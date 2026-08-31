@@ -36,6 +36,11 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Finished
 
+- **2026-09-01** — **R1: Atari ST.** sc68 2.2.1 vendored and building for every ABI, behind a backend
+  interface alongside libopenmpt. SNDH files are 68000 machine code, so this is a whole emulated
+  Atari. **Not confirmed playing** — there is no SNDH file on this machine and no emulator; the
+  owner has to try one.
+
 - **2026-09-01** — Audio focus and becoming-noisy: another app or a phone call takes the speaker and
   we pause; pulling headphones out pauses instead of playing to the room.
 
@@ -148,9 +153,8 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 
 - **No media session.** The foreground service keeps playback alive and its notification has
   transport buttons, but lock-screen controls and Bluetooth or headphone buttons do nothing.
-- **Seeking works for tracker formats but has no capability flag yet.** `libopenmpt` can seek; the
-  CPU-emulator backends coming later cannot, and the UI does not yet ask which it is dealing with
-  (`docs/ARCHITECTURE.md` §5 says it must).
+- **`.sc68` container files will not play**, though `.sndh` should. That format references external
+  replay binaries which we do not ship. SNDH carries its own code and needs none.
 - **R9 (playback starts immediately) is untested.** Nothing is cached and nothing is prepared ahead;
   a small local module is fast because it is small, not because we made it so.
 - **Folder scanning filters by file extension**, not by probing content as

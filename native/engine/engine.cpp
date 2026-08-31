@@ -26,11 +26,17 @@
 #include <oboe/Oboe.h>
 #include <libopenmpt/libopenmpt.hpp>
 
+extern "C" {
+#include <api68/api68.h>
+}
+
 #include <android/log.h>
 #include <atomic>
 #include <cstring>
 #include <memory>
+#include <stdexcept>
 #include <sstream>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -39,34 +45,216 @@
 
 namespace {
 
-class Player : public oboe::AudioStreamDataCallback {
+/**
+ * One decoder, seen the same way whatever it is underneath.
+ *
+ * Everything the player needs to know is asked, not assumed -- especially [canSeek]. libopenmpt can
+ * move to a position; sc68 emulates a 68000 and cannot, because there is no way back except running
+ * the machine again from the start. A UI that offers a control the backend cannot honour is a UI
+ * that lies (docs/ARCHITECTURE.md §5).
+ */
+class Backend {
 public:
-    explicit Player(std::vector<char> bytes)
+    virtual ~Backend() = default;
+
+    /** Renders interleaved stereo floats. Returns frames produced; fewer than asked means the end. */
+    virtual std::size_t render(int sampleRate, std::size_t frames, float *out) = 0;
+
+    virtual bool canSeek() const = 0;
+    virtual void seek(double seconds) = 0;
+    virtual void rewind() = 0;
+    virtual double positionSeconds() const = 0;
+    virtual double durationSeconds() const = 0;
+    virtual std::string describe() const = 0;
+
+    /** 0 means "whatever the device prefers". Non-zero backends are resampled by Oboe if need be. */
+    virtual int preferredSampleRate() const { return 0; }
+};
+
+class OpenmptBackend : public Backend {
+public:
+    explicit OpenmptBackend(const std::vector<char> &bytes)
         : module_(std::make_unique<openmpt::module>(bytes.data(), bytes.size())) {}
 
+    std::size_t render(int sampleRate, std::size_t frames, float *out) override {
+        return module_->read_interleaved_stereo(sampleRate, frames, out);
+    }
+
+    bool canSeek() const override { return true; }
+    void seek(double seconds) override { module_->set_position_seconds(seconds); }
+    void rewind() override { module_->set_position_seconds(0.0); }
+    double positionSeconds() const override { return module_->get_position_seconds(); }
+    double durationSeconds() const override { return module_->get_duration_seconds(); }
+
+    std::string describe() const override {
+        std::ostringstream o;
+        o << "title\t" << module_->get_metadata("title") << '\n'
+          << "format\t" << module_->get_metadata("type_long") << '\n'
+          << "tracker\t" << module_->get_metadata("tracker") << '\n'
+          << "artist\t" << module_->get_metadata("artist") << '\n'
+          << "channels\t" << module_->get_num_channels() << '\n'
+          << "patterns\t" << module_->get_num_patterns() << '\n'
+          << "instruments\t" << module_->get_num_instruments() << '\n'
+          << "samples\t" << module_->get_num_samples() << '\n'
+          << "subsongs\t" << module_->get_num_subsongs() << '\n'
+          << "seekable\t1" << '\n'
+          << "message\t" << module_->get_metadata("message_raw");
+        return o.str();
+    }
+
+private:
+    std::unique_ptr<openmpt::module> module_;
+};
+
+/**
+ * Atari ST, through a 68000 emulator.
+ *
+ * An SNDH file is machine code, not note data: the music is a program that drives the YM2149. That
+ * is why this backend is a whole emulated computer and why it cannot seek -- the only way to reach
+ * a position is to run the machine there.
+ */
+// sc68 declares its allocator as taking unsigned int, which is not malloc's signature on a 64-bit
+// target. Adapters rather than a cast: a cast here would compile and then pass a truncated size.
+void *sc68Alloc(unsigned int bytes) { return std::malloc(bytes); }
+void sc68Free(void *pointer) { std::free(pointer); }
+
+class Sc68Backend : public Backend {
+public:
+    static bool recognises(const std::vector<char> &bytes) {
+        return api68_verify_mem(bytes.data(), static_cast<int>(bytes.size())) >= 0;
+    }
+
+    explicit Sc68Backend(const std::vector<char> &bytes) {
+        api68_init_t init;
+        std::memset(&init, 0, sizeof(init));
+        init.alloc = sc68Alloc;
+        init.free = sc68Free;
+        init.sampling_rate = kSampleRate;
+
+        api_ = api68_init(&init);
+        if (!api_) throw std::runtime_error("sc68 refused to initialise");
+
+        if (api68_load_mem(api_, bytes.data(), static_cast<int>(bytes.size())) < 0) {
+            api68_shutdown(api_);
+            api_ = nullptr;
+            throw std::runtime_error("sc68 could not load this file");
+        }
+        api68_play(api_, 1);
+        api68_music_info(api_, &info_, 1, nullptr);
+    }
+
+    ~Sc68Backend() override {
+        if (api_) {
+            api68_stop(api_);
+            api68_shutdown(api_);
+        }
+    }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        if (ended_) return 0;
+
+        // sc68 produces interleaved 16-bit stereo; Oboe is running in float. Converting here keeps
+        // the whole conversion on the audio thread and out of the rest of the engine.
+        if (scratch_.size() < frames * 2) scratch_.resize(frames * 2);
+
+        const int code = api68_process(api_, scratch_.data(), static_cast<int>(frames));
+        if (code & API68_END) ended_ = true;
+
+        for (std::size_t i = 0; i < frames * 2; ++i) {
+            out[i] = static_cast<float>(scratch_[i]) / 32768.0f;
+        }
+        rendered_ += frames;
+        return ended_ ? 0 : frames;
+    }
+
+    bool canSeek() const override { return false; }
+    void seek(double) override {}
+
+    void rewind() override {
+        api68_stop(api_);
+        api68_play(api_, 1);
+        rendered_ = 0;
+        ended_ = false;
+    }
+
+    double positionSeconds() const override {
+        return static_cast<double>(rendered_) / static_cast<double>(kSampleRate);
+    }
+
+    double durationSeconds() const override {
+        return static_cast<double>(info_.time_ms) / 1000.0;
+    }
+
+    std::string describe() const override {
+        std::ostringstream o;
+        o << "title\t" << (info_.title ? info_.title : "") << '\n'
+          << "format\tAtari ST (sc68)" << '\n'
+          << "tracker\t" << (info_.replay ? info_.replay : "") << '\n'
+          << "artist\t" << (info_.author ? info_.author : "") << '\n'
+          << "composer\t" << (info_.composer ? info_.composer : "") << '\n'
+          << "hardware\t" << (info_.hwname ? info_.hwname : "") << '\n'
+          << "subsongs\t" << info_.tracks << '\n'
+          << "seekable\t0";
+        return o.str();
+    }
+
+    int preferredSampleRate() const override { return kSampleRate; }
+
+private:
+    static constexpr int kSampleRate = 44100;
+
+    api68_t *api_ = nullptr;
+    api68_music_info_t info_{};
+    std::vector<short> scratch_;
+    std::size_t rendered_ = 0;
+    bool ended_ = false;
+};
+
+std::unique_ptr<Backend> openBackend(std::vector<char> bytes) {
+    // sc68 asked first, and strictly. Its verify is a real header check, while libopenmpt's format
+    // net is wide enough that a stray claim on an SNDH would be hard to notice.
+    if (Sc68Backend::recognises(bytes)) {
+        try {
+            return std::make_unique<Sc68Backend>(bytes);
+        } catch (const std::exception &e) {
+            LOGE("sc68 recognised but refused: %s", e.what());
+        }
+    }
+    try {
+        return std::make_unique<OpenmptBackend>(bytes);
+    } catch (const std::exception &e) {
+        LOGE("libopenmpt refused: %s", e.what());
+    }
+    return nullptr;
+}
+
+class Player : public oboe::AudioStreamDataCallback {
+public:
+    explicit Player(std::unique_ptr<Backend> backend) : backend_(std::move(backend)) {}
+
     // Not locked, and deliberately so. Oboe's stop() blocks until an in-flight callback returns, and
-    // every control path below stops the stream before touching the module -- so the callback is the
-    // only reader while it runs, and never concurrent with a writer. A mutex here would be a lock on
-    // the audio thread bought for nothing.
+    // every control path below stops the stream before touching the backend -- so the callback is
+    // the only reader while it runs, and never concurrent with a writer. A mutex here would be a
+    // lock on the audio thread bought for nothing.
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *stream, void *audioData,
                                           int32_t numFrames) override {
         auto *out = static_cast<float *>(audioData);
 
-        // A seek requested from another thread is applied HERE rather than there. libopenmpt's
-        // module is not safe to move under a read in progress, and the audio callback is the only
-        // thread that reads it, so handing the request over and letting the callback act on it
-        // removes the race without stopping the stream and clicking.
+        // A seek requested from another thread is applied HERE rather than there. A decoder cannot
+        // be moved under a read in progress, and the audio callback is the only thread that reads
+        // it, so handing the request over and letting the callback act on it removes the race
+        // without stopping the stream and clicking.
         const double seekTo = pendingSeek_.exchange(NO_SEEK, std::memory_order_acq_rel);
-        if (seekTo >= 0.0) {
-            module_->set_position_seconds(seekTo);
+        if (seekTo >= 0.0 && backend_->canSeek()) {
+            backend_->seek(seekTo);
             finished_.store(false, std::memory_order_release);
         }
 
-        const std::size_t rendered = module_->read_interleaved_stereo(
-            stream->getSampleRate(), static_cast<std::size_t>(numFrames), out);
+        const std::size_t rendered =
+            backend_->render(stream->getSampleRate(), static_cast<std::size_t>(numFrames), out);
 
         if (rendered < static_cast<std::size_t>(numFrames)) {
-            // End of the module. Silence the remainder rather than leaving whatever the buffer held,
+            // End of the tune. Silence the remainder rather than leaving whatever the buffer held,
             // then ask Oboe to stop -- a player that runs off the end into noise is worse than one
             // that stops.
             std::memset(out + rendered * 2, 0, (numFrames - rendered) * 2 * sizeof(float));
@@ -85,22 +273,24 @@ public:
 
     /**
      * Asks for a new position. Applied by the audio callback on its next pass, or immediately when
-     * nothing is playing and there is no callback to hand it to.
+     * nothing is playing and there is no callback to hand it to. Ignored by backends that cannot
+     * seek; the UI is told so through the metadata rather than finding out by being disobeyed.
      */
     void seek(double seconds) {
+        if (!backend_->canSeek()) return;
         const double target = seconds < 0.0 ? 0.0 : seconds;
         if (stream_) {
             pendingSeek_.store(target, std::memory_order_release);
         } else {
-            module_->set_position_seconds(target);
+            backend_->seek(target);
             finished_.store(false, std::memory_order_release);
         }
     }
 
-    /** Back to the beginning and playing again. Used for repeat-one and for replaying a finished track. */
+    /** Back to the beginning and playing. For repeat-one, and for replaying a finished tune. */
     bool restart() {
         stop();
-        module_->set_position_seconds(0.0);
+        backend_->rewind();
         finished_.store(false, std::memory_order_release);
         return start();
     }
@@ -118,6 +308,14 @@ public:
             ->setUsage(oboe::Usage::Media)
             ->setContentType(oboe::ContentType::Music)
             ->setDataCallback(this);
+
+        // Backends that synthesise at a fixed rate say so, and Oboe resamples if the device runs at
+        // something else. Asking a 68000 emulator to run at 48000 because the phone prefers it would
+        // change the music, not the format it arrives in.
+        if (const int preferred = backend_->preferredSampleRate(); preferred > 0) {
+            builder.setSampleRate(preferred)
+                ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium);
+        }
 
         const oboe::Result result = builder.openStream(stream_);
         if (result != oboe::Result::OK) {
@@ -143,27 +341,12 @@ public:
 
     ~Player() override { stop(); }
 
-    double positionSeconds() const { return module_->get_position_seconds(); }
-    double durationSeconds() const { return module_->get_duration_seconds(); }
-
-    std::string describe() const {
-        std::ostringstream o;
-        o << "title\t" << module_->get_metadata("title") << '\n'
-          << "format\t" << module_->get_metadata("type_long") << '\n'
-          << "tracker\t" << module_->get_metadata("tracker") << '\n'
-          << "artist\t" << module_->get_metadata("artist") << '\n'
-          << "channels\t" << module_->get_num_channels() << '\n'
-          << "patterns\t" << module_->get_num_patterns() << '\n'
-          << "instruments\t" << module_->get_num_instruments() << '\n'
-          << "samples\t" << module_->get_num_samples() << '\n'
-          << "subsongs\t" << module_->get_num_subsongs() << '\n'
-          << "duration\t" << module_->get_duration_seconds() << '\n'
-          << "message\t" << module_->get_metadata("message_raw");
-        return o.str();
-    }
+    double positionSeconds() const { return backend_->positionSeconds(); }
+    double durationSeconds() const { return backend_->durationSeconds(); }
+    std::string describe() const { return backend_->describe(); }
 
 private:
-    std::unique_ptr<openmpt::module> module_;
+    std::unique_ptr<Backend> backend_;
     std::shared_ptr<oboe::AudioStream> stream_;
     std::atomic<bool> finished_{false};
 
@@ -185,14 +368,11 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
     std::vector<char> bytes(static_cast<std::size_t>(length));
     env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
 
-    // libopenmpt reports an unrecognised or corrupt module by throwing. A handle of 0 is how that
-    // reaches Kotlin; the caller is expected to say so rather than fail silently.
-    try {
-        return reinterpret_cast<jlong>(new Player(std::move(bytes)));
-    } catch (const std::exception &e) {
-        LOGE("open failed: %s", e.what());
-        return 0;
-    }
+    // No backend recognising the bytes is reported as a handle of 0. The caller says so to the user
+    // rather than failing silently.
+    auto backend = openBackend(std::move(bytes));
+    if (!backend) return 0;
+    return reinterpret_cast<jlong>(new Player(std::move(backend)));
 }
 
 JNIEXPORT void JNICALL

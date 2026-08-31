@@ -68,5 +68,14 @@ fetch libopenmpt \
       "9273b88b67973cc69e54d748ab1b749399d6d07695f1c37d0c59f88b4106074f" \
       1
 
+# sc68 -- GPL-2.0-OR-LATER (verified 2026-09-01: all 51 licensed sources say "or (at your option)
+# any later version", which is what lets it combine with our GPL-3 application). Atari ST: SNDH and
+# raw YM. Brings its own 68000 emulator, which is why SNDH needs it at all.
+fetch sc68 \
+      "2.2.1" \
+      "https://downloads.sourceforge.net/project/sc68/sc68/2.2.1/sc68-2.2.1.tar.gz" \
+      "d7371f0f406dc925debf50f64df1f0700e1d29a8502bb170883fc41cc733265f" \
+      1
+
 echo
 echo "✅ done — sources in native/vendor/ (gitignored)"

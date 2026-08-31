@@ -100,7 +100,15 @@ The largest item and the one that makes the app usable rather than demonstrable.
 **Done when:** a headphone button pauses playback, the lock screen shows transport, and another app
 starting audio pauses us instead of playing over us.
 
-## 6. sc68 — SNDH, the format that started this
+## 6. ~~sc68 — SNDH, the format that started this~~ — BUILT 2026-09-01, UNPROVEN
+
+It compiles and links for every ABI and the licence is verified. Nobody has heard a note: there is
+no SNDH file on the build machine and no emulator. First job when the owner has one to hand.
+
+Also outstanding from this item:
+
+- `.sc68` container files reference external replay binaries we do not ship, so they will not play.
+- Subsong selection: sc68 reports `tracks`, and the UI has nowhere to show them.
 
 `docs/OPEN_QUESTIONS.md` Q2 put it second after libopenmpt and it has not been done.
 

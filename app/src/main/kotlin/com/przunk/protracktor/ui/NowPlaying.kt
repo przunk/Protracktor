@@ -71,7 +71,7 @@ fun NowPlaying(
         // is. Without that the poll two hundred milliseconds later drags the thumb back out from
         // under the user, which reads as a control that refused.
         var scrubbing by remember { mutableStateOf<Float?>(null) }
-        val seekable = state.durationSeconds > 0.0 && track != null
+        val seekable = state.seekable && track != null
         val shown = scrubbing ?: state.positionSeconds.toFloat()
 
         Slider(
@@ -140,6 +140,8 @@ private val FIELDS = listOf(
     "format" to R.string.field_format,
     "tracker" to R.string.field_tracker,
     "artist" to R.string.field_artist,
+    "composer" to R.string.field_composer,
+    "hardware" to R.string.field_hardware,
     "channels" to R.string.field_channels,
     "patterns" to R.string.field_patterns,
     "instruments" to R.string.field_instruments,

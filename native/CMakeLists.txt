@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(protracktor_native CXX)
+project(protracktor_native C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(PROTRACKTOR_BUILD_ENGINE "Build the JNI engine (needs Oboe from Gradle)" ON)
 
 add_subdirectory(backends/libopenmpt)
+add_subdirectory(backends/sc68)
 
 if(PROTRACKTOR_BUILD_ENGINE)
     add_subdirectory(engine)

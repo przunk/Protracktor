@@ -13,7 +13,7 @@ source we vendor, at the moment we vendor it, and this table is corrected then. 
 | Component | Covers | Licence expected | Verified |
 | --- | --- | --- | --- |
 | libopenmpt 0.8.9 | MOD, XM, S3M, IT, MPTM and many others | BSD-3-Clause | **yes, 2026-08-31** |
-| sc68 / libsc68 | Atari ST SNDH, YM | GPL-3.0-or-later | no |
+| sc68 2.2.1 | Atari ST SNDH, YM | GPL-2.0-**or-later** | **yes, 2026-09-01** |
 | libsidplayfp | C64 SID | GPL-2.0-**or-later** | no |
 | game-music-emu | NSF, GBS, SPC, VGM, HES, AY, KSS | LGPL-2.1-or-later | no |
 | ASAP | Atari 8-bit SAP | GPL-2.0-**or-later** | no |
@@ -45,6 +45,15 @@ Recorded here so it is not forgotten before a release.
 
 Sources are fetched by `scripts/fetch-native-deps.sh`, pinned to an exact version and verified
 against a SHA-256 recorded in that script. They are not committed.
+
+**sc68 2.2.1**, checked on 2026-09-01. `COPYING` carries the GPL **version 2** text, which on its
+own would have invalidated our GPL-3 decision — but every one of the 51 licensed source files says:
+
+> under the terms of the GNU General Public License as published by the Free Software Foundation;
+> either version 2 of the License, or (at your option) any later version.
+
+"Or later" is what matters, and it is unanimous across the tree. Reading only `COPYING` would have
+given the wrong answer here, which is why the rule is to check the sources.
 
 ## Android / JVM dependencies
 
