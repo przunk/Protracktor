@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilledIconButton
@@ -67,7 +68,9 @@ fun PlayerDock(
         tonalElevation = 3.dp,
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        Column {
+        // The surface still paints behind the gesture bar -- only the controls move up. Padding the
+        // Surface instead would leave a strip of the wrong colour under the dock.
+        Column(modifier = Modifier.navigationBarsPadding()) {
             val fraction = when {
                 state.durationSeconds <= 0.0 -> 0f
                 else -> (state.positionSeconds / state.durationSeconds).coerceIn(0.0, 1.0).toFloat()

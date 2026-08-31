@@ -82,7 +82,7 @@ data class PlayQueue(
     val current: TrackRef? get() = currentIndex?.let(tracks::getOrNull)
 
     /** True when [previous] would move somewhere. */
-    val hasPrevious: Boolean get() = historyCursor > 0
+    val hasPrevious: Boolean get() = previousQueue() != null
 
     /**
      * True when [next] would move somewhere. This goes false on the last track unless repeat is
@@ -118,9 +118,27 @@ data class PlayQueue(
     fun onTrackEnded(): PlayQueue? =
         if (repeat == RepeatMode.ONE && current != null) this else advanced()
 
-    /** Steps back through what was actually played. Returns the same queue at the beginning. */
-    fun previous(): PlayQueue =
-        if (hasPrevious) copy(historyCursor = historyCursor - 1) else this
+    /**
+     * Goes back one.
+     *
+     * **What "back" means depends on shuffle**, and getting this wrong is what made the controls
+     * feel random. With shuffle on, back returns to the track that was actually played before --
+     * that is R5, and there is no other sensible reading of "previous" in a random order. With
+     * shuffle off, back means the row above, every time: the list is right there on screen and a
+     * button that disagrees with it looks broken, however defensible its bookkeeping.
+     */
+    fun previous(): PlayQueue = previousQueue() ?: this
+
+    private fun previousQueue(): PlayQueue? {
+        if (shuffle) return if (historyCursor > 0) copy(historyCursor = historyCursor - 1) else null
+
+        val position = order.indexOf(currentIndex ?: return null)
+        return when {
+            position > 0 -> appended(order[position - 1])
+            repeat == RepeatMode.PLAYLIST -> order.lastOrNull()?.let { appended(it) }
+            else -> null
+        }
+    }
 
     fun withRepeat(mode: RepeatMode): PlayQueue = copy(repeat = mode)
 
@@ -137,18 +155,24 @@ data class PlayQueue(
     /**
      * Replaces the track list.
      *
-     * History entries that no longer address a track are dropped, and the cursor moves with them.
-     * Appending is the common case and leaves history untouched, because existing indices still
-     * point at the same tracks.
+     * History is remapped **by track identity, not by position**. Removing a track shifts every
+     * later index by one, so history kept as raw positions would silently start pointing at the
+     * neighbours of what was really played -- the same class of bug as the order that copy() left
+     * behind, and just as invisible on screen. Entries whose track is gone are dropped, and the
+     * cursor moves with them.
      */
     fun withTracks(newTracks: List<TrackRef>): PlayQueue {
-        val kept = history.filter { it in newTracks.indices }
-        val removedBeforeCursor = history.take(historyCursor + 1).count { it !in newTracks.indices }
-        return copy(
-            tracks = newTracks,
-            history = kept,
-            historyCursor = (historyCursor - removedBeforeCursor).coerceIn(-1, kept.lastIndex),
-        )
+        val newIndexById = newTracks.withIndex().associate { (index, track) -> track.id to index }
+        val remapped = mutableListOf<Int>()
+        var newCursor = -1
+
+        history.forEachIndexed { position, oldIndex ->
+            val newIndex = tracks.getOrNull(oldIndex)?.id?.let(newIndexById::get) ?: return@forEachIndexed
+            remapped += newIndex
+            if (position <= historyCursor) newCursor = remapped.lastIndex
+        }
+
+        return copy(tracks = newTracks, history = remapped, historyCursor = newCursor)
     }
 
     private fun advanced(): PlayQueue? {
@@ -160,8 +184,9 @@ data class PlayQueue(
         }
 
         // Forward through history first -- this is what makes "back then forward" land where the
-        // user left off rather than somewhere new.
-        if (historyCursor < history.lastIndex) return copy(historyCursor = historyCursor + 1)
+        // user left off rather than somewhere new. Only under shuffle: in list order, next means
+        // the row below, and a redo branch there would contradict what the screen is showing.
+        if (shuffle && historyCursor < history.lastIndex) return copy(historyCursor = historyCursor + 1)
 
         val positionInOrder = order.indexOf(currentIdx)
         val nextPosition = positionInOrder + 1

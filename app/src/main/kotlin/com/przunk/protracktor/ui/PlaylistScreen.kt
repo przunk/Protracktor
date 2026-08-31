@@ -29,6 +29,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +55,7 @@ import com.przunk.protracktor.player.PlayerUiState
 fun PlaylistScreen(
     state: PlayerUiState,
     onPlayAt: (Int) -> Unit,
+    onRemoveAt: (Int) -> Unit,
     onBrowse: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -93,6 +96,14 @@ fun PlaylistScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
+                },
+                trailingContent = {
+                    IconButton(onClick = { onRemoveAt(index) }) {
+                        Icon(
+                            imageVector = PlayerIcons.Remove,
+                            contentDescription = stringResource(R.string.a11y_remove_track, track.title),
+                        )
                     }
                 },
                 colors = if (isCurrent) {

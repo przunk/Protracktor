@@ -52,22 +52,46 @@ class PlayQueueTest {
     }
 
     @Test
-    fun `forward after backward replays the same track rather than picking a new one`() {
+    fun `in shuffle, forward after backward replays the same track rather than picking a new one`() {
         // History has to DIVERGE from the play order for this to test anything. Built with plain
         // next() calls the two are identical, so removing the redo branch entirely still produced
         // the right answer by accident -- mutation testing caught exactly that. Jumping around with
         // startAt is what makes the two disagree.
-        var q = queueOf(10)
+        var q = queueOf(10).withShuffle(true, seed = 42L)
         q = q.startAt(7).startAt(2).startAt(5)
 
         q = q.previous().previous()
         assertEquals("Track 7", q.titleNow())
 
-        // Order-next from 7 would be 8. Redoing history gives 2, then 5.
         q = q.next()
         assertEquals("Track 2", q.titleNow())
         q = q.next()
         assertEquals("Track 5", q.titleNow())
+    }
+
+    // --- what the buttons mean without shuffle ---------------------------------------------------
+
+    @Test
+    fun `without shuffle, previous is the row above and not the last thing played`() {
+        // Reported from a device as "next and previous behave randomly". They were walking the tap
+        // history, which is right in shuffle and wrong here: the list is on screen, and a button
+        // that disagrees with it looks broken however defensible its bookkeeping.
+        var q = queueOf(10)
+        q = q.startAt(7).startAt(2)
+
+        assertEquals("Track 1", q.previous().titleNow())
+        assertEquals("Track 3", q.startAt(2).next().titleNow())
+    }
+
+    @Test
+    fun `without shuffle, previous stops at the top unless the playlist repeats`() {
+        val top = queueOf(4).startAt(0)
+        assertFalse(top.hasPrevious)
+        assertEquals("Track 0", top.previous().titleNow())
+
+        val wrapping = top.withRepeat(RepeatMode.PLAYLIST)
+        assertTrue(wrapping.hasPrevious)
+        assertEquals("Track 3", wrapping.previous().titleNow())
     }
 
     @Test
@@ -207,12 +231,35 @@ class PlayQueueTest {
 
     @Test
     fun `shrinking the track list drops history that no longer addresses anything`() {
-        var q = queueOf(5)
+        // Shuffle, because that is the mode where history is what previous walks. Without it
+        // previous means the row above and would say nothing about whether history was pruned.
+        var q = queueOf(5).withShuffle(true, seed = 5L)
         q = q.startAt(4).startAt(1)
 
         q = q.withTracks(q.tracks.take(2))
         assertEquals("Track 1", q.titleNow())
         assertFalse("history should have lost the entry for the removed track", q.hasPrevious)
+    }
+
+    @Test
+    fun `removing an earlier track keeps the right one playing`() {
+        // Removal shifts every later index by one. History held as raw positions would keep
+        // pointing at the same NUMBERS and therefore at different tracks -- a wrong answer that
+        // looks entirely plausible on screen.
+        var q = queueOf(5).startAt(3)
+        assertEquals("Track 3", q.titleNow())
+
+        q = q.withTracks(q.tracks.filterIndexed { index, _ -> index != 1 })
+
+        assertEquals("Track 3", q.titleNow())
+        assertEquals("Track 4", q.next().titleNow())
+    }
+
+    @Test
+    fun `removing the playing track leaves nothing current rather than the wrong thing`() {
+        var q = queueOf(4).startAt(2)
+        q = q.withTracks(q.tracks.filterIndexed { index, _ -> index != 2 })
+        assertNull(q.current)
     }
 
     // --- edges --------------------------------------------------------------------------------

@@ -132,6 +132,9 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 - **R2 (the session survives leaving the app) is NOT met.** The playlist lives in memory and dies
   with the process. This is the requirement that started the project and it needs the persistent
   index; it is the next stage, not an oversight.
+- **No playback service, so audio stops with the process.** Confirmed on a device: playback does not
+  survive long in the background. This is the next stage and it brings the notification, the media
+  session, and headphone and Bluetooth controls with it.
 - **R6 (several playlists) is NOT met.** There is one playlist. The top bar shows its name as plain
   text rather than as the switcher the navigation model calls for — a switcher with nothing to
   switch to would be a control that does nothing (AGENTS.md §7), so it waits for persistence.
@@ -140,8 +143,6 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 - **Folder scanning filters by file extension**, not by probing content as
   `docs/ARCHITECTURE.md` §5 requires. Probing means reading every candidate, which belongs with the
   index rather than with a foreground scan. `SupportedFormats` says so in its own documentation.
-- **No playback service.** Audio stops when the process does; there is no notification and no media
-  session, so headphone buttons and Bluetooth controls do nothing.
 
 ## Known defects
 
@@ -150,6 +151,15 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
   that drives the progress bar notices it.
 
 ## Fixed
+
+- **2026-08-31 — next and previous "behaved randomly", reported from a device.** Navigation walked
+  the play history in *every* mode. That is right under shuffle — R5 asks for exactly it — and wrong
+  without, where the list is on screen and "previous" has to mean the row above. History now governs
+  only when shuffle is on. Whatever the bookkeeping, a control that disagrees with the visible list
+  looks broken.
+- **2026-08-31 — the gesture bar covered the transport row.** The dock's contents now sit above the
+  navigation-bar inset while the surface still paints behind it; padding the surface instead would
+  leave a strip of the wrong colour beneath the dock.
 
 - **2026-08-31 — `NoSuchElementException: List is empty` in `PlayQueue.advanced()` on adding the
   first folder.** `order` was a constructor property defaulting to `tracks.indices`, and **`copy()`

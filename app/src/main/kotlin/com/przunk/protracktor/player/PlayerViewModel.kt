@@ -108,6 +108,32 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         else -> "Added $count tracks."
     }
 
+    /**
+     * Drops one track.
+     *
+     * Removing what is playing stops playback rather than jumping somewhere: silently starting a
+     * different track because the user deleted this one is a surprise, and there is no reading of
+     * "remove" that asks for it.
+     */
+    fun removeTrack(index: Int) {
+        val currentState = _state.value
+        val removed = currentState.queue.tracks.getOrNull(index) ?: return
+        val wasPlaying = currentState.queue.currentIndex == index
+
+        if (wasPlaying) stopPlayback()
+
+        _state.update {
+            it.copy(
+                queue = it.queue.withTracks(it.queue.tracks.filterIndexed { i, _ -> i != index }),
+                playing = if (wasPlaying) false else it.playing,
+                metadata = if (wasPlaying) emptyMap() else it.metadata,
+                positionSeconds = if (wasPlaying) 0.0 else it.positionSeconds,
+                durationSeconds = if (wasPlaying) 0.0 else it.durationSeconds,
+                message = "Removed ${removed.title}",
+            )
+        }
+    }
+
     fun clearPlaylist() {
         stopPlayback()
         _state.update { PlayerUiState(message = "Playlist cleared.") }

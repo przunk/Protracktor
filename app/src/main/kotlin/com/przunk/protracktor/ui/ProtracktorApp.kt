@@ -120,6 +120,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         PlaylistScreen(
             state = state,
             onPlayAt = viewModel::playAt,
+            onRemoveAt = viewModel::removeTrack,
             onBrowse = { showBrowse = true },
             contentPadding = insets,
         )

@@ -33,6 +33,8 @@
     <string name="field_subsongs">Subsongs</string>
     <string name="field_message">Message</string>
 
+    <string name="a11y_remove_track">Remove %1$s from the playlist</string>
+
     <string name="a11y_play">Play</string>
     <string name="a11y_pause">Pause</string>
     <string name="a11y_previous">Previous track</string>
