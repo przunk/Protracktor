@@ -36,6 +36,9 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Finished
 
+- **2026-09-01** — Removing a track offers undo instead of asking first; deleting a playlist asks.
+  Snackbars can be pushed off the screen sideways.
+
 - **2026-09-01** — **R6 met.** Several named playlists, created, renamed, deleted and switched from
   the top bar. Browse remembers granted folders and adds a *selection* rather than a whole folder.
 

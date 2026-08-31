@@ -57,7 +57,7 @@ found and let the user choose.
 **Done when:** the user can open Browse, tick three files out of a folder of two hundred, add them
 to a named playlist, and find them there.
 
-## 3. Undo and confirmation on removal
+## 3. ~~Undo and confirmation on removal~~ — DONE 2026-09-01
 
 > "usuwanie z potwierdzeniem oraz opcja undo w snackbarze"
 
@@ -72,7 +72,9 @@ A confirmation dialog *and* an undo for a single row would mean two interactions
 line. If the owner wants both, say so and it is done — this reading is an interpretation, not a
 decision he made.
 
-## 4. A snackbar that can be swiped away
+**Built that way on 2026-09-01**: undo on a track, a dialog on deleting a playlist.
+
+## 4. ~~A snackbar that can be swiped away~~ — DONE 2026-09-01
 
 > "snackbar, który można 'przesunąć'"
 

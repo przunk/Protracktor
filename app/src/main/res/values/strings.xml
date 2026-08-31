@@ -19,6 +19,7 @@
     <string name="action_add_files">Add files</string>
     <string name="action_scanning">Scanning…</string>
 
+    <string name="action_undo">Undo</string>
     <string name="action_back">Back</string>
     <string name="action_delete">Delete</string>
     <string name="action_cancel">Cancel</string>
