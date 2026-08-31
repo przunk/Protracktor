@@ -11,7 +11,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 ---
 
-## 1. Persistence — the state survives a restart
+## 1. ~~Persistence — the state survives a restart~~ — DONE 2026-09-01
 
 > "po restarcie/aktualizacji aplikacji wszystkie utwory zniknęły z listy"
 > "aplikacja powinna zapisywać stan ustawień po restarcie (np. loop, który ostatnio odtwarzaliśmy)"

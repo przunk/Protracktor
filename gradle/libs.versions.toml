@@ -21,6 +21,10 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 oboe = { group = "com.google.oboe", name = "oboe", version.ref = "oboe" }
 junit = { group = "junit", name = "junit", version = "4.13.2" }
+# Test only. Lets the schema and its migrations run against a real SQLite engine on the JVM, which
+# is the only way to test them at all here: there is no emulator, and a migration meets somebody's
+# data exactly once.
+sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version = "3.50.3.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -49,6 +49,15 @@ object MediaScanner {
         }
     }
 
+    /** A name for a granted tree that means something to a human. */
+    fun labelOf(treeUri: Uri): String =
+        runCatching { DocumentsContract.getTreeDocumentId(treeUri) }
+            .getOrNull()
+            ?.substringAfterLast(':')
+            ?.substringAfterLast('/')
+            ?.ifBlank { null }
+            ?: treeUri.lastPathSegment.orEmpty()
+
     /** Walks a granted folder tree, depth first, and returns everything that looks playable. */
     suspend fun scanTree(context: Context, treeUri: Uri): List<TrackRef> = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver

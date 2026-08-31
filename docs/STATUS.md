@@ -36,6 +36,10 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Finished
 
+- **2026-09-01** — **R2 met.** Playlist, shuffle, repeat and the track last played survive a restart,
+  in a hand-written SQLite database (`docs/ARCHITECTURE.md` §9 explains why not Room). Granted SAF
+  folders are remembered too. Six tests run the schema against a real SQLite engine on the JVM.
+
 - **2026-08-31** — The Compose UI: dock, playlist, Now Playing, Browse, theme with dynamic colour,
   Polish and English strings. `PlayerViewModel` ties `PlayQueue` to the native engine. The engine
   gained a finished flag and a restart, polled rather than pushed — signalling from the audio
@@ -129,9 +133,6 @@ Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does no
 
 Naming these because a `STATUS.md` that implies more than exists is worse than none.
 
-- **R2 (the session survives leaving the app) is NOT met.** The playlist lives in memory and dies
-  with the process. This is the requirement that started the project and it needs the persistent
-  index; it is the next stage, not an oversight.
 - **No playback service, so audio stops with the process.** Confirmed on a device: playback does not
   survive long in the background. This is the next stage and it brings the notification, the media
   session, and headphone and Bluetooth controls with it.
