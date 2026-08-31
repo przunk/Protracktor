@@ -63,6 +63,17 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     var showBrowse by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // The foreground service runs with or without this; only its notification is suppressed. Asked
+    // once, at the top, rather than in the middle of the user pressing play.
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        val notificationPermission = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { }
+        LaunchedEffect(Unit) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> if (uri != null) { viewModel.addFolder(uri); showBrowse = false } }

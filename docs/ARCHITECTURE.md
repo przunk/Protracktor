@@ -199,3 +199,38 @@ that come as a set should not be able to exist half-written.
 **Restoring makes a track current without starting it.** Coming back to the app is not a request to
 make noise, and R2 asks for the view to be restored, not the playback. Resuming a *position* is
 `docs/OPEN_QUESTIONS.md` Q6 and still open.
+
+## 10. One player per process, and a service to keep it alive
+
+Decided 2026-09-01.
+
+Playback used to live in the ViewModel. That cannot work: a ViewModel dies with its screen, and
+playback has to outlast it. Worse, a service with its own copy would mean two players agreeing by
+accident.
+
+So `PlaybackController` is a process-wide singleton and owns everything — the queue, the open
+module, the store. The ViewModel forwards to it and `PlaybackService` holds the same instance. There
+is one answer to "what is playing" no matter who asks.
+
+### Why the service starts before playback
+
+Android only permits a foreground service to be *started* while the app is itself in the foreground.
+Waiting until the user leaves is waiting until it is no longer allowed, so the service starts on any
+press that makes noise. That has a consequence worth stating: at start-up there is legitimately no
+track yet, so "nothing playing" must not mean "stop the service" — only an empty state that follows
+a non-empty one means playback is really over.
+
+It also has a deadline. Android gives a started service roughly five seconds to call
+`startForeground`, and the first track is still being read off disk — over SMB, on the owner's setup.
+So the notification is posted immediately with whatever state exists and updated afterwards.
+
+### What is missing
+
+**No `MediaSession`.** Lock-screen transport, Bluetooth and headphone buttons do not work; the
+notification's own actions do. `docs/ARCHITECTURE.md` §4 picked Media3's `SimpleBasePlayer` for
+this and that is still the plan — it is a separate step because it is a separate risk, and doing it
+alongside the service would have meant debugging two new things at once. Recorded in
+`docs/BACKLOG.md`.
+
+**No audio focus.** Another app starting playback will talk over us, and a phone call will not duck
+us. Same step.
