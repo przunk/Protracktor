@@ -10,6 +10,15 @@
 
 TOOLING_ROOT="${PROTRACKTOR_TOOLING_ROOT:-/mnt/workspace/.tooling}"
 
+# Worked out from where this file sits rather than written down. Two branches cannot be worked on in
+# one directory, so a second checkout is a git worktree elsewhere -- and a script pinned to an
+# absolute path would quietly build the *other* checkout's code from inside it.
+export PROTRACKTOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Named after the checkout for the same reason: two builds at once would otherwise overwrite each
+# other's log, and the failure you are reading would belong to somebody else.
+export PROTRACKTOR_LOG_PREFIX="/tmp/protracktor-$(basename "$PROTRACKTOR_DIR")"
+
 export JAVA_HOME="${PROTRACKTOR_JAVA_HOME:-$TOOLING_ROOT/jdk}"
 export ANDROID_HOME="$TOOLING_ROOT/android-sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"

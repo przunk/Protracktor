@@ -74,20 +74,64 @@ prefab package unpacked from an AAR, and only the Gradle build unpacks it.
 ## Builds
 
 ```bash
-./scripts/build-debug.sh [extra gradle args…]
+./scripts/build-debug.sh   [extra gradle args…]
+./scripts/build-release.sh [extra gradle args…]
 ```
 
-Runs `check-tooling.sh` first, writes `local.properties`, builds `:app:assembleDebug`, and copies
-the result to `dist/protracktor-<versionName>-debug.apk`.
+**Gradle's output goes to a log file, never to the terminal.** On success you get four lines; on
+failure you get the part of the log that says what broke — the `What went wrong` block, Kotlin `e:`
+lines, and compiler errors from the native build — plus the path to the rest. Thousands of lines of
+task names are worth reading exactly never, and cost real money when an agent is the one reading
+them.
 
-**Look in `dist/`, not in `app/build/outputs`.** The build directory is `~/.protracktor/build`
-(see above), so the path every Android tutorial gives you is wrong here.
+Logs land at `/tmp/protracktor-<checkout>-{debug,release}.log`, named after the checkout so two
+builds running at once cannot overwrite each other's.
 
-The script treats a green build that produced no APK as a failure. Gradle can report success while
+### Artifacts
+
+```
+dist/protracktor-debug-<versionName>-<versionCode>-<YYYYmmdd-HHMMSS>.apk
+dist/protracktor-<versionName>-<versionCode>-<YYYYmmdd-HHMMSS>.apk
+```
+
+Same scheme as the workshop's other projects. The `versionCode` and the timestamp are both there
+because two builds of one `versionName` are otherwise indistinguishable once they leave `dist/` —
+which is exactly the moment it matters which one is on the phone.
+
+**Look in `dist/`, not in `app/build/outputs`.** The build directory is `~/.protracktor/build`, so
+the path every Android tutorial gives you is wrong here.
+
+Both scripts treat a green build that produced no APK as a failure. Gradle can report success while
 skipping the packaging task, and "✅ nothing was produced" is the kind of message that costs an
 afternoon.
 
-Release builds are not written yet: they need a keystore, which is the owner's to create.
+### Signing
+
+Release signing credentials never live in this repository. Put them in `~/.gradle/gradle.properties`:
+
+```properties
+PRZUNK_UPLOAD_STORE_FILE=/absolute/path/to/protracktor-release.jks
+PRZUNK_UPLOAD_STORE_PASSWORD=…
+PRZUNK_UPLOAD_KEY_ALIAS=…
+PRZUNK_UPLOAD_KEY_PASSWORD=…
+```
+
+The same property names the workshop's other projects use, and **the owner decided on 2026-08-31
+that Protracktor shares their keystore** rather than getting its own. A separate key was considered
+because a GPL-3 app may end up on F-Droid; sharing won because one key across the workshop is one
+thing to keep safe instead of five.
+
+Without them the release build still succeeds, signed with the local **debug** key. That keeps
+sideloading alive on a machine with no release key — an unsigned APK cannot be installed at all —
+but such an APK must never be published. `build-release.sh` prints the certificate's subject rather
+than assuming, because the Gradle config can look right and still have fallen back, and the mistake
+is otherwise invisible until an upload is rejected.
+
+### App Bundle (.aab)
+
+Not written. The owner is adding a bundle signing key later, and a bundle script guessing at how it
+will be configured would have to be rewritten when it arrives. There is nothing to upload to a store
+yet either.
 
 ## Pushing to GitHub
 

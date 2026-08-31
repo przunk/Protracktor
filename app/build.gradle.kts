@@ -42,8 +42,29 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // Read from ~/.gradle/gradle.properties, never from this repository. A key committed
+            // beside the code has to be treated as public from the day it is written.
+            // Same property names as the workshop's other projects, so one keystore serves them all.
+            val storePath = providers.gradleProperty("PRZUNK_UPLOAD_STORE_FILE").orNull
+            if (storePath != null) {
+                storeFile = rootProject.file(storePath)
+                storePassword = providers.gradleProperty("PRZUNK_UPLOAD_STORE_PASSWORD").orNull
+                keyAlias = providers.gradleProperty("PRZUNK_UPLOAD_KEY_ALIAS").orNull
+                keyPassword = providers.gradleProperty("PRZUNK_UPLOAD_KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // The upload key when it is configured, the local debug key otherwise. An unsigned APK
+            // cannot be installed at all, so falling back keeps sideloading alive on a machine with
+            // no release key. build-release.sh prints which key actually signed it, because that
+            // mistake is otherwise invisible until an upload is rejected.
+            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
+                ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

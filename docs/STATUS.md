@@ -8,8 +8,8 @@ Updated: 2026-08-31
 is a proof of concept: pick a module through the storage access framework, see its metadata, press
 play.
 
-**Not yet confirmed on a device that sound actually comes out.** That is the whole point of this
-stage and only the owner can establish it.
+**Confirmed on a device on 2026-08-31: a `.mod` plays, and plays well.** libopenmpt, Oboe, JNI and
+the SAF picker all hold together on real hardware. That was the risk this stage existed to retire.
 
 What *is* verified, on the produced artifact rather than from the build log:
 
@@ -22,6 +22,9 @@ What *is* verified, on the produced artifact rather than from the build log:
   mismatch here is an `UnsatisfiedLinkError` on the device and nothing earlier would have caught it.
 - The earlier placeholder build was installed by the owner on 2026-08-31 and ran, so the
   build → phone chain itself is established.
+- The **release** build works too: 9.9 MB against the debug build's 40 MB, and the script correctly
+  warned that it had fallen back to the debug key (no `PRZUNK_UPLOAD_*` on this machine). R8 kept
+  the JNI method names — see the note below about the two it dropped.
 
 ## Finished
 
@@ -41,6 +44,11 @@ What *is* verified, on the produced artifact rather than from the build log:
   (`docs/ARCHITECTURE.md` §8). Modland's index and file endpoints were measured, not assumed.
 - **2026-08-31** — `AGENTS.md` in the project root records the English-documentation override as
   applying to Protracktor only; the workspace-wide rule is untouched.
+- **2026-08-31** — Build scripts rewritten to keep Gradle's output in a log file and print four
+  lines: the token cost of an agent reading task names was the whole reason. Artifact naming now
+  matches the workshop's other projects (`versionName-versionCode-timestamp`), release signing uses
+  the shared `PRZUNK_UPLOAD_*` properties, and the failure path was tested by breaking a Kotlin
+  source deliberately.
 - **2026-08-31** — Native layer: libopenmpt 0.8.9 vendored by `scripts/fetch-native-deps.sh`
   (pinned, SHA-256 verified), built by a CMakeLists that reads its source list from upstream's own
   `Android.mk`. JNI engine with Oboe output in `native/engine/`. Kotlin facade in
@@ -53,6 +61,11 @@ What *is* verified, on the produced artifact rather than from the build log:
   not a warning. But the Compose compiler plugin (`org.jetbrains.kotlin.plugin.compose`) is *still*
   separate and *still* required whenever `buildFeatures.compose` is on. The two facts look
   contradictory and cost two failed configurations to establish.
+- **`-keepclasseswithmembernames` preserves names but still allows shrinking.** The 0.1.0 release
+  APK contains five of `NativeEngine`'s seven native declarations: `nativePositionSeconds` and
+  `nativeDurationSeconds` were removed because no Kotlin code calls them yet. That is correct — JNI
+  resolves lazily and per call — but it looks exactly like a broken keep rule at a glance, so check
+  whether the missing method is simply unused before changing anything.
 - **CMake's regex engine has no `\t` escape.** An anchor written `"^[ \t]*..."` matches nothing at
   all on a tab-indented file, silently. Strip the line with `string(STRIP)` and anchor on `^`
   instead.
@@ -76,9 +89,7 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Next
 
-1. **The owner installs this APK and reports whether a module plays.** Everything below assumes it
-   does.
-2. `sc68` integration for SNDH — the format that started this project. `sndh.net` did not resolve
+1. `sc68` integration for SNDH — the format that started this project. `sndh.net` did not resolve
    from here, so finding a source for it is part of the step.
 3. Room index and the library scan, which is what R9 (instant start) actually depends on.
 
