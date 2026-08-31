@@ -1,0 +1,24 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.cxx/
+captures/
+dist/
+
+# Signing material never belongs in the repository
+keystore.properties
+*.jks
+*.keystore
+
+# Vendored native sources are fetched by scripts/fetch-native-deps.sh, not committed
+native/vendor/
+
+# IDE
+.idea/
+*.hprof
+
+# OS
+.DS_Store
+Thumbs.db
