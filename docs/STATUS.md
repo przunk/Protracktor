@@ -1,38 +1,30 @@
 # Status
 
-Updated: 2026-08-31
+Updated: 2026-09-01 — version 0.2.0, versionCode 2
 
 ## What works
 
-The three-layer shell from `docs/OPEN_QUESTIONS.md` Q1 is built: playlist as the only destination,
-Now Playing expanding from the dock, Browse as a modal, and the dock present on every surface with
-shuffle / previous / play / next / repeat. Adding a folder walks it with the storage access
-framework and fills the playlist; tracks play, advance, and honour shuffle and repeat.
+A usable player, as far as anything can be called that without a device saying so.
 
-Polish and English strings from the first screen (R10).
+- **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more) and Atari ST
+  through sc68 (SNDH, YM). Backends sit behind one interface and are asked what they can do rather
+  than assumed — libopenmpt seeks, sc68 cannot, and the UI reflects that.
+- **Library**: folders granted through the storage access framework, remembered between sessions.
+  Browse shows what a folder holds and adds the ticked rows, not the whole thing.
+- **Playlists**: several, named, created, renamed, deleted, switched from the top bar. Shuffle and
+  repeat work inside the active one.
+- **Transport**: a dock on every screen with shuffle, previous, play, next and repeat. Shuffle keeps
+  a real history so backward returns to what was actually played; without shuffle, backward is the
+  row above. Seeking where the backend allows it.
+- **Survives a restart**: playlist, settings and the track last played all come back.
+- **Survives leaving the app**: a foreground service with transport in its notification. Audio focus
+  and becoming-noisy are honoured.
+- **Both languages**, Polish and English, from the first screen.
 
+Verified here: 29 unit tests, a release build through R8 with all ten JNI symbols intact, and
+`aapt2` on the artifact. Verified by the owner on a device up to 2026-08-31: modules play.
 
-`./scripts/build-debug.sh` produces an installable debug APK carrying the native player. The screen
-is a proof of concept: pick a module through the storage access framework, see its metadata, press
-play.
-
-**Confirmed on a device on 2026-08-31: a `.mod` plays, and plays well.** libopenmpt, Oboe, JNI and
-the SAF picker all hold together on real hardware. That was the risk this stage existed to retire.
-
-What *is* verified, on the produced artifact rather than from the build log:
-
-- `aapt2 dump badging`: `com.przunk.protracktor`, `minSdkVersion 29`, `targetSdkVersion 36`,
-  `compileSdkVersion 36`.
-- All three ABIs carry `libprotracktor_engine.so`, `liboboe.so` and `libc++_shared.so`
-  (4.50 / 2.50 / 4.67 MB for the engine on arm64-v8a, armeabi-v7a, x86_64).
-- `llvm-nm -D` on the shipped `libprotracktor_engine.so` exports exactly the seven
-  `Java_com_przunk_protracktor_engine_NativeEngine_*` symbols that `NativeEngine.kt` declares. A
-  mismatch here is an `UnsatisfiedLinkError` on the device and nothing earlier would have caught it.
-- The earlier placeholder build was installed by the owner on 2026-08-31 and ran, so the
-  build → phone chain itself is established.
-- The **release** build works too: 9.9 MB against the debug build's 40 MB, and the script correctly
-  warned that it had fallen back to the debug key (no `PRZUNK_UPLOAD_*` on this machine). R8 kept
-  the JNI method names — see the note below about the two it dropped.
+**Not verified by anyone yet**: SNDH playback, everything added on 2026-09-01, and every gesture.
 
 ## Finished
 
