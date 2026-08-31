@@ -66,6 +66,14 @@ object NativeEngine {
         /** Back to the beginning and playing. For repeat-one, and for replaying a finished track. */
         fun restart(): Boolean = nativeRestart(handle())
 
+        /**
+         * Moves the playing position.
+         *
+         * Takes effect on the audio thread's next pass rather than immediately, so the position
+         * read straight afterwards may still be the old one.
+         */
+        fun seekTo(seconds: Double) = nativeSeek(handle(), seconds)
+
         fun stop() = nativeStop(handle())
 
         fun positionSeconds(): Double = nativePositionSeconds(handle())
@@ -92,6 +100,7 @@ object NativeEngine {
     @JvmStatic private external fun nativeStop(handle: Long)
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
+    @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double
     @JvmStatic private external fun nativeDurationSeconds(handle: Long): Double

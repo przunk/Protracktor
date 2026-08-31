@@ -72,8 +72,8 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     ) { uris -> if (uris.isNotEmpty()) { viewModel.addFiles(uris); showBrowse = false } }
 
     state.message?.let { message ->
-        LaunchedEffect(message) {
-            snackbarHostState.showSnackbar(message)
+        LaunchedEffect(message.id) {
+            snackbarHostState.showSnackbar(message.text)
             viewModel.dismissMessage()
         }
     }
@@ -134,7 +134,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
             onDismissRequest = { showNowPlaying = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
-            NowPlaying(state = state)
+            NowPlaying(state = state, onSeek = viewModel::seekTo)
         }
     }
 

@@ -18,6 +18,7 @@ package com.przunk.protracktor.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -25,8 +26,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -42,7 +48,11 @@ import com.przunk.protracktor.player.PlayerUiState
  * files. A visualiser returns later as something the user switches on (`docs/WISHLIST.md`).
  */
 @Composable
-fun NowPlaying(state: PlayerUiState, modifier: Modifier = Modifier) {
+fun NowPlaying(
+    state: PlayerUiState,
+    onSeek: (Double) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val track = state.current
     Column(
         modifier = modifier
@@ -56,6 +66,38 @@ fun NowPlaying(state: PlayerUiState, modifier: Modifier = Modifier) {
             text = track?.title ?: stringResource(R.string.dock_idle_title),
             style = MaterialTheme.typography.headlineSmall,
         )
+
+        // While the thumb is held, the slider shows where the finger is rather than where playback
+        // is. Without that the poll two hundred milliseconds later drags the thumb back out from
+        // under the user, which reads as a control that refused.
+        var scrubbing by remember { mutableStateOf<Float?>(null) }
+        val seekable = state.durationSeconds > 0.0 && track != null
+        val shown = scrubbing ?: state.positionSeconds.toFloat()
+
+        Slider(
+            value = shown.coerceIn(0f, state.durationSeconds.toFloat().coerceAtLeast(0f)),
+            onValueChange = { scrubbing = it },
+            onValueChangeFinished = {
+                scrubbing?.let { onSeek(it.toDouble()) }
+                scrubbing = null
+            },
+            valueRange = 0f..state.durationSeconds.toFloat().coerceAtLeast(0.001f),
+            enabled = seekable,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = formatTime(shown.toDouble()),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = formatTime(state.durationSeconds),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         val message = state.metadata["message"].orEmpty()
         val rows = FIELDS.mapNotNull { (key, label) ->

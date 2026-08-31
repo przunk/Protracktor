@@ -51,6 +51,17 @@ public:
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *stream, void *audioData,
                                           int32_t numFrames) override {
         auto *out = static_cast<float *>(audioData);
+
+        // A seek requested from another thread is applied HERE rather than there. libopenmpt's
+        // module is not safe to move under a read in progress, and the audio callback is the only
+        // thread that reads it, so handing the request over and letting the callback act on it
+        // removes the race without stopping the stream and clicking.
+        const double seekTo = pendingSeek_.exchange(NO_SEEK, std::memory_order_acq_rel);
+        if (seekTo >= 0.0) {
+            module_->set_position_seconds(seekTo);
+            finished_.store(false, std::memory_order_release);
+        }
+
         const std::size_t rendered = module_->read_interleaved_stereo(
             stream->getSampleRate(), static_cast<std::size_t>(numFrames), out);
 
@@ -71,6 +82,20 @@ public:
     }
 
     bool isFinished() const { return finished_.load(std::memory_order_acquire); }
+
+    /**
+     * Asks for a new position. Applied by the audio callback on its next pass, or immediately when
+     * nothing is playing and there is no callback to hand it to.
+     */
+    void seek(double seconds) {
+        const double target = seconds < 0.0 ? 0.0 : seconds;
+        if (stream_) {
+            pendingSeek_.store(target, std::memory_order_release);
+        } else {
+            module_->set_position_seconds(target);
+            finished_.store(false, std::memory_order_release);
+        }
+    }
 
     /** Back to the beginning and playing again. Used for repeat-one and for replaying a finished track. */
     bool restart() {
@@ -141,6 +166,11 @@ private:
     std::unique_ptr<openmpt::module> module_;
     std::shared_ptr<oboe::AudioStream> stream_;
     std::atomic<bool> finished_{false};
+
+    // -1 means "nothing requested". A sentinel rather than a second flag: one atomic exchange in
+    // the callback both reads the request and clears it.
+    static constexpr double NO_SEEK = -1.0;
+    std::atomic<double> pendingSeek_{NO_SEEK};
 };
 
 Player *asPlayer(jlong handle) { return reinterpret_cast<Player *>(handle); }
@@ -188,6 +218,11 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeIsFinished(JNIEnv *, jclas
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, jlong handle) {
     return asPlayer(handle)->restart() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlong handle, jdouble seconds) {
+    asPlayer(handle)->seek(seconds);
 }
 
 JNIEXPORT jstring JNICALL

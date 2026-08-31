@@ -20,14 +20,35 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.przunk.protracktor.engine.NativeEngine
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * Something to tell the user.
+ *
+ * Carries an id so that two identical texts in a row are two separate notices rather than one that
+ * silently fails to reappear. [actionLabel] is the hook the undo work will hang on; nothing sets it
+ * yet.
+ */
+data class Message(
+    val text: String,
+    val actionLabel: String? = null,
+    val id: Long = nextMessageId(),
+)
+
+private var messageCounter = 0L
+
+private fun nextMessageId(): Long = ++messageCounter
 
 data class PlayerUiState(
     val queue: PlayQueue = PlayQueue(tracks = emptyList()),
@@ -37,7 +58,7 @@ data class PlayerUiState(
     val durationSeconds: Double = 0.0,
     val scanning: Boolean = false,
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
-    val message: String? = null,
+    val message: Message? = null,
 ) {
     val current: TrackRef? get() = queue.current
 }
@@ -49,6 +70,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     /** The open module. Owned here because native memory is invisible to the garbage collector. */
     private var track: NativeEngine.Track? = null
+
+    /**
+     * The in-flight open. Cancelled before a new one starts.
+     *
+     * Two quick presses of next used to start two audio streams at once: each press launched its
+     * own open, and the second overwrote `track` without closing the first, which went on playing
+     * with nobody holding it.
+     */
+    private var openJob: Job? = null
 
     init {
         // One loop drives both the progress bar and end-of-track handling. The native side flags
@@ -87,7 +117,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun appendTracks(found: List<TrackRef>, message: String) {
+    private fun appendTracks(found: List<TrackRef>, message: Message) {
         _state.update { current ->
             // Rebuilding the queue rather than mutating it keeps the play history meaningful: the
             // indices it holds must keep pointing at the same tracks.
@@ -102,11 +132,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun describeScan(count: Int): String = when (count) {
-        0 -> "Nothing playable found there."
-        1 -> "Added 1 track."
-        else -> "Added $count tracks."
-    }
+    private fun describeScan(count: Int): Message = Message(
+        when (count) {
+            0 -> "Nothing playable found there."
+            1 -> "Added 1 track."
+            else -> "Added $count tracks."
+        }
+    )
 
     /**
      * Drops one track.
@@ -129,14 +161,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 metadata = if (wasPlaying) emptyMap() else it.metadata,
                 positionSeconds = if (wasPlaying) 0.0 else it.positionSeconds,
                 durationSeconds = if (wasPlaying) 0.0 else it.durationSeconds,
-                message = "Removed ${removed.title}",
+                message = Message("Removed ${removed.title}"),
             )
         }
     }
 
     fun clearPlaylist() {
         stopPlayback()
-        _state.update { PlayerUiState(message = "Playlist cleared.") }
+        _state.update { PlayerUiState(message = Message("Playlist cleared.")) }
     }
 
     fun dismissMessage() = _state.update { it.copy(message = null) }
@@ -155,6 +187,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val queue = _state.value.queue
         if (!queue.hasPrevious) return
         openAndPlay(queue.previous())
+    }
+
+    fun seekTo(seconds: Double) {
+        val open = track ?: return
+        open.seekTo(seconds)
+        // Shown immediately rather than waiting for the next poll: a slider that springs back to
+        // where it was before catching up reads as a control that did not work.
+        _state.update { it.copy(positionSeconds = seconds) }
     }
 
     fun togglePlayPause() {
@@ -204,10 +244,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun openAndPlay(queue: PlayQueue) {
         val ref = queue.current ?: return
-        viewModelScope.launch {
+
+        // The queue advances NOW, not inside the coroutine. Two quick presses of next both read the
+        // old queue otherwise, and both advance to the same track.
+        _state.update { it.copy(queue = queue, playing = false, positionSeconds = 0.0) }
+
+        openJob?.cancel()
+        openJob = viewModelScope.launch {
             track?.close()
             track = null
-            _state.update { it.copy(queue = queue, playing = false, positionSeconds = 0.0) }
 
             val bytes = withContext(Dispatchers.IO) {
                 runCatching {
@@ -215,16 +260,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         .openInputStream(Uri.parse(ref.id))?.use { it.readBytes() }
                 }.getOrNull()
             }
+            ensureActive()
 
             if (bytes == null) {
-                _state.update { it.copy(message = "Could not read ${ref.title}") }
+                _state.update { it.copy(message = Message("Could not read ${ref.title}")) }
                 return@launch
             }
 
             val opened = withContext(Dispatchers.IO) { NativeEngine.open(bytes) }
             if (opened == null) {
-                _state.update { it.copy(message = "${ref.title} is not a format we can play yet") }
+                _state.update {
+                    it.copy(message = Message("${ref.title} is not a format we can play yet"))
+                }
                 return@launch
+            }
+
+            // Cancelled while the file was being read: throw away what was opened instead of
+            // starting a stream nobody asked for and nobody will stop.
+            if (!isActive) {
+                opened.close()
+                throw CancellationException()
             }
 
             track = opened
@@ -235,7 +290,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     metadata = opened.describe(),
                     durationSeconds = opened.durationSeconds(),
                     positionSeconds = 0.0,
-                    message = if (started) null else "Could not open the audio device",
+                    message = if (started) it.message else Message("Could not open the audio device"),
                 )
             }
         }

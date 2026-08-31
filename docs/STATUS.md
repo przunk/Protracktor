@@ -138,6 +138,9 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 - **R6 (several playlists) is NOT met.** There is one playlist. The top bar shows its name as plain
   text rather than as the switcher the navigation model calls for — a switcher with nothing to
   switch to would be a control that does nothing (AGENTS.md §7), so it waits for persistence.
+- **Seeking works for tracker formats but has no capability flag yet.** `libopenmpt` can seek; the
+  CPU-emulator backends coming later cannot, and the UI does not yet ask which it is dealing with
+  (`docs/ARCHITECTURE.md` §5 says it must).
 - **R9 (playback starts immediately) is untested.** Nothing is cached and nothing is prepared ahead;
   a small local module is fast because it is small, not because we made it so.
 - **Folder scanning filters by file extension**, not by probing content as
@@ -151,6 +154,13 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
   that drives the progress bar notices it.
 
 ## Fixed
+
+- **2026-08-31 — pressing next twice quickly played two tracks at once.** Each press launched its
+  own open; the second overwrote the handle without closing the first, which kept playing with
+  nobody holding it. Two things were wrong: the queue advanced *inside* the coroutine, so both
+  presses read the same starting point, and there was nothing to cancel an open already in flight.
+  The queue now advances synchronously and the in-flight open is cancelled, with anything it had
+  already opened closed rather than started.
 
 - **2026-08-31 — next and previous "behaved randomly", reported from a device.** Navigation walked
   the play history in *every* mode. That is right under shuffle — R5 asks for exactly it — and wrong
