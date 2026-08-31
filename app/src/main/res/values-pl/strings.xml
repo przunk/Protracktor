@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Protracktor</string>
+
+    <string name="playlist_default_name">Playlista</string>
+    <string name="playlist_empty_title">Jeszcze tu pusto</string>
+    <string name="playlist_empty_body">Dodaj katalog z modułami, a pojawią się tutaj.</string>
+
+    <plurals name="track_count">
+        <item quantity="one">%d utwór</item>
+        <item quantity="few">%d utwory</item>
+        <item quantity="many">%d utworów</item>
+        <item quantity="other">%d utworu</item>
+    </plurals>
+
+    <string name="dock_idle_title">Nic nie gra</string>
+    <string name="dock_idle_subtitle">Dotknij, aby przeglądać</string>
+
+    <string name="action_browse">Przeglądaj</string>
+    <string name="action_add_folder">Dodaj katalog</string>
+    <string name="action_add_files">Dodaj pliki</string>
+    <string name="action_scanning">Skanowanie…</string>
+    <string name="action_clear_playlist">Wyczyść playlistę</string>
+
+    <string name="browse_title">Dodaj muzykę</string>
+    <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
+
+    <string name="field_format">Format</string>
+    <string name="field_tracker">Tracker</string>
+    <string name="field_artist">Autor</string>
+    <string name="field_channels">Kanały</string>
+    <string name="field_patterns">Wzorce</string>
+    <string name="field_instruments">Instrumenty</string>
+    <string name="field_samples">Sample</string>
+    <string name="field_subsongs">Podutwory</string>
+    <string name="field_message">Wiadomość</string>
+
+    <string name="a11y_remove_track">Usuń %1$s z playlisty</string>
+
+    <string name="a11y_play">Odtwórz</string>
+    <string name="a11y_pause">Pauza</string>
+    <string name="a11y_previous">Poprzedni utwór</string>
+    <string name="a11y_next">Następny utwór</string>
+    <string name="a11y_shuffle_off">Losowo wyłączone</string>
+    <string name="a11y_shuffle_on">Losowo włączone</string>
+    <string name="a11y_repeat_off">Powtarzanie wyłączone</string>
+    <string name="a11y_repeat_playlist">Powtarzanie playlisty</string>
+    <string name="a11y_repeat_one">Powtarzanie tego utworu</string>
+</resources>

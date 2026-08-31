@@ -17,6 +17,7 @@ finished.
 | `docs/STATUS.md` | what is done, what is open, known defects, branch state |
 | `docs/ARCHITECTURE.md` | how it is built and **why that way** |
 | `docs/OPEN_QUESTIONS.md` | decisions deliberately left open, with options |
+| `docs/BACKLOG.md` | agreed work not yet started, ordered so each item can be picked up cold |
 | `docs/WISHLIST.md` | ideas, with who raised them and when |
 | `docs/BUILD.md` | how to build debug, release and a store bundle |
 | `docs/LICENSES.md` | every third-party component, its licence, and what that obliges us to do |
