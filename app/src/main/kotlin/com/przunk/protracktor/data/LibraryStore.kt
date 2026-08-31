@@ -72,6 +72,34 @@ class LibraryStore(context: Context) {
             }
     }
 
+    suspend fun createPlaylist(name: String): Long = withContext(Dispatchers.IO) {
+        val db = helper.writableDatabase
+        val nextPosition = db.rawQuery("SELECT COALESCE(MAX(position), -1) + 1 FROM playlists", null)
+            .use { row -> if (row.moveToFirst()) row.getInt(0) else 0 }
+        db.insert("playlists", null, ContentValues().apply {
+            put("name", name)
+            put("position", nextPosition)
+        })
+    }
+
+    suspend fun renamePlaylist(id: Long, name: String) = withContext(Dispatchers.IO) {
+        helper.writableDatabase.update(
+            "playlists", ContentValues().apply { put("name", name) }, "id = ?", arrayOf(id.toString()),
+        )
+        Unit
+    }
+
+    /**
+     * Removes a playlist and its membership rows; the tracks themselves stay.
+     *
+     * A track belongs to the library, not to the list that happened to mention it -- deleting a
+     * playlist must not take the user's music with it.
+     */
+    suspend fun deletePlaylist(id: Long) = withContext(Dispatchers.IO) {
+        helper.writableDatabase.delete("playlists", "id = ?", arrayOf(id.toString()))
+        Unit
+    }
+
     // --- tracks -------------------------------------------------------------------------------
 
     suspend fun tracksIn(playlistId: Long): List<TrackRef> = withContext(Dispatchers.IO) {

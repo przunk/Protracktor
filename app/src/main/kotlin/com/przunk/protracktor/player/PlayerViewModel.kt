@@ -19,6 +19,7 @@ import android.app.Application
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import com.przunk.protracktor.data.GrantedFolder
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -33,15 +34,27 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val controller = PlaybackController.get(application)
 
     val state: StateFlow<PlayerUiState> get() = controller.state
+    val browse: StateFlow<BrowseState> get() = controller.browse
 
     fun addFolder(treeUri: Uri) = controller.addFolder(treeUri)
     fun addFiles(uris: List<Uri>) = controller.addFiles(uris)
     fun removeTrack(index: Int) = controller.removeTrack(index)
-    fun clearPlaylist() = controller.clearPlaylist()
     fun dismissMessage() = controller.dismissMessage()
     fun seekTo(seconds: Double) = controller.seekTo(seconds)
     fun toggleShuffle() = controller.toggleShuffle()
     fun cycleRepeat() = controller.cycleRepeat()
+
+    fun createPlaylist(name: String) = controller.createPlaylist(name)
+    fun renameActivePlaylist(name: String) = controller.renameActivePlaylist(name)
+    fun deletePlaylist(id: Long) = controller.deletePlaylist(id)
+    fun switchToPlaylist(id: Long) = controller.switchToPlaylist(id)
+
+    fun refreshFolders() = controller.refreshFolders()
+    fun rememberFolder(treeUri: Uri) = controller.rememberFolder(treeUri)
+    fun forgetFolder(uri: String) = controller.forgetFolder(uri)
+    fun openFolder(folder: GrantedFolder) = controller.openFolder(folder)
+    fun closeFolder() = controller.closeFolder()
+    fun addToPlaylist(tracks: List<TrackRef>) = controller.addToPlaylist(tracks)
 
     fun playAt(index: Int) {
         ensureServiceRunning()

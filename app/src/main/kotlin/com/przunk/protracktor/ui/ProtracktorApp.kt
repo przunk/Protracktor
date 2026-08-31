@@ -18,7 +18,7 @@ package com.przunk.protracktor.ui
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -59,8 +58,10 @@ import com.przunk.protracktor.player.PlayerViewModel
 @Composable
 fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
     var showBrowse by remember { mutableStateOf(false) }
+    var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // The foreground service runs with or without this; only its notification is suppressed. Asked
@@ -76,11 +77,13 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
-    ) { uri -> if (uri != null) { viewModel.addFolder(uri); showBrowse = false } }
+    ) { uri -> if (uri != null) viewModel.rememberFolder(uri) }
 
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) { viewModel.addFiles(uris); showBrowse = false } }
+
+    LaunchedEffect(showBrowse) { if (showBrowse) viewModel.refreshFolders() }
 
     state.message?.let { message ->
         LaunchedEffect(message.id) {
@@ -93,8 +96,8 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(stringResource(R.string.playlist_default_name))
+                    Column(modifier = Modifier.clickable { showPlaylists = true }) {
+                        Text(state.activePlaylistName ?: stringResource(R.string.playlist_default_name))
                         if (state.queue.tracks.isNotEmpty()) {
                             Text(
                                 text = pluralStringResource(
@@ -149,18 +152,31 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         }
     }
 
+    if (showPlaylists) {
+        BackHandler { showPlaylists = false }
+        PlaylistSheet(state = state, viewModel = viewModel, onDismiss = { showPlaylists = false })
+    }
+
     if (showBrowse) {
-        BackHandler { showBrowse = false }
+        // Back leaves the open folder first and the sheet second: one layer at a time, which is the
+        // rule the rest of the navigation follows.
+        BackHandler { if (browse.openFolder != null) viewModel.closeFolder() else showBrowse = false }
         ModalBottomSheet(
             onDismissRequest = { showBrowse = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
-            BrowseSheet(
-                scanning = state.scanning,
-                hasTracks = state.queue.tracks.isNotEmpty(),
+            BrowseScreen(
+                browse = browse,
+                playlistName = state.activePlaylistName,
                 onPickFolder = { folderPicker.launch(null) },
                 onPickFiles = { filePicker.launch(arrayOf("*/*")) },
-                onClear = { viewModel.clearPlaylist(); showBrowse = false },
+                onOpenFolder = viewModel::openFolder,
+                onForgetFolder = viewModel::forgetFolder,
+                onCloseFolder = viewModel::closeFolder,
+                onAdd = { tracks ->
+                    viewModel.addToPlaylist(tracks)
+                    showBrowse = false
+                },
             )
         }
     }
@@ -168,48 +184,25 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BrowseSheet(
-    scanning: Boolean,
-    hasTracks: Boolean,
-    onPickFolder: () -> Unit,
-    onPickFiles: () -> Unit,
-    onClear: () -> Unit,
+private fun PlaylistSheet(
+    state: com.przunk.protracktor.player.PlayerUiState,
+    viewModel: PlayerViewModel,
+    onDismiss: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        Text(
-            text = stringResource(R.string.browse_title),
-            style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+        PlaylistSwitcher(
+            playlists = state.playlists,
+            activeId = state.activePlaylistId,
+            onSelect = { id ->
+                viewModel.switchToPlaylist(id)
+                onDismiss()
+            },
+            onCreate = viewModel::createPlaylist,
+            onRename = viewModel::renameActivePlaylist,
+            onDelete = viewModel::deletePlaylist,
         )
-        Text(
-            text = stringResource(R.string.browse_body),
-            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        OutlinedButton(
-            onClick = onPickFolder,
-            enabled = !scanning,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                stringResource(
-                    if (scanning) R.string.action_scanning else R.string.action_add_folder
-                )
-            )
-        }
-        OutlinedButton(
-            onClick = onPickFiles,
-            enabled = !scanning,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.action_add_files)) }
-
-        if (hasTracks) {
-            TextButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.action_clear_playlist))
-            }
-        }
     }
 }

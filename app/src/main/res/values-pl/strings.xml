@@ -20,7 +20,32 @@
     <string name="action_add_folder">Dodaj katalog</string>
     <string name="action_add_files">Dodaj pliki</string>
     <string name="action_scanning">Skanowanie…</string>
-    <string name="action_clear_playlist">Wyczyść playlistę</string>
+
+    <string name="action_back">Wstecz</string>
+    <string name="action_delete">Usuń</string>
+    <string name="action_cancel">Anuluj</string>
+    <string name="action_save">Zapisz</string>
+
+    <string name="browse_select_all">Zaznacz wszystko</string>
+    <string name="browse_select_none">Odznacz wszystko</string>
+    <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
+    <plurals name="browse_add_selected">
+        <item quantity="one">Dodaj %d utwór</item>
+        <item quantity="few">Dodaj %d utwory</item>
+        <item quantity="many">Dodaj %d utworów</item>
+        <item quantity="other">Dodaj %d utworu</item>
+    </plurals>
+
+    <string name="playlist_switch_title">Playlisty</string>
+    <string name="playlist_new">Nowa playlista</string>
+    <string name="playlist_rename">Zmień nazwę</string>
+    <string name="playlist_name_label">Nazwa</string>
+    <string name="playlist_delete_title">Usunąć %1$s?</string>
+    <string name="playlist_delete_body">Playlista znika; utwory zostają w bibliotece.</string>
+
+    <string name="a11y_forget_folder">Zapomnij katalog %1$s</string>
+    <string name="a11y_rename_playlist">Zmień nazwę %1$s</string>
+    <string name="a11y_delete_playlist">Usuń %1$s</string>
 
     <string name="browse_title">Dodaj muzykę</string>
     <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
