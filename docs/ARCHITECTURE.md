@@ -117,3 +117,46 @@ duration policy — these are pure Kotlin, testable without an emulator, and the
 worth testing. There is no emulator in this environment (AGENTS.md §3), so anything that can only
 be verified by running the UI is verified by the owner on a real phone, and everything else is
 verified by tests that run here.
+
+## 8. Two kinds of source behind one index
+
+Decided 2026-08-31, after the owner asked whether online catalogues with a local cache were
+possible. They are, and the measurements below were taken rather than assumed.
+
+| Source | Index | File |
+| --- | --- | --- |
+| Local folder (SAF) | produced by a scan | already present |
+| Remote catalogue (Modland, HVSC) | downloaded once | fetched on demand, then cached |
+
+Both produce rows in the same index, so **a playlist can mix local and remote entries** — it refers
+to index rows, not to paths.
+
+### What was verified on 2026-08-31
+
+`https://modland.com/allmods.zip` is 5.75 MB and contains a single `allmods.txt` of **515,502**
+lines, each `<size>\t<Format>/<Author>/<title>.<ext>`. A file is fetched at
+`https://modland.com/pub/modules/` + the URL-encoded path; one was pulled and its length matched
+the index exactly, with a real ProTracker header rather than an error page. The server answers
+`Range` requests with `206 Partial Content`.
+
+`https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5` is 5.2 MB and downloads
+directly, which settles Q4: exact SID durations are available and do not have to be guessed.
+
+`sndh.net` did not resolve from this machine. **Unverified** — whether the domain is gone or the
+network here blocks it is unknown. Atari ST material is also in Modland, so nothing depends on it
+yet.
+
+### What follows from those numbers
+
+- **Browsing Modland works entirely offline.** The index is one 5.75 MB file; in Room it gives
+  browse-by-format and browse-by-author with no network. The network is first needed at the moment
+  a track is played.
+- **Range support means fetches resume**, and a partially fetched file can start playing.
+- The one fetch measured took 4 s for 212 KB. That is an argument for fetching the next track
+  ahead of time, not against remote catalogues.
+
+### Offline behaviour
+
+An entry whose file is not cached stays **visible and explicitly marked unavailable**. It is not
+hidden and not silently skipped: a press that does nothing and says nothing is a defect
+(AGENTS.md §7).

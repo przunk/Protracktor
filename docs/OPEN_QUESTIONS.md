@@ -28,9 +28,9 @@ plays is how a project like this dies.
   and `libopenmpt` is the easiest possible native build, so it de-risks the toolchain cheaply.
 - **(b) Everything at once.**
 
-Recommendation: **(a)**. Then `libsidplayfp`, then game-music-emu, then UADE last — UADE is the
-hardest (it emulates a whole 68k machine and ships original replayer binaries whose licensing needs
-a careful look).
+**Decided 2026-08-31: (a).** Then `libsidplayfp`, then game-music-emu, then UADE last — UADE is
+the hardest (it emulates a whole 68k machine and ships original replayer binaries whose licensing
+needs a careful look).
 
 ## Q3 — How the library gets its files
 
@@ -41,7 +41,10 @@ a careful look).
 - **(c) App-private storage with an import step.** Fastest and fully under our control, but the
   user's collection is duplicated.
 
-Recommendation: **(a)**. (b) is disqualified by what MediaStore indexes.
+**Decided 2026-08-31: (a).** (b) is disqualified by what MediaStore indexes.
+
+Remote catalogues were added alongside this, not instead of it — see `docs/ARCHITECTURE.md` §8.
+SAF is still what reaches the owner's existing collection on disk.
 
 ## Q4 — Track duration where the format has none
 
@@ -54,8 +57,13 @@ Most of these formats have no intrinsic length. Options, combinable:
 - **Loop detection** — some backends report a loop point.
 - **Fixed default + fade** — 3 minutes, say. Always works, often wrong.
 
-Question for the owner: is a downloaded songlength database acceptable, or should the app work
-entirely offline?
+**Decided 2026-08-31.** The app is both: it may use the network, and it must work offline with
+whatever is cached. A downloaded songlength database is therefore acceptable, and HVSC's
+`Songlengths.md5` was confirmed to be directly fetchable (5.2 MB), so SID durations are exact
+rather than guessed.
+
+Still open for the formats with no such database — silence detection, loop points, or a fixed
+default with a fade. To be settled once something plays and the options can be compared by ear.
 
 ## Q5 — Cache budget
 
