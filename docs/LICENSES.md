@@ -12,13 +12,13 @@ source we vendor, at the moment we vendor it, and this table is corrected then. 
 
 | Component | Covers | Licence expected | Verified |
 | --- | --- | --- | --- |
-| libopenmpt | MOD, XM, S3M, IT, MPTM and many others | BSD-3-Clause | no |
+| libopenmpt 0.8.9 | MOD, XM, S3M, IT, MPTM and many others | BSD-3-Clause | **yes, 2026-08-31** |
 | sc68 / libsc68 | Atari ST SNDH, YM | GPL-3.0-or-later | no |
 | libsidplayfp | C64 SID | GPL-2.0-**or-later** | no |
 | game-music-emu | NSF, GBS, SPC, VGM, HES, AY, KSS | LGPL-2.1-or-later | no |
 | ASAP | Atari 8-bit SAP | GPL-2.0-**or-later** | no |
 | UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
-| Oboe | audio output | Apache-2.0 | no |
+| Oboe 1.10.0 | audio output | Apache-2.0 | no |
 
 **The "or later" matters.** A dependency that turns out to be GPL-2-**only** cannot be combined
 with our Apache-2.0 UI stack under GPL-3, and invalidates the licence decision. If that is found,
@@ -28,6 +28,23 @@ stop and raise it with the owner — do not work around it.
 commercial and shareware Amiga music programs. UADE's own code is GPL; the status of those
 binaries is not clean, and that is a distribution question, not a linking one. To be settled before
 UADE is integrated, not after.
+
+## Verified
+
+**libopenmpt 0.8.9**, read from `LICENSE` in the source tarball on 2026-08-31:
+
+> Copyright (c) 2004-2026, OpenMPT Project Developers and Contributors
+> Copyright (c) 1997-2003, Olivier Lapicque
+> All rights reserved.
+> Redistribution and use in source and binary forms, with or without modification, are permitted
+> provided that the following conditions are met: […]
+
+Three-clause BSD — permissive, compatible with GPL-3, and it obliges us to reproduce that notice in
+anything we distribute. That obligation is not yet discharged: the app has no licences screen.
+Recorded here so it is not forgotten before a release.
+
+Sources are fetched by `scripts/fetch-native-deps.sh`, pinned to an exact version and verified
+against a SHA-256 recorded in that script. They are not committed.
 
 ## Android / JVM dependencies
 

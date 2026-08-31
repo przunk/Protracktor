@@ -4,16 +4,24 @@ Updated: 2026-08-31
 
 ## What works
 
-The project builds. `./scripts/build-debug.sh` produces an installable debug APK
-(`dist/protracktor-0.1.0-debug.apk`) containing a single placeholder screen. **Nothing plays yet**
-and there is no native code in the APK.
+`./scripts/build-debug.sh` produces an installable debug APK carrying the native player. The screen
+is a proof of concept: pick a module through the storage access framework, see its metadata, press
+play.
 
-Verified with `aapt2 dump badging` on the produced artifact rather than from the build log:
-package `com.przunk.protracktor`, `minSdkVersion 29`, `targetSdkVersion 36`, `compileSdkVersion 36`.
+**Not yet confirmed on a device that sound actually comes out.** That is the whole point of this
+stage and only the owner can establish it.
 
-**Confirmed on a real device on 2026-08-31**: the owner installed the debug APK and the
-placeholder screen appears. The build → phone chain works end to end, which is all this stage
-claimed.
+What *is* verified, on the produced artifact rather than from the build log:
+
+- `aapt2 dump badging`: `com.przunk.protracktor`, `minSdkVersion 29`, `targetSdkVersion 36`,
+  `compileSdkVersion 36`.
+- All three ABIs carry `libprotracktor_engine.so`, `liboboe.so` and `libc++_shared.so`
+  (4.50 / 2.50 / 4.67 MB for the engine on arm64-v8a, armeabi-v7a, x86_64).
+- `llvm-nm -D` on the shipped `libprotracktor_engine.so` exports exactly the seven
+  `Java_com_przunk_protracktor_engine_NativeEngine_*` symbols that `NativeEngine.kt` declares. A
+  mismatch here is an `UnsatisfiedLinkError` on the device and nothing earlier would have caught it.
+- The earlier placeholder build was installed by the owner on 2026-08-31 and ran, so the
+  build → phone chain itself is established.
 
 ## Finished
 
@@ -33,6 +41,11 @@ claimed.
   (`docs/ARCHITECTURE.md` §8). Modland's index and file endpoints were measured, not assumed.
 - **2026-08-31** — `AGENTS.md` in the project root records the English-documentation override as
   applying to Protracktor only; the workspace-wide rule is untouched.
+- **2026-08-31** — Native layer: libopenmpt 0.8.9 vendored by `scripts/fetch-native-deps.sh`
+  (pinned, SHA-256 verified), built by a CMakeLists that reads its source list from upstream's own
+  `Android.mk`. JNI engine with Oboe output in `native/engine/`. Kotlin facade in
+  `engine/NativeEngine.kt`, with the R8 keep rule that stops the release build renaming the native
+  method names.
 
 ## Surprises worth remembering
 
@@ -40,6 +53,19 @@ claimed.
   not a warning. But the Compose compiler plugin (`org.jetbrains.kotlin.plugin.compose`) is *still*
   separate and *still* required whenever `buildFeatures.compose` is on. The two facts look
   contradictory and cost two failed configurations to establish.
+- **CMake's regex engine has no `\t` escape.** An anchor written `"^[ \t]*..."` matches nothing at
+  all on a tab-indented file, silently. Strip the line with `string(STRIP)` and anchor on `^`
+  instead.
+- **`file(STRINGS)` treats a trailing backslash as a list escape.** Reading a makefile whose source
+  list is continued with `\` yields the entire block as *one* list element beginning
+  `LOCAL_SRC_FILES += \`, so per-line matching finds nothing. Read the file whole and use
+  `string(REGEX MATCHALL)`.
+  Both of the above produced zero parsed sources and both were caught only because the CMake asserts
+  the count is over 100. Without that assert, the build would have produced a correctly linking
+  libopenmpt with no decoders in it.
+- **Oboe's prefab package requires `c++_shared`.** CMake's NDK default is `c++_static`, so the first
+  native build fails with `[CXX1212] User is using a static STL but library requires a shared STL`.
+  Fixed with `-DANDROID_STL=c++_shared`.
 - **`unzip` is not installed in this environment.** Irrelevant to the app (archive handling will be
   native), but it will bite any script that reaches for it. Use Python's `zipfile` instead.
 - **`sndh.net` does not resolve from this machine.** Whether the domain is gone or the network here
@@ -50,9 +76,10 @@ claimed.
 
 ## Next
 
-1. Native layer proof of concept: `libopenmpt` + Oboe playing one `.mod` from the placeholder
-   Activity. This decides whether the whole approach holds, so it comes before any UI work.
-2. `sc68` integration for SNDH — the format that started this project.
+1. **The owner installs this APK and reports whether a module plays.** Everything below assumes it
+   does.
+2. `sc68` integration for SNDH — the format that started this project. `sndh.net` did not resolve
+   from here, so finding a source for it is part of the step.
 3. Room index and the library scan, which is what R9 (instant start) actually depends on.
 
 Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does not block steps 1–3.

@@ -40,6 +40,37 @@ Those last two are not tidiness. `/mnt/workspace` is a 9p mount that rejects `ch
 lives on the Linux filesystem, and every one of them is namespaced to Protracktor so a build here
 cannot disturb another project in the workspace.
 
+## Native dependencies
+
+```bash
+./scripts/fetch-native-deps.sh [--force]
+```
+
+Downloads the decoder sources into `native/vendor/`, which is gitignored. Each is pinned to an exact
+version and verified against a SHA-256 recorded in the script; a mismatch refuses to unpack rather
+than warning. Downloads are cached in `~/.protracktor/downloads`, so a re-fetch costs nothing.
+
+Run it once before the first build. `build-debug.sh` does not run it for you, because a build that
+silently reaches out to the network is a build that behaves differently depending on whether you
+noticed.
+
+### Checking one decoder quickly
+
+A full Gradle build compiles every ABI. To check that a newly vendored library compiles at all,
+configure the backends alone for one ABI — about a minute instead of several:
+
+```bash
+source scripts/use-tooling.sh
+cmake -S native -B /tmp/protracktor-nativetest -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 \
+  -DCMAKE_BUILD_TYPE=Release -DPROTRACKTOR_BUILD_ENGINE=OFF
+ninja -C /tmp/protracktor-nativetest
+```
+
+`PROTRACKTOR_BUILD_ENGINE=OFF` is required outside Gradle: the engine links Oboe, which arrives as a
+prefab package unpacked from an AAR, and only the Gradle build unpacks it.
+
 ## Builds
 
 ```bash
