@@ -21,6 +21,7 @@
     <string name="action_add_files">Dodaj pliki</string>
     <string name="action_scanning">Skanowanie…</string>
 
+    <string name="action_undo">Cofnij</string>
     <string name="action_back">Wstecz</string>
     <string name="action_delete">Usuń</string>
     <string name="action_cancel">Anuluj</string>

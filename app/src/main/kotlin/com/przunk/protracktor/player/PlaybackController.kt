@@ -109,6 +109,9 @@ class PlaybackController private constructor(private val context: Context) {
         private const val POLL_INTERVAL_MS = 200L
         private const val SAVE_DEBOUNCE_MS = 400L
         const val DEFAULT_PLAYLIST_NAME = "Playlist"
+
+        /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
+        const val UNDO = "undo"
     }
 
     // Main.immediate so a press and the state change it causes land in the same frame; the work
@@ -376,12 +379,18 @@ class PlaybackController private constructor(private val context: Context) {
         }
     )
 
+    /** What [undoRemoval] would put back. Cleared once its notice is gone. */
+    private var lastRemoval: Pair<Int, TrackRef>? = null
+
     /**
      * Drops one track.
      *
      * Removing what is playing stops playback rather than jumping somewhere: silently starting a
      * different track because the user deleted this one is a surprise, and there is no reading of
      * "remove" that asks for it.
+     *
+     * No confirmation. Undo is the better answer for one row -- it costs nothing when the user meant
+     * it, and a dialog on every delete is a toll paid by the people who did.
      */
     fun removeTrack(index: Int) {
         val currentState = _state.value
@@ -389,6 +398,7 @@ class PlaybackController private constructor(private val context: Context) {
         val wasPlaying = currentState.queue.currentIndex == index
 
         if (wasPlaying) stopPlayback()
+        lastRemoval = index to removed
 
         _state.update {
             it.copy(
@@ -397,13 +407,30 @@ class PlaybackController private constructor(private val context: Context) {
                 metadata = if (wasPlaying) emptyMap() else it.metadata,
                 positionSeconds = if (wasPlaying) 0.0 else it.positionSeconds,
                 durationSeconds = if (wasPlaying) 0.0 else it.durationSeconds,
-                message = Message("Removed ${removed.title}"),
+                message = Message(text = "Removed ${removed.title}", actionLabel = UNDO),
             )
         }
         scheduleSave()
     }
 
-    fun dismissMessage() = _state.update { it.copy(message = null) }
+    /** Puts the last removed track back where it was. */
+    fun undoRemoval() {
+        val (index, track) = lastRemoval ?: return
+        lastRemoval = null
+        _state.update {
+            val restored = it.queue.tracks.toMutableList().apply {
+                // The list may have changed since; clamp rather than throw.
+                add(index.coerceIn(0, size), track)
+            }
+            it.copy(queue = it.queue.withTracks(restored), message = null)
+        }
+        scheduleSave()
+    }
+
+    fun dismissMessage() {
+        lastRemoval = null
+        _state.update { it.copy(message = null) }
+    }
 
     // --- transport ----------------------------------------------------------------------------
 

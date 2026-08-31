@@ -28,7 +28,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.przunk.protracktor.R
+import com.przunk.protracktor.player.PlaybackController
 import com.przunk.protracktor.player.PlayerViewModel
 
 /**
@@ -85,9 +88,15 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
 
     LaunchedEffect(showBrowse) { if (showBrowse) viewModel.refreshFolders() }
 
+    val undoLabel = stringResource(R.string.action_undo)
     state.message?.let { message ->
         LaunchedEffect(message.id) {
-            snackbarHostState.showSnackbar(message.text)
+            val result = snackbarHostState.showSnackbar(
+                message = message.text,
+                actionLabel = if (message.actionLabel == PlaybackController.UNDO) undoLabel else null,
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) viewModel.undoRemoval()
             viewModel.dismissMessage()
         }
     }
@@ -129,7 +138,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onRepeat = viewModel::cycleRepeat,
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
     ) { insets ->
         PlaylistScreen(
             state = state,
