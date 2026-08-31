@@ -4,6 +4,14 @@ Updated: 2026-08-31
 
 ## What works
 
+The three-layer shell from `docs/OPEN_QUESTIONS.md` Q1 is built: playlist as the only destination,
+Now Playing expanding from the dock, Browse as a modal, and the dock present on every surface with
+shuffle / previous / play / next / repeat. Adding a folder walks it with the storage access
+framework and fills the playlist; tracks play, advance, and honour shuffle and repeat.
+
+Polish and English strings from the first screen (R10).
+
+
 `./scripts/build-debug.sh` produces an installable debug APK carrying the native player. The screen
 is a proof of concept: pick a module through the storage access framework, see its metadata, press
 play.
@@ -27,6 +35,11 @@ What *is* verified, on the produced artifact rather than from the build log:
   the JNI method names — see the note below about the two it dropped.
 
 ## Finished
+
+- **2026-08-31** — The Compose UI: dock, playlist, Now Playing, Browse, theme with dynamic colour,
+  Polish and English strings. `PlayerViewModel` ties `PlayQueue` to the native engine. The engine
+  gained a finished flag and a restart, polled rather than pushed — signalling from the audio
+  callback would mean attaching a JNI environment on the thread that must never be late.
 
 - **2026-08-31** — `PlayQueue`: play order, history and repeat/shuffle semantics as pure Kotlin with
   no Android in sight. 16 unit tests, all four deliberate mutations of the logic killed by them.
@@ -112,12 +125,29 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does not block steps 1–3.
 
+## Not built yet — and the requirements they leave open
+
+Naming these because a `STATUS.md` that implies more than exists is worse than none.
+
+- **R2 (the session survives leaving the app) is NOT met.** The playlist lives in memory and dies
+  with the process. This is the requirement that started the project and it needs the persistent
+  index; it is the next stage, not an oversight.
+- **R6 (several playlists) is NOT met.** There is one playlist. The top bar shows its name as plain
+  text rather than as the switcher the navigation model calls for — a switcher with nothing to
+  switch to would be a control that does nothing (AGENTS.md §7), so it waits for persistence.
+- **R9 (playback starts immediately) is untested.** Nothing is cached and nothing is prepared ahead;
+  a small local module is fast because it is small, not because we made it so.
+- **Folder scanning filters by file extension**, not by probing content as
+  `docs/ARCHITECTURE.md` §5 requires. Probing means reading every candidate, which belongs with the
+  index rather than with a foreground scan. `SupportedFormats` says so in its own documentation.
+- **No playback service.** Audio stops when the process does; there is no notification and no media
+  session, so headphone buttons and Bluetooth controls do nothing.
+
 ## Known defects
 
-- **Play/Stop label goes stale when a module reaches its end.** The native callback stops the stream
-  by itself, but nothing tells the UI, so the button still reads "Stop". Cosmetic, on a screen that
-  the real UI replaces. Recorded rather than patched because the fix belongs with the player state
-  the real UI needs anyway.
+- ~~Play/Stop label goes stale when a module reaches its end.~~ **Fixed 2026-08-31** by the polling
+  loop in `PlayerViewModel`: the native side raises a flag when the module ends and the same tick
+  that drives the progress bar notices it.
 
 ## Fixed
 

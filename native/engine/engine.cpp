@@ -27,6 +27,7 @@
 #include <libopenmpt/libopenmpt.hpp>
 
 #include <android/log.h>
+#include <atomic>
 #include <cstring>
 #include <memory>
 #include <sstream>
@@ -58,13 +59,30 @@ public:
             // then ask Oboe to stop -- a player that runs off the end into noise is worse than one
             // that stops.
             std::memset(out + rendered * 2, 0, (numFrames - rendered) * 2 * sizeof(float));
+
+            // A flag rather than a callback into Java. Attaching a JNI environment from the audio
+            // callback means allocation and possible blocking on the one thread that must never be
+            // late; Kotlin is polling this side anyway to drive the progress bar, so it costs
+            // nothing to let it notice there too.
+            finished_.store(true, std::memory_order_release);
             return oboe::DataCallbackResult::Stop;
         }
         return oboe::DataCallbackResult::Continue;
     }
 
+    bool isFinished() const { return finished_.load(std::memory_order_acquire); }
+
+    /** Back to the beginning and playing again. Used for repeat-one and for replaying a finished track. */
+    bool restart() {
+        stop();
+        module_->set_position_seconds(0.0);
+        finished_.store(false, std::memory_order_release);
+        return start();
+    }
+
     bool start() {
         if (stream_) return true;
+        finished_.store(false, std::memory_order_release);
 
         oboe::AudioStreamBuilder builder;
         builder.setDirection(oboe::Direction::Output)
@@ -122,6 +140,7 @@ public:
 private:
     std::unique_ptr<openmpt::module> module_;
     std::shared_ptr<oboe::AudioStream> stream_;
+    std::atomic<bool> finished_{false};
 };
 
 Player *asPlayer(jlong handle) { return reinterpret_cast<Player *>(handle); }
@@ -159,6 +178,16 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeStart(JNIEnv *, jclass, jl
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeStop(JNIEnv *, jclass, jlong handle) {
     asPlayer(handle)->stop();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeIsFinished(JNIEnv *, jclass, jlong handle) {
+    return asPlayer(handle)->isFinished() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, jlong handle) {
+    return asPlayer(handle)->restart() ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jstring JNICALL

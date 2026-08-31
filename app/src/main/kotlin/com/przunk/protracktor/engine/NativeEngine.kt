@@ -54,6 +54,18 @@ object NativeEngine {
 
         fun start(): Boolean = nativeStart(handle())
 
+        /**
+         * True once the module has played to its end.
+         *
+         * Polled rather than pushed: signalling from the audio callback would mean attaching a JNI
+         * environment on the one thread that must never be late. The caller is polling for position
+         * anyway.
+         */
+        fun isFinished(): Boolean = nativeIsFinished(handle())
+
+        /** Back to the beginning and playing. For repeat-one, and for replaying a finished track. */
+        fun restart(): Boolean = nativeRestart(handle())
+
         fun stop() = nativeStop(handle())
 
         fun positionSeconds(): Double = nativePositionSeconds(handle())
@@ -78,6 +90,8 @@ object NativeEngine {
     @JvmStatic private external fun nativeClose(handle: Long)
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
     @JvmStatic private external fun nativeStop(handle: Long)
+    @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
+    @JvmStatic private external fun nativeRestart(handle: Long): Boolean
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double
     @JvmStatic private external fun nativeDurationSeconds(handle: Long): Double

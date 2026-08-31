@@ -1,8 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Protracktor</string>
-    <string name="poc_notice">Proof of concept: pick a module and it should play. Nothing else works yet.</string>
-    <string name="action_open_module">Open module</string>
-    <string name="action_play">Play</string>
-    <string name="action_stop">Stop</string>
+
+    <string name="playlist_default_name">Playlist</string>
+    <string name="playlist_empty_title">Nothing here yet</string>
+    <string name="playlist_empty_body">Add a folder of modules and they will show up here.</string>
+
+    <plurals name="track_count">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
+
+    <string name="dock_idle_title">Nothing playing</string>
+    <string name="dock_idle_subtitle">Tap to browse</string>
+
+    <string name="action_browse">Browse</string>
+    <string name="action_add_folder">Add a folder</string>
+    <string name="action_add_files">Add files</string>
+    <string name="action_scanning">Scanning…</string>
+    <string name="action_clear_playlist">Clear the playlist</string>
+
+    <string name="browse_title">Add music</string>
+    <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>
+
+    <string name="field_format">Format</string>
+    <string name="field_tracker">Tracker</string>
+    <string name="field_artist">Artist</string>
+    <string name="field_channels">Channels</string>
+    <string name="field_patterns">Patterns</string>
+    <string name="field_instruments">Instruments</string>
+    <string name="field_samples">Samples</string>
+    <string name="field_subsongs">Subsongs</string>
+    <string name="field_message">Message</string>
+
+    <string name="a11y_play">Play</string>
+    <string name="a11y_pause">Pause</string>
+    <string name="a11y_previous">Previous track</string>
+    <string name="a11y_next">Next track</string>
+    <string name="a11y_shuffle_off">Shuffle off</string>
+    <string name="a11y_shuffle_on">Shuffle on</string>
+    <string name="a11y_repeat_off">Repeat off</string>
+    <string name="a11y_repeat_playlist">Repeating the playlist</string>
+    <string name="a11y_repeat_one">Repeating this track</string>
 </resources>
