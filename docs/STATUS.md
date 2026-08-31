@@ -28,6 +28,10 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Finished
 
+- **2026-08-31** — `PlayQueue`: play order, history and repeat/shuffle semantics as pure Kotlin with
+  no Android in sight. 16 unit tests, all four deliberate mutations of the logic killed by them.
+  `scripts/test-protracktor.sh` runs them quietly.
+
 - **2026-08-31** — Repository created. GPL-3.0-or-later, remote `https://github.com/przunk/protracktor`
   (private for now).
 - **2026-08-31** — Build environment scripts: `use-tooling.sh`, `check-tooling.sh`,
@@ -66,6 +70,19 @@ What *is* verified, on the produced artifact rather than from the build log:
   `nativeDurationSeconds` were removed because no Kotlin code calls them yet. That is correct — JNI
   resolves lazily and per call — but it looks exactly like a broken keep rule at a glance, so check
   whether the missing method is simply unused before changing anything.
+- **A test can pass for the wrong reason and mutation testing is how you find out.** The test for
+  "forward after backward replays the same track" was built with plain `next()` calls, which makes
+  the history identical to the play order — so deleting the redo branch entirely still produced the
+  right answer by accident. It only became a real test once the history was made to *diverge* from
+  the order with `startAt`. Two further rounds were needed: the mutation was also shadowed by
+  `appended()` failing to truncate the forward branch, a latent inconsistency that is unreachable
+  today only because another branch runs first.
+- **`set -e` with `set -o pipefail` kills a script on a grep that matches nothing.** The test
+  script's failure report died halfway through, so the run that most needed explaining printed
+  least. Every grep that may legitimately find nothing now ends in `|| true`.
+- **Filtering test-result XML by modification time reports zero tests on every second run**, because
+  Gradle skips the task when nothing changed. The zero-tests guard has to distinguish "skipped as
+  up to date" from "genuinely ran nothing", and now says which.
 - **CMake's regex engine has no `\t` escape.** An anchor written `"^[ \t]*..."` matches nothing at
   all on a tab-indented file, silently. Strip the line with `string(STRIP)` and anchor on `^`
   instead.
