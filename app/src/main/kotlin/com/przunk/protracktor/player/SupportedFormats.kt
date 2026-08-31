@@ -29,7 +29,7 @@ package com.przunk.protracktor.player
  */
 object SupportedFormats {
 
-    /** What libopenmpt handles today. Grows as backends are added. */
+    /** What the backends handle today. Grows as more are added. */
     val extensions: Set<String> = setOf(
         // The mainstream trackers
         "mod", "xm", "s3m", "it", "mptm",
@@ -39,6 +39,9 @@ object SupportedFormats {
         // PC and console lineage
         "far", "gdm", "imf", "mdl", "mtm", "ptm", "stm", "ult", "669", "amf", "ams", "dmf",
         "dsm", "dtm", "j2b", "mt2", "psm", "plm", "rtm", "c67", "cba", "gt2", "mo3", "xmf",
+        // Atari ST, through sc68. SNDH is 68000 machine code rather than note data, which is why it
+        // needs an emulator and why nothing else in this list resembles it.
+        "sndh", "snd", "sc68", "ym",
         // Containers libopenmpt unpacks itself
         "mmcmp", "pp20", "xpk", "umx",
     )
@@ -46,6 +49,7 @@ object SupportedFormats {
     /** Filename prefixes used instead of extensions by several Amiga trackers. */
     private val prefixes: Set<String> = setOf(
         "mod", "med", "okt", "dbm", "digi", "ahx", "hvl", "stk", "sfx", "ice", "fc", "smod",
+        "sndh",
     )
 
     fun looksPlayable(fileName: String): Boolean {

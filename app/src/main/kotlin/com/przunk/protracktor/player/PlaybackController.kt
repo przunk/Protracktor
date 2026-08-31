@@ -70,6 +70,15 @@ data class PlayerUiState(
 ) {
     val current: TrackRef? get() = queue.current
 
+    /**
+     * Whether the current backend can move to a position at all.
+     *
+     * Asked, not assumed. sc68 emulates a 68000 and has no way back except running the machine
+     * again from the start, so offering a slider there would be offering a control that cannot be
+     * honoured (docs/ARCHITECTURE.md §5).
+     */
+    val seekable: Boolean get() = metadata["seekable"] != "0" && durationSeconds > 0.0
+
     val activePlaylistName: String?
         get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
 }
