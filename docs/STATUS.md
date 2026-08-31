@@ -36,6 +36,10 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Finished
 
+- **2026-09-01** — Playback survives the app leaving the screen: `PlaybackController` is now a
+  process-wide singleton and `PlaybackService` keeps it in the foreground with a notification
+  carrying previous, play/pause, next and stop.
+
 - **2026-09-01** — **R2 met.** Playlist, shuffle, repeat and the track last played survive a restart,
   in a hand-written SQLite database (`docs/ARCHITECTURE.md` §9 explains why not Room). Granted SAF
   folders are remembered too. Six tests run the schema against a real SQLite engine on the JVM.
@@ -133,9 +137,9 @@ Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does no
 
 Naming these because a `STATUS.md` that implies more than exists is worse than none.
 
-- **No playback service, so audio stops with the process.** Confirmed on a device: playback does not
-  survive long in the background. This is the next stage and it brings the notification, the media
-  session, and headphone and Bluetooth controls with it.
+- **No media session and no audio focus.** The foreground service keeps playback alive and its
+  notification has transport buttons, but lock-screen controls, Bluetooth and headphone buttons do
+  nothing, and another app starting playback will talk over us.
 - **R6 (several playlists) is NOT met.** There is one playlist. The top bar shows its name as plain
   text rather than as the switcher the navigation model calls for — a switcher with nothing to
   switch to would be a control that does nothing (AGENTS.md §7), so it waits for persistence.

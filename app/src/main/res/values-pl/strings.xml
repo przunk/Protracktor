@@ -37,6 +37,9 @@
 
     <string name="a11y_remove_track">Usuń %1$s z playlisty</string>
 
+    <string name="notification_stop">Zatrzymaj</string>
+    <string name="notification_channel_playback">Odtwarzanie</string>
+
     <string name="a11y_play">Odtwórz</string>
     <string name="a11y_pause">Pauza</string>
     <string name="a11y_previous">Poprzedni utwór</string>

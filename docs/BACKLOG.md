@@ -79,22 +79,23 @@ decision he made.
 Material 3's `Snackbar` has no swipe dismissal. Wrap it with a horizontal drag that dismisses past a
 threshold, via a custom `snackbarHost`.
 
-## 5. Playback service and media session
+## 5. Media session and audio focus
+
+The foreground service landed on 2026-09-01; playback survives the app leaving the screen and the
+notification carries transport. What is left of the original item:
 
 > "nie gra za długo w tle"
 
 The largest item and the one that makes the app usable rather than demonstrable.
 
-- A `MediaSessionService` with a foreground notification, so playback survives the app leaving the
-  foreground.
 - Audio focus, becoming-noisy, headphone and Bluetooth controls, lock-screen transport.
 - `docs/ARCHITECTURE.md` §4 already picked the approach: Media3's `SimpleBasePlayer` over the native
   engine, so the session comes without writing an ExoPlayer renderer for a synthesiser.
 - Android 14+ requires a `foregroundServiceType` and its permission; `targetSdk` is 36, so this is
   not optional.
 
-**Done when:** playback continues with the app swiped away, the notification shows the track and its
-transport, and a headphone button pauses it.
+**Done when:** a headphone button pauses playback, the lock screen shows transport, and another app
+starting audio pauses us instead of playing over us.
 
 ## 6. sc68 — SNDH, the format that started this
 
