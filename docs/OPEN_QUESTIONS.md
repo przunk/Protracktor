@@ -7,17 +7,74 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ## Q1 — Navigation model (R7)
 
-The requirement says browsing must not be a page you slide onto by accident. It does not say what
-replaces it.
+**Decided 2026-08-31.** The owner delegated the choice and fixed one requirement: a player bar
+docked at the bottom of every screen carrying previous / play / next / shuffle / repeat-one.
 
-- **(a) Bottom navigation bar, 3 destinations** — Now Playing / Playlists / Library. The docked
-  player bar sits above it. Conventional, one tap to anywhere, costs a strip of vertical space.
-- **(b) Single screen + browser as a modal sheet.** Now Playing is the app; browsing slides up over
-  it and is dismissed. Maximum room for metadata, and browsing is unmistakably deliberate.
-- **(c) Navigation rail on wide screens, bottom bar on narrow.** Best on a tablet, most work.
+### The shape
 
-Recommendation: **(a)**, with (c) added later when tablet layout is tackled. It is the pattern
-Material 3 is designed around and it is the least surprising.
+Three layers, only one of which is a real destination.
+
+```
+┌──────────────────────────────────────┐
+│  Lotus 3            ▾      ⌕  Browse │  top bar: active playlist as a button
+├──────────────────────────────────────┤
+│                                      │
+│   the active playlist                │  the only destination; what you look
+│   (tracks, reorderable)              │  at almost all of the time
+│                                      │
+│                                      │
+├──────────────────────────────────────┤
+│ ▸ rebels - megablast     4-Mat       │  dock, identity row -> tap to expand
+│ ────────────────────────             │  progress
+│  ⤨    ⏮    ▶    ⏭    ⟳¹             │  dock, transport row
+└──────────────────────────────────────┘
+```
+
+- **Playlist** is the home surface. It is the active playlist, not the whole library — shuffle and
+  repeat operate inside it (R6), so it is also the thing whose contents you need to see.
+- **Now Playing** expands upward from the dock, over the playlist. It is the metadata screen (R4),
+  not a separate tab.
+- **Browse** opens as a full-screen modal from the top bar: folders, formats, authors, the remote
+  catalogues. You add or play from it and dismiss it.
+- **The playlist switcher** is a bottom sheet, opened by tapping the playlist name in the top bar.
+
+Back always descends one layer, which is the only rule the user has to learn.
+
+### Why not a bottom navigation bar
+
+It was the earlier recommendation, and the dock is what changed it. A nav bar *plus* a dock is two
+stacked strips of furniture — roughly 160dp of a phone screen spent on chrome before any content.
+The dock already provides the one thing a nav bar would: a fixed anchor that is present everywhere.
+
+### Why browsing is a modal rather than a tab
+
+R7 says browsing must not be something you slide onto by accident. A full-screen modal you open and
+dismiss cannot be entered by accident and cannot be left by accident either. It also gets the whole
+screen, which the library tree wants and a tab sharing space with a nav bar does not.
+
+### Dock details
+
+- **Repeat is one control cycling three states**: off → repeat playlist → repeat one. Shuffle is a
+  separate toggle, with the real backward history R5 requires.
+- **State is never carried by colour alone** (AGENTS.md §8). Repeat-one uses a different icon from
+  repeat-all, not the same icon tinted, and the content description states the mode in words.
+- **With nothing loaded the dock stays, but is visibly inert**: transport disabled, identity row
+  reading "Nothing playing — Browse" and acting as the button that opens Browse. A permanently dead
+  strip teaches the user something untrue (AGENTS.md §7); this turns it into the obvious next step.
+- **Tap targets**: five controls on a phone is tight but standard. Play is the larger filled centre;
+  the rest are icon buttons at the 48dp minimum.
+
+### Wide screens
+
+The dock stays full width at the bottom. Browse becomes a side pane instead of a full-screen modal,
+and Now Playing sits beside the playlist rather than over it. Same three layers, laid out rather
+than stacked.
+
+### Standing objection
+
+This is the agent's proposal, made on delegated authority. It is recorded as decided so work can
+proceed; the owner overrules it by saying so, and this section gets rewritten rather than argued
+with.
 
 ## Q2 — Which formats ship in version 1
 
