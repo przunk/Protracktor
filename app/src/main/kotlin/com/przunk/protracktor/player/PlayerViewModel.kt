@@ -95,7 +95,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 current.queue.tracks.any { it.id == new.id }
             }
             current.copy(
-                queue = current.queue.copy(tracks = merged),
+                queue = current.queue.withTracks(merged),
                 scanning = false,
                 message = message,
             )

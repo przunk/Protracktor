@@ -15,7 +15,6 @@
  */
 package com.przunk.protracktor.player
 
-import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -36,7 +35,7 @@ class PlayQueueTest {
     fun `backward in shuffle returns the previously played track, not another random one`() {
         // A fixed seed so the shuffled order is known; the property under test is about history,
         // not about which permutation came out.
-        var q = queueOf(10).withShuffle(true, Random(1234))
+        var q = queueOf(10).withShuffle(true, seed = 1234L)
 
         q = q.next()
         val first = q.titleNow()
@@ -148,7 +147,7 @@ class PlayQueueTest {
 
     @Test
     fun `shuffle visits every track exactly once before the playlist ends`() {
-        var q = queueOf(25).withShuffle(true, Random(7))
+        var q = queueOf(25).withShuffle(true, seed = 7L)
         val seen = mutableListOf<String>()
         while (q.hasNext) {
             q = q.next()
@@ -163,15 +162,15 @@ class PlayQueueTest {
         var q = queueOf(10)
         q = q.next().next()
         val playing = q.titleNow()
-        assertEquals(playing, q.withShuffle(true, Random(3)).titleNow())
-        assertEquals(playing, q.withShuffle(true, Random(3)).withShuffle(false).titleNow())
+        assertEquals(playing, q.withShuffle(true, seed = 3L).titleNow())
+        assertEquals(playing, q.withShuffle(true, seed = 3L).withShuffle(false).titleNow())
     }
 
     @Test
     fun `shuffle reshuffles on each lap rather than repeating one permutation`() {
         // Two laps of a 40-track playlist landing in the same order would be a fixed order wearing
         // shuffle's name. With 40 tracks the odds of a genuine coincidence are vanishing.
-        var q = queueOf(40).withShuffle(true, Random(11)).withRepeat(RepeatMode.PLAYLIST)
+        var q = queueOf(40).withShuffle(true, seed = 11L).withRepeat(RepeatMode.PLAYLIST)
         val lapOne = mutableListOf<String>()
         repeat(40) { q = q.next(); lapOne += q.titleNow()!! }
         val lapTwo = mutableListOf<String>()
@@ -179,6 +178,41 @@ class PlayQueueTest {
 
         assertEquals(lapOne.toSet(), lapTwo.toSet())
         assertFalse("second lap repeated the first lap's order", lapOne == lapTwo)
+    }
+
+    // --- the invariant that broke on a device ---------------------------------------------------
+
+    @Test
+    fun `a queue built empty and filled afterwards can play`() {
+        // The crash of 2026-08-31: order was a constructor property defaulting to tracks.indices,
+        // and copy() does not re-evaluate default arguments. A queue created empty and then given
+        // tracks kept the empty order, so the first next() indexed into nothing.
+        val filled = PlayQueue(tracks = emptyList())
+            .withTracks((0 until 3).map { TrackRef(id = "t$it", title = "Track $it") })
+
+        assertTrue(filled.hasNext)
+        assertEquals("Track 0", filled.next().titleNow())
+    }
+
+    @Test
+    fun `copying in a new track list keeps the order consistent`() {
+        // Same invariant reached the other way. copy() is public on a data class and cannot be
+        // taken away, so the order has to be derived rather than stored.
+        val filled = PlayQueue(tracks = emptyList())
+            .copy(tracks = (0 until 3).map { TrackRef(id = "t$it", title = "Track $it") })
+
+        assertTrue(filled.hasNext)
+        assertEquals("Track 0", filled.next().titleNow())
+    }
+
+    @Test
+    fun `shrinking the track list drops history that no longer addresses anything`() {
+        var q = queueOf(5)
+        q = q.startAt(4).startAt(1)
+
+        q = q.withTracks(q.tracks.take(2))
+        assertEquals("Track 1", q.titleNow())
+        assertFalse("history should have lost the entry for the removed track", q.hasPrevious)
     }
 
     // --- edges --------------------------------------------------------------------------------

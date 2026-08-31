@@ -151,6 +151,16 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 
 ## Fixed
 
+- **2026-08-31 — `NoSuchElementException: List is empty` in `PlayQueue.advanced()` on adding the
+  first folder.** `order` was a constructor property defaulting to `tracks.indices`, and **`copy()`
+  does not re-evaluate default arguments** — so a queue created empty and then given tracks by
+  `copy(tracks = …)` kept the empty order, and the first `hasNext` indexed into nothing.
+
+  Fixed by deriving `order` from `tracks` and a shuffle seed instead of storing it, which makes the
+  two impossible to disagree. Patching the one call site would have left the trap in place for the
+  next person, and `copy()` cannot be taken away from a data class. Two regression tests cover both
+  routes in, and both were confirmed to fail against the original code.
+
 - **2026-08-31 — `IllegalStateException: Track already closed` on pressing Play.**
   `DisposableEffect` was keyed on the loaded module. It runs `onDispose` whenever its key changes,
   not only when the composable leaves, and the lambda read the state at dispose time — by which

@@ -59,10 +59,23 @@ data class PlayQueue(
     val tracks: List<TrackRef>,
     val shuffle: Boolean = false,
     val repeat: RepeatMode = RepeatMode.OFF,
-    private val order: List<Int> = tracks.indices.toList(),
+    /** Fixes the shuffled permutation. A new value is a new shuffle. */
+    private val shuffleSeed: Long = 0L,
     private val history: List<Int> = emptyList(),
     private val historyCursor: Int = -1,
 ) {
+    /**
+     * The playback order, **derived** rather than stored.
+     *
+     * It used to be a constructor property defaulting to `tracks.indices`. That is a trap:
+     * `copy()` does not re-evaluate default arguments, so `copy(tracks = …)` on a queue built empty
+     * carried the empty order forward, and the first call to next() indexed into nothing. Deriving
+     * it makes the two impossible to disagree, which is the only fix that stays fixed.
+     */
+    private val order: List<Int> by lazy(LazyThreadSafetyMode.NONE) {
+        if (shuffle) tracks.indices.shuffled(kotlin.random.Random(shuffleSeed)) else tracks.indices.toList()
+    }
+
     /** Index into [tracks] of what is playing, or `null` before anything has started. */
     val currentIndex: Int? get() = history.getOrNull(historyCursor)
 
@@ -118,20 +131,33 @@ data class PlayQueue(
      * interrupt what is playing now. History is left alone, so backward still walks the tracks that
      * were really played, across the change.
      */
-    fun withShuffle(on: Boolean, random: kotlin.random.Random = kotlin.random.Random.Default): PlayQueue =
-        if (on == shuffle) this else copy(shuffle = on, order = buildOrder(on, random))
+    fun withShuffle(on: Boolean, seed: Long = kotlin.random.Random.nextLong()): PlayQueue =
+        if (on == shuffle) this else copy(shuffle = on, shuffleSeed = seed)
 
-    private fun buildOrder(on: Boolean, random: kotlin.random.Random): List<Int> =
-        if (on) tracks.indices.shuffled(random) else tracks.indices.toList()
+    /**
+     * Replaces the track list.
+     *
+     * History entries that no longer address a track are dropped, and the cursor moves with them.
+     * Appending is the common case and leaves history untouched, because existing indices still
+     * point at the same tracks.
+     */
+    fun withTracks(newTracks: List<TrackRef>): PlayQueue {
+        val kept = history.filter { it in newTracks.indices }
+        val removedBeforeCursor = history.take(historyCursor + 1).count { it !in newTracks.indices }
+        return copy(
+            tracks = newTracks,
+            history = kept,
+            historyCursor = (historyCursor - removedBeforeCursor).coerceIn(-1, kept.lastIndex),
+        )
+    }
 
     private fun advanced(): PlayQueue? {
         if (tracks.isEmpty()) return null
 
         // Nothing started yet: begin at the front of the order.
-        val currentIdx = currentIndex ?: return copy(
-            history = listOf(order.first()),
-            historyCursor = 0,
-        )
+        val currentIdx = currentIndex ?: return order.firstOrNull()?.let {
+            copy(history = listOf(it), historyCursor = 0)
+        }
 
         // Forward through history first -- this is what makes "back then forward" land where the
         // user left off rather than somewhere new.
@@ -145,8 +171,10 @@ data class PlayQueue(
             RepeatMode.PLAYLIST -> {
                 // A fresh permutation each lap: replaying the same shuffled order forever is not
                 // what anyone means by shuffle.
-                val wrapped = if (shuffle) tracks.indices.shuffled() else tracks.indices.toList()
-                copy(order = wrapped, history = history + wrapped.first(), historyCursor = historyCursor + 1)
+                val lap = if (shuffle) copy(shuffleSeed = kotlin.random.Random.nextLong()) else this
+                lap.order.firstOrNull()?.let {
+                    lap.copy(history = history + it, historyCursor = historyCursor + 1)
+                }
             }
             // ONE repeats a track, not a playlist. At the end of the playlist it stops, like OFF.
             RepeatMode.OFF, RepeatMode.ONE -> null
