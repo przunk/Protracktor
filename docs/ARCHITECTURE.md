@@ -160,3 +160,42 @@ yet.
 An entry whose file is not cached stays **visible and explicitly marked unavailable**. It is not
 hidden and not silently skipped: a press that does nothing and says nothing is a defect
 (AGENTS.md §7).
+
+## 9. Storage: hand-written SQLite, not Room
+
+Decided 2026-09-01.
+
+Room was the intention and is the obvious choice. It cannot be used here: Room's annotation
+processor needs KSP, and **KSP has no release built against the Kotlin that AGP 9.2.1 embeds**. The
+newest KSP is 2.3.11, built for Kotlin 2.3; AGP 9.2.1 carries Kotlin 2.4.0. There is no version pair
+that works, and downgrading AGP to reach one would give up the whole toolchain this project is
+pinned to.
+
+So the schema is hand-written SQL executed by an `SQLiteOpenHelper`. The arrangement is deliberately
+shaped so the move to Room stays mechanical if KSP catches up:
+
+- **All SQL lives in `SchemaSql`, a plain Kotlin object with no Android imports.** That is what
+  makes it testable at all here. A migration meets a phone holding somebody's data exactly once, and
+  there is no emulator in this environment — so the statements are executed against a real SQLite
+  engine (`org.xerial:sqlite-jdbc`, test scope) in unit tests that run on this machine.
+- **Migrations are keyed by the version they produce**, and asking for a version that has none is an
+  error rather than a silent skip.
+- **`SchemaSqlTest` checks that a fresh install and a fully migrated database end up identical.**
+  Updating `CREATE` after adding a migration is the step everyone forgets, and the symptom — a
+  schema that differs between an upgraded phone and a new one — surfaces far from its cause.
+- **Going down recreates rather than refusing to open**, per AGENTS.md §10. Installing an older
+  build over a newer one happens whenever anyone tests from a file, and the default behaviour leaves
+  an app that cannot start at all until its data is cleared by hand.
+
+### What is stored
+
+`playlists`, `tracks`, `playlist_tracks` (ordered membership), `granted_folders` (SAF grants, so
+browsing does not begin at a file picker every session), and a single-row `player_state`.
+
+The schema already carries several playlists although the UI offers one, so R6 arrives without a
+migration. `player_state` is one row enforced by a `CHECK` rather than five key-value rows: settings
+that come as a set should not be able to exist half-written.
+
+**Restoring makes a track current without starting it.** Coming back to the app is not a request to
+make noise, and R2 asks for the view to be restored, not the playback. Resuming a *position* is
+`docs/OPEN_QUESTIONS.md` Q6 and still open.

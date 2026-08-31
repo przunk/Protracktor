@@ -19,6 +19,9 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.przunk.protracktor.data.GrantedFolder
+import com.przunk.protracktor.data.LibraryStore
+import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.engine.NativeEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +60,8 @@ data class PlayerUiState(
     val positionSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0,
     val scanning: Boolean = false,
+    /** False until the stored state has been read. Saving before then would erase it. */
+    val restored: Boolean = false,
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
 ) {
@@ -80,7 +85,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
      */
     private var openJob: Job? = null
 
+    private val store = LibraryStore(application)
+
+    /** Which playlist is being edited. Resolved during [restore]; there is only one so far. */
+    private var playlistId: Long = 0L
+
+    /** Debounces writes. Every transport press changes state; the disk does not need each one. */
+    private var saveJob: Job? = null
+
     init {
+        restore()
         // One loop drives both the progress bar and end-of-track handling. The native side flags
         // completion rather than calling back, so something has to look; since the progress bar
         // needs a tick anyway, this is that tick.
@@ -99,12 +113,68 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // --- persistence --------------------------------------------------------------------------
+
+    private fun restore() {
+        viewModelScope.launch {
+            playlistId = store.defaultPlaylistId(DEFAULT_PLAYLIST_NAME)
+            val tracks = store.tracksIn(playlistId)
+            val saved = store.loadPlayerState()
+
+            _state.update { current ->
+                var queue = current.queue
+                    .withTracks(tracks)
+                    .withRepeat(saved?.repeat ?: RepeatMode.OFF)
+                if (saved?.shuffle == true) queue = queue.withShuffle(true)
+
+                // The track it was on is made current but NOT started. Coming back to the app is
+                // not a request to make noise, and R2 asks for the view to be restored, not the
+                // playback (docs/OPEN_QUESTIONS.md Q6 is still open on resuming a position).
+                val index = tracks.indexOfFirst { it.id == saved?.currentTrackId }
+                if (index >= 0) queue = queue.startAt(index)
+
+                current.copy(queue = queue, restored = true)
+            }
+        }
+    }
+
+    /**
+     * Writes the current state, shortly.
+     *
+     * Debounced because every press of shuffle, repeat, next and previous changes something worth
+     * keeping, and none of them is worth a disk write on its own.
+     */
+    private fun scheduleSave() {
+        saveJob?.cancel()
+        saveJob = viewModelScope.launch {
+            delay(SAVE_DEBOUNCE_MS)
+            saveNow()
+        }
+    }
+
+    private suspend fun saveNow() {
+        if (!_state.value.restored) return // never overwrite stored state with an empty start-up one
+        val snapshot = _state.value
+        store.replaceTracks(playlistId, snapshot.queue.tracks)
+        store.savePlayerState(
+            SavedPlayerState(
+                activePlaylistId = playlistId,
+                currentTrackId = snapshot.current?.id,
+                shuffle = snapshot.queue.shuffle,
+                repeat = snapshot.queue.repeat,
+            )
+        )
+    }
+
     // --- library ------------------------------------------------------------------------------
 
     fun addFolder(treeUri: Uri) {
         viewModelScope.launch {
             _state.update { it.copy(scanning = true) }
             MediaScanner.persistPermission(getApplication(), treeUri, isTree = true)
+            store.rememberFolder(
+                GrantedFolder(uri = treeUri.toString(), displayName = MediaScanner.labelOf(treeUri))
+            )
             val found = MediaScanner.scanTree(getApplication(), treeUri)
             appendTracks(found, describeScan(found.size))
         }
@@ -130,6 +200,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 message = message,
             )
         }
+        scheduleSave()
     }
 
     private fun describeScan(count: Int): Message = Message(
@@ -164,11 +235,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 message = Message("Removed ${removed.title}"),
             )
         }
+        scheduleSave()
     }
 
     fun clearPlaylist() {
         stopPlayback()
-        _state.update { PlayerUiState(message = Message("Playlist cleared.")) }
+        _state.update { PlayerUiState(message = Message("Playlist cleared."), restored = true) }
+        scheduleSave()
     }
 
     fun dismissMessage() = _state.update { it.copy(message = null) }
@@ -200,8 +273,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun togglePlayPause() {
         val open = track
         if (open == null) {
-            // Nothing loaded: start at the top rather than doing nothing quietly.
-            if (_state.value.queue.tracks.isNotEmpty()) playAt(0)
+            // Nothing loaded -- which is the normal state after a restart, where the queue already
+            // knows which track it was on. Resume that one, not the top of the list.
+            val queue = _state.value.queue
+            if (queue.tracks.isNotEmpty()) playAt(queue.currentIndex ?: 0)
             return
         }
         if (_state.value.playing) {
@@ -214,10 +289,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun toggleShuffle() =
-        _state.update { it.copy(queue = it.queue.withShuffle(!it.queue.shuffle)) }
+        _state.update { it.copy(queue = it.queue.withShuffle(!it.queue.shuffle)) }.also { scheduleSave() }
 
     fun cycleRepeat() =
-        _state.update { it.copy(queue = it.queue.withRepeat(it.queue.repeat.next())) }
+        _state.update { it.copy(queue = it.queue.withRepeat(it.queue.repeat.next())) }.also { scheduleSave() }
 
     // --- internals ----------------------------------------------------------------------------
 
@@ -248,6 +323,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         // The queue advances NOW, not inside the coroutine. Two quick presses of next both read the
         // old queue otherwise, and both advance to the same track.
         _state.update { it.copy(queue = queue, playing = false, positionSeconds = 0.0) }
+        scheduleSave()
 
         openJob?.cancel()
         openJob = viewModelScope.launch {
@@ -309,5 +385,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private companion object {
         // Fast enough that a progress bar does not visibly step, slow enough to be free.
         const val POLL_INTERVAL_MS = 200L
+        const val SAVE_DEBOUNCE_MS = 400L
+        const val DEFAULT_PLAYLIST_NAME = "Playlist"
     }
 }
