@@ -102,7 +102,13 @@ private fun ProofOfConceptScreen() {
 
     // The native side owns memory the garbage collector cannot see, so leaving the screen has to
     // release it explicitly.
-    DisposableEffect(loaded) {
+    //
+    // Keyed on Unit, not on `loaded`. DisposableEffect runs onDispose whenever its KEY changes, not
+    // only when the composable leaves -- and this lambda reads `loaded` at dispose time, by which
+    // point it already holds the NEW value. Keyed on `loaded`, opening a second module therefore
+    // closed the module that had just been opened, and Play then hit a freed handle. Replacing a
+    // module is the picker's job below; this effect only has to catch the screen going away.
+    DisposableEffect(Unit) {
         onDispose { (loaded as? Loaded.Module)?.track?.close() }
     }
 

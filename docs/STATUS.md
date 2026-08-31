@@ -86,7 +86,23 @@ Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does no
 
 ## Known defects
 
-None recorded.
+- **Play/Stop label goes stale when a module reaches its end.** The native callback stops the stream
+  by itself, but nothing tells the UI, so the button still reads "Stop". Cosmetic, on a screen that
+  the real UI replaces. Recorded rather than patched because the fix belongs with the player state
+  the real UI needs anyway.
+
+## Fixed
+
+- **2026-08-31 — `IllegalStateException: Track already closed` on pressing Play.**
+  `DisposableEffect` was keyed on the loaded module. It runs `onDispose` whenever its key changes,
+  not only when the composable leaves, and the lambda read the state at dispose time — by which
+  point it already held the *new* value. So opening a module closed the module that had just been
+  opened, and Play hit a freed handle. Keyed on `Unit` instead; replacing a module is the picker's
+  job, and the effect only has to catch the screen going away.
+
+  Worth keeping: the crash came from the code written to prevent a leak, and the guard in
+  `Track.handle()` is what turned a use-after-free in native memory into a named exception with a
+  line number.
 
 ## Branches
 
