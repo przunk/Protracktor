@@ -18,7 +18,30 @@
     <string name="action_add_folder">Add a folder</string>
     <string name="action_add_files">Add files</string>
     <string name="action_scanning">Scanning…</string>
-    <string name="action_clear_playlist">Clear the playlist</string>
+
+    <string name="action_back">Back</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+
+    <string name="browse_select_all">Select all</string>
+    <string name="browse_select_none">Select none</string>
+    <string name="browse_nothing_found">Nothing playable in this folder.</string>
+    <plurals name="browse_add_selected">
+        <item quantity="one">Add %d track</item>
+        <item quantity="other">Add %d tracks</item>
+    </plurals>
+
+    <string name="playlist_switch_title">Playlists</string>
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_rename">Rename playlist</string>
+    <string name="playlist_name_label">Name</string>
+    <string name="playlist_delete_title">Delete %1$s?</string>
+    <string name="playlist_delete_body">The playlist goes; the tracks stay in your library.</string>
+
+    <string name="a11y_forget_folder">Forget the folder %1$s</string>
+    <string name="a11y_rename_playlist">Rename %1$s</string>
+    <string name="a11y_delete_playlist">Delete %1$s</string>
 
     <string name="browse_title">Add music</string>
     <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>

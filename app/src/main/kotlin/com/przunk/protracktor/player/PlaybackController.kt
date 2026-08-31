@@ -20,6 +20,7 @@ import android.net.Uri
 import com.przunk.protracktor.data.GrantedFolder
 import com.przunk.protracktor.data.LibraryStore
 import com.przunk.protracktor.data.SavedPlayerState
+import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.engine.NativeEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -60,13 +61,31 @@ data class PlayerUiState(
     val positionSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0,
     val scanning: Boolean = false,
+    val playlists: List<SavedPlaylist> = emptyList(),
+    val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
     val restored: Boolean = false,
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
 ) {
     val current: TrackRef? get() = queue.current
+
+    val activePlaylistName: String?
+        get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
 }
+
+/**
+ * What the Browse screen is looking at.
+ *
+ * Separate from [PlayerUiState] because it is a different lifetime: browsing comes and goes while
+ * playback does not, and folding it in would mean every scan tick recomposing the player.
+ */
+data class BrowseState(
+    val folders: List<GrantedFolder> = emptyList(),
+    val openFolder: GrantedFolder? = null,
+    val tracks: List<TrackRef> = emptyList(),
+    val loading: Boolean = false,
+)
 
 /**
  * Everything about playback, owned once per process.
@@ -98,6 +117,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
+
+    private val _browse = MutableStateFlow(BrowseState())
+    val browse: StateFlow<BrowseState> = _browse.asStateFlow()
 
     /** The open module. Owned here because native memory is invisible to the garbage collector. */
     private var track: NativeEngine.Track? = null
@@ -143,9 +165,13 @@ class PlaybackController private constructor(private val context: Context) {
 
     private fun restore() {
         scope.launch {
-            playlistId = store.defaultPlaylistId(DEFAULT_PLAYLIST_NAME)
-            val tracks = store.tracksIn(playlistId)
             val saved = store.loadPlayerState()
+            val known = store.playlists()
+            // The stored active playlist, unless it has since been deleted.
+            playlistId = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
+                ?: store.defaultPlaylistId(DEFAULT_PLAYLIST_NAME)
+            val playlists = store.playlists()
+            val tracks = store.tracksIn(playlistId)
 
             _state.update { current ->
                 var queue = current.queue
@@ -159,7 +185,12 @@ class PlaybackController private constructor(private val context: Context) {
                 val index = tracks.indexOfFirst { it.id == saved?.currentTrackId }
                 if (index >= 0) queue = queue.startAt(index)
 
-                current.copy(queue = queue, restored = true)
+                current.copy(
+                    queue = queue,
+                    playlists = playlists,
+                    activePlaylistId = playlistId,
+                    restored = true,
+                )
             }
         }
     }
@@ -191,6 +222,114 @@ class PlaybackController private constructor(private val context: Context) {
             )
         )
     }
+
+    // --- playlists ----------------------------------------------------------------------------
+
+    fun createPlaylist(name: String) {
+        scope.launch {
+            val id = store.createPlaylist(name.ifBlank { DEFAULT_PLAYLIST_NAME })
+            _state.update { it.copy(playlists = store.playlists()) }
+            switchToPlaylist(id)
+        }
+    }
+
+    fun renameActivePlaylist(name: String) {
+        if (name.isBlank()) return
+        scope.launch {
+            store.renamePlaylist(playlistId, name)
+            _state.update { it.copy(playlists = store.playlists()) }
+        }
+    }
+
+    /**
+     * Deletes a playlist. The tracks stay in the library; only the list goes.
+     *
+     * The last playlist cannot be deleted -- an app with nowhere to put anything is a state with no
+     * way out, and "delete" is not a request to be stranded.
+     */
+    fun deletePlaylist(id: Long) {
+        scope.launch {
+            if (store.playlists().size <= 1) {
+                _state.update { it.copy(message = Message("The last playlist cannot be deleted.")) }
+                return@launch
+            }
+            store.deletePlaylist(id)
+            val remaining = store.playlists()
+            _state.update { it.copy(playlists = remaining) }
+            if (id == playlistId) switchToPlaylist(remaining.first().id)
+        }
+    }
+
+    /**
+     * Makes another playlist the active one.
+     *
+     * Playback stops. The queue *is* the active playlist, so carrying a playing track into a list
+     * that does not contain it would leave next and previous disagreeing with the screen -- the
+     * exact fault that made the transport feel random before.
+     */
+    fun switchToPlaylist(id: Long) {
+        scope.launch {
+            saveNow()
+            stopPlayback()
+            playlistId = id
+            val tracks = store.tracksIn(id)
+            _state.update {
+                it.copy(
+                    queue = PlayQueue(tracks = tracks, shuffle = it.queue.shuffle, repeat = it.queue.repeat),
+                    playlists = store.playlists(),
+                    activePlaylistId = id,
+                    playing = false,
+                    metadata = emptyMap(),
+                    positionSeconds = 0.0,
+                    durationSeconds = 0.0,
+                )
+            }
+            scheduleSave()
+        }
+    }
+
+    // --- browsing -----------------------------------------------------------------------------
+
+    fun refreshFolders() {
+        scope.launch { _browse.update { it.copy(folders = store.grantedFolders()) } }
+    }
+
+    fun rememberFolder(treeUri: Uri) {
+        scope.launch {
+            MediaScanner.persistPermission(context, treeUri, isTree = true)
+            val folder = GrantedFolder(treeUri.toString(), MediaScanner.labelOf(treeUri))
+            store.rememberFolder(folder)
+            _browse.update { it.copy(folders = store.grantedFolders()) }
+            openFolder(folder)
+        }
+    }
+
+    fun forgetFolder(uri: String) {
+        scope.launch {
+            store.forgetFolder(uri)
+            _browse.update { it.copy(folders = store.grantedFolders(), openFolder = null, tracks = emptyList()) }
+        }
+    }
+
+    fun openFolder(folder: GrantedFolder) {
+        scope.launch {
+            _browse.update { it.copy(openFolder = folder, loading = true, tracks = emptyList()) }
+            val found = MediaScanner.scanTree(context, Uri.parse(folder.uri))
+            _browse.update { it.copy(tracks = found, loading = false) }
+        }
+    }
+
+    fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
+
+    /** Adds a chosen set to the active playlist. Duplicates are ignored rather than doubled. */
+    fun addToPlaylist(tracks: List<TrackRef>) {
+        if (tracks.isEmpty()) return
+        appendTracks(tracks, describeAdded(tracks.size))
+    }
+
+    private fun describeAdded(count: Int): Message = Message(
+        if (count == 1) "Added 1 track." else "Added $count tracks."
+    )
 
     // --- library ------------------------------------------------------------------------------
 
@@ -261,12 +400,6 @@ class PlaybackController private constructor(private val context: Context) {
                 message = Message("Removed ${removed.title}"),
             )
         }
-        scheduleSave()
-    }
-
-    fun clearPlaylist() {
-        stopPlayback()
-        _state.update { PlayerUiState(message = Message("Playlist cleared."), restored = true) }
         scheduleSave()
     }
 

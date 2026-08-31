@@ -36,6 +36,9 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Finished
 
+- **2026-09-01** — **R6 met.** Several named playlists, created, renamed, deleted and switched from
+  the top bar. Browse remembers granted folders and adds a *selection* rather than a whole folder.
+
 - **2026-09-01** — Playback survives the app leaving the screen: `PlaybackController` is now a
   process-wide singleton and `PlaybackService` keeps it in the foreground with a notification
   carrying previous, play/pause, next and stop.
@@ -140,9 +143,6 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 - **No media session and no audio focus.** The foreground service keeps playback alive and its
   notification has transport buttons, but lock-screen controls, Bluetooth and headphone buttons do
   nothing, and another app starting playback will talk over us.
-- **R6 (several playlists) is NOT met.** There is one playlist. The top bar shows its name as plain
-  text rather than as the switcher the navigation model calls for — a switcher with nothing to
-  switch to would be a control that does nothing (AGENTS.md §7), so it waits for persistence.
 - **Seeking works for tracker formats but has no capability flag yet.** `libopenmpt` can seek; the
   CPU-emulator backends coming later cannot, and the UI does not yet ask which it is dealing with
   (`docs/ARCHITECTURE.md` §5 says it must).

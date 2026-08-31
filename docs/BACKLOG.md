@@ -39,7 +39,7 @@ into Room happens with the index rather than twice.
 **Done when:** the app is force-stopped and reopened and shows the same list, the same scroll
 position, the same shuffle and repeat, and the same track loaded in the dock.
 
-## 2. Browse that adds a selection, not a whole folder
+## 2. ~~Browse that adds a selection, not a whole folder~~ — DONE 2026-09-01
 
 > "chcę mieć widok browse który dodaje do playlisty pojedyncze (lub kilka zaznaczonych) utwory"
 
