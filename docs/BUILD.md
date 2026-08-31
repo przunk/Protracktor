@@ -42,8 +42,21 @@ cannot disturb another project in the workspace.
 
 ## Builds
 
-Not written yet — there is no Gradle project. This section is filled in with the same stage that
-adds it.
+```bash
+./scripts/build-debug.sh [extra gradle args…]
+```
+
+Runs `check-tooling.sh` first, writes `local.properties`, builds `:app:assembleDebug`, and copies
+the result to `dist/protracktor-<versionName>-debug.apk`.
+
+**Look in `dist/`, not in `app/build/outputs`.** The build directory is `~/.protracktor/build`
+(see above), so the path every Android tutorial gives you is wrong here.
+
+The script treats a green build that produced no APK as a failure. Gradle can report success while
+skipping the packaging task, and "✅ nothing was produced" is the kind of message that costs an
+afternoon.
+
+Release builds are not written yet: they need a keystore, which is the owner's to create.
 
 ## Pushing to GitHub
 
