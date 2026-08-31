@@ -90,7 +90,8 @@ notification carries transport. What is left of the original item:
 
 The largest item and the one that makes the app usable rather than demonstrable.
 
-- Audio focus, becoming-noisy, headphone and Bluetooth controls, lock-screen transport.
+- ~~Audio focus and becoming-noisy~~ — done 2026-09-01.
+- Headphone and Bluetooth controls, lock-screen transport. Needs the `MediaSession`.
 - `docs/ARCHITECTURE.md` §4 already picked the approach: Media3's `SimpleBasePlayer` over the native
   engine, so the session comes without writing an ExoPlayer renderer for a synthesiser.
 - Android 14+ requires a `foregroundServiceType` and its permission; `targetSdk` is 36, so this is

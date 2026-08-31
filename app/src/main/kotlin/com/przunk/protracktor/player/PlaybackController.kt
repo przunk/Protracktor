@@ -138,6 +138,14 @@ class PlaybackController private constructor(private val context: Context) {
 
     private val store = LibraryStore(context)
 
+    private val audioFocus = AudioFocus(
+        context = context,
+        onPause = { pause() },
+        // Only ever called after a pause this class caused, so it cannot restart something the user
+        // stopped on purpose.
+        onResume = { resumeAfterInterruption() },
+    )
+
     /** Which playlist is being edited. Resolved during [restore]; there is only one so far. */
     private var playlistId: Long = 0L
 
@@ -467,8 +475,15 @@ class PlaybackController private constructor(private val context: Context) {
         }
         if (_state.value.playing) {
             open.stop()
+            audioFocus.release()
             _state.update { it.copy(playing = false) }
         } else {
+            // Asking first, and not starting if refused: a player that talks over a phone call is
+            // worse than one that does nothing.
+            if (!audioFocus.acquire()) {
+                _state.update { it.copy(message = Message("Something else is using the audio.")) }
+                return
+            }
             val restarted = if (open.isFinished()) open.restart() else open.start()
             _state.update { it.copy(playing = restarted) }
         }
@@ -478,7 +493,15 @@ class PlaybackController private constructor(private val context: Context) {
     fun pause() {
         val open = track ?: return
         open.stop()
+        audioFocus.release()
         _state.update { it.copy(playing = false) }
+    }
+
+    private fun resumeAfterInterruption() {
+        val open = track ?: return
+        if (_state.value.playing) return
+        if (!audioFocus.acquire()) return
+        _state.update { it.copy(playing = open.start()) }
     }
 
     fun toggleShuffle() =
@@ -496,8 +519,10 @@ class PlaybackController private constructor(private val context: Context) {
         when {
             advanced == null -> {
                 // End of the playlist with repeat off. Stop, but leave the track loaded so the
-                // screen still says what was playing.
+                // screen still says what was playing. Focus goes back: holding it while silent
+                // would keep other apps ducked for no reason.
                 track?.stop()
+                audioFocus.release()
                 _state.update { it.copy(playing = false, positionSeconds = it.durationSeconds) }
             }
             // Repeat-one hands back the identical queue: same track, from the top, without a new
@@ -551,6 +576,12 @@ class PlaybackController private constructor(private val context: Context) {
                 throw CancellationException()
             }
 
+            if (!audioFocus.acquire()) {
+                opened.close()
+                _state.update { it.copy(message = Message("Something else is using the audio.")) }
+                return@launch
+            }
+
             track = opened
             val started = opened.start()
             _state.update {
@@ -568,6 +599,7 @@ class PlaybackController private constructor(private val context: Context) {
     private fun stopPlayback() {
         track?.close()
         track = null
+        audioFocus.release()
     }
 
     /** Releases the module. The process is going away; nothing owns native memory after this. */

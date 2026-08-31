@@ -36,6 +36,9 @@ What *is* verified, on the produced artifact rather than from the build log:
 
 ## Finished
 
+- **2026-09-01** — Audio focus and becoming-noisy: another app or a phone call takes the speaker and
+  we pause; pulling headphones out pauses instead of playing to the room.
+
 - **2026-09-01** — Removing a track offers undo instead of asking first; deleting a playlist asks.
   Snackbars can be pushed off the screen sideways.
 
@@ -143,9 +146,8 @@ Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does no
 
 Naming these because a `STATUS.md` that implies more than exists is worse than none.
 
-- **No media session and no audio focus.** The foreground service keeps playback alive and its
-  notification has transport buttons, but lock-screen controls, Bluetooth and headphone buttons do
-  nothing, and another app starting playback will talk over us.
+- **No media session.** The foreground service keeps playback alive and its notification has
+  transport buttons, but lock-screen controls and Bluetooth or headphone buttons do nothing.
 - **Seeking works for tracker formats but has no capability flag yet.** `libopenmpt` can seek; the
   CPU-emulator backends coming later cannot, and the UI does not yet ask which it is dealing with
   (`docs/ARCHITECTURE.md` §5 says it must).
