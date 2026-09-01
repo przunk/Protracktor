@@ -99,8 +99,13 @@ fun PlayerDock(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = loaded?.let { it.subtitle.ifBlank { formatOf(state) } }
-                            ?: stringResource(R.string.dock_idle_subtitle),
+                        // Said out loud, because on a network share this is seconds. A player that
+                        // looks idle while it works gets pressed again.
+                        text = when {
+                            state.loadingTrack -> stringResource(R.string.dock_loading)
+                            loaded != null -> loaded.subtitle.ifBlank { formatOf(state) }
+                            else -> stringResource(R.string.dock_idle_subtitle)
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

@@ -98,6 +98,14 @@ data class PlayQueue(
     }
 
     /**
+     * What [next] would land on, without moving.
+     *
+     * Exists so the player can start loading the following track while this one plays, which is
+     * what R9 actually needs: the wait the owner complained about is a read, not a decode.
+     */
+    val upcoming: TrackRef? get() = if (hasNext) next().current else null
+
+    /**
      * The user pressed next. Returns the same queue when there is nowhere to go.
      *
      * [RepeatMode.ONE] deliberately does **not** apply here. It governs what happens when a track
