@@ -204,14 +204,14 @@ The fix is sc68 3.0.0b — see `docs/PLAN_FORMATS.md` §0, which has the route a
 Failures now say which backend refused and what it said, rather than claiming the format is
 unsupported.
 
-### C2. `.sc68` container files — status unknown
+### C2. ~~`.sc68` container files — status unknown~~ — ANSWERED 2026-09-02: they play
 
-Previously recorded here as "will not play, because they reference external replay binaries we do not
-ship". **That reasoning is now stale**: those binaries have shipped since 2026-09-01, which is what
-made SNDH play at all. Whether `.sc68` works has not been tested.
+Ten random `.sc68` files from Modland (of 1,775) through the host probe: **8 play, 2 render silence,
+0 fail to load**. Better than `.sndh`, and the two silent ones fail in the same shape as the silent
+SNDH files — the same 2003 library, the same partial coverage, so C1's fix is this one's fix too.
 
-Left in the list rather than removed, because "we do not know" and "it works" are different things
-and only one of them has been established.
+Kept in the list with its answer rather than deleted: the entry existed because the reasoning
+underneath it had gone stale, and the record of that is worth more than a shorter list.
 
 ### C3. R9 is addressed but unmeasured
 

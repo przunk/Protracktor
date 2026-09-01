@@ -66,7 +66,7 @@ working unattended is the case they were written for.
       Four gestures only, listed in the backlog entry, and nothing with a visible result. Last
       of the building items because it attaches to gestures items 1 and 2 create.
 
-- [ ] **5. C2 — does `.sc68` play?**
+- [x] **5. C2 — does `.sc68` play?** *(yes: 8 of 10)*
       A defect line that says "unknown". Take a `.sc68` from Modland (1,775 of them), run it through
       the host probe the way `docs/PLAN_FORMATS.md` §0 describes, and turn the line into an answer
       either way. Cheap, and it removes an "I do not know" from the defect list.
