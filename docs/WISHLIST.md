@@ -6,6 +6,17 @@ Format: what, who raised it, when.
 
 ---
 
+- **A web player, with favourites and history synced to an account** — owner, 2026-09-01. The same
+  music in a browser, sharing state with the phone through a Google or Cloudflare account. Recorded
+  as a thought to return to, not a plan.
+
+  Worth noting now, because it would change decisions we are making today: the decoders are C and
+  would need WebAssembly builds (libopenmpt already ships one; sc68 does not), and syncing state to
+  an account means a server, accounts, and somebody's data in someone else's hands — which is a
+  different kind of project from an app that reads files off a phone. The parts that would carry
+  over unchanged are the ones already kept free of Android: `PlayQueue`, and the schema in
+  `SchemaSql`.
+
 - **Fold hard-panned channels together** — owner, 2026-09-01. Amiga modules pan channels hard left
   and right by convention, and on his phone one "speaker" is the screen vibrator: half the music is
   effectively inaudible. Wanted is a mix control — full stereo, narrowed, or mono — applied in the

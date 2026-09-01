@@ -124,7 +124,7 @@ Also outstanding from this item:
   to be declared and the UI has to reflect it (`docs/ARCHITECTURE.md` §5), which means item 5's
   transport and the seek slider both need a "can this backend do it" answer.
 
-## 6b. Formats we do not play yet
+## 6b. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 Agreed 2026-09-01: the owner will send this as its own goal. Recording what is known now so it does
 not have to be rediscovered.
@@ -147,7 +147,7 @@ Extensions here are unreliable, absent, or shared between unrelated formats. Pro
 every candidate, which is why it belongs with the persistent index from item 1 rather than with a
 foreground scan.
 
-## 8. More online catalogues
+## 8. More online catalogues — planned in `docs/PLAN_CATALOGUES.md`
 
 Modland is wired up and verified end to end. The owner asked for several: ASMA, AMP
 (amp.dascene.net), Aminet, ModArchive and others.
