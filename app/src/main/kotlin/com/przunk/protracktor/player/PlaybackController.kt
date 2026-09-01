@@ -170,6 +170,12 @@ class PlaybackController private constructor(private val context: Context) {
         // Fast enough that a progress bar does not visibly step, slow enough to be free.
         private const val POLL_INTERVAL_MS = 200L
         private const val SAVE_DEBOUNCE_MS = 400L
+
+        /** How often the background metadata pass looks to see whether the user has stopped. */
+        private const val IDLE_CHECK_MS = 500L
+
+        /** Between files, so resolving hundreds does not saturate a network share. */
+        private const val RESOLVE_GAP_MS = 120L
         const val DEFAULT_PLAYLIST_NAME = "Playlist"
 
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
@@ -211,6 +217,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private var prefetched: Pair<String, ByteArray>? = null
     private var prefetchJob: Job? = null
+
+    /** The background metadata pass. Cancelled and restarted whenever the track list changes. */
+    private var resolveJob: Job? = null
 
     private val store = LibraryStore(context)
     private val catalogues = CatalogueStore(context)
@@ -300,6 +309,7 @@ class PlaybackController private constructor(private val context: Context) {
                     restored = true,
                 )
             }
+            resolveMetadataInBackground()
         }
     }
 
@@ -343,7 +353,9 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val snapshot = _state.value
             store.replaceTracks(playlistId, snapshot.queue.tracks)
-            _state.update { it.copy(dirty = false, message = Message("Playlist saved.")) }
+            // Saved silently. The Save button disappearing is the confirmation, and it is on
+            // screen already.
+            _state.update { it.copy(dirty = false) }
         }
     }
 
@@ -425,6 +437,7 @@ class PlaybackController private constructor(private val context: Context) {
                 )
             }
             scheduleSave()
+            resolveMetadataInBackground()
         }
     }
 
@@ -712,7 +725,7 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    private fun appendTracks(found: List<TrackRef>, describe: (added: Int, skipped: Int) -> Message) {
+    private fun appendTracks(found: List<TrackRef>, describe: (added: Int, skipped: Int) -> Message?) {
         var added = 0
         var skipped = 0
         _state.update { current ->
@@ -726,25 +739,29 @@ class PlaybackController private constructor(private val context: Context) {
                 queue = current.queue.withTracks(merged),
                 scanning = false,
                 dirty = current.dirty || added > 0,
-                message = describe(added, skipped),
+                // Only replaces the current message when there is something to say; a null must
+                // not silently clear a message the user has not read.
+                message = describe(added, skipped) ?: current.message,
             )
         }
+        resolveMetadataInBackground()
     }
 
     /**
-     * What to say after adding.
+     * What to say after adding — usually nothing.
      *
-     * Duplicates skipped are reported rather than swallowed. Silently adding nothing looks exactly
-     * like a button that did not work.
+     * A notice that repeats what the screen already shows is noise, and this one covered the very
+     * rows it was reporting. The tracks appearing **is** the confirmation.
+     *
+     * It still speaks when the screen does not tell the story: nothing was added, or some were
+     * silently skipped as duplicates. Both look identical to a button that did not work.
      */
-    private fun describeAdded(added: Int, skipped: Int): Message = Message(
-        when {
-            added == 0 && skipped == 0 -> "Nothing playable found there."
-            added == 0 -> "Already in this playlist."
-            skipped == 0 -> if (added == 1) "Added 1 track." else "Added $added tracks."
-            else -> "Added $added; $skipped already there."
-        }
-    )
+    private fun describeAdded(added: Int, skipped: Int): Message? = when {
+        added == 0 && skipped == 0 -> Message("Nothing playable found there.")
+        added == 0 -> Message("Already in this playlist.")
+        skipped == 0 -> null
+        else -> Message("Added $added; $skipped already there.")
+    }
 
     /** What [undoRemoval] would put back. Cleared once its notice is gone. */
     private var lastRemoval: Pair<Int, TrackRef>? = null
@@ -1067,6 +1084,48 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
     }
 
+    /**
+     * Fills in titles and authors for tracks nobody has played yet.
+     *
+     * These formats carry their real names inside, and until now a list of three hundred stayed a
+     * list of filenames until each had been heard. This opens them in the background instead.
+     *
+     * **It runs only while nothing is loaded**, and that is a hard requirement rather than
+     * politeness: sc68 keeps its 68000 emulator in global state, so opening a second instance while
+     * one is playing would clobber the one you are listening to. Waiting for idle is also exactly
+     * the lowest priority the owner asked for. The consequence — adding a folder mid-playback
+     * resolves nothing until you stop — is real and accepted.
+     */
+    private fun resolveMetadataInBackground() {
+        resolveJob?.cancel()
+        resolveJob = scope.launch {
+            // Only the ones that would learn something. A track whose title already differs from its
+            // filename has been resolved before.
+            val pending = _state.value.queue.tracks.filter {
+                it.author.isBlank() && it.title == it.fileNameOrTitle
+            }
+            if (pending.isEmpty()) return@launch
+
+            for (ref in pending) {
+                ensureActive()
+                // Anything the user asked for outranks this, indefinitely.
+                while (track != null || _state.value.loadingTrack) delay(IDLE_CHECK_MS)
+                delay(RESOLVE_GAP_MS)
+
+                val bytes = loadBytes(ref) ?: continue
+                ensureActive()
+                if (track != null) continue // something started while the file was being read
+
+                val opened = withContext(Dispatchers.IO) {
+                    NativeEngine.open(bytes, ref.fileNameOrTitle)
+                } ?: continue
+                val described = opened.describe()
+                opened.close()
+                adoptTitleFrom(described, ref)
+            }
+        }
+    }
+
     /** Reads a track's bytes, from wherever it lives. */
     private suspend fun loadBytes(ref: TrackRef): ByteArray? =
         if (ref.id.startsWith("http")) {
@@ -1109,6 +1168,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Releases the module. The process is going away; nothing owns native memory after this. */
     fun release() {
+        resolveJob?.cancel()
         openJob?.cancel()
         stopPlayback()
     }

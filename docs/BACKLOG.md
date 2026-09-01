@@ -181,7 +181,7 @@ the number before one exists.
 Also: **the delete icon leaving every row is a real improvement**, not just tidying. It currently
 sits one thumb-width from the row you tap to play.
 
-## 5d. The snackbar covers the list
+## 5d. ~~The snackbar covers the list~~ — DONE 2026-09-01
 
 Raised 2026-09-01. Adding tracks confirms with a snackbar that sits over the rows you just added,
 which is exactly what you want to look at. It is worse here than in most apps because the message
@@ -192,7 +192,7 @@ dock rather than over the content, shorten it to a line inside the top bar, or d
 additions entirely and let the list itself be the confirmation — the rows appearing *is* the
 feedback, and a notice that repeats what the screen already shows is noise.
 
-## 5e. Resolve metadata in the background
+## 5e. ~~Resolve metadata in the background~~ — DONE 2026-09-01
 
 Raised 2026-09-01. Titles and authors currently improve only when a track is played, because reading
 them means opening the file. On a list of three hundred that means the list stays full of filenames
