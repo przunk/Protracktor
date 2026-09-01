@@ -10,6 +10,37 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B13. Tapping the player bar scrolls the list to that track
+
+*owner, 2026-09-01.*
+
+The dock says what is playing; the list does not say where it is. Tapping the identity row — or the
+expanded player it opens — should take you to that row in the playlist.
+
+Cheap: `LazyListState.animateScrollToItem` on the index the queue already knows. It shares its
+mechanism with B14 and with `docs/BACKLOG.md` A3.
+
+## B14. Should the list follow playback?
+
+*owner, 2026-09-01. Asked as a question, and it deserves one.*
+
+The wish is real: press next on shuffle and the playing track is somewhere off screen.
+
+**My answer is no — not as automatic scrolling.** "Follow playback" is a feature people turn off.
+The moment you are scrolling the list looking for something while music plays, a track change yanks
+the view out from under you, and that is worse than not knowing where the playing track is. It also
+fights B13 and A3, which exist precisely so the user can decide where to look.
+
+**What I would build instead:** a small chip that appears **only when the playing track is off
+screen** — "Now playing ↓" — and scrolls to it when tapped. It answers the same question, is
+discoverable, never steals the view, and disappears when it has nothing to say. It also composes
+with B13 rather than competing: one is "take me there because I asked", the other is "you have
+drifted away from it, here is the way back".
+
+If the owner wants true follow-along after trying the chip, the honest version is: follow **unless
+the user has scrolled in the last few seconds**. That is the rule every player that gets this right
+uses, and it is more code than the chip for a worse first version.
+
 ## B1. Play a track from the search results
 
 *owner, raised twice, 2026-09-01.*
