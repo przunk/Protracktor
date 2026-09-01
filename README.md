@@ -16,15 +16,16 @@ device.
 
 | File | Contents |
 | --- | --- |
-| `docs/STATUS.md` | what is done, known defects numbered **C1…Cn**, branch state |
-| `docs/ARCHITECTURE.md` | how it is built and **why that way** |
-| `docs/OPEN_QUESTIONS.md` | decisions deliberately left open, with options |
-| `docs/PLAN_FORMATS.md` | plan for the decoders we do not have yet |
-| `docs/PLAN_CATALOGUES.md` | plan for the online archives we do not have yet |
-| `docs/BACKLOG.md` | agreed work not yet started, numbered **A1…An** |
-| `docs/WISHLIST.md` | ideas, numbered **B1…Bn**, with who raised them and when |
-| `docs/BUILD.md` | how to build debug, release and a store bundle |
-| `docs/LICENSES.md` | every third-party component, its licence, and what that obliges us to do |
+| [`GOAL.md`](GOAL.md) | the work queued for an unattended run, with its rules |
+| [`docs/STATUS.md`](docs/STATUS.md) | what is done, known defects numbered **C1…Cn**, branch state |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | how it is built and **why that way** |
+| [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md) | decisions deliberately left open, with options |
+| [`docs/PLAN_FORMATS.md`](docs/PLAN_FORMATS.md) | plan for the decoders we do not have yet |
+| [`docs/PLAN_CATALOGUES.md`](docs/PLAN_CATALOGUES.md) | plan for the online archives we do not have yet |
+| [`docs/BACKLOG.md`](docs/BACKLOG.md) | agreed work not yet started, numbered **A1…An** |
+| [`docs/WISHLIST.md`](docs/WISHLIST.md) | ideas, numbered **B1…Bn**, with who raised them and when |
+| [`docs/BUILD.md`](docs/BUILD.md) | how to build debug, release and a store bundle |
+| [`docs/LICENSES.md`](docs/LICENSES.md) | every third-party component, its licence, and what that obliges us to do |
 
 ## Licence
 
