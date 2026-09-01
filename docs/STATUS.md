@@ -28,6 +28,11 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-02** — A track can be played from Browse and from search results without adding it: the
+  results become the queue while you are looking at them, and the playlist is untouched. Sources are
+  named as paths everywhere, so a result says where it came from and Information shows
+  `Modland/Format/Author`.
+
 - **2026-09-01** — Adding tracks no longer raises a snackbar over the rows it is reporting, and
   titles and authors are filled in by a background pass instead of waiting for each track to be
   played.

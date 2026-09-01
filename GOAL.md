@@ -40,7 +40,7 @@ working unattended is the case they were written for.
 
 ## The list
 
-- [ ] **1. B1 + A1 — search: play a result, and see where it came from**
+- [x] **1. B1 + A1 — search: play a result, and see where it came from**
       The owner has asked for this three times, which is what puts it first.
 
       Two halves of one row and they are done together because they are the same row: a result must
@@ -56,7 +56,7 @@ working unattended is the case they were written for.
       back. Both traps are written up in `docs/WISHLIST.md` B14 — distinguishing our scrolling from
       the user's, and not animating across three hundred rows.
 
-- [ ] **3. B3 — the catalogue path in Information**
+- [x] **3. B3 — the catalogue path in Information** *(landed with item 1: one change to what a source is called served both)*
       A Modland track should read `Modland/Author/name.mod`. Today the dialog shows `subtitle`,
       which is `format · author` for a catalogue track — right for a row, wrong for an information
       panel. Same underlying inconsistency as item 1's second half, so if item 1 settles what a

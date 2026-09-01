@@ -77,6 +77,14 @@ data class PlayerUiState(
      * sense for something picked at random.
      */
     val transient: TrackRef? = null,
+    /**
+     * Playing from search results rather than from the playlist.
+     *
+     * The results become the queue while you are in them: next and previous walk what you found,
+     * and the playlist is left exactly as it was. Playing something you searched for must not
+     * rewrite the list you were keeping.
+     */
+    val resultsQueue: PlayQueue? = null,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
     val playlists: List<SavedPlaylist> = emptyList(),
@@ -94,7 +102,7 @@ data class PlayerUiState(
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
 ) {
-    val current: TrackRef? get() = transient ?: queue.current
+    val current: TrackRef? get() = transient ?: resultsQueue?.current ?: queue.current
 
     /**
      * Whether the current backend can move to a position at all.
@@ -111,14 +119,31 @@ data class PlayerUiState(
      * Asked of the mode rather than always of the queue: during Random the buttons walk the random
      * history, and a queue that happens to be empty must not grey them out.
      */
-    val canGoNext: Boolean get() = if (randomMode) true else queue.hasNext
-    val canGoPrevious: Boolean get() = if (randomMode) randomHasPrevious else queue.hasPrevious
+    val canGoNext: Boolean
+        get() = when {
+            randomMode -> true
+            searchMode -> resultsQueue?.hasNext == true
+            else -> queue.hasNext
+        }
+
+    val canGoPrevious: Boolean
+        get() = when {
+            randomMode -> randomHasPrevious
+            searchMode -> resultsQueue?.hasPrevious == true
+            else -> queue.hasPrevious
+        }
 
     val activePlaylistName: String?
         get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
 
     /** True while Random is driving playback rather than the playlist. */
     val randomMode: Boolean get() = transient != null
+
+    /** True while search results are driving playback rather than the playlist. */
+    val searchMode: Boolean get() = resultsQueue != null
+
+    /** True whenever what is playing did not come from the active playlist. */
+    val awayFromPlaylist: Boolean get() = randomMode || searchMode
 }
 
 /** Which part of Browse is on screen. Back moves one step towards [ROOT]. */
@@ -611,6 +636,32 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
+     * Plays a search result, without adding it to anything.
+     *
+     * The point of a search is finding out what something is, and that used to require adding it to
+     * the playlist first — which is backwards. The results become the queue while you are in them,
+     * so next and previous walk what you found and the playlist is untouched.
+     */
+    fun playFromResults(results: List<TrackRef>, index: Int) {
+        if (index !in results.indices) return
+        playFromResultsQueue(PlayQueue(tracks = results).startAt(index))
+    }
+
+    private fun playFromResultsQueue(results: PlayQueue) {
+        val ref = results.current ?: return
+        _state.update {
+            it.copy(
+                resultsQueue = results,
+                transient = null,
+                randomHasPrevious = false,
+                playing = false,
+                positionSeconds = 0.0,
+            )
+        }
+        load(ref)
+    }
+
+    /**
      * Keeps what is playing, without leaving Random.
      *
      * The owner asked for these to be separate: adding a track you like should not end the sequence
@@ -621,15 +672,22 @@ class PlaybackController private constructor(private val context: Context) {
         addToPlaylist(listOf(ref))
     }
 
-    /** Leaves Random and goes back to the playlist. Playback stops; the playlist is where you were. */
-    fun exitRandom() {
-        if (_state.value.transient == null) return
+    /**
+     * Leaves whatever is playing outside the playlist — Random or a search — and goes back to it.
+     *
+     * Playback stops. The playlist is exactly where it was left, which is the whole point of never
+     * having written to it.
+     */
+    fun returnToPlaylist() {
+        if (!_state.value.awayFromPlaylist) return
         stopPlayback()
         randomHistory.clear()
         randomCursor = -1
         _state.update {
             it.copy(
                 transient = null,
+                resultsQueue = null,
+                randomHasPrevious = false,
                 playing = false,
                 metadata = emptyMap(),
                 positionSeconds = 0.0,
@@ -690,7 +748,14 @@ class PlaybackController private constructor(private val context: Context) {
             // the URL is what both the cache and the player key on.
             id = catalogue?.urlFor(track.path) ?: track.path,
             title = track.title,
-            subtitle = listOf(track.format, track.author).filter { it.isNotBlank() }.joinToString(" · "),
+            // The source, as a path, the same shape a local file's is: "Modland/Protracker/4-Mat".
+            // It used to be "format · author", which reads well in a row and badly everywhere else
+            // -- the information panel needs to say where a file came from, and a search result has
+            // to answer "which one of these is it". The author still has its own field, so nothing
+            // is lost by making this a path.
+            subtitle = listOf(catalogue?.displayName, track.path.substringBeforeLast('/', ""))
+                .filter { !it.isNullOrBlank() }
+                .joinToString("/"),
             sizeBytes = track.size,
             fileName = track.title,
             // Catalogues file by author, so this is known before the file is ever opened.
@@ -837,17 +902,25 @@ class PlaybackController private constructor(private val context: Context) {
     fun playAt(index: Int) = openAndPlay(_state.value.queue.startAt(index))
 
     fun next() {
-        if (_state.value.transient != null) return randomNext()
-        val queue = _state.value.queue
-        if (!queue.hasNext) return
-        openAndPlay(queue.next())
+        val now = _state.value
+        if (now.transient != null) return randomNext()
+        now.resultsQueue?.let { results ->
+            if (results.hasNext) playFromResultsQueue(results.next())
+            return
+        }
+        if (!now.queue.hasNext) return
+        openAndPlay(now.queue.next())
     }
 
     fun previous() {
-        if (_state.value.transient != null) return randomPrevious()
-        val queue = _state.value.queue
-        if (!queue.hasPrevious) return
-        openAndPlay(queue.previous())
+        val now = _state.value
+        if (now.transient != null) return randomPrevious()
+        now.resultsQueue?.let { results ->
+            if (results.hasPrevious) playFromResultsQueue(results.previous())
+            return
+        }
+        if (!now.queue.hasPrevious) return
+        openAndPlay(now.queue.previous())
     }
 
     fun seekTo(seconds: Double) {
@@ -918,6 +991,24 @@ class PlaybackController private constructor(private val context: Context) {
     // --- internals ----------------------------------------------------------------------------
 
     private fun handleTrackEnded() {
+        _state.value.resultsQueue?.let { results ->
+            val advanced = results.onTrackEnded()
+            when {
+                advanced == null -> {
+                    track?.stop()
+                    audioFocus.release()
+                    _state.update { it.copy(playing = false, positionSeconds = it.durationSeconds) }
+                }
+                // Repeat-one hands back the identical queue.
+                advanced == results -> {
+                    val playing = track?.restart() ?: false
+                    _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
+                }
+                else -> playFromResultsQueue(advanced)
+            }
+            return
+        }
+
         // A transient track ending stops playback. Rolling on into the playlist would be answering
         // a question the user did not ask by pressing Random.
         if (_state.value.transient != null) {
@@ -967,8 +1058,16 @@ class PlaybackController private constructor(private val context: Context) {
 
         // The queue advances NOW, not inside the coroutine. Two quick presses of next both read the
         // old queue otherwise, and both advance to the same track.
+        // Playing from the playlist proper leaves any detour behind.
         _state.update {
-            it.copy(queue = queue, transient = null, randomHasPrevious = false, playing = false, positionSeconds = 0.0)
+            it.copy(
+                queue = queue,
+                transient = null,
+                resultsQueue = null,
+                randomHasPrevious = false,
+                playing = false,
+                positionSeconds = 0.0,
+            )
         }
         scheduleSave()
         load(ref)
