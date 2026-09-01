@@ -28,6 +28,10 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — Adding tracks no longer raises a snackbar over the rows it is reporting, and
+  titles and authors are filled in by a background pass instead of waiting for each track to be
+  played.
+
 - **2026-09-01** — The playlist row rebuilt to the owner's sketch: ordinal or a play triangle, title
   with author and format, an overflow menu holding information and delete, and a drag handle that
   reorders. Reordering is an edit, so it waits for Save like the others.
@@ -186,6 +190,13 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 - **Folder scanning filters by file extension**, not by probing content as
   `docs/ARCHITECTURE.md` §5 requires. Probing means reading every candidate, which belongs with the
   index rather than with a foreground scan. `SupportedFormats` says so in its own documentation.
+
+## Known limitations
+
+- **Background metadata resolution waits for playback to stop.** sc68 keeps its 68000 emulator in
+  global state, so opening a second instance while one plays would clobber it. Adding a folder while
+  music is playing therefore resolves nothing until you stop. Accepted deliberately; the alternative
+  is per-backend rules about which are safe to open concurrently.
 
 ## Known defects
 
