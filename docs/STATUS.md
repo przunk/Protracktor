@@ -28,6 +28,14 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — Adding tracks no longer raises a snackbar over the rows it is reporting, and
+  titles and authors are filled in by a background pass instead of waiting for each track to be
+  played.
+
+- **2026-09-01** — The playlist row rebuilt to the owner's sketch: ordinal or a play triangle, title
+  with author and format, an overflow menu holding information and delete, and a drag handle that
+  reorders. Reordering is an edit, so it waits for Save like the others.
+
 - **2026-09-01** — **The consoles.** game-music-emu 0.6.5: NES (NSF/NSFE), SNES (SPC), Game Boy
   (GBS), Sega (VGM/VGZ/GYM), PC Engine (HES), ZX Spectrum (AY), MSX (KSS). Verified on the host
   before integration — NSF 4/4, SPC 4/4, GBS 3/3, VGM 3/3.
@@ -170,37 +178,56 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does not block steps 1–3.
 
-## Not built yet — and the requirements they leave open
+## C — known defects
 
-Naming these because a `STATUS.md` that implies more than exists is worse than none.
+Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
+what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-- **`.sc68` container files will not play**, though `.sndh` should. That format references external
-  replay binaries which we do not ship. SNDH carries its own code and needs none.
-- **R9 is addressed but unmeasured.** The next track is read while the current one plays, and
-  remote fetches are cached on disk. Whether that turns the owner's five-to-thirty seconds into
-  nothing has not been measured on his SMB share, which is the only measurement that counts.
-- **Folder scanning filters by file extension**, not by probing content as
-  `docs/ARCHITECTURE.md` §5 requires. Probing means reading every candidate, which belongs with the
-  index rather than with a foreground scan. `SupportedFormats` says so in its own documentation.
+### C1. Roughly half of `.sndh` files do not play
 
-## Known defects
+Measured on thirty random Modland files through the real backend logic: **16 play, 5 load and render
+silence, 9 fail `api68_load_mem`**. sc68 2.2.1 is from 2003 and its SNDH support is partial.
 
-- **Roughly half of `.sndh` files do not play.** Measured on thirty random Modland files through the
-  real backend logic: 16 play, 5 load and render silence, 9 fail `api68_load_mem`. sc68 2.2.1 is from
-  2003 and its SNDH support is partial.
-  The fix is sc68 3.0.0b, which exists only in SourceForge SVN — see `docs/PLAN_FORMATS.md` §0 for
-  what that would take. Failures now say which backend refused and why, rather than claiming the
-  format is unsupported.
+The fix is sc68 3.0.0b — see `docs/PLAN_FORMATS.md` §0, which has the route and what it costs.
+Failures now say which backend refused and what it said, rather than claiming the format is
+unsupported.
 
+### C2. `.sc68` container files — status unknown
 
+Previously recorded here as "will not play, because they reference external replay binaries we do not
+ship". **That reasoning is now stale**: those binaries have shipped since 2026-09-01, which is what
+made SNDH play at all. Whether `.sc68` works has not been tested.
 
+Left in the list rather than removed, because "we do not know" and "it works" are different things
+and only one of them has been established.
 
+### C3. R9 is addressed but unmeasured
 
-- ~~Play/Stop label goes stale when a module reaches its end.~~ **Fixed 2026-08-31** by the polling
-  loop in `PlayerViewModel`: the native side raises a flag when the module ends and the same tick
-  that drives the progress bar notices it.
+The next track is read while the current one plays and remote fetches are cached, but nobody has
+measured whether that turns the owner's original five-to-thirty second wait into nothing **on his
+SMB share**, which is the only measurement that counts.
+
+### C4. Folder scanning trusts file extensions
+
+Not content probing, as `docs/ARCHITECTURE.md` §5 requires. A misnamed file is skipped by a scan; a
+misleadingly named one is added and refuses only when played. Tracked as work in `docs/BACKLOG.md`
+A6 as well, because it is both a defect and a piece of work.
+
+## Known limitations — deliberate, not defects
+
+- **Background metadata resolution waits for playback to stop.** sc68 keeps its 68000 emulator in
+  global state, so opening a second instance while one plays would clobber it. Adding a folder while
+  music is playing therefore resolves nothing until you stop. Accepted; the alternative is
+  per-backend rules about which are safe to open concurrently.
+- **Subsong selection does not exist.** Every backend plays track 0. Some console files hold
+  hundreds. It is a defect in effect, but the design is an open decision rather than a bug to fix —
+  `docs/BACKLOG.md` A2.
 
 ## Fixed
+
+- ~~**Play/Stop label goes stale when a module reaches its end.**~~ Fixed 2026-08-31 by the polling
+  loop: the native side raises a flag when a module ends and the tick that drives the progress bar
+  notices it.
 
 - **2026-09-01 — `.sndh` played silence.** Not a missing format and not a wrapper bug: **sc68 wraps
   SNDH in a replay routine that lives on disk**, not inside the tune, and opens it by path. We

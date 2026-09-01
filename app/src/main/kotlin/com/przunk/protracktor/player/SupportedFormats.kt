@@ -61,6 +61,22 @@ object SupportedFormats {
         "sndh",
     )
 
+    /**
+     * A short label for what a file is, for the playlist row.
+     *
+     * The extension, upper-cased — `SAP`, `MOD`, `SPC`. Crude, and right nearly always: the backend
+     * knows better but only after the file has been opened, and a row has to say something before
+     * that. Amiga prefix names (`mod.title`) are handled the same way from the other end.
+     */
+    fun labelFor(fileName: String): String {
+        val name = fileName.lowercase()
+        val extension = name.substringAfterLast('.', "")
+        if (extension.isNotEmpty() && extension in extensions) return extension.uppercase()
+        val prefix = name.substringBefore('.', "")
+        if (prefix.isNotEmpty() && name.contains('.') && prefix in prefixes) return prefix.uppercase()
+        return extension.uppercase()
+    }
+
     fun looksPlayable(fileName: String): Boolean {
         val name = fileName.lowercase()
         val extension = name.substringAfterLast('.', "")

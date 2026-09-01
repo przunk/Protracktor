@@ -27,6 +27,13 @@
     <string name="action_scanning">Skanowanie…</string>
 
     <string name="action_undo">Cofnij</string>
+    <string name="action_info">Informacje</string>
+    <string name="action_close">Zamknij</string>
+    <string name="info_location">Lokalizacja</string>
+    <string name="info_size">Rozmiar</string>
+    <string name="a11y_now_playing_row">Teraz odtwarzane</string>
+    <string name="a11y_track_actions">Akcje dla %1$s</string>
+    <string name="a11y_reorder">Przeciągnij, aby przenieść %1$s</string>
     <string name="action_back">Wstecz</string>
     <string name="action_delete">Usuń</string>
     <string name="action_cancel">Anuluj</string>

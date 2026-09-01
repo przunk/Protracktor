@@ -65,8 +65,10 @@ fun SwipeableSnackbar(data: SnackbarData) {
                 onDragStopped = {
                     if (abs(offset.value) > dismissThreshold) {
                         offset.animateTo(if (offset.value > 0) screenWidthPx else -screenWidthPx)
+                        // Left off-screen deliberately. Snapping back to zero here put the snackbar
+                        // in the middle at full opacity for the frame between the reset and the host
+                        // removing it, which read as a flicker.
                         data.dismiss()
-                        offset.snapTo(0f)
                     } else {
                         offset.animateTo(0f)
                     }
