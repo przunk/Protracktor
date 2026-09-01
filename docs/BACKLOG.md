@@ -170,11 +170,61 @@ will not break the play history — that was designed for removal and happens to
 **One reservation, worth settling before building it.** That is five things across two lines on a
 phone. The platform label and the overflow menu compete for the same right-hand space, and the
 handle takes more of it. Suggestion: platform/format as a small label under the author or beside it,
-overflow and handle sharing the right edge — or drop the ordinal once the handle is there, since a
-number nobody can edit earns less than the space it takes.
+with overflow and handle sharing the right edge.
+
+**The ordinal stays.** I suggested dropping it to buy space; the owner's reason for keeping it is
+better than my reason for removing it: with three hundred tracks the number tells you *where you
+are in the list* at a glance, which nothing else on the row does. A scroll indicator would do the
+same job and take no row space at all — worth offering as the alternative, but not worth removing
+the number before one exists.
 
 Also: **the delete icon leaving every row is a real improvement**, not just tidying. It currently
 sits one thumb-width from the row you tap to play.
+
+## 5d. The snackbar covers the list
+
+Raised 2026-09-01. Adding tracks confirms with a snackbar that sits over the rows you just added,
+which is exactly what you want to look at. It is worse here than in most apps because the message
+arrives at the moment the list changes.
+
+It also carries undo, so it cannot simply be made quieter. Options worth weighing: put it above the
+dock rather than over the content, shorten it to a line inside the top bar, or drop the message for
+additions entirely and let the list itself be the confirmation — the rows appearing *is* the
+feedback, and a notice that repeats what the screen already shows is noise.
+
+## 5e. Resolve metadata in the background
+
+Raised 2026-09-01. Titles and authors currently improve only when a track is played, because reading
+them means opening the file. On a list of three hundred that means the list stays full of filenames
+until each has been heard.
+
+A background pass after a scan — open each file, take title and author, write them, move on — fixes
+that. It is the same work `adoptTitleFrom` already does, driven by a queue instead of by playback.
+
+**Two things it has to respect.** It must not compete with playback for the network on a share, and
+it must be interruptible: the user pressing play matters more than the pass finishing. It is also
+half of the content-probing item (§7) — once every file is being opened anyway, identifying it
+properly is nearly free.
+
+## 5f. Subsongs: the decision, then the UI
+
+Raised 2026-09-01, and now overdue rather than merely absent. game-music-emu reports track counts in
+the hundreds — one GBS in the sample said 99, an HES said 256 — and we play track 0 and nothing else.
+sc68 and ASAP report subsongs too.
+
+**The question is not how to draw it, it is what a subsong IS to this app.** Two readings, and they
+lead to different apps:
+
+1. **A subsong is a track.** A 99-track GBS becomes 99 rows on adding. Honest, browsable, searchable
+   — and it turns a folder of twenty GBS files into a playlist of two thousand rows.
+2. **A subsong is a property of a track.** One row, with a selector while it plays. Keeps lists
+   short, but subsongs become invisible to search and to shuffle.
+
+A third exists: default to (2) with an explicit "expand into tracks" action. More work, and it
+avoids choosing for the user.
+
+Worth deciding before building either, because the schema differs: (1) needs a subsong index on the
+track identity, and identity is what the duplicate check and the play history both rest on.
 
 ## 6b. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
