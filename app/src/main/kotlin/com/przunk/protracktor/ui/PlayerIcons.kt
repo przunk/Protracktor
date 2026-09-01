@@ -49,6 +49,23 @@ object PlayerIcons {
     val Play: ImageVector by lazy {
         icon("Play", "M8 5v14l11-7z")
     }
+    val DropDown: ImageVector by lazy {
+        icon("DropDown", "M7 10l5 5 5-5z")
+    }
+    val Save: ImageVector by lazy {
+        icon(
+            "Save",
+            "M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 " +
+                "0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z",
+        )
+    }
+    val Discard: ImageVector by lazy {
+        icon(
+            "Discard",
+            "M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 " +
+                "8s8-3.58 8-8-3.58-8-8-8z",
+        )
+    }
     val Rename: ImageVector by lazy {
         icon(
             "Rename",

@@ -33,6 +33,13 @@
         <item quantity="other">Add %d tracks</item>
     </plurals>
 
+    <string name="action_discard">Discard</string>
+    <string name="playlist_unsaved_title">Unsaved changes</string>
+    <string name="playlist_unsaved_body">This playlist has edits that are not written yet. Save them before switching, or throw them away.</string>
+    <string name="a11y_choose_playlist">Choose a playlist</string>
+    <string name="a11y_save_playlist">Save the playlist</string>
+    <string name="a11y_discard_changes">Discard the changes</string>
+
     <string name="playlist_switch_title">Playlists</string>
     <string name="playlist_new">New playlist</string>
     <string name="playlist_rename">Rename playlist</string>
@@ -64,6 +71,7 @@
     <string name="notification_stop">Stop</string>
     <string name="notification_channel_playback">Playback</string>
 
+    <string name="a11y_seek">Seek within the track</string>
     <string name="a11y_play">Play</string>
     <string name="a11y_pause">Pause</string>
     <string name="a11y_previous">Previous track</string>

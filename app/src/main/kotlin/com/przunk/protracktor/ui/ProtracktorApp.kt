@@ -19,12 +19,22 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -89,6 +99,8 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     LaunchedEffect(showBrowse) { if (showBrowse) viewModel.refreshFolders() }
 
     val undoLabel = stringResource(R.string.action_undo)
+    val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
+    var pendingSwitch by remember { mutableStateOf<Long?>(null) }
     state.message?.let { message ->
         LaunchedEffect(message.id) {
             val result = snackbarHostState.showSnackbar(
@@ -105,21 +117,57 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         topBar = {
             TopAppBar(
                 title = {
-                    Column(modifier = Modifier.clickable { showPlaylists = true }) {
-                        Text(state.activePlaylistName ?: stringResource(R.string.playlist_default_name))
-                        if (state.queue.tracks.isNotEmpty()) {
-                            Text(
-                                text = pluralStringResource(
-                                    R.plurals.track_count,
-                                    state.queue.tracks.size,
-                                    state.queue.tracks.size,
-                                ),
-                                style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    // A chevron and a filled shape, because the owner could not tell the name was a
+                    // button. A control that only looks like a label is a control nobody presses.
+                    Surface(
+                        onClick = { showPlaylists = true },
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.semantics {
+                            contentDescription = choosePlaylistLabel
+                        },
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column {
+                                Text(
+                                    text = state.activePlaylistName
+                                        ?: stringResource(R.string.playlist_default_name),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                )
+                                if (state.queue.tracks.isNotEmpty()) {
+                                    Text(
+                                        text = pluralStringResource(
+                                            R.plurals.track_count,
+                                            state.queue.tracks.size,
+                                            state.queue.tracks.size,
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = PlayerIcons.DropDown,
+                                contentDescription = null,
+                                modifier = Modifier.padding(start = 2.dp),
                             )
                         }
                     }
                 },
                 actions = {
+                    // Only while there is something to save. A permanently lit Save button teaches
+                    // nothing about whether the list on screen is the list on disk.
+                    if (state.dirty) {
+                        IconButton(onClick = viewModel::discardChanges) {
+                            Icon(PlayerIcons.Discard, stringResource(R.string.a11y_discard_changes))
+                        }
+                        FilledIconButton(onClick = viewModel::savePlaylist) {
+                            Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
+                        }
+                    }
                     TextButton(onClick = { showBrowse = true }) {
                         Text(stringResource(R.string.action_browse))
                     }
@@ -129,6 +177,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         bottomBar = {
             PlayerDock(
                 state = state,
+                onSeek = viewModel::seekTo,
                 onExpand = { showNowPlaying = true },
                 onBrowse = { showBrowse = true },
                 onPlayPause = viewModel::togglePlayPause,
@@ -163,7 +212,36 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
 
     if (showPlaylists) {
         BackHandler { showPlaylists = false }
-        PlaylistSheet(state = state, viewModel = viewModel, onDismiss = { showPlaylists = false })
+        PlaylistSheet(
+            state = state,
+            viewModel = viewModel,
+            // Switching abandons unsaved edits, so ask before losing them rather than after.
+            onSelect = { id ->
+                if (state.dirty) pendingSwitch = id else viewModel.switchToPlaylist(id)
+            },
+            onDismiss = { showPlaylists = false },
+        )
+    }
+
+    pendingSwitch?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingSwitch = null },
+            title = { Text(stringResource(R.string.playlist_unsaved_title)) },
+            text = { Text(stringResource(R.string.playlist_unsaved_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.savePlaylist()
+                    viewModel.switchToPlaylist(target)
+                    pendingSwitch = null
+                }) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.switchToPlaylist(target)
+                    pendingSwitch = null
+                }) { Text(stringResource(R.string.action_discard)) }
+            },
+        )
     }
 
     if (showBrowse) {
@@ -196,6 +274,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
 private fun PlaylistSheet(
     state: com.przunk.protracktor.player.PlayerUiState,
     viewModel: PlayerViewModel,
+    onSelect: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
@@ -206,7 +285,7 @@ private fun PlaylistSheet(
             playlists = state.playlists,
             activeId = state.activePlaylistId,
             onSelect = { id ->
-                viewModel.switchToPlaylist(id)
+                onSelect(id)
                 onDismiss()
             },
             onCreate = viewModel::createPlaylist,
