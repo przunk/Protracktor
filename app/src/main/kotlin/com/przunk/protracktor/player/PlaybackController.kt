@@ -965,8 +965,17 @@ class PlaybackController private constructor(private val context: Context) {
 
             val opened = withContext(Dispatchers.IO) { NativeEngine.open(bytes) }
             if (opened == null) {
+                // The reason, not just the verdict. "Not a format we can play" is wrong when a
+                // backend claimed the file and then choked on it, which is exactly what sc68 does
+                // with some SNDH files -- and the two are indistinguishable from outside.
+                val reason = NativeEngine.lastOpenError()
                 _state.update {
-                    it.copy(message = Message("${ref.title} is not a format we can play yet"))
+                    it.copy(
+                        message = Message(
+                            if (reason.isBlank()) "${ref.title}: no backend could open it"
+                            else "${ref.title}: $reason"
+                        )
+                    )
                 }
                 return@launch
             }

@@ -37,6 +37,14 @@ object NativeEngine {
     fun setDataPath(path: String) = nativeSetDataPath(path)
 
     /**
+     * Why the last [open] returned null.
+     *
+     * Empty when nothing failed. Worth showing: a file no backend claims and a file a backend
+     * claimed and then choked on are different problems, and they look identical from outside.
+     */
+    fun lastOpenError(): String = nativeLastOpenError()
+
+    /**
      * Opens a module from its bytes. Returns a handle, or `null` if the bytes are not a module the
      * backend recognises.
      *
@@ -119,6 +127,7 @@ object NativeEngine {
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
     @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
     @JvmStatic private external fun nativeSetDataPath(path: String)
+    @JvmStatic private external fun nativeLastOpenError(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double

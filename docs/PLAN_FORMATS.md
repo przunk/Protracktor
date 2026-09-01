@@ -29,21 +29,54 @@ net is wide enough to make a claim on something another backend should have had.
 
 ---
 
-## 0. ~~Fix `.sndh`~~ — DONE 2026-09-01
+## 0. `.sndh` — half fixed, and the rest needs a newer sc68
 
-sc68 wraps SNDH in a replay routine that lives on disk rather than inside the tune. We shipped none,
-so every file loaded and played silence. The binaries are packaged now, and the sc68 gate no longer
-trusts `api68_verify_mem`, which rejects ICE-packed SNDH that loads perfectly.
+**Done 2026-09-01:** sc68 wraps SNDH in a replay routine that lives on disk rather than inside the
+tune. We shipped none, so every file loaded and played silence. The binaries are packaged now, and
+the gate no longer trusts `api68_verify_mem`, which rejects ICE-packed SNDH that loads perfectly.
 
-**Two things this leaves behind:**
+**Still broken, and measured rather than guessed.** Five random SNDH files from Modland, run through
+the exact backend logic on the host:
 
-- `docs/LICENSES.md` records a question about where some of those replay binaries came from. It
-  needs answering before the repository is public.
-- `.sc68` container files should now work too, for the same reason. Untested.
+| | |
+| --- | --- |
+| plays | 3 |
+| loads, then renders silence | 1 |
+| fails `api68_load_mem` — *"validation test"* | 1 |
 
-**The technique is the point and should be reused.** Building a backend for the *host* and calling
-its API on a real file turns "it does not work" into a trace, in seconds, with no device. Every
-backend below should be proven that way before it is wired into the app.
+That last one is what produces the owner's "not a format we can play yet". **sc68 2.2.1 is from 2003
+and its SNDH support is partial.** No amount of wiring on our side changes that.
+
+### The fix is sc68 3.0.0b
+
+It exists, and its own `NEWS` says what we need:
+
+> sndh support should be almost perfect. […] sc68 has a built-in database of all sndh files known to
+> this day including information on track duration and hardware used
+
+A duration database would also give SNDH the track lengths it currently lacks entirely.
+
+**Getting it is the problem.** It lives only in SourceForge SVN (`https://svn.code.sf.net/p/sc68/code/`,
+revision 713 as of 2026-09-01) — no git mirror, and benjihan's GitHub account does not carry it. The
+code-snapshot zip URL returns 404. `svn` is not installed on this machine and installing it needs the
+owner.
+
+**Options, for the owner to choose:**
+
+1. Install `svn` (needs `sudo`) and vendor a pinned revision. Cleanest, and the pin is honest.
+2. Fetch the tree file by file over HTTP — it works, `NEWS` came back that way — but a scripted
+   recursive fetch of a whole source tree is a fragile thing to depend on.
+3. Leave it. Three SNDH files in five play; the others now say why they do not.
+
+It is also a **much larger and more modern codebase** than 2.2.1, with its own autotools setup and a
+different API. Expect it to be closer to a fresh integration than an upgrade.
+
+### Meanwhile
+
+The failure message now names which backend refused and what it said, instead of claiming the format
+is unsupported. A file no backend claims and a file a backend claimed and then choked on are
+different problems and were indistinguishable from outside — it took a host probe to tell them apart,
+which is not a thing the owner can do.
 
 ## 1. `libsidplayfp` — Commodore 64
 
