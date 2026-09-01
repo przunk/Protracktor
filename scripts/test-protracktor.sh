@@ -40,6 +40,16 @@ if grep -aq '^> Task :app:testDebugUnitTest UP-TO-DATE' "$LOG_FILE"; then
     cached=" (up to date, not re-run)"
 fi
 
+# A compile error is not a test failure, and reporting stale counts from the previous run's XML
+# alongside it says "29 passed" about code that did not build. Named for what it is.
+if [ "$status" -ne 0 ] && grep -aq '^e: ' "$LOG_FILE"; then
+    echo "❌ Did not compile:"
+    { grep -a '^e: ' "$LOG_FILE" || true; } | sed "s|file://$PROTRACKTOR_DIR/||" | sed 's/^/   /' | head -n 20
+    echo
+    echo "Full log: $LOG_FILE"
+    exit 1
+fi
+
 if [ "$status" -ne 0 ]; then
     echo "❌ Tests failed:"
     # "|| true" on every one of these. With set -o pipefail a grep that legitimately matches

@@ -20,7 +20,13 @@ import android.net.Uri
 import com.przunk.protracktor.data.GrantedFolder
 import com.przunk.protracktor.data.LibraryStore
 import com.przunk.protracktor.data.SavedPlayerState
+import com.przunk.protracktor.data.CatalogueGroup
+import com.przunk.protracktor.data.CatalogueStore
+import com.przunk.protracktor.data.CatalogueSummary
+import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.data.SavedPlaylist
+import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.engine.NativeEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -91,6 +97,9 @@ data class PlayerUiState(
         get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
 }
 
+/** Which part of Browse is on screen. Back moves one step towards [ROOT]. */
+enum class BrowseDomain { ROOT, LOCAL, ONLINE, SEARCH }
+
 /**
  * What the Browse screen is looking at.
  *
@@ -98,20 +107,31 @@ data class PlayerUiState(
  * playback does not, and folding it in would mean every scan tick recomposing the player.
  */
 data class BrowseState(
+    val domain: BrowseDomain = BrowseDomain.ROOT,
+    val loading: Boolean = false,
+
+    // Local files
     val folders: List<GrantedFolder> = emptyList(),
     val openFolder: GrantedFolder? = null,
+
+    // Online catalogues
+    val catalogues: List<CatalogueSummary> = emptyList(),
+    val openCatalogue: CatalogueSummary? = null,
+    val openFormat: String? = null,
+    val openAuthor: String? = null,
+    val groups: List<CatalogueGroup> = emptyList(),
+    /** Non-null while an index is downloading; carries something to show the user. */
+    val indexing: String? = null,
+
+    // Search
+    val query: String = "",
+    val searchLocal: Boolean = true,
+    val searchCatalogues: Set<String> = emptySet(),
+
+    /** Whatever the current level lists, in the form the playlist takes. */
     val tracks: List<TrackRef> = emptyList(),
-    val loading: Boolean = false,
 )
 
-/**
- * Everything about playback, owned once per process.
- *
- * It used to live in the ViewModel. That cannot survive the screen going away, and playback has to:
- * a foreground service and the UI must look at the *same* player, not two that agree by accident.
- * The service holds this, the ViewModel forwards to it, and there is one answer to "what is
- * playing" no matter who asks.
- */
 class PlaybackController private constructor(private val context: Context) {
 
     companion object {
@@ -154,6 +174,8 @@ class PlaybackController private constructor(private val context: Context) {
     private var openJob: Job? = null
 
     private val store = LibraryStore(context)
+    private val catalogues = CatalogueStore(context)
+    private val remoteFiles = RemoteFiles(context)
 
     private val audioFocus = AudioFocus(
         context = context,
@@ -348,6 +370,32 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- browsing -----------------------------------------------------------------------------
 
+    fun openDomain(domain: BrowseDomain) {
+        _browse.update { it.copy(domain = domain, tracks = emptyList(), groups = emptyList()) }
+        when (domain) {
+            BrowseDomain.LOCAL -> refreshFolders()
+            BrowseDomain.ONLINE, BrowseDomain.SEARCH -> refreshCatalogues()
+            BrowseDomain.ROOT -> Unit
+        }
+    }
+
+    /** One step back up the browse hierarchy. Returns false when already at the top. */
+    fun browseBack(): Boolean {
+        val current = _browse.value
+        val next = when {
+            current.openAuthor != null -> current.copy(openAuthor = null, tracks = emptyList())
+                .also { openFormat(current.openFormat.orEmpty()) }
+            current.openFormat != null -> current.copy(openFormat = null, tracks = emptyList())
+                .also { current.openCatalogue?.let(::openCatalogue) }
+            current.openCatalogue != null -> current.copy(openCatalogue = null, groups = emptyList())
+            current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList())
+            current.domain != BrowseDomain.ROOT -> current.copy(domain = BrowseDomain.ROOT, tracks = emptyList())
+            else -> return false
+        }
+        _browse.update { next }
+        return true
+    }
+
     fun refreshFolders() {
         scope.launch { _browse.update { it.copy(folders = store.grantedFolders()) } }
     }
@@ -379,6 +427,128 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
 
+    // --- online catalogues --------------------------------------------------------------------
+
+    fun refreshCatalogues() {
+        scope.launch { _browse.update { it.copy(catalogues = catalogues.summaries()) } }
+    }
+
+    /**
+     * Downloads a catalogue's index and stores it.
+     *
+     * Only entries whose filename a backend might handle are kept. Modland lists about half a
+     * million files across formats nothing here can play yet; indexing them all would cost minutes
+     * and disk to browse a list of tracks that cannot be opened. Re-run this after adding a backend
+     * -- noted in docs/BACKLOG.md so it is not discovered by wondering where the SIDs went.
+     */
+    fun indexCatalogue(id: String) {
+        val catalogue = Catalogue.byId(id) ?: return
+        scope.launch {
+            _browse.update { it.copy(indexing = catalogue.displayName) }
+            val bytes = remoteFiles.fetchIndex(catalogue.indexUrl)
+            if (bytes == null) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("Could not download the ${catalogue.displayName} index.")) }
+                return@launch
+            }
+            val entries = withContext(Dispatchers.Default) {
+                catalogue.parseIndex(bytes) { name -> SupportedFormats.looksPlayable(name) }
+            }
+            catalogues.replaceIndex(catalogue, entries)
+            _browse.update { it.copy(indexing = null, catalogues = catalogues.summaries()) }
+            _state.update { it.copy(message = Message("Indexed ${entries.size} tracks from ${catalogue.displayName}.")) }
+        }
+    }
+
+    fun openCatalogue(summary: CatalogueSummary) {
+        scope.launch {
+            _browse.update {
+                it.copy(openCatalogue = summary, openFormat = null, openAuthor = null, loading = true, tracks = emptyList())
+            }
+            val formats = catalogues.formats(summary.id)
+            _browse.update { it.copy(groups = formats, loading = false) }
+        }
+    }
+
+    fun openFormat(format: String) {
+        val catalogueId = _browse.value.openCatalogue?.id ?: return
+        scope.launch {
+            _browse.update { it.copy(openFormat = format, openAuthor = null, loading = true, tracks = emptyList()) }
+            val authors = catalogues.authors(catalogueId, format)
+            _browse.update { it.copy(groups = authors, loading = false) }
+        }
+    }
+
+    fun openAuthor(author: String) {
+        val current = _browse.value
+        val catalogueId = current.openCatalogue?.id ?: return
+        val format = current.openFormat ?: return
+        scope.launch {
+            _browse.update { it.copy(openAuthor = author, loading = true, tracks = emptyList()) }
+            val found = catalogues.tracks(catalogueId, format, author).map(::toTrackRef)
+            _browse.update { it.copy(tracks = found, loading = false) }
+        }
+    }
+
+    /** Picks something at random from the indexed catalogues and plays it. */
+    fun playRandom() {
+        scope.launch {
+            val picked = catalogues.random()
+            if (picked == null) {
+                _state.update {
+                    it.copy(message = Message("Nothing is indexed yet. Index a catalogue first."))
+                }
+                return@launch
+            }
+            val ref = toTrackRef(picked)
+            addToPlaylist(listOf(ref))
+            val index = _state.value.queue.tracks.indexOfFirst { it.id == ref.id }
+            if (index >= 0) playAt(index)
+        }
+    }
+
+    // --- search -------------------------------------------------------------------------------
+
+    fun setQuery(query: String) = _browse.update { it.copy(query = query) }
+
+    fun toggleSearchLocal() = _browse.update { it.copy(searchLocal = !it.searchLocal) }
+
+    fun toggleSearchCatalogue(id: String) = _browse.update {
+        it.copy(
+            searchCatalogues = if (id in it.searchCatalogues) it.searchCatalogues - id else it.searchCatalogues + id
+        )
+    }
+
+    fun runSearch() {
+        val current = _browse.value
+        if (current.query.isBlank()) return
+        scope.launch {
+            _browse.update { it.copy(loading = true, tracks = emptyList()) }
+
+            val fromLocal = if (current.searchLocal) {
+                // The library, meaning every playlist's tracks -- searching only the active one
+                // would answer a question nobody asked.
+                store.allTracks().filter { it.title.contains(current.query, ignoreCase = true) }
+            } else {
+                emptyList()
+            }
+            val fromOnline = catalogues.search(current.query, current.searchCatalogues).map(::toTrackRef)
+
+            _browse.update { it.copy(tracks = fromLocal + fromOnline, loading = false) }
+        }
+    }
+
+    private fun toTrackRef(track: CatalogueTrack): TrackRef {
+        val catalogue = Catalogue.byId(track.catalogueId)
+        return TrackRef(
+            // The URL is the identity. A catalogue track has no document URI and never will, and
+            // the URL is what both the cache and the player key on.
+            id = catalogue?.urlFor(track.path) ?: track.path,
+            title = track.title,
+            subtitle = listOf(track.format, track.author).filter { it.isNotBlank() }.joinToString(" · "),
+        )
+    }
+
     /** Adds a chosen set to the active playlist. Duplicates are ignored rather than doubled. */
     fun addToPlaylist(tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
@@ -389,7 +559,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (count == 1) "Added 1 track." else "Added $count tracks."
     )
 
-    // --- library ------------------------------------------------------------------------------
+    // --- library ---    // --- library ------------------------------------------------------------------------------
 
     fun addFolder(treeUri: Uri) {
         scope.launch {
@@ -594,11 +764,15 @@ class PlaybackController private constructor(private val context: Context) {
             track?.close()
             track = null
 
-            val bytes = withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver
-                        .openInputStream(Uri.parse(ref.id))?.use { it.readBytes() }
-                }.getOrNull()
+            val bytes = if (ref.id.startsWith("http")) {
+                remoteFiles.fetch(ref.id)
+            } else {
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver
+                            .openInputStream(Uri.parse(ref.id))?.use { it.readBytes() }
+                    }.getOrNull()
+                }
             }
             ensureActive()
 

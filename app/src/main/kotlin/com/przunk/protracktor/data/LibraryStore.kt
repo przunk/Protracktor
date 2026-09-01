@@ -121,6 +121,19 @@ class LibraryStore(context: Context) {
         }
     }
 
+    /** Every track known to the library, whichever playlist it belongs to. For searching. */
+    suspend fun allTracks(): List<TrackRef> = withContext(Dispatchers.IO) {
+        helper.readableDatabase
+            .rawQuery("SELECT id, title, subtitle FROM tracks ORDER BY title", null)
+            .use { row ->
+                buildList {
+                    while (row.moveToNext()) {
+                        add(TrackRef(row.getString(0), row.getString(1), row.getString(2)))
+                    }
+                }
+            }
+    }
+
     /**
      * Makes the stored playlist match [tracks] exactly, order included.
      *

@@ -234,3 +234,47 @@ alongside the service would have meant debugging two new things at once. Recorde
 
 **No audio focus.** Another app starting playback will talk over us, and a phone call will not duck
 us. Same step.
+
+## 11. Browse has domains, and online catalogues live in the database
+
+Decided 2026-09-01, after the owner asked for Browse to start with *where to look* rather than with
+"add a folder".
+
+Four domains: **local filesystem**, **online catalogues**, **random**, **search**. Below that it is
+the same list-and-tick machinery whatever the source, which is why one component covers all four —
+a folder of files and an author's page in an archive are the same problem once the rows exist.
+
+### The index goes in the database, the files do not
+
+A catalogue's index is downloaded once and stored, so **browsing an online archive needs no
+network**. The network is next needed only when a track that is not cached is played. Modland's
+whole index is a 5.75 MB zip of about half a million lines; kept as rows it is browsable by format
+and author instantly and offline.
+
+Only entries a backend might handle are indexed. Modland lists formats nothing here can play yet,
+and indexing them would cost minutes and disk to browse a list of tracks that cannot be opened.
+**Re-index after adding a backend** — recorded in `docs/BACKLOG.md`, because otherwise it is
+discovered by wondering where the SIDs went.
+
+### A remote track's identity is its URL
+
+It has no document URI and never will. The URL is what the cache keys on and what the player opens,
+so it is what `TrackRef.id` holds — the same field a local track keeps its `content://` URI in. The
+player branches on the scheme and nothing else in the app has to know the difference.
+
+### The cache is not an optimisation
+
+A measured Modland fetch took four seconds for 212 KB, and the owner's own local library sits on an
+SMB share, so "read the file" is a network round trip either way. Fetched bytes are cached by a hash
+of the URL — hashed rather than sanitised, because real Modland paths carry spaces, slashes, `@` and
+`$`, and any escaping scheme would eventually collide. Downloads land through a temporary file, so
+an interrupted one cannot leave a truncated file that looks valid forever after.
+
+The eviction budget is still `docs/OPEN_QUESTIONS.md` Q5 and still open.
+
+### Only Modland so far
+
+Each archive publishes its contents differently, so parsing belongs to the catalogue rather than
+being shared. `Catalogue` is a sealed class with one implementation; adding ASMA, AMP, Aminet or
+ModArchive means writing its index parser and, in most cases, the backend that can play what it
+holds. The UI says as much rather than showing archives that would open on nothing.

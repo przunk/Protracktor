@@ -10,6 +10,11 @@
          works and only the controls are missing. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Online catalogues: the index is downloaded once, then browsing works offline. The network
+         is next needed when a track that is not cached is played. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/ic_media_play"

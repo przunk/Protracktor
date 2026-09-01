@@ -133,7 +133,24 @@ Extensions here are unreliable, absent, or shared between unrelated formats. Pro
 every candidate, which is why it belongs with the persistent index from item 1 rather than with a
 foreground scan.
 
-## 8. Instant start (R9)
+## 8. More online catalogues
+
+Modland is wired up and verified end to end. The owner asked for several: ASMA, AMP
+(amp.dascene.net), Aminet, ModArchive and others.
+
+Each needs two things, and the second is usually the blocker:
+
+- **Its index parser.** `Catalogue` is a sealed class; adding one is writing `parseIndex` and
+  `urlFor` against whatever that archive publishes. None of the others is a single tab-separated
+  file the way Modland's is.
+- **A backend that can play what it holds.** ASMA is Atari 8-bit SAP and needs ASAP; AMP is heavy on
+  Amiga custom formats and needs UADE. Indexing an archive we cannot play produces a browsable list
+  of tracks that fail to open.
+
+**Also**: re-index after adding any backend. The index deliberately keeps only entries whose
+filename a backend might handle, so formats added later are simply absent until a re-index.
+
+## 9. Instant start (R9)
 
 Nothing is cached and nothing is prepared ahead. A local module is fast because it is small.
 

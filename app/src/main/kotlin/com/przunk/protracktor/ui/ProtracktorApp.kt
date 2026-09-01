@@ -19,22 +19,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -45,6 +35,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.przunk.protracktor.R
+import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.PlaybackController
 import com.przunk.protracktor.player.PlayerViewModel
 
@@ -96,7 +97,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) { viewModel.addFiles(uris); showBrowse = false } }
 
-    LaunchedEffect(showBrowse) { if (showBrowse) viewModel.refreshFolders() }
+    LaunchedEffect(showBrowse) { if (showBrowse) viewModel.openDomain(BrowseDomain.ROOT) }
 
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
@@ -116,60 +117,72 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (showBrowse) {
+                        IconButton(onClick = { if (!viewModel.browseBack()) showBrowse = false }) {
+                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                        }
+                    }
+                },
                 title = {
-                    // A chevron and a filled shape, because the owner could not tell the name was a
-                    // button. A control that only looks like a label is a control nobody presses.
-                    Surface(
-                        onClick = { showPlaylists = true },
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        modifier = Modifier.semantics {
-                            contentDescription = choosePlaylistLabel
-                        },
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                    if (showBrowse) {
+                        Text(stringResource(R.string.browse_title))
+                    } else {
+                        // A chevron and a filled shape, because the owner could not tell the name
+                        // was a button. A control that only looks like a label is a control nobody
+                        // presses.
+                        Surface(
+                            onClick = { showPlaylists = true },
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.semantics { contentDescription = choosePlaylistLabel },
                         ) {
-                            Column {
-                                Text(
-                                    text = state.activePlaylistName
-                                        ?: stringResource(R.string.playlist_default_name),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 1,
-                                )
-                                if (state.queue.tracks.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column {
                                     Text(
-                                        text = pluralStringResource(
-                                            R.plurals.track_count,
-                                            state.queue.tracks.size,
-                                            state.queue.tracks.size,
-                                        ),
-                                        style = MaterialTheme.typography.labelSmall,
+                                        text = state.activePlaylistName
+                                            ?: stringResource(R.string.playlist_default_name),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        maxLines = 1,
                                     )
+                                    if (state.queue.tracks.isNotEmpty()) {
+                                        Text(
+                                            text = pluralStringResource(
+                                                R.plurals.track_count,
+                                                state.queue.tracks.size,
+                                                state.queue.tracks.size,
+                                            ),
+                                            style = MaterialTheme.typography.labelSmall,
+                                        )
+                                    }
                                 }
+                                Icon(
+                                    imageVector = PlayerIcons.DropDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(start = 2.dp),
+                                )
                             }
-                            Icon(
-                                imageVector = PlayerIcons.DropDown,
-                                contentDescription = null,
-                                modifier = Modifier.padding(start = 2.dp),
-                            )
                         }
                     }
                 },
                 actions = {
-                    // Only while there is something to save. A permanently lit Save button teaches
-                    // nothing about whether the list on screen is the list on disk.
-                    if (state.dirty) {
-                        IconButton(onClick = viewModel::discardChanges) {
-                            Icon(PlayerIcons.Discard, stringResource(R.string.a11y_discard_changes))
+                    if (!showBrowse) {
+                        // Only while there is something to save. A permanently lit Save button
+                        // teaches nothing about whether the list on screen is the list on disk.
+                        if (state.dirty) {
+                            IconButton(onClick = viewModel::discardChanges) {
+                                Icon(PlayerIcons.Discard, stringResource(R.string.a11y_discard_changes))
+                            }
+                            FilledIconButton(onClick = viewModel::savePlaylist) {
+                                Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
+                            }
                         }
-                        FilledIconButton(onClick = viewModel::savePlaylist) {
-                            Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
+                        TextButton(onClick = { showBrowse = true }) {
+                            Text(stringResource(R.string.action_browse))
                         }
-                    }
-                    TextButton(onClick = { showBrowse = true }) {
-                        Text(stringResource(R.string.action_browse))
                     }
                 },
             )
@@ -189,13 +202,44 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
     ) { insets ->
-        PlaylistScreen(
-            state = state,
-            onPlayAt = viewModel::playAt,
-            onRemoveAt = viewModel::removeTrack,
-            onBrowse = { showBrowse = true },
-            contentPadding = insets,
-        )
+        if (showBrowse) {
+            BrowseScreen(
+                browse = browse,
+                playlistName = state.activePlaylistName,
+                contentPadding = insets,
+                onOpenDomain = viewModel::openDomain,
+                onPickFolder = { folderPicker.launch(null) },
+                onPickFiles = { filePicker.launch(arrayOf("*/*")) },
+                onOpenFolder = viewModel::openFolder,
+                onForgetFolder = viewModel::forgetFolder,
+                onIndexCatalogue = viewModel::indexCatalogue,
+                onOpenCatalogue = viewModel::openCatalogue,
+                onOpenGroup = viewModel::openGroup,
+                onRandom = { viewModel.playRandom(); showBrowse = false },
+                onQueryChange = viewModel::setQuery,
+                onToggleLocal = viewModel::toggleSearchLocal,
+                onToggleCatalogue = viewModel::toggleSearchCatalogue,
+                onSearch = viewModel::runSearch,
+                onAdd = { tracks ->
+                    viewModel.addToPlaylist(tracks)
+                    showBrowse = false
+                },
+            )
+        } else {
+            PlaylistScreen(
+                state = state,
+                onPlayAt = viewModel::playAt,
+                onRemoveAt = viewModel::removeTrack,
+                onBrowse = { showBrowse = true },
+                contentPadding = insets,
+            )
+        }
+    }
+
+    // One level at a time, out of Browse and then out of the screen -- the rule the rest of the
+    // navigation follows.
+    if (showBrowse) {
+        BackHandler { if (!viewModel.browseBack()) showBrowse = false }
     }
 
     if (showNowPlaying) {
@@ -242,30 +286,6 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 }) { Text(stringResource(R.string.action_discard)) }
             },
         )
-    }
-
-    if (showBrowse) {
-        // Back leaves the open folder first and the sheet second: one layer at a time, which is the
-        // rule the rest of the navigation follows.
-        BackHandler { if (browse.openFolder != null) viewModel.closeFolder() else showBrowse = false }
-        ModalBottomSheet(
-            onDismissRequest = { showBrowse = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        ) {
-            BrowseScreen(
-                browse = browse,
-                playlistName = state.activePlaylistName,
-                onPickFolder = { folderPicker.launch(null) },
-                onPickFiles = { filePicker.launch(arrayOf("*/*")) },
-                onOpenFolder = viewModel::openFolder,
-                onForgetFolder = viewModel::forgetFolder,
-                onCloseFolder = viewModel::closeFolder,
-                onAdd = { tracks ->
-                    viewModel.addToPlaylist(tracks)
-                    showBrowse = false
-                },
-            )
-        }
     }
 }
 

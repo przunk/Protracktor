@@ -28,6 +28,11 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — Browse is a full screen with four domains: local filesystem, online catalogues,
+  random, and search across both. Modland is indexed into the database (schema version 2) and
+  browsable offline by format and author; remote tracks stream and are cached. **None of it has run
+  on a device.**
+
 - **2026-09-01** — **R1: Atari ST.** sc68 2.2.1 vendored and building for every ABI, behind a backend
   interface alongside libopenmpt. SNDH files are 68000 machine code, so this is a whole emulated
   Atari. **Not confirmed playing** — there is no SNDH file on this machine and no emulator; the
