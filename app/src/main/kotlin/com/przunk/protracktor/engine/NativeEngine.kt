@@ -50,9 +50,13 @@ object NativeEngine {
      *
      * Bytes rather than a path because the sources this app plays from are not all files: entries
      * inside an archive and files fetched from a remote catalogue have no path of their own.
+     *
+     * The name comes along separately because some backends need it. Several of the Atari 8-bit
+     * formats ASAP handles are told apart by extension rather than by any header, and one of them
+     * shares `.fc` with an Amiga format libopenmpt claims.
      */
-    fun open(bytes: ByteArray): Track? {
-        val handle = nativeOpen(bytes)
+    fun open(bytes: ByteArray, fileName: String): Track? {
+        val handle = nativeOpen(bytes, fileName)
         return if (handle == 0L) null else Track(handle)
     }
 
@@ -119,7 +123,7 @@ object NativeEngine {
         }
     }
 
-    @JvmStatic private external fun nativeOpen(data: ByteArray): Long
+    @JvmStatic private external fun nativeOpen(data: ByteArray, fileName: String): Long
     @JvmStatic private external fun nativeClose(handle: Long)
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
     @JvmStatic private external fun nativeStop(handle: Long)

@@ -154,17 +154,25 @@ One library, many formats: NSF, GBS, SPC, VGM/VGZ, HES, AY, KSS. Modland lists 3
 - LGPL-2.1-or-later, and it already builds with CMake — the least painful item on this list.
 - Best value per hour of work. Do it before ASAP unless the owner wants Atari 8-bit sooner.
 
-## 3. ASAP — Atari 8-bit (`.sap`)
+## 3. ~~ASAP — Atari 8-bit~~ — DONE 2026-09-01
 
-The owner has `.sap` files and they do not play.
+ASAP 8.0.0, from SourceForge (not GitHub — the earlier guess at `pfusik/asap` was wrong). GPL-2.0-or-
+later, verified in `README` and 34 sources.
 
-- **Source location unverified.** It is not at `github.com/pfusik/asap` (404 on 2026-09-01). Find it
-  before planning further; it has historically lived on SourceForge, and there is an official
-  Android port whose build may be worth reading.
-- GPL-2.0-or-later, expected. Verify.
-- Written in Ć and transpiled to C, so the vendored artefact is generated C — check what the release
-  tarball actually contains before assuming a source build.
-- Cannot seek. ASMA (see `docs/PLAN_CATALOGUES.md`) is its natural catalogue.
+**The easiest vendored library in this project by a wide margin.** ASAP is written in Ć and shipped
+as transpiled C: one 8,000-line `asap.c`, no configure step, no generated headers, no options. It
+also seeks, which none of the other emulator backends do.
+
+Twelve of twelve random Modland SAP files played on the host probe before a line of it went near the
+app — the technique from §0, and it is now two for two at catching things early.
+
+Two things worth remembering from it:
+
+- **The engine now carries a filename alongside the bytes.** Several of ASAP's fourteen formats are
+  told apart by extension rather than by any header, so nothing else could make that call.
+- **`.fc` is claimed by two backends**: Atari Future Composer to ASAP, Amiga Future Composer to
+  libopenmpt. Checked rather than assumed — ASAP refuses the Amiga files, so they fall through
+  correctly. Content probing would settle it properly; until then, whichever loads it wins.
 
 ## 4. UADE — Amiga custom formats
 

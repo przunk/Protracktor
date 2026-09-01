@@ -963,7 +963,7 @@ class PlaybackController private constructor(private val context: Context) {
                 return@launch
             }
 
-            val opened = withContext(Dispatchers.IO) { NativeEngine.open(bytes) }
+            val opened = withContext(Dispatchers.IO) { NativeEngine.open(bytes, ref.fileNameOrTitle) }
             if (opened == null) {
                 // The reason, not just the verdict. "Not a format we can play" is wrong when a
                 // backend claimed the file and then choked on it, which is exactly what sc68 does
