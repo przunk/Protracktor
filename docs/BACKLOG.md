@@ -121,7 +121,11 @@ Worth having ready for it: an icon needs an adaptive foreground and background (
 monochrome layer for themed icons (API 33+), and it is the one asset where a wrong choice is visible
 on every home screen. Nothing about it is a detail to settle in code.
 
-## A8. Haptics for the gestures that deserve them
+## A8. ~~Haptics for the gestures that deserve them~~ — MOSTLY DONE 2026-09-02
+
+Three of the four landed: picking a row up, putting it down, and each position it crosses, plus the
+snackbar's dismiss threshold. The fourth — long-press that starts a selection — belongs to A4 and
+should be added there rather than left as a loose end here.
 
 Raised 2026-09-01.
 
