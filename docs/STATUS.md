@@ -175,8 +175,9 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 
 ## Known defects
 
-- **Some `.sndh` files still do not play.** sc68 2.2.1's SNDH support is partial: of five random
-  Modland files, three play, one loads and renders silence, and one fails `api68_load_mem` outright.
+- **Roughly half of `.sndh` files do not play.** Measured on thirty random Modland files through the
+  real backend logic: 16 play, 5 load and render silence, 9 fail `api68_load_mem`. sc68 2.2.1 is from
+  2003 and its SNDH support is partial.
   The fix is sc68 3.0.0b, which exists only in SourceForge SVN — see `docs/PLAN_FORMATS.md` §0 for
   what that would take. Failures now say which backend refused and why, rather than claiming the
   format is unsupported.
