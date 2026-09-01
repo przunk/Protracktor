@@ -16,7 +16,7 @@ source we vendor, at the moment we vendor it, and this table is corrected then. 
 | sc68 2.2.1 | Atari ST SNDH, YM | GPL-2.0-**or-later** | **yes, 2026-09-01** |
 | libsidplayfp | C64 SID | GPL-2.0-**or-later** | no |
 | game-music-emu | NSF, GBS, SPC, VGM, HES, AY, KSS | LGPL-2.1-or-later | no |
-| ASAP | Atari 8-bit SAP | GPL-2.0-**or-later** | no |
+| ASAP 8.0.0 | Atari 8-bit: SAP + 13 tracker formats | GPL-2.0-**or-later** | **yes, 2026-09-01** |
 | UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
 | Oboe 1.10.0 | audio output | Apache-2.0 | no |
 
@@ -54,6 +54,14 @@ own would have invalidated our GPL-3 decision — but every one of the 51 licens
 
 "Or later" is what matters, and it is unanimous across the tree. Reading only `COPYING` would have
 given the wrong answer here, which is why the rule is to check the sources.
+
+**ASAP 8.0.0**, checked on 2026-09-01. `COPYING` is the GPL **version 2** text again, and again the
+sources settle it — `README` and 34 files say:
+
+> either version 2 of the License, or (at your option) any later version
+
+Compatible with GPL-3. Second time in this project that reading only `COPYING` would have given the
+wrong answer.
 
 ## sc68's replay binaries — a question for the owner
 

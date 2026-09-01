@@ -13,6 +13,7 @@ option(PROTRACKTOR_BUILD_ENGINE "Build the JNI engine (needs Oboe from Gradle)" 
 
 add_subdirectory(backends/libopenmpt)
 add_subdirectory(backends/sc68)
+add_subdirectory(backends/asap)
 
 if(PROTRACKTOR_BUILD_ENGINE)
     add_subdirectory(engine)

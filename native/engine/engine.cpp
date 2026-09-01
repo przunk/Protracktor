@@ -28,6 +28,7 @@
 
 extern "C" {
 #include <api68/api68.h>
+#include <asap.h>
 }
 
 #include <android/log.h>
@@ -251,8 +252,141 @@ std::string &lastOpenError() {
     return reason;
 }
 
-std::unique_ptr<Backend> openBackend(std::vector<char> bytes) {
+/**
+ * Atari 8-bit, through a 6502 and a POKEY.
+ *
+ * Twelve of twelve random SAP files from Modland played on the first try, which is not a sentence
+ * that could be written about the Atari ST backend. ASAP also seeks, which few emulator backends do.
+ *
+ * It needs the **filename**: several of the fourteen formats it handles are told apart by extension
+ * rather than by a header, and one of them (`.fc`) collides with an Amiga format libopenmpt claims.
+ * That is why the whole engine now carries a name alongside the bytes.
+ */
+class AsapBackend : public Backend {
+public:
+    static bool claimsName(const std::string &name) {
+        return ASAPInfo_IsOurFile(name.c_str());
+    }
+
+    AsapBackend(const std::vector<char> &bytes, const std::string &name)
+        : asap_(ASAP_New()) {
+        if (!asap_) throw std::runtime_error("ASAP would not initialise");
+
+        ASAP_SetSampleRate(asap_, kSampleRate);
+        if (!ASAP_Load(asap_, name.c_str(),
+                       reinterpret_cast<const uint8_t *>(bytes.data()),
+                       static_cast<int>(bytes.size()))) {
+            ASAP_Delete(asap_);
+            asap_ = nullptr;
+            throw std::runtime_error("ASAP could not load this file");
+        }
+
+        info_ = ASAP_GetInfo(asap_);
+        song_ = ASAPInfo_GetDefaultSong(info_);
+        durationMs_ = ASAPInfo_GetDuration(info_, song_);
+
+        if (!ASAP_PlaySong(asap_, song_, durationMs_)) {
+            ASAP_Delete(asap_);
+            asap_ = nullptr;
+            throw std::runtime_error("ASAP loaded this file but would not start it");
+        }
+    }
+
+    ~AsapBackend() override {
+        if (asap_) ASAP_Delete(asap_);
+    }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        if (ended_) return 0;
+
+        const int channels = ASAPInfo_GetChannels(info_);
+        const std::size_t wanted = frames * static_cast<std::size_t>(channels);
+        if (scratch_.size() < wanted) scratch_.resize(wanted);
+
+        const int bytes = ASAP_Generate(
+            asap_, reinterpret_cast<uint8_t *>(scratch_.data()),
+            static_cast<int>(wanted * sizeof(short)), ASAPSampleFormat_S16_L_E);
+
+        if (bytes <= 0) {
+            ended_ = true;
+            return 0;
+        }
+
+        const std::size_t produced = static_cast<std::size_t>(bytes) / sizeof(short) / channels;
+        for (std::size_t i = 0; i < produced; ++i) {
+            // Mono is duplicated rather than left in one ear. Half these tunes are single-POKEY and
+            // the owner's phone puts its second channel through the screen vibrator, where it would
+            // be inaudible.
+            const float left = static_cast<float>(scratch_[i * channels]) / 32768.0f;
+            const float right = channels > 1
+                ? static_cast<float>(scratch_[i * channels + 1]) / 32768.0f
+                : left;
+            out[i * 2] = left;
+            out[i * 2 + 1] = right;
+        }
+        if (produced < frames) ended_ = true;
+        return produced;
+    }
+
+    bool canSeek() const override { return true; }
+
+    void seek(double seconds) override {
+        ASAP_Seek(asap_, static_cast<int>(seconds * 1000.0));
+        ended_ = false;
+    }
+
+    void rewind() override {
+        ASAP_PlaySong(asap_, song_, durationMs_);
+        ended_ = false;
+    }
+
+    double positionSeconds() const override { return ASAP_GetPosition(asap_) / 1000.0; }
+
+    // A negative duration means the file does not say, which is common. Zero reads as "unknown" to
+    // the rest of the app and disables the scrubber rather than offering a meaningless one.
+    double durationSeconds() const override {
+        return durationMs_ > 0 ? durationMs_ / 1000.0 : 0.0;
+    }
+
+    std::string describe() const override {
+        std::ostringstream o;
+        o << "title\t" << (ASAPInfo_GetTitle(info_) ? ASAPInfo_GetTitle(info_) : "") << '\n'
+          << "format\tAtari 8-bit (ASAP)" << '\n'
+          << "artist\t" << (ASAPInfo_GetAuthor(info_) ? ASAPInfo_GetAuthor(info_) : "") << '\n'
+          << "date\t" << (ASAPInfo_GetDate(info_) ? ASAPInfo_GetDate(info_) : "") << '\n'
+          << "channels\t" << ASAPInfo_GetChannels(info_) << '\n'
+          << "subsongs\t" << ASAPInfo_GetSongs(info_) << '\n'
+          << "seekable\t1";
+        return o.str();
+    }
+
+    int preferredSampleRate() const override { return kSampleRate; }
+
+private:
+    static constexpr int kSampleRate = 44100;
+
+    ASAP *asap_ = nullptr;
+    const ASAPInfo *info_ = nullptr;
+    int song_ = 0;
+    int durationMs_ = -1;
+    std::vector<short> scratch_;
+    bool ended_ = false;
+};
+
+std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name) {
     lastOpenError().clear();
+
+    // ASAP first when the name is one of its fourteen: several of its formats are told apart by
+    // extension rather than by any header, so nothing else can make that call.
+    if (AsapBackend::claimsName(name)) {
+        try {
+            return std::make_unique<AsapBackend>(bytes, name);
+        } catch (const std::exception &e) {
+            LOGE("ASAP claimed the name but refused: %s", e.what());
+            lastOpenError() = std::string("ASAP refused it: ") + e.what();
+        }
+    }
+
     // sc68 asked first. Its answer is the load succeeding, not a verify -- see worthTrying. If it
     // refuses, we fall through to libopenmpt, whose format net is wide enough that letting it go
     // first would risk a stray claim on something sc68 should have had.
@@ -422,14 +556,19 @@ Player *asPlayer(jlong handle) { return reinterpret_cast<Player *>(handle); }
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, jbyteArray data) {
+Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, jbyteArray data,
+                                                          jstring fileName) {
     const jsize length = env->GetArrayLength(data);
     std::vector<char> bytes(static_cast<std::size_t>(length));
     env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
 
+    const char *nameChars = env->GetStringUTFChars(fileName, nullptr);
+    const std::string name = nameChars ? nameChars : "";
+    env->ReleaseStringUTFChars(fileName, nameChars);
+
     // No backend recognising the bytes is reported as a handle of 0. The caller says so to the user
     // rather than failing silently.
-    auto backend = openBackend(std::move(bytes));
+    auto backend = openBackend(std::move(bytes), name);
     if (!backend) return 0;
     return reinterpret_cast<jlong>(new Player(std::move(backend)));
 }

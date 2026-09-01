@@ -77,5 +77,14 @@ fetch sc68 \
       "d7371f0f406dc925debf50f64df1f0700e1d29a8502bb170883fc41cc733265f" \
       1
 
+# ASAP -- GPL-2.0-OR-LATER (verified 2026-09-01: README and 34 sources say "either version 2 of the
+# License, or (at your option) any later version"). Atari 8-bit POKEY: SAP and thirteen tracker
+# formats. Transpiled from Ć to a single self-contained asap.c, so there is nothing to configure.
+fetch asap \
+      "8.0.0" \
+      "https://downloads.sourceforge.net/project/asap/asap/8.0.0/asap-8.0.0.tar.gz" \
+      "062d7db2a0747bf9200560141452f8fa2289909b147ac40a5bb5b60d5275a14f" \
+      1
+
 echo
 echo "✅ done — sources in native/vendor/ (gitignored)"

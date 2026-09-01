@@ -44,6 +44,10 @@ object SupportedFormats {
         // "snd" is deliberately absent: in Modland it means Westwood SND, a DOS format nothing here
         // plays, and listing it only indexes files that cannot open.
         "sndh", "sc68", "ym",
+        // Atari 8-bit, through ASAP. "fc" is already above and means the Amiga Future Composer to
+        // libopenmpt and the Atari one to ASAP -- whichever loads it wins, which is the only way to
+        // settle that without probing content.
+        "sap", "cmc", "cm3", "cmr", "cms", "dmc", "dlt", "mpt", "mpd", "rmt", "tmc", "tm2", "tm8",
         // Containers libopenmpt unpacks itself
         "mmcmp", "pp20", "xpk", "umx",
     )

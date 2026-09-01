@@ -28,6 +28,11 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — **Atari 8-bit.** ASAP 8.0.0 vendored and building for every ABI: SAP plus Chaos
+  Music Composer, Raster Music Tracker, Theta Music Composer, Delta Music Composer, Music ProTracker
+  and their double-play variants. Twelve of twelve random Modland SAP files played on the host probe.
+  It seeks, which the Atari ST backend cannot.
+
 - **2026-09-01** — Search scope is explicit and two-level (library / online / which catalogues);
   local results show where the file lives. Tracks take their real name from the tune's metadata
   once played, keeping the filename. Random is a mode: the playlist goes behind glass, next and
@@ -183,11 +188,6 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
   format is unsupported.
 
 
-
-- **`.sap` does not play, and is not supposed to yet.** Atari 8-bit SAP needs the ASAP backend,
-  which is not integrated. `SupportedFormats` does not list it, so a scan should not offer one —
-  if one appeared, it came in through the `snd` extension or a prefix match, which is worth checking
-  when ASAP lands.
 
 
 
