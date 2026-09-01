@@ -49,6 +49,15 @@ object MediaScanner {
         }
     }
 
+    /**
+     * The folder a document sits in, as something a person can read.
+     *
+     * A document id looks like `primary:Music/mods/4mat/elysium.mod`. The scheme prefix and the
+     * filename are noise; what is worth showing is the path between them.
+     */
+    fun readableFolder(documentId: String): String =
+        documentId.substringAfter(':').substringBeforeLast('/', "").ifBlank { "/" }
+
     /** A name for a granted tree that means something to a human. */
     fun labelOf(treeUri: Uri): String =
         runCatching { DocumentsContract.getTreeDocumentId(treeUri) }
@@ -102,7 +111,10 @@ object MediaScanner {
                     found += TrackRef(
                         id = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId).toString(),
                         title = displayName,
-                        subtitle = parentDocumentId.substringAfterLast('/').substringAfterLast(':'),
+                        // Where it came from, not just the last folder. The owner asked to be able
+                        // to tell two identically named tunes apart in a search result.
+                        subtitle = readableFolder(documentId),
+                        fileName = displayName,
                         // Read here because it is free with the row we already have, and it is half
                         // of what tells two URIs for one file apart.
                         sizeBytes = if (cursor.isNull(3)) 0L else cursor.getLong(3),
@@ -116,10 +128,13 @@ object MediaScanner {
     fun fromDocuments(context: Context, uris: List<Uri>): List<TrackRef> = uris.map { uri ->
         persistPermission(context, uri, isTree = false)
         val (name, size) = describe(context, uri)
+        val displayName = name ?: uri.lastPathSegment.orEmpty()
         TrackRef(
             id = uri.toString(),
-            title = name ?: uri.lastPathSegment.orEmpty(),
+            title = displayName,
+            subtitle = runCatching { readableFolder(DocumentsContract.getDocumentId(uri)) }.getOrDefault(""),
             sizeBytes = size,
+            fileName = displayName,
         )
     }
 

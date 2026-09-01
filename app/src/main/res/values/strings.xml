@@ -2,6 +2,10 @@
 <resources>
     <string name="app_name">Protracktor</string>
 
+    <string name="random_playing_title">Playing at random</string>
+    <string name="random_playing_body">Nothing from this playlist is playing. Next picks another; the plus keeps this one.</string>
+    <string name="random_back_to_playlist">Back to the playlist</string>
+
     <string name="playlist_default_name">Playlist</string>
     <string name="playlist_empty_title">Nothing here yet</string>
     <string name="playlist_empty_body">Add a folder of modules and they will show up here.</string>
@@ -68,8 +72,10 @@
     <string name="a11y_index_catalogue">Download the index for %1$s</string>
 
     <string name="search_label">Title or author</string>
+    <string name="search_scope_online">Online catalogues</string>
+    <string name="search_no_catalogues">No catalogue is indexed yet.</string>
+    <string name="field_file">File</string>
     <string name="search_scope_local">My library</string>
-    <string name="search_scope_hint">With no catalogue ticked, every indexed catalogue is searched.</string>
 
     <string name="browse_title">Add music</string>
     <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>

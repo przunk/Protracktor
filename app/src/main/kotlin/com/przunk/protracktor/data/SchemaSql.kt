@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 3
+    const val VERSION = 4
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -85,6 +85,17 @@ object SchemaSql {
      */
     private val TRACK_SIZE_V3: List<String> = listOf(
         "ALTER TABLE tracks ADD COLUMN size INTEGER NOT NULL DEFAULT 0",
+    )
+
+    /**
+     * The file's own name, added at version 4.
+     *
+     * A track's displayed title becomes the tune's real name once it has been opened and found to
+     * have one. The filename has to survive that, both so the metadata view can say where a track
+     * came from and so identity does not shift under a playlist when a title is rewritten.
+     */
+    private val TRACK_FILE_NAME_V4: List<String> = listOf(
+        "ALTER TABLE tracks ADD COLUMN file_name TEXT NOT NULL DEFAULT ''",
     )
 
     /** What a fresh install gets: version 1's tables plus every migration since. */
@@ -141,7 +152,7 @@ object SchemaSql {
         """.trimIndent(),
 
         "INSERT INTO player_state (id) VALUES (0)",
-    ) + CATALOGUES_V2 + TRACK_SIZE_V3
+    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4
 
 
 
@@ -155,6 +166,7 @@ object SchemaSql {
     val MIGRATIONS: Map<Int, List<String>> = mapOf(
         2 to CATALOGUES_V2,
         3 to TRACK_SIZE_V3,
+        4 to TRACK_FILE_NAME_V4,
     )
 
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */

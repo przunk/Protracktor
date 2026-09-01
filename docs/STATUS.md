@@ -28,6 +28,11 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — Search scope is explicit and two-level (library / online / which catalogues);
+  local results show where the file lives. Tracks take their real name from the tune's metadata
+  once played, keeping the filename. Random is a mode: the playlist goes behind glass, next and
+  previous walk the random history, and keeping a track no longer leaves it.
+
 - **2026-09-01** — Ducking: a notification lowers the music instead of stopping it, a call stops it
   and does not bring it back. Duplicate tracks are refused by file identity rather than by URI.
   Random plays without adding, with a control to keep what you hear.

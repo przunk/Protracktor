@@ -146,7 +146,7 @@ fun PlayerDock(
                     onClick = onShuffle,
                 )
 
-                IconButton(onClick = onPrevious, enabled = state.queue.hasPrevious) {
+                IconButton(onClick = onPrevious, enabled = state.canGoPrevious) {
                     Icon(PlayerIcons.SkipPrevious, stringResource(R.string.a11y_previous))
                 }
 
@@ -165,7 +165,7 @@ fun PlayerDock(
                     )
                 }
 
-                IconButton(onClick = onNext, enabled = state.queue.hasNext) {
+                IconButton(onClick = onNext, enabled = state.canGoNext) {
                     Icon(PlayerIcons.SkipNext, stringResource(R.string.a11y_next))
                 }
 

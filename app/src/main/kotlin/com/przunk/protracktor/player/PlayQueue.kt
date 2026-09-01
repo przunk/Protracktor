@@ -41,6 +41,15 @@ data class TrackRef(
     val subtitle: String = "",
     /** Bytes, where the source knows. 0 means unknown. Part of [sameFileAs]. */
     val sizeBytes: Long = 0,
+    /**
+     * The file's own name, kept separately from [title].
+     *
+     * [title] is what the user should read, which is the tune's real name once we have opened it
+     * and found one. Until then the two are the same. Keeping the filename regardless means the
+     * metadata view can still say where a track came from, and search can still match on it --
+     * people remember `4mat-elysium.mod` even when the tune calls itself something else.
+     */
+    val fileName: String = "",
 ) {
     /**
      * Whether two references point at the same actual file.
@@ -51,10 +60,16 @@ data class TrackRef(
      * and size together settle it for anything local, and for a remote track the URL is already
      * unique.
      */
+    /** The filename, falling back to the title for references made before it was recorded. */
+    val fileNameOrTitle: String get() = fileName.ifBlank { title }
+
     fun sameFileAs(other: TrackRef): Boolean = when {
         id == other.id -> true
         sizeBytes > 0 && other.sizeBytes > 0 ->
-            sizeBytes == other.sizeBytes && title.equals(other.title, ignoreCase = true)
+            // The FILE name, not the title: a title can be rewritten from metadata after the fact,
+            // and identity must not change under a track that is already in a playlist.
+            sizeBytes == other.sizeBytes &&
+                fileNameOrTitle.equals(other.fileNameOrTitle, ignoreCase = true)
         else -> false
     }
 }

@@ -87,6 +87,7 @@ fun BrowseScreen(
     onRandom: () -> Unit,
     onQueryChange: (String) -> Unit,
     onToggleLocal: () -> Unit,
+    onToggleOnline: () -> Unit,
     onToggleCatalogue: (String) -> Unit,
     onSearch: () -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -128,6 +129,7 @@ fun BrowseScreen(
                 playlistName = playlistName,
                 onQueryChange = onQueryChange,
                 onToggleLocal = onToggleLocal,
+                onToggleOnline = onToggleOnline,
                 onToggleCatalogue = onToggleCatalogue,
                 onSearch = onSearch,
                 onAdd = onAdd,
@@ -345,6 +347,7 @@ private fun SearchDomain(
     playlistName: String?,
     onQueryChange: (String) -> Unit,
     onToggleLocal: () -> Unit,
+    onToggleOnline: () -> Unit,
     onToggleCatalogue: (String) -> Unit,
     onSearch: () -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -365,6 +368,9 @@ private fun SearchDomain(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
+        // Two levels: which side to search, then which catalogues within the online side. The
+        // earlier version treated "no catalogue ticked" as "all of them", which made the filter look
+        // broken -- unticking Modland searched Modland anyway.
         FlowRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -374,22 +380,36 @@ private fun SearchDomain(
                 onClick = onToggleLocal,
                 label = { Text(stringResource(R.string.search_scope_local)) },
             )
-            browse.catalogues.filter { it.indexed }.forEach { catalogue ->
-                FilterChip(
-                    selected = catalogue.id in browse.searchCatalogues,
-                    onClick = { onToggleCatalogue(catalogue.id) },
-                    label = { Text(catalogue.displayName) },
-                )
+            FilterChip(
+                selected = browse.searchOnline,
+                onClick = onToggleOnline,
+                label = { Text(stringResource(R.string.search_scope_online)) },
+            )
+        }
+
+        val indexed = browse.catalogues.filter { it.indexed }
+        if (browse.searchOnline && indexed.isNotEmpty()) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                indexed.forEach { catalogue ->
+                    FilterChip(
+                        selected = catalogue.id in browse.searchCatalogues,
+                        onClick = { onToggleCatalogue(catalogue.id) },
+                        label = { Text(catalogue.displayName) },
+                    )
+                }
             }
         }
-        Text(
-            // Nothing ticked among the catalogues means all of them, which is a rule the user
-            // cannot guess from looking at unticked chips.
-            text = stringResource(R.string.search_scope_hint),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+        if (browse.searchOnline && indexed.isEmpty()) {
+            Text(
+                text = stringResource(R.string.search_no_catalogues),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
 
         if (browse.loading) Loading() else Selectable(browse, playlistName, onAdd)
     }

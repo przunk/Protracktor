@@ -6,6 +6,11 @@ Format: what, who raised it, when.
 
 ---
 
+- **Full metadata for any supported file** — owner, 2026-09-01. An info button or a long press,
+  showing everything the backend knows about a track rather than the handful of fields the player
+  screen has room for. Should work on any file the current version can open, not only on what is
+  playing.
+
 - **A history of what was played** — owner, 2026-09-01. Somewhere in settings. Note that
   `PlayQueue` already keeps a history, but only within a session and only for the active playlist;
   a real one is a table of plays with timestamps, which is a small schema change and a screen.
