@@ -20,26 +20,30 @@ expanded player it opens — should take you to that row in the playlist.
 Cheap: `LazyListState.animateScrollToItem` on the index the queue already knows. It shares its
 mechanism with B14 and with `docs/BACKLOG.md` A3.
 
-## B14. Should the list follow playback?
+## B14. A follow-the-playing-track toggle
 
-*owner, 2026-09-01. Asked as a question, and it deserves one.*
+*owner asked the question 2026-09-01, and settled it himself 2026-09-02.*
 
-The wish is real: press next on shuffle and the playing track is somewhere off screen.
+The wish: press next on shuffle and the playing track is somewhere off screen.
 
-**My answer is no — not as automatic scrolling.** "Follow playback" is a feature people turn off.
-The moment you are scrolling the list looking for something while music plays, a track change yanks
-the view out from under you, and that is worse than not knowing where the playing track is. It also
-fights B13 and A3, which exist precisely so the user can decide where to look.
+**The owner's design, and it is better than the chip I proposed.** A floating button, bottom-right
+over the list, labelled to say what it does — *follow track on list*. Off by default. Tap it and the
+list starts following playback, and the button disappears because it has nothing left to offer.
+Scroll the list by hand and following stops and the button comes back.
 
-**What I would build instead:** a small chip that appears **only when the playing track is off
-screen** — "Now playing ↓" — and scrolls to it when tapped. It answers the same question, is
-discoverable, never steals the view, and disappears when it has nothing to say. It also composes
-with B13 rather than competing: one is "take me there because I asked", the other is "you have
-drifted away from it, here is the way back".
+Why it beats the chip: mine was a one-shot jump, so a user who *wants* to follow along has to keep
+asking. This is a mode you opt into, and the gesture that cancels it is exactly the gesture that
+means "I want to look somewhere else". Nothing ever steals the view, and nobody has to keep pressing.
+It composes with B13 (tap the player bar to jump once) rather than replacing it.
 
-If the owner wants true follow-along after trying the chip, the honest version is: follow **unless
-the user has scrolled in the last few seconds**. That is the rule every player that gets this right
-uses, and it is more code than the chip for a worse first version.
+**Two things that will bite, worth knowing before starting:**
+
+- **Telling our scrolling from the user's.** When following is on, *we* scroll the list — and that
+  must not be mistaken for the user scrolling and switch following off. `isScrollInProgress` alone
+  cannot tell them apart; the distinction is in `LazyListState.interactionSource`, where a real drag
+  arrives as a `DragInteraction`.
+- **How far to scroll.** `animateScrollToItem` across three hundred rows is a long, silly animation.
+  Animate when the target is near, jump when it is far.
 
 ## B1. Play a track from the search results
 
