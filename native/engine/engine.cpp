@@ -36,6 +36,7 @@ extern "C" {
 #include <memory>
 #include <stdexcept>
 #include <sstream>
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -120,8 +121,32 @@ void sc68Free(void *pointer) { std::free(pointer); }
 
 class Sc68Backend : public Backend {
 public:
-    static bool recognises(const std::vector<char> &bytes) {
-        return api68_verify_mem(bytes.data(), static_cast<int>(bytes.size())) >= 0;
+    /** Where sc68's replay binaries were unpacked. Set once from Kotlin before anything is opened. */
+    static std::string &sharedDataPath() {
+        static std::string path;
+        return path;
+    }
+
+    /**
+     * A cheap pre-filter, not a verdict.
+     *
+     * api68_verify_mem is NOT usable for this: it returns -1 for an ICE-packed SNDH that
+     * api68_load_mem then loads and plays perfectly. Gating on it is what stopped every SNDH in the
+     * owner's library from opening. So this only asks "is it worth handing to sc68", and the real
+     * answer comes from whether the load succeeds.
+     */
+    static bool worthTrying(const std::vector<char> &bytes) {
+        if (bytes.size() < 16) return false;
+        if (api68_verify_mem(bytes.data(), static_cast<int>(bytes.size())) >= 0) return true;
+        if (!std::memcmp(bytes.data(), "ICE!", 4)) return true;   // packed; sc68 unpacks it itself
+        if (!std::memcmp(bytes.data(), "SC68", 4)) return true;
+
+        // SNDH files carry the tag a few bytes in, after a branch instruction.
+        const std::size_t window = std::min<std::size_t>(bytes.size() - 4, 256);
+        for (std::size_t i = 0; i < window; ++i) {
+            if (!std::memcmp(bytes.data() + i, "SNDH", 4)) return true;
+        }
+        return false;
     }
 
     explicit Sc68Backend(const std::vector<char> &bytes) {
@@ -130,6 +155,9 @@ public:
         init.alloc = sc68Alloc;
         init.free = sc68Free;
         init.sampling_rate = kSampleRate;
+        // Without this, SNDH loads and then refuses to play: sc68 wraps these tunes in a small
+        // replay routine of its own (sndh_ice.bin and friends) that lives on disk, not in the file.
+        init.shared_path = sharedDataPath().empty() ? nullptr : sharedDataPath().c_str();
 
         api_ = api68_init(&init);
         if (!api_) throw std::runtime_error("sc68 refused to initialise");
@@ -211,9 +239,10 @@ private:
 };
 
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes) {
-    // sc68 asked first, and strictly. Its verify is a real header check, while libopenmpt's format
-    // net is wide enough that a stray claim on an SNDH would be hard to notice.
-    if (Sc68Backend::recognises(bytes)) {
+    // sc68 asked first. Its answer is the load succeeding, not a verify -- see worthTrying. If it
+    // refuses, we fall through to libopenmpt, whose format net is wide enough that letting it go
+    // first would risk a stray claim on something sc68 should have had.
+    if (Sc68Backend::worthTrying(bytes)) {
         try {
             return std::make_unique<Sc68Backend>(bytes);
         } catch (const std::exception &e) {
@@ -415,6 +444,13 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlong handle, jdouble seconds) {
     asPlayer(handle)->seek(seconds);
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSetDataPath(JNIEnv *env, jclass, jstring path) {
+    const char *chars = env->GetStringUTFChars(path, nullptr);
+    Sc68Backend::sharedDataPath() = chars ? chars : "";
+    env->ReleaseStringUTFChars(path, chars);
 }
 
 JNIEXPORT void JNICALL

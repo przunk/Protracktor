@@ -41,7 +41,9 @@ object SupportedFormats {
         "dsm", "dtm", "j2b", "mt2", "psm", "plm", "rtm", "c67", "cba", "gt2", "mo3", "xmf",
         // Atari ST, through sc68. SNDH is 68000 machine code rather than note data, which is why it
         // needs an emulator and why nothing else in this list resembles it.
-        "sndh", "snd", "sc68", "ym",
+        // "snd" is deliberately absent: in Modland it means Westwood SND, a DOS format nothing here
+        // plays, and listing it only indexes files that cannot open.
+        "sndh", "sc68", "ym",
         // Containers libopenmpt unpacks itself
         "mmcmp", "pp20", "xpk", "umx",
     )

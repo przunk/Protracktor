@@ -238,6 +238,18 @@ class PlaybackController private constructor(private val context: Context) {
     private var saveJob: Job? = null
 
     init {
+        // Before anything can be opened: sc68 reads its replay binaries from a path, and an asset
+        // inside an APK does not have one.
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val version = context.packageManager
+                    .getPackageInfo(context.packageName, 0).longVersionCode.toString()
+                NativeEngine.setDataPath(
+                    com.przunk.protracktor.engine.NativeData.ensureUnpacked(context, version).absolutePath
+                )
+            }
+        }
+
         restore()
         // One loop drives both the progress bar and end-of-track handling. The native side flags
         // completion rather than calling back, so something has to look; since the progress bar
