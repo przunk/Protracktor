@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Protracktor</string>
+
+    <string name="random_playing_title">Odtwarzanie losowe</string>
+    <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny.\nPlus zachowuje ten.</string>
+    <string name="random_back_to_playlist">Wróć do playlisty</string>
+
+    <string name="playlist_default_name">Playlista</string>
+    <string name="playlist_empty_title">Jeszcze tu pusto</string>
+    <string name="playlist_empty_body">Dodaj katalog z modułami, a pojawią się tutaj.</string>
+
+    <plurals name="track_count">
+        <item quantity="one">%d utwór</item>
+        <item quantity="few">%d utwory</item>
+        <item quantity="many">%d utworów</item>
+        <item quantity="other">%d utworu</item>
+    </plurals>
+
+    <string name="dock_idle_title">Nic nie gra</string>
+    <string name="dock_loading">Wczytywanie…</string>
+    <string name="dock_idle_subtitle">Dotknij, aby przeglądać</string>
+
+    <string name="action_browse">Przeglądaj</string>
+    <string name="action_add_folder">Dodaj katalog</string>
+    <string name="action_add_files">Dodaj pliki</string>
+    <string name="action_scanning">Skanowanie…</string>
+
+    <string name="action_undo">Cofnij</string>
+    <string name="action_back">Wstecz</string>
+    <string name="action_delete">Usuń</string>
+    <string name="action_cancel">Anuluj</string>
+    <string name="action_save">Zapisz</string>
+
+    <string name="browse_select_all">Zaznacz wszystko</string>
+    <string name="browse_select_none">Odznacz wszystko</string>
+    <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
+    <plurals name="browse_add_selected">
+        <item quantity="one">Dodaj %d utwór</item>
+        <item quantity="few">Dodaj %d utwory</item>
+        <item quantity="many">Dodaj %d utworów</item>
+        <item quantity="other">Dodaj %d utworu</item>
+    </plurals>
+
+    <string name="action_discard">Odrzuć</string>
+    <string name="playlist_unsaved_title">Niezapisane zmiany</string>
+    <string name="playlist_unsaved_body">Ta playlista ma zmiany, których jeszcze nie zapisano. Zapisz je przed przełączeniem albo odrzuć.</string>
+    <string name="a11y_choose_playlist">Wybierz playlistę</string>
+    <string name="a11y_save_playlist">Zapisz playlistę</string>
+    <string name="a11y_discard_changes">Odrzuć zmiany</string>
+
+    <string name="playlist_switch_title">Playlisty</string>
+    <string name="playlist_new">Nowa playlista</string>
+    <string name="playlist_rename">Zmień nazwę</string>
+    <string name="playlist_name_label">Nazwa</string>
+    <string name="playlist_delete_title">Usunąć %1$s?</string>
+    <string name="playlist_delete_body">Playlista znika; utwory zostają w bibliotece.</string>
+
+    <string name="a11y_forget_folder">Zapomnij katalog %1$s</string>
+    <string name="a11y_rename_playlist">Zmień nazwę %1$s</string>
+    <string name="a11y_delete_playlist">Usuń %1$s</string>
+
+    <string name="domain_local_title">Pliki lokalne</string>
+    <string name="domain_local_body">Katalogi i pliki na tym urządzeniu</string>
+    <string name="domain_online_title">Katalogi online</string>
+    <string name="domain_online_body">Przeglądaj archiwa — indeks pobierany raz, potem działa offline</string>
+    <string name="domain_random_title">Losowo</string>
+    <string name="domain_random_body">Zagraj coś z zaindeksowanych katalogów</string>
+    <string name="domain_search_title">Szukaj</string>
+    <string name="domain_search_body">W bibliotece i w katalogach</string>
+
+    <string name="browse_indexing">Indeksowanie %1$s…</string>
+    <string name="browse_unknown">(nieznany)</string>
+    <string name="catalogue_not_indexed">Brak indeksu — dotknij strzałki, aby go pobrać</string>
+    <string name="catalogue_more_coming">Kolejne archiwa są w planach. Trafiają tu tylko te, których format indeksu jest już obsłużony.</string>
+    <string name="a11y_index_catalogue">Pobierz indeks dla %1$s</string>
+
+    <string name="search_label">Tytuł lub autor</string>
+    <string name="search_scope_online">Katalogi online</string>
+    <string name="search_no_catalogues">Żaden katalog nie jest jeszcze zaindeksowany.</string>
+    <string name="field_file">Plik</string>
+    <string name="search_scope_local">Moja biblioteka</string>
+
+    <string name="browse_title">Dodaj muzykę</string>
+    <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
+
+    <string name="field_format">Format</string>
+    <string name="field_tracker">Tracker</string>
+    <string name="field_artist">Autor</string>
+    <string name="field_composer">Kompozytor</string>
+    <string name="field_hardware">Sprzęt</string>
+    <string name="field_channels">Kanały</string>
+    <string name="field_patterns">Wzorce</string>
+    <string name="field_instruments">Instrumenty</string>
+    <string name="field_samples">Sample</string>
+    <string name="field_subsongs">Podutwory</string>
+    <string name="field_message">Wiadomość</string>
+
+    <string name="a11y_remove_track">Usuń %1$s z playlisty</string>
+
+    <string name="notification_stop">Zatrzymaj</string>
+    <string name="notification_channel_playback">Odtwarzanie</string>
+
+    <string name="a11y_seek">Przewiń w utworze</string>
+    <string name="a11y_keep_track">Dodaj ten utwór do playlisty</string>
+    <string name="a11y_play">Odtwórz</string>
+    <string name="a11y_pause">Pauza</string>
+    <string name="a11y_previous">Poprzedni utwór</string>
+    <string name="a11y_next">Następny utwór</string>
+    <string name="a11y_shuffle_off">Losowo wyłączone</string>
+    <string name="a11y_shuffle_on">Losowo włączone</string>
+    <string name="a11y_repeat_off">Powtarzanie wyłączone</string>
+    <string name="a11y_repeat_playlist">Powtarzanie playlisty</string>
+    <string name="a11y_repeat_one">Powtarzanie tego utworu</string>
+</resources>

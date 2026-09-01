@@ -1,0 +1,151 @@
+/*
+ * Protracktor -- a player for retro platform music formats.
+ * Copyright (C) 2026 Przunk
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
+ * the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <https://www.gnu.org/licenses/>.
+ */
+package com.przunk.protracktor.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import com.przunk.protracktor.R
+import com.przunk.protracktor.player.PlayerUiState
+
+/**
+ * What the main screen shows: **the file, not a visualiser** (R4).
+ *
+ * Format, tracker, author, channels, patterns, instruments, samples, subsongs — and the module
+ * message, which is where the scene put its greetings and is half the reason anyone keeps these
+ * files. A visualiser returns later as something the user switches on (`docs/WISHLIST.md`).
+ */
+@Composable
+fun NowPlaying(
+    state: PlayerUiState,
+    onSeek: (Double) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val track = state.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = track?.title ?: stringResource(R.string.dock_idle_title),
+            style = MaterialTheme.typography.headlineSmall,
+        )
+
+        SeekBar(
+            positionSeconds = state.positionSeconds,
+            durationSeconds = state.durationSeconds,
+            enabled = state.seekable && track != null,
+            onSeek = onSeek,
+            label = stringResource(R.string.a11y_seek),
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = formatTime(state.positionSeconds),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = formatTime(state.durationSeconds),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // The filename and where it came from, which the title no longer shows once a tune's real
+        // name has been read out of it.
+        track?.let {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.field_file),
+                    modifier = Modifier.width(120.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = listOf(it.subtitle, it.fileNameOrTitle).filter(String::isNotBlank).joinToString("/"),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+
+        val message = state.metadata["message"].orEmpty()
+        val rows = FIELDS.mapNotNull { (key, label) ->
+            state.metadata[key]?.takeIf { it.isNotBlank() && it != "0" }?.let { label to it }
+        }
+
+        if (rows.isNotEmpty()) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            rows.forEach { (label, value) ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(label),
+                        modifier = Modifier.width(120.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(text = value, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
+        if (message.isNotBlank()) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Text(
+                text = stringResource(R.string.field_message),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // Monospaced on purpose: these messages were written to a fixed-width tracker display
+            // and their alignment is part of what they say.
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            )
+        }
+    }
+}
+
+private val FIELDS = listOf(
+    "format" to R.string.field_format,
+    "tracker" to R.string.field_tracker,
+    "artist" to R.string.field_artist,
+    "composer" to R.string.field_composer,
+    "hardware" to R.string.field_hardware,
+    "channels" to R.string.field_channels,
+    "patterns" to R.string.field_patterns,
+    "instruments" to R.string.field_instruments,
+    "samples" to R.string.field_samples,
+    "subsongs" to R.string.field_subsongs,
+)

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Protracktor</string>
+
+    <string name="random_playing_title">Playing at random</string>
+    <string name="random_playing_body">Nothing from this playlist is playing. Next picks another.\nThe plus keeps this one.</string>
+    <string name="random_back_to_playlist">Back to the playlist</string>
+
+    <string name="playlist_default_name">Playlist</string>
+    <string name="playlist_empty_title">Nothing here yet</string>
+    <string name="playlist_empty_body">Add a folder of modules and they will show up here.</string>
+
+    <plurals name="track_count">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
+
+    <string name="dock_idle_title">Nothing playing</string>
+    <string name="dock_loading">Loading…</string>
+    <string name="dock_idle_subtitle">Tap to browse</string>
+
+    <string name="action_browse">Browse</string>
+    <string name="action_add_folder">Add a folder</string>
+    <string name="action_add_files">Add files</string>
+    <string name="action_scanning">Scanning…</string>
+
+    <string name="action_undo">Undo</string>
+    <string name="action_back">Back</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+
+    <string name="browse_select_all">Select all</string>
+    <string name="browse_select_none">Select none</string>
+    <string name="browse_nothing_found">Nothing playable in this folder.</string>
+    <plurals name="browse_add_selected">
+        <item quantity="one">Add %d track</item>
+        <item quantity="other">Add %d tracks</item>
+    </plurals>
+
+    <string name="action_discard">Discard</string>
+    <string name="playlist_unsaved_title">Unsaved changes</string>
+    <string name="playlist_unsaved_body">This playlist has edits that are not written yet. Save them before switching, or throw them away.</string>
+    <string name="a11y_choose_playlist">Choose a playlist</string>
+    <string name="a11y_save_playlist">Save the playlist</string>
+    <string name="a11y_discard_changes">Discard the changes</string>
+
+    <string name="playlist_switch_title">Playlists</string>
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_rename">Rename playlist</string>
+    <string name="playlist_name_label">Name</string>
+    <string name="playlist_delete_title">Delete %1$s?</string>
+    <string name="playlist_delete_body">The playlist goes; the tracks stay in your library.</string>
+
+    <string name="a11y_forget_folder">Forget the folder %1$s</string>
+    <string name="a11y_rename_playlist">Rename %1$s</string>
+    <string name="a11y_delete_playlist">Delete %1$s</string>
+
+    <string name="domain_local_title">Local filesystem</string>
+    <string name="domain_local_body">Folders and files on this device</string>
+    <string name="domain_online_title">Online catalogues</string>
+    <string name="domain_online_body">Browse the archives — indexed once, then browsable offline</string>
+    <string name="domain_random_title">Random</string>
+    <string name="domain_random_body">Play something from the indexed catalogues</string>
+    <string name="domain_search_title">Search</string>
+    <string name="domain_search_body">Across your library and the catalogues</string>
+
+    <string name="browse_indexing">Indexing %1$s…</string>
+    <string name="browse_unknown">(unknown)</string>
+    <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
+    <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>
+    <string name="a11y_index_catalogue">Download the index for %1$s</string>
+
+    <string name="search_label">Title or author</string>
+    <string name="search_scope_online">Online catalogues</string>
+    <string name="search_no_catalogues">No catalogue is indexed yet.</string>
+    <string name="field_file">File</string>
+    <string name="search_scope_local">My library</string>
+
+    <string name="browse_title">Add music</string>
+    <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>
+
+    <string name="field_format">Format</string>
+    <string name="field_tracker">Tracker</string>
+    <string name="field_artist">Artist</string>
+    <string name="field_composer">Composer</string>
+    <string name="field_hardware">Hardware</string>
+    <string name="field_channels">Channels</string>
+    <string name="field_patterns">Patterns</string>
+    <string name="field_instruments">Instruments</string>
+    <string name="field_samples">Samples</string>
+    <string name="field_subsongs">Subsongs</string>
+    <string name="field_message">Message</string>
+
+    <string name="a11y_remove_track">Remove %1$s from the playlist</string>
+
+    <string name="notification_stop">Stop</string>
+    <string name="notification_channel_playback">Playback</string>
+
+    <string name="a11y_seek">Seek within the track</string>
+    <string name="a11y_keep_track">Add this track to the playlist</string>
+    <string name="a11y_play">Play</string>
+    <string name="a11y_pause">Pause</string>
+    <string name="a11y_previous">Previous track</string>
+    <string name="a11y_next">Next track</string>
+    <string name="a11y_shuffle_off">Shuffle off</string>
+    <string name="a11y_shuffle_on">Shuffle on</string>
+    <string name="a11y_repeat_off">Repeat off</string>
+    <string name="a11y_repeat_playlist">Repeating the playlist</string>
+    <string name="a11y_repeat_one">Repeating this track</string>
+</resources>
