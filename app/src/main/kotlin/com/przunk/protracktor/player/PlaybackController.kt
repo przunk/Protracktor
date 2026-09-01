@@ -721,6 +721,17 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Play or pause explicitly, rather than toggling.
+     *
+     * A media button says which it wants; toggling on a stale idea of the state is how a headphone
+     * press ends up pausing something that was already paused.
+     */
+    fun togglePlayPauseTo(play: Boolean) {
+        if (play == _state.value.playing) return
+        togglePlayPause()
+    }
+
     /** Stops playing without forgetting what was loaded. Used by the notification's stop action. */
     fun pause() {
         val open = track ?: return
