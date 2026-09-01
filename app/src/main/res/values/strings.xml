@@ -12,6 +12,7 @@
     </plurals>
 
     <string name="dock_idle_title">Nothing playing</string>
+    <string name="dock_loading">Loading…</string>
     <string name="dock_idle_subtitle">Tap to browse</string>
 
     <string name="action_browse">Browse</string>

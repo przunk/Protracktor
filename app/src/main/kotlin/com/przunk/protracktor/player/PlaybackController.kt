@@ -67,6 +67,8 @@ data class PlayerUiState(
     val positionSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0,
     val scanning: Boolean = false,
+    /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
+    val loadingTrack: Boolean = false,
     val playlists: List<SavedPlaylist> = emptyList(),
     val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
@@ -149,6 +151,9 @@ class PlaybackController private constructor(private val context: Context) {
 
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
         const val UNDO = "undo"
+
+        /** Four megabytes. Comfortably above any tracker module and below anything worth holding. */
+        private const val MAX_PREFETCH_BYTES = 4 * 1024 * 1024
     }
 
     // Main.immediate so a press and the state change it causes land in the same frame; the work
@@ -172,6 +177,17 @@ class PlaybackController private constructor(private val context: Context) {
      * with nobody holding it.
      */
     private var openJob: Job? = null
+
+    /**
+     * The next track's bytes, read while the current one plays.
+     *
+     * R9 -- "playback starts immediately" -- is a reading problem, not a decoding one. A module is
+     * kilobytes and decodes in milliseconds; the wait the owner measured at five to thirty seconds
+     * was opening the file, and his library sits on an SMB share where that means a network round
+     * trip. One entry is enough: it is the next track people wait for.
+     */
+    private var prefetched: Pair<String, ByteArray>? = null
+    private var prefetchJob: Job? = null
 
     private val store = LibraryStore(context)
     private val catalogues = CatalogueStore(context)
@@ -720,11 +736,18 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(playing = open.start()) }
     }
 
-    fun toggleShuffle() =
-        _state.update { it.copy(queue = it.queue.withShuffle(!it.queue.shuffle)) }.also { scheduleSave() }
+    fun toggleShuffle() {
+        _state.update { it.copy(queue = it.queue.withShuffle(!it.queue.shuffle)) }
+        scheduleSave()
+        // Both of these change what comes next, so anything read ahead is now the wrong track.
+        prefetchUpcoming()
+    }
 
-    fun cycleRepeat() =
-        _state.update { it.copy(queue = it.queue.withRepeat(it.queue.repeat.next())) }.also { scheduleSave() }
+    fun cycleRepeat() {
+        _state.update { it.copy(queue = it.queue.withRepeat(it.queue.repeat.next())) }
+        scheduleSave()
+        prefetchUpcoming()
+    }
 
     // --- internals ----------------------------------------------------------------------------
 
@@ -764,16 +787,15 @@ class PlaybackController private constructor(private val context: Context) {
             track?.close()
             track = null
 
-            val bytes = if (ref.id.startsWith("http")) {
-                remoteFiles.fetch(ref.id)
-            } else {
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        context.contentResolver
-                            .openInputStream(Uri.parse(ref.id))?.use { it.readBytes() }
-                    }.getOrNull()
-                }
+            // Already read while the previous track was playing, which is the whole point.
+            val ready = prefetched?.takeIf { it.first == ref.id }?.second
+            prefetched = null
+
+            val bytes = ready ?: run {
+                _state.update { it.copy(loadingTrack = true) }
+                loadBytes(ref)
             }
+            _state.update { it.copy(loadingTrack = false) }
             ensureActive()
 
             if (bytes == null) {
@@ -813,10 +835,46 @@ class PlaybackController private constructor(private val context: Context) {
                     message = if (started) it.message else Message("Could not open the audio device"),
                 )
             }
+
+            prefetchUpcoming()
+        }
+    }
+
+    /** Reads a track's bytes, from wherever it lives. */
+    private suspend fun loadBytes(ref: TrackRef): ByteArray? =
+        if (ref.id.startsWith("http")) {
+            remoteFiles.fetch(ref.id)
+        } else {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver
+                        .openInputStream(Uri.parse(ref.id))?.use { it.readBytes() }
+                }.getOrNull()
+            }
+        }
+
+    /**
+     * Starts reading whatever comes next.
+     *
+     * Cancelled and restarted whenever the queue moves, because a read of a track the user has
+     * already skipped past is a read competing with the one they are waiting for.
+     */
+    private fun prefetchUpcoming() {
+        val upcoming = _state.value.queue.upcoming ?: return
+        if (prefetched?.first == upcoming.id) return
+
+        prefetchJob?.cancel()
+        prefetchJob = scope.launch {
+            val bytes = loadBytes(upcoming) ?: return@launch
+            // A large file is not worth holding in memory to save a second; these formats are
+            // kilobytes and anything of this size is not one of them.
+            if (bytes.size <= MAX_PREFETCH_BYTES) prefetched = upcoming.id to bytes
         }
     }
 
     private fun stopPlayback() {
+        prefetchJob?.cancel()
+        prefetched = null
         track?.close()
         track = null
         audioFocus.release()

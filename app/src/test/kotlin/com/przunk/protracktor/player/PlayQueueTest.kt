@@ -262,6 +262,31 @@ class PlayQueueTest {
         assertNull(q.current)
     }
 
+    // --- reading ahead ---------------------------------------------------------------------------
+
+    @Test
+    fun `upcoming is what next would land on, without moving`() {
+        val q = queueOf(5).startAt(1)
+        assertEquals("Track 2", q.upcoming?.title)
+        // Asking must not advance anything: the whole point is to read ahead while this one plays.
+        assertEquals("Track 1", q.titleNow())
+        assertEquals(q.upcoming?.title, q.next().titleNow())
+    }
+
+    @Test
+    fun `upcoming is nothing at the end of the playlist`() {
+        val q = queueOf(3).startAt(2)
+        assertNull(q.upcoming)
+        assertEquals("Track 0", q.withRepeat(RepeatMode.PLAYLIST).upcoming?.title)
+    }
+
+    @Test
+    fun `upcoming follows the shuffled order, not the list order`() {
+        var q = queueOf(20).withShuffle(true, seed = 77L)
+        q = q.next()
+        assertEquals(q.next().titleNow(), q.upcoming?.title)
+    }
+
     // --- edges --------------------------------------------------------------------------------
 
     @Test

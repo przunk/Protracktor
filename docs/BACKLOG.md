@@ -150,7 +150,11 @@ Each needs two things, and the second is usually the blocker:
 **Also**: re-index after adding any backend. The index deliberately keeps only entries whose
 filename a backend might handle, so formats added later are simply absent until a re-index.
 
-## 9. Instant start (R9)
+## 9. ~~Instant start (R9)~~ — DONE 2026-09-01, UNMEASURED
+
+Read-ahead and a disk cache both landed. What is left is the measurement: whether the owner's
+five-to-thirty second wait on an SMB share actually became nothing. Also still open is the cache
+eviction budget (`docs/OPEN_QUESTIONS.md` Q5) — nothing is ever deleted today.
 
 Nothing is cached and nothing is prepared ahead. A local module is fast because it is small.
 

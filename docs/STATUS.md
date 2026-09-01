@@ -28,6 +28,9 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — Read-ahead: the next track's bytes are loaded while the current one plays, and
+  the dock says "Loading…" when a read is actually happening. R9's wait is a read, not a decode.
+
 - **2026-09-01** — Browse is a full screen with four domains: local filesystem, online catalogues,
   random, and search across both. Modland is indexed into the database (schema version 2) and
   browsable offline by format and author; remote tracks stream and are cached. **None of it has run
@@ -152,8 +155,9 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
   transport buttons, but lock-screen controls and Bluetooth or headphone buttons do nothing.
 - **`.sc68` container files will not play**, though `.sndh` should. That format references external
   replay binaries which we do not ship. SNDH carries its own code and needs none.
-- **R9 (playback starts immediately) is untested.** Nothing is cached and nothing is prepared ahead;
-  a small local module is fast because it is small, not because we made it so.
+- **R9 is addressed but unmeasured.** The next track is read while the current one plays, and
+  remote fetches are cached on disk. Whether that turns the owner's five-to-thirty seconds into
+  nothing has not been measured on his SMB share, which is the only measurement that counts.
 - **Folder scanning filters by file extension**, not by probing content as
   `docs/ARCHITECTURE.md` §5 requires. Probing means reading every candidate, which belongs with the
   index rather than with a foreground scan. `SupportedFormats` says so in its own documentation.
