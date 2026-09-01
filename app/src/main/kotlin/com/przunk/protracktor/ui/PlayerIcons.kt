@@ -49,6 +49,40 @@ object PlayerIcons {
     val Play: ImageVector by lazy {
         icon("Play", "M8 5v14l11-7z")
     }
+    val Back: ImageVector by lazy {
+        icon("Back", "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z")
+    }
+    val Folder: ImageVector by lazy {
+        icon("Folder", "M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z")
+    }
+    val Cloud: ImageVector by lazy {
+        icon(
+            "Cloud",
+            "M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 " +
+                "14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z",
+        )
+    }
+    val Dice: ImageVector by lazy {
+        icon(
+            "Dice",
+            "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8.5 " +
+                "17c-.83 0-1.5-.67-1.5-1.5S7.67 14 8.5 14s1.5.67 1.5 1.5S9.33 17 8.5 17zm0-7C7.67 " +
+                "10 7 9.33 7 8.5S7.67 7 8.5 7 10 7.67 10 8.5 9.33 10 8.5 10zm7 7c-.83 0-1.5-.67-1.5-1.5S14.67 " +
+                "14 15.5 14s1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm0-7c-.83 0-1.5-.67-1.5-1.5S14.67 7 15.5 7 17 " +
+                "7.67 17 8.5 16.33 10 15.5 10z",
+        )
+    }
+    val Search: ImageVector by lazy {
+        icon(
+            "Search",
+            "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 " +
+                "9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 " +
+                "0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+        )
+    }
+    val Download: ImageVector by lazy {
+        icon("Download", "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z")
+    }
     val DropDown: ImageVector by lazy {
         icon("DropDown", "M7 10l5 5 5-5z")
     }

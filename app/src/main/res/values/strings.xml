@@ -51,6 +51,25 @@
     <string name="a11y_rename_playlist">Rename %1$s</string>
     <string name="a11y_delete_playlist">Delete %1$s</string>
 
+    <string name="domain_local_title">Local filesystem</string>
+    <string name="domain_local_body">Folders and files on this device</string>
+    <string name="domain_online_title">Online catalogues</string>
+    <string name="domain_online_body">Browse the archives — indexed once, then browsable offline</string>
+    <string name="domain_random_title">Random</string>
+    <string name="domain_random_body">Play something from the indexed catalogues</string>
+    <string name="domain_search_title">Search</string>
+    <string name="domain_search_body">Across your library and the catalogues</string>
+
+    <string name="browse_indexing">Indexing %1$s…</string>
+    <string name="browse_unknown">(unknown)</string>
+    <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
+    <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>
+    <string name="a11y_index_catalogue">Download the index for %1$s</string>
+
+    <string name="search_label">Title or author</string>
+    <string name="search_scope_local">My library</string>
+    <string name="search_scope_hint">With no catalogue ticked, every indexed catalogue is searched.</string>
+
     <string name="browse_title">Add music</string>
     <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>
 

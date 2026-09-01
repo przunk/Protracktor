@@ -19,6 +19,7 @@ import android.app.Application
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.GrantedFolder
 import kotlinx.coroutines.flow.StateFlow
 
@@ -57,6 +58,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun forgetFolder(uri: String) = controller.forgetFolder(uri)
     fun openFolder(folder: GrantedFolder) = controller.openFolder(folder)
     fun closeFolder() = controller.closeFolder()
+    fun openDomain(domain: BrowseDomain) = controller.openDomain(domain)
+    fun browseBack(): Boolean = controller.browseBack()
+    fun indexCatalogue(id: String) = controller.indexCatalogue(id)
+    fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
+    fun openGroup(name: String) {
+        // One handler for both levels: the format list and the author list look identical and the
+        // state already knows which one is showing.
+        if (controller.browse.value.openFormat == null) controller.openFormat(name)
+        else controller.openAuthor(name)
+    }
+    fun playRandom() = controller.playRandom()
+    fun setQuery(query: String) = controller.setQuery(query)
+    fun toggleSearchLocal() = controller.toggleSearchLocal()
+    fun toggleSearchCatalogue(id: String) = controller.toggleSearchCatalogue(id)
+    fun runSearch() = controller.runSearch()
     fun addToPlaylist(tracks: List<TrackRef>) = controller.addToPlaylist(tracks)
 
     fun playAt(index: Int) {

@@ -55,6 +55,25 @@
     <string name="a11y_rename_playlist">Zmień nazwę %1$s</string>
     <string name="a11y_delete_playlist">Usuń %1$s</string>
 
+    <string name="domain_local_title">Pliki lokalne</string>
+    <string name="domain_local_body">Katalogi i pliki na tym urządzeniu</string>
+    <string name="domain_online_title">Katalogi online</string>
+    <string name="domain_online_body">Przeglądaj archiwa — indeks pobierany raz, potem działa offline</string>
+    <string name="domain_random_title">Losowo</string>
+    <string name="domain_random_body">Zagraj coś z zaindeksowanych katalogów</string>
+    <string name="domain_search_title">Szukaj</string>
+    <string name="domain_search_body">W bibliotece i w katalogach</string>
+
+    <string name="browse_indexing">Indeksowanie %1$s…</string>
+    <string name="browse_unknown">(nieznany)</string>
+    <string name="catalogue_not_indexed">Brak indeksu — dotknij strzałki, aby go pobrać</string>
+    <string name="catalogue_more_coming">Kolejne archiwa są w planach. Trafiają tu tylko te, których format indeksu jest już obsłużony.</string>
+    <string name="a11y_index_catalogue">Pobierz indeks dla %1$s</string>
+
+    <string name="search_label">Tytuł lub autor</string>
+    <string name="search_scope_local">Moja biblioteka</string>
+    <string name="search_scope_hint">Gdy żaden katalog nie jest zaznaczony, przeszukiwane są wszystkie zaindeksowane.</string>
+
     <string name="browse_title">Dodaj muzykę</string>
     <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
 

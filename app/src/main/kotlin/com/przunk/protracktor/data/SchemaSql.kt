@@ -38,9 +38,44 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 1
+    const val VERSION = 2
 
-    /** What a fresh install gets. Must equal [CREATE] plus every migration applied in order. */
+    /**
+     * Online catalogues and their contents, added at version 2.
+     *
+     * Held as one list so [CREATE] and [MIGRATIONS] cannot describe different tables -- the failure
+     * that leaves an upgraded phone and a fresh install with different schemas, discovered weeks
+     * later and far from its cause.
+     */
+    private val CATALOGUES_V2: List<String> = listOf(
+        """
+        CREATE TABLE catalogues (
+            id TEXT PRIMARY KEY NOT NULL,
+            display_name TEXT NOT NULL,
+            indexed_at INTEGER,
+            track_count INTEGER NOT NULL DEFAULT 0
+        )
+        """.trimIndent(),
+
+        // Half a million rows for Modland alone, so the columns are the ones the UI browses by and
+        // nothing else. The path is the identity: it is what the download URL is built from.
+        """
+        CREATE TABLE catalogue_tracks (
+            catalogue_id TEXT NOT NULL REFERENCES catalogues(id) ON DELETE CASCADE,
+            path TEXT NOT NULL,
+            format TEXT NOT NULL,
+            author TEXT NOT NULL,
+            title TEXT NOT NULL,
+            size INTEGER NOT NULL,
+            PRIMARY KEY (catalogue_id, path)
+        )
+        """.trimIndent(),
+
+        "CREATE INDEX idx_catalogue_browse ON catalogue_tracks(catalogue_id, format, author, title)",
+        "CREATE INDEX idx_catalogue_title ON catalogue_tracks(catalogue_id, title)",
+    )
+
+    /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
         CREATE TABLE playlists (
@@ -94,16 +129,20 @@ object SchemaSql {
         """.trimIndent(),
 
         "INSERT INTO player_state (id) VALUES (0)",
-    )
+    ) + CATALOGUES_V2
+
+
 
     /**
      * Keyed by the version each set of statements produces, so migrating 1 to 3 runs
      * `MIGRATIONS[2]` then `MIGRATIONS[3]`.
      *
-     * Empty at version 1. The map exists now so the first migration is written into a harness that
-     * already has a test, rather than arriving with one improvised around it.
+     * The statements are shared with [CREATE] rather than copied, which is what makes the two
+     * physically unable to disagree.
      */
-    val MIGRATIONS: Map<Int, List<String>> = emptyMap()
+    val MIGRATIONS: Map<Int, List<String>> = mapOf(
+        2 to CATALOGUES_V2,
+    )
 
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */
     fun migrationsBetween(from: Int, to: Int): List<String> =
