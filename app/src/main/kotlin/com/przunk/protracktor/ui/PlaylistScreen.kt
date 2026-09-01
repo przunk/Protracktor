@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -126,6 +127,16 @@ private fun PlaylistBody(
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
 
+    // The pointer handler is created once and never restarted, so anything it reads must be read
+    // through a holder that is kept current. Capturing the track list directly is what broke the
+    // drag after two rows: the handler kept answering with the position the row had when the
+    // gesture began, so the third step was computed from a stale origin and threw the row back.
+    val tracks by rememberUpdatedState(state.queue.tracks)
+    val move by rememberUpdatedState(onMove)
+    val indexOfTrack = remember { { id: String -> tracks.indexOfFirst { it.id == id } } }
+    val trackCount = remember { { tracks.size } }
+    val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
+
     LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(state.queue.tracks, key = { _, track -> track.id }) { index, track ->
             TrackRow(
@@ -141,12 +152,12 @@ private fun PlaylistBody(
                 dragHandleModifier = Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
-                    indexOf = { id -> state.queue.tracks.indexOfFirst { it.id == id } },
-                    trackCount = state.queue.tracks.size,
+                    indexOf = indexOfTrack,
+                    trackCount = trackCount,
                     setDragging = { draggingId = it },
                     offset = { dragOffset },
                     setOffset = { dragOffset = it },
-                    onMove = onMove,
+                    onMove = moveTrack,
                 ),
             )
         }
@@ -168,17 +179,22 @@ private fun PlaylistBody(
  * the index of the row being dragged changes the instant it moves — so an index key cancelled the
  * gesture after every single step, and left the drag offset attached to whichever row had inherited
  * that number.
+ *
+ * **And nothing it reads may be captured.** The handler is created once and then never re-created,
+ * which is the point — but it means a captured list is frozen at the moment the gesture started.
+ * That was the second bug: after two rows the origin it was measuring from no longer existed, and
+ * the row snapped back mid-drag. Everything comes in as a function that reads current state.
  */
 private fun Modifier.dragToReorder(
     trackId: String,
     listState: LazyListState,
     indexOf: (String) -> Int,
-    trackCount: Int,
+    trackCount: () -> Int,
     setDragging: (String?) -> Unit,
     offset: () -> Float,
     setOffset: (Float) -> Unit,
     onMove: (Int, Int) -> Unit,
-): Modifier = pointerInput(trackId, trackCount) {
+): Modifier = pointerInput(trackId) {
     detectDragGestures(
         onDragStart = { setDragging(trackId); setOffset(0f) },
         onDragEnd = { setDragging(null); setOffset(0f) },
@@ -201,7 +217,7 @@ private fun Modifier.dragToReorder(
             val steps = (offset() / height).toInt()
             if (steps == 0) return@detectDragGestures
 
-            val target = (from + steps).coerceIn(0, trackCount - 1)
+            val target = (from + steps).coerceIn(0, trackCount() - 1)
             if (target != from) {
                 onMove(from, target)
                 // The row has moved under the finger, so the accumulated offset that caused the
