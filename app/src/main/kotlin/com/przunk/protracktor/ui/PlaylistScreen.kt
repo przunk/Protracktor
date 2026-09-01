@@ -146,6 +146,7 @@ private fun PlaylistBody(
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
 
     var following by remember { mutableStateOf(false) }
+    val haptics = rememberHaptics()
 
     LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(state.queue.tracks, key = { _, track -> track.id }) { index, track ->
@@ -168,6 +169,7 @@ private fun PlaylistBody(
                     offset = { dragOffset },
                     setOffset = { dragOffset = it },
                     onMove = moveTrack,
+                    haptics = haptics,
                 ),
             )
         }
@@ -268,11 +270,12 @@ private fun Modifier.dragToReorder(
     offset: () -> Float,
     setOffset: (Float) -> Unit,
     onMove: (Int, Int) -> Unit,
+    haptics: Haptics,
 ): Modifier = pointerInput(trackId) {
     detectDragGestures(
-        onDragStart = { setDragging(trackId); setOffset(0f) },
-        onDragEnd = { setDragging(null); setOffset(0f) },
-        onDragCancel = { setDragging(null); setOffset(0f) },
+        onDragStart = { setDragging(trackId); setOffset(0f); haptics.gestureStart() },
+        onDragEnd = { setDragging(null); setOffset(0f); haptics.gestureEnd() },
+        onDragCancel = { setDragging(null); setOffset(0f); haptics.gestureEnd() },
         onDrag = { change, delta ->
             change.consume()
             setOffset(offset() + delta.y)
@@ -294,6 +297,9 @@ private fun Modifier.dragToReorder(
             val target = (from + steps).coerceIn(0, trackCount() - 1)
             if (target != from) {
                 onMove(from, target)
+                // One notch per position passed, which is what makes a reorder followable without
+                // watching it.
+                haptics.tick()
                 // The row has moved under the finger, so the accumulated offset that caused the
                 // move is spent. What remains is the part of the drag past it.
                 setOffset(offset() - (target - from) * height)

@@ -28,6 +28,9 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-02** — Haptics on the three gestures the screen does not already answer: a row picked up,
+  put down, and each position it crosses; plus the snackbar's dismiss threshold.
+
 - **2026-09-02** — Finding the playing track: a "Show in playlist" action in the expanded player, and
   a follow toggle over the list that is off by default, hides itself while following, and switches
   off the moment the user scrolls by hand.

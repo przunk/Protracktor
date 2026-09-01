@@ -62,7 +62,7 @@ working unattended is the case they were written for.
       panel. Same underlying inconsistency as item 1's second half, so if item 1 settles what a
       source is called, this should follow it rather than invent a second answer.
 
-- [ ] **4. A8 — haptics**
+- [x] **4. A8 — haptics** *(three of the four gestures; the fourth belongs to A4, which does not exist yet)*
       Four gestures only, listed in the backlog entry, and nothing with a visible result. Last
       of the building items because it attaches to gestures items 1 and 2 create.
 
