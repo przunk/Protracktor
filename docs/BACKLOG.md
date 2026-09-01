@@ -238,6 +238,29 @@ Two observations to bring to that conversation:
 Schema is not a constraint: the owner has confirmed the database can change freely and he can
 reinstall, since nobody else uses the app yet.
 
+## 5f2. Getting up and down a long list
+
+Raised 2026-09-01. Three hundred tracks is a lot of flicking.
+
+This is the other half of the ordinal conversation. The number stayed on the row because it is the
+only thing that says *where in the list you are* — but that is a read-out, not a control. What is
+missing is the way to **go** somewhere.
+
+Two shapes, and they answer different questions:
+
+- **A scrollbar you can drag.** Appears while scrolling, grabbable, drags the list. Answers "take me
+  roughly two thirds down". Standard, and Compose has no built-in one, so it is a custom
+  `LazyListState`-driven overlay — not hard, but not free either.
+- **Jump to top / bottom.** A button that appears once you are far from either end. Answers "take me
+  back to the start", which on a playlist is the more common wish, and costs almost nothing.
+
+Worth doing the second first: it is a fraction of the work and covers the case that comes up most.
+The scrollbar can follow if flicking still annoys.
+
+**If a draggable scrollbar lands, revisit the ordinal.** It was kept because nothing else reported
+position; a scrollbar reports it better and takes no row space. That is not a reason to remove the
+number now, but it is a reason to ask again then.
+
 ## 5g. Bulk operations on the playlist
 
 Raised 2026-09-01. Long-press a row to start a selection, then **tap** further rows to add them —
