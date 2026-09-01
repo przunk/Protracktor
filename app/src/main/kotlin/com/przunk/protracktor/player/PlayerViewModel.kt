@@ -21,6 +21,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.GrantedFolder
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -36,6 +37,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     val state: StateFlow<PlayerUiState> get() = controller.state
     val browse: StateFlow<BrowseState> get() = controller.browse
+
+    /** One-shot "scroll the playlist here" events. */
+    val reveal: SharedFlow<Int> get() = controller.reveal
 
     fun addFolder(treeUri: Uri) = controller.addFolder(treeUri)
     fun addFiles(uris: List<Uri>) = controller.addFiles(uris)

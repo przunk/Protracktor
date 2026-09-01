@@ -40,7 +40,7 @@ working unattended is the case they were written for.
 
 ## The list
 
-- [ ] **1. The follow-track button is too heavy**
+- [x] **1. The follow-track button is too heavy**
       Reported 2026-09-02: it covers too much of the list. It is currently an
       `ExtendedFloatingActionButton` with a label — the label is what makes it large. Make it
       subtle: a small icon-only button, or something that fades to the edge when the list is idle.
@@ -48,7 +48,7 @@ working unattended is the case they were written for.
       the label was there in the first place — so shrinking it is a trade, not a free win. Keep the
       behaviour exactly as it is; this is about weight on screen, nothing else.
 
-- [ ] **2. Adding tracks should show them**
+- [x] **2. Adding tracks should show them**
       Reported 2026-09-02. Adding from Browse appends to the end of the playlist and leaves the view
       where it was, so nothing visibly happens — which is worse now that the confirming snackbar has
       been removed on purpose. Scroll to the first newly added track.

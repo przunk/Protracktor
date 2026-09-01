@@ -36,8 +36,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -216,6 +220,16 @@ class PlaybackController private constructor(private val context: Context) {
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
+
+    /**
+     * "Look here" — a row index the playlist should scroll to.
+     *
+     * An event rather than state: scrolling somewhere is something that happens once, and a value
+     * left sitting in state would scroll again on every recomposition that touched it. Extra buffer
+     * capacity with DROP_OLDEST so an emit never suspends and never queues a stale destination.
+     */
+    private val _reveal = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val reveal: SharedFlow<Int> = _reveal.asSharedFlow()
 
     private val _browse = MutableStateFlow(BrowseState())
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
@@ -793,12 +807,19 @@ class PlaybackController private constructor(private val context: Context) {
     private fun appendTracks(found: List<TrackRef>, describe: (added: Int, skipped: Int) -> Message?) {
         var added = 0
         var skipped = 0
+        var firstAdded = 0
         _state.update { current ->
             // Rebuilding the queue rather than mutating it keeps the play history meaningful: the
             // indices it holds must keep pointing at the same tracks.
             val merged = current.queue.tracks.toMutableList()
             found.forEach { candidate ->
-                if (merged.any { it.sameFileAs(candidate) }) skipped++ else { merged += candidate; added++ }
+                if (merged.any { it.sameFileAs(candidate) }) {
+                    skipped++
+                } else {
+                    if (added == 0) firstAdded = merged.size
+                    merged += candidate
+                    added++
+                }
             }
             current.copy(
                 queue = current.queue.withTracks(merged),
@@ -810,6 +831,10 @@ class PlaybackController private constructor(private val context: Context) {
             )
         }
         resolveMetadataInBackground()
+
+        // Adding appends to the end, so without this nothing visibly happens -- which matters more
+        // now that the confirming message was deliberately removed.
+        if (added > 0) _reveal.tryEmit(firstAdded)
     }
 
     /**
