@@ -14,7 +14,7 @@ finished.
 
 | File | Contents |
 | --- | --- |
-| `docs/STATUS.md` | what is done, what is open, known defects, branch state |
+| `docs/STATUS.md` | what is done, known defects numbered **C1…Cn**, branch state |
 | `docs/ARCHITECTURE.md` | how it is built and **why that way** |
 | `docs/OPEN_QUESTIONS.md` | decisions deliberately left open, with options |
 | `docs/PLAN_FORMATS.md` | plan for the decoders we do not have yet |
