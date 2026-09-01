@@ -36,36 +36,35 @@ import androidx.core.content.ContextCompat
  *   suddenly play the user's music out loud to a room. This one is a courtesy people only notice
  *   once, memorably.
  *
- * Ducking is treated as a pause rather than a volume dip. These formats are dense and quiet
- * chip-music; halving the volume under a navigation prompt leaves neither audible.
+ * The three kinds of interruption are deliberately not treated alike, because the owner does not
+ * experience them alike:
+ *
+ * - **A notification** asks to duck. The music drops in volume for a moment and comes back. Pausing
+ *   for a message arriving is worse than the message.
+ * - **A phone call** takes focus transiently. Playback stops and **does not resume** when the call
+ *   ends. Music restarting by itself as you put the phone down is startling, and the owner asked for
+ *   it not to.
+ * - **Another player starting** takes focus permanently. Playback stops and stays stopped.
  */
 class AudioFocus(
     private val context: Context,
     private val onPause: () -> Unit,
-    private val onResume: () -> Unit,
+    private val onDuck: (Float) -> Unit,
 ) {
     private val audioManager = context.getSystemService(AudioManager::class.java)
 
-    /** Only resume what we paused. A user's own pause must not be undone by a phone call ending. */
-    private var pausedByLoss = false
     private var request: AudioFocusRequest? = null
     private var noisyReceiver: BroadcastReceiver? = null
 
     private val listener = AudioManager.OnAudioFocusChangeListener { change ->
         when (change) {
-            AudioManager.AUDIOFOCUS_LOSS -> {
-                pausedByLoss = false // permanent: do not come back on our own
-                onPause()
-            }
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                pausedByLoss = true
-                onPause()
-            }
-            AudioManager.AUDIOFOCUS_GAIN -> if (pausedByLoss) {
-                pausedByLoss = false
-                onResume()
-            }
+            // A notification, a navigation prompt: quieter, not silent, and back afterwards.
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> onDuck(DUCKED_GAIN)
+            AudioManager.AUDIOFOCUS_GAIN -> onDuck(1f)
+
+            // A call, or another player. Both stop us; neither brings us back. The owner asked for
+            // music not to restart by itself when a call ends.
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS -> onPause()
         }
     }
 
@@ -86,7 +85,9 @@ class AudioFocus(
                     .build()
             )
             .setOnAudioFocusChangeListener(listener)
-            .setWillPauseWhenDucked(true)
+            // False, so the system tells us to duck instead of doing the pausing for us. Handling it
+            // ourselves is the only way a notification can lower the music rather than stop it.
+            .setWillPauseWhenDucked(false)
             .build()
         request = built
         return audioManager.requestAudioFocus(built) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
@@ -94,18 +95,19 @@ class AudioFocus(
 
     fun release() {
         request?.let(audioManager::abandonAudioFocusRequest)
-        pausedByLoss = false
         unregisterNoisyReceiver()
+    }
+
+    private companion object {
+        /** About a quarter of the level. Audible underneath, and clearly out of the way. */
+        const val DUCKED_GAIN = 0.25f
     }
 
     private fun registerNoisyReceiver() {
         if (noisyReceiver != null) return
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
-                    pausedByLoss = false
-                    onPause()
-                }
+                if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) onPause()
             }
         }
         // The export flag is mandatory from API 34 for anything but a protected system broadcast.

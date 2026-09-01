@@ -87,6 +87,7 @@ object MediaScanner {
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                 DocumentsContract.Document.COLUMN_DISPLAY_NAME,
                 DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_SIZE,
             ),
             null, null, null,
         )?.use { cursor ->
@@ -102,6 +103,9 @@ object MediaScanner {
                         id = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId).toString(),
                         title = displayName,
                         subtitle = parentDocumentId.substringAfterLast('/').substringAfterLast(':'),
+                        // Read here because it is free with the row we already have, and it is half
+                        // of what tells two URIs for one file apart.
+                        sizeBytes = if (cursor.isNull(3)) 0L else cursor.getLong(3),
                     )
                 }
             }
@@ -111,13 +115,29 @@ object MediaScanner {
     /** Builds references for individually picked files. */
     fun fromDocuments(context: Context, uris: List<Uri>): List<TrackRef> = uris.map { uri ->
         persistPermission(context, uri, isTree = false)
-        TrackRef(id = uri.toString(), title = displayNameOf(context, uri) ?: uri.lastPathSegment.orEmpty())
+        val (name, size) = describe(context, uri)
+        TrackRef(
+            id = uri.toString(),
+            title = name ?: uri.lastPathSegment.orEmpty(),
+            sizeBytes = size,
+        )
     }
 
-    private fun displayNameOf(context: Context, uri: Uri): String? =
+    private fun describe(context: Context, uri: Uri): Pair<String?, Long> =
         runCatching {
             context.contentResolver.query(
-                uri, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null,
-            )?.use { if (it.moveToFirst()) it.getString(0) else null }
-        }.getOrNull()
+                uri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_SIZE,
+                ),
+                null, null, null,
+            )?.use { row ->
+                if (row.moveToFirst()) {
+                    row.getString(0) to (if (row.isNull(1)) 0L else row.getLong(1))
+                } else {
+                    null to 0L
+                }
+            }
+        }.getOrNull() ?: (null to 0L)
 }

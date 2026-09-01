@@ -74,6 +74,14 @@ object NativeEngine {
          */
         fun seekTo(seconds: Double) = nativeSeek(handle(), seconds)
 
+        /**
+         * Scales the output. 1.0 is untouched.
+         *
+         * Applied inside the render callback, so ducking under a notification lowers the music
+         * without a gap where stopping the stream would leave one.
+         */
+        fun setGain(gain: Float) = nativeSetGain(handle(), gain)
+
         fun stop() = nativeStop(handle())
 
         fun positionSeconds(): Double = nativePositionSeconds(handle())
@@ -101,6 +109,7 @@ object NativeEngine {
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
     @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
+    @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double
     @JvmStatic private external fun nativeDurationSeconds(handle: Long): Double

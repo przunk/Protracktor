@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -73,6 +73,18 @@ object SchemaSql {
 
         "CREATE INDEX idx_catalogue_browse ON catalogue_tracks(catalogue_id, format, author, title)",
         "CREATE INDEX idx_catalogue_title ON catalogue_tracks(catalogue_id, title)",
+    )
+
+    /**
+     * Track size, added at version 3.
+     *
+     * The storage access framework hands out different document URIs for the same file depending on
+     * how it was reached, so the id alone cannot tell a duplicate from a new track. Name and size
+     * together can, and the size has to survive a restart or the check stops working the moment the
+     * app is reopened.
+     */
+    private val TRACK_SIZE_V3: List<String> = listOf(
+        "ALTER TABLE tracks ADD COLUMN size INTEGER NOT NULL DEFAULT 0",
     )
 
     /** What a fresh install gets: version 1's tables plus every migration since. */
@@ -129,7 +141,7 @@ object SchemaSql {
         """.trimIndent(),
 
         "INSERT INTO player_state (id) VALUES (0)",
-    ) + CATALOGUES_V2
+    ) + CATALOGUES_V2 + TRACK_SIZE_V3
 
 
 
@@ -142,6 +154,7 @@ object SchemaSql {
      */
     val MIGRATIONS: Map<Int, List<String>> = mapOf(
         2 to CATALOGUES_V2,
+        3 to TRACK_SIZE_V3,
     )
 
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */

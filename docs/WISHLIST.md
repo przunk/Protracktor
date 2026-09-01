@@ -6,6 +6,11 @@ Format: what, who raised it, when.
 
 ---
 
+- **A history of what was played** — owner, 2026-09-01. Somewhere in settings. Note that
+  `PlayQueue` already keeps a history, but only within a session and only for the active playlist;
+  a real one is a table of plays with timestamps, which is a small schema change and a screen.
+  There is no settings screen yet either.
+
 - **Optional visualiser on the main screen** — owner, 2026-08-31. R4 makes metadata the default;
   the visualiser returns as something the user switches on. Worth doing properly (a real scope or
   per-channel VU driven by the render callback) rather than the "stiff" one being replaced.

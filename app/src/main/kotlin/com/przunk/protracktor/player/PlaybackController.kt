@@ -69,6 +69,14 @@ data class PlayerUiState(
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
+    /**
+     * Playing, but not part of the playlist.
+     *
+     * What Random produces. The owner asked for it to play rather than land in the list, so that
+     * keeping it is a decision he makes after hearing it -- which is the only order that makes
+     * sense for something picked at random.
+     */
+    val transient: TrackRef? = null,
     val playlists: List<SavedPlaylist> = emptyList(),
     val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
@@ -84,7 +92,7 @@ data class PlayerUiState(
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
 ) {
-    val current: TrackRef? get() = queue.current
+    val current: TrackRef? get() = transient ?: queue.current
 
     /**
      * Whether the current backend can move to a position at all.
@@ -196,9 +204,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val audioFocus = AudioFocus(
         context = context,
         onPause = { pause() },
-        // Only ever called after a pause this class caused, so it cannot restart something the user
-        // stopped on purpose.
-        onResume = { resumeAfterInterruption() },
+        onDuck = { gain -> track?.setGain(gain) },
     )
 
     /** Which playlist is being edited. Resolved during [restore]; there is only one so far. */
@@ -287,7 +293,9 @@ class PlaybackController private constructor(private val context: Context) {
         store.savePlayerState(
             SavedPlayerState(
                 activePlaylistId = playlistId,
-                currentTrackId = snapshot.current?.id,
+                // The queue's track, never a transient one: a random pick is not where the user
+                // was, and restoring into it would be restoring somewhere they never chose to be.
+                currentTrackId = snapshot.queue.current?.id,
                 shuffle = snapshot.queue.shuffle,
                 repeat = snapshot.queue.repeat,
             )
@@ -506,7 +514,7 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** Picks something at random from the indexed catalogues and plays it. */
+    /** Picks something at random from the indexed catalogues and plays it, without adding it. */
     fun playRandom() {
         scope.launch {
             val picked = catalogues.random()
@@ -516,11 +524,19 @@ class PlaybackController private constructor(private val context: Context) {
                 }
                 return@launch
             }
-            val ref = toTrackRef(picked)
-            addToPlaylist(listOf(ref))
-            val index = _state.value.queue.tracks.indexOfFirst { it.id == ref.id }
-            if (index >= 0) playAt(index)
+            playTransient(toTrackRef(picked))
         }
+    }
+
+    /** Keeps what is playing. Only meaningful while a transient track is on. */
+    fun keepTransient() {
+        val ref = _state.value.transient ?: return
+        addToPlaylist(listOf(ref))
+        _state.update { it.copy(transient = null, queue = it.queue) }
+        // Now that it is in the list, make it the queue's current track so next and previous carry
+        // on from here instead of from wherever the playlist was left.
+        val index = _state.value.queue.tracks.indexOfFirst { it.sameFileAs(ref) }
+        if (index >= 0) _state.update { it.copy(queue = it.queue.startAt(index)) }
     }
 
     // --- search -------------------------------------------------------------------------------
@@ -568,12 +584,8 @@ class PlaybackController private constructor(private val context: Context) {
     /** Adds a chosen set to the active playlist. Duplicates are ignored rather than doubled. */
     fun addToPlaylist(tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
-        appendTracks(tracks, describeAdded(tracks.size))
+        appendTracks(tracks, ::describeAdded)
     }
-
-    private fun describeAdded(count: Int): Message = Message(
-        if (count == 1) "Added 1 track." else "Added $count tracks."
-    )
 
     // --- library ---    // --- library ------------------------------------------------------------------------------
 
@@ -585,38 +597,48 @@ class PlaybackController private constructor(private val context: Context) {
                 GrantedFolder(uri = treeUri.toString(), displayName = MediaScanner.labelOf(treeUri))
             )
             val found = MediaScanner.scanTree(context, treeUri)
-            appendTracks(found, describeScan(found.size))
+            appendTracks(found, ::describeAdded)
         }
     }
 
     fun addFiles(uris: List<Uri>) {
         scope.launch {
             val found = withContext(Dispatchers.IO) { MediaScanner.fromDocuments(context, uris) }
-            appendTracks(found, describeScan(found.size))
+            appendTracks(found, ::describeAdded)
         }
     }
 
-    private fun appendTracks(found: List<TrackRef>, message: Message) {
+    private fun appendTracks(found: List<TrackRef>, describe: (added: Int, skipped: Int) -> Message) {
+        var added = 0
+        var skipped = 0
         _state.update { current ->
             // Rebuilding the queue rather than mutating it keeps the play history meaningful: the
             // indices it holds must keep pointing at the same tracks.
-            val merged = current.queue.tracks + found.filterNot { new ->
-                current.queue.tracks.any { it.id == new.id }
+            val merged = current.queue.tracks.toMutableList()
+            found.forEach { candidate ->
+                if (merged.any { it.sameFileAs(candidate) }) skipped++ else { merged += candidate; added++ }
             }
             current.copy(
                 queue = current.queue.withTracks(merged),
                 scanning = false,
-                dirty = true,
-                message = message,
+                dirty = current.dirty || added > 0,
+                message = describe(added, skipped),
             )
         }
     }
 
-    private fun describeScan(count: Int): Message = Message(
-        when (count) {
-            0 -> "Nothing playable found there."
-            1 -> "Added 1 track."
-            else -> "Added $count tracks."
+    /**
+     * What to say after adding.
+     *
+     * Duplicates skipped are reported rather than swallowed. Silently adding nothing looks exactly
+     * like a button that did not work.
+     */
+    private fun describeAdded(added: Int, skipped: Int): Message = Message(
+        when {
+            added == 0 && skipped == 0 -> "Nothing playable found there."
+            added == 0 -> "Already in this playlist."
+            skipped == 0 -> if (added == 1) "Added 1 track." else "Added $added tracks."
+            else -> "Added $added; $skipped already there."
         }
     )
 
@@ -740,13 +762,6 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(playing = false) }
     }
 
-    private fun resumeAfterInterruption() {
-        val open = track ?: return
-        if (_state.value.playing) return
-        if (!audioFocus.acquire()) return
-        _state.update { it.copy(playing = open.start()) }
-    }
-
     fun toggleShuffle() {
         _state.update { it.copy(queue = it.queue.withShuffle(!it.queue.shuffle)) }
         scheduleSave()
@@ -763,6 +778,15 @@ class PlaybackController private constructor(private val context: Context) {
     // --- internals ----------------------------------------------------------------------------
 
     private fun handleTrackEnded() {
+        // A transient track ending stops playback. Rolling on into the playlist would be answering
+        // a question the user did not ask by pressing Random.
+        if (_state.value.transient != null) {
+            track?.stop()
+            audioFocus.release()
+            _state.update { it.copy(playing = false, positionSeconds = it.durationSeconds) }
+            return
+        }
+
         val queue = _state.value.queue
         val advanced = queue.onTrackEnded()
 
@@ -785,13 +809,23 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /** Plays something that is not in the playlist. */
+    private fun playTransient(ref: TrackRef) {
+        _state.update { it.copy(transient = ref, playing = false, positionSeconds = 0.0) }
+        load(ref)
+    }
+
     private fun openAndPlay(queue: PlayQueue) {
         val ref = queue.current ?: return
 
         // The queue advances NOW, not inside the coroutine. Two quick presses of next both read the
         // old queue otherwise, and both advance to the same track.
-        _state.update { it.copy(queue = queue, playing = false, positionSeconds = 0.0) }
+        _state.update { it.copy(queue = queue, transient = null, playing = false, positionSeconds = 0.0) }
         scheduleSave()
+        load(ref)
+    }
+
+    private fun load(ref: TrackRef) {
 
         openJob?.cancel()
         openJob = scope.launch {

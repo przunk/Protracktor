@@ -28,6 +28,10 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — Ducking: a notification lowers the music instead of stopping it, a call stops it
+  and does not bring it back. Duplicate tracks are refused by file identity rather than by URI.
+  Random plays without adding, with a control to keep what you hear.
+
 - **2026-09-01** — Media session: lock-screen transport, Bluetooth and headphone buttons, with the
   notification bound to it through `Notification.MediaStyle`. Seeking is advertised only for
   backends that can honour it.

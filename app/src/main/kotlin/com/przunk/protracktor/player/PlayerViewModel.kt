@@ -69,6 +69,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         else controller.openAuthor(name)
     }
     fun playRandom() = controller.playRandom()
+    fun keepTransient() = controller.keepTransient()
     fun setQuery(query: String) = controller.setQuery(query)
     fun toggleSearchLocal() = controller.toggleSearchLocal()
     fun toggleSearchCatalogue(id: String) = controller.toggleSearchCatalogue(id)

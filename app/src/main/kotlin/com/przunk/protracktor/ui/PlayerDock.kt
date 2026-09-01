@@ -53,6 +53,7 @@ import com.przunk.protracktor.player.RepeatMode
 fun PlayerDock(
     state: PlayerUiState,
     onSeek: (Double) -> Unit,
+    onKeep: () -> Unit,
     onExpand: () -> Unit,
     onBrowse: () -> Unit,
     onPlayPause: () -> Unit,
@@ -117,6 +118,15 @@ fun PlayerDock(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                // Only for a track that is playing but is not in the playlist -- a random pick.
+                // Keeping it is a decision made after hearing it, which is the only order that makes
+                // sense for something chosen at random.
+                if (state.transient != null) {
+                    IconButton(onClick = onKeep) {
+                        Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                    }
+                }
             }
 
             Row(
@@ -142,7 +152,9 @@ fun PlayerDock(
 
                 FilledIconButton(
                     onClick = onPlayPause,
-                    enabled = state.queue.tracks.isNotEmpty(),
+                    // A transient track counts: pressing Random with an empty playlist must still
+                    // give you something you can pause.
+                    enabled = state.current != null || state.queue.tracks.isNotEmpty(),
                     modifier = Modifier.size(52.dp),
                 ) {
                     Icon(

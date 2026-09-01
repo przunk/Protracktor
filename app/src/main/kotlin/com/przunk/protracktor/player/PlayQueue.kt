@@ -39,7 +39,25 @@ data class TrackRef(
     val id: String,
     val title: String,
     val subtitle: String = "",
-)
+    /** Bytes, where the source knows. 0 means unknown. Part of [sameFileAs]. */
+    val sizeBytes: Long = 0,
+) {
+    /**
+     * Whether two references point at the same actual file.
+     *
+     * The id alone is not enough. The storage access framework hands out a **different** document
+     * URI for the same file depending on how it was reached -- a folder grant and an individual
+     * pick produce different strings -- so a playlist would happily hold the same track twice. Name
+     * and size together settle it for anything local, and for a remote track the URL is already
+     * unique.
+     */
+    fun sameFileAs(other: TrackRef): Boolean = when {
+        id == other.id -> true
+        sizeBytes > 0 && other.sizeBytes > 0 ->
+            sizeBytes == other.sizeBytes && title.equals(other.title, ignoreCase = true)
+        else -> false
+    }
+}
 
 /**
  * The play order and the position in it.
