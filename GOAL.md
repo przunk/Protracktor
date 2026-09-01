@@ -49,7 +49,7 @@ working unattended is the case they were written for.
       them**, the way Random has its own history — and playing from a search must not rewrite the
       playlist. Build that reading.
 
-- [ ] **2. B13 + B14 — finding the playing track**
+- [x] **2. B13 + B14 — finding the playing track**
       Tapping the dock's identity row scrolls the playlist to the playing track. Plus the owner's
       follow toggle: a floating button over the list, off by default; tapping it makes the list
       follow playback and hides the button; scrolling by hand turns it off and brings the button

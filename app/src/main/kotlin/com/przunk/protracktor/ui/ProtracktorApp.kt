@@ -45,6 +45,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -102,6 +105,9 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     var pendingSwitch by remember { mutableStateOf<Long?>(null) }
+    // Hoisted so the expanded player can send the list to the playing track without owning the list.
+    val playlistState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     state.message?.let { message ->
         LaunchedEffect(message.id) {
             val result = snackbarHostState.showSnackbar(
@@ -233,6 +239,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         } else {
             PlaylistScreen(
                 state = state,
+                listState = playlistState,
                 onPlayAt = viewModel::playAt,
                 onRemoveAt = viewModel::removeTrack,
                 onMove = viewModel::moveTrack,
@@ -257,7 +264,20 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
             onDismissRequest = { showNowPlaying = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
-            NowPlaying(state = state, onSeek = viewModel::seekTo)
+            NowPlaying(
+                state = state,
+                onSeek = viewModel::seekTo,
+                // Only when what is playing is actually in the list. During Random or a search there
+                // is nothing to show, and a button that lands nowhere is worse than no button.
+                onShowInPlaylist = state.queue.currentIndex
+                    ?.takeIf { !state.awayFromPlaylist }
+                    ?.let { index ->
+                        {
+                            showNowPlaying = false
+                            scope.launch { playlistState.animateScrollToItem(index) }
+                        }
+                    },
+            )
         }
     }
 

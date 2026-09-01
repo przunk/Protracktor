@@ -23,6 +23,8 @@
     <string name="dock_loading">Wczytywanie…</string>
     <string name="dock_idle_subtitle">Dotknij, aby przeglądać</string>
 
+    <string name="action_follow_track">Śledź utwór</string>
+    <string name="action_show_in_playlist">Pokaż na playliście</string>
     <string name="action_browse">Przeglądaj</string>
     <string name="action_add_folder">Dodaj katalog</string>
     <string name="action_add_files">Dodaj pliki</string>
