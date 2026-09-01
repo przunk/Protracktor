@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,6 +52,7 @@ import com.przunk.protracktor.player.RepeatMode
 @Composable
 fun PlayerDock(
     state: PlayerUiState,
+    onSeek: (Double) -> Unit,
     onExpand: () -> Unit,
     onBrowse: () -> Unit,
     onPlayPause: () -> Unit,
@@ -71,21 +71,24 @@ fun PlayerDock(
         // The surface still paints behind the gesture bar -- only the controls move up. Padding the
         // Surface instead would leave a strip of the wrong colour under the dock.
         Column(modifier = Modifier.navigationBarsPadding()) {
-            val fraction = when {
-                state.durationSeconds <= 0.0 -> 0f
-                else -> (state.positionSeconds / state.durationSeconds).coerceIn(0.0, 1.0).toFloat()
-            }
-            LinearProgressIndicator(
-                progress = { fraction },
-                modifier = Modifier.fillMaxWidth(),
-                drawStopIndicator = {},
+            // The same seek control as the expanded player. The owner asked to be able to move
+            // through a track from the main screen without opening anything first; a progress line
+            // you cannot grab was the fault.
+            SeekBar(
+                positionSeconds = state.positionSeconds,
+                durationSeconds = state.durationSeconds,
+                enabled = state.seekable && loaded != null,
+                onSeek = onSeek,
+                compact = true,
+                label = stringResource(R.string.a11y_seek),
+                modifier = Modifier.padding(horizontal = 12.dp),
             )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = if (loaded != null) onExpand else onBrowse)
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {

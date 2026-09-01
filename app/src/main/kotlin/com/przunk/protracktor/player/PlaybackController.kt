@@ -65,6 +65,14 @@ data class PlayerUiState(
     val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
     val restored: Boolean = false,
+    /**
+     * The playlist on screen differs from the one on disk.
+     *
+     * Adding and removing edit a working copy; nothing is written until the user says so. That is
+     * what the owner asked for -- a list you can rearrange without committing to it -- and it means
+     * leaving without saving loses the edits, which the UI has to say out loud.
+     */
+    val dirty: Boolean = false,
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
 ) {
@@ -229,10 +237,15 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Writes the settings, never the track list.
+     *
+     * Shuffle, repeat and where playback got to are the app's own business and are saved as they
+     * change. The track list belongs to the user's editing session and waits for [savePlaylist].
+     */
     private suspend fun saveNow() {
         if (!_state.value.restored) return // never overwrite stored state with an empty start-up one
         val snapshot = _state.value
-        store.replaceTracks(playlistId, snapshot.queue.tracks)
         store.savePlayerState(
             SavedPlayerState(
                 activePlaylistId = playlistId,
@@ -241,6 +254,25 @@ class PlaybackController private constructor(private val context: Context) {
                 repeat = snapshot.queue.repeat,
             )
         )
+    }
+
+    /** Commits the edited list. The diskette button. */
+    fun savePlaylist() {
+        scope.launch {
+            val snapshot = _state.value
+            store.replaceTracks(playlistId, snapshot.queue.tracks)
+            _state.update { it.copy(dirty = false, message = Message("Playlist saved.")) }
+        }
+    }
+
+    /** Throws the edits away and goes back to what is on disk. */
+    fun discardChanges() {
+        scope.launch {
+            val stored = store.tracksIn(playlistId)
+            _state.update {
+                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = Message("Changes discarded."))
+            }
+        }
     }
 
     // --- playlists ----------------------------------------------------------------------------
@@ -287,6 +319,11 @@ class PlaybackController private constructor(private val context: Context) {
      * that does not contain it would leave next and previous disagreeing with the screen -- the
      * exact fault that made the transport feel random before.
      */
+    /**
+     * Makes another playlist the active one, abandoning any unsaved edits to this one.
+     *
+     * The UI asks first when there are edits to lose; this method is what it calls after the answer.
+     */
     fun switchToPlaylist(id: Long) {
         scope.launch {
             saveNow()
@@ -299,6 +336,7 @@ class PlaybackController private constructor(private val context: Context) {
                     playlists = store.playlists(),
                     activePlaylistId = id,
                     playing = false,
+                    dirty = false,
                     metadata = emptyMap(),
                     positionSeconds = 0.0,
                     durationSeconds = 0.0,
@@ -382,10 +420,10 @@ class PlaybackController private constructor(private val context: Context) {
             current.copy(
                 queue = current.queue.withTracks(merged),
                 scanning = false,
+                dirty = true,
                 message = message,
             )
         }
-        scheduleSave()
     }
 
     private fun describeScan(count: Int): Message = Message(
@@ -424,10 +462,10 @@ class PlaybackController private constructor(private val context: Context) {
                 metadata = if (wasPlaying) emptyMap() else it.metadata,
                 positionSeconds = if (wasPlaying) 0.0 else it.positionSeconds,
                 durationSeconds = if (wasPlaying) 0.0 else it.durationSeconds,
+                dirty = true,
                 message = Message(text = "Removed ${removed.title}", actionLabel = UNDO),
             )
         }
-        scheduleSave()
     }
 
     /** Puts the last removed track back where it was. */
@@ -439,9 +477,8 @@ class PlaybackController private constructor(private val context: Context) {
                 // The list may have changed since; clamp rather than throw.
                 add(index.coerceIn(0, size), track)
             }
-            it.copy(queue = it.queue.withTracks(restored), message = null)
+            it.copy(queue = it.queue.withTracks(restored), dirty = true, message = null)
         }
-        scheduleSave()
     }
 
     fun dismissMessage() {
