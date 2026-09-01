@@ -83,6 +83,23 @@ fun NowPlaying(
             )
         }
 
+        // The filename and where it came from, which the title no longer shows once a tune's real
+        // name has been read out of it.
+        track?.let {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.field_file),
+                    modifier = Modifier.width(120.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = listOf(it.subtitle, it.fileNameOrTitle).filter(String::isNotBlank).joinToString("/"),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+
         val message = state.metadata["message"].orEmpty()
         val rows = FIELDS.mapNotNull { (key, label) ->
             state.metadata[key]?.takeIf { it.isNotBlank() && it != "0" }?.let { label to it }

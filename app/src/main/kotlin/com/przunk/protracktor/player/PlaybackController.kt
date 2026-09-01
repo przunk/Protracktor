@@ -77,6 +77,8 @@ data class PlayerUiState(
      * sense for something picked at random.
      */
     val transient: TrackRef? = null,
+    /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
+    val randomHasPrevious: Boolean = false,
     val playlists: List<SavedPlaylist> = emptyList(),
     val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
@@ -103,8 +105,20 @@ data class PlayerUiState(
      */
     val seekable: Boolean get() = metadata["seekable"] != "0" && durationSeconds > 0.0
 
+    /**
+     * What the transport can do right now.
+     *
+     * Asked of the mode rather than always of the queue: during Random the buttons walk the random
+     * history, and a queue that happens to be empty must not grey them out.
+     */
+    val canGoNext: Boolean get() = if (randomMode) true else queue.hasNext
+    val canGoPrevious: Boolean get() = if (randomMode) randomHasPrevious else queue.hasPrevious
+
     val activePlaylistName: String?
         get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
+
+    /** True while Random is driving playback rather than the playlist. */
+    val randomMode: Boolean get() = transient != null
 }
 
 /** Which part of Browse is on screen. Back moves one step towards [ROOT]. */
@@ -136,6 +150,7 @@ data class BrowseState(
     // Search
     val query: String = "",
     val searchLocal: Boolean = true,
+    val searchOnline: Boolean = true,
     val searchCatalogues: Set<String> = emptySet(),
 
     /** Whatever the current level lists, in the form the playlist takes. */
@@ -206,6 +221,15 @@ class PlaybackController private constructor(private val context: Context) {
         onPause = { pause() },
         onDuck = { gain -> track?.setGain(gain) },
     )
+
+    /**
+     * What Random has played, and where in it we are.
+     *
+     * Random needs its own history: "previous" during Random has to mean the previous random pick,
+     * not the previous row of a playlist the user is not listening to.
+     */
+    private val randomHistory = mutableListOf<TrackRef>()
+    private var randomCursor = -1
 
     /** Which playlist is being edited. Resolved during [restore]; there is only one so far. */
     private var playlistId: Long = 0L
@@ -454,7 +478,19 @@ class PlaybackController private constructor(private val context: Context) {
     // --- online catalogues --------------------------------------------------------------------
 
     fun refreshCatalogues() {
-        scope.launch { _browse.update { it.copy(catalogues = catalogues.summaries()) } }
+        scope.launch {
+            val summaries = catalogues.summaries()
+            _browse.update { current ->
+                current.copy(
+                    catalogues = summaries,
+                    // Everything indexed is searched until the user says otherwise. Starting with
+                    // none ticked would make the first search return nothing and look broken.
+                    searchCatalogues = current.searchCatalogues.ifEmpty {
+                        summaries.filter { it.indexed }.map { it.id }.toSet()
+                    },
+                )
+            }
+        }
     }
 
     /**
@@ -524,19 +560,57 @@ class PlaybackController private constructor(private val context: Context) {
                 }
                 return@launch
             }
-            playTransient(toTrackRef(picked))
+            val ref = toTrackRef(picked)
+            // Anything ahead of the cursor is abandoned, the way it is in any other history: going
+            // back and then picking something new discards the branch you left.
+            while (randomHistory.lastIndex > randomCursor) randomHistory.removeAt(randomHistory.lastIndex)
+            randomHistory += ref
+            randomCursor = randomHistory.lastIndex
+            playTransient(ref)
         }
     }
 
-    /** Keeps what is playing. Only meaningful while a transient track is on. */
+    private fun randomNext() {
+        if (randomCursor < randomHistory.lastIndex) {
+            randomCursor++
+            playTransient(randomHistory[randomCursor])
+        } else {
+            playRandom()
+        }
+    }
+
+    private fun randomPrevious() {
+        if (randomCursor <= 0) return
+        randomCursor--
+        playTransient(randomHistory[randomCursor])
+    }
+
+    /**
+     * Keeps what is playing, without leaving Random.
+     *
+     * The owner asked for these to be separate: adding a track you like should not end the sequence
+     * you are listening through.
+     */
     fun keepTransient() {
         val ref = _state.value.transient ?: return
         addToPlaylist(listOf(ref))
-        _state.update { it.copy(transient = null, queue = it.queue) }
-        // Now that it is in the list, make it the queue's current track so next and previous carry
-        // on from here instead of from wherever the playlist was left.
-        val index = _state.value.queue.tracks.indexOfFirst { it.sameFileAs(ref) }
-        if (index >= 0) _state.update { it.copy(queue = it.queue.startAt(index)) }
+    }
+
+    /** Leaves Random and goes back to the playlist. Playback stops; the playlist is where you were. */
+    fun exitRandom() {
+        if (_state.value.transient == null) return
+        stopPlayback()
+        randomHistory.clear()
+        randomCursor = -1
+        _state.update {
+            it.copy(
+                transient = null,
+                playing = false,
+                metadata = emptyMap(),
+                positionSeconds = 0.0,
+                durationSeconds = 0.0,
+            )
+        }
     }
 
     // --- search -------------------------------------------------------------------------------
@@ -544,6 +618,9 @@ class PlaybackController private constructor(private val context: Context) {
     fun setQuery(query: String) = _browse.update { it.copy(query = query) }
 
     fun toggleSearchLocal() = _browse.update { it.copy(searchLocal = !it.searchLocal) }
+
+    /** Turning the whole online side off leaves the individual choices as they were. */
+    fun toggleSearchOnline() = _browse.update { it.copy(searchOnline = !it.searchOnline) }
 
     fun toggleSearchCatalogue(id: String) = _browse.update {
         it.copy(
@@ -560,11 +637,22 @@ class PlaybackController private constructor(private val context: Context) {
             val fromLocal = if (current.searchLocal) {
                 // The library, meaning every playlist's tracks -- searching only the active one
                 // would answer a question nobody asked.
-                store.allTracks().filter { it.title.contains(current.query, ignoreCase = true) }
+                store.allTracks().filter {
+                    it.title.contains(current.query, ignoreCase = true) ||
+                        it.fileName.contains(current.query, ignoreCase = true)
+                }
             } else {
                 emptyList()
             }
-            val fromOnline = catalogues.search(current.query, current.searchCatalogues).map(::toTrackRef)
+
+            // Explicit. "No catalogue ticked means all of them" was the earlier rule and it made
+            // the filter look broken: unticking Modland searched Modland anyway. Nothing ticked now
+            // means nothing searched, which is what unticking a box has always meant.
+            val fromOnline = if (current.searchOnline && current.searchCatalogues.isNotEmpty()) {
+                catalogues.search(current.query, current.searchCatalogues).map(::toTrackRef)
+            } else {
+                emptyList()
+            }
 
             _browse.update { it.copy(tracks = fromLocal + fromOnline, loading = false) }
         }
@@ -578,6 +666,8 @@ class PlaybackController private constructor(private val context: Context) {
             id = catalogue?.urlFor(track.path) ?: track.path,
             title = track.title,
             subtitle = listOf(track.format, track.author).filter { it.isNotBlank() }.joinToString(" · "),
+            sizeBytes = track.size,
+            fileName = track.title,
         )
     }
 
@@ -699,12 +789,14 @@ class PlaybackController private constructor(private val context: Context) {
     fun playAt(index: Int) = openAndPlay(_state.value.queue.startAt(index))
 
     fun next() {
+        if (_state.value.transient != null) return randomNext()
         val queue = _state.value.queue
         if (!queue.hasNext) return
         openAndPlay(queue.next())
     }
 
     fun previous() {
+        if (_state.value.transient != null) return randomPrevious()
         val queue = _state.value.queue
         if (!queue.hasPrevious) return
         openAndPlay(queue.previous())
@@ -811,7 +903,14 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Plays something that is not in the playlist. */
     private fun playTransient(ref: TrackRef) {
-        _state.update { it.copy(transient = ref, playing = false, positionSeconds = 0.0) }
+        _state.update {
+            it.copy(
+                transient = ref,
+                randomHasPrevious = randomCursor > 0,
+                playing = false,
+                positionSeconds = 0.0,
+            )
+        }
         load(ref)
     }
 
@@ -820,7 +919,9 @@ class PlaybackController private constructor(private val context: Context) {
 
         // The queue advances NOW, not inside the coroutine. Two quick presses of next both read the
         // old queue otherwise, and both advance to the same track.
-        _state.update { it.copy(queue = queue, transient = null, playing = false, positionSeconds = 0.0) }
+        _state.update {
+            it.copy(queue = queue, transient = null, randomHasPrevious = false, playing = false, positionSeconds = 0.0)
+        }
         scheduleSave()
         load(ref)
     }
@@ -871,18 +972,49 @@ class PlaybackController private constructor(private val context: Context) {
 
             track = opened
             val started = opened.start()
+            val described = opened.describe()
             _state.update {
                 it.copy(
                     playing = started,
-                    metadata = opened.describe(),
+                    metadata = described,
                     durationSeconds = opened.durationSeconds(),
                     positionSeconds = 0.0,
                     message = if (started) it.message else Message("Could not open the audio device"),
                 )
             }
+            adoptTitleFrom(described, ref)
 
             prefetchUpcoming()
         }
+    }
+
+    /**
+     * Takes the tune's real name from its metadata, once we have it.
+     *
+     * These formats carry a title inside, and it is usually better than the filename -- but there is
+     * no way to know it without opening the file, and opening every file during a scan is exactly
+     * the wait R9 exists to remove. So names improve as tracks are played, which costs nothing and
+     * is the only affordable moment.
+     *
+     * The filename is kept either way, so identity does not shift under a playlist and the metadata
+     * view can still say where a track came from.
+     */
+    private fun adoptTitleFrom(described: Map<String, String>, ref: TrackRef) {
+        val realTitle = described["title"]?.trim().orEmpty()
+        if (realTitle.isBlank() || realTitle == ref.title) return
+
+        _state.update { current ->
+            val index = current.queue.tracks.indexOfFirst { it.id == ref.id }
+            if (index < 0) return@update current
+            val renamed = current.queue.tracks.toMutableList().apply {
+                this[index] = this[index].copy(title = realTitle, fileName = this[index].fileNameOrTitle)
+            }
+            current.copy(queue = current.queue.withTracks(renamed))
+        }
+        // Written straight away rather than waiting for the user to press Save: this is not one of
+        // their edits, it is the app learning something, and losing it would mean relearning it on
+        // every launch.
+        scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
     }
 
     /** Reads a track's bytes, from wherever it lives. */

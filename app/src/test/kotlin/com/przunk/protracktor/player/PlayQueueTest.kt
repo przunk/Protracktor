@@ -317,6 +317,18 @@ class PlayQueueTest {
         assertTrue(one.sameFileAs(one.copy(title = "A.MOD")))
     }
 
+    @Test
+    fun `adopting a tune's real name does not change which file it is`() {
+        // Titles are rewritten from metadata once a track has been played. If identity followed the
+        // title, a track would stop matching itself the moment it was first played, and the
+        // duplicate check would let a second copy in.
+        val scanned = TrackRef("uri://1", "4mat-elysium.mod", "Music/mods", 4096, "4mat-elysium.mod")
+        val renamed = scanned.copy(title = "elysium")
+
+        assertTrue(scanned.sameFileAs(renamed))
+        assertTrue(renamed.sameFileAs(TrackRef("uri://2", "anything", "", 4096, "4MAT-ELYSIUM.MOD")))
+    }
+
     // --- edges --------------------------------------------------------------------------------
 
     @Test

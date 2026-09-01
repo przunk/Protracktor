@@ -57,15 +57,47 @@ fun PlaylistScreen(
     onPlayAt: (Int) -> Unit,
     onRemoveAt: (Int) -> Unit,
     onBrowse: () -> Unit,
+    onExitRandom: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    if (state.queue.tracks.isEmpty()) {
+    // Random plays something that is not in this list, so the list is put behind glass: visible,
+    // clearly not what you are listening to, and not touchable by accident. Cheaper and more
+    // portable than a blur, which needs API 31 and this app runs from 29.
+    if (state.randomMode) {
+        Box(modifier = modifier.fillMaxSize()) {
+            PlaylistBody(state, currentIndex = null, onPlayAt = {}, onRemoveAt = {}, contentPadding = contentPadding, enabled = false)
+            RandomScrim(onExitRandom = onExitRandom, contentPadding = contentPadding)
+        }
+        return
+    }
+    if (state.queue.tracks.isEmpty() && !state.randomMode) {
         EmptyPlaylist(onBrowse = onBrowse, contentPadding = contentPadding, modifier = modifier)
         return
     }
 
-    val currentIndex = state.queue.currentIndex
+    // Nothing in the list is playing while Random is on, so nothing in the list is marked.
+    PlaylistBody(
+        state = state,
+        currentIndex = state.queue.currentIndex,
+        onPlayAt = onPlayAt,
+        onRemoveAt = onRemoveAt,
+        contentPadding = contentPadding,
+        enabled = true,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun PlaylistBody(
+    state: PlayerUiState,
+    currentIndex: Int?,
+    onPlayAt: (Int) -> Unit,
+    onRemoveAt: (Int) -> Unit,
+    contentPadding: PaddingValues,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(state.queue.tracks, key = { _, track -> track.id }) { index, track ->
             val isCurrent = index == currentIndex
@@ -98,12 +130,14 @@ fun PlaylistScreen(
                         }
                     }
                 },
-                trailingContent = {
+                trailingContent = if (!enabled) null else {
+                    {
                     IconButton(onClick = { onRemoveAt(index) }) {
                         Icon(
                             imageVector = PlayerIcons.Remove,
                             contentDescription = stringResource(R.string.a11y_remove_track, track.title),
                         )
+                    }
                     }
                 },
                 colors = if (isCurrent) {
@@ -111,7 +145,7 @@ fun PlaylistScreen(
                 } else {
                     ListItemDefaults.colors()
                 },
-                modifier = Modifier.fillMaxWidth().clickable { onPlayAt(index) },
+                modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { onPlayAt(index) },
             )
         }
     }
@@ -143,6 +177,51 @@ private fun EmptyPlaylist(
                 textAlign = TextAlign.Center,
             )
             Button(onClick = onBrowse) { Text(stringResource(R.string.action_browse)) }
+        }
+    }
+}
+
+/**
+ * The glass over the playlist during Random, and the way out of it.
+ *
+ * The way out is in the middle of the screen with a label rather than tucked into a corner: the
+ * playlist is already covered, so there is room, and a mode you can enter but cannot obviously
+ * leave is a trap.
+ */
+@Composable
+private fun RandomScrim(onExitRandom: () -> Unit, contentPadding: PaddingValues) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
+            // Swallows taps so a row underneath cannot be pressed through the glass.
+            .clickable(enabled = true, onClick = {})
+            .padding(contentPadding),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = PlayerIcons.Dice,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(R.string.random_playing_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.random_playing_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Button(onClick = onExitRandom) {
+                Text(stringResource(R.string.random_back_to_playlist))
+            }
         }
     }
 }

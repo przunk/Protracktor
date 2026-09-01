@@ -219,6 +219,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onRandom = { viewModel.playRandom(); showBrowse = false },
                 onQueryChange = viewModel::setQuery,
                 onToggleLocal = viewModel::toggleSearchLocal,
+                onToggleOnline = viewModel::toggleSearchOnline,
                 onToggleCatalogue = viewModel::toggleSearchCatalogue,
                 onSearch = viewModel::runSearch,
                 onAdd = { tracks ->
@@ -232,6 +233,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onPlayAt = viewModel::playAt,
                 onRemoveAt = viewModel::removeTrack,
                 onBrowse = { showBrowse = true },
+                onExitRandom = viewModel::exitRandom,
                 contentPadding = insets,
             )
         }

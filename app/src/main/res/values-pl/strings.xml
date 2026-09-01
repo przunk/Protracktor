@@ -2,6 +2,10 @@
 <resources>
     <string name="app_name">Protracktor</string>
 
+    <string name="random_playing_title">Odtwarzanie losowe</string>
+    <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny; plus zachowuje ten.</string>
+    <string name="random_back_to_playlist">Wróć do playlisty</string>
+
     <string name="playlist_default_name">Playlista</string>
     <string name="playlist_empty_title">Jeszcze tu pusto</string>
     <string name="playlist_empty_body">Dodaj katalog z modułami, a pojawią się tutaj.</string>
@@ -72,8 +76,10 @@
     <string name="a11y_index_catalogue">Pobierz indeks dla %1$s</string>
 
     <string name="search_label">Tytuł lub autor</string>
+    <string name="search_scope_online">Katalogi online</string>
+    <string name="search_no_catalogues">Żaden katalog nie jest jeszcze zaindeksowany.</string>
+    <string name="field_file">Plik</string>
     <string name="search_scope_local">Moja biblioteka</string>
-    <string name="search_scope_hint">Gdy żaden katalog nie jest zaznaczony, przeszukiwane są wszystkie zaindeksowane.</string>
 
     <string name="browse_title">Dodaj muzykę</string>
     <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>

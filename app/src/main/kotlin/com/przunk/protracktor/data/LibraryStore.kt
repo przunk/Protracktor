@@ -105,7 +105,7 @@ class LibraryStore(context: Context) {
     suspend fun tracksIn(playlistId: Long): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
             """
-            SELECT t.id, t.title, t.subtitle, t.size
+            SELECT t.id, t.title, t.subtitle, t.size, t.file_name
             FROM playlist_tracks pt
             JOIN tracks t ON t.id = pt.track_id
             WHERE pt.playlist_id = ?
@@ -121,6 +121,7 @@ class LibraryStore(context: Context) {
                             title = row.getString(1),
                             subtitle = row.getString(2),
                             sizeBytes = row.getLong(3),
+                            fileName = row.getString(4),
                         )
                     )
                 }
@@ -131,13 +132,17 @@ class LibraryStore(context: Context) {
     /** Every track known to the library, whichever playlist it belongs to. For searching. */
     suspend fun allTracks(): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase
-            .rawQuery("SELECT id, title, subtitle, size FROM tracks ORDER BY title", null)
+            .rawQuery("SELECT id, title, subtitle, size, file_name FROM tracks ORDER BY title", null)
             .use { row ->
                 buildList {
                     while (row.moveToNext()) {
                         add(
                             TrackRef(
-                                row.getString(0), row.getString(1), row.getString(2), row.getLong(3)
+                                id = row.getString(0),
+                                title = row.getString(1),
+                                subtitle = row.getString(2),
+                                sizeBytes = row.getLong(3),
+                                fileName = row.getString(4),
                             )
                         )
                     }
@@ -163,6 +168,7 @@ class LibraryStore(context: Context) {
                         put("title", track.title)
                         put("subtitle", track.subtitle)
                         put("size", track.sizeBytes)
+                        put("file_name", track.fileNameOrTitle)
                     },
                     android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
                 )
