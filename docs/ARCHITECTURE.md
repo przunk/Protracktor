@@ -278,3 +278,28 @@ Each archive publishes its contents differently, so parsing belongs to the catal
 being shared. `Catalogue` is a sealed class with one implementation; adding ASMA, AMP, Aminet or
 ModArchive means writing its index parser and, in most cases, the backend that can play what it
 holds. The UI says as much rather than showing archives that would open on nothing.
+
+## 12. The media session is the platform's, not Media3's
+
+Decided 2026-09-01, changing the plan recorded in §4.
+
+§4 chose Media3's `SimpleBasePlayer` so a `MediaSession` could be had without writing an ExoPlayer
+renderer for a synthesiser. By the time the session was actually needed, that reasoning had stopped
+applying: `PlaybackController` already is the player, with its own queue, transport and state flow.
+Media3 would have meant a dependency plus an adapter that translates our player into a `Player` so
+Media3 can translate it back into a session.
+
+`minSdk` is 29, so `android.media.session.MediaSession` is available directly. It gives the lock
+screen, Bluetooth and headphone buttons, and `Notification.MediaStyle` binds the notification to it.
+No dependency, no adapter.
+
+Two details worth keeping:
+
+- **Seeking is advertised only when the backend can do it.** sc68 emulates a 68000 and cannot seek;
+  a lock screen offering a scrubber that does nothing is the same lie as an app that does.
+- **A media button says which action it wants, so the controller has an explicit
+  `togglePlayPauseTo(play)`.** Toggling on a stale idea of the state is how a headphone press ends
+  up pausing something that was already paused.
+
+If Media3 is ever wanted for something else — Android Auto's browse tree, say — this does not stand
+in the way; the session is created in one method in `PlaybackService`.

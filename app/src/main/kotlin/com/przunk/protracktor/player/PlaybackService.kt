@@ -22,9 +22,12 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.drawable.Icon
+import android.media.MediaMetadata
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.przunk.protracktor.MainActivity
 import com.przunk.protracktor.R
@@ -43,8 +46,10 @@ import kotlinx.coroutines.launch
  * way to say "this one is doing something the user asked for". The notification is not decoration —
  * it is the price of the service and the user's way to stop it.
  *
- * No `MediaSession` yet, so lock-screen and Bluetooth transport do not work. That is the next step
- * and it is written down in `docs/BACKLOG.md` rather than implied by this comment.
+ * It also owns the `MediaSession`, which is what makes the lock screen, Bluetooth and the button on
+ * a pair of headphones work. The platform session rather than Media3's: with `minSdk 29` the
+ * framework API is available directly, and it costs no dependency and no adapter layer over a
+ * player that is already ours. `docs/ARCHITECTURE.md` §12 records the change of plan.
  */
 class PlaybackService : Service() {
 
@@ -63,10 +68,13 @@ class PlaybackService : Service() {
      */
     private var everHadTrack = false
 
+    private lateinit var session: MediaSession
+
     override fun onCreate() {
         super.onCreate()
         controller = PlaybackController.get(this)
         createChannel()
+        createSession()
 
         // Immediately, whatever the state. Android gives a started service about five seconds to
         // call startForeground and kills it otherwise, and the track is still being read off disk.
@@ -85,6 +93,66 @@ class PlaybackService : Service() {
                     }
                 }
         }
+
+        // Position moves without the track changing, so the session needs its own subscription --
+        // the notification's would rebuild the whole thing five times a second for nothing.
+        scope.launch {
+            controller.state.collect { publishSession(it) }
+        }
+    }
+
+    private fun createSession() {
+        // Deliberately not written with apply(). MediaSession has its own getController(), so inside
+        // an apply block the name `controller` silently stops meaning ours and starts meaning the
+        // session's MediaController -- which compiles far enough to be confusing and would have been
+        // very hard to see. Plain assignment keeps the name meaning what it says.
+        val created = MediaSession(this, "Protracktor")
+        created.setCallback(object : MediaSession.Callback() {
+            override fun onPlay() = controller.togglePlayPauseTo(play = true)
+            override fun onPause() = controller.pause()
+            override fun onSkipToNext() = controller.next()
+            override fun onSkipToPrevious() = controller.previous()
+            override fun onSeekTo(pos: Long) = controller.seekTo(pos / 1000.0)
+            override fun onStop() {
+                controller.pause()
+                stopForegroundAndSelf()
+            }
+        })
+        created.isActive = true
+        session = created
+    }
+
+    private fun publishSession(state: PlayerUiState) {
+        val track = state.current
+        session.setMetadata(
+            MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, track?.title.orEmpty())
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, state.metadata["artist"].orEmpty())
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, track?.subtitle.orEmpty())
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, (state.durationSeconds * 1000).toLong())
+                .build()
+        )
+
+        var actions = PlaybackState.ACTION_PLAY or
+            PlaybackState.ACTION_PAUSE or
+            PlaybackState.ACTION_PLAY_PAUSE or
+            PlaybackState.ACTION_STOP
+        if (state.queue.hasNext) actions = actions or PlaybackState.ACTION_SKIP_TO_NEXT
+        if (state.queue.hasPrevious) actions = actions or PlaybackState.ACTION_SKIP_TO_PREVIOUS
+        // Advertised only when the backend can honour it. sc68 emulates a 68000 and cannot seek;
+        // a lock screen offering a scrubber that does nothing is the same lie as an app that does.
+        if (state.seekable) actions = actions or PlaybackState.ACTION_SEEK_TO
+
+        session.setPlaybackState(
+            PlaybackState.Builder()
+                .setActions(actions)
+                .setState(
+                    if (state.playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
+                    (state.positionSeconds * 1000).toLong(),
+                    if (state.playing) 1f else 0f,
+                )
+                .build()
+        )
     }
 
     private fun contentOf(state: PlayerUiState) =
@@ -111,6 +179,8 @@ class PlaybackService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        session.isActive = false
+        session.release()
         scope.cancel()
         super.onDestroy()
     }
@@ -153,34 +223,56 @@ class PlaybackService : Service() {
             PendingIntent.FLAG_IMMUTABLE,
         )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        // The platform builder rather than NotificationCompat, because MediaStyle has to be handed
+        // the platform session token and minSdk 29 means there is nothing to be compatible with.
+        // MediaStyle is what turns a notification with buttons into transport the lock screen and
+        // Android Auto understand.
+        return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(content.title ?: getString(R.string.dock_idle_title))
             .setContentText(content.subtitle.orEmpty())
             .setContentIntent(open)
             .setOngoing(content.playing)
             .setShowWhen(false)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
-            .addAction(
-                android.R.drawable.ic_media_previous,
-                getString(R.string.a11y_previous),
-                command(ACTION_PREVIOUS),
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setCategory(Notification.CATEGORY_TRANSPORT)
+            .setStyle(
+                Notification.MediaStyle()
+                    .setMediaSession(session.sessionToken)
+                    // Which buttons survive the collapsed notification: previous, play/pause, next.
+                    .setShowActionsInCompactView(0, 1, 2)
             )
             .addAction(
-                if (content.playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
-                getString(if (content.playing) R.string.a11y_pause else R.string.a11y_play),
-                command(ACTION_PLAY_PAUSE),
+                Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_media_previous),
+                    getString(R.string.a11y_previous),
+                    command(ACTION_PREVIOUS),
+                ).build()
             )
             .addAction(
-                android.R.drawable.ic_media_next,
-                getString(R.string.a11y_next),
-                command(ACTION_NEXT),
+                Notification.Action.Builder(
+                    Icon.createWithResource(
+                        this,
+                        if (content.playing) android.R.drawable.ic_media_pause
+                        else android.R.drawable.ic_media_play,
+                    ),
+                    getString(if (content.playing) R.string.a11y_pause else R.string.a11y_play),
+                    command(ACTION_PLAY_PAUSE),
+                ).build()
             )
             .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                getString(R.string.notification_stop),
-                command(ACTION_STOP),
+                Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_media_next),
+                    getString(R.string.a11y_next),
+                    command(ACTION_NEXT),
+                ).build()
+            )
+            .addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    getString(R.string.notification_stop),
+                    command(ACTION_STOP),
+                ).build()
             )
             .build()
     }

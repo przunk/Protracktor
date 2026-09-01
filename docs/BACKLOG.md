@@ -81,7 +81,7 @@ decision he made.
 Material 3's `Snackbar` has no swipe dismissal. Wrap it with a horizontal drag that dismisses past a
 threshold, via a custom `snackbarHost`.
 
-## 5. Media session and audio focus
+## 5. ~~Media session and audio focus~~ — DONE 2026-09-01
 
 The foreground service landed on 2026-09-01; playback survives the app leaving the screen and the
 notification carries transport. What is left of the original item:

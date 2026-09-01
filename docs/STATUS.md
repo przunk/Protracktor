@@ -28,6 +28,10 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — Media session: lock-screen transport, Bluetooth and headphone buttons, with the
+  notification bound to it through `Notification.MediaStyle`. Seeking is advertised only for
+  backends that can honour it.
+
 - **2026-09-01** — Read-ahead: the next track's bytes are loaded while the current one plays, and
   the dock says "Loading…" when a read is actually happening. R9's wait is a read, not a decode.
 
@@ -151,8 +155,6 @@ Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does no
 
 Naming these because a `STATUS.md` that implies more than exists is worse than none.
 
-- **No media session.** The foreground service keeps playback alive and its notification has
-  transport buttons, but lock-screen controls and Bluetooth or headphone buttons do nothing.
 - **`.sc68` container files will not play**, though `.sndh` should. That format references external
   replay binaries which we do not ship. SNDH carries its own code and needs none.
 - **R9 is addressed but unmeasured.** The next track is read while the current one plays, and
