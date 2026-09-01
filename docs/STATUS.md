@@ -175,6 +175,14 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 
 ## Known defects
 
+- **Some `.sndh` files still do not play.** sc68 2.2.1's SNDH support is partial: of five random
+  Modland files, three play, one loads and renders silence, and one fails `api68_load_mem` outright.
+  The fix is sc68 3.0.0b, which exists only in SourceForge SVN — see `docs/PLAN_FORMATS.md` §0 for
+  what that would take. Failures now say which backend refused and why, rather than claiming the
+  format is unsupported.
+
+
+
 - **`.sap` does not play, and is not supposed to yet.** Atari 8-bit SAP needs the ASAP backend,
   which is not integrated. `SupportedFormats` does not list it, so a scan should not offer one —
   if one appeared, it came in through the `snd` extension or a prefix match, which is worth checking

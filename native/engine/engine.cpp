@@ -238,7 +238,21 @@ private:
     bool ended_ = false;
 };
 
+/**
+ * Why the last open failed, in words.
+ *
+ * "Not a format we can play yet" is true of a file no backend claims and false of one a backend
+ * claimed and then choked on -- and the owner cannot tell those apart from the outside. Neither
+ * could I: it took a host probe to find that sc68 2.2.1 loads some SNDH files and fails validation
+ * on others. Saying which happened costs one string.
+ */
+std::string &lastOpenError() {
+    static std::string reason;
+    return reason;
+}
+
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes) {
+    lastOpenError().clear();
     // sc68 asked first. Its answer is the load succeeding, not a verify -- see worthTrying. If it
     // refuses, we fall through to libopenmpt, whose format net is wide enough that letting it go
     // first would risk a stray claim on something sc68 should have had.
@@ -247,12 +261,16 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes) {
             return std::make_unique<Sc68Backend>(bytes);
         } catch (const std::exception &e) {
             LOGE("sc68 recognised but refused: %s", e.what());
+            lastOpenError() = std::string("sc68 recognised this file but refused it: ") + e.what();
         }
     }
     try {
         return std::make_unique<OpenmptBackend>(bytes);
     } catch (const std::exception &e) {
         LOGE("libopenmpt refused: %s", e.what());
+        if (lastOpenError().empty()) {
+            lastOpenError() = std::string("no backend recognised it: ") + e.what();
+        }
     }
     return nullptr;
 }
@@ -444,6 +462,11 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlong handle, jdouble seconds) {
     asPlayer(handle)->seek(seconds);
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeLastOpenError(JNIEnv *env, jclass) {
+    return env->NewStringUTF(lastOpenError().c_str());
 }
 
 JNIEXPORT void JNICALL
