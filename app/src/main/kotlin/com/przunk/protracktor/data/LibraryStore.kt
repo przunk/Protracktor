@@ -105,7 +105,7 @@ class LibraryStore(context: Context) {
     suspend fun tracksIn(playlistId: Long): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
             """
-            SELECT t.id, t.title, t.subtitle
+            SELECT t.id, t.title, t.subtitle, t.size
             FROM playlist_tracks pt
             JOIN tracks t ON t.id = pt.track_id
             WHERE pt.playlist_id = ?
@@ -115,7 +115,14 @@ class LibraryStore(context: Context) {
         ).use { row ->
             buildList {
                 while (row.moveToNext()) {
-                    add(TrackRef(id = row.getString(0), title = row.getString(1), subtitle = row.getString(2)))
+                    add(
+                        TrackRef(
+                            id = row.getString(0),
+                            title = row.getString(1),
+                            subtitle = row.getString(2),
+                            sizeBytes = row.getLong(3),
+                        )
+                    )
                 }
             }
         }
@@ -124,11 +131,15 @@ class LibraryStore(context: Context) {
     /** Every track known to the library, whichever playlist it belongs to. For searching. */
     suspend fun allTracks(): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase
-            .rawQuery("SELECT id, title, subtitle FROM tracks ORDER BY title", null)
+            .rawQuery("SELECT id, title, subtitle, size FROM tracks ORDER BY title", null)
             .use { row ->
                 buildList {
                     while (row.moveToNext()) {
-                        add(TrackRef(row.getString(0), row.getString(1), row.getString(2)))
+                        add(
+                            TrackRef(
+                                row.getString(0), row.getString(1), row.getString(2), row.getLong(3)
+                            )
+                        )
                     }
                 }
             }
@@ -151,6 +162,7 @@ class LibraryStore(context: Context) {
                         put("id", track.id)
                         put("title", track.title)
                         put("subtitle", track.subtitle)
+                        put("size", track.sizeBytes)
                     },
                     android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
                 )

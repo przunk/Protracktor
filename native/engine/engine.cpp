@@ -253,6 +253,14 @@ public:
         const std::size_t rendered =
             backend_->render(stream->getSampleRate(), static_cast<std::size_t>(numFrames), out);
 
+        // Ducking is applied here rather than by stopping the stream. A notification arriving should
+        // lower the music for a moment, not end it -- and the only place a gain can be applied
+        // without a gap is the buffer on its way out.
+        const float gain = gain_.load(std::memory_order_relaxed);
+        if (gain != 1.0f) {
+            for (std::size_t i = 0; i < rendered * 2; ++i) out[i] *= gain;
+        }
+
         if (rendered < static_cast<std::size_t>(numFrames)) {
             // End of the tune. Silence the remainder rather than leaving whatever the buffer held,
             // then ask Oboe to stop -- a player that runs off the end into noise is worse than one
@@ -270,6 +278,9 @@ public:
     }
 
     bool isFinished() const { return finished_.load(std::memory_order_acquire); }
+
+    /** 1.0 is untouched. Used for ducking under a transient interruption. */
+    void setGain(float gain) { gain_.store(gain, std::memory_order_relaxed); }
 
     /**
      * Asks for a new position. Applied by the audio callback on its next pass, or immediately when
@@ -349,6 +360,7 @@ private:
     std::unique_ptr<Backend> backend_;
     std::shared_ptr<oboe::AudioStream> stream_;
     std::atomic<bool> finished_{false};
+    std::atomic<float> gain_{1.0f};
 
     // -1 means "nothing requested". A sentinel rather than a second flag: one atomic exchange in
     // the callback both reads the request and clears it.
@@ -403,6 +415,11 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlong handle, jdouble seconds) {
     asPlayer(handle)->seek(seconds);
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSetGain(JNIEnv *, jclass, jlong handle, jfloat gain) {
+    asPlayer(handle)->setGain(gain);
 }
 
 JNIEXPORT jstring JNICALL

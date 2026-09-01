@@ -191,6 +191,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
             PlayerDock(
                 state = state,
                 onSeek = viewModel::seekTo,
+                onKeep = viewModel::keepTransient,
                 onExpand = { showNowPlaying = true },
                 onBrowse = { showBrowse = true },
                 onPlayPause = viewModel::togglePlayPause,

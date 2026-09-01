@@ -92,6 +92,7 @@
     <string name="notification_channel_playback">Playback</string>
 
     <string name="a11y_seek">Seek within the track</string>
+    <string name="a11y_keep_track">Add this track to the playlist</string>
     <string name="a11y_play">Play</string>
     <string name="a11y_pause">Pause</string>
     <string name="a11y_previous">Previous track</string>

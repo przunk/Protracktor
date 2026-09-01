@@ -287,6 +287,36 @@ class PlayQueueTest {
         assertEquals(q.next().titleNow(), q.upcoming?.title)
     }
 
+    // --- telling one file from two -----------------------------------------------------------
+
+    @Test
+    fun `the same file reached by two different URIs counts as one track`() {
+        // Reported from a device: the same track could be added twice. The storage access framework
+        // hands out a different document URI for the same file depending on how it was reached, so
+        // comparing ids alone lets a duplicate straight through.
+        val viaFolder = TrackRef("content://tree/x/document/x%3AMusic%2Fa.mod", "a.mod", "Music", 4096)
+        val viaPicker = TrackRef("content://com.android.providers/document/1234", "a.mod", "", 4096)
+
+        assertTrue(viaFolder.sameFileAs(viaPicker))
+        assertTrue(viaPicker.sameFileAs(viaFolder))
+    }
+
+    @Test
+    fun `same name but a different size is a different track`() {
+        val one = TrackRef("uri://1", "a.mod", "", 4096)
+        val other = TrackRef("uri://2", "a.mod", "", 8192)
+        assertFalse(one.sameFileAs(other))
+    }
+
+    @Test
+    fun `without a size, only the id can settle it`() {
+        // Names alone are worthless here: half of Modland is called something.mod.
+        val one = TrackRef("uri://1", "a.mod")
+        val other = TrackRef("uri://2", "a.mod")
+        assertFalse(one.sameFileAs(other))
+        assertTrue(one.sameFileAs(one.copy(title = "A.MOD")))
+    }
+
     // --- edges --------------------------------------------------------------------------------
 
     @Test
