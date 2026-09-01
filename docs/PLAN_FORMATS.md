@@ -7,6 +7,27 @@ the first item is not a new format at all.
 
 ---
 
+## How much is actually out there
+
+Counted from Modland's index on 2026-09-01 — 515,057 files, of which **188,755 (37%) play today**.
+Modland is not the whole world, but it is the largest single sample we have and the one we index.
+
+| Backend | Modland files it would unlock | Largest formats |
+| --- | --- | --- |
+| game-music-emu | ~80,000 | Nintendo SPC 36,903 · Gameboy 23,775 · VGM 14,172 · NSF 5,015 |
+| libsidplayfp | ~72,000 | HVSC 60,572 · Sidplayer 5,032 · RealSID 3,540 |
+| the `*SF` family | ~71,000 | Nintendo DS 31,118 · Playstation 16,840 · PS2 6,969 · N64 6,463 |
+| ASAP | 3,230 | Slight Atari Player |
+| UADE | ~1,400 by extension, more by directory | spread across many small format directories |
+
+Two things this table says that a list of format names does not:
+
+- **game-music-emu and libsidplayfp together are worth about 150,000 files** — roughly doubling what
+  the app can play — and they are two libraries, not ten.
+- **UADE's count is small and its cost is the highest** (a whole emulated Amiga, plus the licensing
+  question about its bundled replay binaries). It is last for good reasons, and the numbers are one
+  of them.
+
 ## What every backend costs
 
 The same five things, so they are stated once:
