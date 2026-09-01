@@ -7,8 +7,10 @@ Players for these formats exist. This one is written because the existing ones l
 you leave the app, shuffle without a history, hold everything in a single playlist, and take
 seconds to start a track that is measured in kilobytes.
 
-**Status: early construction. Nothing plays yet.** See `docs/STATUS.md` for what is actually
-finished.
+**Status: it plays.** Tracker modules, Atari ST, Atari 8-bit and seven console families, with
+playlists, offline browsing of Modland, background playback and a media session. See
+`docs/STATUS.md` for what is finished, what is known broken, and what has not been confirmed on a
+device.
 
 ## Documentation
 
