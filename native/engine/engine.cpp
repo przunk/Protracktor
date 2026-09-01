@@ -29,6 +29,7 @@
 extern "C" {
 #include <api68/api68.h>
 #include <asap.h>
+#include <gme.h>
 }
 
 #include <android/log.h>
@@ -373,6 +374,99 @@ private:
     bool ended_ = false;
 };
 
+/**
+ * The consoles, through game-music-emu: NES, SNES, Game Boy, Sega, PC Engine, ZX Spectrum, MSX.
+ *
+ * One library for seven machines, and the only one here that identifies files **by content** --
+ * `gme_identify_header` reads the bytes rather than trusting a name. That makes it the safest
+ * backend to ask early, and it is why nothing had to be added to the filename plumbing for it.
+ *
+ * Verified on the host before integration: NSF 4/4, SPC 4/4, GBS 3/3, VGM 3/3.
+ */
+class GmeBackend : public Backend {
+public:
+    static bool recognises(const std::vector<char> &bytes) {
+        if (bytes.size() < 16) return false;
+        const char *type = gme_identify_header(bytes.data());
+        return type && *type;
+    }
+
+    explicit GmeBackend(const std::vector<char> &bytes) {
+        if (const gme_err_t err = gme_open_data(bytes.data(), static_cast<long>(bytes.size()),
+                                                &emu_, kSampleRate)) {
+            throw std::runtime_error(std::string("game-music-emu refused it: ") + err);
+        }
+        if (!emu_) throw std::runtime_error("game-music-emu returned nothing");
+
+        gme_track_info(emu_, &info_, kTrack);
+        if (const gme_err_t err = gme_start_track(emu_, kTrack)) {
+            const std::string message = std::string("game-music-emu could not start it: ") + err;
+            if (info_) gme_free_info(info_);
+            gme_delete(emu_);
+            emu_ = nullptr;
+            throw std::runtime_error(message);
+        }
+
+        // Without a fade the last buffer stops dead. GME applies one relative to the track length
+        // it reports, which for files that do not state a length is its own two-and-a-half minutes.
+        if (info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
+    }
+
+    ~GmeBackend() override {
+        if (info_) gme_free_info(info_);
+        if (emu_) gme_delete(emu_);
+    }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        if (!emu_ || gme_track_ended(emu_)) return 0;
+
+        const std::size_t samples = frames * 2;  // gme counts samples, not frames
+        if (scratch_.size() < samples) scratch_.resize(samples);
+
+        if (gme_play(emu_, static_cast<int>(samples), scratch_.data())) return 0;
+
+        for (std::size_t i = 0; i < samples; ++i) {
+            out[i] = static_cast<float>(scratch_[i]) / 32768.0f;
+        }
+        return frames;
+    }
+
+    bool canSeek() const override { return true; }
+    void seek(double seconds) override { gme_seek(emu_, static_cast<int>(seconds * 1000.0)); }
+    void rewind() override { gme_start_track(emu_, kTrack); }
+    double positionSeconds() const override { return gme_tell(emu_) / 1000.0; }
+
+    double durationSeconds() const override {
+        return (info_ && info_->play_length > 0) ? info_->play_length / 1000.0 : 0.0;
+    }
+
+    std::string describe() const override {
+        const auto field = [](const char *value) { return value && *value ? value : ""; };
+        std::ostringstream o;
+        o << "title\t" << (info_ ? field(info_->song) : "") << '\n'
+          << "format\t" << (info_ ? field(info_->system) : "") << '\n'
+          << "artist\t" << (info_ ? field(info_->author) : "") << '\n'
+          << "game\t" << (info_ ? field(info_->game) : "") << '\n'
+          << "copyright\t" << (info_ ? field(info_->copyright) : "") << '\n'
+          << "dumper\t" << (info_ ? field(info_->dumper) : "") << '\n'
+          << "subsongs\t" << (emu_ ? gme_track_count(emu_) : 0) << '\n'
+          << "seekable\t1" << '\n'
+          << "message\t" << (info_ ? field(info_->comment) : "");
+        return o.str();
+    }
+
+    int preferredSampleRate() const override { return kSampleRate; }
+
+private:
+    static constexpr int kSampleRate = 44100;
+    // Subsong selection is a UI feature that does not exist yet; some of these files hold hundreds.
+    static constexpr int kTrack = 0;
+
+    Music_Emu *emu_ = nullptr;
+    gme_info_t *info_ = nullptr;
+    std::vector<short> scratch_;
+};
+
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name) {
     lastOpenError().clear();
 
@@ -384,6 +478,17 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
         } catch (const std::exception &e) {
             LOGE("ASAP claimed the name but refused: %s", e.what());
             lastOpenError() = std::string("ASAP refused it: ") + e.what();
+        }
+    }
+
+    // game-music-emu next, because it is the only backend that identifies by content rather than by
+    // name or by trying: a header check that reads the bytes cannot claim something that is not its.
+    if (GmeBackend::recognises(bytes)) {
+        try {
+            return std::make_unique<GmeBackend>(bytes);
+        } catch (const std::exception &e) {
+            LOGE("gme recognised the header but refused: %s", e.what());
+            lastOpenError() = e.what();
         }
     }
 

@@ -142,6 +142,40 @@ behind it: **what do next and previous mean while listening from a search?** The
 everything else here is that the results become the queue for as long as you are in them, the way
 Random has its own history. Playing from search must not quietly rewrite the playlist.
 
+## 5c. Reordering, and what a playlist row should say
+
+Both raised 2026-09-01.
+
+**Reordering.** Drag a track to a new position. Fits the draft model already in place: reordering is
+an edit, so it waits for Save like the others. `withTracks` remaps history by identity, so a reorder
+will not break the play history — that was designed for removal and happens to cover this.
+
+**The row itself — the owner's sketch, and it is a good one:**
+
+```
+ 12  ◤   Elysium                              SAP    ⋮   ≡
+         4-Mat                                ATARI
+```
+
+- Ordinal on the left, replaced by a **play triangle** on the playing row rather than the dot used
+  today. Better: a triangle says *what it is*, where a dot only says *this one*.
+- Title and author stacked.
+- The platform (`ATARI`) or the format (`SAP`). Worth having, and cheap — the backend already
+  reports both.
+- An overflow menu (`⋮`) for per-row actions: info, delete, and whatever comes later. This is where
+  the wishlist's "full metadata" button belongs, and it removes the permanent delete icon that
+  currently sits on every row.
+- A drag handle (`≡`) on the far right, which is what makes reordering discoverable at all.
+
+**One reservation, worth settling before building it.** That is five things across two lines on a
+phone. The platform label and the overflow menu compete for the same right-hand space, and the
+handle takes more of it. Suggestion: platform/format as a small label under the author or beside it,
+overflow and handle sharing the right edge — or drop the ordinal once the handle is there, since a
+number nobody can edit earns less than the space it takes.
+
+Also: **the delete icon leaving every row is a real improvement**, not just tidying. It currently
+sits one thumb-width from the row you tap to play.
+
 ## 6b. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 Agreed 2026-09-01: the owner will send this as its own goal. Recording what is known now so it does

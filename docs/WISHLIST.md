@@ -6,6 +6,16 @@ Format: what, who raised it, when.
 
 ---
 
+- **Play MP3 too** — owner, 2026-09-01. Likely simple, and there is a neat route: `minimp3` is a
+  single public-domain header, which is a fourth backend of about fifty lines rather than a whole
+  library. (Android's own decoder is not the easy answer here — the engine is native from the file
+  to the speaker, and routing one format through the platform instead would mean two playback paths
+  to keep in step.)
+
+  Worth a thought before doing it: this app is a retro chiptune player, and MP3 is the format its
+  whole point is *not*. Handy for a rip of something, out of place in a browse tree. Probably belongs
+  behind "play this file" rather than in the library scan.
+
 - **A web player, with favourites and history synced to an account** — owner, 2026-09-01. The same
   music in a browser, sharing state with the phone through a Google or Cloudflare account. Recorded
   as a thought to return to, not a plan.
