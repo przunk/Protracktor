@@ -346,6 +346,19 @@ class PlayQueueTest {
         assertEquals("4-Mat", fromCatalogue.displayAuthor)
     }
 
+    @Test
+    fun `reordering keeps the right track playing`() {
+        // Same guarantee removal needed, for the same reason: history holds indices, and moving a
+        // row changes what every index after it means.
+        var q = queueOf(5).startAt(3)
+        val playing = q.titleNow()
+
+        val moved = q.tracks.toMutableList().apply { add(0, removeAt(4)) }
+        q = q.withTracks(moved)
+
+        assertEquals(playing, q.titleNow())
+    }
+
     // --- edges --------------------------------------------------------------------------------
 
     @Test

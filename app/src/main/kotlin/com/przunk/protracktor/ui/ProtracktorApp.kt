@@ -232,6 +232,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 state = state,
                 onPlayAt = viewModel::playAt,
                 onRemoveAt = viewModel::removeTrack,
+                onMove = viewModel::moveTrack,
                 onBrowse = { showBrowse = true },
                 onExitRandom = viewModel::exitRandom,
                 contentPadding = insets,

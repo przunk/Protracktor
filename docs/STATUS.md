@@ -28,6 +28,10 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — The playlist row rebuilt to the owner's sketch: ordinal or a play triangle, title
+  with author and format, an overflow menu holding information and delete, and a drag handle that
+  reorders. Reordering is an edit, so it waits for Save like the others.
+
 - **2026-09-01** — **The consoles.** game-music-emu 0.6.5: NES (NSF/NSFE), SNES (SPC), Game Boy
   (GBS), Sega (VGM/VGZ/GYM), PC Engine (HES), ZX Spectrum (AY), MSX (KSS). Verified on the host
   before integration — NSF 4/4, SPC 4/4, GBS 3/3, VGM 3/3.

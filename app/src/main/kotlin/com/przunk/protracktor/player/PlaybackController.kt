@@ -780,6 +780,23 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Moves a track to another position.
+     *
+     * An edit like any other, so it waits for Save. History survives because [PlayQueue.withTracks]
+     * remaps by track identity rather than by index — written for removal, and it covers this for
+     * free.
+     */
+    fun moveTrack(from: Int, to: Int) {
+        if (from == to) return
+        _state.update { current ->
+            val tracks = current.queue.tracks
+            if (from !in tracks.indices || to !in tracks.indices) return@update current
+            val reordered = tracks.toMutableList().apply { add(to, removeAt(from)) }
+            current.copy(queue = current.queue.withTracks(reordered), dirty = true)
+        }
+    }
+
     /** Puts the last removed track back where it was. */
     fun undoRemoval() {
         val (index, track) = lastRemoval ?: return
