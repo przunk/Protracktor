@@ -91,6 +91,24 @@ android {
     }
 }
 
+// sc68 does not carry its replay routines inside the tunes it plays: SNDH and .sc68 both reference
+// small 68k binaries that ship in sc68's own data directory. They are copied into the APK's assets
+// from the vendored source rather than committed, so they stay pinned to the version we fetched.
+// A plain File, resolved now: AGP 9 refuses a Provider here, because Android Studio cannot tell
+// whether a lazily supplied directory is generated or hand-written.
+val sc68Assets: File = layout.buildDirectory.dir("generated/sc68-assets").get().asFile
+
+val copySc68Data = tasks.register<Copy>("copySc68Data") {
+    from(rootProject.file("native/vendor/sc68/data")) {
+        include("Replay/**", "Sample/**")
+    }
+    into(File(sc68Assets, "sc68"))
+}
+
+android.sourceSets["main"].assets.srcDir(sc68Assets)
+
+tasks.named("preBuild") { dependsOn(copySc68Data) }
+
 dependencies {
     implementation(libs.oboe)
 

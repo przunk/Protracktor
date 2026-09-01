@@ -29,28 +29,21 @@ net is wide enough to make a claim on something another backend should have had.
 
 ---
 
-## 0. Fix `.sndh` — before adding anything
+## 0. ~~Fix `.sndh`~~ — DONE 2026-09-01
 
-**This is a defect, not a missing format.** sc68 is built in and `file68.c` recognises SNDH:
-`read_header` returns `-'sndh'` and `SC68file_verify` turns that into success, so `api68_verify_mem`
-should accept these files. Something between there and `NativeEngine.open` returning null is wrong.
+sc68 wraps SNDH in a replay routine that lives on disk rather than inside the tune. We shipped none,
+so every file loaded and played silence. The binaries are packaged now, and the sc68 gate no longer
+trusts `api68_verify_mem`, which rejects ICE-packed SNDH that loads perfectly.
 
-Adding backends on top of a broken one means debugging two things at once.
+**Two things this leaves behind:**
 
-**How to chase it**, cheapest first:
+- `docs/LICENSES.md` records a question about where some of those replay binaries came from. It
+  needs answering before the repository is public.
+- `.sc68` container files should now work too, for the same reason. Untested.
 
-1. Get an SNDH file onto the build machine. There is none here, and `sndh.net` did not resolve on
-   2026-08-31 — recheck, or ask the owner for one, or take one from Modland's Atari ST section.
-2. Build sc68 **for the host** (it already builds with plain CMake; only the NDK toolchain file is
-   Android-specific) and call `api68_verify_mem` and `api68_load_mem` on the bytes directly. That
-   separates "sc68 refuses it" from "our wrapper is wrong" in one run, on this machine, without a
-   device.
-3. Likely suspects if sc68 accepts it: our `recognises()` return-code reading, `api68_play(api, 1)`
-   track numbering, or `api68_process` frame counting.
-
-**Done when:** an SNDH plays on the owner's device.
-
----
+**The technique is the point and should be reused.** Building a backend for the *host* and calling
+its API on a real file turns "it does not work" into a trace, in seconds, with no device. Every
+backend below should be proven that way before it is wired into the app.
 
 ## 1. `libsidplayfp` — Commodore 64
 

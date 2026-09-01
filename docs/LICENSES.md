@@ -55,6 +55,26 @@ own would have invalidated our GPL-3 decision — but every one of the 51 licens
 "Or later" is what matters, and it is unanimous across the tree. Reading only `COPYING` would have
 given the wrong answer here, which is why the rule is to check the sources.
 
+## sc68's replay binaries — a question for the owner
+
+**Raised 2026-09-01. Not a blocker today; not something to publish without an answer either.**
+
+sc68 does not play SNDH from the tune alone. Each one names a small 68000 replay routine that ships
+in sc68's `data/Replay/` directory, and sc68 opens it by path — which is why every SNDH in the
+owner's library loaded and then played silence until those files were packaged. 85 of them are now
+in the APK, 902 KB.
+
+They arrive inside sc68's own GPL tarball and `AUTHORS` credits Benjamin Gerard as its programmer
+with no separate statement about their origin. That is the whole of what is known. Some are plainly
+his (`sndh_ice.bin` is sc68's own SNDH wrapper); others are named after commercial Atari games
+(`alteredbeast.bin`, `cabal.bin`, `armalyte.bin`) and look very much like routines lifted from those
+games, which is the **same** question already recorded above for UADE.
+
+For a private build this is academic. Before the repository goes public or anything reaches a store,
+the owner should decide: ship them, ship only the ones sc68 clearly authored, or have the user supply
+their own. Shipping them silently is the one option that should not happen by default, which is why
+this is written down rather than left in a commit message.
+
 ## Android / JVM dependencies
 
 Filled in when the Gradle project exists. Expected to be Apache-2.0 throughout (AndroidX, Compose,

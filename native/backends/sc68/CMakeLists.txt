@@ -24,6 +24,10 @@ foreach(module IN LISTS SC68_MODULES)
     list(APPEND SC68_SOURCES ${module_sources})
 endforeach()
 
+# unice68/unice68.c is the command-line depacker and defines main(). Harmless inside a shared
+# library, but it has no business in one, and it is what a host build trips over first.
+list(FILTER SC68_SOURCES EXCLUDE REGEX "unice68/unice68\\.c$")
+
 list(LENGTH SC68_SOURCES SC68_SOURCE_COUNT)
 if(SC68_SOURCE_COUNT LESS 40)
     message(FATAL_ERROR

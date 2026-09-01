@@ -175,13 +175,6 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 
 ## Known defects
 
-- **`.sndh` does not play, reported 2026-09-01 — and this one is ours.** sc68 is built in and its
-  own `file68.c` recognises SNDH: `read_header` returns `-'sndh'` and `SC68file_verify` turns that
-  into success, so `api68_verify_mem` should accept these files. Something between that and
-  `NativeEngine.open` returning null is wrong, and it is not a missing format. Not yet chased: the
-  owner asked to keep to features and UI, and there is no SNDH file on this machine to test against.
-  First job of the format work.
-
 - **`.sap` does not play, and is not supposed to yet.** Atari 8-bit SAP needs the ASAP backend,
   which is not integrated. `SupportedFormats` does not list it, so a scan should not offer one —
   if one appeared, it came in through the `snd` extension or a prefix match, which is worth checking
@@ -194,6 +187,20 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
   that drives the progress bar notices it.
 
 ## Fixed
+
+- **2026-09-01 — `.sndh` played silence.** Not a missing format and not a wrapper bug: **sc68 wraps
+  SNDH in a replay routine that lives on disk**, not inside the tune, and opens it by path. We
+  shipped none, so every Atari ST file loaded, reported its title and author correctly, and then
+  rendered nothing.
+
+  Found by building sc68 for the *host* and calling its API on a real file, which is what turned a
+  guess into a trace: `-> external replay 'sndh_ice'` followed by `failed '/Replay/sndh_ice.bin'`.
+  No device involved, and the run took seconds.
+
+  Two fixes. The replay binaries are packaged as assets and unpacked to a real path on first launch.
+  And the sc68 gate no longer trusts `api68_verify_mem`, which returns **-1** for an ICE-packed SNDH
+  that `api68_load_mem` then loads and plays perfectly — gating on it was rejecting these files
+  before sc68 ever saw them. See `docs/LICENSES.md` for the question the replay binaries raise.
 
 - **2026-08-31 — pressing next twice quickly played two tracks at once.** Each press launched its
   own open; the second overwrote the handle without closing the first, which kept playing with

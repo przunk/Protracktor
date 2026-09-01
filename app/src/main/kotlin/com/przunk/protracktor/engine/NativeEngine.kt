@@ -28,6 +28,15 @@ object NativeEngine {
     }
 
     /**
+     * Tells the native side where sc68's replay binaries were unpacked.
+     *
+     * Must be called before anything is opened. sc68 wraps SNDH and its own container format in
+     * small replay routines that live on disk rather than inside the tune, so without this every
+     * Atari ST file loads and then refuses to play.
+     */
+    fun setDataPath(path: String) = nativeSetDataPath(path)
+
+    /**
      * Opens a module from its bytes. Returns a handle, or `null` if the bytes are not a module the
      * backend recognises.
      *
@@ -109,6 +118,7 @@ object NativeEngine {
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
     @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
+    @JvmStatic private external fun nativeSetDataPath(path: String)
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double
