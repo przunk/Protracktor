@@ -111,6 +111,35 @@ that is not the playlist.
 - **The draft model.** A bulk delete is one edit, not twenty, so undo has to restore the whole
   selection — the current single-track `lastRemoval` will not do.
 
+## A8. Haptics for the gestures that deserve them
+
+Raised 2026-09-01.
+
+**The whole risk here is doing too much of it.** Haptics on every tap is noise, and noise is what
+makes people turn the setting off system-wide — at which point the app loses the few buzzes that
+would have been useful. So the list is short on purpose:
+
+- **Drag start and drop** — picking a row up and putting it down. The gesture has no other
+  confirmation that it began.
+- **Crossing a reorder boundary** — one tick per position the row passes. This is the one that
+  actually helps: it tells you a move happened without looking, which is exactly when you cannot
+  look, because your thumb is over the row.
+- **Long-press that starts a selection** (`A4`) — a long press with no feedback feels like a press
+  that failed.
+- **Swipe past the snackbar's dismiss threshold** — it already fades; a tick says "let go now".
+
+And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
+result. The screen already answered.
+
+**Implementation notes.** Compose's `LocalHapticFeedback` offers only `LongPress` and
+`TextHandleMove`, which is thin. The richer constants live on `View.performHapticFeedback` —
+`GESTURE_START` and `GESTURE_END` (API 30+), `SEGMENT_TICK` (API 34), `CONFIRM` and `REJECT`. With
+`minSdk 29` that means a small helper that degrades: the good constant where it exists, `LongPress`
+where it does not, nothing where the device has no vibrator.
+
+Android already honours the user's system haptics setting, so there is no need for our own — and
+adding one would be inventing a preference the platform already owns.
+
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 
