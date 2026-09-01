@@ -28,8 +28,8 @@ working unattended is the case they were written for.
 
 - **`docs/BACKLOG.md` A2 (subsongs).** The owner has decided what a subsong *is*; the UI is an open
   conversation he asked to have. Do not design it.
-- **`docs/PLAN_FORMATS.md` §1 (libsidplayfp).** It needs Commodore ROMs that cannot be shipped, and
-  what to do about that is his call, not an implementation detail.
+- **The Commodore ROM decision.** Integrating libsidplayfp is item 3; deciding whether to ship ROMs,
+  ask the user for them, or live without them is not. Measure and report.
 - **`master`.** See rule 1.
 - **`docs/STATUS.md` C3.** Measuring R9 needs his phone and his network share.
 - **`docs/BACKLOG.md` A3 (fast scrolling).** It was on this list and the owner pulled it: he wants to
@@ -40,38 +40,63 @@ working unattended is the case they were written for.
 
 ## The list
 
-- [x] **1. B1 + A1 — search: play a result, and see where it came from**
-      The owner has asked for this three times, which is what puts it first.
+- [ ] **1. The follow-track button is too heavy**
+      Reported 2026-09-02: it covers too much of the list. It is currently an
+      `ExtendedFloatingActionButton` with a label — the label is what makes it large. Make it
+      subtle: a small icon-only button, or something that fades to the edge when the list is idle.
+      It still has to be discoverable enough that the owner finds it without being told, which is why
+      the label was there in the first place — so shrinking it is a trade, not a free win. Keep the
+      behaviour exactly as it is; this is about weight on screen, nothing else.
 
-      Two halves of one row and they are done together because they are the same row: a result must
-      be playable **before** it is added, and it must say where it came from. The queue question is
-      already answered in `docs/BACKLOG.md` A1 — **the results become the queue while you are in
-      them**, the way Random has its own history — and playing from a search must not rewrite the
-      playlist. Build that reading.
+- [ ] **2. Adding tracks should show them**
+      Reported 2026-09-02. Adding from Browse appends to the end of the playlist and leaves the view
+      where it was, so nothing visibly happens — which is worse now that the confirming snackbar has
+      been removed on purpose. Scroll to the first newly added track.
 
-- [x] **2. B13 + B14 — finding the playing track**
-      Tapping the dock's identity row scrolls the playlist to the playing track. Plus the owner's
-      follow toggle: a floating button over the list, off by default; tapping it makes the list
-      follow playback and hides the button; scrolling by hand turns it off and brings the button
-      back. Both traps are written up in `docs/WISHLIST.md` B14 — distinguishing our scrolling from
-      the user's, and not animating across three hundred rows.
+      Note this is the same machinery as item 1 and as `docs/BACKLOG.md` A3, which the owner has
+      reserved for a conversation. Use the scrolling helper that already exists; do not build A3.
 
-- [x] **3. B3 — the catalogue path in Information** *(landed with item 1: one change to what a source is called served both)*
-      A Modland track should read `Modland/Author/name.mod`. Today the dialog shows `subtitle`,
-      which is `format · author` for a catalogue track — right for a row, wrong for an information
-      panel. Same underlying inconsistency as item 1's second half, so if item 1 settles what a
-      source is called, this should follow it rather than invent a second answer.
+- [ ] **3. libsidplayfp — Commodore 64**
+      The format chosen for this round, and the reasoning is the point of writing it down: it is the
+      largest single body of music left (**~72,000 files in Modland alone** — HVSC 60,572, Sidplayer
+      5,032, RealSID 3,540), it is one library rather than several, and C64 is closer to the heart of
+      this app than the `*SF` console dumps that rival it on volume.
 
-- [x] **4. A8 — haptics** *(three of the four gestures; the fourth belongs to A4, which does not exist yet)*
-      Four gestures only, listed in the backlog entry, and nothing with a visible result. Last
-      of the building items because it attaches to gestures items 1 and 2 create.
+      Follow `docs/PLAN_FORMATS.md` §1, and **prove it on the host before integrating**, the way
+      sc68, ASAP and game-music-emu were. That has caught something every time.
 
-- [x] **5. C2 — does `.sc68` play?** *(yes: 8 of 10)*
-      A defect line that says "unknown". Take a `.sc68` from Modland (1,775 of them), run it through
-      the host probe the way `docs/PLAN_FORMATS.md` §0 describes, and turn the line into an answer
-      either way. Cheap, and it removes an "I do not know" from the defect list.
+      **The ROM question stays the owner's.** Some SID tunes need Commodore's KERNAL, BASIC and
+      CHARGEN images, which cannot be shipped. Do **not** decide what to do about that. Do the thing
+      that makes his decision easy: integrate, play what plays without them, and **measure how many
+      of thirty random SIDs actually need them**. A number turns that question from abstract into a
+      choice.
+
+- [ ] **4. ASMA — the Atari 8-bit archive**
+      Unblocked by ASAP landing: it is the reference collection for `.sap`, and we can now play what
+      it holds. `docs/PLAN_CATALOGUES.md` records what is known — the site responds, `asma.zip`
+      does not, and **the distribution URL and its index shape are unknown**. Finding them is the
+      first half of the job.
+
+      If it turns out ASMA publishes no machine-readable index, stop and write that down rather than
+      scraping HTML. A catalogue that depends on the shape of somebody's web page is a catalogue that
+      breaks silently.
+
+- [ ] **5. HVSC — at least its song lengths**
+      `Songlengths.md5` fetches directly (5.2 MB, verified 2026-08-31) and gives SID tunes the
+      durations they otherwise lack entirely. Worth having **even if the full HVSC catalogue is not
+      built**, because without it every SID will show as unknown length and the scrubber will be
+      disabled.
+
+      Full HVSC browsing is a different shape from Modland — one large collection rather than an
+      index plus per-track fetches — and `docs/PLAN_CATALOGUES.md` says so. If that shape turns out
+      to need a second kind of `Catalogue`, build the song lengths and write up the rest.
 
 ## When the list is done
 
-Stop. Do not start `docs/BACKLOG.md` A4 or A5 — both are large enough to deserve a conversation
-first. Write what happened, what is unverified, and what you would do next.
+Stop. Do not start `docs/BACKLOG.md` A2 (subsongs), A3 (fast scrolling) or A4 (bulk operations) —
+all three are reserved for a conversation.
+
+Write what happened, what is unverified, and what you would do next. In particular, say plainly how
+much of items 3, 4 and 5 was **measured** rather than merely built: the last round established that
+a backend proven on the host before integration is worth several device round trips, and the same
+goes for a catalogue whose index has actually been parsed.
