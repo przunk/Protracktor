@@ -45,7 +45,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -120,7 +119,10 @@ private fun PlaylistBody(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    var dragging by remember { mutableIntStateOf(-1) }
+    // Identified by track id, not by index. The index of the row being dragged changes the moment it
+    // moves, which restarted the gesture and dropped the drag after every single step -- and left
+    // the offset applied to whichever row had inherited that index, which is what made rows overlap.
+    var draggingId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
 
@@ -131,17 +133,17 @@ private fun PlaylistBody(
                 track = track,
                 playing = index == currentIndex,
                 enabled = enabled,
-                dragging = index == dragging,
-                dragOffset = if (index == dragging) dragOffset else 0f,
+                dragging = track.id == draggingId,
+                dragOffset = if (track.id == draggingId) dragOffset else 0f,
                 onPlay = { onPlayAt(index) },
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
                 dragHandleModifier = Modifier.dragToReorder(
-                    index = index,
+                    trackId = track.id,
                     listState = listState,
+                    indexOf = { id -> state.queue.tracks.indexOfFirst { it.id == id } },
                     trackCount = state.queue.tracks.size,
-                    draggingIndex = { dragging },
-                    setDragging = { dragging = it },
+                    setDragging = { draggingId = it },
                     offset = { dragOffset },
                     setOffset = { dragOffset = it },
                     onMove = onMove,
@@ -161,27 +163,35 @@ private fun PlaylistBody(
  * On the handle rather than the whole row, and without a long press: a dedicated grip is what says
  * "this moves", and gesturing on the row itself would fight the list's own scrolling. The row moves
  * as you drag rather than at the end, so the list you are looking at is the list you will get.
+ *
+ * **Keyed on the track id, never on its index.** `pointerInput` restarts when its key changes, and
+ * the index of the row being dragged changes the instant it moves — so an index key cancelled the
+ * gesture after every single step, and left the drag offset attached to whichever row had inherited
+ * that number.
  */
 private fun Modifier.dragToReorder(
-    index: Int,
+    trackId: String,
     listState: LazyListState,
+    indexOf: (String) -> Int,
     trackCount: Int,
-    draggingIndex: () -> Int,
-    setDragging: (Int) -> Unit,
+    setDragging: (String?) -> Unit,
     offset: () -> Float,
     setOffset: (Float) -> Unit,
     onMove: (Int, Int) -> Unit,
-): Modifier = pointerInput(index, trackCount) {
+): Modifier = pointerInput(trackId, trackCount) {
     detectDragGestures(
-        onDragStart = { setDragging(index); setOffset(0f) },
-        onDragEnd = { setDragging(-1); setOffset(0f) },
-        onDragCancel = { setDragging(-1); setOffset(0f) },
+        onDragStart = { setDragging(trackId); setOffset(0f) },
+        onDragEnd = { setDragging(null); setOffset(0f) },
+        onDragCancel = { setDragging(null); setOffset(0f) },
         onDrag = { change, delta ->
             change.consume()
             setOffset(offset() + delta.y)
 
-            val from = draggingIndex()
+            // Looked up every time rather than captured: this row's position is exactly the thing
+            // that changes while the gesture runs.
+            val from = indexOf(trackId)
             if (from < 0) return@detectDragGestures
+
             // Measured rather than assumed: a row's height depends on whether it has a second line,
             // and a hard-coded guess drifts by one position after a few moves.
             val height = listState.layoutInfo.visibleItemsInfo
@@ -194,7 +204,8 @@ private fun Modifier.dragToReorder(
             val target = (from + steps).coerceIn(0, trackCount - 1)
             if (target != from) {
                 onMove(from, target)
-                setDragging(target)
+                // The row has moved under the finger, so the accumulated offset that caused the
+                // move is spent. What remains is the part of the drag past it.
                 setOffset(offset() - (target - from) * height)
             }
         },
