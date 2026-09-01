@@ -6,6 +6,27 @@ Format: what, who raised it, when.
 
 ---
 
+- **Play a track from the search results** — owner, raised twice, 2026-09-01. Already written up in
+  `docs/BACKLOG.md` §5b; repeated here because he has now asked for it twice, which is a signal about
+  priority rather than a duplicate.
+
+- **Jump to a tune's neighbours** — owner, 2026-09-01. Something plays at random, it is good, and the
+  question is "what else did they write". An action — from the row's overflow menu or from the
+  expanded player — that opens the browser **at the place the track came from**: the author's folder
+  in Modland, the folder on disk.
+
+  His refinement is the good part: for a **local** file this should not open the browser at all, it
+  should just show the path. There is nothing to browse to that the user does not already have.
+
+  Depends on knowing where a track came from, which `TrackRef.subtitle` already carries for both
+  sources, though in two different shapes — see the note under §5b about what a result line owes the
+  reader.
+
+- **Show the catalogue path in Information** — owner, 2026-09-01. A Modland track's information
+  should read `Modland/Przunk/name.mod`. Today the dialog shows what is in `subtitle`, which for a
+  catalogue track is `format · author` — right for a row, wrong for an information panel. Same
+  underlying inconsistency as the wish above.
+
 - **Play MP3 too** — owner, 2026-09-01. Likely simple, and there is a neat route: `minimp3` is a
   single public-domain header, which is a fourth backend of about fifty lines rather than a whole
   library. (Android's own decoder is not the easy answer here — the engine is native from the file

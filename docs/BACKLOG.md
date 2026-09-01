@@ -238,6 +238,25 @@ Two observations to bring to that conversation:
 Schema is not a constraint: the owner has confirmed the database can change freely and he can
 reinstall, since nobody else uses the app yet.
 
+## 5g. Bulk operations on the playlist
+
+Raised 2026-09-01. Long-press a row to start a selection, then **tap** further rows to add them —
+tapping, not only dragging, because a selection of scattered tracks is the normal case and dragging
+only reaches neighbours.
+
+While a selection exists the per-row controls give way to actions in the top bar. Delete is the
+obvious one and the owner named it; the others are worth thinking about rather than guessing —
+plausible candidates are *move to another playlist*, *add to another playlist*, and *play these
+only*. The last is interesting because it is close to what Random already does: a temporary queue
+that is not the playlist.
+
+**Two things it will collide with**, worth knowing before starting:
+
+- **The drag handle.** Long-press-to-select and drag-to-reorder are different gestures on the same
+  row, and the handle is what keeps them apart today. Selection must not make the handle ambiguous.
+- **The draft model.** A bulk delete is one edit, not twenty, so undo has to restore the whole
+  selection — the current single-track `lastRemoval` will not do.
+
 ## 6b. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 Agreed 2026-09-01: the owner will send this as its own goal. Recording what is known now so it does
