@@ -42,7 +42,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -221,14 +222,22 @@ private fun FollowTrackButton(
     if (following || currentIndex == null) return
 
     Box(
-        modifier = Modifier.fillMaxSize().padding(contentPadding).padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(contentPadding).padding(12.dp),
         contentAlignment = Alignment.BottomEnd,
     ) {
-        ExtendedFloatingActionButton(
+        // Small and icon-only. The label made it discoverable and made it cover the list, and the
+        // owner has now seen it -- so the trade goes the other way. Its content description still
+        // says what it does, which is where discoverability belongs once you know the button exists.
+        SmallFloatingActionButton(
             onClick = { onFollowingChange(true) },
-            icon = { Icon(PlayerIcons.Locate, contentDescription = null) },
-            text = { Text(stringResource(R.string.action_follow_track)) },
-        )
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp),
+        ) {
+            Icon(
+                imageVector = PlayerIcons.Locate,
+                contentDescription = stringResource(R.string.action_follow_track),
+            )
+        }
     }
 }
 

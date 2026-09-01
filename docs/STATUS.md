@@ -28,6 +28,9 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-02** — The follow-track button is a small icon rather than a labelled one, and adding
+  tracks scrolls to them.
+
 - **2026-09-02** — Haptics on the three gestures the screen does not already answer: a row picked up,
   put down, and each position it crosses; plus the snackbar's dismiss threshold.
 

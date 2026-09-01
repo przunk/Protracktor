@@ -107,6 +107,12 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     var pendingSwitch by remember { mutableStateOf<Long?>(null) }
     // Hoisted so the expanded player can send the list to the playing track without owning the list.
     val playlistState = rememberLazyListState()
+
+    // Newly added tracks land at the end of the list, out of sight. Going to them is the
+    // confirmation that the removed snackbar used to be.
+    LaunchedEffect(Unit) {
+        viewModel.reveal.collect { index -> playlistState.animateScrollToItem(index) }
+    }
     val scope = rememberCoroutineScope()
     state.message?.let { message ->
         LaunchedEffect(message.id) {
