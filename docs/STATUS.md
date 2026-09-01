@@ -28,9 +28,14 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-01** — **The consoles.** game-music-emu 0.6.5: NES (NSF/NSFE), SNES (SPC), Game Boy
+  (GBS), Sega (VGM/VGZ/GYM), PC Engine (HES), ZX Spectrum (AY), MSX (KSS). Verified on the host
+  before integration — NSF 4/4, SPC 4/4, GBS 3/3, VGM 3/3.
+
 - **2026-09-01** — **Atari 8-bit.** ASAP 8.0.0 vendored and building for every ABI: SAP plus Chaos
   Music Composer, Raster Music Tracker, Theta Music Composer, Delta Music Composer, Music ProTracker
-  and their double-play variants. Twelve of twelve random Modland SAP files played on the host probe.
+  and their double-play variants. Twelve of twelve random Modland SAP files played on the host
+  probe, and **confirmed on the owner's device on 2026-09-01**.
   It seeks, which the Atari ST backend cannot.
 
 - **2026-09-01** — Search scope is explicit and two-level (library / online / which catalogues);

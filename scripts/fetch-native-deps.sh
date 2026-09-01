@@ -86,5 +86,14 @@ fetch asap \
       "062d7db2a0747bf9200560141452f8fa2289909b147ac40a5bb5b60d5275a14f" \
       1
 
+# game-music-emu -- LGPL-2.1-OR-LATER (verified 2026-09-01: 48 sources say "or (at your option) any
+# later version"). Seven console families in one library: NES, SNES, Game Boy, Sega, PC Engine,
+# ZX Spectrum AY, MSX. The only vendored library here that ships a working CMake build.
+fetch gme \
+      "0.6.5" \
+      "https://github.com/libgme/game-music-emu/releases/download/0.6.5/libgme-0.6.5-src.tar.gz" \
+      "a133f19278222136ba0d8c27b64a07987ba05fec9d2e6d293ccd8cabdd97ddbb" \
+      1
+
 echo
 echo "✅ done — sources in native/vendor/ (gitignored)"

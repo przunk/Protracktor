@@ -48,6 +48,9 @@ object SupportedFormats {
         // libopenmpt and the Atari one to ASAP -- whichever loads it wins, which is the only way to
         // settle that without probing content.
         "sap", "cmc", "cm3", "cmr", "cms", "dmc", "dlt", "mpt", "mpd", "rmt", "tmc", "tm2", "tm8",
+        // Consoles, through game-music-emu. It identifies by content, so these extensions only
+        // decide what a folder scan picks up -- not what plays.
+        "nsf", "nsfe", "spc", "gbs", "vgm", "vgz", "gym", "hes", "ay", "kss",
         // Containers libopenmpt unpacks itself
         "mmcmp", "pp20", "xpk", "umx",
     )

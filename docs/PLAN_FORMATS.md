@@ -145,14 +145,26 @@ The largest single body of music after trackers, and Modland alone lists **60,63
 - Cannot seek. Duration needs HVSC's `Songlengths.md5` (5.2 MB, fetchable — verified 2026-08-31),
   which ties this item to the catalogue work.
 
-## 2. `game-music-emu` — the consoles
+## 2. ~~`game-music-emu` — the consoles~~ — DONE 2026-09-01
 
 One library, many formats: NSF, GBS, SPC, VGM/VGZ, HES, AY, KSS. Modland lists 36,903 `.spc` and
 14,167 `.vgz`.
 
 - Latest release **0.6.5** (github.com/libgme/game-music-emu, checked 2026-09-01).
 - LGPL-2.1-or-later, and it already builds with CMake — the least painful item on this list.
-- Best value per hour of work. Do it before ASAP unless the owner wants Atari 8-bit sooner.
+- It was the least painful, as expected, and the only vendored library here whose CMake works as-is.
+Two things that were not obvious:
+
+- The static target is `gme_static`, exported as `gme::gme` — not `gme`.
+- Its targets export their include directory only for an *installed* package, so `gme.h` is not on
+  the path when consumed from the build tree. One `target_include_directories` fixes it.
+
+`USE_GME_SAP` is off: gme has its own SAP emulator, ASAP is the reference implementation, and the
+binary should not carry two answers to one question. `GME_YM2612_EMU` is "Nuked" (LGPL) rather than
+"MAME" (GPL) — both would be compatible, the weaker copyleft leaves more room.
+
+**Subsong selection is now overdue.** Some of these files hold hundreds of tracks — one GBS reported
+99, an HES reported 256 — and we play track 0 and nothing else.
 
 ## 3. ~~ASAP — Atari 8-bit~~ — DONE 2026-09-01
 
