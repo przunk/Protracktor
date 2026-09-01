@@ -26,13 +26,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -67,27 +62,16 @@ fun NowPlaying(
             style = MaterialTheme.typography.headlineSmall,
         )
 
-        // While the thumb is held, the slider shows where the finger is rather than where playback
-        // is. Without that the poll two hundred milliseconds later drags the thumb back out from
-        // under the user, which reads as a control that refused.
-        var scrubbing by remember { mutableStateOf<Float?>(null) }
-        val seekable = state.seekable && track != null
-        val shown = scrubbing ?: state.positionSeconds.toFloat()
-
-        Slider(
-            value = shown.coerceIn(0f, state.durationSeconds.toFloat().coerceAtLeast(0f)),
-            onValueChange = { scrubbing = it },
-            onValueChangeFinished = {
-                scrubbing?.let { onSeek(it.toDouble()) }
-                scrubbing = null
-            },
-            valueRange = 0f..state.durationSeconds.toFloat().coerceAtLeast(0.001f),
-            enabled = seekable,
-            modifier = Modifier.fillMaxWidth(),
+        SeekBar(
+            positionSeconds = state.positionSeconds,
+            durationSeconds = state.durationSeconds,
+            enabled = state.seekable && track != null,
+            onSeek = onSeek,
+            label = stringResource(R.string.a11y_seek),
         )
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = formatTime(shown.toDouble()),
+                text = formatTime(state.positionSeconds),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
