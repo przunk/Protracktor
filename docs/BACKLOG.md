@@ -142,7 +142,7 @@ behind it: **what do next and previous mean while listening from a search?** The
 everything else here is that the results become the queue for as long as you are in them, the way
 Random has its own history. Playing from search must not quietly rewrite the playlist.
 
-## 5c. Reordering, and what a playlist row should say
+## 5c. ~~Reordering, and what a playlist row should say~~ — DONE 2026-09-01
 
 Both raised 2026-09-01.
 
@@ -206,25 +206,37 @@ it must be interruptible: the user pressing play matters more than the pass fini
 half of the content-probing item (§7) — once every file is being opened anyway, identifying it
 properly is nearly free.
 
-## 5f. Subsongs: the decision, then the UI
+## 5f. Subsongs — decided 2026-09-01, UI still open
 
-Raised 2026-09-01, and now overdue rather than merely absent. game-music-emu reports track counts in
-the hundreds — one GBS in the sample said 99, an HES said 256 — and we play track 0 and nothing else.
-sc68 and ASAP report subsongs too.
+game-music-emu reports track counts in the hundreds — one GBS in the sample said 99, an HES said 256
+— and we play track 0 and nothing else. sc68 and ASAP report subsongs too. This is a defect now,
+not a gap.
 
-**The question is not how to draw it, it is what a subsong IS to this app.** Two readings, and they
-lead to different apps:
+**The owner has decided what a subsong is: a property of a track, not a track of its own.**
+Expanding a 99-track GBS into 99 rows was rejected outright — a folder of twenty such files would
+become a playlist of two thousand rows.
 
-1. **A subsong is a track.** A 99-track GBS becomes 99 rows on adding. Honest, browsable, searchable
-   — and it turns a folder of twenty GBS files into a playlist of two thousand rows.
-2. **A subsong is a property of a track.** One row, with a selector while it plays. Keeps lists
-   short, but subsongs become invisible to search and to shuffle.
+**His constraints on the UI, in his words, to be designed against:**
 
-A third exists: default to (2) with an explicit "expand into tracks" action. More work, and it
-avoids choosing for the user.
+- **(a)** It must be possible to play all subsongs in order.
+- **(b)** It must be possible to play only subsong 0 and no others.
+- **(c)** It must not cover the track's own view — the track is the *representative*, and it is what
+  is on the list.
+- **(d)** It must be easy to reach: no clicking through several places, and no complicating the way
+  back to the playlist.
 
-Worth deciding before building either, because the schema differs: (1) needs a subsong index on the
-track identity, and identity is what the duplicate check and the play history both rest on.
+Nobody has a good design yet, his words included. **To be discussed before anything is built.**
+
+Two observations to bring to that conversation:
+
+- (a) and (b) together mean subsong playback is a **mode**, like Random — "play this one" and "play
+  through them" are different intents and the transport has to know which. Random already
+  established that shape and could be followed.
+- (c) argues against a sheet or a dialog and in favour of something inline on the Now Playing
+  screen, since that is the one surface where covering the track is not a problem.
+
+Schema is not a constraint: the owner has confirmed the database can change freely and he can
+reinstall, since nobody else uses the app yet.
 
 ## 6b. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
