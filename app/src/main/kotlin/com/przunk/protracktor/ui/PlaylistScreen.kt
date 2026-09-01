@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -42,6 +41,9 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -72,6 +74,7 @@ import com.przunk.protracktor.player.TrackRef
 @Composable
 fun PlaylistScreen(
     state: PlayerUiState,
+    listState: LazyListState,
     onPlayAt: (Int) -> Unit,
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
@@ -85,7 +88,7 @@ fun PlaylistScreen(
     // and more portable than a blur, which needs API 31 and this app runs from 29.
     if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state, null, {}, {}, { _, _ -> }, contentPadding, enabled = false)
+            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, contentPadding, enabled = false)
             AwayScrim(
                 randomMode = state.randomMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -102,6 +105,7 @@ fun PlaylistScreen(
 
     PlaylistBody(
         state = state,
+        listState = listState,
         currentIndex = state.queue.currentIndex,
         onPlayAt = onPlayAt,
         onRemoveAt = onRemoveAt,
@@ -115,6 +119,7 @@ fun PlaylistScreen(
 @Composable
 private fun PlaylistBody(
     state: PlayerUiState,
+    listState: LazyListState,
     currentIndex: Int?,
     onPlayAt: (Int) -> Unit,
     onRemoveAt: (Int) -> Unit,
@@ -123,7 +128,6 @@ private fun PlaylistBody(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
     // the offset applied to whichever row had inherited that index, which is what made rows overlap.
@@ -140,6 +144,8 @@ private fun PlaylistBody(
     val indexOfTrack = remember { { id: String -> tracks.indexOfFirst { it.id == id } } }
     val trackCount = remember { { tracks.size } }
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
+
+    var following by remember { mutableStateOf(false) }
 
     LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(state.queue.tracks, key = { _, track -> track.id }) { index, track ->
@@ -167,10 +173,74 @@ private fun PlaylistBody(
         }
     }
 
+    if (enabled) {
+        FollowTrackButton(
+            listState = listState,
+            currentIndex = currentIndex,
+            contentPadding = contentPadding,
+            following = following,
+            onFollowingChange = { following = it },
+        )
+    }
+
     showingInfo?.let { track ->
         TrackInfoDialog(track = track, onDismiss = { showingInfo = null })
     }
 }
+
+/**
+ * The follow-the-playing-track toggle.
+ *
+ * Off by default, because a list that scrolls itself while you are reading it is a feature people
+ * turn off. Tapping it turns following on and hides the button, because it has nothing left to
+ * offer; scrolling by hand turns following off and brings it back — the gesture that cancels it is
+ * exactly the gesture that means "I want to look somewhere else".
+ */
+@Composable
+private fun FollowTrackButton(
+    listState: LazyListState,
+    currentIndex: Int?,
+    contentPadding: PaddingValues,
+    following: Boolean,
+    onFollowingChange: (Boolean) -> Unit,
+) {
+    // A real drag from the user, not our own scrolling. isScrollInProgress cannot tell those apart,
+    // and mistaking one for the other would switch following off the instant it was switched on.
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions.collect { interaction ->
+            if (interaction is DragInteraction.Start) onFollowingChange(false)
+        }
+    }
+
+    LaunchedEffect(following, currentIndex) {
+        if (following && currentIndex != null) listState.bringIntoView(currentIndex)
+    }
+
+    if (following || currentIndex == null) return
+
+    Box(
+        modifier = Modifier.fillMaxSize().padding(contentPadding).padding(16.dp),
+        contentAlignment = Alignment.BottomEnd,
+    ) {
+        ExtendedFloatingActionButton(
+            onClick = { onFollowingChange(true) },
+            icon = { Icon(PlayerIcons.Locate, contentDescription = null) },
+            text = { Text(stringResource(R.string.action_follow_track)) },
+        )
+    }
+}
+
+/**
+ * Scrolls to an item, animating only when it is close.
+ *
+ * Animating across three hundred rows is a long, silly animation nobody asked to watch.
+ */
+private suspend fun LazyListState.bringIntoView(index: Int) {
+    val distance = kotlin.math.abs(index - firstVisibleItemIndex)
+    if (distance > ANIMATE_WITHIN) scrollToItem(index) else animateScrollToItem(index)
+}
+
+private const val ANIMATE_WITHIN = 15
 
 /**
  * Drag to reorder, from the handle only.

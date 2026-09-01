@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +48,7 @@ import com.przunk.protracktor.player.PlayerUiState
 fun NowPlaying(
     state: PlayerUiState,
     onSeek: (Double) -> Unit,
+    onShowInPlaylist: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val track = state.current
@@ -97,6 +100,19 @@ fun NowPlaying(
                     text = listOf(it.subtitle, it.fileNameOrTitle).filter(String::isNotBlank).joinToString("/"),
                     style = MaterialTheme.typography.bodyMedium,
                 )
+            }
+        }
+
+        // The dock says what is playing; the list does not say where it is. This is the way from one
+        // to the other, and it is absent rather than disabled when there is nowhere to go.
+        onShowInPlaylist?.let { show ->
+            TextButton(onClick = show, modifier = Modifier.padding(top = 4.dp)) {
+                Icon(
+                    imageVector = PlayerIcons.Locate,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(stringResource(R.string.action_show_in_playlist))
             }
         }
 

@@ -28,6 +28,10 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-02** — Finding the playing track: a "Show in playlist" action in the expanded player, and
+  a follow toggle over the list that is off by default, hides itself while following, and switches
+  off the moment the user scrolls by hand.
+
 - **2026-09-02** — A track can be played from Browse and from search results without adding it: the
   results become the queue while you are looking at them, and the playlist is untouched. Sources are
   named as paths everywhere, so a result says where it came from and Information shows
