@@ -90,6 +90,7 @@ fun BrowseScreen(
     onToggleOnline: () -> Unit,
     onToggleCatalogue: (String) -> Unit,
     onSearch: () -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
@@ -114,6 +115,7 @@ fun BrowseScreen(
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
                 onForgetFolder = onForgetFolder,
+                onPlay = onPlay,
                 onAdd = onAdd,
             )
             BrowseDomain.ONLINE -> OnlineDomain(
@@ -122,6 +124,7 @@ fun BrowseScreen(
                 onIndexCatalogue = onIndexCatalogue,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
+                onPlay = onPlay,
                 onAdd = onAdd,
             )
             BrowseDomain.SEARCH -> SearchDomain(
@@ -132,6 +135,7 @@ fun BrowseScreen(
                 onToggleOnline = onToggleOnline,
                 onToggleCatalogue = onToggleCatalogue,
                 onSearch = onSearch,
+                onPlay = onPlay,
                 onAdd = onAdd,
             )
         }
@@ -203,10 +207,11 @@ private fun LocalDomain(
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
 ) {
     if (browse.openFolder != null) {
-        Selectable(browse = browse, playlistName = playlistName, onAdd = onAdd)
+        Selectable(browse = browse, playlistName = playlistName, onPlay = onPlay, onAdd = onAdd)
         return
     }
 
@@ -261,10 +266,11 @@ private fun OnlineDomain(
     onIndexCatalogue: (String) -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
 ) {
     when {
-        browse.openAuthor != null -> Selectable(browse = browse, playlistName = playlistName, onAdd = onAdd)
+        browse.openAuthor != null -> Selectable(browse, playlistName, onPlay, onAdd)
 
         browse.openCatalogue != null -> {
             if (browse.loading) {
@@ -350,6 +356,7 @@ private fun SearchDomain(
     onToggleOnline: () -> Unit,
     onToggleCatalogue: (String) -> Unit,
     onSearch: () -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -411,7 +418,7 @@ private fun SearchDomain(
             )
         }
 
-        if (browse.loading) Loading() else Selectable(browse, playlistName, onAdd)
+        if (browse.loading) Loading() else Selectable(browse, playlistName, onPlay, onAdd)
     }
 }
 
@@ -434,6 +441,7 @@ private fun Loading() {
 private fun Selectable(
     browse: BrowseState,
     playlistName: String?,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
 ) {
     var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
@@ -495,6 +503,17 @@ private fun Selectable(
                             { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         },
                         leadingContent = { Checkbox(checked = ticked, onCheckedChange = null) },
+                        // Hearing it before deciding is the whole point of a search: you cannot tell
+                        // which "elysium.mod" this is from its name. Playing does not add anything --
+                        // the results become the queue while you are in them.
+                        trailingContent = {
+                            IconButton(onClick = { onPlay(browse.tracks.indexOf(track)) }) {
+                                Icon(
+                                    PlayerIcons.Play,
+                                    stringResource(R.string.a11y_preview, track.title),
+                                )
+                            }
+                        },
                         modifier = Modifier.clickable {
                             selected = if (ticked) selected - track.id else selected + track.id
                         },

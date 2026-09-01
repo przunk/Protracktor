@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A1. Search results need the path too, and a way to hear a track first
+## A1. ~~Search results need the path too, and a way to hear a track first~~ — DONE 2026-09-02
 
 
 Both reported 2026-09-01, both about the Search view specifically.
@@ -110,6 +110,16 @@ that is not the playlist.
   row, and the handle is what keeps them apart today. Selection must not make the handle ambiguous.
 - **The draft model.** A bulk delete is one edit, not twenty, so undo has to restore the whole
   selection — the current single-track `lastRemoval` will not do.
+
+## A9. The app icon
+
+Raised 2026-09-02: the launcher icon is a placeholder — `@android:drawable/ic_media_play`, the
+system's own. The owner wants to discuss the concept before anything is drawn, so this is a
+placeholder for that conversation rather than a task.
+
+Worth having ready for it: an icon needs an adaptive foreground and background (API 26+), a
+monochrome layer for themed icons (API 33+), and it is the one asset where a wrong choice is visible
+on every home screen. Nothing about it is a detail to settle in code.
 
 ## A8. Haptics for the gestures that deserve them
 

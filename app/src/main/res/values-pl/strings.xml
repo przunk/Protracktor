@@ -2,6 +2,8 @@
 <resources>
     <string name="app_name">Protracktor</string>
 
+    <string name="search_playing_title">Odtwarzanie z wyszukiwania</string>
+    <string name="search_playing_body">Nic z tej playlisty nie gra.\nNastępny i poprzedni chodzą po wynikach.</string>
     <string name="random_playing_title">Odtwarzanie losowe</string>
     <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny.\nPlus zachowuje ten.</string>
     <string name="random_back_to_playlist">Wróć do playlisty</string>
@@ -110,6 +112,7 @@
 
     <string name="a11y_seek">Przewiń w utworze</string>
     <string name="a11y_keep_track">Dodaj ten utwór do playlisty</string>
+    <string name="a11y_preview">Odtwórz %1$s</string>
     <string name="a11y_play">Odtwórz</string>
     <string name="a11y_pause">Pauza</string>
     <string name="a11y_previous">Poprzedni utwór</string>

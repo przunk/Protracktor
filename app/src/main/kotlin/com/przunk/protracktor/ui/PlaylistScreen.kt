@@ -76,17 +76,21 @@ fun PlaylistScreen(
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onBrowse: () -> Unit,
-    onExitRandom: () -> Unit,
+    onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    // Random plays something that is not in this list, so the list is put behind glass: visible,
-    // clearly not what you are listening to, and not touchable by accident. Cheaper and more
-    // portable than a blur, which needs API 31 and this app runs from 29.
-    if (state.randomMode) {
+    // Random and a search both play something that is not in this list, so the list goes behind
+    // glass: visible, clearly not what you are listening to, and not touchable by accident. Cheaper
+    // and more portable than a blur, which needs API 31 and this app runs from 29.
+    if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
             PlaylistBody(state, null, {}, {}, { _, _ -> }, contentPadding, enabled = false)
-            RandomScrim(onExitRandom = onExitRandom, contentPadding = contentPadding)
+            AwayScrim(
+                randomMode = state.randomMode,
+                onReturnToPlaylist = onReturnToPlaylist,
+                contentPadding = contentPadding,
+            )
         }
         return
     }
@@ -389,14 +393,21 @@ private fun EmptyPlaylist(
 }
 
 /**
- * The glass over the playlist during Random, and the way out of it.
+ * The glass over the playlist while something else is playing, and the way out of it.
+ *
+ * One component for both detours — Random and a search — because they are the same situation from
+ * the playlist's point of view: what you are hearing is not on this list. Only the wording differs.
  *
  * The way out is in the middle of the screen with a label rather than tucked into a corner: the
  * playlist is already covered, so there is room, and a mode you can enter but cannot obviously
  * leave is a trap.
  */
 @Composable
-private fun RandomScrim(onExitRandom: () -> Unit, contentPadding: PaddingValues) {
+private fun AwayScrim(
+    randomMode: Boolean,
+    onReturnToPlaylist: () -> Unit,
+    contentPadding: PaddingValues,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -411,22 +422,26 @@ private fun RandomScrim(onExitRandom: () -> Unit, contentPadding: PaddingValues)
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(
-                imageVector = PlayerIcons.Dice,
+                imageVector = if (randomMode) PlayerIcons.Dice else PlayerIcons.Search,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringResource(R.string.random_playing_title),
+                text = stringResource(
+                    if (randomMode) R.string.random_playing_title else R.string.search_playing_title
+                ),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = stringResource(R.string.random_playing_body),
+                text = stringResource(
+                    if (randomMode) R.string.random_playing_body else R.string.search_playing_body
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onExitRandom) {
+            Button(onClick = onReturnToPlaylist) {
                 Text(stringResource(R.string.random_back_to_playlist))
             }
         }
