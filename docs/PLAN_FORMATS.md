@@ -35,41 +35,72 @@ net is wide enough to make a claim on something another backend should have had.
 tune. We shipped none, so every file loaded and played silence. The binaries are packaged now, and
 the gate no longer trusts `api68_verify_mem`, which rejects ICE-packed SNDH that loads perfectly.
 
-**Still broken, and measured rather than guessed.** Five random SNDH files from Modland, run through
-the exact backend logic on the host:
+**Still broken, and measured rather than guessed.** Thirty random SNDH files from Modland, run
+through the exact backend logic on the host:
 
-| | |
-| --- | --- |
-| plays | 3 |
-| loads, then renders silence | 1 |
-| fails `api68_load_mem` — *"validation test"* | 1 |
+| | | |
+| --- | --- | --- |
+| plays | 16 | 53% |
+| loads, then renders silence | 5 | 17% |
+| fails `api68_load_mem` | 9 | 30% |
 
-That last one is what produces the owner's "not a format we can play yet". **sc68 2.2.1 is from 2003
-and its SNDH support is partial.** No amount of wiring on our side changes that.
+**sc68 2.2.1 is from 2003 and its SNDH support is partial.** Roughly half. No amount of wiring on
+our side changes that, and the owner has hit the failing half twice in a row.
 
-### The fix is sc68 3.0.0b
+### The fix is sc68 3.0.0b, and it is reachable
 
-It exists, and its own `NEWS` says what we need:
+Its own `NEWS` says what we need:
 
 > sndh support should be almost perfect. […] sc68 has a built-in database of all sndh files known to
 > this day including information on track duration and hardware used
 
-A duration database would also give SNDH the track lengths it currently lacks entirely.
+That database would also give SNDH the durations it currently lacks entirely.
 
-**Getting it is the problem.** It lives only in SourceForge SVN (`https://svn.code.sf.net/p/sc68/code/`,
-revision 713 as of 2026-09-01) — no git mirror, and benjihan's GitHub account does not carry it. The
-code-snapshot zip URL returns 404. `svn` is not installed on this machine and installing it needs the
-owner.
+**Fetching it is solved.** It lives only in SourceForge SVN (revision 713 as of 2026-09-01) — no git
+mirror, the author's GitHub does not carry it, the snapshot zip 404s, and `svn` is not installed
+here. But **SourceForge serves the SVN tree as plain HTTP directory listings**, and they walk. The
+whole tree came down with nothing but `urllib`: 715 files, 391 MB.
 
-**Options, for the owner to choose:**
+Almost all of that is ballast: `sc68-fb2k` alone is 348 MB of foobar2000 SDK binaries. **The fetch
+must exclude the plugin directories** (`sc68-fb2k`, `sc68-dshow`, `sc68-winamp`, `sc68-vlc`,
+`sc68-gst`, `sc68-audacious`, `sc68-doc`). What we actually need is 71 C files:
 
-1. Install `svn` (needs `sudo`) and vendor a pinned revision. Cleanest, and the pin is honest.
-2. Fetch the tree file by file over HTTP — it works, `NEWS` came back that way — but a scripted
-   recursive fetch of a whole source tree is a fragile thing to depend on.
-3. Leave it. Three SNDH files in five play; the others now say why they do not.
+| | |
+| --- | --- |
+| `libsc68/emu68` | 25 |
+| `libsc68/io68` | 16 |
+| `libsc68/src` | 4 |
+| `file68/src` | 22 |
+| `unice68` | 4 |
 
-It is also a **much larger and more modern codebase** than 2.2.1, with its own autotools setup and a
-different API. Expect it to be closer to a fresh integration than an upgrade.
+### What building it will take — established 2026-09-01, not guessed
+
+There are **no autotools on this machine** (`autoconf`, `automake`, `libtool`, `pkg-config` all
+missing), so `configure` cannot be run. The same treatment 2.2.1 got applies, and a trial compile
+narrowed the work to three things:
+
+1. **Package defines.** `PACKAGE_STRING`, `PACKAGE_NAME`, `PACKAGE_VERSION` and friends, which
+   `libsc68.c` `#error`s about by name. Trivial.
+2. **`HAVE_*` defines and `<stdint.h>`.** Without them every file fails on `uint32_t`. Trivial.
+3. **`file68_features.h`**, which autoconf generates from `file68/sc68/file68_features.h.in`. Not
+   trivial, but not research either: **the tree already contains a pre-generated one** at
+   `sc68-msvc/sc68/file68_features.h`, which is a working starting point.
+
+So: a focused session's work, not a research project. The order stays as written — fetch, build for
+the **host**, re-run the same thirty files, and only integrate if it beats 16/30.
+
+### Why not write our own
+
+Asked by the owner on 2026-09-01, and worth recording because the answer is not obvious.
+
+It would mean a 68000 emulator, a YM2149, the MFP 68901 timers, and SNDH parsing. The CPU is the
+*easy* part — Musashi is MIT-licensed and proven, so nobody needs to write one. The hard part is
+timing: SNDH music is driven by MFP timer interrupts, and the whole genre depends on those being
+cycle-accurate, plus the envelope and "SID voice" tricks composers abused on the YM.
+
+Months of work, and the failure modes are subtle — wrong tempo, missing effects — rather than
+obvious. It would also be writing sc68 again with a borrowed CPU. The author has already done it and
+says his version is almost perfect; the sensible move is to take his.
 
 ### Meanwhile
 
