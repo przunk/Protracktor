@@ -50,13 +50,16 @@ object MediaScanner {
     }
 
     /**
-     * The folder a document sits in, as something a person can read.
+     * Where a granted tree sits, as something a person can read.
      *
-     * A document id looks like `primary:Music/mods/4mat/elysium.mod`. The scheme prefix and the
-     * filename are noise; what is worth showing is the path between them.
+     * Best effort: `primary:Andrzej/Music/Amiga` becomes `Andrzej/Music/Amiga`. There is no way to
+     * get a real filesystem path out of the storage access framework, and for a network share there
+     * is not one to get -- so this is a label, not an address, and it is treated as one.
      */
-    fun readableFolder(documentId: String): String =
-        documentId.substringAfter(':').substringBeforeLast('/', "").ifBlank { "/" }
+    private fun rootPathOf(treeUri: Uri): String =
+        runCatching {
+            DocumentsContract.getTreeDocumentId(treeUri).substringAfter(':').trim('/')
+        }.getOrNull()?.ifBlank { null } ?: labelOf(treeUri)
 
     /** A name for a granted tree that means something to a human. */
     fun labelOf(treeUri: Uri): String =
@@ -71,13 +74,19 @@ object MediaScanner {
     suspend fun scanTree(context: Context, treeUri: Uri): List<TrackRef> = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
         val found = mutableListOf<TrackRef>()
-        val pending = ArrayDeque(listOf(DocumentsContract.getTreeDocumentId(treeUri)))
+
+        // The path is accumulated as we descend rather than read back off each document id. Document
+        // ids are the provider's business: the framework's own are readable paths, but a network
+        // provider's are often short opaque handles -- which is why the owner saw only "AMIGA" where
+        // he expected the whole path. Walking down, we always know where we are.
+        val pending = ArrayDeque(listOf(DocumentsContract.getTreeDocumentId(treeUri) to rootPathOf(treeUri)))
 
         while (pending.isNotEmpty()) {
             // A deep tree on a slow provider can take a while; cancelling the scan has to actually
             // stop it rather than let it run on in the background.
             coroutineContext.ensureActive()
-            collectChildren(resolver, treeUri, pending.removeFirst(), found, pending)
+            val (documentId, path) = pending.removeFirst()
+            collectChildren(resolver, treeUri, documentId, path, found, pending)
         }
         found.sortedWith(compareBy({ it.subtitle }, { it.title }))
     }
@@ -86,8 +95,9 @@ object MediaScanner {
         resolver: ContentResolver,
         treeUri: Uri,
         parentDocumentId: String,
+        parentPath: String,
         found: MutableList<TrackRef>,
-        pending: ArrayDeque<String>,
+        pending: ArrayDeque<Pair<String, String>>,
     ) {
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
         resolver.query(
@@ -106,23 +116,22 @@ object MediaScanner {
                 val mimeType = cursor.getString(2)
 
                 if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
-                    pending.addLast(documentId)
+                    pending.addLast(documentId to "$parentPath/$displayName")
                 } else if (SupportedFormats.looksPlayable(displayName)) {
                     found += TrackRef(
                         id = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId).toString(),
                         title = displayName,
-                        // Where it came from, not just the last folder. The owner asked to be able
-                        // to tell two identically named tunes apart in a search result.
-                        subtitle = readableFolder(documentId),
-                        fileName = displayName,
-                        // Read here because it is free with the row we already have, and it is half
-                        // of what tells two URIs for one file apart.
+                        // The whole path. One folder name does not say which library it came from,
+                        // which is what the owner asked to be able to see.
+                        subtitle = parentPath,
                         sizeBytes = if (cursor.isNull(3)) 0L else cursor.getLong(3),
+                        fileName = displayName,
                     )
                 }
             }
         }
     }
+
 
     /** Builds references for individually picked files. */
     fun fromDocuments(context: Context, uris: List<Uri>): List<TrackRef> = uris.map { uri ->
@@ -132,7 +141,11 @@ object MediaScanner {
         TrackRef(
             id = uri.toString(),
             title = displayName,
-            subtitle = runCatching { readableFolder(DocumentsContract.getDocumentId(uri)) }.getOrDefault(""),
+            // An individually picked file has no tree walk behind it, so the document id is all
+            // there is. Usually a readable path; when it is not, a short label beats a blank line.
+            subtitle = runCatching {
+                DocumentsContract.getDocumentId(uri).substringAfter(':').substringBeforeLast('/', "")
+            }.getOrDefault(""),
             sizeBytes = size,
             fileName = displayName,
         )
