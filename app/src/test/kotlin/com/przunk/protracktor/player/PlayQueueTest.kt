@@ -329,6 +329,23 @@ class PlayQueueTest {
         assertTrue(renamed.sameFileAs(TrackRef("uri://2", "anything", "", 4096, "4MAT-ELYSIUM.MOD")))
     }
 
+    @Test
+    fun `the author falls back to the folder a track came from`() {
+        // This music is filed by author far more often than it is tagged with one, so the folder is
+        // usually the right answer until the file has been opened.
+        val untagged = TrackRef("uri://1", "elysium.mod", "Music/mods/4-Mat", 4096, "elysium.mod")
+        assertEquals("4-Mat", untagged.displayAuthor)
+
+        val tagged = untagged.copy(author = "Rob Hubbard")
+        assertEquals("Rob Hubbard", tagged.displayAuthor)
+    }
+
+    @Test
+    fun `a catalogue subtitle yields its author half`() {
+        val fromCatalogue = TrackRef("https://x/y", "a.mod", "Protracker · 4-Mat")
+        assertEquals("4-Mat", fromCatalogue.displayAuthor)
+    }
+
     // --- edges --------------------------------------------------------------------------------
 
     @Test

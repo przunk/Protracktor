@@ -668,6 +668,8 @@ class PlaybackController private constructor(private val context: Context) {
             subtitle = listOf(track.format, track.author).filter { it.isNotBlank() }.joinToString(" · "),
             sizeBytes = track.size,
             fileName = track.title,
+            // Catalogues file by author, so this is known before the file is ever opened.
+            author = track.author,
         )
     }
 
@@ -989,7 +991,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Takes the tune's real name from its metadata, once we have it.
+     * Takes the tune's real name and author from its metadata, once we have them.
      *
      * These formats carry a title inside, and it is usually better than the filename -- but there is
      * no way to know it without opening the file, and opening every file during a scan is exactly
@@ -1001,13 +1003,23 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private fun adoptTitleFrom(described: Map<String, String>, ref: TrackRef) {
         val realTitle = described["title"]?.trim().orEmpty()
-        if (realTitle.isBlank() || realTitle == ref.title) return
+        // Backends disagree on which key carries it, so both are asked before giving up.
+        val realAuthor = described["artist"]?.trim()?.ifBlank { null }
+            ?: described["composer"]?.trim().orEmpty()
+
+        val newTitle = realTitle.ifBlank { ref.title }
+        val newAuthor = realAuthor.ifBlank { ref.author }
+        if (newTitle == ref.title && newAuthor == ref.author) return
 
         _state.update { current ->
             val index = current.queue.tracks.indexOfFirst { it.id == ref.id }
             if (index < 0) return@update current
             val renamed = current.queue.tracks.toMutableList().apply {
-                this[index] = this[index].copy(title = realTitle, fileName = this[index].fileNameOrTitle)
+                this[index] = this[index].copy(
+                    title = newTitle,
+                    author = newAuthor,
+                    fileName = this[index].fileNameOrTitle,
+                )
             }
             current.copy(queue = current.queue.withTracks(renamed))
         }

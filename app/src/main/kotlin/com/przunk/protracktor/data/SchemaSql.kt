@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 4
+    const val VERSION = 5
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -98,6 +98,17 @@ object SchemaSql {
         "ALTER TABLE tracks ADD COLUMN file_name TEXT NOT NULL DEFAULT ''",
     )
 
+    /**
+     * The author, added at version 5.
+     *
+     * Read from the tune's metadata when it is played, the same way the title is. Stored rather
+     * than re-read because re-reading means opening every file, which is the wait R9 exists to
+     * remove.
+     */
+    private val TRACK_AUTHOR_V5: List<String> = listOf(
+        "ALTER TABLE tracks ADD COLUMN author TEXT NOT NULL DEFAULT ''",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -152,7 +163,7 @@ object SchemaSql {
         """.trimIndent(),
 
         "INSERT INTO player_state (id) VALUES (0)",
-    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4
+    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5
 
 
 
@@ -167,6 +178,7 @@ object SchemaSql {
         2 to CATALOGUES_V2,
         3 to TRACK_SIZE_V3,
         4 to TRACK_FILE_NAME_V4,
+        5 to TRACK_AUTHOR_V5,
     )
 
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */

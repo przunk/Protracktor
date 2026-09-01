@@ -488,9 +488,12 @@ private fun Selectable(
                     val ticked = track.id in selected
                     ListItem(
                         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = if (track.subtitle.isNotBlank()) {
-                            { Text(track.subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        } else null,
+                        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
+                            // The full source here rather than just the author: in a search result
+                            // the question is "which one is this", and two tunes with one name are
+                            // told apart by where they live.
+                            { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        },
                         leadingContent = { Checkbox(checked = ticked, onCheckedChange = null) },
                         modifier = Modifier.clickable {
                             selected = if (ticked) selected - track.id else selected + track.id

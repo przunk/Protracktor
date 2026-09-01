@@ -3,7 +3,7 @@
     <string name="app_name">Protracktor</string>
 
     <string name="random_playing_title">Odtwarzanie losowe</string>
-    <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny; plus zachowuje ten.</string>
+    <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny.\nPlus zachowuje ten.</string>
     <string name="random_back_to_playlist">Wróć do playlisty</string>
 
     <string name="playlist_default_name">Playlista</string>
