@@ -124,6 +124,20 @@ Also outstanding from this item:
   to be declared and the UI has to reflect it (`docs/ARCHITECTURE.md` §5), which means item 5's
   transport and the seek slider both need a "can this backend do it" answer.
 
+## 6b. Formats we do not play yet
+
+Agreed 2026-09-01: the owner will send this as its own goal. Recording what is known now so it does
+not have to be rediscovered.
+
+- **`.sap`** — Atari 8-bit. Needs ASAP (GPL-2.0-or-later, by Piotr Fusik, has an Android port).
+- **`.sndh`** — should already work; see the defect in `docs/STATUS.md`. Fix before adding anything.
+- **SID, NSF, SPC, GBS, VGM, AY** — `libsidplayfp` and game-music-emu, in that order of value.
+- **Amiga custom (TFMX, Hippel, Future Composer, …)** — UADE, last, and its bundled replay binaries
+  need a licence decision of their own.
+
+Each new backend also means **re-indexing the catalogues**: the index only keeps entries whose
+filename a backend might handle.
+
 ## 7. Probe content instead of trusting extensions
 
 > "wczytuje dobrze pliki z folderu ale opiera się o rozszerzenie tylko (na razie ok)"

@@ -105,9 +105,11 @@ private fun PlaylistBody(
                 headlineContent = {
                     Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
-                supportingContent = if (track.subtitle.isNotBlank()) {
-                    { Text(track.subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                } else null,
+                // The author when the tune carries one, otherwise the folder it came from --
+                // this music is filed by author far more often than it is tagged with one.
+                supportingContent = track.displayAuthor.takeIf { it.isNotBlank() }?.let { author ->
+                    { Text(author, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                },
                 leadingContent = {
                     // The playing row is marked by a shape as well as a colour, so which row it is
                     // survives being read without colour (AGENTS.md §8).

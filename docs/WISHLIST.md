@@ -6,6 +6,12 @@ Format: what, who raised it, when.
 
 ---
 
+- **Fold hard-panned channels together** — owner, 2026-09-01. Amiga modules pan channels hard left
+  and right by convention, and on his phone one "speaker" is the screen vibrator: half the music is
+  effectively inaudible. Wanted is a mix control — full stereo, narrowed, or mono — applied in the
+  render callback where the gain already is. Note that libopenmpt has a stereo-separation setting of
+  its own, so part of this may be a backend option rather than a mix of ours.
+
 - **Full metadata for any supported file** — owner, 2026-09-01. An info button or a long press,
   showing everything the backend knows about a track rather than the handful of fields the player
   screen has room for. Should work on any file the current version can open, not only on what is

@@ -50,6 +50,14 @@ data class TrackRef(
      * people remember `4mat-elysium.mod` even when the tune calls itself something else.
      */
     val fileName: String = "",
+    /**
+     * Who made it, where that is known.
+     *
+     * Taken from the tune's metadata once it has been played. Until then the folder usually says
+     * it -- this music is filed by author far more often than it is tagged with one -- so the
+     * display falls back to the source folder rather than to nothing.
+     */
+    val author: String = "",
 ) {
     /**
      * Whether two references point at the same actual file.
@@ -62,6 +70,10 @@ data class TrackRef(
      */
     /** The filename, falling back to the title for references made before it was recorded. */
     val fileNameOrTitle: String get() = fileName.ifBlank { title }
+
+    /** What to show as the author: the tag if there is one, otherwise the folder it came from. */
+    val displayAuthor: String
+        get() = author.ifBlank { subtitle.substringAfterLast('/').substringAfterLast(" · ") }
 
     fun sameFileAs(other: TrackRef): Boolean = when {
         id == other.id -> true

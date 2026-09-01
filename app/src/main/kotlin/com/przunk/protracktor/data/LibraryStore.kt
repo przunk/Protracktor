@@ -105,7 +105,7 @@ class LibraryStore(context: Context) {
     suspend fun tracksIn(playlistId: Long): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
             """
-            SELECT t.id, t.title, t.subtitle, t.size, t.file_name
+            SELECT t.id, t.title, t.subtitle, t.size, t.file_name, t.author
             FROM playlist_tracks pt
             JOIN tracks t ON t.id = pt.track_id
             WHERE pt.playlist_id = ?
@@ -122,6 +122,7 @@ class LibraryStore(context: Context) {
                             subtitle = row.getString(2),
                             sizeBytes = row.getLong(3),
                             fileName = row.getString(4),
+                            author = row.getString(5),
                         )
                     )
                 }
@@ -132,7 +133,7 @@ class LibraryStore(context: Context) {
     /** Every track known to the library, whichever playlist it belongs to. For searching. */
     suspend fun allTracks(): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase
-            .rawQuery("SELECT id, title, subtitle, size, file_name FROM tracks ORDER BY title", null)
+            .rawQuery("SELECT id, title, subtitle, size, file_name, author FROM tracks ORDER BY title", null)
             .use { row ->
                 buildList {
                     while (row.moveToNext()) {
@@ -143,6 +144,7 @@ class LibraryStore(context: Context) {
                                 subtitle = row.getString(2),
                                 sizeBytes = row.getLong(3),
                                 fileName = row.getString(4),
+                                author = row.getString(5),
                             )
                         )
                     }
@@ -169,6 +171,7 @@ class LibraryStore(context: Context) {
                         put("subtitle", track.subtitle)
                         put("size", track.sizeBytes)
                         put("file_name", track.fileNameOrTitle)
+                        put("author", track.author)
                     },
                     android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
                 )

@@ -175,6 +175,20 @@ Naming these because a `STATUS.md` that implies more than exists is worse than n
 
 ## Known defects
 
+- **`.sndh` does not play, reported 2026-09-01 — and this one is ours.** sc68 is built in and its
+  own `file68.c` recognises SNDH: `read_header` returns `-'sndh'` and `SC68file_verify` turns that
+  into success, so `api68_verify_mem` should accept these files. Something between that and
+  `NativeEngine.open` returning null is wrong, and it is not a missing format. Not yet chased: the
+  owner asked to keep to features and UI, and there is no SNDH file on this machine to test against.
+  First job of the format work.
+
+- **`.sap` does not play, and is not supposed to yet.** Atari 8-bit SAP needs the ASAP backend,
+  which is not integrated. `SupportedFormats` does not list it, so a scan should not offer one —
+  if one appeared, it came in through the `snd` extension or a prefix match, which is worth checking
+  when ASAP lands.
+
+
+
 - ~~Play/Stop label goes stale when a module reaches its end.~~ **Fixed 2026-08-31** by the polling
   loop in `PlayerViewModel`: the native side raises a flag when the module ends and the same tick
   that drives the progress bar notices it.

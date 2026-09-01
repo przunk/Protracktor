@@ -104,7 +104,7 @@ fun PlayerDock(
                         // looks idle while it works gets pressed again.
                         text = when {
                             state.loadingTrack -> stringResource(R.string.dock_loading)
-                            loaded != null -> loaded.subtitle.ifBlank { formatOf(state) }
+                            loaded != null -> loaded.displayAuthor.ifBlank { formatOf(state) }
                             else -> stringResource(R.string.dock_idle_subtitle)
                         },
                         style = MaterialTheme.typography.bodySmall,
