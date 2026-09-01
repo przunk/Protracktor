@@ -124,6 +124,24 @@ Also outstanding from this item:
   to be declared and the UI has to reflect it (`docs/ARCHITECTURE.md` §5), which means item 5's
   transport and the seek slider both need a "can this backend do it" answer.
 
+## 5b. Search results need the path too, and a way to hear a track first
+
+Both reported 2026-09-01, both about the Search view specifically.
+
+**The path is missing from search results.** Adding a folder now shows where a file lives, but a
+search result still shows only the last part — "AMIGA", "SNDH". The owner wants both: the format or
+archive it came from *and* the path within it, like `ASMA/Przunk/Bonio`. Local results have the path
+in `subtitle` already; catalogue results put `format · author` there instead, so the two disagree
+about what that field means. Decide what a result line owes the reader, and make both sources answer
+it the same way.
+
+**A track cannot be played from search before being added.** You can tick a row but not hear it,
+which is backwards: the point of a search is to find out what something is. A play control on the
+row is the obvious shape — the owner suggested the right-hand side — but there is a real question
+behind it: **what do next and previous mean while listening from a search?** The answer that matches
+everything else here is that the results become the queue for as long as you are in them, the way
+Random has its own history. Playing from search must not quietly rewrite the playlist.
+
 ## 6b. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 Agreed 2026-09-01: the owner will send this as its own goal. Recording what is known now so it does
