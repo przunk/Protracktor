@@ -19,8 +19,8 @@ finished.
 | `docs/OPEN_QUESTIONS.md` | decisions deliberately left open, with options |
 | `docs/PLAN_FORMATS.md` | plan for the decoders we do not have yet |
 | `docs/PLAN_CATALOGUES.md` | plan for the online archives we do not have yet |
-| `docs/BACKLOG.md` | agreed work not yet started, ordered so each item can be picked up cold |
-| `docs/WISHLIST.md` | ideas, with who raised them and when |
+| `docs/BACKLOG.md` | agreed work not yet started, numbered **A1…An** |
+| `docs/WISHLIST.md` | ideas, numbered **B1…Bn**, with who raised them and when |
 | `docs/BUILD.md` | how to build debug, release and a store bundle |
 | `docs/LICENSES.md` | every third-party component, its licence, and what that obliges us to do |
 

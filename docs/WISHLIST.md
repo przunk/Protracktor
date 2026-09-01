@@ -2,78 +2,119 @@
 
 Ideas, not defects. A thing that does not work as intended belongs in `docs/STATUS.md`.
 
-Format: what, who raised it, when.
+Numbered so a choice can be made unambiguously. The order is the order they were raised, newest
+first — it is not a priority.
+
+Each says who raised it and when. Stale reasoning is worse than no reasoning, so where a wish has
+been overtaken by work already done, it says so.
 
 ---
 
-- **Play a track from the search results** — owner, raised twice, 2026-09-01. Already written up in
-  `docs/BACKLOG.md` §5b; repeated here because he has now asked for it twice, which is a signal about
-  priority rather than a duplicate.
+## B1. Play a track from the search results
 
-- **Jump to a tune's neighbours** — owner, 2026-09-01. Something plays at random, it is good, and the
-  question is "what else did they write". An action — from the row's overflow menu or from the
-  expanded player — that opens the browser **at the place the track came from**: the author's folder
-  in Modland, the folder on disk.
+*owner, raised twice, 2026-09-01.*
 
-  His refinement is the good part: for a **local** file this should not open the browser at all, it
-  should just show the path. There is nothing to browse to that the user does not already have.
+Already written up in `docs/BACKLOG.md` A1; repeated here because he has now asked for it twice, which is a signal about
+priority rather than a duplicate.
 
-  Depends on knowing where a track came from, which `TrackRef.subtitle` already carries for both
-  sources, though in two different shapes — see the note under §5b about what a result line owes the
-  reader.
+## B2. Jump to a tune's neighbours
 
-- **Show the catalogue path in Information** — owner, 2026-09-01. A Modland track's information
-  should read `Modland/Przunk/name.mod`. Today the dialog shows what is in `subtitle`, which for a
-  catalogue track is `format · author` — right for a row, wrong for an information panel. Same
-  underlying inconsistency as the wish above.
+*owner, 2026-09-01.*
 
-- **Play MP3 too** — owner, 2026-09-01. Likely simple, and there is a neat route: `minimp3` is a
-  single public-domain header, which is a fourth backend of about fifty lines rather than a whole
-  library. (Android's own decoder is not the easy answer here — the engine is native from the file
-  to the speaker, and routing one format through the platform instead would mean two playback paths
-  to keep in step.)
+Something plays at random, it is good, and the question is "what else did they write". An action — from the row's overflow menu or from the
+expanded player — that opens the browser **at the place the track came from**: the author's folder
+in Modland, the folder on disk.
 
-  Worth a thought before doing it: this app is a retro chiptune player, and MP3 is the format its
-  whole point is *not*. Handy for a rip of something, out of place in a browse tree. Probably belongs
-  behind "play this file" rather than in the library scan.
+His refinement is the good part: for a **local** file this should not open the browser at all, it
+should just show the path. There is nothing to browse to that the user does not already have.
 
-- **A web player, with favourites and history synced to an account** — owner, 2026-09-01. The same
-  music in a browser, sharing state with the phone through a Google or Cloudflare account. Recorded
-  as a thought to return to, not a plan.
+Depends on knowing where a track came from, which `TrackRef.subtitle` already carries for both
+sources, though in two different shapes — see the note under A1 about what a result line owes the
+reader.
 
-  Worth noting now, because it would change decisions we are making today: the decoders are C and
-  would need WebAssembly builds (libopenmpt already ships one; sc68 does not), and syncing state to
-  an account means a server, accounts, and somebody's data in someone else's hands — which is a
-  different kind of project from an app that reads files off a phone. The parts that would carry
-  over unchanged are the ones already kept free of Android: `PlayQueue`, and the schema in
-  `SchemaSql`.
+## B3. Show the catalogue path in Information
 
-- **Fold hard-panned channels together** — owner, 2026-09-01. Amiga modules pan channels hard left
-  and right by convention, and on his phone one "speaker" is the screen vibrator: half the music is
-  effectively inaudible. Wanted is a mix control — full stereo, narrowed, or mono — applied in the
-  render callback where the gain already is. Note that libopenmpt has a stereo-separation setting of
-  its own, so part of this may be a backend option rather than a mix of ours.
+*owner, 2026-09-01.*
 
-- **Full metadata for any supported file** — owner, 2026-09-01. An info button or a long press,
-  showing everything the backend knows about a track rather than the handful of fields the player
-  screen has room for. Should work on any file the current version can open, not only on what is
-  playing.
+A Modland track's information should read `Modland/Przunk/name.mod`. Today the dialog shows what is in `subtitle`, which for a
+catalogue track is `format · author` — right for a row, wrong for an information panel. Same
+underlying inconsistency as the wish above.
 
-- **A history of what was played** — owner, 2026-09-01. Somewhere in settings. Note that
-  `PlayQueue` already keeps a history, but only within a session and only for the active playlist;
-  a real one is a table of plays with timestamps, which is a small schema change and a screen.
-  There is no settings screen yet either.
+## B4. Play MP3 too
 
-- **Optional visualiser on the main screen** — owner, 2026-08-31. R4 makes metadata the default;
-  the visualiser returns as something the user switches on. Worth doing properly (a real scope or
-  per-channel VU driven by the render callback) rather than the "stiff" one being replaced.
+*owner, 2026-09-01.*
 
-- **Online catalogue browsing (Modland, HVSC, AMP)** — Claude, 2026-08-31. These archives are how
-  people actually get this music. Streaming straight from them would remove the "download and
-  unpack it yourself" step entirely. Large feature; nothing before the local player is good.
+Likely simple, and there is a neat route: `minimp3` is a
+single public-domain header, which is a fourth backend of about fifty lines rather than a whole
+library. (Android's own decoder is not the easy answer here — the engine is native from the file
+to the speaker, and routing one format through the platform instead would mean two playback paths
+to keep in step.)
 
-- **Per-format playback settings** — Claude, 2026-08-31. Interpolation and stereo separation for
-  trackers, SID model (6581 vs 8580) and filter curve, Amiga LED filter. This audience cares, and
-  it is cheap once the backend facade exposes it.
+Worth a thought before doing it: this app is a retro chiptune player, and MP3 is the format its
+whole point is *not*. Handy for a rip of something, out of place in a browse tree. Probably belongs
+behind "play this file" rather than in the library scan.
 
-- **Gapless / crossfade between subsongs** — Claude, 2026-08-31.
+## B5. A web player, with favourites and history synced to an account
+
+*owner, 2026-09-01.*
+
+The same music in a browser, sharing state with the phone through a Google or Cloudflare account. Recorded
+as a thought to return to, not a plan.
+
+Worth noting now, because it would change decisions we are making today: the decoders are C and
+would need WebAssembly builds (libopenmpt already ships one; sc68 does not), and syncing state to
+an account means a server, accounts, and somebody's data in someone else's hands — which is a
+different kind of project from an app that reads files off a phone. The parts that would carry
+over unchanged are the ones already kept free of Android: `PlayQueue`, and the schema in
+`SchemaSql`.
+
+## B6. Fold hard-panned channels together
+
+*owner, 2026-09-01.*
+
+Amiga modules pan channels hard left and right by convention, and on his phone one "speaker" is the screen vibrator: half the music is
+effectively inaudible. Wanted is a mix control — full stereo, narrowed, or mono — applied in the
+render callback where the gain already is. Note that libopenmpt has a stereo-separation setting of
+its own, so part of this may be a backend option rather than a mix of ours.
+
+## B7. Full metadata for any supported file
+
+*owner, 2026-09-01.*
+
+An info button or a long press, showing everything the backend knows about a track rather than the handful of fields the player
+screen has room for. Should work on any file the current version can open, not only on what is
+playing.
+
+## B8. A history of what was played
+
+*owner, 2026-09-01.*
+
+Somewhere in settings. Note that `PlayQueue` already keeps a history, but only within a session and only for the active playlist;
+a real one is a table of plays with timestamps, which is a small schema change and a screen.
+There is no settings screen yet either.
+
+## B9. Optional visualiser on the main screen
+
+*owner, 2026-08-31.*
+
+R4 makes metadata the default; the visualiser returns as something the user switches on. Worth doing properly (a real scope or
+per-channel VU driven by the render callback) rather than the "stiff" one being replaced.
+
+## B10. Online catalogue browsing — the rest of the archives
+
+*Claude, 2026-08-31. **Modland is done** — this is now the others; see `docs/PLAN_CATALOGUES.md`.*
+
+These archives are how people actually get this music. Streaming straight from them would remove the "download and
+unpack it yourself" step entirely. Large feature; nothing before the local player is good.
+
+## B11. Per-format playback settings
+
+*Claude, 2026-08-31.*
+
+Interpolation and stereo separation for trackers, SID model (6581 vs 8580) and filter curve, Amiga LED filter. This audience cares, and
+it is cheap once the backend facade exposes it.
+
+## B12. Gapless / crossfade between subsongs
+
+*Claude, 2026-08-31.*
+
