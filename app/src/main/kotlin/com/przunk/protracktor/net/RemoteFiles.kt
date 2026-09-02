@@ -35,6 +35,10 @@ class RemoteFiles(context: Context) {
 
     private val cacheDir = File(context.cacheDir, "remote").apply { mkdirs() }
 
+    // filesDir rather than cacheDir: an archive is expensive to fetch and the system may clear a
+    // cache directory at any time. Losing 20 MB to a cache sweep would mean downloading it again.
+    private val archiveDir = File(context.filesDir, "catalogues").apply { mkdirs() }
+
     /** Returns the bytes, from cache when possible. Null when the fetch failed. */
     suspend fun fetch(url: String): ByteArray? = withContext(Dispatchers.IO) {
         val cached = fileFor(url)
@@ -62,6 +66,36 @@ class RemoteFiles(context: Context) {
      */
     suspend fun fetchIndex(url: String): ByteArray? = withContext(Dispatchers.IO) {
         runCatching { download(url) }.getOrNull()
+    }
+
+    /** Where a catalogue that ships as one archive keeps it. */
+    fun archiveFile(catalogueId: String): File = File(archiveDir, "$catalogueId.zip")
+
+    /** Stores a downloaded archive whole, so its contents can be read without the network again. */
+    suspend fun storeArchive(catalogueId: String, bytes: ByteArray): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val target = archiveFile(catalogueId)
+            val temporary = File(target.parentFile, target.name + ".part")
+            temporary.writeBytes(bytes)
+            temporary.renameTo(target)
+        }.getOrDefault(false)
+    }
+
+    /**
+     * Reads one entry out of a stored archive.
+     *
+     * Opened and closed per read rather than kept open: these are played one at a time, and a file
+     * handle held across a whole listening session is a handle held for no reason.
+     */
+    suspend fun readFromArchive(catalogueId: String, entry: String): ByteArray? = withContext(Dispatchers.IO) {
+        val archive = archiveFile(catalogueId)
+        if (!archive.isFile) return@withContext null
+        runCatching {
+            java.util.zip.ZipFile(archive).use { zip ->
+                val found = zip.getEntry(entry) ?: return@use null
+                zip.getInputStream(found).use { it.readBytes() }
+            }
+        }.getOrNull()
     }
 
     fun isCached(url: String): Boolean = fileFor(url).let { it.exists() && it.length() > 0 }

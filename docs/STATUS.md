@@ -28,6 +28,10 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-02** — **ASMA**, the Atari SAP Music Archive: 6,335 files, downloaded once as a 20 MB
+  archive and then browsable and playable with no network at all. A second kind of catalogue
+  (`docs/ARCHITECTURE.md` §13).
+
 - **2026-09-02** — **Commodore 64.** libsidplayfp 3.1.1 with the SIDLite emulation, building for
   every ABI. Thirty random Modland SIDs played on the host with **no Commodore ROMs supplied at
   all**, none of them BASIC-compatible — which shrinks the ROM question rather than answering it.
