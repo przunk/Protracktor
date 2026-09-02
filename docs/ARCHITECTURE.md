@@ -561,3 +561,52 @@ blocked before it was started. sc68 **3.0.0b** is instance-based, and
 `native/probe/sc68/probe_concurrency.c` runs four threads each creating, loading, playing and
 destroying its own player twenty times: no failures, every thread producing audio. So a scan runs in
 the background and the music keeps playing.
+
+## 19. What the cache keeps
+
+Added 2026-09-03, answering `docs/OPEN_QUESTIONS.md` Q5. Before this, nothing was ever deleted.
+
+**512 MB, least recently used first.** These files are kilobytes to a few megabytes, so that is
+thousands of tunes — a library rather than a cache. It is a chosen number rather than a measured
+one, and exposing it as a setting is `docs/BACKLOG.md` A13.
+
+Enforced **after every successful write** and **once at start-up**. The second is what makes an
+installation that grew past the limit before the limit existed converge on it instead of sitting
+over it forever.
+
+### What counts
+
+Only the fetched-file cache, and that is structural rather than a rule anybody has to remember —
+the things that must survive live in different directories entirely:
+
+| | where | counted |
+| --- | --- | --- |
+| fetched tracks | `cacheDir/remote` | **yes** |
+| ASMA archive (20 MB) | `filesDir/catalogues` | no |
+| HVSC song lengths, the library index | the database | no |
+| copies made for sharing | `cacheDir/shared` | no |
+
+### What is never evicted
+
+- **Unfinished downloads.** A `.part` file is a fetch in progress. The budget neither charges for
+  it nor deletes it: charging would bill the user for bytes that may never become a file, and
+  deleting would corrupt a download that is still running.
+- **Anything in use** — the track playing and the ones read ahead. A file deleted mid-read looks to
+  the user exactly like a corrupt download.
+
+A protected file still **counts**. It is real disk taken by real bytes, and excluding it would let
+the cache sit above its ceiling while reporting that it does not. When protected files alone exceed
+the ceiling, everything else goes and no more: deleting what is playing to satisfy an arithmetic
+target would be the cache breaking the app in order to obey itself.
+
+### Why it is a separate object
+
+`CacheBudget` has no Android imports and **no clock** — it is handed a list and returns names to
+delete. Reading the directory and deleting is `RemoteFiles`'s job. That split is the whole reason
+the rules have tests: Q5 stayed open for weeks partly because there was nowhere to write one. The
+ordering has a name tie-break for the same reason — a rule that cannot be predicted cannot be
+tested.
+
+**A ceiling stops growth; it does not give the disk back.** Nothing in the app deletes the ASMA
+archive or the song lengths (A13). The online screen at least says what is held, because an app that
+takes disk quietly is worse than one that takes the same disk and says so.

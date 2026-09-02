@@ -123,7 +123,16 @@ rather than guessed.
 Still open for the formats with no such database — silence detection, loop points, or a fixed
 default with a fade. To be settled once something plays and the options can be compared by ear.
 
-## Q5 — Cache budget
+## Q5 — ~~Cache budget~~ — ANSWERED 2026-09-03: 512 MB, least recently used first
+
+**512 MB with LRU eviction**, enforced after every successful cache write and once at start-up so an
+installation that grew past the limit converges on it rather than staying over. What counts and what
+is exempt is in `docs/ARCHITECTURE.md` §19; making the number a setting is `docs/BACKLOG.md` A13.
+
+The original question and its options are kept below, because the reasoning is still what would be
+revisited if the number turns out to be wrong.
+
+### Original entry
 
 The extracted-file cache (ARCHITECTURE §6) has no size limit yet. Fixed ceiling, percentage of free
 space, or user setting? Recommendation: user setting with a 512 MB default, evicted least-recently-

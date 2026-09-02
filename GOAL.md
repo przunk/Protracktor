@@ -306,7 +306,7 @@ own branch and commit. Never merge to `master`.
       migrated schema for equivalence, run the test through the production configuration path, and
       deliberately break the probing/indexing rule once to prove the regression test can fail.
 
-- [ ] **3. Put a real bound on the fetched-file cache (Q5)**
+- [x] **3. Put a real bound on the fetched-file cache (Q5)**
 
       Adopt a **512 MB default ceiling with least-recently-used eviction**. This round establishes
       the mechanism and the default; exposing the value as a user setting remains part of A13.

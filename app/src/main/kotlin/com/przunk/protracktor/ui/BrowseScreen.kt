@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
+import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.BrowseState
@@ -504,6 +505,26 @@ private fun OnlineDomain(
                         }
                     },
                 )
+            }
+            // What the app is holding, said out loud. It cannot be deleted from here yet
+            // (`docs/BACKLOG.md` A13), but an app that takes disk quietly is worse than one that
+            // takes the same disk and says so.
+            item {
+                val (cache, permanent) = browse.storageBytes
+                if (cache > 0 || permanent > 0) {
+                    HorizontalDivider()
+                    Text(
+                        text = stringResource(
+                            R.string.storage_summary,
+                            cache / (1024 * 1024),
+                            CacheBudget.DEFAULT_CEILING_BYTES / (1024 * 1024),
+                            permanent / (1024 * 1024),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                    )
+                }
             }
             item {
                 Text(
