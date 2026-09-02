@@ -242,6 +242,16 @@ item gets its own branch from `develop`, tests, debug build, commit and merge ba
 The review itself gets a branch and commit; each independent correction selected from it gets its
 own branch and commit. Never merge to `master`.
 
+> **On the size of this round.** Six implementation items — item 2 is plausibly the largest single
+> piece of work this project has had — then a whole-tree review, then corrections, then a full
+> documentation reconciliation. The risk is not failing to finish; it is Phase 2 being done on an
+> exhausted context and Phase 4 then describing a state that was only half reviewed.
+>
+> So: **stopping cleanly between phases is a good outcome, not a failure.** If the work has to end
+> early, end it on a merged, building, documented item with an honest note in `docs/STATUS.md`
+> saying where it stopped and what was not reached. That is worth more than reaching Phase 4 with
+> a review nobody should trust.
+
 ## Phase 1 — specified implementation
 
 - [ ] **1. Replace sc68 2.2.1 with 3.0.0b and re-measure C1/C2**
@@ -272,6 +282,25 @@ own branch and commit. Never merge to `master`.
       count, size and the information needed to determine whether the source is still available.
       A renamed or misleading extension must not decide whether a playable file enters the index.
 
+      **Two collisions this item inherits, neither of them yours to solve by guessing.**
+
+      *Probing while something plays.* sc68 keeps its 68000 emulator in global state, so opening a
+      second instance while one is playing clobbers it — which is why background metadata resolution
+      already waits for playback to stop (`docs/STATUS.md`, known limitations). Probing content is
+      the same act, at library scale. The options are at least: refuse to scan while playing and say
+      so; probe with the backends that are safe concurrently and defer the rest; serialise all
+      native opens behind one lock; or keep filename filtering as a cheap first pass and probe only
+      what it admits. Pick one, say which and why in the commit, and record the rejected ones in
+      `docs/BACKLOG.md` — do not silently pick the easiest.
+
+      *Backends change, and the index was built by them.* Item 1 may replace sc68, which changes
+      what is playable. `docs/BACKLOG.md` A7 already carries this problem for catalogue indexes
+      ("re-index after adding any backend") and it is handled there by a note to a human. A local
+      index should do better, but how much better is open: a stored backend-set fingerprint that
+      marks the index stale, a per-row record of which backend claimed the file so only the affected
+      rows are re-probed, or an explicit rescan the user triggers. Whatever is chosen, an index built
+      by a set of backends must not silently outlive them.
+
       Reserve the database version before editing the schema. Write a manual, non-destructive
       migration and test it against real SQLite with existing data. Test fresh creation and the
       migrated schema for equivalence, run the test through the production configuration path, and
@@ -287,6 +316,14 @@ own branch and commit. Never merge to `master`.
       data such as the ASMA archive or HVSC song-length database, a file currently being read or
       prefetched, an incomplete download, or a `FileProvider` share copy still inside its retention
       window. Failed and interrupted downloads must not become valid cache entries.
+
+      **A ceiling stops growth; it does not give the disk back.** ASMA (20 MB) and the HVSC song
+      lengths (5.2 MB) are deliberately exempt, so real occupancy is the cap plus permanent
+      downloads plus the index, and nothing in the app can delete any of it (`docs/BACKLOG.md` A13).
+      Deleting stays in A13, but **showing the numbers is nearly free and should not wait for it**:
+      surface what the cache holds and what the permanent downloads hold, wherever it costs least.
+      If even that turns out to need a UI decision, stop and write it down rather than inventing a
+      screen.
 
       Keep eviction and ordering logic independent of Android time and filesystem APIs where
       practical. Add deterministic tests for the byte ceiling, LRU ordering, protected files,
@@ -304,6 +341,34 @@ own branch and commit. Never merge to `master`.
       selection is one back step, an ordinary descent returns one level, and a jump made by "More
       from this author" returns directly to the playlist. Do not implement A3's draggable scrollbar
       or top/bottom controls as part of this item.
+
+> **Items 5 and 6 ask for tests that cannot be written against the code as it stands, and this is
+> the one thing to settle before starting either.**
+>
+> Both call for regression tests at the level of browse state, item 6 explicitly "through the same
+> callbacks the UI uses". Today that is impossible: the test dependencies are `junit` and
+> `sqlite-jdbc`, there is no Robolectric and no emulator, and `PlaybackController` takes a `Context`
+> and owns a `SQLiteOpenHelper`, so it cannot be constructed on the JVM. Every existing test file
+> tests something deliberately free of Android — `PlayQueue`, `SchemaSql`, `Catalogue`,
+> `SongLengths`.
+>
+> The options, none of them chosen here:
+>
+> - **Extract the browse navigation state** into a plain Kotlin unit and test that, the way
+>   `PlayQueue` was extracted from playback and `SchemaSql` from storage. The project has a strong
+>   precedent and A20 would gain a single place to live — but it is a refactor sitting underneath
+>   two bug fixes, and refactoring to make a bug testable can be how a small fix becomes a large one.
+> - **Add a test dependency** (Robolectric or similar) and test the controller as it is. Honest and
+>   quick to reach, and it adds a heavyweight dependency to a project that has kept its test
+>   toolchain to two artifacts on purpose.
+> - **Fix both without a state-level test**, verifying by build and by reasoning, and say plainly in
+>   `docs/STATUS.md` that they rest on a device check. Cheapest, and it is exactly the bar that let
+>   every defect the owner found today through.
+>
+> Choose per item rather than once for both if that fits better — C7 may well be reachable more
+> cheaply than C6. State the choice and its reason in the commit, and record the rejected options in
+> `docs/BACKLOG.md` so the next person does not re-derive them. **Do not silently downgrade the
+> requested test to "it compiles".**
 
 - [ ] **5. C6 — a fresh entry into Online catalogues starts at the catalogue list**
 
@@ -356,6 +421,17 @@ Look especially for:
 - incorrect capability claims, queue/history edge cases and regressions between local, indexed,
   archive and live-search sources;
 - release-build, R8/JNI, signing and dependency/licence risks.
+
+**Two rules about the review itself, because it is being done by whoever wrote the code.** A review
+of one's own work mostly re-affirms its own decisions, and every defect found in this project so far
+was found by the owner using it rather than by anyone reading it.
+
+1. **`confirmed` requires evidence that can fail** — a failing test, a deterministic diagnostic, a
+   measurement. Reasoning, however good, produces an `unverified risk`, and there is no shame in a
+   review that is mostly those.
+2. Findings in code written earlier in this same run deserve more suspicion, not less. Where a
+   choice was made for a stated reason, check the reason still holds rather than the code still
+   matches it.
 
 Write the result to **`docs/review.md`** in English. Give each finding a stable identifier, severity
 (`critical`, `high`, `medium`, `low`), concrete file/location, mechanism, user impact, evidence or
