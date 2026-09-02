@@ -179,6 +179,11 @@ data class BrowseState(
     val groups: List<CatalogueGroup> = emptyList(),
     /** Non-null while an index is downloading; carries something to show the user. */
     val indexing: String? = null,
+    /**
+     * True when this level was reached by "more from this author" rather than by browsing down to
+     * it. Back has to undo the jump instead of walking up a hierarchy the user never walked down.
+     */
+    val arrivedByJump: Boolean = false,
     /** How many SID tunes HVSC has given us a length for. Zero until the database is downloaded. */
     val songLengthCount: Int = 0,
 
@@ -562,7 +567,9 @@ class PlaybackController private constructor(private val context: Context) {
     // --- browsing -----------------------------------------------------------------------------
 
     fun openDomain(domain: BrowseDomain) {
-        _browse.update { it.copy(domain = domain, tracks = emptyList(), groups = emptyList()) }
+        _browse.update {
+            it.copy(domain = domain, tracks = emptyList(), groups = emptyList(), arrivedByJump = false)
+        }
         when (domain) {
             BrowseDomain.LOCAL -> refreshFolders()
             BrowseDomain.ONLINE, BrowseDomain.SEARCH -> refreshCatalogues()
@@ -574,6 +581,16 @@ class PlaybackController private constructor(private val context: Context) {
     /** One step back up the browse hierarchy. Returns false when already at the top. */
     fun browseBack(): Boolean {
         val current = _browse.value
+
+        // A jump is one step, not a descent. "More from this author" puts you three levels deep
+        // without your having passed through any of them, so back should return you to where you
+        // actually were -- the playlist -- rather than making you climb out of a hierarchy you
+        // never climbed into. Reported by the owner, who had to press back four times.
+        if (current.arrivedByJump) {
+            _browse.update { it.copy(arrivedByJump = false) }
+            return false
+        }
+
         val next = when {
             current.openAuthor != null -> current.copy(openAuthor = null, tracks = emptyList())
                 .also { openFormat(current.openFormat.orEmpty()) }
@@ -719,6 +736,7 @@ class PlaybackController private constructor(private val context: Context) {
                     groups = emptyList(),
                     tracks = emptyList(),
                     loading = true,
+                    arrivedByJump = true,
                 )
             }
             _showBrowse.tryEmit(Unit)
@@ -876,7 +894,10 @@ class PlaybackController private constructor(private val context: Context) {
     fun openCatalogue(summary: CatalogueSummary) {
         scope.launch {
             _browse.update {
-                it.copy(openCatalogue = summary, openFormat = null, openAuthor = null, loading = true, tracks = emptyList())
+                it.copy(
+                    openCatalogue = summary, openFormat = null, openAuthor = null,
+                    loading = true, tracks = emptyList(), arrivedByJump = false,
+                )
             }
             val formats = catalogues.formats(summary.id)
             _browse.update { it.copy(groups = formats, loading = false) }
@@ -886,7 +907,12 @@ class PlaybackController private constructor(private val context: Context) {
     fun openFormat(format: String) {
         val catalogueId = _browse.value.openCatalogue?.id ?: return
         scope.launch {
-            _browse.update { it.copy(openFormat = format, openAuthor = null, loading = true, tracks = emptyList()) }
+            _browse.update {
+                it.copy(
+                    openFormat = format, openAuthor = null, loading = true,
+                    tracks = emptyList(), arrivedByJump = false,
+                )
+            }
             val authors = catalogues.authors(catalogueId, format)
             _browse.update { it.copy(groups = authors, loading = false) }
         }
@@ -897,7 +923,9 @@ class PlaybackController private constructor(private val context: Context) {
         val catalogueId = current.openCatalogue?.id ?: return
         val format = current.openFormat ?: return
         scope.launch {
-            _browse.update { it.copy(openAuthor = author, loading = true, tracks = emptyList()) }
+            _browse.update {
+                it.copy(openAuthor = author, loading = true, tracks = emptyList(), arrivedByJump = false)
+            }
             val found = catalogues.tracks(catalogueId, format, author).map(::toTrackRef)
             _browse.update { it.copy(tracks = found, loading = false) }
         }
@@ -1003,6 +1031,12 @@ class PlaybackController private constructor(private val context: Context) {
         // which is where the idea came from and not where it belongs.
         val ref = _state.value.transient ?: _state.value.resultsQueue?.current ?: return
         addToPlaylist(listOf(ref))
+        // Said out loud, unlike adding from the playlist screen. `describeAdded` stays silent on
+        // success because there the rows visibly appear and a notice would repeat the screen -- but
+        // this button is pressed from the dock while looking at something else entirely, so nothing
+        // appears and nothing was said. The owner had to navigate away to find out whether it had
+        // worked.
+        _state.update { it.copy(message = Message("Added \"${ref.title}\" to the playlist.")) }
     }
 
     /**
@@ -1103,7 +1137,7 @@ class PlaybackController private constructor(private val context: Context) {
         appendTracks(tracks, ::describeAdded)
     }
 
-    // --- library ---    // --- library ------------------------------------------------------------------------------
+    // --- library ------------------------------------------------------------------------------
 
     fun addFolder(treeUri: Uri) {
         scope.launch {

@@ -145,6 +145,7 @@
     <string name="action_share_link">Udostępnij link</string>
     <string name="share_chooser">Udostępnij</string>
 
+    <string name="action_to_playlist">Playlista</string>
     <string name="action_add_track">Dodaj do playlisty</string>
     <string name="a11y_track_menu">Akcje dla %1$s</string>
     <plurals name="browse_selected">
