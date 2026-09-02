@@ -79,7 +79,14 @@
     <string name="browse_indexing">Indexing %1$s…</string>
     <string name="browse_unknown">(unknown)</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
-    <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>
+    <string name="song_lengths_title">SID song lengths (HVSC)</string>
+    <string name="song_lengths_none">Not downloaded — SID tunes will show no length</string>
+    <plurals name="song_lengths_count">
+        <item quantity="one">%1$d tune</item>
+        <item quantity="other">%,1$d tunes</item>
+    </plurals>
+    <string name="a11y_download_song_lengths">Download the HVSC song length database</string>
+        <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>
     <string name="a11y_index_catalogue">Download the index for %1$s</string>
 
     <string name="search_label">Title or author</string>

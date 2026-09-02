@@ -81,7 +81,7 @@ working unattended is the case they were written for.
       scraping HTML. A catalogue that depends on the shape of somebody's web page is a catalogue that
       breaks silently.
 
-- [ ] **5. HVSC — at least its song lengths**
+- [x] **5. HVSC — at least its song lengths** *(done; full HVSC browsing deliberately not built)*
       `Songlengths.md5` fetches directly (5.2 MB, verified 2026-08-31) and gives SID tunes the
       durations they otherwise lack entirely. Worth having **even if the full HVSC catalogue is not
       built**, because without it every SID will show as unknown length and the scrubber will be

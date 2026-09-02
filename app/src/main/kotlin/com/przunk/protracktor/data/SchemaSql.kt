@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 5
+    const val VERSION = 6
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -109,6 +109,27 @@ object SchemaSql {
         "ALTER TABLE tracks ADD COLUMN author TEXT NOT NULL DEFAULT ''",
     )
 
+    /**
+     * HVSC's SID song lengths, added at version 6.
+     *
+     * Keyed by the MD5 of the SID file, which is what the published database is keyed by
+     * ([SongLengths]). One row per tune and about 61,000 of them, so this is the largest table
+     * after the Modland index -- kept in the database rather than the 5 MB text file it came from
+     * because the question asked of it is "this one hash", sixty thousand times per session, and a
+     * file is the wrong shape for that.
+     *
+     * `seconds` holds every subsong's length, not just the first, so the table does not have to be
+     * rebuilt when subsongs become selectable (docs/BACKLOG.md A2).
+     */
+    private val SONG_LENGTHS_V6: List<String> = listOf(
+        """
+        CREATE TABLE song_lengths (
+            md5 TEXT PRIMARY KEY NOT NULL,
+            seconds TEXT NOT NULL
+        )
+        """.trimIndent(),
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -163,7 +184,7 @@ object SchemaSql {
         """.trimIndent(),
 
         "INSERT INTO player_state (id) VALUES (0)",
-    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5
+    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6
 
 
 
@@ -179,6 +200,7 @@ object SchemaSql {
         3 to TRACK_SIZE_V3,
         4 to TRACK_FILE_NAME_V4,
         5 to TRACK_AUTHOR_V5,
+        6 to SONG_LENGTHS_V6,
     )
 
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */

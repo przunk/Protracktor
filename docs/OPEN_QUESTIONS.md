@@ -107,7 +107,8 @@ SAF is still what reaches the owner's existing collection on disk.
 
 Most of these formats have no intrinsic length. Options, combinable:
 
-- **Songlength databases** — HVSC `Songlengths.md5` for SID, and equivalents elsewhere. Accurate,
+- ~~**Songlength databases**~~ — HVSC's is in, 2026-09-02 (`docs/ARCHITECTURE.md` §14). Equivalents
+  for other platforms remain open. Accurate,
   but means shipping or downloading a database.
 - **Silence detection** — render ahead and stop after N seconds of silence. Works everywhere,
   wrong on tracks with deliberate quiet passages.

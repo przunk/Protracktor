@@ -66,6 +66,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun openDomain(domain: BrowseDomain) = controller.openDomain(domain)
     fun browseBack(): Boolean = controller.browseBack()
     fun indexCatalogue(id: String) = controller.indexCatalogue(id)
+
+    fun downloadSongLengths() = controller.downloadSongLengths()
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the

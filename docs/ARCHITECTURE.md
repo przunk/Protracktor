@@ -140,7 +140,8 @@ the index exactly, with a real ProTracker header rather than an error page. The 
 `Range` requests with `206 Partial Content`.
 
 `https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5` is 5.2 MB and downloads
-directly, which settles Q4: exact SID durations are available and do not have to be guessed.
+directly, which settles Q4: exact SID durations are available and do not have to be guessed. Used
+since 2026-09-02 — re-checked that day, still 5,205,150 bytes; §14 records what it turned out to be.
 
 `sndh.net` did not resolve from this machine. **Unverified** — whether the domain is gone or the
 network here blocks it is unknown. Atari ST material is also in Modland, so nothing depends on it
@@ -329,3 +330,34 @@ ASMA's paths run `asma/<section>/<author>/<title>.sap`, and the section — Comp
 Unknown, Misc, Groups — becomes the top browse level. Every file in it is a SAP, so browsing by
 format would offer one choice; browsing by section is the useful hierarchy. Checked against the real
 archive: 730 entries have no author folder and keep an empty author rather than being dropped.
+
+## 14. Where a duration comes from
+
+Most backends know how long the thing they are playing is, and are asked. Two do not, for opposite
+reasons, and only one of them is fixable.
+
+A **SID is a program**. It plays until stopped, and "how long is it" is a question the format cannot
+answer — not one it answers badly. HVSC answers it by hand: somebody listened and wrote a number
+down, for 61,157 tunes, published as `DOCUMENTS/Songlengths.md5`. So the rule is: **take the
+backend's duration; when there is none, ask HVSC.** Never the other way round — a format that knows
+its own length knows it better than a lookup on a hash could.
+
+The lookup key is the **plain MD5 of the whole file**. That is worth writing down because it used
+not to be: older HVSC releases keyed the database on a hash of selected header fields, which
+libsidplayfp still exposes as `SidTune::createMD5`, and code written from the old documentation
+would find nothing and look merely empty rather than wrong. Verified by fetching three tunes from
+the collection and finding all three by file MD5.
+
+The database is downloaded on request rather than with the first SID, because 5 MB is not something
+to spend at the moment somebody presses play. It is not a catalogue — nothing in it is playable —
+so it sits below the catalogue list rather than in it. All subsongs' lengths are stored, not just
+the first, so the table survives subsongs becoming selectable (`docs/BACKLOG.md` A2).
+
+**Position** for a SID is counted rather than asked, for the same reason: libsidplayfp is running a
+machine and has no position to report. Frames handed to the output device is the same quantity by
+another route, and it is the one the listener is hearing. **Seeking is still impossible** — the only
+way to a position in a SID is to run the machine there — so the scrubber shows progress and does not
+accept a drag.
+
+The other backend without a duration is a tracker module with an unbounded pattern loop, where the
+length genuinely depends on what the tune does. Nothing here fixes that.

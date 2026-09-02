@@ -35,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -82,6 +83,7 @@ fun BrowseScreen(
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
     onIndexCatalogue: (String) -> Unit,
+    onDownloadSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
@@ -122,6 +124,7 @@ fun BrowseScreen(
                 browse = browse,
                 playlistName = playlistName,
                 onIndexCatalogue = onIndexCatalogue,
+                onDownloadSongLengths = onDownloadSongLengths,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
                 onPlay = onPlay,
@@ -264,6 +267,7 @@ private fun OnlineDomain(
     browse: BrowseState,
     playlistName: String?,
     onIndexCatalogue: (String) -> Unit,
+    onDownloadSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onPlay: (Int) -> Unit,
@@ -327,6 +331,38 @@ private fun OnlineDomain(
                         Modifier.clickable { onOpenCatalogue(catalogue) }
                     } else {
                         Modifier
+                    },
+                )
+            }
+            // Not a catalogue: nothing in it can be played. It answers "how long is this SID"
+            // about tunes that came from anywhere at all, which is why it sits under the list
+            // rather than in it.
+            item {
+                HorizontalDivider()
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.song_lengths_title)) },
+                    supportingContent = {
+                        Text(
+                            if (browse.songLengthCount > 0) {
+                                pluralStringResource(
+                                    R.plurals.song_lengths_count,
+                                    browse.songLengthCount,
+                                    browse.songLengthCount,
+                                )
+                            } else {
+                                stringResource(R.string.song_lengths_none)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = { Icon(PlayerIcons.Info, contentDescription = null) },
+                    trailingContent = {
+                        IconButton(onClick = onDownloadSongLengths) {
+                            Icon(
+                                PlayerIcons.Download,
+                                stringResource(R.string.a11y_download_song_lengths),
+                            )
+                        }
                     },
                 )
             }
