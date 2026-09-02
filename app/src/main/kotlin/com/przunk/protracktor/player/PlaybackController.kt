@@ -997,7 +997,11 @@ class PlaybackController private constructor(private val context: Context) {
      * you are listening through.
      */
     fun keepTransient() {
-        val ref = _state.value.transient ?: return
+        // Anything playing that is not the playlist: a Random pick, a search result, a track tapped
+        // while browsing. All three are "I am hearing something I did not choose to keep", and the
+        // moment just after hearing it is when a person decides. It used to work for Random alone,
+        // which is where the idea came from and not where it belongs.
+        val ref = _state.value.transient ?: _state.value.resultsQueue?.current ?: return
         addToPlaylist(listOf(ref))
     }
 

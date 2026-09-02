@@ -24,6 +24,7 @@
     <string name="action_follow_track">Follow track</string>
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
+    <string name="action_add_track">Add to the playlist</string>
     <string name="action_add_folder">Add a folder</string>
     <string name="action_add_files">Add files</string>
     <string name="action_scanning">Scanning…</string>
@@ -79,6 +80,12 @@
     <string name="browse_indexing">Indexing %1$s…</string>
     <string name="browse_unknown">(unknown)</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
+    <plurals name="browse_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="few">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="a11y_track_menu">Actions for %1$s</string>
     <string name="action_share_file">Share the file</string>
     <string name="action_share_link">Share a link</string>
     <string name="share_chooser">Share</string>
@@ -91,7 +98,7 @@
     <string name="song_lengths_none">Not downloaded — SID tunes will show no length</string>
     <plurals name="song_lengths_count">
         <item quantity="one">%1$d tune</item>
-        <item quantity="other">%,1$d tunes</item>
+        <item quantity="other">%1$,d tunes</item>
     </plurals>
     <string name="a11y_download_song_lengths">Download the HVSC song length database</string>
         <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>

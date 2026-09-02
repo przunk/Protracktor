@@ -188,7 +188,7 @@ this is the order to build it in.
 **Scope: Browse, search and history. Not the playlist** — the owner chose that, and `docs/BACKLOG.md`
 A4 stays open for the playlist half.
 
-- [ ] **1. Tap plays, long-press selects**
+- [x] **1. Tap plays, long-press selects**
       Rows lose the always-visible checkbox and the play button. Tap plays; the playing row is
       marked. Long-press starts selecting: the checkbox appears in the leading slot, tap ticks,
       and back leaves the selection with nothing ticked. Use the platform long-press timeout and
@@ -196,17 +196,28 @@ A4 stays open for the playlist half.
       that fires at a twentieth of a second while he is scrolling, and then back throws him out of
       the list entirely.
 
-- [ ] **2. A three-dot menu on every row**
+- [x] **2. A three-dot menu on every row**
       Add to playlist, information, share the file, share a link, more from this author. The same
       actions the playlist row already offers, minus the ones that only make sense in a playlist.
       `TrackInfoDialog` exists in `PlaylistScreen` and should be shared rather than copied.
 
-- [ ] **3. The plus, for anything playing outside the playlist**
+- [x] **3. The plus, for anything playing outside the playlist**
       The dock shows it only for Random today; playing from Browse or a search goes through
       `resultsQueue` and offers nothing. The owner called this the natural place to keep a track.
 
-- [ ] **4. No ordinals in Browse**
+- [x] **4. No ordinals in Browse**
       The space goes to the checkbox, so a row does not change width when selection starts.
 
 **Out of scope, written down instead:** `docs/WISHLIST.md` B17 (a mis-tap now costs a download) and
 `docs/BACKLOG.md` A4, A16, A20.
+
+## Round 4 — closed 2026-09-02
+
+Done and merged. Two things found on the way that had nothing to do with lists:
+
+- **Fifteen strings had no Polish**, accumulated across rounds 2, 3 and 4 — including every string
+  added today. The app is bilingual from the first screen and I had been adding English only.
+- **`%,1$d` throws.** The argument index has to precede the flag; written the other way round it
+  is not a format specifier at all. It was in the song-length count, whose quantity is always
+  `other` at 61,157, so the online screen would have crashed the moment the database was
+  downloaded. Nobody had run that path yet.

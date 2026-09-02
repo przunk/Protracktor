@@ -119,10 +119,10 @@ fun PlayerDock(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
-                // Only for a track that is playing but is not in the playlist -- a random pick.
-                // Keeping it is a decision made after hearing it, which is the only order that makes
-                // sense for something chosen at random.
-                if (state.transient != null) {
+                // For anything playing that is not the playlist: a random pick, a search result, a
+                // track tapped while browsing. Keeping it is a decision made after hearing it,
+                // which is the only order that makes sense for something you did not choose.
+                if (state.awayFromPlaylist) {
                     IconButton(onClick = onKeep) {
                         Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
                     }

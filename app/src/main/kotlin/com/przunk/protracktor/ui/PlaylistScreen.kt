@@ -452,39 +452,6 @@ private fun TrackRow(
  * Deliberately not the full metadata: that means reading the file, and it is a wishlist item of its
  * own. This says where the track came from and what it is, which is what "which one is this" needs.
  */
-@Composable
-private fun TrackInfoDialog(track: TrackRef, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(track.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                InfoLine(R.string.field_artist, track.displayAuthor)
-                InfoLine(R.string.field_format, SupportedFormats.labelFor(track.fileNameOrTitle))
-                InfoLine(R.string.field_file, track.fileNameOrTitle)
-                InfoLine(R.string.info_location, track.subtitle)
-                InfoLine(
-                    R.string.info_size,
-                    if (track.sizeBytes > 0) "${track.sizeBytes / 1024} kB" else "",
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
-    )
-}
-
-@Composable
-private fun InfoLine(label: Int, value: String) {
-    if (value.isBlank()) return
-    Column {
-        Text(
-            text = stringResource(label),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
-    }
-}
 
 @Composable
 private fun EmptyPlaylist(

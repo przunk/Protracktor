@@ -40,6 +40,11 @@ Round 3's features are confirmed; the formats and archives from round 2 are not.
 
 ## Finished
 
+- **2026-09-02** — **How a list behaves** (`docs/ARCHITECTURE.md` §17). Tapping a track plays it;
+  a long press starts selecting; the always-visible checkbox and play button are gone; every row
+  has a three-dot menu with add, information, both shares and "more from this author". Back leaves
+  a selection before it leaves a level. The dock's **+** now appears for anything playing outside
+  the playlist, not only for Random.
 - **2026-09-02** — Read-ahead fetches its tracks **in parallel**; it was written serially and the
   owner heard the difference on a device. The Random icon is a die rather than a solid square, and
   the two share actions no longer share an icon.
@@ -273,6 +278,16 @@ underneath it had gone stale, and the record of that is worth more than a shorte
 The next track is read while the current one plays and remote fetches are cached, but nobody has
 measured whether that turns the owner's original five-to-thirty second wait into nothing **on his
 SMB share**, which is the only measurement that counts.
+
+### C5. ~~`%,1$d` in a plural would have crashed the online screen~~ — FIXED 2026-09-02
+
+Never reported, because nobody had downloaded the song lengths on a device. The argument index must
+come before the flag (`%1$,d`); the other way round is not a format specifier and `String.format`
+throws. The count is always the `other` quantity at 61,157 entries, so the crash was certain rather
+than conditional.
+
+**Worth generalising**: nothing checks resource formatting, and a bad specifier compiles. The check
+that found this is three lines of regex over both string files and could live in the test script.
 
 ### C4. Folder scanning trusts file extensions
 

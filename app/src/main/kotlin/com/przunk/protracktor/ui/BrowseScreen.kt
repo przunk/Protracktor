@@ -35,7 +35,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -60,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
+import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.BrowseState
 import com.przunk.protracktor.player.TrackRef
@@ -93,6 +101,10 @@ fun BrowseScreen(
     onToggleCatalogue: (String) -> Unit,
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
 ) {
@@ -114,6 +126,10 @@ fun BrowseScreen(
             BrowseDomain.LOCAL -> LocalDomain(
                 browse = browse,
                 playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
                 onPickFolder = onPickFolder,
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
@@ -124,6 +140,10 @@ fun BrowseScreen(
             BrowseDomain.ONLINE -> OnlineDomain(
                 browse = browse,
                 playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onOpenCatalogue = onOpenCatalogue,
@@ -134,6 +154,10 @@ fun BrowseScreen(
             BrowseDomain.HISTORY -> HistoryDomain(
                 browse = browse,
                 playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
                 onClearHistory = onClearHistory,
                 onPlay = onPlay,
                 onAdd = onAdd,
@@ -141,6 +165,10 @@ fun BrowseScreen(
             BrowseDomain.SEARCH -> SearchDomain(
                 browse = browse,
                 playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
                 onQueryChange = onQueryChange,
                 onToggleLocal = onToggleLocal,
                 onToggleOnline = onToggleOnline,
@@ -222,6 +250,10 @@ private fun DomainRow(
 private fun LocalDomain(
     browse: BrowseState,
     playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
@@ -230,7 +262,16 @@ private fun LocalDomain(
     onAdd: (List<TrackRef>) -> Unit,
 ) {
     if (browse.openFolder != null) {
-        Selectable(browse = browse, playlistName = playlistName, onPlay = onPlay, onAdd = onAdd)
+        Selectable(
+            browse = browse,
+            playlistName = playlistName,
+            playingId = playingId,
+            onPlay = onPlay,
+            onAdd = onAdd,
+            onShowNeighbours = onShowNeighbours,
+            onShareFile = onShareFile,
+            onShareLink = onShareLink,
+        )
         return
     }
 
@@ -282,6 +323,10 @@ private fun LocalDomain(
 private fun OnlineDomain(
     browse: BrowseState,
     playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -290,7 +335,7 @@ private fun OnlineDomain(
     onAdd: (List<TrackRef>) -> Unit,
 ) {
     when {
-        browse.openAuthor != null -> Selectable(browse, playlistName, onPlay, onAdd)
+        browse.openAuthor != null -> Selectable(browse, playlistName, playingId, onPlay, onAdd, onShowNeighbours, onShareFile, onShareLink)
 
         browse.openCatalogue != null -> {
             if (browse.loading) {
@@ -403,6 +448,10 @@ private fun OnlineDomain(
 private fun SearchDomain(
     browse: BrowseState,
     playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onQueryChange: (String) -> Unit,
     onToggleLocal: () -> Unit,
     onToggleOnline: () -> Unit,
@@ -470,7 +519,7 @@ private fun SearchDomain(
             )
         }
 
-        if (browse.loading) Loading() else Selectable(browse, playlistName, onPlay, onAdd)
+        if (browse.loading) Loading() else Selectable(browse, playlistName, playingId, onPlay, onAdd, onShowNeighbours, onShareFile, onShareLink)
     }
 }
 
@@ -502,6 +551,10 @@ private fun Loading() {
 private fun HistoryDomain(
     browse: BrowseState,
     playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onClearHistory: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -529,22 +582,48 @@ private fun HistoryDomain(
                 Text(stringResource(R.string.action_clear_history))
             }
         }
-        Selectable(browse, playlistName, onPlay, onAdd)
+        Selectable(browse, playlistName, playingId, onPlay, onAdd, onShowNeighbours, onShareFile, onShareLink)
     }
 }
 
+/**
+ * The track list, shared by every domain.
+ *
+ * Two modes, and `docs/ARCHITECTURE.md` §17 is why they are these two. **Normally a tap plays** --
+ * the app used to select on tap, which almost nothing does, and the owner said so. **A long press
+ * starts selecting**, a checkbox appears where nothing was, and further taps tick rows. Back leaves
+ * the selection with nothing ticked.
+ *
+ * Selection is this composable's own business and dies with it. Holding it in the controller would
+ * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
+ */
 @Composable
 private fun Selectable(
     browse: BrowseState,
     playlistName: String?,
+    playingId: String?,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
 ) {
     var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
     }
+    var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
     LaunchedEffect(browse.tracks) {
         selected = selected.intersect(browse.tracks.map { it.id }.toSet())
+    }
+    val selecting = selected.isNotEmpty()
+
+    // Takes back before the level-and-exit handler outside, because the innermost enabled handler
+    // wins. That is the stack the owner asked for: leave the selection, then go up a level, then
+    // out to the playlist -- one step each.
+    BackHandler(enabled = selecting) { selected = emptySet() }
+
+    showingInfo?.let { track ->
+        TrackInfoDialog(track = track, onDismiss = { showingInfo = null })
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -554,27 +633,35 @@ private fun Selectable(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = pluralStringResource(
-                        R.plurals.track_count, browse.tracks.size, browse.tracks.size
-                    ),
+                    text = if (selecting) {
+                        pluralStringResource(R.plurals.browse_selected, selected.size, selected.size)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.track_count, browse.tracks.size, browse.tracks.size
+                        )
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(
-                    onClick = {
-                        selected = if (selected.size == browse.tracks.size) {
-                            emptySet()
-                        } else {
-                            browse.tracks.map { it.id }.toSet()
+                // Only while selecting. Before that there is nothing to select all of, and the
+                // button was advertising a mode the user had not entered.
+                if (selecting) {
+                    TextButton(
+                        onClick = {
+                            selected = if (selected.size == browse.tracks.size) {
+                                emptySet()
+                            } else {
+                                browse.tracks.map { it.id }.toSet()
+                            }
                         }
-                    }
-                ) {
-                    Text(
-                        stringResource(
-                            if (selected.size == browse.tracks.size) R.string.browse_select_none
-                            else R.string.browse_select_all
+                    ) {
+                        Text(
+                            stringResource(
+                                if (selected.size == browse.tracks.size) R.string.browse_select_none
+                                else R.string.browse_select_all
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -588,46 +675,147 @@ private fun Selectable(
                 modifier = Modifier.padding(24.dp),
             )
             else -> LazyColumn(modifier = Modifier.weight(1f)) {
-                items(browse.tracks, key = { it.id }) { track ->
-                    val ticked = track.id in selected
-                    ListItem(
-                        headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
-                            // The full source here rather than just the author: in a search result
-                            // the question is "which one is this", and two tunes with one name are
-                            // told apart by where they live.
-                            { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
+                    BrowseTrackRow(
+                        track = track,
+                        index = index,
+                        ticked = track.id in selected,
+                        selecting = selecting,
+                        playing = track.id == playingId,
+                        onPlay = { onPlay(index) },
+                        onToggle = {
+                            selected = if (track.id in selected) selected - track.id
+                            else selected + track.id
                         },
-                        leadingContent = { Checkbox(checked = ticked, onCheckedChange = null) },
-                        // Hearing it before deciding is the whole point of a search: you cannot tell
-                        // which "elysium.mod" this is from its name. Playing does not add anything --
-                        // the results become the queue while you are in them.
-                        trailingContent = {
-                            IconButton(onClick = { onPlay(browse.tracks.indexOf(track)) }) {
-                                Icon(
-                                    PlayerIcons.Play,
-                                    stringResource(R.string.a11y_preview, track.title),
-                                )
-                            }
-                        },
-                        modifier = Modifier.clickable {
-                            selected = if (ticked) selected - track.id else selected + track.id
-                        },
+                        onStartSelecting = { selected = selected + track.id },
+                        onAdd = { onAdd(listOf(track)) },
+                        onInfo = { showingInfo = track },
+                        onShowNeighbours = track.takeIf { Catalogue.owning(it.id) != null }
+                            ?.let { { onShowNeighbours(it) } },
+                        onShareFile = { onShareFile(track) },
+                        onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
+                            ?.let { { onShareLink(it) } },
                     )
                 }
             }
         }
 
-        if (selected.isNotEmpty()) {
+        if (selecting) {
             Button(
-                onClick = { onAdd(browse.tracks.filter { it.id in selected }) },
+                onClick = {
+                    onAdd(browse.tracks.filter { it.id in selected })
+                    selected = emptySet()
+                },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
             ) {
                 Text(
                     pluralStringResource(R.plurals.browse_add_selected, selected.size, selected.size) +
-                        (playlistName?.let { " → $it" } ?: "")
+                        (playlistName?.let { " \u2192 $it" } ?: "")
                 )
             }
         }
     }
+}
+
+/**
+ * One row of a track list outside the playlist.
+ *
+ * The same anatomy as a playlist row minus the drag handle, which is the only thing that is
+ * genuinely different: a playlist has an order that belongs to the user and these do not.
+ *
+ * No ordinal. In the playlist the number answers "where am I in three hundred rows of *my* list";
+ * here it would only say which row of somebody else's archive this is. The space it would have
+ * taken is the checkbox's, so the row does not change width when selection begins.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun BrowseTrackRow(
+    track: TrackRef,
+    index: Int,
+    ticked: Boolean,
+    selecting: Boolean,
+    playing: Boolean,
+    onPlay: () -> Unit,
+    onToggle: () -> Unit,
+    onStartSelecting: () -> Unit,
+    onAdd: () -> Unit,
+    onInfo: () -> Unit,
+    onShowNeighbours: (() -> Unit)?,
+    onShareFile: () -> Unit,
+    onShareLink: (() -> Unit)?,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+
+    ListItem(
+        headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
+            // The full source rather than just the author: in a search result the question is
+            // "which one is this", and two tunes with one name are told apart by where they live.
+            { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        },
+        leadingContent = if (selecting) {
+            { Checkbox(checked = ticked, onCheckedChange = { onToggle() }) }
+        } else {
+            null
+        },
+        // Nothing here while selecting: a menu on a row you are ticking is a second meaning for a
+        // press that already has one.
+        trailingContent = if (selecting) {
+            null
+        } else {
+            {
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(PlayerIcons.More, stringResource(R.string.a11y_track_menu, track.title))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_track)) },
+                            leadingIcon = { Icon(PlayerIcons.Add, contentDescription = null) },
+                            onClick = { menuOpen = false; onAdd() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_info)) },
+                            leadingIcon = { Icon(PlayerIcons.Info, contentDescription = null) },
+                            onClick = { menuOpen = false; onInfo() },
+                        )
+                        onShowNeighbours?.let { show ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_show_neighbours)) },
+                                leadingIcon = { Icon(PlayerIcons.Folder, contentDescription = null) },
+                                onClick = { menuOpen = false; show() },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_share_file)) },
+                            leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
+                            onClick = { menuOpen = false; onShareFile() },
+                        )
+                        onShareLink?.let { share ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_share_link)) },
+                                leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
+                                onClick = { menuOpen = false; share() },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        colors = if (playing) {
+            ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        } else {
+            ListItemDefaults.colors()
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
+            // into a scroll is claimed by the list before it ever becomes a long press. Both matter:
+            // the owner's complaint about another player is a long press firing at a twentieth of a
+            // second mid-scroll, after which back throws him out of the list entirely.
+            .combinedClickable(
+                onClick = { if (selecting) onToggle() else onPlay() },
+                onLongClick = { if (!selecting) onStartSelecting() },
+            ),
+    )
 }
