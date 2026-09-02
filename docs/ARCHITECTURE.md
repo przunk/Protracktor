@@ -459,8 +459,20 @@ Three jobs, in this order, each one step:
 2. up one browse level
 3. out of Browse, back to the playlist
 
-That is what makes back predictable, and it is also why **A16** wants a separate, always-present way
-out to the playlist: from four levels deep, the stack is correct and still four taps.
+That is what makes back predictable, and it is also why there is a separate, always-present way out:
+from four levels deep the stack is correct and still four taps. The header carries a labelled
+**Playlist** action that leaves Browse in one press from any depth.
+
+**A jump is not a descent.** "More from this author" puts you three levels deep without your passing
+through any of them, so back there returns you to the playlist rather than climbing a hierarchy you
+never climbed. Any ordinary navigation from the landing place clears the mark and the stack above
+applies again.
+
+### Nothing may move when selection starts
+
+Rows keep a reserved leading slot and a floor on their height whether or not a checkbox is showing,
+and the header keeps a fixed height whether or not the select-all button is there. Without that,
+long-pressing a row made the list grow under the very finger that had pressed it.
 
 ### What is not numbered
 
@@ -480,6 +492,11 @@ belongs to the user.
 Playing something from Browse used to offer no way to keep it — the dock's **+** existed only for
 Random. It now appears whenever something outside the playlist is playing, which is the natural
 moment to decide you want to keep a tune: just after hearing it.
+
+**And it says so.** Adding from the playlist screen stays silent on success, because there the rows
+appear and a notice would only repeat the screen. This button is pressed from the dock while looking
+at something else entirely, so nothing appears — and the owner had to navigate away to find out
+whether it had worked. The same rule, applied honestly, gives opposite answers in the two places.
 
 ### Deliberately still open
 

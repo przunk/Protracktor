@@ -148,6 +148,13 @@ object PlayerIcons {
                 "3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
         )
     }
+    /** The playlist itself. Used by the way out of Browse, which is not the same as "back". */
+    val Playlist: ImageVector by lazy {
+        icon(
+            "Playlist",
+            "M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z",
+        )
+    }
     val Download: ImageVector by lazy {
         icon("Download", "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z")
     }

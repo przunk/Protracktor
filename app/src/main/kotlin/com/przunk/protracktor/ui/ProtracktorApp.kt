@@ -55,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.LocalContext
@@ -204,6 +205,29 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                     }
                 },
                 actions = {
+                    // The way out, as opposed to the way back. Back is a stack -- leave the
+                    // selection, then up a level, then out -- and from four levels deep that is
+                    // four presses even when it is behaving correctly. This is one, from anywhere.
+                    // Labelled as well as drawn, because an icon alone does not say where it goes.
+                    if (showBrowse) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { showBrowse = false }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Icon(
+                                imageVector = PlayerIcons.Playlist,
+                                contentDescription = null,
+                            )
+                            Text(
+                                text = stringResource(R.string.action_to_playlist),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
                     if (!showBrowse) {
                         // Only while there is something to save. A permanently lit Save button
                         // teaches nothing about whether the list on screen is the list on disk.

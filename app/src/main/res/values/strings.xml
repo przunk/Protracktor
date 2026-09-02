@@ -24,6 +24,7 @@
     <string name="action_follow_track">Follow track</string>
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
+    <string name="action_to_playlist">Playlist</string>
     <string name="action_add_track">Add to the playlist</string>
     <string name="action_add_folder">Add a folder</string>
     <string name="action_add_files">Add files</string>

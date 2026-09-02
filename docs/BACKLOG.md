@@ -93,12 +93,21 @@ number now, but it is a reason to ask again then.
 
 ## A4. Bulk operations on the playlist
 
-**Half-decided 2026-09-02.** The *gesture* is settled — long-press to start selecting, tap to add
-more — because Browse now works that way (`docs/ARCHITECTURE.md` §17) and the playlist should not
-disagree with it. **Which bulk actions the playlist gets is still open**, and that is the part
-worth the conversation: delete is obvious, and *move to another playlist*, *add to another
-playlist* and *play these only* are guesses until he says otherwise. The owner said this will be
-expanded later.
+**Agreed 2026-09-02 (evening):** *"long-press/bulk operations should be implemented the same way on
+the playlist"*. So the gesture and its behaviour come straight from `docs/ARCHITECTURE.md` §17 —
+long press to start, tap to tick, back to leave with nothing ticked, no layout shift when the
+checkbox arrives.
+
+**Which bulk actions the playlist gets is still the open part.** Delete is obvious and the owner
+named it; *move to another playlist*, *add to another playlist* and *play these only* remain my
+guesses. Ask before building those.
+
+**Two things §17 does not cover, because Browse does not have them:**
+
+- **The drag handle.** Long-press-to-select and drag-to-reorder are different gestures on the same
+  row, and the handle is what keeps them apart. Selection must not make the handle ambiguous.
+- **Undo.** A bulk delete is one edit, not twenty, so undo has to restore the whole selection. The
+  current single-track `lastRemoval` will not do.
 
 
 
@@ -327,7 +336,7 @@ non-zero winding they filled in and left a solid rounded square. Redrawn as an o
 pips, rendered even-odd. `PlayerIcons.icon()` gained a `hollow` flag for the next icon with the
 same symptom.
 
-## A16. No way back to the playlist from a browse jump — to discuss
+## A16. ~~No way back to the playlist from a browse jump~~ — DONE 2026-09-02
 
 Raised 2026-09-02 by the owner, after using **B2**: *"more from this author"* opens the browser at
 the author's folder, which is right; back then walks up the folder levels, which is also right; but
@@ -347,8 +356,15 @@ deep, and nothing made it easy to leave.
 3. **The player dock is already on every screen** — tapping the identity row could mean "take me
    back to the list", which is close to what B13 already does inside the playlist.
 
-Option 1 is the least clever and the easiest to explain. Option 2 is the most correct and the most
-likely to surprise someone who wanted to keep browsing where they landed.
+**Both 1 and 2 were built**, because they turned out to answer different halves:
+
+- The header carries a labelled **Playlist** action — icon and word, at the owner's request — that
+  leaves Browse from any depth in one press. That is the way *out*, as distinct from back.
+- **Back after a jump returns to the playlist** rather than walking up. The owner reported this as
+  a defect and he is right: a jump puts you three levels deep without your passing through any of
+  them, so climbing out of a hierarchy you never climbed into is not "back". `arrivedByJump` marks
+  it and is cleared by any ordinary navigation, so browsing down from the landing place behaves
+  normally again.
 
 **Related and unsettled**: `docs/OPEN_QUESTIONS.md` Q1, the navigation model, touches exactly this.
 

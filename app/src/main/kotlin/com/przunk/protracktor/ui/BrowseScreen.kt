@@ -18,6 +18,9 @@ package com.przunk.protracktor.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -38,6 +41,9 @@ import androidx.compose.material3.FilterChip
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -628,8 +634,11 @@ private fun Selectable(
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (browse.tracks.isNotEmpty()) {
+            // A fixed height, because the select-all button only exists while selecting and a
+            // header that grows when it appears shifts the whole list under the finger that just
+            // long-pressed. Same reason as the row below.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -727,6 +736,12 @@ private fun Selectable(
  * here it would only say which row of somebody else's archive this is. The space it would have
  * taken is the checkbox's, so the row does not change width when selection begins.
  */
+/** Wide enough for a checkbox, and reserved whether or not one is showing. */
+private val CHECKBOX_SLOT = 40.dp
+
+/** What every track row is at least, in both modes, so entering selection moves nothing. */
+private val ROW_HEIGHT = 72.dp
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun BrowseTrackRow(
@@ -753,10 +768,13 @@ private fun BrowseTrackRow(
             // "which one is this", and two tunes with one name are told apart by where they live.
             { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         },
-        leadingContent = if (selecting) {
-            { Checkbox(checked = ticked, onCheckedChange = { onToggle() }) }
-        } else {
-            null
+        // The slot is always here, empty or not. Letting it appear along with the checkbox made
+        // every row grow the moment selection started, so the list jumped by more than a row --
+        // under the very finger that had just long-pressed one.
+        leadingContent = {
+            Box(modifier = Modifier.size(CHECKBOX_SLOT), contentAlignment = Alignment.Center) {
+                if (selecting) Checkbox(checked = ticked, onCheckedChange = { onToggle() })
+            }
         },
         // Nothing here while selecting: a menu on a row you are ticking is a second meaning for a
         // press that already has one.
@@ -809,6 +827,10 @@ private fun BrowseTrackRow(
         },
         modifier = Modifier
             .fillMaxWidth()
+            // A floor rather than a fixed height: rows with no source line are shorter than rows
+            // with one, and a list whose rows change height when a checkbox arrives is the defect
+            // this is here to prevent.
+            .heightIn(min = ROW_HEIGHT)
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
             // into a scroll is claimed by the list before it ever becomes a long press. Both matter:
             // the owner's complaint about another player is a long press firing at a twentieth of a
