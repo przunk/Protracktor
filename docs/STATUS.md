@@ -40,6 +40,10 @@ Round 3's features are confirmed; the formats and archives from round 2 are not.
 
 ## Finished
 
+- **2026-09-03** — **C6 and C7.** Entering a Browse domain now forgets where you had got to, so
+  choosing Online catalogues shows catalogues rather than an emptied folder; and adding one track
+  from a row's menu stays in Browse and says what it did. The two rules about position are
+  deliberate opposites: descend and return keeps your place, leave and re-enter does not.
 - **2026-09-03** — **Browse remembers where you were.** Each level keeps its own scroll position for
   the life of a Browse session, and coming back puts the row you descended by on screen rather than
   an offset that may no longer mean anything. Closes **A20**.
@@ -310,7 +314,7 @@ and on any string that exists in English and not in Polish, naming the line eith
 were verified by breaking the files on purpose and watching the script exit non-zero — a check
 nobody has seen fail is a check nobody should trust.
 
-### C6. Re-entering Online lands inside the last folder, or on nothing
+### C6. ~~Re-entering Online lands inside the last folder, or on nothing~~ — FIXED 2026-09-03
 
 Reported by the owner 2026-09-02: opening Browse and choosing **Online catalogues** should show the
 catalogues. Instead it shows some folder, or an empty screen.
@@ -326,11 +330,12 @@ it.copy(domain = domain, tracks = emptyList(), groups = emptyList(), arrivedByJu
 underneath just emptied. Hence a folder view with nothing in it. Longstanding rather than new; what
 changed is that `docs/BACKLOG.md` A20 has made people notice where Browse thinks it is.
 
-**The fix is to clear the position with the domain**, and it belongs with A20 rather than on its
-own: A20 wants Browse to *remember* a position per level, which is the same question asked the other
-way round. Deciding one without the other produces a screen that remembers what it should forget.
+**Fixed with A20**, as predicted, and the two rules are deliberate opposites that both hold:
+descending and returning keeps your place (A20), leaving a domain and re-entering it does not (this).
+The transition lives in `BrowseNavigation.enteringDomain`, pulled out of the controller so it could
+be tested — removing the three lines that clear the hierarchy fails the test that catches it.
 
-### C7. "Add to the playlist" from a row menu closes Browse
+### C7. ~~"Add to the playlist" from a row menu closes Browse~~ — FIXED 2026-09-03
 
 Reported by the owner 2026-09-02.
 
@@ -345,10 +350,11 @@ Closing is right for the bulk button — you have finished choosing and want to 
 It is wrong for a menu item on one row, where the whole point is to keep browsing. One callback for
 two intentions.
 
-**Worth fixing together with the confirmation question**, because they are the same question: if
-Browse stays open, adding one track has to *say* it happened, exactly as the dock's **+** now does
-(`docs/ARCHITECTURE.md` §17). Fixing the navigation alone would replace a jarring screen change
-with no feedback at all.
+**Fixed as one thing, because it was one question.** The row menu and the bulk button now call
+different things: finishing a selection means you are done here, adding one track from its menu
+means you are not. And because Browse stays open, the row-menu add speaks — naming the track and the
+playlist, or saying the track was already there rather than doing nothing visible. Fixing the
+navigation alone would have replaced a jarring screen change with no feedback at all.
 
 ### C4. ~~Folder scanning trusts file extensions~~ — FIXED 2026-09-03
 

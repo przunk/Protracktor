@@ -71,6 +71,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun downloadSongLengths() = controller.downloadSongLengths()
 
+    fun addToPlaylistAndSay(tracks: List<TrackRef>) = controller.addToPlaylistAndSay(tracks)
+
     fun clearHistory() = controller.clearHistory()
 
     fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)

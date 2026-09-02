@@ -585,9 +585,7 @@ class PlaybackController private constructor(private val context: Context) {
     // --- browsing -----------------------------------------------------------------------------
 
     fun openDomain(domain: BrowseDomain) {
-        _browse.update {
-            it.copy(domain = domain, tracks = emptyList(), groups = emptyList(), arrivedByJump = false)
-        }
+        _browse.update { BrowseNavigation.enteringDomain(it, domain) }
         when (domain) {
             BrowseDomain.LOCAL -> refreshFolders()
             BrowseDomain.ONLINE, BrowseDomain.SEARCH -> refreshCatalogues()
@@ -1317,6 +1315,31 @@ class PlaybackController private constructor(private val context: Context) {
     fun addToPlaylist(tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
         appendTracks(tracks, ::describeAdded)
+    }
+
+    /**
+     * Adds, and says so, for callers whose screen will not show the result.
+     *
+     * `describeAdded` stays silent on success on purpose: on the playlist screen the rows appear,
+     * and a notice would only repeat what is already visible. That reasoning does not survive being
+     * moved -- adding one track from a Browse row menu leaves you in Browse, looking at a list that
+     * does not change (`docs/STATUS.md` C7). The same rule, applied honestly, gives opposite answers
+     * in the two places, so the caller picks.
+     */
+    fun addToPlaylistAndSay(tracks: List<TrackRef>) {
+        if (tracks.isEmpty()) return
+        appendTracks(tracks) { added, skipped ->
+            val where = _state.value.activePlaylistName?.let { " to $it" }.orEmpty()
+            when {
+                added == 0 && skipped == 0 -> Message("Nothing playable to add.")
+                // Said rather than swallowed: an add that quietly does nothing because the track is
+                // already there is indistinguishable from a button that does not work.
+                added == 0 -> Message("Already in this playlist.")
+                added == 1 && skipped == 0 -> Message("Added \"${tracks.first().title}\"$where.")
+                skipped == 0 -> Message("Added $added tracks$where.")
+                else -> Message("Added $added$where; $skipped already there.")
+            }
+        }
     }
 
     /**
