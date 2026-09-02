@@ -50,7 +50,7 @@ net is wide enough to make a claim on something another backend should have had.
 
 ---
 
-## 0. `.sndh` — half fixed, and the rest needs a newer sc68
+## 0. ~~`.sndh` — half fixed, and the rest needs a newer sc68~~ — DONE 2026-09-03
 
 **Done 2026-09-01:** sc68 wraps SNDH in a replay routine that lives on disk rather than inside the
 tune. We shipped none, so every file loaded and played silence. The binaries are packaged now, and
@@ -109,6 +109,38 @@ narrowed the work to three things:
 
 So: a focused session's work, not a research project. The order stays as written — fetch, build for
 the **host**, re-run the same thirty files, and only integrate if it beats 16/30.
+
+### What actually happened, 2026-09-03
+
+Measured with `./scripts/probe-sc68.py`, which runs **both** libraries over one deterministically
+picked corpus. The 16/30 baseline was measured on files nobody recorded, so this is an A/B on the
+same bytes rather than a B against a remembered A:
+
+| | 2.2.1 | 3.0.0b | 3.0.0b, `NDEBUG` |
+| --- | --- | --- | --- |
+| `.sndh` plays | 14/30 | 28/30 | **30/30** |
+| `.sndh` silent | 7 | 0 | 0 |
+| `.sndh` load failure | 9 | 0 | 0 |
+| `.sndh` abort | 0 | **2** | 0 |
+| `.sc68` plays | 10/10 | 10/10 | **10/10** |
+
+**Integrated.** 47% → 100% on SNDH, nothing that worked before stopped working, and SNDH files now
+have durations at all — 3.x carries a database of known tunes with their lengths, which 2.2.1 had
+no equivalent of.
+
+Four things the plan did not foresee:
+
+- **The whole `api68_*` API is gone**, with no compatibility header. `Sc68Backend` was rewritten
+  against `sc68_*`. This was a rewrite, not a version bump.
+- **`trap68.h` is generated**, and by sc68's *own* 68000 assembler (`as68`, which is in the tree)
+  from `libsc68/asm/trapfunc.s`. Running a host tool inside a cross-compile is possible and
+  unpleasant; the 630 bytes are committed instead, the way libsidplayfp's configure output is.
+- **Two files abort on an assertion** — an MFP timer mode 3.x does not implement, which its own
+  code then handles by disabling the timer. Assertions are off for this target in every build, so
+  a debug build cannot be taken down by an ordinary file from the library.
+- **The licence changed**: 2.2.1 was GPL-2.0-or-later, 3.0.0b is GPL-**3**.0-or-later. Verified
+  across all 78 licensed sources; `COPYING` agrees this time. It is compatible either way — the app
+  is GPL-3.0-or-later — but it removes one thing that had to stay true.
 
 ### Why not write our own
 

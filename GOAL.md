@@ -254,7 +254,7 @@ own branch and commit. Never merge to `master`.
 
 ## Phase 1 — specified implementation
 
-- [ ] **1. Replace sc68 2.2.1 with 3.0.0b and re-measure C1/C2**
+- [x] **1. Replace sc68 2.2.1 with 3.0.0b and re-measure C1/C2** *(14/30 → 30/30 SNDH; integrated)*
 
       Follow `docs/PLAN_FORMATS.md` §0. Fetch only the required SourceForge SVN tree, excluding
       the plugin and SDK ballast; pin the exact upstream revision and verify the downloaded content.

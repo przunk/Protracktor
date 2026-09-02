@@ -68,9 +68,16 @@ fetch libopenmpt \
       "9273b88b67973cc69e54d748ab1b749399d6d07695f1c37d0c59f88b4106074f" \
       1
 
-# sc68 -- GPL-2.0-OR-LATER (verified 2026-09-01: all 51 licensed sources say "or (at your option)
-# any later version", which is what lets it combine with our GPL-3 application). Atari ST: SNDH and
-# raw YM. Brings its own 68000 emulator, which is why SNDH needs it at all.
+# sc68 -- GPL-2.0-OR-LATER.
+#
+# **2.2.1, and it is no longer what the app plays.** The app uses 3.0.0b, which exists only in
+# SourceForge SVN and is fetched by ./scripts/fetch-sc68-svn.py. This release is kept because
+# ./scripts/probe-sc68.py measures the two against each other, and the whole reason item 1 of
+# GOAL.md round 5 took a day was that nobody could re-run the earlier measurement. Removing the
+# ability to compare is how that happens again.
+#
+# Licence verified 2026-09-01: all 51 licensed sources say "or (at your option) any later version",
+# whatever COPYING says on its own.
 fetch sc68 \
       "2.2.1" \
       "https://downloads.sourceforge.net/project/sc68/sc68/2.2.1/sc68-2.2.1.tar.gz" \
@@ -103,6 +110,15 @@ fetch sidplayfp \
       "https://github.com/libsidplayfp/libsidplayfp/releases/download/v3.1.1/libsidplayfp-3.1.1.tar.gz" \
       "12b79190593bf480b2d11481b5c2de62bac07f344437a66cd8d887329875c626" \
       1
+
+# sc68 3.0.0b is not a release and has no tarball: it lives only in SourceForge SVN. Its fetch
+# pins a revision and verifies a checksum manifest, which the tarball fetch above gets for free
+# from a published sha256 -- so it is a separate script rather than another `fetch` line.
+echo
+if ! "$PROJECT_DIR/scripts/fetch-sc68-svn.py"; then
+    echo "  ❌ sc68 3.0.0b could not be fetched. The Atari ST backend will not build."
+    exit 1
+fi
 
 echo
 echo "✅ done — sources in native/vendor/ (gitignored)"

@@ -25,7 +25,10 @@ NEW="$ROOT/native/vendor/sc68-3"
 PROBE="$ROOT/native/probe/sc68"
 BUILD="$PROBE/build"
 
-[ -f "$OLD/api68/api68.c" ] || { echo "❌ sc68 2.2.1 missing. Run ./scripts/fetch-native-deps.sh"; exit 1; }
+# 2.2.1 is optional: it is only here so the comparison can be re-run, and the app no longer uses
+# it. Its absence skips half the measurement rather than failing the script.
+BUILD_OLD=1
+[ -f "$OLD/api68/api68.c" ] || { echo "ℹ️  sc68 2.2.1 not present — skipping the 'before' probe."; BUILD_OLD=0; }
 [ -f "$NEW/libsc68/src/api68.c" ] || { echo "❌ sc68 3.0.0b missing. Run ./scripts/fetch-sc68-svn.py"; exit 1; }
 
 mkdir -p "$BUILD/obj-old" "$BUILD/obj-new" "$BUILD/gen/sc68"
@@ -36,6 +39,7 @@ cp "$PROBE/generated/sc68/file68_features.h" "$BUILD/gen/sc68/file68_features.h"
 # include path, which makes both spellings work; this reproduces that.
 cp "$PROBE/generated/sc68/file68_features.h" "$BUILD/gen/file68_features.h"
 
+if [ "$BUILD_OLD" = "1" ]; then
 echo "🔨 sc68 2.2.1 probe"
 OLD_SRC=$(ls "$OLD"/emu68/*.c "$OLD"/io68/*.c "$OLD"/file68/*.c "$OLD"/api68/*.c "$OLD"/unice68/*.c 2>/dev/null | grep -v 'unice68/unice68\.c$')
 export BUILD OLD
@@ -49,6 +53,7 @@ printf '%s\n' $OLD_SRC | xargs -P "$(nproc)" -I{} bash -c 'compile_old "$@"' _ {
 ar rcs "$BUILD/libsc68-old.a" "$BUILD"/obj-old/*.o
 gcc -o "$PROBE/probe-2.2.1" "$PROBE/probe_2_2_1.c" "$BUILD/libsc68-old.a" -I"$OLD" -lm -w
 echo "   ✅ $(ls "$BUILD"/obj-old/*.o | wc -l) objects"
+fi
 
 echo "🔨 sc68 3.0.0b probe"
 

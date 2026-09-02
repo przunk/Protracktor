@@ -13,7 +13,7 @@ source we vendor, at the moment we vendor it, and this table is corrected then. 
 | Component | Covers | Licence expected | Verified |
 | --- | --- | --- | --- |
 | libopenmpt 0.8.9 | MOD, XM, S3M, IT, MPTM and many others | BSD-3-Clause | **yes, 2026-08-31** |
-| sc68 2.2.1 | Atari ST SNDH, YM | GPL-2.0-**or-later** | **yes, 2026-09-01** |
+| sc68 **3.0.0b** (SVN r713) | Atari ST SNDH, YM, `.sc68` | GPL-3.0-**or-later** | **yes, 2026-09-03** |
 | libsidplayfp 3.1.1 | C64: PSID, RSID | GPL-2.0-**or-later** | **yes, 2026-09-02** |
 | game-music-emu 0.6.5 | NSF, NSFE, GBS, SPC, VGM, VGZ, GYM, HES, AY, KSS | LGPL-2.1-**or-later** | **yes, 2026-09-01** |
 | ASAP 8.0.0 | Atari 8-bit: SAP + 13 tracker formats | GPL-2.0-**or-later** | **yes, 2026-09-01** |
@@ -77,11 +77,11 @@ much smaller than it looked. It is still his to decide if a tune ever needs them
 **Raised 2026-09-01. Not a blocker today; not something to publish without an answer either.**
 
 sc68 does not play SNDH from the tune alone. Each one names a small 68000 replay routine that ships
-in sc68's `data/Replay/` directory, and sc68 opens it by path — which is why every SNDH in the
-owner's library loaded and then played silence until those files were packaged. 85 of them are now
-in the APK, 902 KB.
+in sc68's replay directory, and sc68 opens it by path — which is why every SNDH in the owner's
+library loaded and then played silence until those files were packaged. **99 of them are now in the
+APK** (3.0.0b's `file68/data68/Replay/`, up from 2.2.1's 84 — part of why more SNDH files play).
 
-They arrive inside sc68's own GPL tarball and `AUTHORS` credits Benjamin Gerard as its programmer
+They arrive inside sc68's own GPL tree and `AUTHORS` credits Benjamin Gerard as its programmer
 with no separate statement about their origin. That is the whole of what is known. Some are plainly
 his (`sndh_ice.bin` is sc68's own SNDH wrapper); others are named after commercial Atari games
 (`alteredbeast.bin`, `cabal.bin`, `armalyte.bin`) and look very much like routines lifted from those
