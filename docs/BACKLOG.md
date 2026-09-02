@@ -416,7 +416,7 @@ a metered connection; a folder is unbounded.
 - A middle position exists and may be the right one: fetch the first *n* of the folder, in the order
   shown, on the same machinery A11 already uses.
 
-## A20. Browse forgets where you were when you go back
+## A20. ~~Browse forgets where you were when you go back~~ — DONE 2026-09-03
 
 Raised 2026-09-02 by the owner, with the use case that shows it:
 
@@ -441,6 +441,13 @@ is then clamped to whatever the new, usually shorter, list can hold. Going into 
 2. Coming back should put the row you **came from** on screen — not merely the offset you happened
    to have. Those differ whenever the list changed underneath, and the second is what "back where I
    was" means to a person.
+
+**Built.** `BrowseScroll` keeps one scroll state per level for the life of a Browse session, and
+records the row you descended by so that returning finds it again. Identity first and **no index
+fallback**: an index is only "where I was" while the list is unchanged, and the case this exists for
+is exactly the one where it changed. When the row has gone, the level's own saved offset is already
+close enough, and jumping somewhere arbitrary because a number still parses would be worse. The
+animate-when-near / jump-when-far helper is shared with B13 and B14 rather than reimplemented.
 
 **Shares its machinery with:**
 

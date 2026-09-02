@@ -40,6 +40,9 @@ Round 3's features are confirmed; the formats and archives from round 2 are not.
 
 ## Finished
 
+- **2026-09-03** — **Browse remembers where you were.** Each level keeps its own scroll position for
+  the life of a Browse session, and coming back puts the row you descended by on screen rather than
+  an offset that may no longer mean anything. Closes **A20**.
 - **2026-09-03** — **The fetched-file cache has a ceiling**: 512 MB, least recently used first,
   enforced after every write and at start-up (`docs/ARCHITECTURE.md` §19). Answers
   `docs/OPEN_QUESTIONS.md` Q5, which had left the cache growing without limit. Unfinished downloads

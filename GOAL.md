@@ -329,7 +329,7 @@ own branch and commit. Never merge to `master`.
       practical. Add deterministic tests for the byte ceiling, LRU ordering, protected files,
       interrupted writes and start-up cleanup. Document exactly what counts toward the 512 MB.
 
-- [ ] **4. Restore the correct Browse position on back navigation (A20)**
+- [x] **4. Restore the correct Browse position on back navigation (A20)**
 
       Every Browse level keeps its own scroll state for the life of that Browse session. Returning
       from tracks to authors, or from authors to formats, must bring back the row the user entered,

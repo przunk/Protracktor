@@ -262,17 +262,7 @@ private fun FollowTrackButton(
     }
 }
 
-/**
- * Scrolls to an item, animating only when it is close.
- *
- * Animating across three hundred rows is a long, silly animation nobody asked to watch.
- */
-private suspend fun LazyListState.bringIntoView(index: Int) {
-    val distance = kotlin.math.abs(index - firstVisibleItemIndex)
-    if (distance > ANIMATE_WITHIN) scrollToItem(index) else animateScrollToItem(index)
-}
 
-private const val ANIMATE_WITHIN = 15
 
 /**
  * Drag to reorder, from the handle only.
