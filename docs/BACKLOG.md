@@ -193,8 +193,10 @@ would be a list of URLs plus local files that cannot travel. Not in scope here.
 - The MIME type is `application/octet-stream`, not `audio/*`: no chat app can play a `.mod`, and
   claiming an audio type invites the receiving end to try and fail.
 
-**What the owner may still want to decide**: what a shared link should *say*. A bare `modland.com`
-URL is honest and points at a file rather than at anything a person can look at.
+**Decided by the owner 2026-09-02**: the link points at **the file** — exactly what is being played
+— and what to do with it is the recipient's business. So Modland's track URL stays as it is, and
+the reason ASMA cannot have one (it publishes an archive, not a file tree) is now the whole reason
+its share names the collection and the path instead.
 
 ## A11. ~~Random should read ahead, the way the playlist does~~ — DONE 2026-09-02
 
@@ -230,7 +232,8 @@ queue ahead, **the dice and next stop meaning the same thing.** Next means forwa
 the queue. The dice means "surprise me", so it drops the picks that were read ahead and never heard
 and re-rolls — but keeps everything actually played, which the old code did not: it truncated at the
 cursor and so discarded real history along with the guesses. Telling the two apart is what
-`randomPlayed` is for. Say if the dice should behave differently.
+`randomPlayed` is for. **Confirmed by the owner 2026-09-02** — the dice re-rolls, next walks
+forward.
 
 ## A12. ~~Random should keep going when a track ends~~ — DONE 2026-09-02
 
@@ -278,6 +281,116 @@ somebody's guesses:
 is reached from. The app has no overflow menu at the top level today, and adding one to reach a
 single screen is a navigation change — `docs/OPEN_QUESTIONS.md` Q1 is still open and touches the
 same surface.
+
+## A14. Getting ready for the Play Store
+
+Raised 2026-09-02 by the owner. Nothing here is written down anywhere yet; `docs/BUILD.md` covers
+building and signing an APK and explicitly stops short of a bundle.
+
+**What is already true:** the release build goes through R8, is signed from `PRZUNK_UPLOAD_*`, and
+`build-release.sh` prints the certificate subject so an accidentally debug-signed artifact is
+visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
+
+**What is missing, roughly in the order it will bite:**
+
+- **An App Bundle.** The store takes `.aab`, not `.apk`. `docs/BUILD.md` says the script is not
+  written because the owner is adding a bundle signing key later — that key is the blocker.
+- **The launcher icon** (A9) is the system's `ic_media_play`. The store will not take that, and it
+  is the one asset visible on every home screen.
+- **A privacy policy and a data-safety declaration.** Required for every listing. Ours is unusually
+  easy and worth saying plainly: the app collects nothing, has no analytics, no accounts, no
+  crash reporting, and the only network traffic is fetching music from archives the user chose.
+- **The GPL and the store.** Distributing a GPL-3 app through Play is fine, and the obligation is
+  that source is offered to recipients — the public repository does that. Worth writing down once
+  so it is not re-litigated. The **`sc68` replay binaries** question (`docs/LICENSES.md`) is a real
+  one to settle *before* publishing, not after.
+- **Content rating, listing text, screenshots, a feature graphic.** Mechanical, but none exists.
+- **`versionCode` discipline.** Every upload needs a higher one; the scheme is in `docs/BUILD.md`
+  and has never been exercised against a store that rejects duplicates.
+
+**Not started, and not to be started without the owner**: publishing is his account, his key and
+his name on the listing.
+
+## A15. ~~The Random icon does not look like a die~~ — DONE 2026-09-02
+
+Reported by the owner: *"it does not look like a die, it looks like the Excel logo"*, which was
+exact. It was Material's `casino` glyph, whose pips wind the same way as its outline, so under
+non-zero winding they filled in and left a solid rounded square. Redrawn as an outline plus five
+pips, rendered even-odd. `PlayerIcons.icon()` gained a `hollow` flag for the next icon with the
+same symptom.
+
+## A16. No way back to the playlist from a browse jump — to discuss
+
+Raised 2026-09-02 by the owner, after using **B2**: *"more from this author"* opens the browser at
+the author's folder, which is right; back then walks up the folder levels, which is also right; but
+there is **no one-tap way back to the playlist** from wherever you have got to.
+
+**Why it is a real gap and not a missing button.** The rule the app follows today is "back goes up
+one level, and from the top it leaves Browse". That is correct and it is also slow: land three
+levels deep from a jump and getting out is four taps. The jump made it easy to arrive somewhere
+deep, and nothing made it easy to leave.
+
+**Options, none chosen — this is the owner's call:**
+
+1. **A close affordance on Browse itself**, separate from back. An X in the top bar next to the
+   back arrow. Cheapest, and it makes the two gestures visibly different things.
+2. **Back from a jump returns whence it came**, rather than walking up. The jump becomes one step
+   in the history rather than a teleport, which is what a browser tab does.
+3. **The player dock is already on every screen** — tapping the identity row could mean "take me
+   back to the list", which is close to what B13 already does inside the playlist.
+
+Option 1 is the least clever and the easiest to explain. Option 2 is the most correct and the most
+likely to surprise someone who wanted to keep browsing where they landed.
+
+**Related and unsettled**: `docs/OPEN_QUESTIONS.md` Q1, the navigation model, touches exactly this.
+
+## A17. The actions in a track's details need sorting out — to discuss
+
+Raised 2026-09-02 by the owner about two places at once:
+
+- **The expanded player**, where every action is its own full-width row — *show in playlist*, *more
+  from this author*, *share the file*, *share a link* — and the list grows every time one is added.
+  Four now, and A10 and B2 added two of them in a day.
+- **The history list**, where the owner says the actions are *"średnio"* — the row menu offers
+  what a playlist row offers, and some of it does not belong on something that is not in a playlist.
+
+Not a layout tweak: the question is what a track's actions *are*, once there are more than fit
+comfortably. Candidates are an icon row rather than stacked text buttons, an overflow menu, or
+splitting "about this track" from "do something with this track".
+
+## A18. Should playing something reorder the list it came from? — to discuss
+
+Raised 2026-09-02 by the owner: what should happen to the order of the displayed list after one of
+its entries is played.
+
+Worth pinning down **which** list before designing anything, because the answer is probably not the
+same for each: the playlist (where order is the user's and must not move by itself), history (where
+order is recency and playing something arguably *should* move it to the top — it already does in
+the database, the view just does not refresh under you), and a browse or search result (where order
+is the archive's).
+
+The reason it needs a conversation rather than a decision: a list that reorders under a finger is
+the single most disorienting thing a list can do, and the owner has already said (defending the
+ordinal numbers) that knowing where you are in three hundred rows matters to him.
+
+## A19. Should a jump also fetch the whole author's folder? — to discuss
+
+Raised 2026-09-02 by the owner, about **B2**: having jumped to an author's folder, pre-fetch what is
+in it so playing any of it is instant.
+
+**Why it is not simply "yes".** An author's folder in Modland can hold a handful of tunes or a
+couple of hundred, and the app cannot tell before it fetches which it is. The read-ahead built for
+Random (A11) is bounded at three because three is the cost of a feature nobody asked to pay for on
+a metered connection; a folder is unbounded.
+
+**What is worth knowing before deciding:**
+
+- These files are kilobytes. A folder of thirty is perhaps a megabyte, which is nothing; a folder of
+  three hundred is not.
+- The cache has **no eviction budget at all** (`docs/OPEN_QUESTIONS.md` Q5). Fetching folders makes
+  that question urgent rather than theoretical.
+- A middle position exists and may be the right one: fetch the first *n* of the folder, in the order
+  shown, on the same machinery A11 already uses.
 
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 

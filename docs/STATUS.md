@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-09-02 — version 0.2.0, versionCode 2
+Updated: 2026-09-02 (evening) — version 0.2.0, versionCode 2
 
 ## What works
 
@@ -31,13 +31,18 @@ Verified here: 51 unit tests, a release build through R8 with all ten JNI symbol
 integrated, which is where its measured coverage in this file comes from.
 
 Verified by the owner on a device: modules play (2026-08-31), SAP plays (2026-09-01), reordering a
-playlist works (2026-09-02).
+playlist works (2026-09-02), and on the evening of 2026-09-02 he tested all five of round 3 —
+**Random rolling on, history, "more from this author" and both shares all work**. Read-ahead was
+working and fetching serially, which he heard; that is fixed.
 
-**Not verified by anyone on a device**: SNDH, SID, console formats, ASMA, HVSC song lengths, and
-everything else added on 2026-09-01 and 2026-09-02.
+**Not verified by anyone on a device**: SNDH, SID, console formats, ASMA and HVSC song lengths.
+Round 3's features are confirmed; the formats and archives from round 2 are not.
 
 ## Finished
 
+- **2026-09-02** — Read-ahead fetches its tracks **in parallel**; it was written serially and the
+  owner heard the difference on a device. The Random icon is a die rather than a solid square, and
+  the two share actions no longer share an icon.
 - **2026-09-02** — **Sharing**: the file, from anywhere, through a `FileProvider` copy; and a link,
   for catalogue tracks, which is the file's own URL where the catalogue publishes one and the
   collection plus the path inside it where it does not.

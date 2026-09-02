@@ -420,3 +420,8 @@ track URL *is* the link. ASMA publishes one archive and has no per-file address 
 `webUrlFor` returns null and the share names the collection and the path inside it. That is
 deliberate: an `asma://` reference means nothing on anyone else's phone, and an action that appears
 to work is worse than one that says what it can do.
+
+The owner settled the open part on 2026-09-02: **a link points at the file**, the same bytes that
+are playing, and what the recipient does with it is theirs to decide. That is what Modland's link
+already was, and it is what ASMA cannot offer — which is why ASMA's share is a collection and a
+path rather than a worse link.
