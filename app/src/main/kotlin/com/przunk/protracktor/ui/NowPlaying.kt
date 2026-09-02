@@ -147,7 +147,7 @@ fun NowPlaying(
         onShareLink?.let { share ->
             TextButton(onClick = share) {
                 Icon(
-                    imageVector = PlayerIcons.Share,
+                    imageVector = PlayerIcons.Link,
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp),
                 )
