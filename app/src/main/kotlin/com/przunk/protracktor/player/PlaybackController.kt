@@ -18,6 +18,7 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.przunk.protracktor.R
 import com.przunk.protracktor.data.GrantedFolder
 import com.przunk.protracktor.data.LibraryStore
 import com.przunk.protracktor.data.SavedPlayerState
@@ -1135,6 +1136,67 @@ class PlaybackController private constructor(private val context: Context) {
     fun addToPlaylist(tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
         appendTracks(tracks, ::describeAdded)
+    }
+
+    /**
+     * Adds tracks to a specified playlist (B18).
+     *
+     * If [targetPlaylistId] is the active playlist, this edits the in-memory draft like [addToPlaylist].
+     * If [targetPlaylistId] is another playlist, the tracks are committed straight to disk without
+     * disturbing the active editing session, and a notification is displayed (ARCHITECTURE.md §17).
+     */
+    fun addToPlaylist(targetPlaylistId: Long, tracks: List<TrackRef>) {
+        if (tracks.isEmpty()) return
+        if (targetPlaylistId == playlistId) {
+            addToPlaylist(tracks)
+            return
+        }
+        scope.launch {
+            val targetName = store.playlists().firstOrNull { it.id == targetPlaylistId }?.name
+                ?: return@launch
+            val existing = store.tracksIn(targetPlaylistId).toMutableList()
+            var added = 0
+            tracks.forEach { candidate ->
+                if (existing.none { it.sameFileAs(candidate) }) {
+                    existing.add(candidate)
+                    added++
+                }
+            }
+            if (added > 0) {
+                store.replaceTracks(targetPlaylistId, existing)
+            }
+            val message = when {
+                tracks.size == 1 && added == 1 ->
+                    Message(context.getString(R.string.notice_added_to_named_playlist, tracks.first().title, targetName))
+                tracks.size == 1 && added == 0 ->
+                    Message(context.getString(R.string.notice_already_in_playlist, tracks.first().title, targetName))
+                added > 0 ->
+                    Message(context.resources.getQuantityString(R.plurals.notice_added_count_to_playlist, added, added, targetName))
+                else ->
+                    Message(context.getString(R.string.notice_all_already_in_playlist, targetName))
+            }
+            _state.update { it.copy(message = message) }
+        }
+    }
+
+    /**
+     * Creates a new playlist and immediately adds [tracks] to it (B18).
+     */
+    fun createPlaylistAndAdd(name: String, tracks: List<TrackRef>) {
+        if (tracks.isEmpty()) return
+        scope.launch {
+            val finalName = name.ifBlank { DEFAULT_PLAYLIST_NAME }
+            val newId = store.createPlaylist(finalName)
+            store.replaceTracks(newId, tracks)
+            val updated = store.playlists()
+            _state.update { it.copy(playlists = updated) }
+            val message = if (tracks.size == 1) {
+                Message(context.getString(R.string.notice_added_to_named_playlist, tracks.first().title, finalName))
+            } else {
+                Message(context.resources.getQuantityString(R.plurals.notice_added_count_to_playlist, tracks.size, tracks.size, finalName))
+            }
+            _state.update { it.copy(message = message) }
+        }
     }
 
     // --- library ------------------------------------------------------------------------------

@@ -129,6 +129,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     var pendingSwitch by remember { mutableStateOf<Long?>(null) }
+    var pendingAddToPlaylist by remember { mutableStateOf<List<com.przunk.protracktor.player.TrackRef>?>(null) }
     // Hoisted so the expanded player can send the list to the playing track without owning the list.
     val playlistState = rememberLazyListState()
 
@@ -296,6 +297,9 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                     viewModel.addToPlaylist(tracks)
                     showBrowse = false
                 },
+                onAddToOtherPlaylist = { tracks ->
+                    pendingAddToPlaylist = tracks
+                },
             )
         } else {
             PlaylistScreen(
@@ -307,6 +311,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
+                onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
                 onBrowse = openBrowse,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,
@@ -356,6 +361,12 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onShareLink = state.current
                     ?.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { track -> { viewModel.shareLink(track) } },
+                onAddToOtherPlaylist = state.current?.let { track ->
+                    {
+                        showNowPlaying = false
+                        pendingAddToPlaylist = listOf(track)
+                    }
+                },
             )
         }
     }
@@ -391,6 +402,23 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                     pendingSwitch = null
                 }) { Text(stringResource(R.string.action_discard)) }
             },
+        )
+    }
+
+    pendingAddToPlaylist?.let { tracks ->
+        AddToPlaylistDialog(
+            tracks = tracks,
+            playlists = state.playlists,
+            activePlaylistId = state.activePlaylistId,
+            onSelectPlaylist = { playlist ->
+                viewModel.addToPlaylist(playlist.id, tracks)
+                pendingAddToPlaylist = null
+            },
+            onCreatePlaylist = { name ->
+                viewModel.createPlaylistAndAdd(name, tracks)
+                pendingAddToPlaylist = null
+            },
+            onDismiss = { pendingAddToPlaylist = null },
         )
     }
 }

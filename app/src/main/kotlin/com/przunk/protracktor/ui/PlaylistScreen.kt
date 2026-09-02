@@ -83,6 +83,7 @@ fun PlaylistScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onAddToOtherPlaylist: (TrackRef) -> Unit = {},
     onBrowse: () -> Unit,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
@@ -93,7 +94,7 @@ fun PlaylistScreen(
     // and more portable than a blur, which needs API 31 and this app runs from 29.
     if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, contentPadding, enabled = false)
+            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
                 randomMode = state.randomMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -118,6 +119,7 @@ fun PlaylistScreen(
         onShowNeighbours = onShowNeighbours,
         onShareFile = onShareFile,
         onShareLink = onShareLink,
+        onAddToOtherPlaylist = onAddToOtherPlaylist,
         contentPadding = contentPadding,
         enabled = true,
         modifier = modifier,
@@ -135,6 +137,7 @@ private fun PlaylistBody(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onAddToOtherPlaylist: (TrackRef) -> Unit,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -171,6 +174,7 @@ private fun PlaylistBody(
                 onPlay = { onPlayAt(index) },
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
+                onAddToOtherPlaylist = { onAddToOtherPlaylist(track) },
                 // Absent for a local file, which has no catalogue folder to open.
                 onShowNeighbours = track.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { { onShowNeighbours(it) } },
@@ -311,8 +315,6 @@ private fun Modifier.dragToReorder(
             val from = indexOf(trackId)
             if (from < 0) return@detectDragGestures
 
-            // Measured rather than assumed: a row's height depends on whether it has a second line,
-            // and a hard-coded guess drifts by one position after a few moves.
             val height = listState.layoutInfo.visibleItemsInfo
                 .firstOrNull { it.index == from }?.size?.takeIf { it > 0 }
                 ?: return@detectDragGestures
@@ -323,11 +325,7 @@ private fun Modifier.dragToReorder(
             val target = (from + steps).coerceIn(0, trackCount() - 1)
             if (target != from) {
                 onMove(from, target)
-                // One notch per position passed, which is what makes a reorder followable without
-                // watching it.
                 haptics.tick()
-                // The row has moved under the finger, so the accumulated offset that caused the
-                // move is spent. What remains is the part of the drag past it.
                 setOffset(offset() - (target - from) * height)
             }
         },
@@ -345,6 +343,7 @@ private fun TrackRow(
     onPlay: () -> Unit,
     onRemove: () -> Unit,
     onInfo: () -> Unit,
+    onAddToOtherPlaylist: () -> Unit,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareLink: (() -> Unit)?,
@@ -363,8 +362,6 @@ private fun TrackRow(
         leadingContent = {
             Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
                 if (playing) {
-                    // A triangle rather than the dot this used to be: a triangle says what the row
-                    // IS, where a dot only says which one.
                     Icon(
                         imageVector = PlayerIcons.Play,
                         contentDescription = stringResource(R.string.a11y_now_playing_row),
@@ -372,8 +369,6 @@ private fun TrackRow(
                         modifier = Modifier.size(20.dp),
                     )
                 } else {
-                    // The number stays. With three hundred tracks it is the only thing on the row
-                    // that says where in the list you are.
                     Text(
                         text = "${index + 1}",
                         style = MaterialTheme.typography.labelSmall,
@@ -395,6 +390,11 @@ private fun TrackRow(
                                 text = { Text(stringResource(R.string.action_info)) },
                                 leadingIcon = { Icon(PlayerIcons.Info, contentDescription = null) },
                                 onClick = { menuOpen = false; onInfo() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_add_to_other_playlist)) },
+                                leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
+                                onClick = { menuOpen = false; onAddToOtherPlaylist() },
                             )
                             onShowNeighbours?.let { show ->
                                 DropdownMenuItem(

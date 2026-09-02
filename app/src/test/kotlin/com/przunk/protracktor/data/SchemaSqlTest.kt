@@ -128,6 +128,31 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `the same track can belong to multiple playlists`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO playlists (id, name, position) VALUES (1, 'Main', 0)",
+                    "INSERT INTO playlists (id, name, position) VALUES (2, 'Favorites', 1)",
+                    "INSERT INTO tracks (id, title) VALUES ('modland://tune.mod', 'Cool Tune')",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 'modland://tune.mod', 0)",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (2, 'modland://tune.mod', 0)",
+                )
+            )
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT COUNT(*) FROM playlist_tracks WHERE track_id = 'modland://tune.mod'"
+                ).use { rows ->
+                    rows.next()
+                    assertEquals(2, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `a version 1 database migrated to the current version matches a fresh install`() {
         // The step that gets forgotten is updating CREATE after adding a migration, and the symptom
         // is a schema that differs between an upgraded phone and a fresh one -- found weeks later,
