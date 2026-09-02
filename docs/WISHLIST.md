@@ -142,12 +142,17 @@ There is no settings screen yet either.
 R4 makes metadata the default; the visualiser returns as something the user switches on. Worth doing properly (a real scope or
 per-channel VU driven by the render callback) rather than the "stiff" one being replaced.
 
-## B10. Online catalogue browsing — the rest of the archives
+## B10. ~~Online catalogue browsing — the rest of the archives~~ — SAME AS A7, folded 2026-09-02
 
-*Claude, 2026-08-31. **Modland is done** — this is now the others; see `docs/PLAN_CATALOGUES.md`.*
+*Claude, 2026-08-31. Spotted as a duplicate by the owner 2026-09-02, and he was right.*
 
-These archives are how people actually get this music. Streaming straight from them would remove the "download and
-unpack it yourself" step entirely. Large feature; nothing before the local player is good.
+This and `docs/BACKLOG.md` A7 are one item under two names: I raised it here as a wish on 2026-08-31
+and it became agreed work as A7 the next day, without anyone striking the wish. **A7 is the live
+one**, and it carries what this entry said — that these archives are how people actually get this
+music, and streaming straight from them removes the "download and unpack it yourself" step.
+
+Kept rather than deleted so the number is not reused and the duplication stays visible: a wishlist
+and a backlog that share a topic will do this again.
 
 ## B11. Per-format playback settings
 

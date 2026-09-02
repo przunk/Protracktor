@@ -120,3 +120,47 @@ All five items done and merged into `develop`. What is worth knowing beyond that
 **Nothing in this round has been confirmed on a device.** Five formats and two online archives were
 built and measured on the host; none has been seen working on a phone. That is the honest state and
 the first thing worth doing next.
+
+---
+
+# Round 3 — set 2026-09-02
+
+The owner picked these five by number and asked for them to be built, not planned. The rules at the
+top of this file still apply, unchanged.
+
+**Out of scope for this round**, in addition to the standing list above: `docs/BACKLOG.md` A13
+(application settings) was added the same day and is deliberately **not** here — it needs a
+navigation decision the owner has not made (`docs/OPEN_QUESTIONS.md` Q1 touches the same surface).
+
+Order is chosen so each item stands on the one before it, not by the owner's numbering.
+
+- [ ] **1. A12 — Random keeps going when a track ends**
+      Smallest of the five and the one the rest is felt through. A transient track ending should go
+      to the next random pick. **The existing comment's reasoning survives** and must be narrowed
+      rather than deleted: rolling on into the *playlist* is still the wrong answer. A search result
+      is also a transient track and must not be touched — it has its own queue, handled earlier in
+      the same function.
+
+- [ ] **2. A11 — Random reads ahead**
+      Decide two or three picks in advance into `randomHistory` past `randomCursor`, so the
+      read-ahead that already exists has something to read. `prefetched` holds one track today;
+      several means a small cache with an eviction rule. Going back must never re-roll the past.
+
+- [ ] **3. B8 — A history of what was played**
+      Persisted, not the in-memory `randomHistory`. What it is *for* is the thing to get right: not
+      an audit log, but "that tune two days ago, what was it". Needs a decision on how much is kept
+      and whether it is browsable as a queue — decide the implementation, and if the **UI** turns
+      out to need the owner, write it down and move on (rule 4).
+
+- [ ] **4. B2 — Jump to a tune's neighbours**
+      From a playing or listed track, open Browse at the place it came from: the author's folder.
+      The catalogue path is already in `TrackRef.subtitle` and B3 proved it survives the trip. A
+      **local** file's neighbours are its folder, which is a different mechanism — do the catalogue
+      case first and say plainly whether the local one is in or out.
+
+- [ ] **5. A10 — Sharing, the file and a link**
+      Two actions, not one. A local file needs a `FileProvider` copy because a SAF URI cannot be
+      handed to another app. **Not every track has a link**: Modland ids are `https://` URLs, ASMA
+      ids are `asma://<entry>` and mean nothing off this device — decide and act, do not let it
+      fail quietly. If choosing *what a shared link should say* needs the owner, that part stops
+      and the rest ships.
