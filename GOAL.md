@@ -134,14 +134,14 @@ navigation decision the owner has not made (`docs/OPEN_QUESTIONS.md` Q1 touches 
 
 Order is chosen so each item stands on the one before it, not by the owner's numbering.
 
-- [ ] **1. A12 — Random keeps going when a track ends**
+- [x] **1. A12 — Random keeps going when a track ends**
       Smallest of the five and the one the rest is felt through. A transient track ending should go
       to the next random pick. **The existing comment's reasoning survives** and must be narrowed
       rather than deleted: rolling on into the *playlist* is still the wrong answer. A search result
       is also a transient track and must not be touched — it has its own queue, handled earlier in
       the same function.
 
-- [ ] **2. A11 — Random reads ahead**
+- [x] **2. A11 — Random reads ahead**
       Decide two or three picks in advance into `randomHistory` past `randomCursor`, so the
       read-ahead that already exists has something to read. `prefetched` holds one track today;
       several means a small cache with an eviction rule. Going back must never re-roll the past.

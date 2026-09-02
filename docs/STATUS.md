@@ -38,6 +38,11 @@ everything else added on 2026-09-01 and 2026-09-02.
 
 ## Finished
 
+- **2026-09-02** — **Random plays on, and reads ahead.** A tune ending goes to the next random pick
+  instead of stopping, and Random now decides two or three picks in advance so the read-ahead has
+  something to fetch — it never could before, because Random picked at the moment you pressed it.
+  Repeat-one still means what it says. The dice and next now differ: next walks forward into the
+  queue, the dice re-rolls.
 - **2026-09-02** — **SID durations**, from HVSC's song length database: 61,157 tunes, downloaded on
   request from the online screen and looked up by the MD5 of the file. SID position now counts the
   frames actually played, because libsidplayfp has no notion of a position to ask for and a
