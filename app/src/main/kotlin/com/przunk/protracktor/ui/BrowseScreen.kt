@@ -391,7 +391,9 @@ private fun OnlineDomain(
                     headlineContent = { Text(catalogue.displayName) },
                     supportingContent = {
                         Text(
-                            if (catalogue.indexed) {
+                            if (catalogue.isOnlineOnly) {
+                                stringResource(R.string.catalogue_online_search)
+                            } else if (catalogue.indexed) {
                                 pluralStringResource(
                                     R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
                                 )
@@ -402,17 +404,21 @@ private fun OnlineDomain(
                         )
                     },
                     leadingContent = { Icon(PlayerIcons.Cloud, contentDescription = null) },
-                    trailingContent = {
-                        IconButton(onClick = { onIndexCatalogue(catalogue.id) }) {
-                            Icon(
-                                PlayerIcons.Download,
-                                stringResource(R.string.a11y_index_catalogue, catalogue.displayName),
-                            )
+                    trailingContent = if (catalogue.isOnlineOnly) {
+                        null
+                    } else {
+                        {
+                            IconButton(onClick = { onIndexCatalogue(catalogue.id) }) {
+                                Icon(
+                                    PlayerIcons.Download,
+                                    stringResource(R.string.a11y_index_catalogue, catalogue.displayName),
+                                )
+                            }
                         }
                     },
                     // Only openable once there is an index. Tapping an empty catalogue and landing
                     // on an empty list would teach nothing about why.
-                    modifier = if (catalogue.indexed) {
+                    modifier = if (catalogue.indexed && !catalogue.isOnlineOnly) {
                         Modifier.clickable { onOpenCatalogue(catalogue) }
                     } else {
                         Modifier

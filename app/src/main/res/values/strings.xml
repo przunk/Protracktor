@@ -158,4 +158,5 @@
         <item quantity="other">Added %1$d tracks to %2$s.</item>
     </plurals>
     <string name="notice_all_already_in_playlist">All tracks are already in %1$s.</string>
+    <string name="catalogue_online_search">Live online search</string>
 </resources>

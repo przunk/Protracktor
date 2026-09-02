@@ -78,6 +78,11 @@ sealed class Catalogue(
      */
     open val isArchive: Boolean get() = false
 
+    /**
+     * Whether this catalogue is an online live search service rather than a local offline database.
+     */
+    open val isOnlineOnly: Boolean get() = false
+
     /** Turns the downloaded index into entries. Given the raw bytes; several ship them zipped. */
     abstract fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry>
 
@@ -95,7 +100,7 @@ sealed class Catalogue(
          * test for `owning` did, immediately. Deferring to first access is the fix, because by then
          * every object in the list has finished initialising.
          */
-        val all: List<Catalogue> by lazy { listOf(Modland, Asma) }
+        val all: List<Catalogue> by lazy { listOf(Modland, Asma, ModArchive) }
 
         fun byId(id: String): Catalogue? = all.firstOrNull { it.id == id }
 

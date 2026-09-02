@@ -1100,13 +1100,20 @@ class PlaybackController private constructor(private val context: Context) {
             // Explicit. "No catalogue ticked means all of them" was the earlier rule and it made
             // the filter look broken: unticking Modland searched Modland anyway. Nothing ticked now
             // means nothing searched, which is what unticking a box has always meant.
-            val fromOnline = if (current.searchOnline && current.searchCatalogues.isNotEmpty()) {
-                catalogues.search(current.query, current.searchCatalogues).map(::toTrackRef)
+            val dbCatalogues = current.searchCatalogues.filter { it != com.przunk.protracktor.net.ModArchive.id }.toSet()
+            val fromOnline = if (current.searchOnline && dbCatalogues.isNotEmpty()) {
+                catalogues.search(current.query, dbCatalogues).map(::toTrackRef)
             } else {
                 emptyList()
             }
 
-            _browse.update { it.copy(tracks = fromLocal + fromOnline, loading = false) }
+            val fromModArchive = if (current.searchOnline && com.przunk.protracktor.net.ModArchive.id in current.searchCatalogues) {
+                com.przunk.protracktor.net.ModArchive.search(current.query)
+            } else {
+                emptyList()
+            }
+
+            _browse.update { it.copy(tracks = fromLocal + fromOnline + fromModArchive, loading = false) }
         }
     }
 
