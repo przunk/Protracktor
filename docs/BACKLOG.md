@@ -301,8 +301,8 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 
 **What is missing, roughly in the order it will bite:**
 
-- **An App Bundle.** The store takes `.aab`, not `.apk`. `docs/BUILD.md` says the script is not
-  written because the owner is adding a bundle signing key later — that key is the blocker.
+- ~~**An App Bundle.**~~ `./scripts/build-bundle.sh`, written 2026-09-02. The key itself is still
+  the owner's to create; the script asks for it and refuses to produce a debug-signed bundle.
 - **The launcher icon** (A9) is the system's `ic_media_play`. The store will not take that, and it
   is the one asset visible on every home screen.
 - **A privacy policy and a data-safety declaration.** Required for every listing. Ours is unusually
