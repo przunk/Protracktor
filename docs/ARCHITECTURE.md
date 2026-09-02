@@ -14,7 +14,7 @@ when reality disagrees.
 | --- | --- | --- |
 | Language | Kotlin | — |
 | UI | Jetpack Compose, Material 3 Expressive | R8 |
-| `minSdk` | 29 (Android 10) | Below this, scoped storage and current Media3 both become a fight. The owner's own device is API 36; 29 exists so other people can install it. |
+| `minSdk` | 29 (Android 10) | Below this, scoped storage and the current media APIs both become a fight. The owner's own device is API 36; 29 exists so other people can install it. |
 | `targetSdk` | 36 (Android 16) | Owner's device generation. |
 | Native | NDK 29.0.14206865, CMake 3.31.6 | Pinned. A native toolchain that changes underneath you produces failures nobody can reproduce. |
 
@@ -27,7 +27,7 @@ The decoders worth having are GPL — `libsidplayfp` (C64), UADE (Amiga custom f
 choice.
 
 Choosing **3** rather than 2 is a choice, and the reason is our own stack, not the decoders:
-Jetpack Compose, Media3, Room, Kotlin's standard library and Oboe are all **Apache-2.0**, which is
+Jetpack Compose, AndroidX, Kotlin's standard library and Oboe are all **Apache-2.0**, which is
 incompatible with GPL-2 and compatible with GPL-3. Under GPL-2 we would have a licence conflict
 with our own UI framework. GPL-3 additionally carries an explicit patent grant that GPL-2 lacks.
 
@@ -57,7 +57,7 @@ content-probing logic, not vendored.
   │   └─ SimpleBasePlayer implementation ───┼──▶│ engine facade (JNI)       │
   │        control, position, queue         │   │   ├─ backend registry     │
   │                                         │   │   ├─ libopenmpt  (trackers)│
-  │ Room: library index, playlists, cache   │   │   ├─ sc68        (SNDH/YM) │
+  │ SQLite: index, playlists, cache (§9)    │   │   ├─ sc68        (SNDH/YM) │
   │ Compose UI                              │   │   ├─ libsidplayfp (SID)   │
   │                                         │   │   ├─ UADE        (Amiga)  │
   │                                         │   │   └─ game-music-emu (NSF…) │
@@ -75,9 +75,14 @@ glitch.
 Oboe rather than raw `AudioTrack` because Oboe already solves device-specific buffer sizing and
 stream recovery on Android, and it is Apache-2.0.
 
-On the Kotlin side, Media3's `SimpleBasePlayer` is what makes this affordable: it lets a custom
-player expose itself to `MediaSession`, so notification controls, audio focus, becoming-noisy,
-Bluetooth and Android Auto all work without writing an ExoPlayer `Renderer` for a synthesiser.
+On the Kotlin side, Media3's `SimpleBasePlayer` looked like what makes this affordable: it lets a
+custom player expose itself to `MediaSession`, so notification controls, audio focus,
+becoming-noisy, Bluetooth and Android Auto all work without writing an ExoPlayer `Renderer` for a
+synthesiser.
+
+> **Superseded by §12.** The session was built on the platform's own `android.media.session`
+> instead, and Media3 is not a dependency of this project. The paragraph above is left as the
+> decision that was actually made at the time; §12 says what replaced it and why.
 
 ## 5. One facade, many backends
 
@@ -101,7 +106,7 @@ re-opening the containing archive and re-probing the format on every single play
 
 Three mechanisms, in order of effect:
 
-1. **Persistent index (Room).** Path, container, offset, detected format, metadata, duration,
+1. **Persistent index (SQLite, §9).** Path, container, offset, detected format, metadata, duration,
    subsong count — written once at scan, read instantly afterwards. This alone removes the probe.
 2. **Extracted-file cache.** Entries pulled out of ZIP/LHA archives are kept on disk keyed by
    container identity, so playing the second track from an archive does not re-open it.
@@ -149,8 +154,8 @@ yet.
 
 ### What follows from those numbers
 
-- **Browsing Modland works entirely offline.** The index is one 5.75 MB file; in Room it gives
-  browse-by-format and browse-by-author with no network. The network is first needed at the moment
+- **Browsing Modland works entirely offline.** The index is one 5.75 MB file; in the database it
+  gives browse-by-format and browse-by-author with no network. The network is first needed at the moment
   a track is played.
 - **Range support means fetches resume**, and a partially fetched file can start playing.
 - The one fetch measured took 4 s for 212 KB. That is an argument for fetching the next track
@@ -228,9 +233,9 @@ So the notification is posted immediately with whatever state exists and updated
 ### What is missing
 
 **No `MediaSession`.** Lock-screen transport, Bluetooth and headphone buttons do not work; the
-notification's own actions do. `docs/ARCHITECTURE.md` §4 picked Media3's `SimpleBasePlayer` for
-this and that is still the plan — it is a separate step because it is a separate risk, and doing it
-alongside the service would have meant debugging two new things at once. Recorded in
+notification's own actions do. §4 picked Media3's `SimpleBasePlayer` for this — **§12 records what
+was built instead** — and it was a separate step because it was a separate risk: doing it alongside
+the service would have meant debugging two new things at once. Recorded in
 `docs/BACKLOG.md`.
 
 **No audio focus.** Another app starting playback will talk over us, and a phone call will not duck

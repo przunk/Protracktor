@@ -92,7 +92,38 @@ the owner should decide: ship them, ship only the ones sc68 clearly authored, or
 their own. Shipping them silently is the one option that should not happen by default, which is why
 this is written down rather than left in a commit message.
 
+## Data the app downloads, and does not ship
+
+Distinct from the components above, and the distinction is the whole point: **none of this is in the
+repository or in the APK.** The user asks for it, their device fetches it from the project that
+publishes it, and it stays on their device. Nothing here is redistributed by us, so nothing here
+places a condition on our distribution.
+
+| Data | From | Size | What it is |
+| --- | --- | --- | --- |
+| Modland index | `modland.com` | ~40 MB | a list of what the archive holds |
+| ASMA | `asma.atari.org` | 20 MB | the Atari 8-bit collection itself, 6,335 `.sap` files |
+| HVSC song lengths | `hvsc.c64.org` | 5.2 MB | hand-timed durations for 61,157 SID tunes |
+
+Worth a second look **if that ever changes** — if it becomes tempting to bundle any of it to save
+the user a download, the terms of the collection publishing it become our problem, and each of these
+three is published under its own conditions that nobody here has read. Today none of them apply.
+
 ## Android / JVM dependencies
 
-Filled in when the Gradle project exists. Expected to be Apache-2.0 throughout (AndroidX, Compose,
-Media3, Room, Kotlin).
+Checked against `gradle/libs.versions.toml` on 2026-09-02, and it is a short list — **Apache-2.0
+throughout**, so nothing here constrains the GPL-3 combined work.
+
+| Dependency | Licence |
+| --- | --- |
+| `androidx.core:core-ktx`, `androidx.lifecycle:*`, `androidx.activity:activity-compose` | Apache-2.0 |
+| `androidx.compose:*` (BOM 2024.12.01), `androidx.compose.material3:material3` | Apache-2.0 |
+| `com.google.oboe:oboe` 1.10.0 | Apache-2.0 |
+| `junit:junit` 4.13.2 — test only | EPL-1.0 |
+| `org.xerial:sqlite-jdbc` 3.50.3.0 — test only | Apache-2.0 |
+
+Two names that earlier drafts of this file and `README.md` listed are **not dependencies and never
+were**: Media3 and Room. The media session is built on the platform's own `android.media.session`,
+and storage is hand-written SQLite for the reason in `docs/ARCHITECTURE.md` §9. The GPL-3 argument
+does not depend on either — Compose and Oboe carry it — but a licence file naming components that
+are not there is a licence file nobody should trust.

@@ -7,8 +7,9 @@ Players for these formats exist. This one is written because the existing ones l
 you leave the app, shuffle without a history, hold everything in a single playlist, and take
 seconds to start a track that is measured in kilobytes.
 
-**Status: it plays.** Tracker modules, Atari ST, Atari 8-bit and seven console families, with
-playlists, offline browsing of Modland, background playback and a media session. See
+**Status: it plays.** Tracker modules, Atari ST, Atari 8-bit, Commodore 64 and seven console
+families, with playlists, offline browsing of Modland and ASMA, background playback and a media
+session. See
 `docs/STATUS.md` for what is finished, what is known broken, and what has not been confirmed on a
 device.
 
@@ -33,5 +34,5 @@ GPL-3.0-or-later. See `LICENSE`.
 
 This is not a preference. The decoders that make the app worth having — `libsidplayfp`, UADE,
 `sc68`, ASAP — are GPL, so the combined work is GPL. Version 3 rather than 2 because the Android
-stack we build on (Jetpack Compose, Media3, Room, Oboe) is Apache-2.0, which is incompatible with
+stack we build on (Jetpack Compose, AndroidX, Oboe) is Apache-2.0, which is incompatible with
 GPL-2 and compatible with GPL-3. The reasoning is recorded in `docs/ARCHITECTURE.md`.
