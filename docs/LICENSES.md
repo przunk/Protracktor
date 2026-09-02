@@ -14,7 +14,7 @@ source we vendor, at the moment we vendor it, and this table is corrected then. 
 | --- | --- | --- | --- |
 | libopenmpt 0.8.9 | MOD, XM, S3M, IT, MPTM and many others | BSD-3-Clause | **yes, 2026-08-31** |
 | sc68 2.2.1 | Atari ST SNDH, YM | GPL-2.0-**or-later** | **yes, 2026-09-01** |
-| libsidplayfp | C64 SID | GPL-2.0-**or-later** | no |
+| libsidplayfp 3.1.1 | C64: PSID, RSID | GPL-2.0-**or-later** | **yes, 2026-09-02** |
 | game-music-emu 0.6.5 | NSF, NSFE, GBS, SPC, VGM, VGZ, GYM, HES, AY, KSS | LGPL-2.1-**or-later** | **yes, 2026-09-01** |
 | ASAP 8.0.0 | Atari 8-bit: SAP + 13 tracker formats | GPL-2.0-**or-later** | **yes, 2026-09-01** |
 | UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
@@ -62,6 +62,15 @@ sources settle it — `README` and 34 files say:
 
 Compatible with GPL-3. Second time in this project that reading only `COPYING` would have given the
 wrong answer.
+
+**libsidplayfp 3.1.1**, checked on 2026-09-02. `COPYING` is the GPL **version 2** text — the third
+time in this project — and the sources again say "either version 2 of the License, or (at your
+option) any later version". Compatible with GPL-3.
+
+**No Commodore ROMs are shipped and none are needed for the files tested.** KERNAL, BASIC and
+CHARGEN are Commodore's and cannot be distributed. Thirty random Modland SIDs all played without
+them and none was BASIC-compatible, so the question the owner was asked to decide turns out to be
+much smaller than it looked. It is still his to decide if a tune ever needs them.
 
 ## sc68's replay binaries — a question for the owner
 

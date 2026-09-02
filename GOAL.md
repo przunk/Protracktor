@@ -56,7 +56,7 @@ working unattended is the case they were written for.
       Note this is the same machinery as item 1 and as `docs/BACKLOG.md` A3, which the owner has
       reserved for a conversation. Use the scrolling helper that already exists; do not build A3.
 
-- [ ] **3. libsidplayfp — Commodore 64**
+- [x] **3. libsidplayfp — Commodore 64** *(30 of 30 played with no ROMs at all)*
       The format chosen for this round, and the reasoning is the point of writing it down: it is the
       largest single body of music left (**~72,000 files in Modland alone** — HVSC 60,572, Sidplayer
       5,032, RealSID 3,540), it is one library rather than several, and C64 is closer to the heart of

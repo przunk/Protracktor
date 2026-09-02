@@ -130,20 +130,30 @@ is unsupported. A file no backend claims and a file a backend claimed and then c
 different problems and were indistinguishable from outside — it took a host probe to tell them apart,
 which is not a thing the owner can do.
 
-## 1. `libsidplayfp` — Commodore 64
+## 1. ~~`libsidplayfp` — Commodore 64~~ — DONE 2026-09-02
 
-The largest single body of music after trackers, and Modland alone lists **60,633** `.sid` files.
+Version 3.1.1, GPL-2.0-or-later, verified in the sources rather than in `COPYING` for the third time
+running.
 
-- Latest release **v3.1.1** (github.com/libsidplayfp/libsidplayfp, checked 2026-09-01).
-- GPL-2.0-or-later — compatible, but verify against the sources.
-- Builds with autotools; expect the same treatment sc68 got: a CMakeLists of ours listing the
-  sources, with the configure-generated defines supplied by hand.
-- **It needs ROM images** (KERNAL, BASIC, CHARGEN) for some tunes. reSIDfp plays much without them,
-  but not everything. Those ROMs are Commodore's and **cannot be shipped**. Decide early: play what
-  works without them, or let the user supply their own. This is a question for the owner, not a
-  detail to settle in code.
-- Cannot seek. Duration needs HVSC's `Songlengths.md5` (5.2 MB, fetchable — verified 2026-08-31),
-  which ties this item to the catalogue work.
+**The ROM question, answered with a number.** Thirty random Modland SIDs were played on the host
+with **no ROMs supplied at all**: 30 played, 0 were silent, 0 failed, and 0 were BASIC-compatible.
+The decision the owner was asked to make is therefore much smaller than it looked — it only matters
+for tunes that call into KERNAL or BASIC, and none of a thirty-file sample did. It remains his
+decision if one ever turns up.
+
+**Three things worth knowing before the next version bump:**
+
+- **ReSIDfp is no longer inside libsidplayfp.** 3.x split it into a separate `libresidfp` package, so
+  the build here uses **SIDLite**, which ships inside. ReSIDfp is the better emulation; using it
+  means vendoring a second project. Revisit if SIDLite proves wanting.
+- **Three generated headers are hand-written** in `native/backends/sidplayfp/generated/`:
+  `config.h`, `sl_defs.h` and `sidplayfp/sidversion.h`. Upstream produces them from `configure`, and
+  cross-compiling `configure` three times to feed one CMake build is more moving parts than thirty
+  defines. Compare them against freshly generated ones when the version changes.
+- **`mix()` needs `initMixer()` called first**, or it dereferences a mixer that does not exist. No
+  header says so. It cost a segfault and a read of `player.cpp` — and it is exactly the kind of
+  thing the host probe exists to find, since finding it on a device would have meant a crash report
+  and no stack worth reading.
 
 ## 2. ~~`game-music-emu` — the consoles~~ — DONE 2026-09-01
 

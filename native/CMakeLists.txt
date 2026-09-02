@@ -15,6 +15,7 @@ add_subdirectory(backends/libopenmpt)
 add_subdirectory(backends/sc68)
 add_subdirectory(backends/asap)
 add_subdirectory(backends/gme)
+add_subdirectory(backends/sidplayfp)
 
 if(PROTRACKTOR_BUILD_ENGINE)
     add_subdirectory(engine)

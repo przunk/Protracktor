@@ -95,5 +95,14 @@ fetch gme \
       "a133f19278222136ba0d8c27b64a07987ba05fec9d2e6d293ccd8cabdd97ddbb" \
       1
 
+# libsidplayfp -- GPL-2.0-OR-LATER (verified 2026-09-02: COPYING is the version 2 text again, and the
+# sources say "either version 2 of the License, or (at your option) any later version"). Commodore
+# 64: PSID and RSID, roughly 72,000 files in Modland alone.
+fetch sidplayfp \
+      "3.1.1" \
+      "https://github.com/libsidplayfp/libsidplayfp/releases/download/v3.1.1/libsidplayfp-3.1.1.tar.gz" \
+      "12b79190593bf480b2d11481b5c2de62bac07f344437a66cd8d887329875c626" \
+      1
+
 echo
 echo "✅ done — sources in native/vendor/ (gitignored)"
