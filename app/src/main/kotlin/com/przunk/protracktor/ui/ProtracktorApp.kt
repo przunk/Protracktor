@@ -294,10 +294,13 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
                 onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
+                // Two intentions, and they used to share one callback. Finishing a selection means
+                // you are done here; adding one track from its menu means you are not.
                 onAdd = { tracks ->
                     viewModel.addToPlaylist(tracks)
                     showBrowse = false
                 },
+                onAddStayingHere = viewModel::addToPlaylistAndSay,
                 onAddToOtherPlaylist = { tracks ->
                     pendingAddToPlaylist = tracks
                 },

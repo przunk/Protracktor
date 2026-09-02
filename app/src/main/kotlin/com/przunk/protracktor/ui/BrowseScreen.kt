@@ -116,6 +116,7 @@ fun BrowseScreen(
     onShareLink: (TrackRef) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddStayingHere: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
 ) {
     // One per Browse session. It dies when Browse closes, which is what makes a fresh entry start
@@ -152,6 +153,7 @@ fun BrowseScreen(
                 onScanFolder = onScanFolder,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddStayingHere = onAddStayingHere,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.ONLINE -> OnlineDomain(
@@ -168,6 +170,7 @@ fun BrowseScreen(
                 onOpenGroup = onOpenGroup,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddStayingHere = onAddStayingHere,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.HISTORY -> HistoryDomain(
@@ -181,6 +184,7 @@ fun BrowseScreen(
                 onClearHistory = onClearHistory,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddStayingHere = onAddStayingHere,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.SEARCH -> SearchDomain(
@@ -198,6 +202,7 @@ fun BrowseScreen(
                 onSearch = onSearch,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddStayingHere = onAddStayingHere,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
         }
@@ -285,6 +290,7 @@ private fun LocalDomain(
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddStayingHere: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     val folder = browse.openFolder
@@ -339,6 +345,7 @@ private fun LocalDomain(
                 playingId = playingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddStayingHere = onAddStayingHere,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
@@ -410,6 +417,7 @@ private fun OnlineDomain(
     onOpenGroup: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddStayingHere: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     when {
@@ -420,6 +428,7 @@ private fun OnlineDomain(
             playingId = playingId,
             onPlay = onPlay,
             onAdd = onAdd,
+            onAddStayingHere = onAddStayingHere,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
@@ -587,6 +596,7 @@ private fun SearchDomain(
     onSearch: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddStayingHere: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -658,6 +668,7 @@ private fun SearchDomain(
                 playingId = playingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddStayingHere = onAddStayingHere,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
@@ -703,6 +714,7 @@ private fun HistoryDomain(
     onClearHistory: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddStayingHere: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     if (browse.loading) {
@@ -735,6 +747,7 @@ private fun HistoryDomain(
             playingId = playingId,
             onPlay = onPlay,
             onAdd = onAdd,
+            onAddStayingHere = onAddStayingHere,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
@@ -786,6 +799,7 @@ private fun Selectable(
     playingId: String?,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddStayingHere: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
@@ -878,7 +892,10 @@ private fun Selectable(
                             else selected + track.id
                         },
                         onStartSelecting = { selected = selected + track.id },
-                        onAdd = { onAdd(listOf(track)) },
+                        // Not `onAdd`: that one closes Browse, which is right for the bulk button
+                        // -- you have finished choosing -- and wrong for a menu item on one row,
+                        // where the point is to keep browsing (`docs/STATUS.md` C7).
+                        onAdd = { onAddStayingHere(listOf(track)) },
                         onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
                         onInfo = { showingInfo = track },
                         onShowNeighbours = track.takeIf { Catalogue.owning(it.id) != null }

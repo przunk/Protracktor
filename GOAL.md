@@ -370,7 +370,7 @@ own branch and commit. Never merge to `master`.
 > `docs/BACKLOG.md` so the next person does not re-derive them. **Do not silently downgrade the
 > requested test to "it compiles".**
 
-- [ ] **5. C6 — a fresh entry into Online catalogues starts at the catalogue list**
+- [x] **5. C6 — a fresh entry into Online catalogues starts at the catalogue list**
 
       Reported by the owner on 2026-09-02. After leaving Browse and opening **Browse → Online
       catalogues** again, the app currently sometimes restores an old folder/search-like state or
@@ -385,7 +385,7 @@ own branch and commit. Never merge to `master`.
       catalogues again and sees the catalogue root with real catalogue rows rather than an empty
       list.
 
-- [ ] **6. C7 — "Add to playlist" from a Browse row menu stays in Browse**
+- [x] **6. C7 — "Add to playlist" from a Browse row menu stays in Browse**
 
       Reported by the owner on 2026-09-02. Choosing **Add to playlist** from a track's three-dot
       menu currently dismisses Browse and returns to the playlist. Adding is not navigation: keep
