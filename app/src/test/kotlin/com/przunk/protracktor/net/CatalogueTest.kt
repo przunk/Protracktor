@@ -73,6 +73,52 @@ class CatalogueTest {
     fun `owning finds the catalogue a reference belongs to, and admits when there is none`() {
         assertEquals(Modland, Catalogue.owning(Modland.urlFor("Protracker/4-Mat/elysium.mod")))
         assertEquals(Asma, Catalogue.owning(Asma.urlFor("asma/Games/Abracadabra.sap")))
+        assertEquals(
+            ModArchive,
+            Catalogue.owning("https://api.modarchive.org/downloads.php?moduleid=67183#dalezy-lotus_drei_remix.xm")
+        )
         assertNull(Catalogue.owning("content://com.android.providers/document/1234"))
+    }
+
+    @Test
+    fun `ModArchive webUrl points to module view page`() {
+        val path = "67183#dalezy-lotus_drei_remix.xm"
+        assertEquals(
+            "https://modarchive.org/index.php?request=view_by_moduleid&query=67183",
+            ModArchive.webUrlFor(path),
+        )
+        assertEquals(
+            "https://api.modarchive.org/downloads.php?moduleid=67183#dalezy-lotus_drei_remix.xm",
+            ModArchive.urlFor(path),
+        )
+    }
+
+    @Test
+    fun `ModArchive parses search results HTML correctly`() {
+        val sampleHtml = """
+            <tr>
+            <td valign="top" width="75">
+            <a href="https://api.modarchive.org/downloads.php?moduleid=67183#dalezy-lotus_drei_remix.xm" title="Download">
+            <img class="inline" src="style/images/icons/world_go.png" alt="GRAB!" border="0"></a>
+            <span class="format-icon">XM</span>
+            </td>
+            <td valign="top" width="200">
+            <a class="standard-link" href="index.php?request=view_by_moduleid&amp;query=67183" title="lotus drei remix">dalezy-lotus_drei_remix.xm</a>
+            </td>
+            <td valign="top" width="300">
+            <span class="module-listing">
+            lotus drei remix
+            </span>
+            </td>
+            </tr>
+        """.trimIndent()
+
+        val results = ModArchive.parseSearchResults(sampleHtml)
+        assertEquals(1, results.size)
+        val track = results[0]
+        assertEquals("lotus drei remix", track.title)
+        assertEquals("dalezy-lotus_drei_remix.xm", track.fileName)
+        assertEquals("The Mod Archive/XM", track.subtitle)
+        assertEquals("https://api.modarchive.org/downloads.php?moduleid=67183#dalezy-lotus_drei_remix.xm", track.id)
     }
 }

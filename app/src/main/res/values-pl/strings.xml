@@ -173,4 +173,5 @@
         <item quantity="other">Dodano %1$d utworu do playlisty %2$s.</item>
     </plurals>
     <string name="notice_all_already_in_playlist">Wszystkie utwory znajdują się już na playliście %1$s.</string>
+    <string name="catalogue_online_search">Wyszukiwanie online</string>
 </resources>

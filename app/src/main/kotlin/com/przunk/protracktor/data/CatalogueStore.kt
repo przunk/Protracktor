@@ -27,8 +27,9 @@ data class CatalogueSummary(
     val displayName: String,
     val trackCount: Int,
     val indexedAt: Long?,
+    val isOnlineOnly: Boolean = false,
 ) {
-    val indexed: Boolean get() = trackCount > 0
+    val indexed: Boolean get() = trackCount > 0 || isOnlineOnly
 }
 
 /** A row of an online catalogue, ready to become a playable reference. */
@@ -69,7 +70,7 @@ class CatalogueStore(context: Context) {
         // A catalogue nobody has indexed yet still has to appear, or there is no way to index it.
         Catalogue.all.map { catalogue ->
             val (count, at) = stored[catalogue.id] ?: (0 to null)
-            CatalogueSummary(catalogue.id, catalogue.displayName, count, at)
+            CatalogueSummary(catalogue.id, catalogue.displayName, count, at, catalogue.isOnlineOnly)
         }
     }
 
