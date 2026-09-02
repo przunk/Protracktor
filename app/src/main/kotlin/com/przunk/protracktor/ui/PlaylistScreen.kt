@@ -411,7 +411,7 @@ private fun TrackRow(
                             onShareLink?.let { share ->
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.action_share_link)) },
-                                    leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
+                                    leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
                                     onClick = { menuOpen = false; share() },
                                 )
                             }

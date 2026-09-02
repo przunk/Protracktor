@@ -1635,13 +1635,23 @@ class PlaybackController private constructor(private val context: Context) {
 
         prefetchJob?.cancel()
         prefetchJob = scope.launch {
-            for (ref in missing) {
-                // A large file is not worth holding in memory to save a second; these formats are
-                // kilobytes and anything of this size is not one of them. The second bound is on
-                // the total, because three files under the per-file limit are not under it.
-                if (prefetched.values.sumOf { it.size } >= MAX_PREFETCH_TOTAL_BYTES) return@launch
-                val bytes = loadBytes(ref) ?: continue
-                if (bytes.size <= MAX_PREFETCH_BYTES) prefetched[ref.id] = bytes
+            // **Together, not one after another.** These fetches spend nearly all their time
+            // waiting on a network, so reading three in turn makes the third arrive three round
+            // trips late -- which is the wait this whole thing exists to remove. Written serially
+            // first, and the owner noticed on a device before any measurement here did.
+            missing.forEach { ref ->
+                launch {
+                    val bytes = loadBytes(ref) ?: return@launch
+                    // A large file is not worth holding in memory to save a second; these formats
+                    // are kilobytes and anything of this size is not one of them.
+                    if (bytes.size > MAX_PREFETCH_BYTES) return@launch
+                    // Back on the scope's dispatcher (main), so the budget check and the write
+                    // cannot interleave with another fetch finishing. The second bound is on the
+                    // total, because three files each under the per-file limit are not under it.
+                    if (prefetched.values.sumOf { it.size } + bytes.size <= MAX_PREFETCH_TOTAL_BYTES) {
+                        prefetched[ref.id] = bytes
+                    }
+                }
             }
         }
     }

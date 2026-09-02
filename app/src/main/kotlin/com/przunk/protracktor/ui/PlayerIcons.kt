@@ -16,6 +16,7 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
@@ -31,7 +32,7 @@ import androidx.compose.ui.unit.dp
  * Repeat and repeat-one are deliberately *different shapes*, not one shape in two colours: state
  * that only a colour distinguishes is state some users cannot read (AGENTS.md §8).
  */
-private fun icon(name: String, pathData: String): ImageVector =
+private fun icon(name: String, pathData: String, hollow: Boolean = false): ImageVector =
     ImageVector.Builder(
         name = name,
         defaultWidth = 24.dp,
@@ -41,6 +42,11 @@ private fun icon(name: String, pathData: String): ImageVector =
     ).apply {
         addPath(
             pathData = PathParser().parsePathString(pathData).toNodes(),
+            // Non-zero winding by default, which is what most single-shape icons want. `hollow`
+            // switches to even-odd, where any enclosed subpath is a hole whichever way round it was
+            // drawn. Needed when an icon has holes and its subpaths wind the same way as its
+            // outline -- under non-zero those fill in, and the icon becomes a solid blob.
+            pathFillType = if (hollow) PathFillType.EvenOdd else PathFillType.NonZero,
             fill = SolidColor(Color.Black),
         )
     }.build()
@@ -91,14 +97,29 @@ object PlayerIcons {
                 "14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z",
         )
     }
+    /**
+     * A die, and it has to read as one at 24dp.
+     *
+     * This was Material's `casino` glyph, whose pips wind the same way as its outline: under
+     * non-zero winding they filled in and the icon became a solid rounded square. The owner's
+     * description was "it does not look like a die, it looks like the Excel logo", which is exactly
+     * what a solid green-adjacent rounded square looks like.
+     *
+     * Drawn as an outline plus five pips and rendered even-odd, so the frame is a frame and the
+     * pips are holes in the face rather than part of it.
+     */
     val Dice: ImageVector by lazy {
         icon(
             "Dice",
-            "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8.5 " +
-                "17c-.83 0-1.5-.67-1.5-1.5S7.67 14 8.5 14s1.5.67 1.5 1.5S9.33 17 8.5 17zm0-7C7.67 " +
-                "10 7 9.33 7 8.5S7.67 7 8.5 7 10 7.67 10 8.5 9.33 10 8.5 10zm7 7c-.83 0-1.5-.67-1.5-1.5S14.67 " +
-                "14 15.5 14s1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm0-7c-.83 0-1.5-.67-1.5-1.5S14.67 7 15.5 7 17 " +
-                "7.67 17 8.5 16.33 10 15.5 10z",
+            // Outer rounded square, then the face cut out of it, then the five pips.
+            "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" +
+                "M5 5v14h14V5H5z" +
+                "M7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z" +
+                "M14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z" +
+                "M10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z" +
+                "M7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z" +
+                "M14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z",
+            hollow = true,
         )
     }
     val Search: ImageVector by lazy {
@@ -116,6 +137,15 @@ object PlayerIcons {
                 "c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 " +
                 "9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 " +
                 "4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z",
+        )
+    }
+    /** For sharing a **link**. Deliberately a different shape from [Share], which sends the file. */
+    val Link: ImageVector by lazy {
+        icon(
+            "Link",
+            "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 " +
+                "0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 " +
+                "3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
         )
     }
     val Download: ImageVector by lazy {
