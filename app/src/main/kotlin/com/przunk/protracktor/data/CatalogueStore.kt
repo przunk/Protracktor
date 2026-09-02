@@ -161,8 +161,16 @@ class CatalogueStore(context: Context) {
         }
 
     /** One track at random from the indexed catalogues, or null when nothing is indexed. */
-    suspend fun random(catalogueIds: Set<String> = emptySet()): CatalogueTrack? =
+    /**
+     * Several at once, for reading ahead.
+     *
+     * One query rather than [count] of them, and it cannot hand back the same track twice inside a
+     * batch. `ORDER BY RANDOM()` scans the table, so asking once for three costs what asking once
+     * for one does -- and a third of what three separate calls would.
+     */
+    suspend fun randomSample(count: Int, catalogueIds: Set<String> = emptySet()): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
+            if (count <= 0) return@withContext emptyList()
             val scope = if (catalogueIds.isEmpty()) {
                 "" to emptyArray<String>()
             } else {
@@ -171,9 +179,9 @@ class CatalogueStore(context: Context) {
             }
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks" +
-                    "${scope.first} ORDER BY RANDOM() LIMIT 1",
+                    "${scope.first} ORDER BY RANDOM() LIMIT $count",
                 scope.second,
-            ).use { it.toTracks().firstOrNull() }
+            ).use { it.toTracks() }
         }
 
     private fun android.database.Cursor.toGroups(): List<CatalogueGroup> =

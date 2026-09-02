@@ -240,6 +240,19 @@ class PlaybackController private constructor(private val context: Context) {
 
         /** Four megabytes. Comfortably above any tracker module and below anything worth holding. */
         private const val MAX_PREFETCH_BYTES = 4 * 1024 * 1024
+
+        /** Total held for reading ahead. Three of the per-file limit would be twelve megabytes. */
+        private const val MAX_PREFETCH_TOTAL_BYTES = 8 * 1024 * 1024
+
+        /**
+         * How far ahead Random decides and fetches.
+         *
+         * Three rather than "a few": each one is a file fetched for a tune that may never be
+         * played, and on a metered connection that is the cost of the feature. Three covers the
+         * gap between tracks at the speeds measured (`docs/ARCHITECTURE.md` §8) without turning one
+         * listen into a handful of downloads.
+         */
+        private const val READ_AHEAD = 3
     }
 
     // Main.immediate so a press and the state change it causes land in the same frame; the work
@@ -282,7 +295,13 @@ class PlaybackController private constructor(private val context: Context) {
      * was opening the file, and his library sits on an SMB share where that means a network round
      * trip. One entry is enough: it is the next track people wait for.
      */
-    private var prefetched: Pair<String, ByteArray>? = null
+    /**
+     * Tracks read ahead, keyed by reference id, in the order they were read.
+     *
+     * More than one because Random reads several ahead (`docs/BACKLOG.md` A11), and a single slot
+     * could only ever hold the very next one.
+     */
+    private val prefetched = LinkedHashMap<String, ByteArray>()
     private var prefetchJob: Job? = null
 
     /** The background metadata pass. Cancelled and restarted whenever the track list changes. */
@@ -307,6 +326,12 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private val randomHistory = mutableListOf<TrackRef>()
     private var randomCursor = -1
+
+    /**
+     * How far into [randomHistory] has actually been played. Anything past it was picked ahead and
+     * never heard -- which is the difference between history and speculation, and the dice needs it.
+     */
+    private var randomPlayed = -1
 
     /** Which playlist is being edited. Resolved during [restore]; there is only one so far. */
     private var playlistId: Long = 0L
@@ -687,38 +712,64 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /** Picks something at random from the indexed catalogues and plays it, without adding it. */
+    /**
+     * The dice: a tune nobody here has heard, now.
+     *
+     * Picks read ahead but never played are **speculation**, and the dice means "surprise me", so
+     * they go and everything actually played stays. Stepping back through the history and then
+     * pressing the dice therefore re-rolls, while pressing next -- which means forward -- walks
+     * into the queue as it should. The old code truncated at the cursor and so threw away real
+     * history; keeping [randomPlayed] is what lets it throw away only the guesses.
+     */
     fun playRandom() {
         scope.launch {
-            val picked = catalogues.random()
-            if (picked == null) {
-                _state.update {
-                    it.copy(message = Message("Nothing is indexed yet. Index a catalogue first."))
-                }
-                return@launch
+            while (randomHistory.lastIndex > randomPlayed) {
+                randomHistory.removeAt(randomHistory.lastIndex)
             }
-            val ref = toTrackRef(picked)
-            // Anything ahead of the cursor is abandoned, the way it is in any other history: going
-            // back and then picking something new discards the branch you left.
-            while (randomHistory.lastIndex > randomCursor) randomHistory.removeAt(randomHistory.lastIndex)
-            randomHistory += ref
-            randomCursor = randomHistory.lastIndex
-            playTransient(ref)
+            randomCursor = randomPlayed
+            advanceRandom()
         }
     }
 
     private fun randomNext() {
-        if (randomCursor < randomHistory.lastIndex) {
-            randomCursor++
-            playTransient(randomHistory[randomCursor])
-        } else {
-            playRandom()
-        }
+        scope.launch { advanceRandom() }
     }
 
     private fun randomPrevious() {
         if (randomCursor <= 0) return
         randomCursor--
         playTransient(randomHistory[randomCursor])
+    }
+
+    /**
+     * Moves Random forward one, having decided what comes after it first.
+     *
+     * The order is the point of the whole item. Random used to pick at the moment you pressed it,
+     * so there was never anything to fetch in advance -- not because the read-ahead was missing but
+     * because nothing had been decided for it to read. Deciding early is what makes the wait go.
+     */
+    private suspend fun advanceRandom() {
+        fillRandomQueue()
+        if (randomCursor >= randomHistory.lastIndex) {
+            _state.update {
+                it.copy(message = Message("Nothing is indexed yet. Index a catalogue first."))
+            }
+            return
+        }
+
+        randomCursor++
+        randomPlayed = maxOf(randomPlayed, randomCursor)
+        // Topped up before playing rather than after: `load` reads ahead when it finishes, and it
+        // can only read what has already been decided.
+        fillRandomQueue()
+        playTransient(randomHistory[randomCursor])
+    }
+
+    /** Tops the queue up so [READ_AHEAD] picks stand past the cursor. */
+    private suspend fun fillRandomQueue() {
+        val short = READ_AHEAD - (randomHistory.lastIndex - randomCursor)
+        if (short <= 0) return
+        randomHistory += catalogues.randomSample(short).map(::toTrackRef)
     }
 
     /**
@@ -769,6 +820,7 @@ class PlaybackController private constructor(private val context: Context) {
         stopPlayback()
         randomHistory.clear()
         randomCursor = -1
+        randomPlayed = -1
         _state.update {
             it.copy(
                 transient = null,
@@ -1106,12 +1158,23 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
 
-        // A transient track ending stops playback. Rolling on into the playlist would be answering
-        // a question the user did not ask by pressing Random.
+        // A transient track is a Random pick -- `playTransient` is called from nowhere else, and a
+        // search result sets `transient` to null on its way through `playFromResultsQueue` above.
+        //
+        // Random used to stop here, guarding against rolling on into the playlist: that would
+        // answer a question nobody asked by pressing Random. **That guard still holds** and this is
+        // not it. Going to the next random pick is the question they did ask, and stopping after
+        // every tune made Random something you operate rather than something you listen to.
         if (_state.value.transient != null) {
-            track?.stop()
-            audioFocus.release()
-            _state.update { it.copy(playing = false, positionSeconds = it.durationSeconds) }
+            // Repeat-one is the one setting that means "keep playing this", and it says so on the
+            // dock while Random is running. Skipping to another tune under it would be the app
+            // contradicting its own button.
+            if (_state.value.queue.repeat == RepeatMode.ONE) {
+                val playing = track?.restart() ?: false
+                _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
+            } else {
+                randomNext()
+            }
             return
         }
 
@@ -1178,8 +1241,9 @@ class PlaybackController private constructor(private val context: Context) {
             track = null
 
             // Already read while the previous track was playing, which is the whole point.
-            val ready = prefetched?.takeIf { it.first == ref.id }?.second
-            prefetched = null
+            // Removed rather than left: it is about to be the current track, and holding a second
+            // copy of it helps nobody.
+            val ready = prefetched.remove(ref.id)
 
             val bytes = ready ?: run {
                 _state.update { it.copy(loadingTrack = true) }
@@ -1351,22 +1415,44 @@ class PlaybackController private constructor(private val context: Context) {
      * Cancelled and restarted whenever the queue moves, because a read of a track the user has
      * already skipped past is a read competing with the one they are waiting for.
      */
+    /**
+     * Reads ahead whatever is coming, so pressing next costs nothing.
+     *
+     * In Random that is several tracks, because Random is where the wait was worst: every tune came
+     * off the network and nothing had been decided early enough to fetch it in advance. Deciding
+     * early is [fillRandomQueue]'s job; this only fetches what has been decided.
+     */
     private fun prefetchUpcoming() {
-        val upcoming = _state.value.queue.upcoming ?: return
-        if (prefetched?.first == upcoming.id) return
+        val wanted = if (_state.value.transient != null) {
+            randomHistory.drop(randomCursor + 1).take(READ_AHEAD)
+        } else {
+            listOfNotNull(_state.value.queue.upcoming)
+        }
+
+        // The eviction rule, and it is exact rather than a budget: what is no longer coming is no
+        // longer wanted. Pressing previous or switching playlists drops what was read for the path
+        // not taken, at the moment it stops being the path.
+        prefetched.keys.retainAll(wanted.mapTo(mutableSetOf()) { it.id })
+
+        val missing = wanted.filter { it.id !in prefetched }
+        if (missing.isEmpty()) return
 
         prefetchJob?.cancel()
         prefetchJob = scope.launch {
-            val bytes = loadBytes(upcoming) ?: return@launch
-            // A large file is not worth holding in memory to save a second; these formats are
-            // kilobytes and anything of this size is not one of them.
-            if (bytes.size <= MAX_PREFETCH_BYTES) prefetched = upcoming.id to bytes
+            for (ref in missing) {
+                // A large file is not worth holding in memory to save a second; these formats are
+                // kilobytes and anything of this size is not one of them. The second bound is on
+                // the total, because three files under the per-file limit are not under it.
+                if (prefetched.values.sumOf { it.size } >= MAX_PREFETCH_TOTAL_BYTES) return@launch
+                val bytes = loadBytes(ref) ?: continue
+                if (bytes.size <= MAX_PREFETCH_BYTES) prefetched[ref.id] = bytes
+            }
         }
     }
 
     private fun stopPlayback() {
         prefetchJob?.cancel()
-        prefetched = null
+        prefetched.clear()
         track?.close()
         track = null
         audioFocus.release()

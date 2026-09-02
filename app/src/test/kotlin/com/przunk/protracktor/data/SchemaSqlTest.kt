@@ -222,6 +222,32 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `a random sample returns the number asked for, and no track twice`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf("INSERT INTO catalogues (id, display_name) VALUES ('m', 'Modland')") +
+                    (1..20).map {
+                        "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                            "VALUES ('m', 'p$it', 'MOD', 'a', 't$it', 1)"
+                    }
+            )
+            // The query Random reads ahead with. One statement for three picks, and the reason it
+            // is one statement rather than three is that it cannot then hand back a duplicate --
+            // which would put the same tune twice in a row into a queue meant to surprise you.
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT path FROM catalogue_tracks ORDER BY RANDOM() LIMIT 3"
+                ).use { rows ->
+                    val paths = buildList { while (rows.next()) add(rows.getString(1)) }
+                    assertEquals(3, paths.size)
+                    assertEquals(3, paths.toSet().size)
+                }
+            }
+        }
+    }
+
+    @Test
     fun `a missing migration step is an error rather than a silent skip`() {
         val thrown = runCatching { SchemaSql.migrationsBetween(SchemaSql.VERSION, SchemaSql.VERSION + 5) }
         assertTrue("upgrading past the last known version should refuse", thrown.isFailure)

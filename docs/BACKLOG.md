@@ -180,7 +180,7 @@ Raised 2026-09-02 by the owner. Two actions, and they are **not** the same featu
 Sharing the whole **playlist** is a third thing again, and nobody has asked for it — the formats
 would be a list of URLs plus local files that cannot travel. Not in scope here.
 
-## A11. Random should read ahead, the way the playlist does
+## A11. ~~Random should read ahead, the way the playlist does~~ — DONE 2026-09-02
 
 Raised 2026-09-02 by the owner: waiting for each random track to download is the wait R9 exists to
 remove, and Random is the one place still paying it in full.
@@ -209,7 +209,14 @@ walks into it rather than picking fresh.
 - **Going back must not re-pick.** `randomPrevious()` walks the history; nothing about a queue ahead
   may make the past re-roll.
 
-## A12. Random should keep going when a track ends
+**Built**, three ahead. One thing had to be decided that the write-up above did not foresee: with a
+queue ahead, **the dice and next stop meaning the same thing.** Next means forward, and walks into
+the queue. The dice means "surprise me", so it drops the picks that were read ahead and never heard
+and re-rolls — but keeps everything actually played, which the old code did not: it truncated at the
+cursor and so discarded real history along with the guesses. Telling the two apart is what
+`randomPlayed` is for. Say if the dice should behave differently.
+
+## A12. ~~Random should keep going when a track ends~~ — DONE 2026-09-02
 
 Raised 2026-09-02 by the owner: Random stops at the end of each track and has to be pressed again.
 
@@ -226,6 +233,9 @@ in the other direction.
 
 Pairs naturally with **A11**: continuous play is where reading ahead stops being a nicety, because
 the gap between tracks becomes the only thing the listener notices.
+
+**Built.** Repeat-one is honoured — it says "keep playing this" on the dock while Random runs, and
+skipping under it would be the app contradicting its own button. Not confirmed on a device.
 
 ## A13. Application settings
 
