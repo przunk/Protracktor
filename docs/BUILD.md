@@ -129,9 +129,37 @@ is otherwise invisible until an upload is rejected.
 
 ### App Bundle (.aab)
 
-Not written. The owner is adding a bundle signing key later, and a bundle script guessing at how it
-will be configured would have to be rewritten when it arrives. There is nothing to upload to a store
-yet either.
+```
+./scripts/build-bundle.sh [extra gradle args…]
+```
+
+Written 2026-09-02, adapted from Kratkoza's with the owner's permission — both projects sign with
+the same workshop upload key through the same `PRZUNK_UPLOAD_*` Gradle properties, so the mechanism
+is deliberately identical rather than merely similar.
+
+**It refuses to hand over a bundle Play would reject.** That is the difference from
+`build-release.sh`, which only warns: for an APK the debug fallback earns its place, because an
+unsigned APK cannot be sideloaded at all and a debug-signed one is still useful. For a bundle headed
+to Play it buys nothing but a rejection discovered later instead of now, so a debug signature is a
+hard failure here.
+
+A bundle carries a **JAR** signature rather than an APK one, so `apksigner` cannot read it; the
+check uses `jarsigner -verify` and then `keytool -printcert -jarfile`.
+
+**Credentials**, in order of preference and neither written down:
+
+1. `~/.gradle/gradle.properties`, as above. If `PRZUNK_UPLOAD_STORE_FILE` is there, the script does
+   not ask.
+2. Typed at the prompt, passed to Gradle as `ORG_GRADLE_PROJECT_*` for the life of the process only.
+   Nothing reaches the repository, `gradle.properties`, or the shell history.
+
+Without a terminal, set `PRZUNK_UPLOAD_STORE_FILE`, `PRZUNK_UPLOAD_KEY_ALIAS`,
+`PRZUNK_UPLOAD_STORE_PASSWORD` and `PRZUNK_UPLOAD_KEY_PASSWORD` in the environment.
+
+The artifact is `dist/protracktor-<versionName>-<versionCode>.aab`, **without** the timestamp the
+APK names carry: Play identifies an upload by its versionCode, so the filename should be identified
+by the same thing. The script says so when a bundle for that code already exists — a rebuild is
+fine, a forgotten bump is not, and only you can tell which.
 
 ## Pushing to GitHub
 
