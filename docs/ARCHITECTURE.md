@@ -366,3 +366,32 @@ accept a drag.
 
 The other backend without a duration is a tracker module with an unbounded pattern loop, where the
 length genuinely depends on what the tune does. Nothing here fixes that.
+
+## 15. History is not a log
+
+Added 2026-09-02 with `docs/WISHLIST.md` B8.
+
+The question it exists to answer is **"that tune two days ago, what was it"**. Everything arguable
+about the design follows from that being the question, and would be decided the other way if the
+question were "audit this app":
+
+- **One row per track, not one per play.** `played_at` moves and `play_count` rises. A true log
+  fills with a repeat-one track fifty times over and buries the thing being looked for.
+- **It forgets.** Five hundred tracks, oldest first out, pruned in the same transaction as the
+  insert so a crash cannot leave the table over its limit.
+- **The rows are self-contained** and reference nothing. A tune played from Random or from a search
+  result is never added to a playlist and so has no row in `tracks` — and those are exactly the
+  tunes this list exists for. A foreign key would have given history only for music you had already
+  decided to keep, which is the opposite of the point.
+- **Recorded after the metadata is read**, so it stores the name the tune calls itself rather than
+  the filename it arrived under.
+
+It is a browse domain rather than a screen of its own, which means playing from it and adding from
+it are the same code as everywhere else, and cost nothing.
+
+**One trap worth keeping written down.** The natural way to write "insert or bump the count" is
+`INSERT ... ON CONFLICT ... DO UPDATE`. That is SQLite 3.24, and **API 29 ships 3.22** while
+`minSdk` is 29 — so the natural way crashes on the oldest device supported. Nothing in this project
+would have caught it: the JVM tests run against a current SQLite through `sqlite-jdbc`, and there is
+no emulator here. The statement is written as `INSERT OR REPLACE` with the previous count read back
+in the same statement, and it lives in `SchemaSql` where a test can reach it.

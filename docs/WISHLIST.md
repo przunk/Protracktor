@@ -127,7 +127,7 @@ An info button or a long press, showing everything the backend knows about a tra
 screen has room for. Should work on any file the current version can open, not only on what is
 playing.
 
-## B8. A history of what was played
+## B8. ~~A history of what was played~~ — DONE 2026-09-02
 
 *owner, 2026-09-01.*
 

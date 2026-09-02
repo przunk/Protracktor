@@ -146,7 +146,7 @@ Order is chosen so each item stands on the one before it, not by the owner's num
       read-ahead that already exists has something to read. `prefetched` holds one track today;
       several means a small cache with an eviction rule. Going back must never re-roll the past.
 
-- [ ] **3. B8 — A history of what was played**
+- [x] **3. B8 — A history of what was played**
       Persisted, not the in-memory `randomHistory`. What it is *for* is the thing to get right: not
       an audit log, but "that tune two days ago, what was it". Needs a decision on how much is kept
       and whether it is browsable as a queue — decide the implementation, and if the **UI** turns

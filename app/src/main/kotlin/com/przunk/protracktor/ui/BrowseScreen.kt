@@ -92,6 +92,7 @@ fun BrowseScreen(
     onToggleOnline: () -> Unit,
     onToggleCatalogue: (String) -> Unit,
     onSearch: () -> Unit,
+    onClearHistory: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
 ) {
@@ -127,6 +128,13 @@ fun BrowseScreen(
                 onDownloadSongLengths = onDownloadSongLengths,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
+                onPlay = onPlay,
+                onAdd = onAdd,
+            )
+            BrowseDomain.HISTORY -> HistoryDomain(
+                browse = browse,
+                playlistName = playlistName,
+                onClearHistory = onClearHistory,
                 onPlay = onPlay,
                 onAdd = onAdd,
             )
@@ -170,6 +178,14 @@ private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> 
                 title = stringResource(R.string.domain_random_title),
                 subtitle = stringResource(R.string.domain_random_body),
                 onClick = onRandom,
+            )
+        }
+        item {
+            DomainRow(
+                icon = PlayerIcons.Info,
+                title = stringResource(R.string.domain_history_title),
+                subtitle = stringResource(R.string.domain_history_body),
+                onClick = { onOpenDomain(BrowseDomain.HISTORY) },
             )
         }
         item {
@@ -473,6 +489,50 @@ private fun Loading() {
  * Selection is this composable's own business and dies with it. Holding it in the controller would
  * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
  */
+// --- history ----------------------------------------------------------------------------------
+
+/**
+ * What has been played.
+ *
+ * Deliberately the same list component as everywhere else, so a tune found here can be played or
+ * ticked into a playlist exactly as it can when found anywhere else. The only thing history adds is
+ * the way out of it.
+ */
+@Composable
+private fun HistoryDomain(
+    browse: BrowseState,
+    playlistName: String?,
+    onClearHistory: () -> Unit,
+    onPlay: (Int) -> Unit,
+    onAdd: (List<TrackRef>) -> Unit,
+) {
+    if (browse.loading) {
+        Loading()
+        return
+    }
+    if (browse.history.isEmpty()) {
+        Text(
+            text = stringResource(R.string.history_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(24.dp),
+        )
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onClearHistory) {
+                Text(stringResource(R.string.action_clear_history))
+            }
+        }
+        Selectable(browse, playlistName, onPlay, onAdd)
+    }
+}
+
 @Composable
 private fun Selectable(
     browse: BrowseState,

@@ -237,6 +237,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onSearch = viewModel::runSearch,
                 // Playing from Browse never adds anything and never touches the playlist: whatever
                 // is on screen becomes the queue for as long as you are looking at it.
+                onClearHistory = viewModel::clearHistory,
                 onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
                 onAdd = { tracks ->
                     viewModel.addToPlaylist(tracks)

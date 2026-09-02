@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 6
+    const val VERSION = 7
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -130,6 +130,36 @@ object SchemaSql {
         """.trimIndent(),
     )
 
+    /**
+     * What has been played, added at version 7.
+     *
+     * **Self-contained on purpose.** It cannot reference `tracks`: a tune played from Random or
+     * from a search result is never added to a playlist, so it has no row there, and those are
+     * exactly the tunes this list exists to answer questions about — "that thing yesterday, what
+     * was it". A foreign key would have meant history only for music you had already decided to
+     * keep, which is the opposite of the point.
+     *
+     * **One row per track, not one per play.** `played_at` moves and `play_count` rises. A true log
+     * would fill with a repeat-one track fifty times over and bury the tune from two days ago,
+     * which is the thing being looked for.
+     */
+    private val PLAY_HISTORY_V7: List<String> = listOf(
+        """
+        CREATE TABLE play_history (
+            track_id TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            subtitle TEXT NOT NULL DEFAULT '',
+            file_name TEXT NOT NULL DEFAULT '',
+            author TEXT NOT NULL DEFAULT '',
+            size INTEGER NOT NULL DEFAULT 0,
+            played_at INTEGER NOT NULL,
+            play_count INTEGER NOT NULL DEFAULT 1
+        )
+        """.trimIndent(),
+
+        "CREATE INDEX idx_play_history_recent ON play_history(played_at DESC)",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -184,7 +214,8 @@ object SchemaSql {
         """.trimIndent(),
 
         "INSERT INTO player_state (id) VALUES (0)",
-    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6
+    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
+        PLAY_HISTORY_V7
 
 
 
@@ -201,7 +232,39 @@ object SchemaSql {
         4 to TRACK_FILE_NAME_V4,
         5 to TRACK_AUTHOR_V5,
         6 to SONG_LENGTHS_V6,
+        7 to PLAY_HISTORY_V7,
     )
+
+    /**
+     * Records a play, or moves an existing one up and counts it.
+     *
+     * Here rather than in [HistoryStore] because it is the one statement in the app with real logic
+     * in it, and this file is the part that a JVM test can run against a real SQLite engine.
+     *
+     * **Not** `ON CONFLICT ... DO UPDATE`, which is the obvious way to write an upsert. That needs
+     * SQLite 3.24; API 29 ships 3.22 and `minSdk` is 29, so the obvious way crashes on the oldest
+     * device supported — and nothing here would catch it, because the tests run against a current
+     * SQLite through `sqlite-jdbc` and this machine has no emulator.
+     *
+     * Parameters: track_id, title, subtitle, file_name, author, size, played_at, **track_id again**
+     * for the count lookup.
+     */
+    val PLAY_HISTORY_RECORD: String = """
+        INSERT OR REPLACE INTO play_history
+            (track_id, title, subtitle, file_name, author, size, played_at, play_count)
+        VALUES (
+            ?, ?, ?, ?, ?, ?, ?,
+            COALESCE((SELECT play_count FROM play_history WHERE track_id = ?), 0) + 1
+        )
+    """.trimIndent()
+
+    /** How many tracks history remembers. Past this the oldest are forgotten. */
+    const val PLAY_HISTORY_LIMIT = 500
+
+    /** Forgets the oldest. Run in the same transaction as [PLAY_HISTORY_RECORD]. */
+    val PLAY_HISTORY_PRUNE: String =
+        "DELETE FROM play_history WHERE track_id NOT IN " +
+            "(SELECT track_id FROM play_history ORDER BY played_at DESC LIMIT $PLAY_HISTORY_LIMIT)"
 
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */
     fun migrationsBetween(from: Int, to: Int): List<String> =
