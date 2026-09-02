@@ -286,8 +286,10 @@ come before the flag (`%1$,d`); the other way round is not a format specifier an
 throws. The count is always the `other` quantity at 61,157 entries, so the crash was certain rather
 than conditional.
 
-**Worth generalising**: nothing checks resource formatting, and a bad specifier compiles. The check
-that found this is three lines of regex over both string files and could live in the test script.
+**Generalised the same day.** `./scripts/test-protracktor.sh` now fails on a malformed specifier
+and on any string that exists in English and not in Polish, naming the line either way. Both checks
+were verified by breaking the files on purpose and watching the script exit non-zero — a check
+nobody has seen fail is a check nobody should trust.
 
 ### C4. Folder scanning trusts file extensions
 
