@@ -227,6 +227,32 @@ in the other direction.
 Pairs naturally with **A11**: continuous play is where reading ahead stops being a nicety, because
 the gap between tracks becomes the only thing the listener notices.
 
+## A13. Application settings
+
+Raised 2026-09-02 by the owner. There is no settings screen at all today, and several decisions
+that are currently hard-coded or implicit are exactly the kind a person wants to change once and
+never think about again.
+
+**What already exists and would move there** — this is the argument for the screen, and it is worth
+gathering before designing it, because a settings screen designed before its contents is a screen of
+somebody's guesses:
+
+- **Storage.** Granted folders are managed from Browse today; a downloaded catalogue index, the ASMA
+  archive (20 MB) and the HVSC song lengths (5.2 MB) have **no way to be deleted at all**, and the
+  fetched-file cache has no budget (`docs/OPEN_QUESTIONS.md` Q5). This is the strongest candidate:
+  the app takes disk and offers no way to give it back.
+- **Language.** Polish and English are chosen by the system today. An override is cheap.
+- **Behaviour that is currently a decision we made for the user.** Whether Random keeps going
+  (A12), how far it reads ahead (A11), whether the playlist follows the playing track by default
+  (B14 is off by default and forgets when you leave the screen).
+- **Per-format playback settings** — `docs/WISHLIST.md` B11 is a whole sub-tree of this, and the
+  reason not to design the screen around a flat list of switches.
+
+**What to decide before building:** whether this is one screen or a section per topic, and where it
+is reached from. The app has no overflow menu at the top level today, and adding one to reach a
+single screen is a navigation change — `docs/OPEN_QUESTIONS.md` Q1 is still open and touches the
+same surface.
+
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 
@@ -254,8 +280,10 @@ foreground scan.
 
 ## A7. More online catalogues — planned in `docs/PLAN_CATALOGUES.md`
 
+**`docs/WISHLIST.md` B10 is this item.** It was raised as a wish a day before this was agreed and
+nobody struck it; the owner spotted the duplicate on 2026-09-02. This is the live one.
 
-Modland is wired up and verified end to end. The owner asked for several: ASMA, AMP
+Modland and ASMA are wired up and verified end to end. The owner asked for several: ASMA, AMP
 (amp.dascene.net), Aminet, ModArchive and others.
 
 Each needs two things, and the second is usually the blocker:
