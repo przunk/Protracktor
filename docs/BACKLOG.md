@@ -154,6 +154,79 @@ where it does not, nothing where the device has no vibrator.
 Android already honours the user's system haptics setting, so there is no need for our own — and
 adding one would be inventing a preference the platform already owns.
 
+## A10. Sharing — the file, and a link to it
+
+Raised 2026-09-02 by the owner. Two actions, and they are **not** the same feature:
+
+- **Share the file.** An `ACTION_SEND` with the bytes, so a tune can go into a chat. These are
+  kilobytes, which is what makes this pleasant — the whole point of the formats.
+- **Share a link** to a track in an online catalogue, so the other person gets the tune without
+  receiving a file at all.
+
+**What has to be settled before either is built:**
+
+- **A local file has no shareable URI.** What the library holds is a SAF document URI, and a
+  permission grant that belongs to this app. Handing it to another app hands over nothing it can
+  read. The file has to be copied out through a `FileProvider` — which means a copy, a cache
+  directory for it, and an eviction rule for that directory (`docs/OPEN_QUESTIONS.md` Q5 again).
+- **Not every catalogue track has a link.** Modland tracks do: the id is an `https://` URL and can
+  be shared as it stands. **ASMA tracks do not** — their id is `asma://<entry>`, an address inside a
+  20 MB archive on this device (`docs/ARCHITECTURE.md` §13), and it means nothing anywhere else. So
+  the action is either hidden for archive catalogues, or it shares the archive's own page and names
+  the file, which is a worse thing that at least exists. Decide, do not let it fail quietly.
+- **What a shared link should be.** A raw `modland.com` URL is honest and ugly, and it points at a
+  file rather than at anything a person can look at. Worth a conversation before choosing.
+
+Sharing the whole **playlist** is a third thing again, and nobody has asked for it — the formats
+would be a list of URLs plus local files that cannot travel. Not in scope here.
+
+## A11. Random should read ahead, the way the playlist does
+
+Raised 2026-09-02 by the owner: waiting for each random track to download is the wait R9 exists to
+remove, and Random is the one place still paying it in full.
+
+**Why the existing read-ahead does not cover it.** `prefetchUpcoming()` reads the next track while
+the current one plays, and it works by asking the queue what comes next. Random has no next:
+`playRandom()` calls `catalogues.random()` at the moment you press it, so the track that comes next
+does not exist until it is already needed. Nothing can be read ahead because nothing has been
+decided.
+
+**So the change is to decide sooner, not to cache harder.** Pick two or three ahead, put them in
+`randomHistory` past `randomCursor`, and let the existing read-ahead do its job. Pressing next then
+takes the one already chosen and already fetched, and picks a new one at the far end to replace it.
+The history machinery is already the right shape for this: `randomCursor` sitting behind
+`randomHistory.lastIndex` is exactly what "there is a queue ahead" means, and `randomNext()` already
+walks into it rather than picking fresh.
+
+**Watch for:**
+
+- **Read-ahead is single-slot today.** `prefetched` holds one track's bytes and `MAX_PREFETCH_BYTES`
+  bounds it. Two or three ahead means several, which is a small cache with an eviction rule, not a
+  variable.
+- **Fetching things nobody hears.** Three ahead on a metered connection is three downloads for one
+  listen if the user stops. These files are kilobytes, so the cost is small — but it is not nothing,
+  and it should be a considered number rather than whatever felt right.
+- **Going back must not re-pick.** `randomPrevious()` walks the history; nothing about a queue ahead
+  may make the past re-roll.
+
+## A12. Random should keep going when a track ends
+
+Raised 2026-09-02 by the owner: Random stops at the end of each track and has to be pressed again.
+
+Today that is deliberate and the comment in `handleTrackEnded()` says why — *"Rolling on into the
+playlist would be answering a question the user did not ask by pressing Random."* **That reasoning
+survives.** What the owner wants is not rolling into the playlist; it is rolling on to the next
+random pick. The transient track ending should call `randomNext()`, and the comment should be
+narrowed to say what it is really guarding against rather than deleted.
+
+**One thing to get right:** a transient track is also how a **search result** is played, and those
+already have their own queue (`resultsQueue`) handled earlier in the same function. The change must
+reach the Random path only — a search result playing on into a random tune would be the same mistake
+in the other direction.
+
+Pairs naturally with **A11**: continuous play is where reading ahead stops being a nicety, because
+the gap between tracks becomes the only thing the listener notices.
+
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 
