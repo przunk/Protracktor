@@ -303,3 +303,29 @@ Two details worth keeping:
 
 If Media3 is ever wanted for something else — Android Auto's browse tree, say — this does not stand
 in the way; the session is created in one method in `PlaybackService`.
+
+## 13. Catalogues come in two shapes
+
+Decided 2026-09-02, when ASMA turned out not to fit the one that existed.
+
+**Indexed** (Modland): a downloadable list of what is in the archive, and files fetched individually
+by URL. Browsing is offline because the index is; playing needs the network.
+
+**Archive** (ASMA): the whole collection is one download — 20 MB holding 6,335 `.sap` files — so
+there is no separate index at all. **The archive's own entry list is the index.** Downloading it
+once makes browsing *and* playing work with no network, at the cost of taking everything whether you
+wanted six files or six thousand.
+
+`Catalogue.isArchive` says which, and two things follow from it:
+
+- The downloaded bytes are **kept** rather than parsed and discarded, in `filesDir` rather than the
+  cache — the system may clear a cache directory at any time, and losing 20 MB to a sweep would mean
+  fetching it again.
+- A track's id is `<catalogue>://<entry>` and the player reads it out of the stored zip. Which
+  catalogue that is comes from asking the catalogue list, not from matching a name: the next archive
+  catalogue would otherwise be added without anyone noticing that line existed.
+
+ASMA's paths run `asma/<section>/<author>/<title>.sap`, and the section — Composers, Games,
+Unknown, Misc, Groups — becomes the top browse level. Every file in it is a SAP, so browsing by
+format would offer one choice; browsing by section is the useful hierarchy. Checked against the real
+archive: 730 entries have no author folder and keep an empty author rather than being dropped.

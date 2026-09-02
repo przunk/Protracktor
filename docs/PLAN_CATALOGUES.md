@@ -26,15 +26,18 @@ to open, which is worse than not offering it.
 
 Ordered by what they unlock, with what was actually checked on 2026-09-01.
 
-### ASMA — Atari 8-bit
+### ~~ASMA — Atari 8-bit~~ — DONE 2026-09-02
 
 The reference collection of `.sap`. Natural pair with ASAP.
 
-- `https://asma.atari.org/` responds; `asma.zip` does **not** (404). The distribution URL and its
-  shape are unknown — find them first.
+- Found: `https://asma.atari.org/asmadb/asma.zip`. Not an index — **the whole collection**, 20 MB
+  holding 6,335 `.sap` files. `asma/Docs/Asma.txt` looked like it might be a metadata index and is
+  four lines of version banner.
+- That made it the second kind of catalogue predicted below for HVSC; `docs/ARCHITECTURE.md` §13
+  records the shape.
 - ASMA ships an `.stil`-style info database, which would give durations and credits the way HVSC
   does for SID.
-- **Blocked on ASAP** (`docs/PLAN_FORMATS.md` §3).
+- ~~Blocked on ASAP~~ — ASAP landed 2026-09-01, which is what unblocked this.
 
 ### HVSC — Commodore 64
 

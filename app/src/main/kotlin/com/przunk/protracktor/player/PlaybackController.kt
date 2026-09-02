@@ -210,6 +210,16 @@ class PlaybackController private constructor(private val context: Context) {
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
         const val UNDO = "undo"
 
+        /**
+         * Which archive catalogue a reference belongs to, if any.
+         *
+         * Asked of the catalogue list rather than matched against one name: every archive catalogue
+         * uses its own id as the scheme, so a hard-coded prefix here would need editing for each new
+         * one -- and the one after that would be added without anybody noticing this line existed.
+         */
+        private fun archiveCatalogueOf(id: String): Catalogue? =
+            Catalogue.all.firstOrNull { it.isArchive && id.startsWith("${it.id}://") }
+
         /** Four megabytes. Comfortably above any tracker module and below anything worth holding. */
         private const val MAX_PREFETCH_BYTES = 4 * 1024 * 1024
     }
@@ -575,6 +585,16 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update { it.copy(message = Message("Could not download the ${catalogue.displayName} index.")) }
                 return@launch
             }
+            // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
+            // discarded -- afterwards both browsing and playing work with no network at all.
+            if (catalogue.isArchive && !remoteFiles.storeArchive(catalogue.id, bytes)) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update {
+                    it.copy(message = Message("Could not store the ${catalogue.displayName} archive."))
+                }
+                return@launch
+            }
+
             val entries = withContext(Dispatchers.Default) {
                 catalogue.parseIndex(bytes) { name -> SupportedFormats.looksPlayable(name) }
             }
@@ -1252,7 +1272,11 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Reads a track's bytes, from wherever it lives. */
     private suspend fun loadBytes(ref: TrackRef): ByteArray? =
-        if (ref.id.startsWith("http")) {
+        if (archiveCatalogueOf(ref.id) != null) {
+            // "<catalogue>://<entry>" -- read out of the archive that catalogue shipped as, which is
+            // already on disk. No network, which is why an archive catalogue is worth its download.
+            remoteFiles.readFromArchive(ref.id.substringBefore("://"), ref.id.substringAfter("://"))
+        } else if (ref.id.startsWith("http")) {
             remoteFiles.fetch(ref.id)
         } else {
             withContext(Dispatchers.IO) {

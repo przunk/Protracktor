@@ -39,11 +39,21 @@ sealed class Catalogue(
     /** The URL a track is fetched from. */
     abstract fun urlFor(path: String): String
 
+    /**
+     * Whether the thing at [indexUrl] is the whole archive rather than a list of what is in it.
+     *
+     * Two shapes exist and they are not variations of one another. Modland publishes an index and
+     * serves files individually, so browsing is offline and playing needs the network. ASMA
+     * publishes **everything** in one 20 MB zip, so downloading it once makes both offline — at the
+     * cost of taking the whole thing whether you want six files or six thousand.
+     */
+    open val isArchive: Boolean get() = false
+
     /** Turns the downloaded index into entries. Given the raw bytes; several ship them zipped. */
     abstract fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry>
 
     companion object {
-        val all: List<Catalogue> = listOf(Modland)
+        val all: List<Catalogue> = listOf(Modland, Asma)
 
         fun byId(id: String): Catalogue? = all.firstOrNull { it.id == id }
     }
@@ -97,6 +107,55 @@ object Modland : Catalogue(
                 else -> ""
             }
             entries += CatalogueEntry(path, format, author, title, size)
+        }
+        return entries
+    }
+}
+
+
+/**
+ * ASMA — the Atari SAP Music Archive, and the reason ASAP was worth integrating.
+ *
+ * A different shape from Modland: the whole collection arrives as one zip of about 20 MB holding
+ * 6,335 `.sap` files, so there is no index to parse separately — **the archive's own entry list is
+ * the index**. Downloading it once makes browsing *and* playing work with no network at all.
+ *
+ * `asma/Docs/Asma.txt` looked like it might be a metadata index and is not: it is four lines of
+ * version banner. The structure is in the paths, which run
+ * `asma/<section>/<author>/<title>.sap`.
+ */
+object Asma : Catalogue(
+    id = "asma",
+    displayName = "ASMA (Atari 8-bit)",
+    indexUrl = "https://asma.atari.org/asmadb/asma.zip",
+) {
+    /** Read out of the stored archive rather than fetched. The player understands this scheme. */
+    override fun urlFor(path: String): String = "asma://$path"
+
+    override val isArchive: Boolean get() = true
+
+    override fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry> {
+        val entries = ArrayList<CatalogueEntry>(7000)
+        java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.isDirectory) continue
+
+                val path = entry.name
+                val title = path.substringAfterLast('/')
+                if (!keep(title)) continue
+
+                // asma/<section>/<author>/<title>. Anything shallower keeps what it has rather than
+                // being dropped: a file filed loosely is still a file.
+                val parts = path.split('/')
+                entries += CatalogueEntry(
+                    path = path,
+                    format = parts.getOrElse(1) { "" },
+                    author = if (parts.size >= 4) parts.subList(2, parts.size - 1).joinToString("/") else "",
+                    title = title,
+                    size = entry.size.coerceAtLeast(0),
+                )
+            }
         }
         return entries
     }

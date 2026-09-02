@@ -71,7 +71,7 @@ working unattended is the case they were written for.
       of thirty random SIDs actually need them**. A number turns that question from abstract into a
       choice.
 
-- [ ] **4. ASMA — the Atari 8-bit archive**
+- [x] **4. ASMA — the Atari 8-bit archive** *(it publishes the whole collection as one zip, which is a second kind of catalogue)*
       Unblocked by ASAP landing: it is the reference collection for `.sap`, and we can now play what
       it holds. `docs/PLAN_CATALOGUES.md` records what is known — the site responds, `asma.zip`
       does not, and **the distribution URL and its index shape are unknown**. Finding them is the
