@@ -177,3 +177,36 @@ All five done and merged into `develop`. Two things came out of it that were not
   the dice means surprise me, so it drops unheard picks and re-rolls. Say if that is wrong.
 
 Still true, and now longer: **nothing in rounds 2 or 3 has been confirmed on a device.**
+
+---
+
+# Round 4 — set 2026-09-02, list handling
+
+One item, agreed in detail with the owner first. `docs/ARCHITECTURE.md` §17 is the specification;
+this is the order to build it in.
+
+**Scope: Browse, search and history. Not the playlist** — the owner chose that, and `docs/BACKLOG.md`
+A4 stays open for the playlist half.
+
+- [ ] **1. Tap plays, long-press selects**
+      Rows lose the always-visible checkbox and the play button. Tap plays; the playing row is
+      marked. Long-press starts selecting: the checkbox appears in the leading slot, tap ticks,
+      and back leaves the selection with nothing ticked. Use the platform long-press timeout and
+      make sure a scroll cancels it — the owner's complaint about another player is a long-press
+      that fires at a twentieth of a second while he is scrolling, and then back throws him out of
+      the list entirely.
+
+- [ ] **2. A three-dot menu on every row**
+      Add to playlist, information, share the file, share a link, more from this author. The same
+      actions the playlist row already offers, minus the ones that only make sense in a playlist.
+      `TrackInfoDialog` exists in `PlaylistScreen` and should be shared rather than copied.
+
+- [ ] **3. The plus, for anything playing outside the playlist**
+      The dock shows it only for Random today; playing from Browse or a search goes through
+      `resultsQueue` and offers nothing. The owner called this the natural place to keep a track.
+
+- [ ] **4. No ordinals in Browse**
+      The space goes to the checkbox, so a row does not change width when selection starts.
+
+**Out of scope, written down instead:** `docs/WISHLIST.md` B17 (a mis-tap now costs a download) and
+`docs/BACKLOG.md` A4, A16, A20.

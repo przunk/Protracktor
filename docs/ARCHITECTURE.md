@@ -425,3 +425,64 @@ The owner settled the open part on 2026-09-02: **a link points at the file**, th
 are playing, and what the recipient does with it is theirs to decide. That is what Modland's link
 already was, and it is what ASMA cannot offer — which is why ASMA's share is a collection and a
 path rather than a worse link.
+
+## 17. How a list behaves
+
+Settled with the owner on 2026-09-02, after he said list handling was what irritated him most about
+the app. The complaint that started it: **tapping a track selected it instead of playing it**, which
+is a thing almost nobody does.
+
+### The two modes
+
+| | Normal | Selecting |
+| --- | --- | --- |
+| Entered by | default | **long-press** on a row |
+| Leading slot | nothing | a checkbox |
+| Tap a row | **plays it** | ticks or unticks it |
+| Trailing slot | a three-dot menu | nothing — the checkbox is the affordance |
+| Back | up one level, then out to the playlist | **leaves selecting, ticking nothing** |
+
+Long-press to select and tap to act is the Android convention, and the app was the odd one out. The
+cost is real and was accepted deliberately: adding several tracks now takes a long-press first,
+where it used to take a tick. In exchange the common case — hear this one — drops from two taps to
+one, and listening is more frequent than collecting.
+
+**Back clears the selection to nothing.** The owner suggested keeping the first or playing track
+ticked; this does not, because *playing* and *selected* are different states and only one of them is
+a mode. A cancel that leaves something behind reads as an app that did not quite listen.
+
+### The back stack in Browse
+
+Three jobs, in this order, each one step:
+
+1. leave the selection, if there is one
+2. up one browse level
+3. out of Browse, back to the playlist
+
+That is what makes back predictable, and it is also why **A16** wants a separate, always-present way
+out to the playlist: from four levels deep, the stack is correct and still four taps.
+
+### What is not numbered
+
+Rows in Browse carry no ordinal. In the playlist the number answers "where am I in *my* list of
+three hundred", which the owner defended and is right; in Browse it would only say "row n of
+somebody else's archive". The space goes to the checkbox instead, so rows do not change width when
+selection begins.
+
+### Anatomy
+
+Browse, search and history rows share one anatomy, and the playlist row is the same thing plus a
+drag handle. That is the only genuine difference between them: the playlist has an order that
+belongs to the user.
+
+### The plus
+
+Playing something from Browse used to offer no way to keep it — the dock's **+** existed only for
+Random. It now appears whenever something outside the playlist is playing, which is the natural
+moment to decide you want to keep a tune: just after hearing it.
+
+### Deliberately still open
+
+- **A4** — the same gesture in the *playlist*, and the bulk actions it would need there. The gesture
+  is agreed; which actions the playlist gets is not, and guessing them is not the job.
+- Mis-tapping a remote track now costs a download rather than nothing. `docs/WISHLIST.md` B17.
