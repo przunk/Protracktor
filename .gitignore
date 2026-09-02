@@ -15,6 +15,11 @@ keystore.properties
 # Vendored native sources are fetched by scripts/fetch-native-deps.sh, not committed
 native/vendor/
 
+# Host probes: the sources and their generated config are committed, the objects and binaries are
+# not. They are built by ./scripts/build-sc68-probes.sh and are host-specific.
+native/probe/*/build/
+native/probe/*/probe-*
+
 # IDE
 .idea/
 *.hprof
