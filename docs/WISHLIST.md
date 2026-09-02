@@ -10,7 +10,7 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B13. Tapping the player bar scrolls the list to that track
+## B13. ~~Tapping the player bar scrolls the list to that track~~ — DONE 2026-09-02
 
 *owner, 2026-09-01.*
 
@@ -20,7 +20,9 @@ expanded player it opens — should take you to that row in the playlist.
 Cheap: `LazyListState.animateScrollToItem` on the index the queue already knows. It shares its
 mechanism with B14 and with `docs/BACKLOG.md` A3.
 
-## B14. A follow-the-playing-track toggle
+**Built** as the locate button in the expanded player. Not confirmed on a device.
+
+## B14. ~~A follow-the-playing-track toggle~~ — DONE 2026-09-02
 
 *owner asked the question 2026-09-01, and settled it himself 2026-09-02.*
 
@@ -45,12 +47,17 @@ It composes with B13 (tap the player bar to jump once) rather than replacing it.
 - **How far to scroll.** `animateScrollToItem` across three hundred rows is a long, silly animation.
   Animate when the target is near, jump when it is far.
 
-## B1. Play a track from the search results
+**Built**, both bites included: a real drag is told from our own scrolling through `DragInteraction`,
+and a far target jumps rather than animating. The owner then asked for the button to be subtler,
+which was done the same day. Not confirmed on a device.
+
+## B1. ~~Play a track from the search results~~ — DONE 2026-09-02
 
 *owner, raised twice, 2026-09-01.*
 
 Already written up in `docs/BACKLOG.md` A1; repeated here because he has now asked for it twice, which is a signal about
-priority rather than a duplicate.
+priority rather than a duplicate. **Built** — the results become the queue while you are in them, so
+next and previous walk what you found and the playlist is untouched.
 
 ## B2. Jump to a tune's neighbours
 
@@ -67,7 +74,7 @@ Depends on knowing where a track came from, which `TrackRef.subtitle` already ca
 sources, though in two different shapes — see the note under A1 about what a result line owes the
 reader.
 
-## B3. Show the catalogue path in Information
+## B3. ~~Show the catalogue path in Information~~ — DONE 2026-09-02
 
 *owner, 2026-09-01.*
 
