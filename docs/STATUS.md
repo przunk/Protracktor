@@ -28,6 +28,11 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-02** — **Commodore 64.** libsidplayfp 3.1.1 with the SIDLite emulation, building for
+  every ABI. Thirty random Modland SIDs played on the host with **no Commodore ROMs supplied at
+  all**, none of them BASIC-compatible — which shrinks the ROM question rather than answering it.
+  SID files have no intrinsic length, so durations stay unknown until HVSC's song lengths land.
+
 - **2026-09-02** — The follow-track button is a small icon rather than a labelled one, and adding
   tracks scrolls to them.
 

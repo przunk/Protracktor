@@ -51,6 +51,9 @@ object SupportedFormats {
         // Consoles, through game-music-emu. It identifies by content, so these extensions only
         // decide what a folder scan picks up -- not what plays.
         "nsf", "nsfe", "spc", "gbs", "vgm", "vgz", "gym", "hes", "ay", "kss",
+        // Commodore 64, through libsidplayfp. Identified by a four-byte magic, so these extensions
+        // only decide what a folder scan picks up.
+        "sid", "psid", "rsid",
         // Containers libopenmpt unpacks itself
         "mmcmp", "pp20", "xpk", "umx",
     )

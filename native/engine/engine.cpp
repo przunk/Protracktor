@@ -32,6 +32,12 @@ extern "C" {
 #include <gme.h>
 }
 
+#include <sidplayfp/sidplayfp.h>
+#include <sidplayfp/SidTune.h>
+#include <sidplayfp/SidTuneInfo.h>
+#include <sidplayfp/SidConfig.h>
+#include <sidlite.h>
+
 #include <android/log.h>
 #include <atomic>
 #include <cstring>
@@ -467,6 +473,128 @@ private:
     std::vector<short> scratch_;
 };
 
+/**
+ * Commodore 64, through libsidplayfp.
+ *
+ * The largest single body of music left after trackers: roughly 72,000 files in Modland alone.
+ *
+ * **No Commodore ROMs are supplied**, and thirty random Modland SIDs all played without them, none
+ * of them needing BASIC. Whether to ship or source ROMs at all is the owner's call and is not made
+ * here; the measurement is in `docs/PLAN_FORMATS.md` so the question has a number attached.
+ *
+ * The emulation is SIDLite rather than ReSIDfp: 3.x split ReSIDfp into a separate library, and
+ * SIDLite ships inside this one.
+ */
+class SidBackend : public Backend {
+public:
+    static bool recognises(const std::vector<char> &bytes) {
+        if (bytes.size() < 4) return false;
+        return !std::memcmp(bytes.data(), "PSID", 4) || !std::memcmp(bytes.data(), "RSID", 4);
+    }
+
+    explicit SidBackend(const std::vector<char> &bytes)
+        : tune_(reinterpret_cast<const uint_least8_t *>(bytes.data()),
+                static_cast<uint_least32_t>(bytes.size())),
+          builder_("sidlite") {
+        if (!tune_.getStatus()) {
+            throw std::runtime_error(std::string("not a SID file: ") + tune_.statusString());
+        }
+        tune_.selectSong(0);
+        info_ = tune_.getInfo();
+
+        SidConfig cfg = engine_.config();
+        cfg.frequency = kSampleRate;
+        cfg.sidEmulation = &builder_;
+        if (!engine_.config(cfg)) {
+            throw std::runtime_error(std::string("libsidplayfp refused the configuration: ") + engine_.error());
+        }
+        if (!engine_.load(&tune_)) {
+            throw std::runtime_error(std::string("libsidplayfp could not load it: ") + engine_.error());
+        }
+
+        // Without this, mix() dereferences a mixer that does not exist yet. Nothing in the header
+        // says so; it cost a segfault and a read of player.cpp to find.
+        engine_.initMixer(false);
+    }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        std::size_t produced = 0;
+
+        while (produced < frames) {
+            if (spare_.empty()) {
+                // play() runs the machine for a while and reports how many samples are waiting;
+                // mix() takes them out. The two are separate in 3.x.
+                const int waiting = engine_.play(kCyclesPerPass);
+                if (waiting <= 0) break;
+
+                const unsigned int want = std::min<unsigned int>(waiting, kScratchSamples);
+                scratch_.resize(kScratchSamples);
+                const unsigned int got = engine_.mix(scratch_.data(), want);
+                if (got == 0) break;
+                spare_.assign(scratch_.begin(), scratch_.begin() + got);
+                spareRead_ = 0;
+            }
+
+            // Mono, duplicated into both channels. A SID is one chip and putting it in one ear
+            // would be a choice nobody made.
+            const short sample = spare_[spareRead_++];
+            out[produced * 2] = static_cast<float>(sample) / 32768.0f;
+            out[produced * 2 + 1] = out[produced * 2];
+            ++produced;
+            if (spareRead_ >= spare_.size()) spare_.clear();
+        }
+        return produced;
+    }
+
+    // libsidplayfp has no seek: the only way to a position is to run the machine there.
+    bool canSeek() const override { return false; }
+    void seek(double) override {}
+
+    void rewind() override {
+        spare_.clear();
+        spareRead_ = 0;
+        engine_.load(&tune_);
+        engine_.initMixer(false);
+    }
+
+    double positionSeconds() const override { return 0.0; }
+
+    // SID files carry no length. HVSC's Songlengths database is what supplies one, and that is a
+    // catalogue feature rather than a backend one.
+    double durationSeconds() const override { return 0.0; }
+
+    std::string describe() const override {
+        const auto field = [this](unsigned int i) -> const char * {
+            return (info_ && i < info_->numberOfInfoStrings() && info_->infoString(i))
+                ? info_->infoString(i) : "";
+        };
+        std::ostringstream o;
+        o << "title\t" << field(0) << '\n'
+          << "format\tCommodore 64 (SID)" << '\n'
+          << "artist\t" << field(1) << '\n'
+          << "copyright\t" << field(2) << '\n'
+          << "channels\t" << (info_ ? info_->sidChips() : 1) << '\n'
+          << "subsongs\t" << (info_ ? info_->songs() : 1) << '\n'
+          << "seekable\t0";
+        return o.str();
+    }
+
+    int preferredSampleRate() const override { return kSampleRate; }
+
+private:
+    static constexpr int kSampleRate = 44100;
+    static constexpr unsigned int kCyclesPerPass = 20000;
+    static constexpr unsigned int kScratchSamples = 8192;
+
+    SidTune tune_;
+    SIDLiteBuilder builder_;
+    sidplayfp engine_;
+    const SidTuneInfo *info_ = nullptr;
+    std::vector<short> scratch_;
+    std::vector<short> spare_;
+    std::size_t spareRead_ = 0;
+};
+
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name) {
     lastOpenError().clear();
 
@@ -478,6 +606,17 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
         } catch (const std::exception &e) {
             LOGE("ASAP claimed the name but refused: %s", e.what());
             lastOpenError() = std::string("ASAP refused it: ") + e.what();
+        }
+    }
+
+    // SID first among the content-identified ones: its magic is four unambiguous bytes at offset
+    // zero, which is as certain as identification gets.
+    if (SidBackend::recognises(bytes)) {
+        try {
+            return std::make_unique<SidBackend>(bytes);
+        } catch (const std::exception &e) {
+            LOGE("libsidplayfp refused it: %s", e.what());
+            lastOpenError() = e.what();
         }
     }
 
