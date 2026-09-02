@@ -50,6 +50,8 @@ fun NowPlaying(
     onSeek: (Double) -> Unit,
     onShowInPlaylist: (() -> Unit)?,
     onShowNeighbours: (() -> Unit)?,
+    onShareFile: (() -> Unit)?,
+    onShareLink: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val track = state.current
@@ -127,6 +129,29 @@ fun NowPlaying(
                     modifier = Modifier.padding(end = 8.dp),
                 )
                 Text(stringResource(R.string.action_show_neighbours))
+            }
+        }
+
+        onShareFile?.let { share ->
+            TextButton(onClick = share) {
+                Icon(
+                    imageVector = PlayerIcons.Share,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(stringResource(R.string.action_share_file))
+            }
+        }
+
+        // Absent for a local file: there is no address anyone else could open.
+        onShareLink?.let { share ->
+            TextButton(onClick = share) {
+                Icon(
+                    imageVector = PlayerIcons.Share,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(stringResource(R.string.action_share_link))
             }
         }
 

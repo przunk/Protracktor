@@ -16,6 +16,7 @@
 package com.przunk.protracktor.player
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import com.przunk.protracktor.data.GrantedFolder
 import com.przunk.protracktor.data.LibraryStore
@@ -284,6 +285,16 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private val _showBrowse = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val showBrowse: SharedFlow<Unit> = _showBrowse.asSharedFlow()
+
+    /**
+     * A share the UI should put in front of the user.
+     *
+     * Emitted rather than started here: choosing an app is an activity, and this class holds the
+     * application context. Preparing what is shared is work with a network fetch in it, and belongs
+     * on this side; showing the chooser does not.
+     */
+    private val _share = MutableSharedFlow<Intent>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val share: SharedFlow<Intent> = _share.asSharedFlow()
 
     private val _browse = MutableStateFlow(BrowseState())
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
@@ -607,6 +618,71 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
+
+    // --- sharing ------------------------------------------------------------------------------
+
+    /**
+     * Sends the file itself.
+     *
+     * Works for anything playable, local or downloaded, because it fetches the bytes the same way
+     * playing does — a track from a catalogue is fetched now if it is not already cached. These
+     * formats are kilobytes, which is what makes sending one a reasonable thing to do at all.
+     */
+    fun shareFile(ref: TrackRef) {
+        scope.launch {
+            val bytes = loadBytes(ref)
+            if (bytes == null) {
+                _state.update { it.copy(message = Message("Could not read ${ref.title}")) }
+                return@launch
+            }
+            val uri = remoteFiles.shareableCopy(ref.fileNameOrTitle, bytes)
+            if (uri == null) {
+                _state.update { it.copy(message = Message("Could not prepare ${ref.title} for sharing.")) }
+                return@launch
+            }
+            _share.tryEmit(
+                Intent(Intent.ACTION_SEND).apply {
+                    // Not audio/*: no chat app can play a .mod, and claiming an audio type invites
+                    // the receiving end to try and fail. These are files, and octet-stream is what
+                    // a file with no registered type is.
+                    type = "application/octet-stream"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, ref.title)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            )
+        }
+    }
+
+    /**
+     * Sends a link instead of a file, so the other person fetches it themselves.
+     *
+     * **Catalogue tracks only**, and what is sent depends on what the catalogue publishes. Modland
+     * serves every file over HTTP, so the link is the file. ASMA publishes one archive and no
+     * per-file address at all, so the link is the collection and the path inside it — which is a
+     * real thing to act on, and better than an `asma://` reference that means nothing off this
+     * device. Deciding that was the point: the alternative was an action that looked like it
+     * worked.
+     */
+    fun shareLink(ref: TrackRef) {
+        val catalogue = Catalogue.owning(ref.id)
+        val path = catalogue?.pathFrom(ref.id)
+        if (catalogue == null || path == null) {
+            _state.update {
+                it.copy(message = Message("Only tracks from an online catalogue have a link."))
+            }
+            return
+        }
+        val text = catalogue.webUrlFor(path)
+            ?: "${ref.title} — ${catalogue.displayName}, at $path — ${catalogue.homeUrl}"
+        _share.tryEmit(
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+                putExtra(Intent.EXTRA_SUBJECT, ref.title)
+            }
+        )
+    }
 
     /**
      * Opens Browse where a track came from: the author's folder in its catalogue.

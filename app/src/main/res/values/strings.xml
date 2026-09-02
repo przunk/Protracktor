@@ -79,6 +79,9 @@
     <string name="browse_indexing">Indexing %1$s…</string>
     <string name="browse_unknown">(unknown)</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
+    <string name="action_share_file">Share the file</string>
+    <string name="action_share_link">Share a link</string>
+    <string name="share_chooser">Share</string>
     <string name="action_show_neighbours">More from this author</string>
     <string name="domain_history_title">History</string>
     <string name="domain_history_body">Tunes you have played, most recent first</string>

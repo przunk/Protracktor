@@ -38,6 +38,9 @@ everything else added on 2026-09-01 and 2026-09-02.
 
 ## Finished
 
+- **2026-09-02** — **Sharing**: the file, from anywhere, through a `FileProvider` copy; and a link,
+  for catalogue tracks, which is the file's own URL where the catalogue publishes one and the
+  collection plus the path inside it where it does not.
 - **2026-09-02** — **"More from this author"**, from the expanded player and from a track's menu:
   opens Browse at the author's folder in the catalogue the tune came from. **Catalogue tracks only** —
   a local file's neighbours would be its directory, and the local browser lists a whole granted tree

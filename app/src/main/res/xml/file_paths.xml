@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the FileProvider is allowed to hand out.
+
+    One directory, inside the cache, holding only copies made for sharing. Nothing else in the app
+    is reachable through the provider: a share should expose the one file being shared and not the
+    library, the database or the downloaded archives.
+-->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

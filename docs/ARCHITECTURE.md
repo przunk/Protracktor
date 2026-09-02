@@ -395,3 +395,28 @@ it are the same code as everywhere else, and cost nothing.
 would have caught it: the JVM tests run against a current SQLite through `sqlite-jdbc`, and there is
 no emulator here. The statement is written as `INSERT OR REPLACE` with the previous count read back
 in the same statement, and it lives in `SchemaSql` where a test can reach it.
+
+## 16. Sharing has to copy
+
+Added 2026-09-02 with `docs/BACKLOG.md` A10.
+
+Neither place this app keeps a file can be handed to another app:
+
+- A **local** file is a storage-access-framework document URI plus a permission grant belonging to
+  *this* app, and a grant cannot be passed on. Sending the URI sends a string the receiver cannot
+  read.
+- A **downloaded** file is inside app-private storage, which nothing outside the app can see.
+
+So a share copies the bytes into a cache directory that a `FileProvider` is allowed to vouch for,
+and shares that. The provider is declared with `exported="false"` and a single path — the shared
+directory and nothing else — because a share should expose the one file being shared and not the
+library, the database or the 20 MB archive. Copies are swept an hour after they are made rather
+than on the next share: the receiving app reads the file after the chooser closes, and deleting the
+previous copy the moment a new share starts would sometimes pull it from under a slow reader.
+
+**A link is a different feature, not a cheaper one.** It exists only for catalogue tracks, and what
+it contains is the catalogue's answer rather than ours. Modland serves every file over HTTP, so its
+track URL *is* the link. ASMA publishes one archive and has no per-file address at all, so
+`webUrlFor` returns null and the share names the collection and the path inside it. That is
+deliberate: an `asma://` reference means nothing on anyone else's phone, and an action that appears
+to work is worse than one that says what it can do.

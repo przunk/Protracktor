@@ -36,6 +36,23 @@
             android:name=".player.PlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!--
+            Sharing a tune means handing another app a file it can read, and neither of the places
+            our files live can do that: a document URI from the storage access framework belongs to
+            the provider that issued it and we cannot pass on a grant we do not own, and a
+            downloaded file is inside app-private storage that nothing else can see. So a share
+            copies the bytes somewhere this provider can vouch for them.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.shares"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

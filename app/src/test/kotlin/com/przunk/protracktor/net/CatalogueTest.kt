@@ -57,6 +57,19 @@ class CatalogueTest {
     }
 
     @Test
+    fun `a link is only offered where the catalogue actually publishes one`() {
+        // Modland serves every file over HTTP, so the track URL is the shareable link.
+        assertEquals(
+            Modland.urlFor("Protracker/4-Mat/elysium.mod"),
+            Modland.webUrlFor("Protracker/4-Mat/elysium.mod"),
+        )
+        // ASMA publishes one archive and no per-file address, so it says so instead of handing back
+        // an asma:// reference that would mean nothing on anyone else's phone.
+        assertNull(Asma.webUrlFor("asma/Games/Abracadabra.sap"))
+        assertEquals("https://asma.atari.org/", Asma.homeUrl)
+    }
+
+    @Test
     fun `owning finds the catalogue a reference belongs to, and admits when there is none`() {
         assertEquals(Modland, Catalogue.owning(Modland.urlFor("Protracker/4-Mat/elysium.mod")))
         assertEquals(Asma, Catalogue.owning(Asma.urlFor("asma/Games/Abracadabra.sap")))

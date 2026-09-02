@@ -81,6 +81,8 @@ fun PlaylistScreen(
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onBrowse: () -> Unit,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
@@ -91,7 +93,7 @@ fun PlaylistScreen(
     // and more portable than a blur, which needs API 31 and this app runs from 29.
     if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, {}, contentPadding, enabled = false)
+            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
                 randomMode = state.randomMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -114,6 +116,8 @@ fun PlaylistScreen(
         onRemoveAt = onRemoveAt,
         onMove = onMove,
         onShowNeighbours = onShowNeighbours,
+        onShareFile = onShareFile,
+        onShareLink = onShareLink,
         contentPadding = contentPadding,
         enabled = true,
         modifier = modifier,
@@ -129,6 +133,8 @@ private fun PlaylistBody(
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -168,6 +174,10 @@ private fun PlaylistBody(
                 // Absent for a local file, which has no catalogue folder to open.
                 onShowNeighbours = track.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { { onShowNeighbours(it) } },
+                onShareFile = { onShareFile(track) },
+                // Absent for a local file, which has no address anyone else could open.
+                onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
+                    ?.let { { onShareLink(it) } },
                 dragHandleModifier = Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
@@ -336,6 +346,8 @@ private fun TrackRow(
     onRemove: () -> Unit,
     onInfo: () -> Unit,
     onShowNeighbours: (() -> Unit)?,
+    onShareFile: () -> Unit,
+    onShareLink: (() -> Unit)?,
     dragHandleModifier: Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -389,6 +401,18 @@ private fun TrackRow(
                                     text = { Text(stringResource(R.string.action_show_neighbours)) },
                                     leadingIcon = { Icon(PlayerIcons.Folder, contentDescription = null) },
                                     onClick = { menuOpen = false; show() },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_share_file)) },
+                                leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
+                                onClick = { menuOpen = false; onShareFile() },
+                            )
+                            onShareLink?.let { share ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_share_link)) },
+                                    leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
+                                    onClick = { menuOpen = false; share() },
                                 )
                             }
                             DropdownMenuItem(

@@ -41,6 +41,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     /** One-shot "scroll the playlist here" events. */
     val reveal: SharedFlow<Int> get() = controller.reveal
     val showBrowse: SharedFlow<Unit> get() = controller.showBrowse
+    val share: SharedFlow<Intent> get() = controller.share
 
     fun addFolder(treeUri: Uri) = controller.addFolder(treeUri)
     fun addFiles(uris: List<Uri>) = controller.addFiles(uris)
@@ -73,6 +74,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun clearHistory() = controller.clearHistory()
 
     fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
+
+    fun shareFile(track: TrackRef) = controller.shareFile(track)
+
+    fun shareLink(track: TrackRef) = controller.shareLink(track)
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the

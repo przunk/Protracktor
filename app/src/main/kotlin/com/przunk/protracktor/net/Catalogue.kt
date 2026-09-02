@@ -52,6 +52,23 @@ sealed class Catalogue(
     abstract fun pathFrom(id: String): String?
 
     /**
+     * A link to the collection itself, for when a single file has no address of its own.
+     */
+    abstract val homeUrl: String
+
+    /**
+     * An address for one tune that a person receiving it could actually open, or null if this
+     * catalogue publishes none.
+     *
+     * Modland serves every file over HTTP, so its track URL **is** the shareable link. An archive
+     * catalogue has no per-file address at all — what it publishes is one zip — so it answers null,
+     * and the share falls back to naming the collection and the path inside it. That is a real
+     * thing to act on, and it is the reason this returns null rather than the app quietly offering
+     * a link that would mean nothing anywhere but this phone.
+     */
+    open fun webUrlFor(path: String): String? = urlFor(path)
+
+    /**
      * Whether the thing at [indexUrl] is the whole archive rather than a list of what is in it.
      *
      * Two shapes exist and they are not variations of one another. Modland publishes an index and
@@ -103,6 +120,8 @@ object Modland : Catalogue(
     indexUrl = "https://modland.com/allmods.zip",
 ) {
     private const val FILE_BASE = "https://modland.com/pub/modules/"
+
+    override val homeUrl: String = "https://modland.com/"
 
     override fun urlFor(path: String): String =
         FILE_BASE + path.split('/').joinToString("/") { segment ->
@@ -168,6 +187,11 @@ object Asma : Catalogue(
 ) {
     /** Read out of the stored archive rather than fetched. The player understands this scheme. */
     override fun urlFor(path: String): String = "asma://$path"
+
+    override val homeUrl: String = "https://asma.atari.org/"
+
+    // No per-file address exists: ASMA publishes one archive, not a file tree.
+    override fun webUrlFor(path: String): String? = null
 
     override fun pathFrom(id: String): String? = id.removePrefix("asma://").takeIf { it != id }
 

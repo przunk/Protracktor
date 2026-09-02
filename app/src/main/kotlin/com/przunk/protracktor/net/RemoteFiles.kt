@@ -16,6 +16,8 @@
 package com.przunk.protracktor.net
 
 import android.content.Context
+import android.net.Uri
+import androidx.core.content.FileProvider
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -31,13 +33,16 @@ import kotlinx.coroutines.withContext
  * either way. R9 — playback that starts immediately — is a caching problem before it is anything
  * else.
  */
-class RemoteFiles(context: Context) {
+class RemoteFiles(private val context: Context) {
 
     private val cacheDir = File(context.cacheDir, "remote").apply { mkdirs() }
 
     // filesDir rather than cacheDir: an archive is expensive to fetch and the system may clear a
     // cache directory at any time. Losing 20 MB to a cache sweep would mean downloading it again.
     private val archiveDir = File(context.filesDir, "catalogues").apply { mkdirs() }
+
+    // Must match res/xml/file_paths.xml, which is what the provider is allowed to hand out.
+    private val shareDir = File(context.cacheDir, "shared").apply { mkdirs() }
 
     /** Returns the bytes, from cache when possible. Null when the fetch failed. */
     suspend fun fetch(url: String): ByteArray? = withContext(Dispatchers.IO) {
@@ -101,6 +106,33 @@ class RemoteFiles(context: Context) {
     fun isCached(url: String): Boolean = fileFor(url).let { it.exists() && it.length() > 0 }
 
     /** Total bytes held. The eviction budget is still an open question (OPEN_QUESTIONS Q5). */
+    /**
+     * A copy of [bytes] that another app is allowed to read, as a `content://` URI.
+     *
+     * A copy is unavoidable. What the library holds for a local file is a storage-access-framework
+     * document URI plus a permission grant belonging to **this** app, and a grant cannot be passed
+     * on; what it holds for a downloaded file is a path inside app-private storage that nothing
+     * else can see. Either way the receiving app cannot read what we have, so it gets its own copy
+     * through the provider declared in the manifest.
+     *
+     * Returns null rather than throwing when the copy cannot be made; a failed share is a message,
+     * not a crash.
+     */
+    fun shareableCopy(fileName: String, bytes: ByteArray): Uri? = runCatching {
+        // Copies made for earlier shares, an hour old or more. Not "everything except this one":
+        // the receiving app reads the file after the chooser closes, and deleting the previous
+        // share the moment a new one starts would sometimes pull it out from under a slow reader.
+        val hourAgo = System.currentTimeMillis() - 60 * 60 * 1000
+        shareDir.listFiles()?.forEach { if (it.lastModified() < hourAgo) it.delete() }
+
+        // The name the other person sees. Separators would climb out of the directory, and a blank
+        // name would produce a file called nothing at all.
+        val named = fileName.ifBlank { "tune" }.replace('/', '_').replace('\\', '_')
+        val file = File(shareDir, named)
+        file.writeBytes(bytes)
+        FileProvider.getUriForFile(context, "${context.packageName}.shares", file)
+    }.getOrNull()
+
     fun cacheBytes(): Long = cacheDir.listFiles()?.sumOf { it.length() } ?: 0L
 
     fun clearCache() {
