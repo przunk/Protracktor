@@ -53,7 +53,7 @@ class SchemaSqlTest {
             assertEquals(
                 setOf(
                     "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
-                    "catalogues", "catalogue_tracks",
+                    "catalogues", "catalogue_tracks", "song_lengths",
                 ),
                 connection.tableNames(),
             )
@@ -194,6 +194,28 @@ class SchemaSqlTest {
                 statement.executeQuery("SELECT COUNT(*) FROM catalogue_tracks").use { rows ->
                     rows.next()
                     assertEquals(0, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `song lengths are keyed by md5 and a second write for one tune replaces the first`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO song_lengths (md5, seconds) VALUES ('6d01', '235.594 61.288')",
+                    // HVSC publishes corrections, so the same tune arriving again has to win rather
+                    // than collide.
+                    "INSERT OR REPLACE INTO song_lengths (md5, seconds) VALUES ('6d01', '240')",
+                )
+            )
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT COUNT(*), MIN(seconds) FROM song_lengths").use { rows ->
+                    assertTrue(rows.next())
+                    assertEquals(1, rows.getInt(1))
+                    assertEquals("240", rows.getString(2))
                 }
             }
         }

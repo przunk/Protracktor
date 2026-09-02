@@ -28,6 +28,11 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Finished
 
+- **2026-09-02** — **SID durations**, from HVSC's song length database: 61,157 tunes, downloaded on
+  request from the online screen and looked up by the MD5 of the file. SID position now counts the
+  frames actually played, because libsidplayfp has no notion of a position to ask for and a
+  duration with nothing counting towards it would have been half a feature. Seeking is still not
+  possible in a SID — the only way to a position is to run the machine there.
 - **2026-09-02** — **ASMA**, the Atari SAP Music Archive: 6,335 files, downloaded once as a 20 MB
   archive and then browsable and playable with no network at all. A second kind of catalogue
   (`docs/ARCHITECTURE.md` §13).
@@ -35,7 +40,7 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 - **2026-09-02** — **Commodore 64.** libsidplayfp 3.1.1 with the SIDLite emulation, building for
   every ABI. Thirty random Modland SIDs played on the host with **no Commodore ROMs supplied at
   all**, none of them BASIC-compatible — which shrinks the ROM question rather than answering it.
-  SID files have no intrinsic length, so durations stay unknown until HVSC's song lengths land.
+  SID files have no intrinsic length, so durations came from HVSC the same day (below).
 
 - **2026-09-02** — The follow-track button is a small icon rather than a labelled one, and adding
   tracks scrolls to them.

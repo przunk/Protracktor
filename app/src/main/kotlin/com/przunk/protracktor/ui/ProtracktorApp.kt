@@ -226,6 +226,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onOpenFolder = viewModel::openFolder,
                 onForgetFolder = viewModel::forgetFolder,
                 onIndexCatalogue = viewModel::indexCatalogue,
+                onDownloadSongLengths = viewModel::downloadSongLengths,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
                 onRandom = { viewModel.playRandom(); showBrowse = false },

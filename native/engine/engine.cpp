@@ -40,6 +40,7 @@ extern "C" {
 
 #include <android/log.h>
 #include <atomic>
+#include <cstdint>
 #include <cstring>
 #include <memory>
 #include <stdexcept>
@@ -517,7 +518,8 @@ public:
         engine_.initMixer(false);
     }
 
-    std::size_t render(int, std::size_t frames, float *out) override {
+    std::size_t render(int sampleRate, std::size_t frames, float *out) override {
+        if (sampleRate > 0) rate_ = sampleRate;
         std::size_t produced = 0;
 
         while (produced < frames) {
@@ -543,6 +545,7 @@ public:
             ++produced;
             if (spareRead_ >= spare_.size()) spare_.clear();
         }
+        rendered_ += produced;
         return produced;
     }
 
@@ -553,11 +556,18 @@ public:
     void rewind() override {
         spare_.clear();
         spareRead_ = 0;
+        rendered_ = 0;
         engine_.load(&tune_);
         engine_.initMixer(false);
     }
 
-    double positionSeconds() const override { return 0.0; }
+    // Counted, because there is nothing to ask. The other backends know where they are in a song;
+    // libsidplayfp is running a program and has no notion of a position at all. Frames handed to
+    // the output device is the same quantity by another route, and it is the one the listener is
+    // actually hearing.
+    double positionSeconds() const override {
+        return static_cast<double>(rendered_) / static_cast<double>(rate_);
+    }
 
     // SID files carry no length. HVSC's Songlengths database is what supplies one, and that is a
     // catalogue feature rather than a backend one.
@@ -585,6 +595,9 @@ private:
     static constexpr int kSampleRate = 44100;
     static constexpr unsigned int kCyclesPerPass = 20000;
     static constexpr unsigned int kScratchSamples = 8192;
+
+    std::uint64_t rendered_ = 0;
+    int rate_ = kSampleRate;
 
     SidTune tune_;
     SIDLiteBuilder builder_;

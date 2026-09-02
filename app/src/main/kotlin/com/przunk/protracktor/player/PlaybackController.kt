@@ -25,6 +25,8 @@ import com.przunk.protracktor.data.CatalogueStore
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.data.SavedPlaylist
+import com.przunk.protracktor.data.SongLengthStore
+import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.engine.NativeEngine
@@ -175,6 +177,8 @@ data class BrowseState(
     val groups: List<CatalogueGroup> = emptyList(),
     /** Non-null while an index is downloading; carries something to show the user. */
     val indexing: String? = null,
+    /** How many SID tunes HVSC has given us a length for. Zero until the database is downloaded. */
+    val songLengthCount: Int = 0,
 
     // Search
     val query: String = "",
@@ -217,6 +221,20 @@ class PlaybackController private constructor(private val context: Context) {
          * uses its own id as the scheme, so a hard-coded prefix here would need editing for each new
          * one -- and the one after that would be added without anybody noticing this line existed.
          */
+        /**
+         * Where HVSC's song lengths come from -- the collection's own site, re-checked 2026-09-02
+         * and still serving the 5,205,150 bytes `docs/ARCHITECTURE.md` recorded on 2026-08-31.
+         *
+         * HVSC is distributed through mirrors and this address may one day stop answering;
+         * `hvsc.brona.dk/HVSC/C64Music/DOCUMENTS/Songlengths.md5` served a byte-identical copy on
+         * the same day and is the first place to look if it does. A dead URL here costs a message
+         * about a failed download, not a crash and not a wrong duration.
+         */
+        private const val SONG_LENGTHS_URL =
+            "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5"
+
+        private const val SONG_LENGTHS_LABEL = "SID song lengths"
+
         private fun archiveCatalogueOf(id: String): Catalogue? =
             Catalogue.all.firstOrNull { it.isArchive && id.startsWith("${it.id}://") }
 
@@ -273,6 +291,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val store = LibraryStore(context)
     private val catalogues = CatalogueStore(context)
     private val remoteFiles = RemoteFiles(context)
+    private val songLengths = SongLengthStore(context)
 
     private val audioFocus = AudioFocus(
         context = context,
@@ -554,9 +573,11 @@ class PlaybackController private constructor(private val context: Context) {
     fun refreshCatalogues() {
         scope.launch {
             val summaries = catalogues.summaries()
+            val lengths = songLengths.count()
             _browse.update { current ->
                 current.copy(
                     catalogues = summaries,
+                    songLengthCount = lengths,
                     // Everything indexed is searched until the user says otherwise. Starting with
                     // none ticked would make the first search return nothing and look broken.
                     searchCatalogues = current.searchCatalogues.ifEmpty {
@@ -601,6 +622,37 @@ class PlaybackController private constructor(private val context: Context) {
             catalogues.replaceIndex(catalogue, entries)
             _browse.update { it.copy(indexing = null, catalogues = catalogues.summaries()) }
             _state.update { it.copy(message = Message("Indexed ${entries.size} tracks from ${catalogue.displayName}.")) }
+        }
+    }
+
+    /**
+     * Downloads HVSC's song length database.
+     *
+     * Offered as its own action rather than fetched when the first SID plays, because it is 5 MB
+     * and the moment somebody presses play on a tune is the wrong moment to spend it. It is not a
+     * catalogue either -- nothing in it can be played, it only answers "how long" about SIDs that
+     * came from somewhere else, so it sits below the catalogues rather than among them.
+     */
+    fun downloadSongLengths() {
+        scope.launch {
+            _browse.update { it.copy(indexing = SONG_LENGTHS_LABEL) }
+            val bytes = remoteFiles.fetchIndex(SONG_LENGTHS_URL)
+            if (bytes == null) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("Could not download the song lengths.")) }
+                return@launch
+            }
+            val entries = withContext(Dispatchers.Default) {
+                SongLengths.parse(bytes.toString(Charsets.ISO_8859_1))
+            }
+            if (entries.isEmpty()) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("The song length database was empty.")) }
+                return@launch
+            }
+            songLengths.replaceAll(entries)
+            _browse.update { it.copy(indexing = null, songLengthCount = entries.size) }
+            _state.update { it.copy(message = Message("Song lengths for ${entries.size} SID tunes.")) }
         }
     }
 
@@ -1174,11 +1226,17 @@ class PlaybackController private constructor(private val context: Context) {
             track = opened
             val started = opened.start()
             val described = opened.describe()
+            // A SID has no length in it, so the backend reports none and HVSC's database is asked
+            // instead. Only when the backend has nothing: a format that knows its own length knows
+            // it better than a lookup on a hash could.
+            val duration = opened.durationSeconds().takeIf { it > 0.0 }
+                ?: songLengths.secondsFor(bytes)?.firstOrNull()
+                ?: 0.0
             _state.update {
                 it.copy(
                     playing = started,
                     metadata = described,
-                    durationSeconds = opened.durationSeconds(),
+                    durationSeconds = duration,
                     positionSeconds = 0.0,
                     message = if (started) it.message else Message("Could not open the audio device"),
                 )
