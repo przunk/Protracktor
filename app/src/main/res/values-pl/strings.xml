@@ -145,6 +145,7 @@
     <string name="action_share_link">Udostępnij link</string>
     <string name="share_chooser">Udostępnij</string>
 
+    <string name="storage_summary">Muzyka w cache: %1$d MB z %2$d MB. Trwałe pobrania: %3$d MB.</string>
     <string name="action_scan_folder">Przeskanuj ten folder</string>
     <string name="scan_listing">Listowanie folderu…</string>
     <string name="scan_progress">Otwieranie plików: %1$d z %2$d</string>

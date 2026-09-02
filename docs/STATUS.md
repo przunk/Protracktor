@@ -40,6 +40,11 @@ Round 3's features are confirmed; the formats and archives from round 2 are not.
 
 ## Finished
 
+- **2026-09-03** — **The fetched-file cache has a ceiling**: 512 MB, least recently used first,
+  enforced after every write and at start-up (`docs/ARCHITECTURE.md` §19). Answers
+  `docs/OPEN_QUESTIONS.md` Q5, which had left the cache growing without limit. Unfinished downloads
+  and files in use are exempt from eviction; permanent downloads are in other directories and are
+  not counted at all. The online screen now says what is held.
 - **2026-09-03** — **The local library is scanned by opening files, not by reading their names**
   (`docs/ARCHITECTURE.md` §18). A scan hands every file to the same decoder path playback uses and
   stores the result, so re-entering a folder reads an index instead of walking the tree again. Rows

@@ -48,19 +48,46 @@ class RemoteFiles(private val context: Context) {
     suspend fun fetch(url: String): ByteArray? = withContext(Dispatchers.IO) {
         val cached = fileFor(url)
         if (cached.exists() && cached.length() > 0) {
+            // Touched on the way past, which is what makes the budget's ordering mean "least
+            // recently used" rather than "least recently downloaded". Without it, a tune played
+            // every day would be evicted ahead of one fetched once and never heard again.
+            runCatching { cached.setLastModified(System.currentTimeMillis()) }
             return@withContext runCatching { cached.readBytes() }.getOrNull()
         }
 
         val downloaded = runCatching { download(url) }.getOrNull() ?: return@withContext null
 
         // Written through a temporary file: a download interrupted halfway would otherwise leave a
-        // truncated file in the cache that looks valid forever after.
-        runCatching {
-            val temporary = File(cached.parentFile, cached.name + ".part")
+        // truncated file in the cache that looks valid forever after. The budget ignores `.part`
+        // files in both directions -- it neither charges for them nor deletes them.
+        val stored = runCatching {
+            val temporary = File(cached.parentFile, cached.name + CacheBudget.PARTIAL_SUFFIX)
             temporary.writeBytes(downloaded)
             temporary.renameTo(cached)
-        }
+        }.getOrDefault(false)
+
+        // After a successful write, not before: the file that just arrived is the newest and would
+        // survive anyway, and enforcing before writing would leave the cache briefly over budget
+        // exactly when it is easiest to fix.
+        if (stored) enforceBudget(inUse = setOf(cached.name))
         downloaded
+    }
+
+    /**
+     * Deletes least-recently-used files until the cache is under its ceiling.
+     *
+     * Called after every successful write and once at start-up, so an installation that grew past
+     * the limit before this existed converges on it rather than staying over forever.
+     *
+     * [inUse] names files that must survive whatever the arithmetic says -- the track playing and
+     * the ones read ahead. Deleting a file mid-read would look to the user like a corrupt download.
+     */
+    fun enforceBudget(inUse: Set<String> = emptySet(), ceilingBytes: Long = CacheBudget.DEFAULT_CEILING_BYTES) {
+        val files = cacheDir.listFiles() ?: return
+        val entries = files.map { CacheEntry(it.name, it.length(), it.lastModified()) }
+        CacheBudget.evictions(entries, inUse, ceilingBytes).forEach { name ->
+            runCatching { File(cacheDir, name).delete() }
+        }
     }
 
     /**
@@ -133,7 +160,19 @@ class RemoteFiles(private val context: Context) {
         FileProvider.getUriForFile(context, "${context.packageName}.shares", file)
     }.getOrNull()
 
-    fun cacheBytes(): Long = cacheDir.listFiles()?.sumOf { it.length() } ?: 0L
+    /** What the fetched-file cache holds. Unfinished downloads do not count. */
+    fun cacheBytes(): Long = CacheBudget.totalBytes(
+        cacheDir.listFiles().orEmpty().map { CacheEntry(it.name, it.length(), it.lastModified()) }
+    )
+
+    /**
+     * What the permanent downloads hold — the ASMA archive and anything like it.
+     *
+     * Reported separately because it is exempt from the ceiling by design and the user has no way
+     * to delete it (`docs/BACKLOG.md` A13). A number they can see is not a delete button, but it is
+     * the difference between an app that takes disk and an app that takes disk quietly.
+     */
+    fun permanentBytes(): Long = archiveDir.listFiles().orEmpty().sumOf { it.length() }
 
     fun clearCache() {
         cacheDir.listFiles()?.forEach { it.delete() }

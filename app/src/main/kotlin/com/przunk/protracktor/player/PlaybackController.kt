@@ -195,6 +195,8 @@ data class BrowseState(
     val arrivedByJump: Boolean = false,
     /** How many SID tunes HVSC has given us a length for. Zero until the database is downloaded. */
     val songLengthCount: Int = 0,
+    /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
+    val storageBytes: Pair<Long, Long> = 0L to 0L,
 
     // What has been played
     val history: List<TrackRef> = emptyList(),
@@ -383,6 +385,11 @@ class PlaybackController private constructor(private val context: Context) {
     init {
         // Before anything can be opened: sc68 reads its replay binaries from a path, and an asset
         // inside an APK does not have one.
+        // Once at start-up, so an installation that grew past the ceiling before the limit existed
+        // converges on it instead of staying over forever. Nothing is in use yet, which is exactly
+        // why this is the cheapest moment to do it.
+        scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
+
         scope.launch(Dispatchers.IO) {
             runCatching {
                 val version = context.packageManager
@@ -955,10 +962,14 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val summaries = catalogues.summaries()
             val lengths = songLengths.count()
+            val storage = withContext(Dispatchers.IO) {
+                remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
+            }
             _browse.update { current ->
                 current.copy(
                     catalogues = summaries,
                     songLengthCount = lengths,
+                    storageBytes = storage,
                     // Everything indexed is searched until the user says otherwise. Starting with
                     // none ticked would make the first search return nothing and look broken.
                     searchCatalogues = current.searchCatalogues.ifEmpty {
