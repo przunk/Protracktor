@@ -216,9 +216,10 @@ it exists. Do it first.
 playing. **Not** the playback position — that is `docs/OPEN_QUESTIONS.md` Q6, still open, and
 formats that cannot seek make it expensive.
 
-**Where:** app-private storage. Room is the eventual home (it is what item 2 and the R9 index need),
-but a first cut may use a plain file plus `SharedPreferences` — no new dependency, and the migration
-into Room happens with the index rather than twice.
+**Where:** app-private storage — the database, which is where playlists and the catalogue indexes
+already live (`docs/ARCHITECTURE.md` §9). Written before that was built, this said "Room"; there is
+no Room here and a plain file plus `SharedPreferences` is no longer the cheaper first cut, because
+the schema and its migrations are already in place and tested.
 
 **Watch for:**
 - SAF grants must be persisted too, or the saved URIs will be unreadable on the next launch.
@@ -289,8 +290,8 @@ The largest item and the one that makes the app usable rather than demonstrable.
 
 - ~~Audio focus and becoming-noisy~~ — done 2026-09-01.
 - Headphone and Bluetooth controls, lock-screen transport. Needs the `MediaSession`.
-- `docs/ARCHITECTURE.md` §4 already picked the approach: Media3's `SimpleBasePlayer` over the native
-  engine, so the session comes without writing an ExoPlayer renderer for a synthesiser.
+- `docs/ARCHITECTURE.md` §4 picked Media3's `SimpleBasePlayer`; **§12 records that the platform's own
+  `android.media.session` was used instead**, and Media3 never became a dependency.
 - Android 14+ requires a `foregroundServiceType` and its permission; `targetSdk` is 36, so this is
   not optional.
 

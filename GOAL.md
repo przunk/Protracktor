@@ -100,3 +100,23 @@ Write what happened, what is unverified, and what you would do next. In particul
 much of items 3, 4 and 5 was **measured** rather than merely built: the last round established that
 a backend proven on the host before integration is worth several device round trips, and the same
 goes for a catalogue whose index has actually been parsed.
+
+---
+
+## Round 2 — closed 2026-09-02
+
+All five items done and merged into `develop`. What is worth knowing beyond that:
+
+- **Item 3 (libsidplayfp)** needed no Commodore ROMs for any of thirty test files, which shrinks the
+  ROM question rather than answering it — none of the thirty was BASIC-compatible, and those are the
+  ones that would need them.
+- **Item 4 (ASMA)** was not the shape the plan assumed. It has no index; it publishes the whole
+  collection as one 20 MB zip. That produced a second kind of catalogue rather than another parser
+  (`docs/ARCHITECTURE.md` §13).
+- **Item 5 (HVSC song lengths)** is keyed on the plain MD5 of the file, not the header hash older
+  HVSC releases used and that libsidplayfp still exposes. Written from the older documentation it
+  would have found nothing and looked empty rather than wrong.
+
+**Nothing in this round has been confirmed on a device.** Five formats and two online archives were
+built and measured on the host; none has been seen working on a phone. That is the honest state and
+the first thing worth doing next.

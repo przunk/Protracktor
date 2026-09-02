@@ -1,14 +1,19 @@
 # Status
 
-Updated: 2026-09-01 — version 0.2.0, versionCode 2
+Updated: 2026-09-02 — version 0.2.0, versionCode 2
 
 ## What works
 
 A usable player, as far as anything can be called that without a device saying so.
 
-- **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more) and Atari ST
-  through sc68 (SNDH, YM). Backends sit behind one interface and are asked what they can do rather
-  than assumed — libopenmpt seeks, sc68 cannot, and the UI reflects that.
+- **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more), Atari ST
+  through sc68 (SNDH, YM), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
+  through libsidplayfp (PSID, RSID) and seven console families through game-music-emu (NSF, GBS,
+  SPC, VGM, HES, AY, KSS). Backends sit behind one interface and are asked what they can do rather
+  than assumed — libopenmpt seeks, sc68 and libsidplayfp cannot, and the UI reflects that.
+- **Online archives**: Modland, browsed offline from a downloaded index and fetched per track; ASMA,
+  which arrives as one 20 MB archive and then needs no network at all. HVSC's song lengths give SID
+  tunes the duration the format cannot carry.
 - **Library**: folders granted through the storage access framework, remembered between sessions.
   Browse shows what a folder holds and adds the ticked rows, not the whole thing.
 - **Playlists**: several, named, created, renamed, deleted, switched from the top bar. Shuffle and
@@ -21,10 +26,15 @@ A usable player, as far as anything can be called that without a device saying s
   and becoming-noisy are honoured.
 - **Both languages**, Polish and English, from the first screen.
 
-Verified here: 29 unit tests, a release build through R8 with all ten JNI symbols intact, and
-`aapt2` on the artifact. Verified by the owner on a device up to 2026-08-31: modules play.
+Verified here: 51 unit tests, a release build through R8 with all ten JNI symbols intact, and
+`aapt2` on the artifact. Every backend was also run on the host against real files before it was
+integrated, which is where its measured coverage in this file comes from.
 
-**Not verified by anyone yet**: SNDH playback, everything added on 2026-09-01, and every gesture.
+Verified by the owner on a device: modules play (2026-08-31), SAP plays (2026-09-01), reordering a
+playlist works (2026-09-02).
+
+**Not verified by anyone on a device**: SNDH, SID, console formats, ASMA, HVSC song lengths, and
+everything else added on 2026-09-01 and 2026-09-02.
 
 ## Finished
 
@@ -201,11 +211,19 @@ Verified here: 29 unit tests, a release build through R8 with all ten JNI symbol
 
 ## Next
 
-1. `sc68` integration for SNDH — the format that started this project. `sndh.net` did not resolve
-   from here, so finding a source for it is part of the step.
-3. Room index and the library scan, which is what R9 (instant start) actually depends on.
+Nothing here is chosen; this is what the current state points at.
 
-Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model). It does not block steps 1–3.
+1. **A device pass.** The list of things nobody has confirmed on a phone is now longer than the list
+   of things anybody has, and five formats and two archives went in without one.
+2. **Subsongs** (`docs/BACKLOG.md` A2) — agreed in shape with the owner and unstarted. Console
+   files and SIDs hold hundreds of tunes each, and today every one of them plays only the first.
+   The song lengths already store every subsong's duration, so half the data is waiting.
+3. **The persistent index and library scan**, which is what R9 (instant start) actually depends on.
+4. **A3 fast scrolling** — explicitly deferred by the owner for a conversation, not for want of a
+   plan.
+
+Blocked on the owner: `docs/OPEN_QUESTIONS.md` Q1 (navigation model), the Commodore ROM question,
+and whether `develop` should be merged to `master`.
 
 ## C — known defects
 
@@ -248,6 +266,9 @@ A6 as well, because it is both a defect and a piece of work.
   global state, so opening a second instance while one plays would clobber it. Adding a folder while
   music is playing therefore resolves nothing until you stop. Accepted; the alternative is
   per-backend rules about which are safe to open concurrently.
+- **A SID cannot be seeked**, only played from the start. libsidplayfp runs the machine; the only
+  way to a position is to run it there, and nothing about the song lengths changes that. The
+  position readout counts frames played and the scrubber shows progress without accepting a drag.
 - **Subsong selection does not exist.** Every backend plays track 0. Some console files hold
   hundreds. It is a defect in effect, but the design is an open decision rather than a bug to fix —
   `docs/BACKLOG.md` A2.
@@ -311,6 +332,7 @@ A6 as well, because it is both a defect and a piece of work.
 
 ## Branches
 
-- `master` — repository base.
-- `develop` — current work.
+- `master` — repository base. Merging to it is the owner's decision (`AGENTS.md` §3).
+- `develop` — current work; everything below is merged into it.
+- `feature/asma-catalogue`, `feature/hvsc-songlengths` — 2026-09-02, merged.
 - `feature/project-scaffold` — scaffolding and the Gradle skeleton. Not merged.
