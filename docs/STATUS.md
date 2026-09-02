@@ -7,7 +7,7 @@ Updated: 2026-09-02 (evening) — version 0.2.0, versionCode 2
 A usable player, as far as anything can be called that without a device saying so.
 
 - **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more), Atari ST
-  through sc68 (SNDH, YM), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
+  through sc68 3.0.0b (SNDH, YM, `.sc68`), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
   through libsidplayfp (PSID, RSID) and seven console families through game-music-emu (NSF, GBS,
   SPC, VGM, HES, AY, KSS). Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt seeks, sc68 and libsidplayfp cannot, and the UI reflects that.
@@ -40,6 +40,11 @@ Round 3's features are confirmed; the formats and archives from round 2 are not.
 
 ## Finished
 
+- **2026-09-03** — **sc68 3.0.0b**, replacing the 2003 release. Measured on one corpus, both
+  libraries, same bytes: **`.sndh` 14/30 → 30/30**, `.sc68` 10/10 → 10/10, and SNDH files now carry
+  durations at all because 3.x ships a database of known tunes. Closes **C1** and confirms **C2**.
+  It was a rewrite rather than a version bump — `api68_*` no longer exists — and the licence moved
+  from GPL-2-or-later to GPL-3-or-later.
 - **2026-09-02** — **How a list behaves** (`docs/ARCHITECTURE.md` §17). Tapping a track plays it;
   a long press starts selecting; the always-visible checkbox and play button are gone; every row
   has a three-dot menu with add, information, both shares and "more from this author". Back leaves
@@ -255,7 +260,7 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C1. Roughly half of `.sndh` files do not play
+### C1. ~~Roughly half of `.sndh` files do not play~~ — FIXED 2026-09-03 by sc68 3.0.0b
 
 Measured on thirty random Modland files through the real backend logic: **16 play, 5 load and render
 silence, 9 fail `api68_load_mem`**. sc68 2.2.1 is from 2003 and its SNDH support is partial.

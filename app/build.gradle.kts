@@ -99,8 +99,13 @@ android {
 val sc68Assets: File = layout.buildDirectory.dir("generated/sc68-assets").get().asFile
 
 val copySc68Data = tasks.register<Copy>("copySc68Data") {
-    from(rootProject.file("native/vendor/sc68/data")) {
-        include("Replay/**", "Sample/**")
+    // sc68 3.0.0b keeps them under file68/data68 rather than 2.2.1's data/, and ships 99 replays
+    // where 2.2.1 shipped 84 -- which is part of why more SNDH files play.
+    from(rootProject.file("native/vendor/sc68-3/file68/data68")) {
+        // Replay only. 2.2.1 also had a Sample/ directory; 3.0.0b does not, and the rest of
+        // data68 (Players/ is assembler source, Windows/ is an installer, sc68.cfg is a config we
+        // deliberately never load) has no business in an APK.
+        include("Replay/**")
     }
     into(File(sc68Assets, "sc68"))
 }

@@ -27,7 +27,8 @@
 #include <libopenmpt/libopenmpt.hpp>
 
 extern "C" {
-#include <api68/api68.h>
+#include <sc68/sc68.h>
+#include <sc68/file68_rsc.h>
 #include <asap.h>
 #include <gme.h>
 }
@@ -130,7 +131,13 @@ void sc68Free(void *pointer) { std::free(pointer); }
 
 class Sc68Backend : public Backend {
 public:
-    /** Where sc68's replay binaries were unpacked. Set once from Kotlin before anything is opened. */
+    /**
+     * Where sc68's replay binaries were unpacked. Set once from Kotlin before anything is opened.
+     *
+     * sc68 does not carry these routines inside the tunes: SNDH and `.sc68` both reference small
+     * 68000 binaries that live on disk. Without them a file loads and then plays silence, which is
+     * indistinguishable from a broken decoder and cost a day to diagnose on 2.2.1.
+     */
     static std::string &sharedDataPath() {
         static std::string path;
         return path;
@@ -139,14 +146,14 @@ public:
     /**
      * A cheap pre-filter, not a verdict.
      *
-     * api68_verify_mem is NOT usable for this: it returns -1 for an ICE-packed SNDH that
-     * api68_load_mem then loads and plays perfectly. Gating on it is what stopped every SNDH in the
-     * owner's library from opening. So this only asks "is it worth handing to sc68", and the real
-     * answer comes from whether the load succeeds.
+     * 2.2.1 had `api68_verify_mem`, and it was already distrusted here: it returns -1 for an
+     * ICE-packed SNDH that then loads and plays perfectly, and gating on it is what once stopped
+     * every SNDH in the owner's library from opening. 3.x has no equivalent, which costs nothing --
+     * the magic checks were doing the work. The real answer still comes from whether the load
+     * succeeds.
      */
     static bool worthTrying(const std::vector<char> &bytes) {
         if (bytes.size() < 16) return false;
-        if (api68_verify_mem(bytes.data(), static_cast<int>(bytes.size())) >= 0) return true;
         if (!std::memcmp(bytes.data(), "ICE!", 4)) return true;   // packed; sc68 unpacks it itself
         if (!std::memcmp(bytes.data(), "SC68", 4)) return true;
 
@@ -159,31 +166,32 @@ public:
     }
 
     explicit Sc68Backend(const std::vector<char> &bytes) {
-        api68_init_t init;
-        std::memset(&init, 0, sizeof(init));
-        init.alloc = sc68Alloc;
-        init.free = sc68Free;
-        init.sampling_rate = kSampleRate;
-        // Without this, SNDH loads and then refuses to play: sc68 wraps these tunes in a small
-        // replay routine of its own (sndh_ice.bin and friends) that lives on disk, not in the file.
-        init.shared_path = sharedDataPath().empty() ? nullptr : sharedDataPath().c_str();
+        ensureLibraryReady();
 
-        api_ = api68_init(&init);
-        if (!api_) throw std::runtime_error("sc68 refused to initialise");
+        sc68_create_t create;
+        std::memset(&create, 0, sizeof(create));
+        create.sampling_rate = kSampleRate;
 
-        if (api68_load_mem(api_, bytes.data(), static_cast<int>(bytes.size())) < 0) {
-            api68_shutdown(api_);
-            api_ = nullptr;
+        sc68_ = sc68_create(&create);
+        if (!sc68_) throw std::runtime_error("sc68 refused to create a player");
+
+        if (sc68_load_mem(sc68_, bytes.data(), static_cast<int>(bytes.size())) < 0) {
+            sc68_destroy(sc68_);
+            sc68_ = nullptr;
             throw std::runtime_error("sc68 could not load this file");
         }
-        api68_play(api_, 1);
-        api68_music_info(api_, &info_, 1, nullptr);
+        if (sc68_play(sc68_, 1, SC68_DEF_LOOP) < 0) {
+            sc68_destroy(sc68_);
+            sc68_ = nullptr;
+            throw std::runtime_error("sc68 loaded the file but refused to play it");
+        }
+        sc68_music_info(sc68_, &info_, SC68_CUR_TRACK, nullptr);
     }
 
     ~Sc68Backend() override {
-        if (api_) {
-            api68_stop(api_);
-            api68_shutdown(api_);
+        if (sc68_) {
+            sc68_stop(sc68_);
+            sc68_destroy(sc68_);
         }
     }
 
@@ -194,22 +202,33 @@ public:
         // the whole conversion on the audio thread and out of the rest of the engine.
         if (scratch_.size() < frames * 2) scratch_.resize(frames * 2);
 
-        const int code = api68_process(api_, scratch_.data(), static_cast<int>(frames));
-        if (code & API68_END) ended_ = true;
+        int count = static_cast<int>(frames);
+        const int code = sc68_process(sc68_, scratch_.data(), &count);
 
-        for (std::size_t i = 0; i < frames * 2; ++i) {
+        // `SC68_ERROR` is ~0 -- every bit set -- so testing it with `&` is true of any non-zero
+        // status, including the perfectly ordinary SC68_IDLE|SC68_CHANGE returned on the first
+        // pass. It is a failure only when it IS the value.
+        if (code == SC68_ERROR) {
+            ended_ = true;
+            return 0;
+        }
+        if (code & SC68_END) ended_ = true;
+        if (count <= 0) return ended_ ? 0 : 0;
+
+        const std::size_t produced = static_cast<std::size_t>(count);
+        for (std::size_t i = 0; i < produced * 2; ++i) {
             out[i] = static_cast<float>(scratch_[i]) / 32768.0f;
         }
-        rendered_ += frames;
-        return ended_ ? 0 : frames;
+        rendered_ += produced;
+        return produced;
     }
 
     bool canSeek() const override { return false; }
     void seek(double) override {}
 
     void rewind() override {
-        api68_stop(api_);
-        api68_play(api_, 1);
+        sc68_stop(sc68_);
+        sc68_play(sc68_, 1, SC68_DEF_LOOP);
         rendered_ = 0;
         ended_ = false;
     }
@@ -218,18 +237,25 @@ public:
         return static_cast<double>(rendered_) / static_cast<double>(kSampleRate);
     }
 
+    /**
+     * How long the tune is, which 2.2.1 could not answer for SNDH at all.
+     *
+     * 3.x ships a database of known SNDH files with their durations, so most of these now have a
+     * real length rather than none.
+     */
     double durationSeconds() const override {
-        return static_cast<double>(info_.time_ms) / 1000.0;
+        return static_cast<double>(info_.trk.time_ms) / 1000.0;
     }
 
     std::string describe() const override {
+        const auto text = [](const char *value) { return value ? value : ""; };
         std::ostringstream o;
-        o << "title\t" << (info_.title ? info_.title : "") << '\n'
+        o << "title\t" << text(info_.title) << '\n'
           << "format\tAtari ST (sc68)" << '\n'
-          << "tracker\t" << (info_.replay ? info_.replay : "") << '\n'
-          << "artist\t" << (info_.author ? info_.author : "") << '\n'
-          << "composer\t" << (info_.composer ? info_.composer : "") << '\n'
-          << "hardware\t" << (info_.hwname ? info_.hwname : "") << '\n'
+          << "tracker\t" << text(info_.replay) << '\n'
+          << "artist\t" << text(info_.artist) << '\n'
+          << "hardware\t" << text(info_.trk.hw) << '\n'
+          << "year\t" << text(info_.year) << '\n'
           << "subsongs\t" << info_.tracks << '\n'
           << "seekable\t0";
         return o.str();
@@ -238,10 +264,32 @@ public:
     int preferredSampleRate() const override { return kSampleRate; }
 
 private:
+    /**
+     * `sc68_init` is process-wide and must happen exactly once, before any player is created.
+     *
+     * The replay path is applied here too: 3.x dropped `shared_path` from its init struct and
+     * `rsc68_set_share` replaces it, which has to be called after the library is up.
+     */
+    static void ensureLibraryReady() {
+        static const bool ready = [] {
+            sc68_init_t init;
+            std::memset(&init, 0, sizeof(init));
+            // Do not read or write a config file. There is nowhere sensible for one on Android, and
+            // a player that remembers settings nobody set is a player that behaves differently on
+            // its second run for no visible reason.
+            init.flags.no_load_config = 1;
+            init.flags.no_save_config = 1;
+            if (sc68_init(&init) < 0) return false;
+            if (!sharedDataPath().empty()) rsc68_set_share(sharedDataPath().c_str());
+            return true;
+        }();
+        if (!ready) throw std::runtime_error("sc68 refused to initialise");
+    }
+
     static constexpr int kSampleRate = 44100;
 
-    api68_t *api_ = nullptr;
-    api68_music_info_t info_{};
+    sc68_t *sc68_ = nullptr;
+    sc68_music_info_t info_{};
     std::vector<short> scratch_;
     std::size_t rendered_ = 0;
     bool ended_ = false;
