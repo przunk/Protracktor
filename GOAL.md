@@ -221,3 +221,194 @@ Done and merged. Two things found on the way that had nothing to do with lists:
   is not a format specifier at all. It was in the song-length count, whose quantity is always
   `other` at 61,157, so the online screen would have crashed the moment the database was
   downloaded. Nobody had run that path yet.
+
+---
+
+# Round 5 — set 2026-09-02, reliability, indexing and review
+
+This round has four phases and they happen in this order:
+
+1. implement the six specified changes below;
+2. review the complete codebase and write the findings down;
+3. fix the most important confirmed findings from that review;
+4. reconcile the complete project documentation with the resulting code.
+
+Do not begin the review while one of items 1–6 is merely half-built, and do not update the final
+project status before the review fixes have landed. The point of this order is to review the code
+that will actually be handed back, then make the documentation describe that final state.
+
+The rules at the top of this file continue to apply. In particular, each numbered implementation
+item gets its own branch from `develop`, tests, debug build, commit and merge back into `develop`.
+The review itself gets a branch and commit; each independent correction selected from it gets its
+own branch and commit. Never merge to `master`.
+
+## Phase 1 — specified implementation
+
+- [ ] **1. Replace sc68 2.2.1 with 3.0.0b and re-measure C1/C2**
+
+      Follow `docs/PLAN_FORMATS.md` §0. Fetch only the required SourceForge SVN tree, excluding
+      the plugin and SDK ballast; pin the exact upstream revision and verify the downloaded content.
+      Build and exercise the new library on the host before changing the Android integration.
+
+      Re-run the same representative measurement as the existing baseline: thirty random SNDH
+      files and ten `.sc68` files through the real backend path. Record plays, silent renders and
+      load failures separately, and compare them with **16/30 SNDH** and **8/10 `.sc68`**. Integrate
+      3.0.0b only if the evidence shows a material improvement and no regression in the already
+      working cases; otherwise keep 2.2.1, record the measured blocker, and continue with item 2.
+
+      Update the generated configuration deliberately, verify the actual source-file licences
+      rather than trusting `COPYING`, preserve the replay-data licensing warning, build every
+      Android ABI, and make the host probe a repeatable command rather than a one-off experiment.
+
+- [ ] **2. Build the persistent local-library index and probe content instead of extensions (A6/C4)**
+
+      Scanning remains an explicit user action. Launching or returning to the app must never scan a
+      granted folder as a side effect. A completed scan writes a durable index that later launches
+      can read without reopening and re-probing every file.
+
+      Identify candidate files through the same production backend probing path used for playback,
+      not through their names. Persist enough information to avoid repeating expensive work:
+      source identity, detected backend/format, display metadata, duration where known, subsong
+      count, size and the information needed to determine whether the source is still available.
+      A renamed or misleading extension must not decide whether a playable file enters the index.
+
+      Reserve the database version before editing the schema. Write a manual, non-destructive
+      migration and test it against real SQLite with existing data. Test fresh creation and the
+      migrated schema for equivalence, run the test through the production configuration path, and
+      deliberately break the probing/indexing rule once to prove the regression test can fail.
+
+- [ ] **3. Put a real bound on the fetched-file cache (Q5)**
+
+      Adopt a **512 MB default ceiling with least-recently-used eviction**. This round establishes
+      the mechanism and the default; exposing the value as a user setting remains part of A13.
+
+      Enforce the budget after a successful cache write and on application start, so upgrading an
+      existing installation also converges on the limit. Never count or evict permanent downloaded
+      data such as the ASMA archive or HVSC song-length database, a file currently being read or
+      prefetched, an incomplete download, or a `FileProvider` share copy still inside its retention
+      window. Failed and interrupted downloads must not become valid cache entries.
+
+      Keep eviction and ordering logic independent of Android time and filesystem APIs where
+      practical. Add deterministic tests for the byte ceiling, LRU ordering, protected files,
+      interrupted writes and start-up cleanup. Document exactly what counts toward the 512 MB.
+
+- [ ] **4. Restore the correct Browse position on back navigation (A20)**
+
+      Every Browse level keeps its own scroll state for the life of that Browse session. Returning
+      from tracks to authors, or from authors to formats, must bring back the row the user entered,
+      even when the list changed while they were below it. Restore by stable row identity first and
+      use the saved index/offset only as a fallback.
+
+      Reuse the existing near-target animate / far-target jump helper rather than creating another
+      scrolling policy. Preserve the semantics settled in `docs/ARCHITECTURE.md` §17: leaving a
+      selection is one back step, an ordinary descent returns one level, and a jump made by "More
+      from this author" returns directly to the playlist. Do not implement A3's draggable scrollbar
+      or top/bottom controls as part of this item.
+
+- [ ] **5. C6 — a fresh entry into Online catalogues starts at the catalogue list**
+
+      Reported by the owner on 2026-09-02. After leaving Browse and opening **Browse → Online
+      catalogues** again, the app currently sometimes restores an old folder/search-like state or
+      shows an empty view. A new entry must always show the root list of online catalogues.
+
+      This is the known defect recorded as `docs/STATUS.md` C6 and shares state machinery with A20.
+      The reset happens when a new Browse session enters the Online catalogues domain, not during
+      recomposition and not while navigating inside an existing session. It must clear stale
+      catalogue hierarchy, query/result and transient selection state without deleting downloaded
+      indexes or the per-level scroll state that item 4 needs within the current session. Add a
+      state-level regression test that enters a catalogue deeply, leaves Browse, enters Online
+      catalogues again and sees the catalogue root with real catalogue rows rather than an empty
+      list.
+
+- [ ] **6. C7 — "Add to playlist" from a Browse row menu stays in Browse**
+
+      Reported by the owner on 2026-09-02. Choosing **Add to playlist** from a track's three-dot
+      menu currently dismisses Browse and returns to the playlist. Adding is not navigation: keep
+      the user at the same Browse domain, hierarchy level and scroll position, close only the menu
+      or destination picker, and leave the added row visible.
+
+      This is the known defect recorded as `docs/STATUS.md` C7. It applies to an action initiated
+      from one row's menu, including its destination-picker route. Preserve the existing behaviour
+      of the explicit bulk-add completion action, which closes Browse because that flow is finished.
+
+      Confirm the row-menu action in place. When the target is not visible, the message names the
+      playlist; when duplicate prevention rejects the addition, say so rather than silently
+      navigating or pretending it succeeded. Preserve the existing immediate-write rule for a
+      non-active playlist and the active playlist's draft semantics. Cover both the direct
+      active-playlist action and the destination-picker route with regression tests through the
+      same callbacks the UI uses.
+
+## Phase 2 — thorough code review
+
+After all six items above are complete, review the **entire current `develop` tree**, including the
+Kotlin application and domain code, JNI/native engine and every decoder adapter, SQLite schema and
+migrations, services/media session, catalogue and network/cache code, Compose state and gestures,
+resources, build configuration and project scripts. This is not a formatting pass.
+
+Look especially for:
+
+- data loss, destructive migration paths and identities that can collide;
+- crashes, ANRs, lifecycle leaks, stale Compose state and coroutine/native concurrency races;
+- use-after-close, double ownership, cancellation and audio-thread work that can block;
+- corrupt or partial downloads being accepted, unbounded storage and unsafe URI/file exposure;
+- production wiring that differs from what tests instantiate;
+- actions that silently do nothing, accessibility gaps, English/Polish drift and malformed formats;
+- incorrect capability claims, queue/history edge cases and regressions between local, indexed,
+  archive and live-search sources;
+- release-build, R8/JNI, signing and dependency/licence risks.
+
+Write the result to **`docs/review.md`** in English. Give each finding a stable identifier, severity
+(`critical`, `high`, `medium`, `low`), concrete file/location, mechanism, user impact, evidence or
+reproduction route, proposed correction and status. Separate confirmed defects from unverified
+risks and from optional improvements. Do not inflate the report with style preferences, and do not
+call something fixed until the correcting commit and its verification are named.
+
+## Phase 3 — corrections selected from the review
+
+Fix every confirmed **critical** and **high** finding that can be corrected without a new product
+decision or credentials, then the highest-impact **medium** findings while they remain independent
+and testable. Priority is: data loss/corruption, crash or native-memory safety, playback ownership
+and concurrency, security/privacy, migrations and persistent state, then user-visible behavioural
+failures. A broad architectural rewrite is not an automatic consequence of a review finding.
+
+For every selected finding:
+
+1. reproduce the mechanism with a failing test or a deterministic diagnostic;
+2. make the smallest correction that removes the cause rather than masking the symptom;
+3. break the corrected behaviour deliberately and confirm that its test fails;
+4. run `./scripts/test-protracktor.sh` and `./scripts/build-debug.sh`;
+5. update the finding in `docs/review.md` with its fixing commit and verification.
+
+Leave findings that require the owner's UI/product choice, external credentials, unavailable
+hardware or a large independent feature open. Put the required decision and realistic options in
+`docs/OPEN_QUESTIONS.md` or the work in `docs/BACKLOG.md`; do not guess and do not label the review
+blocked merely because one finding cannot be fixed unattended.
+
+When all selected corrections are in, run the full test suite from genuinely executed tasks rather
+than trusting `UP-TO-DATE`, then build both debug and release artifacts. Verify non-zero test counts,
+the packaged JNI symbols and resources, and report artifact paths and signing identity. This still
+does not confirm any behaviour on a phone.
+
+## Phase 4 — reconcile all documentation
+
+Only after the implementation and review corrections are final, read every project Markdown file
+again and make the set agree with the code and with itself. At minimum reconcile `README.md`, this
+file, `docs/STATUS.md`, `docs/ARCHITECTURE.md`, `docs/BACKLOG.md`, `docs/WISHLIST.md`,
+`docs/OPEN_QUESTIONS.md`, both plan documents, `docs/BUILD.md`, `docs/LICENSES.md`,
+`docs/REQUIREMENTS.md` and `docs/review.md`.
+
+Move or strike completed work without erasing its history; keep open decisions open; correct stale
+claims rather than adding a contradictory paragraph. Update schema versions, dependency versions,
+test counts, measured decoder results, known defects, branch/merge state and build instructions to
+their exact final values. Distinguish host measurement, compilation and unit-test evidence from
+things the owner has actually confirmed on a device.
+
+Finish with one documentation commit, `./scripts/test-protracktor.sh`,
+`./scripts/build-debug.sh`, `git diff --check`, and a concise hand-off containing:
+
+- the six requested outcomes and how each was verified;
+- sc68 before/after measurements;
+- review findings by severity, including what was fixed and what remains;
+- database/cache compatibility notes;
+- debug and release artifact paths and signing status;
+- an explicit list of everything still requiring a device check or owner decision.

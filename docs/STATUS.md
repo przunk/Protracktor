@@ -291,6 +291,46 @@ and on any string that exists in English and not in Polish, naming the line eith
 were verified by breaking the files on purpose and watching the script exit non-zero — a check
 nobody has seen fail is a check nobody should trust.
 
+### C6. Re-entering Online lands inside the last folder, or on nothing
+
+Reported by the owner 2026-09-02: opening Browse and choosing **Online catalogues** should show the
+catalogues. Instead it shows some folder, or an empty screen.
+
+**Cause, read in the code.** `openDomain` clears `tracks` and `groups` but leaves `openCatalogue`,
+`openFormat` and `openAuthor` exactly as the last visit left them:
+
+```kotlin
+it.copy(domain = domain, tracks = emptyList(), groups = emptyList(), arrivedByJump = false)
+```
+
+`OnlineDomain` branches on those three, so it renders the deepest one still set — with the list
+underneath just emptied. Hence a folder view with nothing in it. Longstanding rather than new; what
+changed is that `docs/BACKLOG.md` A20 has made people notice where Browse thinks it is.
+
+**The fix is to clear the position with the domain**, and it belongs with A20 rather than on its
+own: A20 wants Browse to *remember* a position per level, which is the same question asked the other
+way round. Deciding one without the other produces a screen that remembers what it should forget.
+
+### C7. "Add to the playlist" from a row menu closes Browse
+
+Reported by the owner 2026-09-02.
+
+**Cause.** The row menu's single-track add and the bulk add button call the same callback, and that
+callback closes Browse:
+
+```kotlin
+onAdd = { tracks -> viewModel.addToPlaylist(tracks); showBrowse = false }
+```
+
+Closing is right for the bulk button — you have finished choosing and want to see what you chose.
+It is wrong for a menu item on one row, where the whole point is to keep browsing. One callback for
+two intentions.
+
+**Worth fixing together with the confirmation question**, because they are the same question: if
+Browse stays open, adding one track has to *say* it happened, exactly as the dock's **+** now does
+(`docs/ARCHITECTURE.md` §17). Fixing the navigation alone would replace a jarring screen change
+with no feedback at all.
+
 ### C4. Folder scanning trusts file extensions
 
 Not content probing, as `docs/ARCHITECTURE.md` §5 requires. A misnamed file is skipped by a scan; a
