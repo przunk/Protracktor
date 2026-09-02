@@ -158,9 +158,22 @@ Order is chosen so each item stands on the one before it, not by the owner's num
       **local** file's neighbours are its folder, which is a different mechanism — do the catalogue
       case first and say plainly whether the local one is in or out.
 
-- [ ] **5. A10 — Sharing, the file and a link**
+- [x] **5. A10 — Sharing, the file and a link**
       Two actions, not one. A local file needs a `FileProvider` copy because a SAF URI cannot be
       handed to another app. **Not every track has a link**: Modland ids are `https://` URLs, ASMA
       ids are `asma://<entry>` and mean nothing off this device — decide and act, do not let it
       fail quietly. If choosing *what a shared link should say* needs the owner, that part stops
       and the rest ships.
+
+## Round 3 — closed 2026-09-02
+
+All five done and merged into `develop`. Two things came out of it that were not in the plan:
+
+- **A latent null in `Catalogue.all`**, found by the first test that reached it. A companion's
+  properties are static fields of the outer class, so touching a catalogue object directly built
+  the list while that object was still initialising and put a `null` in it for the life of the
+  process. Nothing in the app did that yet; the next person to write `Modland.something` would have.
+- **With a queue read ahead, the dice and next stop meaning the same thing.** Next means forward;
+  the dice means surprise me, so it drops unheard picks and re-rolls. Say if that is wrong.
+
+Still true, and now longer: **nothing in rounds 2 or 3 has been confirmed on a device.**

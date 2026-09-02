@@ -154,7 +154,7 @@ where it does not, nothing where the device has no vibrator.
 Android already honours the user's system haptics setting, so there is no need for our own — and
 adding one would be inventing a preference the platform already owns.
 
-## A10. Sharing — the file, and a link to it
+## A10. ~~Sharing — the file, and a link to it~~ — DONE 2026-09-02
 
 Raised 2026-09-02 by the owner. Two actions, and they are **not** the same feature:
 
@@ -179,6 +179,22 @@ Raised 2026-09-02 by the owner. Two actions, and they are **not** the same featu
 
 Sharing the whole **playlist** is a third thing again, and nobody has asked for it — the formats
 would be a list of URLs plus local files that cannot travel. Not in scope here.
+
+**Built**, and both questions above were decided rather than dodged:
+
+- The file is copied into a `FileProvider` directory in the cache and shared from there, because
+  neither place our files live can be handed to another app — a SAF grant cannot be passed on, and
+  app-private storage cannot be read from outside. Copies are swept an hour after they are made,
+  not immediately, because the receiving app reads the file after the chooser closes.
+- The link asks the catalogue what it publishes. Modland serves every file over HTTP, so the link
+  is the file. ASMA publishes one archive and no per-file address, so the share names the
+  collection and the path inside it — a real thing to act on, rather than an `asma://` reference
+  that means nothing on anyone else's phone. `Catalogue.webUrlFor` returning null is what says so.
+- The MIME type is `application/octet-stream`, not `audio/*`: no chat app can play a `.mod`, and
+  claiming an audio type invites the receiving end to try and fail.
+
+**What the owner may still want to decide**: what a shared link should *say*. A bare `modland.com`
+URL is honest and points at a file rather than at anything a person can look at.
 
 ## A11. ~~Random should read ahead, the way the playlist does~~ — DONE 2026-09-02
 

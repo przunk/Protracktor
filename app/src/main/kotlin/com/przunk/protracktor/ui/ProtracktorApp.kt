@@ -15,6 +15,7 @@
  */
 package com.przunk.protracktor.ui
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -56,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -109,6 +111,19 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         showBrowse = true
     }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
+
+    // The chooser needs an activity; preparing what is shared needed a fetch. The controller does
+    // the second and hands the first over here.
+    // LocalContext inside an activity's content is that activity, so the chooser starts as a
+    // normal child. `LocalActivity` would say this more plainly and arrived in activity-compose
+    // 1.10; this project is on 1.9.3.
+    val context = LocalContext.current
+    val shareTitle = stringResource(R.string.share_chooser)
+    LaunchedEffect(Unit) {
+        viewModel.share.collect { intent ->
+            context.startActivity(Intent.createChooser(intent, shareTitle))
+        }
+    }
 
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
@@ -260,6 +275,8 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onRemoveAt = viewModel::removeTrack,
                 onMove = viewModel::moveTrack,
                 onShowNeighbours = viewModel::showNeighboursOf,
+                onShareFile = viewModel::shareFile,
+                onShareLink = viewModel::shareLink,
                 onBrowse = openBrowse,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,
@@ -305,6 +322,10 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                             viewModel.showNeighboursOf(track)
                         }
                     },
+                onShareFile = state.current?.let { track -> { viewModel.shareFile(track) } },
+                onShareLink = state.current
+                    ?.takeIf { Catalogue.owning(it.id) != null }
+                    ?.let { track -> { viewModel.shareLink(track) } },
             )
         }
     }
