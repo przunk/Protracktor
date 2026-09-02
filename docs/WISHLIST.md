@@ -59,7 +59,7 @@ Already written up in `docs/BACKLOG.md` A1; repeated here because he has now ask
 priority rather than a duplicate. **Built** — the results become the queue while you are in them, so
 next and previous walk what you found and the playlist is untouched.
 
-## B2. Jump to a tune's neighbours
+## B2. ~~Jump to a tune's neighbours~~ — DONE 2026-09-02 for catalogue tracks
 
 *owner, 2026-09-01.*
 

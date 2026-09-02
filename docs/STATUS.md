@@ -38,6 +38,10 @@ everything else added on 2026-09-01 and 2026-09-02.
 
 ## Finished
 
+- **2026-09-02** — **"More from this author"**, from the expanded player and from a track's menu:
+  opens Browse at the author's folder in the catalogue the tune came from. **Catalogue tracks only** —
+  a local file's neighbours would be its directory, and the local browser lists a whole granted tree
+  flat rather than directory by directory, so there is no folder to open.
 - **2026-09-02** — **History.** A fifth domain in Browse listing what has been played, most recent
   first, playable and addable exactly like any other list. One row per track rather than one per
   play, 500 of them, forgetting the oldest.
@@ -274,6 +278,9 @@ A6 as well, because it is both a defect and a piece of work.
   global state, so opening a second instance while one plays would clobber it. Adding a folder while
   music is playing therefore resolves nothing until you stop. Accepted; the alternative is
   per-backend rules about which are safe to open concurrently.
+- **"More from this author" does nothing for local files**, and is absent rather than disabled for
+  them. The local browser lists a granted tree flat, so there is no directory to jump to;
+  directory-level local browsing is its own piece of work and nobody has asked for it.
 - **A SID cannot be seeked**, only played from the start. libsidplayfp runs the machine; the only
   way to a position is to run it there, and nothing about the song lengths changes that. The
   position readout counts frames played and the scrubber shows progress without accepting a drag.

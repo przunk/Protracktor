@@ -60,6 +60,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.przunk.protracktor.R
+import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.PlaybackController
 import com.przunk.protracktor.player.PlayerViewModel
@@ -100,7 +101,14 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) { viewModel.addFiles(uris); showBrowse = false } }
 
-    LaunchedEffect(showBrowse) { if (showBrowse) viewModel.openDomain(BrowseDomain.ROOT) }
+    // Opening Browse from a button starts at the top; opening it from a jump does not, because the
+    // jump has already aimed it. Tying the reset to the button rather than to the sheet being shown
+    // is what keeps those two apart.
+    val openBrowse = {
+        viewModel.openDomain(BrowseDomain.ROOT)
+        showBrowse = true
+    }
+    LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
 
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
@@ -192,7 +200,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                                 Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
                             }
                         }
-                        TextButton(onClick = { showBrowse = true }) {
+                        TextButton(onClick = openBrowse) {
                             Text(stringResource(R.string.action_browse))
                         }
                     }
@@ -205,7 +213,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onSeek = viewModel::seekTo,
                 onKeep = viewModel::keepTransient,
                 onExpand = { showNowPlaying = true },
-                onBrowse = { showBrowse = true },
+                onBrowse = openBrowse,
                 onPlayPause = viewModel::togglePlayPause,
                 onPrevious = viewModel::previous,
                 onNext = viewModel::next,
@@ -251,7 +259,8 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onPlayAt = viewModel::playAt,
                 onRemoveAt = viewModel::removeTrack,
                 onMove = viewModel::moveTrack,
-                onBrowse = { showBrowse = true },
+                onShowNeighbours = viewModel::showNeighboursOf,
+                onBrowse = openBrowse,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,
             )
@@ -283,6 +292,17 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                         {
                             showNowPlaying = false
                             scope.launch { playlistState.animateScrollToItem(index) }
+                        }
+                    },
+                // The Random case is why this is here rather than only in the row menu: during
+                // Random the playlist is behind glass and the row menu cannot be reached at all,
+                // and a tune played at random is exactly the one you want to ask this about.
+                onShowNeighbours = state.current
+                    ?.takeIf { Catalogue.owning(it.id) != null }
+                    ?.let { track ->
+                        {
+                            showNowPlaying = false
+                            viewModel.showNeighboursOf(track)
                         }
                     },
             )

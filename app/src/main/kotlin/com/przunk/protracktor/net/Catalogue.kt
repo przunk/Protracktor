@@ -40,6 +40,18 @@ sealed class Catalogue(
     abstract fun urlFor(path: String): String
 
     /**
+     * The inverse of [urlFor]: the catalogue path a reference points at, or null if it is not ours.
+     *
+     * Needed to get from a track back to where it came from -- the author's folder it was found in
+     * (`docs/WISHLIST.md` B2). A reference carries the URL and nothing else, so without this the
+     * only way back would be guessing from the title.
+     *
+     * Returning null for a reference belonging to another catalogue is how the caller finds which
+     * catalogue a track is from: it asks all of them.
+     */
+    abstract fun pathFrom(id: String): String?
+
+    /**
      * Whether the thing at [indexUrl] is the whole archive rather than a list of what is in it.
      *
      * Two shapes exist and they are not variations of one another. Modland publishes an index and
@@ -53,9 +65,25 @@ sealed class Catalogue(
     abstract fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry>
 
     companion object {
-        val all: List<Catalogue> = listOf(Modland, Asma)
+        /**
+         * **`by lazy` is load-bearing, not style.**
+         *
+         * A companion's properties are static fields of [Catalogue] itself, so initialising this
+         * eagerly meant that *touching `Modland` directly* ran `Catalogue`'s static initialiser
+         * first -- which built this list while `Modland`'s own initialiser was still running, and
+         * so put a **null** in it, permanently, for the life of the process. The crash would then
+         * arrive somewhere else entirely, from a list that could not contain a null.
+         *
+         * Nothing in the app referred to a catalogue object directly, so nothing had hit it; a
+         * test for `owning` did, immediately. Deferring to first access is the fix, because by then
+         * every object in the list has finished initialising.
+         */
+        val all: List<Catalogue> by lazy { listOf(Modland, Asma) }
 
         fun byId(id: String): Catalogue? = all.firstOrNull { it.id == id }
+
+        /** Which catalogue a track reference belongs to, if any. Each recognises only its own. */
+        fun owning(trackId: String): Catalogue? = all.firstOrNull { it.pathFrom(trackId) != null }
     }
 }
 
@@ -80,6 +108,15 @@ object Modland : Catalogue(
         FILE_BASE + path.split('/').joinToString("/") { segment ->
             java.net.URLEncoder.encode(segment, "UTF-8").replace("+", "%20")
         }
+
+    override fun pathFrom(id: String): String? {
+        if (!id.startsWith(FILE_BASE)) return null
+        // Decoded segment by segment rather than whole, so a literal "+" in a filename survives:
+        // URLDecoder turns "+" into a space, and urlFor deliberately encoded spaces as %20.
+        return id.removePrefix(FILE_BASE).split('/').joinToString("/") { segment ->
+            java.net.URLDecoder.decode(segment.replace("+", "%2B"), "UTF-8")
+        }
+    }
 
     override fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry> {
         val text = java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
@@ -131,6 +168,8 @@ object Asma : Catalogue(
 ) {
     /** Read out of the stored archive rather than fetched. The player understands this scheme. */
     override fun urlFor(path: String): String = "asma://$path"
+
+    override fun pathFrom(id: String): String? = id.removePrefix("asma://").takeIf { it != id }
 
     override val isArchive: Boolean get() = true
 

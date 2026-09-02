@@ -49,6 +49,7 @@ fun NowPlaying(
     state: PlayerUiState,
     onSeek: (Double) -> Unit,
     onShowInPlaylist: (() -> Unit)?,
+    onShowNeighbours: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val track = state.current
@@ -113,6 +114,19 @@ fun NowPlaying(
                     modifier = Modifier.padding(end = 8.dp),
                 )
                 Text(stringResource(R.string.action_show_in_playlist))
+            }
+        }
+
+        // "That was good -- what else did they write." Absent rather than disabled for a local
+        // file, which has no catalogue folder to open.
+        onShowNeighbours?.let { show ->
+            TextButton(onClick = show) {
+                Icon(
+                    imageVector = PlayerIcons.Folder,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(stringResource(R.string.action_show_neighbours))
             }
         }
 
