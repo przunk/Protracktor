@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -117,6 +118,10 @@ fun BrowseScreen(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
 ) {
+    // One per Browse session. It dies when Browse closes, which is what makes a fresh entry start
+    // at the top (`docs/STATUS.md` C6) while a descent and return does not.
+    val scroll = rememberBrowseScroll()
+
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
         if (browse.indexing != null) {
             // An index download is minutes of work on a slow connection. Saying which catalogue and
@@ -134,6 +139,7 @@ fun BrowseScreen(
             BrowseDomain.ROOT -> DomainChooser(onOpenDomain = onOpenDomain, onRandom = onRandom)
             BrowseDomain.LOCAL -> LocalDomain(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
                 onShowNeighbours = onShowNeighbours,
@@ -150,6 +156,7 @@ fun BrowseScreen(
             )
             BrowseDomain.ONLINE -> OnlineDomain(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
                 onShowNeighbours = onShowNeighbours,
@@ -165,6 +172,7 @@ fun BrowseScreen(
             )
             BrowseDomain.HISTORY -> HistoryDomain(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
                 onShowNeighbours = onShowNeighbours,
@@ -177,6 +185,7 @@ fun BrowseScreen(
             )
             BrowseDomain.SEARCH -> SearchDomain(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
                 onShowNeighbours = onShowNeighbours,
@@ -263,6 +272,7 @@ private fun DomainRow(
 @Composable
 private fun LocalDomain(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
@@ -324,6 +334,7 @@ private fun LocalDomain(
 
             Selectable(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
                 onPlay = onPlay,
@@ -371,7 +382,10 @@ private fun LocalDomain(
                                 )
                             }
                         },
-                        modifier = Modifier.clickable { onOpenFolder(folder) },
+                        modifier = Modifier.clickable {
+                            scroll.descendingFrom(browse.levelKey(), folder.uri)
+                            onOpenFolder(folder)
+                        },
                     )
                 }
             }
@@ -384,6 +398,7 @@ private fun LocalDomain(
 @Composable
 private fun OnlineDomain(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
@@ -400,6 +415,7 @@ private fun OnlineDomain(
     when {
         browse.openAuthor != null -> Selectable(
             browse = browse,
+            scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
             onPlay = onPlay,
@@ -414,7 +430,11 @@ private fun OnlineDomain(
             if (browse.loading) {
                 Loading()
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                val key = browse.levelKey()
+                val listState = scroll.stateFor(key)
+                RestorePosition(scroll, key, listState, browse.groups.map { it.name })
+
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                     items(browse.groups, key = { it.name }) { group ->
                         ListItem(
                             headlineContent = {
@@ -427,14 +447,21 @@ private fun OnlineDomain(
                             trailingContent = {
                                 Text("${group.count}", style = MaterialTheme.typography.labelMedium)
                             },
-                            modifier = Modifier.clickable { onOpenGroup(group.name) },
+                            modifier = Modifier.clickable {
+                                scroll.descendingFrom(key, group.name)
+                                onOpenGroup(group.name)
+                            },
                         )
                     }
                 }
             }
         }
 
-        else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+        else -> {
+        val key = browse.levelKey()
+        val listState = scroll.stateFor(key)
+        RestorePosition(scroll, key, listState, browse.catalogues.map { it.id })
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             items(browse.catalogues, key = { it.id }) { catalogue ->
                 ListItem(
                     headlineContent = { Text(catalogue.displayName) },
@@ -535,6 +562,7 @@ private fun OnlineDomain(
                 )
             }
         }
+        }
     }
 }
 
@@ -546,6 +574,7 @@ private fun OnlineDomain(
 @Composable
 private fun SearchDomain(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
@@ -624,6 +653,7 @@ private fun SearchDomain(
         } else {
             Selectable(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
                 onPlay = onPlay,
@@ -664,6 +694,7 @@ private fun Loading() {
 @Composable
 private fun HistoryDomain(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
@@ -699,6 +730,7 @@ private fun HistoryDomain(
         }
         Selectable(
             browse = browse,
+            scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
             onPlay = onPlay,
@@ -722,9 +754,34 @@ private fun HistoryDomain(
  * Selection is this composable's own business and dies with it. Holding it in the controller would
  * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
  */
+/**
+ * Puts the row you came out of back on screen, once the list it lives in has arrived.
+ *
+ * Identity first, and there is no index fallback on purpose: an index is only "where I was" while
+ * the list is unchanged, and the case this exists for is precisely the one where it changed. When
+ * the row is gone, the level's own saved offset is already correct enough, and jumping somewhere
+ * arbitrary because a number still parses would be worse than leaving it alone.
+ */
+@Composable
+private fun RestorePosition(
+    scroll: BrowseScroll,
+    key: String,
+    listState: LazyListState,
+    rowKeys: List<String>,
+) {
+    LaunchedEffect(key, rowKeys) {
+        val target = scroll.pendingReturn(key) ?: return@LaunchedEffect
+        if (rowKeys.isEmpty()) return@LaunchedEffect      // not loaded yet; ask again when it is
+        val index = rowKeys.indexOf(target)
+        if (index >= 0) listState.bringIntoView(index)
+        scroll.returned(key)
+    }
+}
+
 @Composable
 private fun Selectable(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
     onPlay: (Int) -> Unit,
@@ -803,7 +860,11 @@ private fun Selectable(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(24.dp),
             )
-            else -> LazyColumn(modifier = Modifier.weight(1f)) {
+            else -> {
+                val key = browse.levelKey()
+                val listState = scroll.stateFor(key)
+                RestorePosition(scroll, key, listState, browse.tracks.map { it.id })
+                LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
                     BrowseTrackRow(
                         track = track,
@@ -827,6 +888,7 @@ private fun Selectable(
                             ?.let { { onShareLink(it) } },
                     )
                 }
+            }
             }
         }
 

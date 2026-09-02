@@ -1,0 +1,87 @@
+/*
+ * Protracktor -- a player for retro platform music formats.
+ * Copyright (C) 2026 Przunk
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
+ * the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <https://www.gnu.org/licenses/>.
+ */
+package com.przunk.protracktor.ui
+
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.remember
+import com.przunk.protracktor.player.BrowseDomain
+import com.przunk.protracktor.player.BrowseState
+
+/**
+ * Where you were on each level of Browse, for as long as Browse is open.
+ *
+ * `docs/BACKLOG.md` A20: going into an author's folder and pressing back put you at the **top** of
+ * the author list, whatever row you had come out of. The cause was that Browse kept no scroll state
+ * at all -- every level was the same `LazyColumn` call site recomposed with different data, so the
+ * position survived a level change by accident and was then clamped to whatever the shorter list
+ * could hold.
+ *
+ * Two halves, and the second is the one that is easy to leave out:
+ *
+ * 1. **Each level keeps its own position.** One [LazyListState] per level key, so descending and
+ *    returning restores the offset rather than inheriting somebody else's.
+ * 2. **Coming back puts the row you came *from* on screen.** An offset is not "where I was" once
+ *    the list underneath has changed -- a rescan, a re-index, a different sort. The row's own key
+ *    is, so that is what is remembered and what is looked for first.
+ *
+ * Lives for the life of the Browse session and dies with it, which is deliberate: leaving Browse
+ * and coming back should start at the top (`docs/STATUS.md` C6), and state that outlives its screen
+ * is how that defect happened in the first place.
+ */
+@Stable
+internal class BrowseScroll {
+
+    private val states = mutableMapOf<String, LazyListState>()
+    private val entered = mutableMapOf<String, String>()
+
+    /** The scroll state for one level, created once and kept. */
+    fun stateFor(key: String): LazyListState = states.getOrPut(key) { LazyListState() }
+
+    /** Records which row was tapped to leave [key], so returning can find it again. */
+    fun descendingFrom(key: String, rowKey: String) {
+        entered[key] = rowKey
+    }
+
+    /** The row to return to on [key], if one is waiting. Does not consume it. */
+    fun pendingReturn(key: String): String? = entered[key]
+
+    /** Forgets the pending return for [key] — once it has been used, or once it cannot be. */
+    fun returned(key: String) {
+        entered.remove(key)
+    }
+}
+
+@Composable
+internal fun rememberBrowseScroll(): BrowseScroll = remember { BrowseScroll() }
+
+/**
+ * Which level of Browse this is.
+ *
+ * Built from the state rather than passed around, so a level cannot be given the wrong key by a
+ * caller that forgot to update it. Two different authors are two different levels; the same author
+ * reached twice is the same one.
+ */
+internal fun BrowseState.levelKey(): String = when (domain) {
+    BrowseDomain.ROOT -> "root"
+    BrowseDomain.LOCAL -> openFolder?.let { "local/${it.uri}" } ?: "local"
+    BrowseDomain.ONLINE ->
+        listOfNotNull("online", openCatalogue?.id, openFormat, openAuthor).joinToString("/")
+    // The query is part of it: searching for something else is a different list, not a scrolled one.
+    BrowseDomain.SEARCH -> "search/$query"
+    BrowseDomain.HISTORY -> "history"
+}
