@@ -392,6 +392,40 @@ a metered connection; a folder is unbounded.
 - A middle position exists and may be the right one: fetch the first *n* of the folder, in the order
   shown, on the same machinery A11 already uses.
 
+## A20. Browse forgets where you were when you go back
+
+Raised 2026-09-02 by the owner, with the use case that shows it:
+
+> I go into Browse and look for an author's folder — say Przunk. I go in, listen to something, press
+> back — and it puts me at the **start** of the folder list. I expect to be back where I was: at the
+> folder I came out of.
+
+**A defect in effect, and listed here because it is the same piece of work as A3 and A16 rather than
+a separate fix.** It is not a wrong-behaviour bug so much as a missing one: nothing in Browse
+remembers a position at all.
+
+**What the code says** (read, not measured): `BrowseScreen` never creates a `LazyListState`. Every
+level is a `LazyColumn` with no explicit state, and the levels are the *same* call site recomposed
+with different data — catalogue list, then formats, then authors, then tracks. So the scroll state
+is neither saved per level nor reset between them: it persists across a level change by accident and
+is then clamped to whatever the new, usually shorter, list can hold. Going into a folder from row
+900 of the authors and coming back out lands near the top, which is exactly what the owner sees.
+
+**What it should do**, and the second half is the part that is easy to leave out:
+
+1. Each level keeps its own scroll position, restored on the way back up.
+2. Coming back should put the row you **came from** on screen — not merely the offset you happened
+   to have. Those differ whenever the list changed underneath, and the second is what "back where I
+   was" means to a person.
+
+**Shares its machinery with:**
+
+- **A3** (getting up and down a long list) — both need Browse to have a real, addressable list state
+  rather than an anonymous one.
+- **B13/B14**, which already solved "put this row on screen, animate when near and jump when far"
+  for the playlist. That helper should be reused rather than written twice.
+- **A16** (no way back to the playlist), which is about the same back button doing too many jobs.
+
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 
