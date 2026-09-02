@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Protracktor adaptive icon foreground.
+
+  A stylised equalizer / tracker-column pattern: five vertical bars of different heights, centred
+  in the 108 dp canvas that adaptive icons require.  The 66 dp safe zone (18 dp inset on each
+  side) keeps the bars visible under every mask shape.
+
+  Colour: bright cyan (#00E5FF) on transparent — the background layer provides the fill.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Five bars, symmetric heights, 6dp wide with 3dp gaps, centred horizontally at x=54. -->
+    <!-- Total group width = 5×6 + 4×3 = 42, starts at x = 54 - 21 = 33 -->
+
+    <!-- Bar 1 (short) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M33,52 L39,52 L39,68 L33,68 Z" />
+
+    <!-- Bar 2 (medium-tall) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M42,40 L48,40 L48,68 L42,68 Z" />
+
+    <!-- Bar 3 (tallest, centre) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M51,32 L57,32 L57,68 L51,68 Z" />
+
+    <!-- Bar 4 (medium) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M60,44 L66,44 L66,68 L60,68 Z" />
+
+    <!-- Bar 5 (short) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M69,50 L75,50 L75,68 L69,68 Z" />
+
+    <!-- Horizontal baseline -->
+    <path
+        android:fillColor="#80DEEA"
+        android:pathData="M30,69 L78,69 L78,71 L30,71 Z" />
+</vector>
