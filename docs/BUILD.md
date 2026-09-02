@@ -151,3 +151,17 @@ Pushing is the owner's action. Agents do not hold tokens (AGENTS.md §3).
 
 There is no emulator in this environment. Nothing about on-screen behaviour is confirmed until the
 owner installs the APK on a phone. A build that compiles proves the build, and nothing else.
+
+## What the test script checks, beyond the tests
+
+`./scripts/test-protracktor.sh` runs the unit tests and then two things the Kotlin compiler and
+`aapt2` are both happy to let through:
+
+- **Format specifiers with their flags in the wrong place.** `%,1$d` is not a specifier — the
+  argument index comes first, `%1$,d` — and `String.format` throws when the string is rendered
+  rather than when it is built. One shipped, in a plural whose quantity is always `other`, so the
+  crash was certain and invisible here (`docs/STATUS.md` C5).
+- **Strings that exist in English and not in Polish.** The app is bilingual from the first screen
+  and fifteen strings had drifted to English-only across three days before anyone looked.
+
+Both were verified by breaking the files deliberately and confirming the script exits non-zero.

@@ -72,4 +72,30 @@ if [ "$total" -eq 0 ]; then
     exit 1
 fi
 
+# --- string resources -------------------------------------------------------------------------
+#
+# Two things the compiler is happy with and a phone is not.
+#
+# 1. A format specifier writes its flags BEFORE the argument index -- "%,1$d" rather than "%1$,d".
+#    That is not a specifier at all and String.format throws when the string is rendered. It
+#    shipped once, in a plural whose quantity is always "other", so the crash was certain and
+#    nothing here noticed.
+# 2. A string exists in one language and not the other. This app is bilingual from the first
+#    screen; fifteen strings had drifted to English-only before anybody looked.
+bad_format=$(grep -ahoE '%[,+#0 -]+[0-9]+\$' app/src/main/res/values*/strings.xml || true)
+if [ -n "$bad_format" ]; then
+    echo "❌ Malformed format specifiers in string resources (flags before the argument index):"
+    grep -anE '%[,+#0 -]+[0-9]+\$' app/src/main/res/values*/strings.xml | sed 's/^/   /' | head -n 10
+    exit 1
+fi
+
+untranslated=$(comm -23 \
+    <(grep -ohE '<(string|plurals) name="[^"]+"' app/src/main/res/values/strings.xml | grep -oE '"[^"]+"' | sort -u) \
+    <(grep -ohE '<(string|plurals) name="[^"]+"' app/src/main/res/values-pl/strings.xml | grep -oE '"[^"]+"' | sort -u))
+if [ -n "$untranslated" ]; then
+    echo "❌ Strings with no Polish translation:"
+    echo "$untranslated" | tr -d '"' | sed 's/^/   /' | head -n 20
+    exit 1
+fi
+
 echo "✅ $total tests passed in $(($(date +%s) - started_at))s$cached"
