@@ -38,6 +38,9 @@ everything else added on 2026-09-01 and 2026-09-02.
 
 ## Finished
 
+- **2026-09-02** — **History.** A fifth domain in Browse listing what has been played, most recent
+  first, playable and addable exactly like any other list. One row per track rather than one per
+  play, 500 of them, forgetting the oldest.
 - **2026-09-02** — **Random plays on, and reads ahead.** A tune ending goes to the next random pick
   instead of stopping, and Random now decides two or three picks in advance so the read-ahead has
   something to fetch — it never could before, because Random picked at the moment you pressed it.

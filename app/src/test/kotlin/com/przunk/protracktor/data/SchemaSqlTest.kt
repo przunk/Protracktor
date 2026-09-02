@@ -53,7 +53,7 @@ class SchemaSqlTest {
             assertEquals(
                 setOf(
                     "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
-                    "catalogues", "catalogue_tracks", "song_lengths",
+                    "catalogues", "catalogue_tracks", "song_lengths", "play_history",
                 ),
                 connection.tableNames(),
             )
@@ -244,6 +244,67 @@ class SchemaSqlTest {
                     assertEquals(3, paths.toSet().size)
                 }
             }
+        }
+    }
+
+    private fun Connection.record(id: String, title: String, at: Long) =
+        prepareStatement(SchemaSql.PLAY_HISTORY_RECORD).use { statement ->
+            statement.setString(1, id)
+            statement.setString(2, title)
+            statement.setString(3, "")
+            statement.setString(4, "")
+            statement.setString(5, "")
+            statement.setLong(6, 0)
+            statement.setLong(7, at)
+            statement.setString(8, id)
+            statement.executeUpdate()
+        }
+
+    private fun Connection.historyRows(): List<Triple<String, String, Int>> =
+        createStatement().use { statement ->
+            statement.executeQuery(
+                "SELECT track_id, title, play_count FROM play_history ORDER BY played_at DESC"
+            ).use { rows ->
+                buildList {
+                    while (rows.next()) {
+                        add(Triple(rows.getString(1), rows.getString(2), rows.getInt(3)))
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun `playing the same track again counts it instead of adding a row`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.record("a", "First name", 1_000)
+            connection.record("b", "Other", 2_000)
+            // The same track again, with the better title the app learned by opening it.
+            connection.record("a", "Its real name", 3_000)
+
+            val rows = connection.historyRows()
+            assertEquals(2, rows.size)
+            // Most recent first, so the replayed one has come back to the top.
+            assertEquals("a", rows[0].first)
+            assertEquals("Its real name", rows[0].second)
+            assertEquals(2, rows[0].third)
+            assertEquals(1, rows[1].third)
+        }
+    }
+
+    @Test
+    fun `history forgets the oldest once it is over its limit`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            val over = SchemaSql.PLAY_HISTORY_LIMIT + 5
+            (1..over).forEach { connection.record("t$it", "t$it", it.toLong()) }
+            connection.run(listOf(SchemaSql.PLAY_HISTORY_PRUNE))
+
+            val rows = connection.historyRows()
+            assertEquals(SchemaSql.PLAY_HISTORY_LIMIT, rows.size)
+            // The newest survived and the oldest did not.
+            assertEquals("t$over", rows.first().first)
+            assertTrue(rows.none { it.first == "t1" })
         }
     }
 

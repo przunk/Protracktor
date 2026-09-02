@@ -79,7 +79,11 @@
     <string name="browse_indexing">Indexing %1$s…</string>
     <string name="browse_unknown">(unknown)</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
-    <string name="song_lengths_title">SID song lengths (HVSC)</string>
+    <string name="domain_history_title">History</string>
+    <string name="domain_history_body">Tunes you have played, most recent first</string>
+    <string name="history_empty">Nothing played yet. Anything you play — from a playlist, from Random or from a search — turns up here.</string>
+    <string name="action_clear_history">Clear history</string>
+        <string name="song_lengths_title">SID song lengths (HVSC)</string>
     <string name="song_lengths_none">Not downloaded — SID tunes will show no length</string>
     <plurals name="song_lengths_count">
         <item quantity="one">%1$d tune</item>

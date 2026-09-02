@@ -25,6 +25,7 @@ import com.przunk.protracktor.data.CatalogueStore
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.data.SavedPlaylist
+import com.przunk.protracktor.data.HistoryStore
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.net.Catalogue
@@ -153,7 +154,7 @@ data class PlayerUiState(
 }
 
 /** Which part of Browse is on screen. Back moves one step towards [ROOT]. */
-enum class BrowseDomain { ROOT, LOCAL, ONLINE, SEARCH }
+enum class BrowseDomain { ROOT, LOCAL, ONLINE, SEARCH, HISTORY }
 
 /**
  * What the Browse screen is looking at.
@@ -179,6 +180,9 @@ data class BrowseState(
     val indexing: String? = null,
     /** How many SID tunes HVSC has given us a length for. Zero until the database is downloaded. */
     val songLengthCount: Int = 0,
+
+    // What has been played
+    val history: List<TrackRef> = emptyList(),
 
     // Search
     val query: String = "",
@@ -311,6 +315,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val catalogues = CatalogueStore(context)
     private val remoteFiles = RemoteFiles(context)
     private val songLengths = SongLengthStore(context)
+    private val history = HistoryStore(context)
 
     private val audioFocus = AudioFocus(
         context = context,
@@ -541,6 +546,7 @@ class PlaybackController private constructor(private val context: Context) {
         when (domain) {
             BrowseDomain.LOCAL -> refreshFolders()
             BrowseDomain.ONLINE, BrowseDomain.SEARCH -> refreshCatalogues()
+            BrowseDomain.HISTORY -> openHistory()
             BrowseDomain.ROOT -> Unit
         }
     }
@@ -592,6 +598,62 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
+
+    // --- what has been played ------------------------------------------------------------------
+
+    /**
+     * Notes that a tune was played.
+     *
+     * Every play, wherever it came from: the playlist, Random, a search result. Random is the
+     * reason this matters most — it is the only place that plays music nobody chose, and "what was
+     * that" is a question you can only ask afterwards.
+     */
+    private fun recordPlayed(ref: TrackRef) {
+        scope.launch {
+            history.record(
+                trackId = ref.id,
+                title = ref.title,
+                subtitle = ref.subtitle,
+                fileName = ref.fileNameOrTitle,
+                author = ref.author,
+                sizeBytes = ref.sizeBytes,
+            )
+            // Only if the user is looking at it. Refreshing a list nobody has open is a database
+            // read per track played, for nothing.
+            if (_browse.value.domain == BrowseDomain.HISTORY) refreshHistory()
+        }
+    }
+
+    fun openHistory() {
+        scope.launch {
+            _browse.update { it.copy(domain = BrowseDomain.HISTORY, loading = true, tracks = emptyList()) }
+            refreshHistory()
+        }
+    }
+
+    private suspend fun refreshHistory() {
+        val played = history.recent().map { entry ->
+            TrackRef(
+                id = entry.trackId,
+                title = entry.title,
+                subtitle = entry.subtitle,
+                sizeBytes = entry.sizeBytes,
+                fileName = entry.fileName,
+                author = entry.author,
+            )
+        }
+        // Also the `tracks` list, because that is what the add-to-playlist machinery reads and
+        // there is no reason history should be the one list you cannot add from.
+        _browse.update { it.copy(history = played, tracks = played, loading = false) }
+    }
+
+    fun clearHistory() {
+        scope.launch {
+            history.clear()
+            _browse.update { it.copy(history = emptyList(), tracks = emptyList()) }
+            _state.update { it.copy(message = Message("History cleared.")) }
+        }
+    }
 
     // --- online catalogues --------------------------------------------------------------------
 
@@ -1305,7 +1367,9 @@ class PlaybackController private constructor(private val context: Context) {
                     message = if (started) it.message else Message("Could not open the audio device"),
                 )
             }
-            adoptTitleFrom(described, ref)
+            // Recorded with the name the tune calls itself rather than the filename it arrived
+            // under, which is why this waits until after the metadata has been read.
+            recordPlayed(adoptTitleFrom(described, ref))
 
             prefetchUpcoming()
         }
@@ -1322,7 +1386,7 @@ class PlaybackController private constructor(private val context: Context) {
      * The filename is kept either way, so identity does not shift under a playlist and the metadata
      * view can still say where a track came from.
      */
-    private fun adoptTitleFrom(described: Map<String, String>, ref: TrackRef) {
+    private fun adoptTitleFrom(described: Map<String, String>, ref: TrackRef): TrackRef {
         val realTitle = described["title"]?.trim().orEmpty()
         // Backends disagree on which key carries it, so both are asked before giving up.
         val realAuthor = described["artist"]?.trim()?.ifBlank { null }
@@ -1330,7 +1394,8 @@ class PlaybackController private constructor(private val context: Context) {
 
         val newTitle = realTitle.ifBlank { ref.title }
         val newAuthor = realAuthor.ifBlank { ref.author }
-        if (newTitle == ref.title && newAuthor == ref.author) return
+        val improved = ref.copy(title = newTitle, author = newAuthor, fileName = ref.fileNameOrTitle)
+        if (newTitle == ref.title && newAuthor == ref.author) return improved
 
         _state.update { current ->
             val index = current.queue.tracks.indexOfFirst { it.id == ref.id }
@@ -1348,6 +1413,7 @@ class PlaybackController private constructor(private val context: Context) {
         // their edits, it is the app learning something, and losing it would mean relearning it on
         // every launch.
         scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
+        return improved
     }
 
     /**
