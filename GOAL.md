@@ -305,13 +305,14 @@ own branch and commit. Never merge to `master`.
       from this author" returns directly to the playlist. Do not implement A3's draggable scrollbar
       or top/bottom controls as part of this item.
 
-- [ ] **5. A fresh entry into Online catalogues starts at the catalogue list**
+- [ ] **5. C6 — a fresh entry into Online catalogues starts at the catalogue list**
 
       Reported by the owner on 2026-09-02. After leaving Browse and opening **Browse → Online
       catalogues** again, the app currently sometimes restores an old folder/search-like state or
       shows an empty view. A new entry must always show the root list of online catalogues.
 
-      This reset happens when a new Browse session enters the Online catalogues domain, not during
+      This is the known defect recorded as `docs/STATUS.md` C6 and shares state machinery with A20.
+      The reset happens when a new Browse session enters the Online catalogues domain, not during
       recomposition and not while navigating inside an existing session. It must clear stale
       catalogue hierarchy, query/result and transient selection state without deleting downloaded
       indexes or the per-level scroll state that item 4 needs within the current session. Add a
@@ -319,19 +320,23 @@ own branch and commit. Never merge to `master`.
       catalogues again and sees the catalogue root with real catalogue rows rather than an empty
       list.
 
-- [ ] **6. "Add to playlist" from a Browse row menu stays in Browse**
+- [ ] **6. C7 — "Add to playlist" from a Browse row menu stays in Browse**
 
       Reported by the owner on 2026-09-02. Choosing **Add to playlist** from a track's three-dot
       menu currently dismisses Browse and returns to the playlist. Adding is not navigation: keep
       the user at the same Browse domain, hierarchy level and scroll position, close only the menu
       or destination picker, and leave the added row visible.
 
-      Confirm the action in place. When the target is not visible, the message names the playlist;
-      when duplicate prevention rejects the addition, say so rather than silently navigating or
-      pretending it succeeded. Preserve the existing immediate-write rule for a non-active
-      playlist and the active playlist's draft semantics. Cover both the direct active-playlist
-      action and the destination-picker route with regression tests through the same callbacks the
-      UI uses.
+      This is the known defect recorded as `docs/STATUS.md` C7. It applies to an action initiated
+      from one row's menu, including its destination-picker route. Preserve the existing behaviour
+      of the explicit bulk-add completion action, which closes Browse because that flow is finished.
+
+      Confirm the row-menu action in place. When the target is not visible, the message names the
+      playlist; when duplicate prevention rejects the addition, say so rather than silently
+      navigating or pretending it succeeded. Preserve the existing immediate-write rule for a
+      non-active playlist and the active playlist's draft semantics. Cover both the direct
+      active-playlist action and the destination-picker route with regression tests through the
+      same callbacks the UI uses.
 
 ## Phase 2 — thorough code review
 
