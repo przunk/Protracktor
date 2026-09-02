@@ -498,6 +498,14 @@ appear and a notice would only repeat the screen. This button is pressed from th
 at something else entirely, so nothing appears — and the owner had to navigate away to find out
 whether it had worked. The same rule, applied honestly, gives opposite answers in the two places.
 
+### Adding to other playlists
+
+Every row menu allows adding to another playlist directly (`docs/WISHLIST.md` B18). Unlike the
+active playlist whose modifications form a temporary draft waiting for Save or Discard, writes to
+another playlist happen immediately on disk to avoid managing multiple concurrent dirty drafts in
+memory. A snackbar explicitly names the target playlist to confirm the addition since the target
+list is not currently on screen.
+
 ### Deliberately still open
 
 - **A4** — the same gesture in the *playlist*, and the bulk actions it would need there. The gesture

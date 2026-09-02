@@ -154,4 +154,23 @@
         <item quantity="many">%d zaznaczonych</item>
         <item quantity="other">%d zaznaczonego</item>
     </plurals>
+
+    <string name="action_add_to_other_playlist">Dodaj do innej playlisty…</string>
+    <string name="dialog_add_to_playlist_title">Dodaj do playlisty</string>
+    <plurals name="dialog_add_tracks_to_playlist_title">
+        <item quantity="one">Dodaj %d utwór do playlisty</item>
+        <item quantity="few">Dodaj %d utwory do playlisty</item>
+        <item quantity="many">Dodaj %d utworów do playlisty</item>
+        <item quantity="other">Dodaj %d utworu do playlisty</item>
+    </plurals>
+    <string name="playlist_active_indicator">Bieżąca playlista</string>
+    <string name="notice_added_to_named_playlist">Dodano „%1$s” do playlisty %2$s.</string>
+    <string name="notice_already_in_playlist">„%1$s” znajduje się już na playliście %2$s.</string>
+    <plurals name="notice_added_count_to_playlist">
+        <item quantity="one">Dodano %1$d utwór do playlisty %2$s.</item>
+        <item quantity="few">Dodano %1$d utwory do playlisty %2$s.</item>
+        <item quantity="many">Dodano %1$d utworów do playlisty %2$s.</item>
+        <item quantity="other">Dodano %1$d utworu do playlisty %2$s.</item>
+    </plurals>
+    <string name="notice_all_already_in_playlist">Wszystkie utwory znajdują się już na playliście %1$s.</string>
 </resources>

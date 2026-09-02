@@ -95,6 +95,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun toggleSearchCatalogue(id: String) = controller.toggleSearchCatalogue(id)
     fun runSearch() = controller.runSearch()
     fun addToPlaylist(tracks: List<TrackRef>) = controller.addToPlaylist(tracks)
+    fun addToPlaylist(targetPlaylistId: Long, tracks: List<TrackRef>) =
+        controller.addToPlaylist(targetPlaylistId, tracks)
+    fun createPlaylistAndAdd(name: String, tracks: List<TrackRef>) =
+        controller.createPlaylistAndAdd(name, tracks)
 
     fun playAt(index: Int) {
         ensureServiceRunning()

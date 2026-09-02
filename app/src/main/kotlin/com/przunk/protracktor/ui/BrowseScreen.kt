@@ -113,6 +113,7 @@ fun BrowseScreen(
     onShareLink: (TrackRef) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
         if (browse.indexing != null) {
@@ -142,6 +143,7 @@ fun BrowseScreen(
                 onForgetFolder = onForgetFolder,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.ONLINE -> OnlineDomain(
                 browse = browse,
@@ -156,6 +158,7 @@ fun BrowseScreen(
                 onOpenGroup = onOpenGroup,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.HISTORY -> HistoryDomain(
                 browse = browse,
@@ -167,6 +170,7 @@ fun BrowseScreen(
                 onClearHistory = onClearHistory,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.SEARCH -> SearchDomain(
                 browse = browse,
@@ -182,6 +186,7 @@ fun BrowseScreen(
                 onSearch = onSearch,
                 onPlay = onPlay,
                 onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
         }
     }
@@ -266,6 +271,7 @@ private fun LocalDomain(
     onForgetFolder: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     if (browse.openFolder != null) {
         Selectable(
@@ -274,6 +280,7 @@ private fun LocalDomain(
             playingId = playingId,
             onPlay = onPlay,
             onAdd = onAdd,
+            onAddToOtherPlaylist = onAddToOtherPlaylist,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareLink = onShareLink,
@@ -339,9 +346,20 @@ private fun OnlineDomain(
     onOpenGroup: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     when {
-        browse.openAuthor != null -> Selectable(browse, playlistName, playingId, onPlay, onAdd, onShowNeighbours, onShareFile, onShareLink)
+        browse.openAuthor != null -> Selectable(
+            browse = browse,
+            playlistName = playlistName,
+            playingId = playingId,
+            onPlay = onPlay,
+            onAdd = onAdd,
+            onAddToOtherPlaylist = onAddToOtherPlaylist,
+            onShowNeighbours = onShowNeighbours,
+            onShareFile = onShareFile,
+            onShareLink = onShareLink,
+        )
 
         browse.openCatalogue != null -> {
             if (browse.loading) {
@@ -465,6 +483,7 @@ private fun SearchDomain(
     onSearch: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
@@ -525,7 +544,21 @@ private fun SearchDomain(
             )
         }
 
-        if (browse.loading) Loading() else Selectable(browse, playlistName, playingId, onPlay, onAdd, onShowNeighbours, onShareFile, onShareLink)
+        if (browse.loading) {
+            Loading()
+        } else {
+            Selectable(
+                browse = browse,
+                playlistName = playlistName,
+                playingId = playingId,
+                onPlay = onPlay,
+                onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
+            )
+        }
     }
 }
 
@@ -564,6 +597,7 @@ private fun HistoryDomain(
     onClearHistory: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     if (browse.loading) {
         Loading()
@@ -588,7 +622,17 @@ private fun HistoryDomain(
                 Text(stringResource(R.string.action_clear_history))
             }
         }
-        Selectable(browse, playlistName, playingId, onPlay, onAdd, onShowNeighbours, onShareFile, onShareLink)
+        Selectable(
+            browse = browse,
+            playlistName = playlistName,
+            playingId = playingId,
+            onPlay = onPlay,
+            onAdd = onAdd,
+            onAddToOtherPlaylist = onAddToOtherPlaylist,
+            onShowNeighbours = onShowNeighbours,
+            onShareFile = onShareFile,
+            onShareLink = onShareLink,
+        )
     }
 }
 
@@ -610,6 +654,7 @@ private fun Selectable(
     playingId: String?,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -698,6 +743,7 @@ private fun Selectable(
                         },
                         onStartSelecting = { selected = selected + track.id },
                         onAdd = { onAdd(listOf(track)) },
+                        onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
                         onInfo = { showingInfo = track },
                         onShowNeighbours = track.takeIf { Catalogue.owning(it.id) != null }
                             ?.let { { onShowNeighbours(it) } },
@@ -710,17 +756,35 @@ private fun Selectable(
         }
 
         if (selecting) {
-            Button(
-                onClick = {
-                    onAdd(browse.tracks.filter { it.id in selected })
-                    selected = emptySet()
-                },
+            Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    pluralStringResource(R.plurals.browse_add_selected, selected.size, selected.size) +
-                        (playlistName?.let { " \u2192 $it" } ?: "")
-                )
+                Button(
+                    onClick = {
+                        onAdd(browse.tracks.filter { it.id in selected })
+                        selected = emptySet()
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        pluralStringResource(R.plurals.browse_add_selected, selected.size, selected.size) +
+                            (playlistName?.let { " \u2192 $it" } ?: "")
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        val toAdd = browse.tracks.filter { it.id in selected }
+                        selected = emptySet()
+                        onAddToOtherPlaylist(toAdd)
+                    },
+                ) {
+                    Icon(
+                        imageVector = PlayerIcons.PlaylistAdd,
+                        contentDescription = stringResource(R.string.action_add_to_other_playlist),
+                    )
+                }
             }
         }
     }
@@ -754,6 +818,7 @@ private fun BrowseTrackRow(
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
     onAdd: () -> Unit,
+    onAddToOtherPlaylist: () -> Unit,
     onInfo: () -> Unit,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
@@ -791,6 +856,11 @@ private fun BrowseTrackRow(
                             text = { Text(stringResource(R.string.action_add_track)) },
                             leadingIcon = { Icon(PlayerIcons.Add, contentDescription = null) },
                             onClick = { menuOpen = false; onAdd() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_to_other_playlist)) },
+                            leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
+                            onClick = { menuOpen = false; onAddToOtherPlaylist() },
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_info)) },

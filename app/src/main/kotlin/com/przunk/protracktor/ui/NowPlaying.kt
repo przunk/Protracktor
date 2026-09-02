@@ -52,6 +52,7 @@ fun NowPlaying(
     onShowNeighbours: (() -> Unit)?,
     onShareFile: (() -> Unit)?,
     onShareLink: (() -> Unit)?,
+    onAddToOtherPlaylist: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val track = state.current
@@ -152,6 +153,17 @@ fun NowPlaying(
                     modifier = Modifier.padding(end = 8.dp),
                 )
                 Text(stringResource(R.string.action_share_link))
+            }
+        }
+
+        onAddToOtherPlaylist?.let { add ->
+            TextButton(onClick = add) {
+                Icon(
+                    imageVector = PlayerIcons.PlaylistAdd,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(stringResource(R.string.action_add_to_other_playlist))
             }
         }
 

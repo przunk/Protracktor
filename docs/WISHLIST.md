@@ -111,7 +111,7 @@ Worth thinking about rather than fixing: the honest options are a short delay be
 starts, cancelling the fetch when another row is tapped within a moment, or simply accepting it.
 The middle one is probably right and is nearly free — `openJob` is already cancelled on a new load.
 
-## B18. Add a track to a *different* playlist, from its menu
+## B18. ~~Add a track to a *different* playlist, from its menu~~ — DONE 2026-09-02
 
 *owner, 2026-09-02.*
 
@@ -119,24 +119,13 @@ Every row now has a three-dot menu whose **Add to the playlist** means the activ
 other half: put this tune in one of the others without leaving what you are doing to switch
 playlists and come back.
 
-**Not a variation of the existing action.** Adding to the active playlist edits a draft — the list
-in memory, marked dirty, which the diskette saves and the discard button throws away. Another
-playlist is not loaded; `LibraryStore` reaches it through `tracksIn` and `replaceTracks`, so adding
-there is a **write to disk that happens immediately and cannot be discarded**. Two menu items one
-above the other would behave differently in a way nothing on screen explains.
+**Built** with a destination picker (`AddToPlaylistDialog`) accessible from the three-dot menu in both
+the active playlist and Browse, in bulk selection mode, and in Now Playing. Adding to a different
+playlist commits to disk immediately without affecting the active playlist's draft, and confirms with
+a snackbar message naming the destination playlist (`docs/ARCHITECTURE.md` §17). Users can also create
+a new playlist on the fly from the picker.
 
-Worth deciding before building:
-
-- whether the write is immediate, or whether the target playlist gets a draft of its own that
-  survives until it is next opened (much more machinery, and probably not worth it);
-- what it says afterwards. It has the same problem the dock's **+** had — the confirmation cannot be
-  "the row appears", because the list it appears in is not the one you are looking at
-  (`docs/ARCHITECTURE.md` §17);
-- whether picking the target is a submenu or the playlist switcher that already exists.
-
-**Related:** `docs/BACKLOG.md` A4 lists *move to another playlist* and *add to another playlist* as
-candidate **bulk** actions. This is the single-track version and the same question underneath; if
-both are built, they should share the answer rather than each invent one.
+**Related:** `docs/BACKLOG.md` A4 candidate bulk actions share this picker machinery.
 
 ## B4. Play MP3 too
 

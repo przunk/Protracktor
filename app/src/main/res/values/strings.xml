@@ -143,4 +143,19 @@
     <string name="a11y_repeat_off">Repeat off</string>
     <string name="a11y_repeat_playlist">Repeating the playlist</string>
     <string name="a11y_repeat_one">Repeating this track</string>
+
+    <string name="action_add_to_other_playlist">Add to another playlist…</string>
+    <string name="dialog_add_to_playlist_title">Add to playlist</string>
+    <plurals name="dialog_add_tracks_to_playlist_title">
+        <item quantity="one">Add %d track to playlist</item>
+        <item quantity="other">Add %d tracks to playlist</item>
+    </plurals>
+    <string name="playlist_active_indicator">Current playlist</string>
+    <string name="notice_added_to_named_playlist">Added \"%1$s\" to %2$s.</string>
+    <string name="notice_already_in_playlist">\"%1$s\" is already in %2$s.</string>
+    <plurals name="notice_added_count_to_playlist">
+        <item quantity="one">Added %1$d track to %2$s.</item>
+        <item quantity="other">Added %1$d tracks to %2$s.</item>
+    </plurals>
+    <string name="notice_all_already_in_playlist">All tracks are already in %1$s.</string>
 </resources>

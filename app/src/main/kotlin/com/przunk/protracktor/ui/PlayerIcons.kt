@@ -155,6 +155,12 @@ object PlayerIcons {
             "M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z",
         )
     }
+    val PlaylistAdd: ImageVector by lazy {
+        icon(
+            "PlaylistAdd",
+            "M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z",
+        )
+    }
     val Download: ImageVector by lazy {
         icon("Download", "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z")
     }
