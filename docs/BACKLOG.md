@@ -128,15 +128,15 @@ that is not the playlist.
 - **The draft model.** A bulk delete is one edit, not twenty, so undo has to restore the whole
   selection — the current single-track `lastRemoval` will not do.
 
-## A9. The app icon
+## A9. ~~The app icon~~ — DONE 2026-09-02
 
-Raised 2026-09-02: the launcher icon is a placeholder — `@android:drawable/ic_media_play`, the
-system's own. The owner wants to discuss the concept before anything is drawn, so this is a
-placeholder for that conversation rather than a task.
+Raised 2026-09-02: the launcher icon was a placeholder (`@android:drawable/ic_media_play`). Google Play
+flagged this on upload.
 
-Worth having ready for it: an icon needs an adaptive foreground and background (API 26+), a
-monochrome layer for themed icons (API 33+), and it is the one asset where a wrong choice is visible
-on every home screen. Nothing about it is a detail to settle in code.
+**Built:** Created a proper adaptive icon (API 26+) featuring stylized tracker equalizer bars in cyan
+on a dark indigo background (`res/drawable/ic_launcher_foreground.xml` and `ic_launcher_background.xml`),
+along with pre-rendered fallback PNGs across all five screen densities (`mipmap-mdpi` through
+`mipmap-xxxhdpi`) including round variants (`ic_launcher_round`). Updated `AndroidManifest.xml`.
 
 ## A8. ~~Haptics for the gestures that deserve them~~ — MOSTLY DONE 2026-09-02
 
@@ -480,14 +480,15 @@ foreground scan.
 **`docs/WISHLIST.md` B10 is this item.** It was raised as a wish a day before this was agreed and
 nobody struck it; the owner spotted the duplicate on 2026-09-02. This is the live one.
 
-Modland and ASMA are wired up and verified end to end. The owner asked for several: ASMA, AMP
-(amp.dascene.net), Aminet, ModArchive and others.
+Modland and ASMA are wired up and verified end to end. On 2026-09-02, **The Mod Archive** was
+integrated as the third online catalogue via live search (`isOnlineOnly`), providing direct access to
+tens of thousands of tracker modules (MOD, XM, S3M, IT) playable through libopenmpt.
 
 Each needs two things, and the second is usually the blocker:
 
-- **Its index parser.** `Catalogue` is a sealed class; adding one is writing `parseIndex` and
-  `urlFor` against whatever that archive publishes. None of the others is a single tab-separated
-  file the way Modland's is.
+- **Its index parser or search integration.** `Catalogue` is a sealed class; adding one is writing
+  `parseIndex` or live search and `urlFor` against whatever that archive publishes. None of the others
+  is a single tab-separated file the way Modland's is.
 - **A backend that can play what it holds.** ASMA is Atari 8-bit SAP and needs ASAP; AMP is heavy on
   Amiga custom formats and needs UADE. Indexing an archive we cannot play produces a browsable list
   of tracks that fail to open.

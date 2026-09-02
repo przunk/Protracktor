@@ -55,14 +55,20 @@ The reference collection of `.sap`. Natural pair with ASAP.
   ASMA's archive shape (`docs/ARCHITECTURE.md` §13) is the model, but HVSC is an order of magnitude
   larger and a whole-collection download is a different proposition at that size.
 
-### The Mod Archive
+### The Mod Archive — search-only integration DONE 2026-09-02
 
-- `https://api.modarchive.org/` responds (2026-09-01). It has a documented XML API, and it wants an
-  **API key**, which is a question for the owner: a key in a public GPL repository is a key that is
-  no longer private.
-- No single index file. This is a paged, queried archive — browsing would be online rather than
-  offline, which breaks the property that makes Modland pleasant. Consider search-only integration.
-- Formats are mostly trackers, so it is **playable today** — the only candidate here that is.
+- `https://api.modarchive.org/` responds (2026-09-01). The official XML API requires an API key
+  that is no longer issued via automatic self-service (requires contacting staff).
+- Instead of waiting for API keys, **integrated via live web search parser** (2026-09-02):
+  - Queries `https://modarchive.org/index.php?request=search&query=...` directly.
+  - Direct downloads via `https://api.modarchive.org/downloads.php?moduleid=...` require no key
+    or session, and are cached on-demand by `RemoteFiles`.
+  - Introduced `Catalogue.isOnlineOnly`: The Mod Archive participates in Search domain filters
+    without requiring a multi-megabyte local offline index download.
+  - Generates shareable web URLs pointing to `https://modarchive.org/index.php?request=view_by_moduleid&query=...`.
+- Supported tracker formats (MOD, XM, S3M, IT) are **playable today** via libopenmpt.
+- **Future direction:** `docs/WISHLIST.md` B19 envisions server-hosted periodic index dumps to allow
+  offline browsing in addition to live search.
 
 ### AMP (amp.dascene.net)
 

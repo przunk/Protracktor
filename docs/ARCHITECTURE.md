@@ -310,9 +310,9 @@ Two details worth keeping:
 If Media3 is ever wanted for something else — Android Auto's browse tree, say — this does not stand
 in the way; the session is created in one method in `PlaybackService`.
 
-## 13. Catalogues come in two shapes
+## 13. Catalogues come in three shapes
 
-Decided 2026-09-02, when ASMA turned out not to fit the one that existed.
+Decided 2026-09-02, when ASMA and The Mod Archive each added a shape that did not fit the original.
 
 **Indexed** (Modland): a downloadable list of what is in the archive, and files fetched individually
 by URL. Browsing is offline because the index is; playing needs the network.
@@ -335,6 +335,11 @@ ASMA's paths run `asma/<section>/<author>/<title>.sap`, and the section — Comp
 Unknown, Misc, Groups — becomes the top browse level. Every file in it is a SAP, so browsing by
 format would offer one choice; browsing by section is the useful hierarchy. Checked against the real
 archive: 730 entries have no author folder and keep an empty author rather than being dropped.
+
+**Live search** (The Mod Archive): the archive provides no monolithic index file to download offline.
+`Catalogue.isOnlineOnly` marks it as search-driven: it participates directly in the Search domain filters
+without requiring an index download, query results are fetched live via its web endpoint, and individual
+modules are streamed and cached via direct HTTP URLs on demand.
 
 ## 14. Where a duration comes from
 
