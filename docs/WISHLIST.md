@@ -99,6 +99,18 @@ grouping the list under day headings may be better than putting a timestamp on e
 *owner, 2026-09-02.* Both used `PlayerIcons.Share`. The link has its own now — two actions that do
 different things should not be told apart only by their labels.
 
+## B17. A mis-tap in an online list now costs a download
+
+*owner, 2026-09-02, raised as a consequence of `docs/ARCHITECTURE.md` §17 and deliberately not acted
+on.*
+
+Once tapping a row plays it, tapping the wrong row in a Modland folder fetches a file. These are
+kilobytes so it is not a disaster, and before the change a mis-tap cost nothing at all.
+
+Worth thinking about rather than fixing: the honest options are a short delay before the fetch
+starts, cancelling the fetch when another row is tapped within a moment, or simply accepting it.
+The middle one is probably right and is nearly free — `openJob` is already cancelled on a new load.
+
 ## B4. Play MP3 too
 
 *owner, 2026-09-01.*

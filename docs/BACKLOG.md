@@ -93,6 +93,14 @@ number now, but it is a reason to ask again then.
 
 ## A4. Bulk operations on the playlist
 
+**Half-decided 2026-09-02.** The *gesture* is settled — long-press to start selecting, tap to add
+more — because Browse now works that way (`docs/ARCHITECTURE.md` §17) and the playlist should not
+disagree with it. **Which bulk actions the playlist gets is still open**, and that is the part
+worth the conversation: delete is obvious, and *move to another playlist*, *add to another
+playlist* and *play these only* are guesses until he says otherwise. The owner said this will be
+expanded later.
+
+
 
 Raised 2026-09-01. Long-press a row to start a selection, then **tap** further rows to add them —
 tapping, not only dragging, because a selection of scattered tracks is the normal case and dragging
