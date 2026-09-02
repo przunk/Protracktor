@@ -124,4 +124,33 @@
     <string name="a11y_repeat_off">Powtarzanie wyłączone</string>
     <string name="a11y_repeat_playlist">Powtarzanie playlisty</string>
     <string name="a11y_repeat_one">Powtarzanie tego utworu</string>
+
+    <string name="domain_history_title">Historia</string>
+    <string name="domain_history_body">Odtworzone utwory, od najnowszych</string>
+    <string name="history_empty">Nic jeszcze nie zagrało. Wszystko, co odtworzysz — z playlisty, z losowania czy z wyszukiwania — trafi tutaj.</string>
+    <string name="action_clear_history">Wyczyść historię</string>
+
+    <string name="song_lengths_title">Długości utworów SID (HVSC)</string>
+    <string name="song_lengths_none">Nie pobrano — utwory SID nie pokażą długości</string>
+    <plurals name="song_lengths_count">
+        <item quantity="one">%1$d utwór</item>
+        <item quantity="few">%1$,d utwory</item>
+        <item quantity="many">%1$,d utworów</item>
+        <item quantity="other">%1$,d utworu</item>
+    </plurals>
+    <string name="a11y_download_song_lengths">Pobierz bazę długości utworów HVSC</string>
+
+    <string name="action_show_neighbours">Więcej tego autora</string>
+    <string name="action_share_file">Udostępnij plik</string>
+    <string name="action_share_link">Udostępnij link</string>
+    <string name="share_chooser">Udostępnij</string>
+
+    <string name="action_add_track">Dodaj do playlisty</string>
+    <string name="a11y_track_menu">Akcje dla %1$s</string>
+    <plurals name="browse_selected">
+        <item quantity="one">%d zaznaczony</item>
+        <item quantity="few">%d zaznaczone</item>
+        <item quantity="many">%d zaznaczonych</item>
+        <item quantity="other">%d zaznaczonego</item>
+    </plurals>
 </resources>
