@@ -82,6 +82,23 @@ A Modland track's information should read `Modland/Przunk/name.mod`. Today the d
 catalogue track is `format · author` — right for a row, wrong for an information panel. Same
 underlying inconsistency as the wish above.
 
+## B15. History should say when
+
+*owner, 2026-09-02, after using B8.*
+
+The list says what was played and in what order, and not **when**. "That tune two days ago" is the
+question history exists to answer, and a date and time is most of the answer — the ordering alone
+only says "before that other one".
+
+Cheap: `played_at` is already stored, to the millisecond. What needs deciding is the *form* —
+"yesterday, 21:14" reads better than a date for anything recent and worse for anything old, and
+grouping the list under day headings may be better than putting a timestamp on every row.
+
+## B16. ~~The share-file and share-link icons are the same~~ — DONE 2026-09-02
+
+*owner, 2026-09-02.* Both used `PlayerIcons.Share`. The link has its own now — two actions that do
+different things should not be told apart only by their labels.
+
 ## B4. Play MP3 too
 
 *owner, 2026-09-01.*
