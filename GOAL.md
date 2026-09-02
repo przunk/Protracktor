@@ -270,7 +270,7 @@ own branch and commit. Never merge to `master`.
       rather than trusting `COPYING`, preserve the replay-data licensing warning, build every
       Android ABI, and make the host probe a repeatable command rather than a one-off experiment.
 
-- [ ] **2. Build the persistent local-library index and probe content instead of extensions (A6/C4)**
+- [x] **2. Build the persistent local-library index and probe content instead of extensions (A6/C4)**
 
       Scanning remains an explicit user action. Launching or returning to the app must never scan a
       granted folder as a side effect. A completed scan writes a durable index that later launches

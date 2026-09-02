@@ -73,6 +73,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearHistory() = controller.clearHistory()
 
+    fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)
+
     fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
 
     fun shareFile(track: TrackRef) = controller.shareFile(track)

@@ -913,6 +913,33 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeLastOpenError(JNIEnv *env,
     return env->NewStringUTF(lastOpenError().c_str());
 }
 
+/**
+ * Which decoders this build has, and at which versions.
+ *
+ * The local library index records a verdict per file -- what it is, whether anything can play it --
+ * and those verdicts are only true of the decoder set that produced them. Replacing sc68 2.2.1 with
+ * 3.0.0b took `.sndh` from 14 of 30 to 30 of 30: every "cannot play this" the old set wrote down
+ * became wrong on the same day. Storing this string beside each row is what lets the index notice.
+ *
+ * Read from the libraries themselves where they will say, so a dependency bump cannot leave a
+ * hand-written string behind.
+ */
+JNIEXPORT jstring JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeBackendsFingerprint(JNIEnv *env, jclass) {
+    std::ostringstream o;
+    o << "openmpt:" << openmpt::string::get("library_version")
+      << ";sc68:" << sc68_versionstr()
+      << ";asap:" << ASAPInfo_VERSION
+      // game-music-emu publishes a packed integer rather than a string.
+      << ";gme:" << ((GME_VERSION >> 16) & 0xff) << '.'
+                 << ((GME_VERSION >> 8) & 0xff) << '.'
+                 << (GME_VERSION & 0xff)
+      << ";sidplayfp:" << LIBSIDPLAYFP_VERSION_MAJ << '.'
+                       << LIBSIDPLAYFP_VERSION_MIN << '.'
+                       << LIBSIDPLAYFP_VERSION_LEV;
+    return env->NewStringUTF(o.str().c_str());
+}
+
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetDataPath(JNIEnv *env, jclass, jstring path) {
     const char *chars = env->GetStringUTFChars(path, nullptr);

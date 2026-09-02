@@ -145,6 +145,11 @@
     <string name="action_share_link">Udostępnij link</string>
     <string name="share_chooser">Udostępnij</string>
 
+    <string name="action_scan_folder">Przeskanuj ten folder</string>
+    <string name="scan_listing">Listowanie folderu…</string>
+    <string name="scan_progress">Otwieranie plików: %1$d z %2$d</string>
+    <string name="folder_unscanned">Jeszcze nieskanowany. Skanowanie otwiera każdy plik, żeby sprawdzić, czym naprawdę jest, zamiast ufać nazwie.</string>
+    <string name="folder_stale">Ten folder skanowano innym zestawem dekoderów. Pliki, które wtedy nie grały, mogą grać teraz.</string>
     <string name="action_to_playlist">Playlista</string>
     <string name="action_add_track">Dodaj do playlisty</string>
     <string name="a11y_track_menu">Akcje dla %1$s</string>

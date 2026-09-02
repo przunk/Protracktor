@@ -18,6 +18,7 @@ package com.przunk.protracktor.data
 import java.sql.Connection
 import java.sql.DriverManager
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -53,7 +54,7 @@ class SchemaSqlTest {
             assertEquals(
                 setOf(
                     "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
-                    "catalogues", "catalogue_tracks", "song_lengths", "play_history",
+                    "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
                 ),
                 connection.tableNames(),
             )
@@ -330,6 +331,91 @@ class SchemaSqlTest {
             // The newest survived and the oldest did not.
             assertEquals("t$over", rows.first().first)
             assertTrue(rows.none { it.first == "t1" })
+        }
+    }
+
+    private fun Connection.indexRow(uri: String, folder: String, backends: String) =
+        run(listOf(
+            "INSERT INTO library_index (uri, folder_uri, path, file_name, indexed_at, backends) " +
+                "VALUES ('$uri', '$folder', 'p', 'f', 1, '$backends')"
+        ))
+
+    @Test
+    fun `rescanning one folder does not touch another`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.indexRow("a1", "folderA", "set1")
+            connection.indexRow("a2", "folderA", "set1")
+            connection.indexRow("b1", "folderB", "set1")
+
+            // What replaceFolder does: clear this folder, then insert. A global delete here would
+            // silently cost the user every other folder they had scanned.
+            connection.run(listOf("DELETE FROM library_index WHERE folder_uri = 'folderA'"))
+            connection.indexRow("a9", "folderA", "set2")
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT folder_uri, COUNT(*) FROM library_index GROUP BY folder_uri ORDER BY folder_uri"
+                ).use { rows ->
+                    assertTrue(rows.next())
+                    assertEquals("folderA", rows.getString(1)); assertEquals(1, rows.getInt(2))
+                    assertTrue(rows.next())
+                    assertEquals("folderB", rows.getString(1)); assertEquals(1, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `an index built by other decoders is reported stale`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.indexRow("a1", "folderA", "sc68:2.2.1")
+            connection.indexRow("a2", "folderA", "sc68:2.2.1")
+
+            val stale = { backends: String ->
+                connection.createStatement().use { statement ->
+                    statement.executeQuery(
+                        "SELECT 1 FROM library_index WHERE folder_uri = 'folderA' " +
+                            "AND backends <> '$backends' LIMIT 1"
+                    ).use { it.next() }
+                }
+            }
+            // Replacing sc68 2.2.1 with 3.0.0b took .sndh from 14/30 to 30/30 -- every "nothing can
+            // play this" the old set wrote down became wrong, and the index has to notice.
+            assertTrue(stale("sc68:3.0.0b"))
+            assertFalse(stale("sc68:2.2.1"))
+        }
+    }
+
+    @Test
+    fun `migrating to the library index keeps what was already indexed and played`() {
+        memoryDatabase().use { connection ->
+            // Everything up to the version before the index existed.
+            connection.run(VERSION_1_SCHEMA)
+            connection.run(SchemaSql.migrationsBetween(1, 7))
+            connection.run(listOf(
+                "INSERT INTO playlists (name, position) VALUES ('Mine', 0)",
+                "INSERT INTO tracks (id, title) VALUES ('u1', 'A tune')",
+                "INSERT INTO play_history (track_id, title, played_at) VALUES ('u1', 'A tune', 5)",
+            ))
+
+            connection.run(SchemaSql.migrationsBetween(7, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT (SELECT COUNT(*) FROM playlists), (SELECT COUNT(*) FROM tracks), " +
+                        "(SELECT COUNT(*) FROM play_history), (SELECT COUNT(*) FROM library_index)"
+                ).use { rows ->
+                    assertTrue(rows.next())
+                    assertEquals(1, rows.getInt(1))
+                    assertEquals(1, rows.getInt(2))
+                    assertEquals(1, rows.getInt(3))
+                    // New and empty, which is what a non-destructive migration looks like: the
+                    // index is built by scanning, not invented from what was there.
+                    assertEquals(0, rows.getInt(4))
+                }
+            }
         }
     }
 
