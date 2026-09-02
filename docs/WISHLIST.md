@@ -24,6 +24,12 @@ Benefits:
 - Keeps API keys private on the server backend rather than embedding them in an open-source client.
 - Fast, bandwidth-efficient downloads cached globally via Cloudflare.
 
+**Observation (owner, 2026-09-02):** In apps like ZXTune that attempt live online hierarchy browsing
+of The Mod Archive without a monolithic index, opening directories takes ages (each level requires
+real-time HTTP fetches and remote scraping). Full offline index caching (Variant 3) is therefore
+**necessary** rather than optional if directory-based browsing of The Mod Archive is to be usable and
+fast. Live search provides immediate utility, but full browsing requires the server index pipeline.
+
 ## B13. ~~Tapping the player bar scrolls the list to that track~~ — DONE 2026-09-02
 
 *owner, 2026-09-01.*
