@@ -276,6 +276,15 @@ class PlaybackController private constructor(private val context: Context) {
     private val _reveal = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val reveal: SharedFlow<Int> = _reveal.asSharedFlow()
 
+    /**
+     * Asks the UI to show Browse at whatever [BrowseState] now says.
+     *
+     * An event rather than a flag, because "show it" happens once. The browse sheet normally resets
+     * to the top when it opens; this exists so a jump can put it somewhere first.
+     */
+    private val _showBrowse = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val showBrowse: SharedFlow<Unit> = _showBrowse.asSharedFlow()
+
     private val _browse = MutableStateFlow(BrowseState())
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
 
@@ -598,6 +607,51 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
+
+    /**
+     * Opens Browse where a track came from: the author's folder in its catalogue.
+     *
+     * "Something played at random, it was good, what else did they write" -- and until now the only
+     * way to ask was to remember the name and go and search for it.
+     *
+     * **Catalogue tracks only, and that is a real limit rather than an oversight.** A local file's
+     * neighbours would be the directory it sits in, and the local browser does not list directories
+     * at all: it lists a whole granted tree, flat. Jumping to "the folder" would mean building
+     * directory-level browsing first, which is its own piece of work — `docs/WISHLIST.md` B2 says
+     * so rather than leaving the action to do nothing on half the library.
+     */
+    fun showNeighboursOf(ref: TrackRef) {
+        scope.launch {
+            // Which catalogue it is from is asked of the catalogues, each of which recognises its
+            // own references and no others.
+            val from = Catalogue.owning(ref.id)
+            val located = from?.pathFrom(ref.id)?.let { path -> catalogues.locate(from.id, path) }
+            if (from == null || located == null) {
+                _state.update {
+                    it.copy(message = Message("Only tracks from an online catalogue can do that."))
+                }
+                return@launch
+            }
+
+            val summary = catalogues.summaries().firstOrNull { it.id == from.id } ?: return@launch
+            _browse.update {
+                it.copy(
+                    domain = BrowseDomain.ONLINE,
+                    openCatalogue = summary,
+                    openFormat = located.format,
+                    openAuthor = located.author,
+                    groups = emptyList(),
+                    tracks = emptyList(),
+                    loading = true,
+                )
+            }
+            _showBrowse.tryEmit(Unit)
+
+            val found = catalogues.tracks(located.catalogueId, located.format, located.author)
+                .map(::toTrackRef)
+            _browse.update { it.copy(tracks = found, loading = false) }
+        }
+    }
 
     // --- what has been played ------------------------------------------------------------------
 

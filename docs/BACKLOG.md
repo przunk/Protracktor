@@ -305,6 +305,10 @@ Each needs two things, and the second is usually the blocker:
   Amiga custom formats and needs UADE. Indexing an archive we cannot play produces a browsable list
   of tracks that fail to open.
 
+**Adding one now also means writing `pathFrom`**, the inverse of `urlFor` — it is what "more from
+this author" uses to get from a track back to where it came from (`docs/WISHLIST.md` B2). It is
+abstract, so the compiler asks for it.
+
 **Also**: re-index after adding any backend. The index deliberately keeps only entries whose
 filename a backend might handle, so formats added later are simply absent until a re-index.
 

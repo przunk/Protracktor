@@ -152,7 +152,7 @@ Order is chosen so each item stands on the one before it, not by the owner's num
       and whether it is browsable as a queue — decide the implementation, and if the **UI** turns
       out to need the owner, write it down and move on (rule 4).
 
-- [ ] **4. B2 — Jump to a tune's neighbours**
+- [x] **4. B2 — Jump to a tune's neighbours** *(catalogue tracks; local files stated as out, with the reason)*
       From a playing or listed track, open Browse at the place it came from: the author's folder.
       The catalogue path is already in `TrackRef.subtitle` and B3 proved it survives the trip. A
       **local** file's neighbours are its folder, which is a different mechanism — do the catalogue

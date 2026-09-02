@@ -162,6 +162,23 @@ class CatalogueStore(context: Context) {
 
     /** One track at random from the indexed catalogues, or null when nothing is indexed. */
     /**
+     * Where a track sits in its catalogue.
+     *
+     * Asked of the database rather than worked out from the path, so that jumping to a track's
+     * neighbours lands exactly where browsing to them lands: the format and author here are the
+     * ones the index parser produced, whatever it decided about a path with too few or too many
+     * segments.
+     */
+    suspend fun locate(catalogueId: String, path: String): CatalogueTrack? =
+        withContext(Dispatchers.IO) {
+            helper.readableDatabase.rawQuery(
+                "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
+                    "WHERE catalogue_id = ? AND path = ? LIMIT 1",
+                arrayOf(catalogueId, path),
+            ).use { it.toTracks().firstOrNull() }
+        }
+
+    /**
      * Several at once, for reading ahead.
      *
      * One query rather than [count] of them, and it cannot hand back the same track twice inside a
