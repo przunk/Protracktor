@@ -465,7 +465,7 @@ not have to be rediscovered.
 Each new backend also means **re-indexing the catalogues**: the index only keeps entries whose
 filename a backend might handle.
 
-## A6. Probe content instead of trusting extensions
+## A6. ~~Probe content instead of trusting extensions~~ — DONE 2026-09-03
 
 
 > "wczytuje dobrze pliki z folderu ale opiera się o rozszerzenie tylko (na razie ok)"

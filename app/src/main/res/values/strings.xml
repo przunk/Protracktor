@@ -24,6 +24,11 @@
     <string name="action_follow_track">Follow track</string>
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
+    <string name="action_scan_folder">Scan this folder</string>
+    <string name="scan_listing">Listing the folder…</string>
+    <string name="scan_progress">Opening files: %1$d of %2$d</string>
+    <string name="folder_unscanned">Not scanned yet. Scanning opens every file to find out what it really is, rather than trusting its name.</string>
+    <string name="folder_stale">This folder was scanned with a different set of decoders. Files that could not be played then may play now.</string>
     <string name="action_to_playlist">Playlist</string>
     <string name="action_add_track">Add to the playlist</string>
     <string name="action_add_folder">Add a folder</string>

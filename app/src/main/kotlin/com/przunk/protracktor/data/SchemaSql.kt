@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 7
+    const val VERSION = 8
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -160,6 +160,52 @@ object SchemaSql {
         "CREATE INDEX idx_play_history_recent ON play_history(played_at DESC)",
     )
 
+    /**
+     * The scanned local library, added at version 8.
+     *
+     * **What it is for.** Scanning a folder means opening every file with a real backend to find out
+     * what it is -- which is the only way to stop trusting a filename ({@code docs/BACKLOG.md} A6,
+     * {@code docs/STATUS.md} C4) and is far too expensive to repeat. This is where the answer is
+     * kept so a later launch, or re-entering the folder, reads instead of re-probing.
+     *
+     * **Identity is the document URI**, the same thing a track reference uses. Nothing here
+     * references `tracks`: a file can be indexed without ever being added to a playlist, which is
+     * the normal case.
+     *
+     * **`backends` is the invalidation rule.** Every row records which decoder set produced it. When
+     * the app ships a different set -- as it just did, replacing sc68 2.2.1 with 3.0.0b, which took
+     * `.sndh` from 14/30 to 30/30 -- rows produced by the old one are stale, and files that were
+     * unplayable may now be playable. Without this the index would quietly outlive the reason its
+     * verdicts were true. `docs/BACKLOG.md` A7 has the same problem for catalogue indexes and
+     * solves it with a note to a human; this does better.
+     *
+     * `folder_uri` is what a granted tree being forgotten deletes, and what tells us a row's source
+     * may no longer be reachable.
+     */
+    private val LIBRARY_INDEX_V8: List<String> = listOf(
+        """
+        CREATE TABLE library_index (
+            uri TEXT PRIMARY KEY NOT NULL,
+            folder_uri TEXT NOT NULL,
+            path TEXT NOT NULL DEFAULT '',
+            file_name TEXT NOT NULL,
+            size INTEGER NOT NULL DEFAULT 0,
+            backend TEXT NOT NULL DEFAULT '',
+            format TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            author TEXT NOT NULL DEFAULT '',
+            duration_ms INTEGER NOT NULL DEFAULT 0,
+            subsongs INTEGER NOT NULL DEFAULT 1,
+            indexed_at INTEGER NOT NULL,
+            backends TEXT NOT NULL DEFAULT ''
+        )
+        """.trimIndent(),
+
+        // Browsing a granted tree reads by folder and then by path; searching reads by title.
+        "CREATE INDEX idx_library_folder ON library_index(folder_uri, path, file_name)",
+        "CREATE INDEX idx_library_title ON library_index(title)",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -215,7 +261,7 @@ object SchemaSql {
 
         "INSERT INTO player_state (id) VALUES (0)",
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
-        PLAY_HISTORY_V7
+        PLAY_HISTORY_V7 + LIBRARY_INDEX_V8
 
 
 
@@ -233,6 +279,7 @@ object SchemaSql {
         5 to TRACK_AUTHOR_V5,
         6 to SONG_LENGTHS_V6,
         7 to PLAY_HISTORY_V7,
+        8 to LIBRARY_INDEX_V8,
     )
 
     /**

@@ -1,0 +1,178 @@
+/*
+ * Protracktor -- a player for retro platform music formats.
+ * Copyright (C) 2026 Przunk
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
+ * the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <https://www.gnu.org/licenses/>.
+ */
+package com.przunk.protracktor.data
+
+import android.content.Context
+import com.przunk.protracktor.player.TrackRef
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/** One file, as a scan found it: what it is, not what it is called. */
+data class IndexedFile(
+    val uri: String,
+    val folderUri: String,
+    val path: String,
+    val fileName: String,
+    val sizeBytes: Long,
+    val backend: String,
+    val format: String,
+    val title: String,
+    val author: String,
+    val durationMs: Long,
+    val subsongs: Int,
+)
+
+/**
+ * The scanned local library.
+ *
+ * A scan opens every file with a real decoder to find out what it is, which is the only way to stop
+ * trusting filenames (`docs/BACKLOG.md` A6) and far too expensive to repeat. This is where the
+ * answer lives so that re-entering a folder, or launching the app again, reads instead of
+ * re-probing.
+ */
+class LibraryIndexStore(context: Context) {
+
+    private val helper = ProtracktorDatabase(context.applicationContext)
+
+    /**
+     * Replaces one folder's contents wholesale.
+     *
+     * Per folder rather than globally, because a scan is per folder: a user rescanning one tree
+     * must not lose the index of another. One transaction, for the same reason the catalogue index
+     * uses one -- a half-written index is worse than none, and it would be indistinguishable from a
+     * folder that genuinely holds less.
+     */
+    suspend fun replaceFolder(
+        folderUri: String,
+        entries: List<IndexedFile>,
+        backends: String,
+    ) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        helper.writableDatabase.transaction {
+            delete("library_index", "folder_uri = ?", arrayOf(folderUri))
+            compileStatement(
+                "INSERT OR REPLACE INTO library_index " +
+                    "(uri, folder_uri, path, file_name, size, backend, format, title, author, " +
+                    " duration_ms, subsongs, indexed_at, backends) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            ).use { statement ->
+                entries.forEach { entry ->
+                    statement.clearBindings()
+                    statement.bindString(1, entry.uri)
+                    statement.bindString(2, entry.folderUri)
+                    statement.bindString(3, entry.path)
+                    statement.bindString(4, entry.fileName)
+                    statement.bindLong(5, entry.sizeBytes)
+                    statement.bindString(6, entry.backend)
+                    statement.bindString(7, entry.format)
+                    statement.bindString(8, entry.title)
+                    statement.bindString(9, entry.author)
+                    statement.bindLong(10, entry.durationMs)
+                    statement.bindLong(11, entry.subsongs.toLong())
+                    statement.bindLong(12, now)
+                    statement.bindString(13, backends)
+                    statement.executeInsert()
+                }
+            }
+        }
+    }
+
+    /** What a folder holds, in the form the playlist and browser take. */
+    suspend fun tracksIn(folderUri: String): List<TrackRef> = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(
+            "SELECT uri, path, file_name, size, title, author FROM library_index " +
+                "WHERE folder_uri = ? ORDER BY path, file_name",
+            arrayOf(folderUri),
+        ).use { row ->
+            buildList {
+                while (row.moveToNext()) {
+                    val fileName = row.getString(2)
+                    add(
+                        TrackRef(
+                            id = row.getString(0),
+                            // The tune's own name where the scan found one; the filename otherwise.
+                            // A scan opens the file, so unlike the old extension-based one it
+                            // usually knows the real title before anything has been played.
+                            title = row.getString(4).ifBlank { fileName },
+                            subtitle = row.getString(1),
+                            sizeBytes = row.getLong(3),
+                            fileName = fileName,
+                            author = row.getString(5),
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /** How many files a folder has indexed, and when it was last scanned. Null if never. */
+    suspend fun summaryOf(folderUri: String): Pair<Int, Long>? = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(
+            "SELECT COUNT(*), MAX(indexed_at) FROM library_index WHERE folder_uri = ?",
+            arrayOf(folderUri),
+        ).use { row ->
+            if (row.moveToFirst() && row.getInt(0) > 0) row.getInt(0) to row.getLong(1) else null
+        }
+    }
+
+    /**
+     * Whether a folder's index was produced by a different set of decoders than this build has.
+     *
+     * The reason this exists: an index records what a file *is* and whether anything can play it,
+     * and both are verdicts of the decoders that produced them. Replacing sc68 2.2.1 with 3.0.0b
+     * took `.sndh` from 14 of 30 to 30 of 30 -- so every file the old set rejected deserves asking
+     * again. `docs/BACKLOG.md` A7 has the same problem for catalogue indexes and leaves it to a
+     * human to remember.
+     */
+    suspend fun isStale(folderUri: String, backends: String): Boolean = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(
+            "SELECT 1 FROM library_index WHERE folder_uri = ? AND backends <> ? LIMIT 1",
+            arrayOf(folderUri, backends),
+        ).use { it.moveToFirst() }
+    }
+
+    /** Everything indexed, for searching across folders. */
+    suspend fun search(query: String, limit: Int): List<TrackRef> = withContext(Dispatchers.IO) {
+        val like = "%${query.trim()}%"
+        helper.readableDatabase.rawQuery(
+            "SELECT uri, path, file_name, size, title, author FROM library_index " +
+                "WHERE title LIKE ? OR file_name LIKE ? OR author LIKE ? " +
+                "ORDER BY title LIMIT ?",
+            arrayOf(like, like, like, limit.toString()),
+        ).use { row ->
+            buildList {
+                while (row.moveToNext()) {
+                    val fileName = row.getString(2)
+                    add(
+                        TrackRef(
+                            id = row.getString(0),
+                            title = row.getString(4).ifBlank { fileName },
+                            subtitle = row.getString(1),
+                            sizeBytes = row.getLong(3),
+                            fileName = fileName,
+                            author = row.getString(5),
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun forgetFolder(folderUri: String) = withContext(Dispatchers.IO) {
+        helper.writableDatabase.delete("library_index", "folder_uri = ?", arrayOf(folderUri))
+        Unit
+    }
+}

@@ -28,6 +28,8 @@ import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.HistoryStore
+import com.przunk.protracktor.data.LibraryIndexStore
+import com.przunk.protracktor.data.IndexedFile
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.net.Catalogue
@@ -180,6 +182,12 @@ data class BrowseState(
     val groups: List<CatalogueGroup> = emptyList(),
     /** Non-null while an index is downloading; carries something to show the user. */
     val indexing: String? = null,
+    /** Non-null while a folder is being scanned: files probed so far, and how many there are. */
+    val scanProgress: Pair<Int, Int>? = null,
+    /** True when the open folder has never been scanned. */
+    val folderUnscanned: Boolean = false,
+    /** True when the open folder's index was built by a different set of decoders. */
+    val folderStale: Boolean = false,
     /**
      * True when this level was reached by "more from this author" rather than by browsing down to
      * it. Back has to undo the jump instead of walking up a hierarchy the user never walked down.
@@ -333,6 +341,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private val prefetched = LinkedHashMap<String, ByteArray>()
     private var prefetchJob: Job? = null
+    private var scanJob: Job? = null
 
     /** The background metadata pass. Cancelled and restarted whenever the track list changes. */
     private var resolveJob: Job? = null
@@ -342,6 +351,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val remoteFiles = RemoteFiles(context)
     private val songLengths = SongLengthStore(context)
     private val history = HistoryStore(context)
+    private val libraryIndex = LibraryIndexStore(context)
 
     private val audioFocus = AudioFocus(
         context = context,
@@ -617,23 +627,158 @@ class PlaybackController private constructor(private val context: Context) {
             store.rememberFolder(folder)
             _browse.update { it.copy(folders = store.grantedFolders()) }
             openFolder(folder)
+            // Granting a folder *is* the user asking for it to be usable, so this is the one moment
+            // a scan starts without a second press. Nothing else starts one: not launching, not
+            // returning to the app, not opening the folder again.
+            scanFolder(folder)
         }
     }
 
     fun forgetFolder(uri: String) {
         scope.launch {
             store.forgetFolder(uri)
+            // The index goes with the grant. Keeping rows for a tree we can no longer read would
+            // leave a browsable list of files that cannot be opened.
+            libraryIndex.forgetFolder(uri)
             _browse.update { it.copy(folders = store.grantedFolders(), openFolder = null, tracks = emptyList()) }
         }
     }
 
+    /**
+     * Shows what a folder holds, from the index rather than by walking it again.
+     *
+     * It used to re-scan the tree every time, which on the owner's network share is seconds of
+     * waiting for an answer that has not changed -- and it decided what was playable from filenames
+     * (`docs/STATUS.md` C4). Now the scan happens once, on purpose, and this reads the result.
+     */
     fun openFolder(folder: GrantedFolder) {
         scope.launch {
-            _browse.update { it.copy(openFolder = folder, loading = true, tracks = emptyList()) }
-            val found = MediaScanner.scanTree(context, Uri.parse(folder.uri))
-            _browse.update { it.copy(tracks = found, loading = false) }
+            _browse.update {
+                it.copy(
+                    openFolder = folder, loading = true, tracks = emptyList(),
+                    folderUnscanned = false, folderStale = false,
+                )
+            }
+            val found = libraryIndex.tracksIn(folder.uri)
+            val stale = found.isNotEmpty() &&
+                libraryIndex.isStale(folder.uri, NativeEngine.backendsFingerprint())
+            _browse.update {
+                it.copy(
+                    tracks = found,
+                    loading = false,
+                    folderUnscanned = found.isEmpty(),
+                    folderStale = stale,
+                )
+            }
         }
     }
+
+    /**
+     * Scans a folder by opening every file in it.
+     *
+     * **Always an explicit action.** Nothing calls this on launch, on returning to the app, or on
+     * opening a folder: it reads every file in the tree, which on a network share is minutes, and
+     * doing that because somebody switched back to the app would be indefensible.
+     *
+     * **It decides by content, not by name** (`docs/BACKLOG.md` A6, `docs/STATUS.md` C4). Each file
+     * is handed to the same `NativeEngine.open` that playback uses, and what comes back -- the
+     * backend that claimed it, the tune's own title and author, its length and subsong count -- is
+     * what gets stored. A file called `.txt` that is really a module is indexed; a file called
+     * `.mod` that is really a photograph is not.
+     *
+     * Playing is not interrupted. That used to be impossible: sc68 2.2.1 kept its emulator in
+     * global state, so opening a second instance while one played clobbered it. 3.0.0b is
+     * instance-based and was measured safe across four concurrent threads
+     * (`native/probe/sc68/probe_concurrency.c`), which is what makes this a background job rather
+     * than something the user has to stop the music for.
+     */
+    fun scanFolder(folder: GrantedFolder) {
+        scanJob?.cancel()
+        scanJob = scope.launch {
+            _browse.update { it.copy(scanProgress = 0 to 0, folderUnscanned = false, folderStale = false) }
+            val candidates = withContext(Dispatchers.IO) {
+                MediaScanner.listFiles(context, Uri.parse(folder.uri))
+            }
+            _browse.update { it.copy(scanProgress = 0 to candidates.size) }
+
+            val fingerprint = NativeEngine.backendsFingerprint()
+            val indexed = mutableListOf<IndexedFile>()
+            var done = 0
+            for (candidate in candidates) {
+                ensureActive()
+                withContext(Dispatchers.IO) { probe(candidate, folder.uri) }?.let(indexed::add)
+                done++
+                // Every file would be a state update per file and a recomposition per file; every
+                // twenty-fifth is still movement on screen and costs almost nothing.
+                if (done % 25 == 0 || done == candidates.size) {
+                    _browse.update { it.copy(scanProgress = done to candidates.size) }
+                }
+            }
+
+            libraryIndex.replaceFolder(folder.uri, indexed, fingerprint)
+            _browse.update { current ->
+                current.copy(
+                    scanProgress = null,
+                    tracks = if (current.openFolder?.uri == folder.uri) {
+                        indexed.map(::toTrackRef)
+                    } else {
+                        current.tracks
+                    },
+                    folderUnscanned = false,
+                    folderStale = false,
+                )
+            }
+            _state.update {
+                it.copy(
+                    message = Message(
+                        "Scanned ${folder.displayName}: ${indexed.size} playable of ${candidates.size}."
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Asks the decoders what one file is. Null when none of them claims it.
+     *
+     * The bytes are read in full because that is what opening a module means -- these formats are
+     * not streamed and a header is not enough to know a backend will accept the rest.
+     */
+    private fun probe(candidate: MediaScanner.Candidate, folderUri: String): IndexedFile? {
+        val bytes = runCatching {
+            context.contentResolver.openInputStream(Uri.parse(candidate.uri))?.use { it.readBytes() }
+        }.getOrNull() ?: return null
+
+        val opened = NativeEngine.open(bytes, candidate.fileName) ?: return null
+        return try {
+            val described = opened.describe()
+            IndexedFile(
+                uri = candidate.uri,
+                folderUri = folderUri,
+                path = candidate.path,
+                fileName = candidate.fileName,
+                sizeBytes = if (candidate.sizeBytes > 0) candidate.sizeBytes else bytes.size.toLong(),
+                backend = described["format"].orEmpty(),
+                format = described["format"].orEmpty(),
+                title = described["title"]?.trim().orEmpty(),
+                author = (described["artist"]?.trim()?.ifBlank { null }
+                    ?: described["composer"]?.trim()).orEmpty(),
+                durationMs = (opened.durationSeconds() * 1000).toLong(),
+                subsongs = described["subsongs"]?.toIntOrNull() ?: 1,
+            )
+        } finally {
+            opened.close()
+        }
+    }
+
+    private fun toTrackRef(entry: IndexedFile): TrackRef = TrackRef(
+        id = entry.uri,
+        title = entry.title.ifBlank { entry.fileName },
+        subtitle = entry.path,
+        sizeBytes = entry.sizeBytes,
+        fileName = entry.fileName,
+        author = entry.author,
+    )
 
     fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
 
@@ -853,6 +998,10 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val entries = withContext(Dispatchers.Default) {
+                // By name, and here that is right rather than a shortcut. A catalogue index is a
+                // list of filenames on somebody else's server; deciding by content would mean
+                // downloading half a million files to find out. The local library is the opposite
+                // case and is scanned by opening (`docs/BACKLOG.md` A6).
                 catalogue.parseIndex(bytes) { name -> SupportedFormats.looksPlayable(name) }
             }
             catalogues.replaceIndex(catalogue, entries)
@@ -1086,6 +1235,15 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             _browse.update { it.copy(loading = true, tracks = emptyList()) }
 
+            // The scanned library first: it knows tunes by their real titles, and it knows files
+            // nobody has added to any playlist. Then the playlists, for anything indexed folders do
+            // not cover -- an individually picked file, or a folder whose grant is gone.
+            val fromIndex = if (current.searchLocal) {
+                libraryIndex.search(current.query, limit = 200)
+            } else {
+                emptyList()
+            }
+
             val fromLocal = if (current.searchLocal) {
                 // The library, meaning every playlist's tracks -- searching only the active one
                 // would answer a question nobody asked.
@@ -1113,7 +1271,12 @@ class PlaybackController private constructor(private val context: Context) {
                 emptyList()
             }
 
-            _browse.update { it.copy(tracks = fromLocal + fromOnline + fromModArchive, loading = false) }
+            // The index first and de-duplicated against it by id: a file can be both indexed and
+            // sitting in a playlist, and showing it twice makes a search look broken.
+            val indexedIds = fromIndex.mapTo(mutableSetOf()) { it.id }
+            val local = fromIndex + fromLocal.filterNot { it.id in indexedIds }
+
+            _browse.update { it.copy(tracks = local + fromOnline + fromModArchive, loading = false) }
         }
     }
 
@@ -1208,15 +1371,29 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- library ------------------------------------------------------------------------------
 
+    /**
+     * Grants a folder and adds everything playable in it to the playlist.
+     *
+     * It scans first and adds what the scan found, rather than adding every file whose name looked
+     * promising. That is the difference A6 is about: the list you get is what the decoders accepted,
+     * so nothing in it refuses when you press play.
+     */
     fun addFolder(treeUri: Uri) {
         scope.launch {
             _state.update { it.copy(scanning = true) }
             MediaScanner.persistPermission(context, treeUri, isTree = true)
-            store.rememberFolder(
-                GrantedFolder(uri = treeUri.toString(), displayName = MediaScanner.labelOf(treeUri))
+            val folder = GrantedFolder(
+                uri = treeUri.toString(),
+                displayName = MediaScanner.labelOf(treeUri),
             )
-            val found = MediaScanner.scanTree(context, treeUri)
-            appendTracks(found, ::describeAdded)
+            store.rememberFolder(folder)
+            _browse.update { it.copy(folders = store.grantedFolders()) }
+
+            scanFolder(folder)
+            scanJob?.join()
+
+            _state.update { it.copy(scanning = false) }
+            appendTracks(libraryIndex.tracksIn(folder.uri), ::describeAdded)
         }
     }
 

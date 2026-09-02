@@ -273,6 +273,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onPickFiles = { filePicker.launch(arrayOf("*/*")) },
                 onOpenFolder = viewModel::openFolder,
                 onForgetFolder = viewModel::forgetFolder,
+                onScanFolder = viewModel::scanFolder,
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
                 onOpenCatalogue = viewModel::openCatalogue,

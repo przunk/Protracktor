@@ -96,6 +96,7 @@ fun BrowseScreen(
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
+    onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -141,6 +142,7 @@ fun BrowseScreen(
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
                 onForgetFolder = onForgetFolder,
+                onScanFolder = onScanFolder,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -269,22 +271,68 @@ private fun LocalDomain(
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
+    onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
-    if (browse.openFolder != null) {
-        Selectable(
-            browse = browse,
-            playlistName = playlistName,
-            playingId = playingId,
-            onPlay = onPlay,
-            onAdd = onAdd,
-            onAddToOtherPlaylist = onAddToOtherPlaylist,
-            onShowNeighbours = onShowNeighbours,
-            onShareFile = onShareFile,
-            onShareLink = onShareLink,
-        )
+    val folder = browse.openFolder
+    if (folder != null) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // A scan reads every file in the tree, so it says how far it has got. On a network
+            // share this is minutes, and a spinner with no number is indistinguishable from a hang.
+            browse.scanProgress?.let { (done, total) ->
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(
+                        text = if (total > 0) {
+                            stringResource(R.string.scan_progress, done, total)
+                        } else {
+                            stringResource(R.string.scan_listing)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (total > 0) {
+                        LinearProgressIndicator(
+                            progress = { done.toFloat() / total },
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                    }
+                }
+            }
+
+            if (browse.scanProgress == null && (browse.folderUnscanned || browse.folderStale)) {
+                // Two different sentences, because they are two different situations: never looked,
+                // versus looked with decoders this build no longer has.
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Text(
+                        text = stringResource(
+                            if (browse.folderUnscanned) R.string.folder_unscanned
+                            else R.string.folder_stale
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = { onScanFolder(folder) },
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    ) { Text(stringResource(R.string.action_scan_folder)) }
+                }
+            }
+
+            Selectable(
+                browse = browse,
+                playlistName = playlistName,
+                playingId = playingId,
+                onPlay = onPlay,
+                onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
+            )
+        }
         return
     }
 

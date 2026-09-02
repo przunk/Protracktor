@@ -516,3 +516,48 @@ list is not currently on screen.
 - **A4** — the same gesture in the *playlist*, and the bulk actions it would need there. The gesture
   is agreed; which actions the playlist gets is not, and guessing them is not the job.
 - Mis-tapping a remote track now costs a download rather than nothing. `docs/WISHLIST.md` B17.
+
+## 18. The local library is scanned by opening, not by reading names
+
+Added 2026-09-03 with `docs/BACKLOG.md` A6 and `docs/STATUS.md` C4.
+
+A folder used to be listed by walking the tree and keeping files whose **name** looked playable. Two
+things were wrong with that and both bit: a module named `readme.txt` was invisible, and a
+photograph named `tune.mod` was added and refused only when the user pressed play. The scan now
+lists everything and hands each file to the same `NativeEngine.open` that playback uses. **What a
+file is, is decided by a decoder accepting it.**
+
+`MediaScanner.worthReading` is the only filter, and it takes the display name as a parameter it
+deliberately never reads. That is not an oversight to tidy: the parameter is there so that the day
+somebody reaches for it, the change shows up in a diff and fails a test. Size is the one thing it
+judges on, and size is content rather than a name — nothing here is above a few megabytes, and
+reading a four-gigabyte film off a network share to learn it is not a SID helps nobody.
+
+### It has to be stored, or it is unaffordable
+
+Opening every file in a library is minutes on a network share, so the answer goes in `library_index`
+and later launches read it. **Scanning is never a side effect**: not of launching, not of returning
+to the app, not of opening a folder. The one moment it starts without a second press is when the
+user grants a folder, because granting a folder *is* asking for it to be usable.
+
+### An index made by decoders expires with them
+
+Every row records which decoder set produced it. This is not theoretical: replacing sc68 2.2.1 with
+3.0.0b on the same morning took `.sndh` from 14 of 30 to 30 of 30, so every "nothing can play this"
+the old set had written down became wrong at once. A folder whose rows name a different set is
+reported stale and offers a rescan. `docs/BACKLOG.md` A7 has the same problem for catalogue indexes
+and solves it with a note asking a human to remember.
+
+**Catalogue indexes are still filtered by name, and that is right rather than a shortcut** — a
+catalogue index is a list of filenames on somebody else's server, and deciding by content would mean
+downloading half a million files to find out.
+
+### Scanning while music plays
+
+Measured rather than assumed, and the answer changed. sc68 **2.2.1** kept its 68000 emulator in
+global state, so opening a second instance while one played clobbered it — which is why background
+metadata resolution in this app waits for playback to stop, and why probing a whole library looked
+blocked before it was started. sc68 **3.0.0b** is instance-based, and
+`native/probe/sc68/probe_concurrency.c` runs four threads each creating, loading, playing and
+destroying its own player twenty times: no failures, every thread producing audio. So a scan runs in
+the background and the music keeps playing.

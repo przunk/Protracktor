@@ -45,6 +45,17 @@ object NativeEngine {
     fun lastOpenError(): String = nativeLastOpenError()
 
     /**
+     * Which decoders this build has, and at which versions.
+     *
+     * Stored with every row of the local index, because an index records verdicts -- what a file is,
+     * and whether anything can play it -- and those are only true of the decoders that produced
+     * them. Replacing sc68 2.2.1 with 3.0.0b took `.sndh` from 14 of 30 to 30 of 30 on one morning:
+     * every "nothing can play this" the old set had written down became wrong. An index that cannot
+     * notice that is an index that quietly outlives its own reasoning.
+     */
+    fun backendsFingerprint(): String = nativeBackendsFingerprint()
+
+    /**
      * Opens a module from its bytes. Returns a handle, or `null` if the bytes are not a module the
      * backend recognises.
      *
@@ -132,6 +143,7 @@ object NativeEngine {
     @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
     @JvmStatic private external fun nativeSetDataPath(path: String)
     @JvmStatic private external fun nativeLastOpenError(): String
+    @JvmStatic private external fun nativeBackendsFingerprint(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double

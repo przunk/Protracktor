@@ -40,6 +40,12 @@ Round 3's features are confirmed; the formats and archives from round 2 are not.
 
 ## Finished
 
+- **2026-09-03** — **The local library is scanned by opening files, not by reading their names**
+  (`docs/ARCHITECTURE.md` §18). A scan hands every file to the same decoder path playback uses and
+  stores the result, so re-entering a folder reads an index instead of walking the tree again. Rows
+  record which decoder set produced them and a folder scanned by a different one is reported stale —
+  which mattered the same day, since sc68 3.0.0b made a great many previous verdicts wrong. Closes
+  **C4** and **A6**.
 - **2026-09-03** — **sc68 3.0.0b**, replacing the 2003 release. Measured on one corpus, both
   libraries, same bytes: **`.sndh` 14/30 → 30/30**, `.sc68` 10/10 → 10/10, and SNDH files now carry
   durations at all because 3.x ships a database of known tunes. Closes **C1** and confirms **C2**.
@@ -336,7 +342,7 @@ Browse stays open, adding one track has to *say* it happened, exactly as the doc
 (`docs/ARCHITECTURE.md` §17). Fixing the navigation alone would replace a jarring screen change
 with no feedback at all.
 
-### C4. Folder scanning trusts file extensions
+### C4. ~~Folder scanning trusts file extensions~~ — FIXED 2026-09-03
 
 Not content probing, as `docs/ARCHITECTURE.md` §5 requires. A misnamed file is skipped by a scan; a
 misleadingly named one is added and refuses only when played. Tracked as work in `docs/BACKLOG.md`
@@ -344,10 +350,10 @@ A6 as well, because it is both a defect and a piece of work.
 
 ## Known limitations — deliberate, not defects
 
-- **Background metadata resolution waits for playback to stop.** sc68 keeps its 68000 emulator in
-  global state, so opening a second instance while one plays would clobber it. Adding a folder while
-  music is playing therefore resolves nothing until you stop. Accepted; the alternative is
-  per-backend rules about which are safe to open concurrently.
+- ~~**Background metadata resolution waits for playback to stop.**~~ **Lifted 2026-09-03.** It was
+  a sc68 2.2.1 limitation: that release kept its 68000 emulator in global state. 3.0.0b is
+  instance-based and was measured safe across four concurrent threads
+  (`native/probe/sc68/probe_concurrency.c`), so a library scan now runs while music plays.
 - **"More from this author" does nothing for local files**, and is absent rather than disabled for
   them. The local browser lists a granted tree flat, so there is no directory to jump to;
   directory-level local browsing is its own piece of work and nobody has asked for it.
