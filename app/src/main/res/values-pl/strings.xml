@@ -147,6 +147,16 @@
     <string name="share_chooser">Udostępnij</string>
 
     <string name="storage_summary">Muzyka w cache: %1$d MB z %2$d MB. Trwałe pobrania: %3$d MB.</string>
+    <plurals name="subsongs_count">
+        <item quantity="one">%1$d utwór</item>
+        <item quantity="few">%1$d utwory</item>
+        <item quantity="many">%1$d utworów</item>
+        <item quantity="other">%1$d utworu</item>
+    </plurals>
+    <string name="subsongs_position">Utwór %1$d z %2$d</string>
+    <string name="subsongs_all">Wszystkie</string>
+    <string name="subsongs_first_only">Tylko pierwszy</string>
+    <string name="a11y_expand_player">Otwórz odtwarzacz</string>
     <string name="action_scan_folder">Przeskanuj ten folder</string>
     <string name="scan_listing">Listowanie folderu…</string>
     <string name="scan_progress">Otwieranie plików: %1$d z %2$d</string>

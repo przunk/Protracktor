@@ -82,6 +82,18 @@ data class PlayerUiState(
     val metadata: Map<String, String> = emptyMap(),
     val positionSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0,
+    /** Which tune inside the file is playing, counted from zero. */
+    val subsong: Int = 0,
+    /** How many tunes the file holds. One for a format that holds one. */
+    val subsongCount: Int = 1,
+    /**
+     * Whether to play every tune inside a file rather than only the first.
+     *
+     * A playback mode like shuffle and repeat: global, remembered, and about what happens next
+     * rather than about any one row. Off by default -- a file reporting 256 subsongs would
+     * otherwise take over a listening session the first time one turned up.
+     */
+    val playAllSubsongs: Boolean = false,
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
@@ -449,7 +461,18 @@ class PlaybackController private constructor(private val context: Context) {
                 if (open.isFinished()) {
                     handleTrackEnded()
                 } else {
-                    _state.update { it.copy(positionSeconds = open.positionSeconds()) }
+                    _state.update {
+                        it.copy(
+                            positionSeconds = open.positionSeconds(),
+                            // Picked up here because a subsong switch is applied on the audio
+                            // thread: the new tune's length does not exist until it has been.
+                            durationSeconds = if (it.durationSeconds <= 0.0) {
+                                open.durationSeconds()
+                            } else {
+                                it.durationSeconds
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -483,6 +506,7 @@ class PlaybackController private constructor(private val context: Context) {
                     queue = queue,
                     playlists = playlists,
                     activePlaylistId = playlistId,
+                    playAllSubsongs = saved?.playAllSubsongs ?: false,
                     restored = true,
                 )
             }
@@ -543,6 +567,7 @@ class PlaybackController private constructor(private val context: Context) {
                 currentTrackId = snapshot.queue.current?.id,
                 shuffle = snapshot.queue.shuffle,
                 repeat = snapshot.queue.repeat,
+                playAllSubsongs = snapshot.playAllSubsongs,
             )
         )
     }
@@ -841,6 +866,7 @@ class PlaybackController private constructor(private val context: Context) {
         sizeBytes = entry.sizeBytes,
         fileName = entry.fileName,
         author = entry.author,
+        subsongs = entry.subsongs,
     )
 
     fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
@@ -1661,6 +1687,14 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun next() {
         val now = _state.value
+        // A tune inside the file first, but **only in "play all"**. The owner settled that: making
+        // next mean something different depending on the *file* would be the transport behaving
+        // differently for reasons the user did not choose, which is the complaint that shaped the
+        // whole transport in the first place. Tied to a mode he set, it is predictable.
+        if (now.playAllSubsongs && now.subsong + 1 < now.subsongCount) {
+            selectSubsong(now.subsong + 1)
+            return
+        }
         if (now.transient != null) return randomNext()
         now.resultsQueue?.let { results ->
             if (results.hasNext) playFromResultsQueue(results.next())
@@ -1672,6 +1706,10 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun previous() {
         val now = _state.value
+        if (now.playAllSubsongs && now.subsong > 0) {
+            selectSubsong(now.subsong - 1)
+            return
+        }
         if (now.transient != null) return randomPrevious()
         now.resultsQueue?.let { results ->
             if (results.hasPrevious) playFromResultsQueue(results.previous())
@@ -1687,6 +1725,40 @@ class PlaybackController private constructor(private val context: Context) {
         // Shown immediately rather than waiting for the next poll: a slider that springs back to
         // where it was before catching up reads as a control that did not work.
         _state.update { it.copy(positionSeconds = seconds) }
+    }
+
+    /**
+     * Plays a tune inside the current file.
+     *
+     * Always available, whatever the mode: the mode governs what *next* does and whether one tune
+     * runs into the next, not whether the user may choose one by hand.
+     */
+    fun selectSubsong(index: Int) {
+        val open = track ?: return
+        val now = _state.value
+        if (index < 0 || index >= now.subsongCount || index == now.subsong) return
+        open.selectSubsong(index)
+        _state.update {
+            it.copy(
+                subsong = index,
+                positionSeconds = 0.0,
+                // The length is per tune, and the backend only knows it after the switch has been
+                // applied -- which happens on the audio thread. Cleared rather than left showing
+                // the previous tune's, and the position poll puts the real one back.
+                durationSeconds = 0.0,
+            )
+        }
+    }
+
+    /**
+     * Turns "play every tune in the file" on or off.
+     *
+     * Global and remembered, like shuffle and repeat, because it is about what plays next rather
+     * than about one row.
+     */
+    fun toggleAllSubsongs() {
+        _state.update { it.copy(playAllSubsongs = !it.playAllSubsongs) }
+        scheduleSave()
     }
 
     fun togglePlayPause() {
@@ -1749,6 +1821,15 @@ class PlaybackController private constructor(private val context: Context) {
     // --- internals ----------------------------------------------------------------------------
 
     private fun handleTrackEnded() {
+        // A file with more tunes in it runs on into the next one, but only in "play all". Off, a
+        // 256-subsong file behaves like any other track and the playlist keeps moving -- which is
+        // exactly why the owner chose that as the default.
+        val now = _state.value
+        if (now.playAllSubsongs && now.subsong + 1 < now.subsongCount) {
+            selectSubsong(now.subsong + 1)
+            return
+        }
+
         _state.value.resultsQueue?.let { results ->
             val advanced = results.onTrackEnded()
             when {
@@ -1920,6 +2001,8 @@ class PlaybackController private constructor(private val context: Context) {
                 it.copy(
                     playing = started,
                     metadata = described,
+                    subsong = 0,
+                    subsongCount = opened.subsongCount().coerceAtLeast(1),
                     durationSeconds = duration,
                     positionSeconds = 0.0,
                     message = if (started) it.message else Message("Could not open the audio device"),

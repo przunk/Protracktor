@@ -25,6 +25,14 @@
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
     <string name="storage_summary">Cached music: %1$d MB of %2$d MB. Permanent downloads: %3$d MB.</string>
+    <plurals name="subsongs_count">
+        <item quantity="one">%1$d tune</item>
+        <item quantity="other">%1$d tunes</item>
+    </plurals>
+    <string name="subsongs_position">Tune %1$d of %2$d</string>
+    <string name="subsongs_all">All tunes</string>
+    <string name="subsongs_first_only">First only</string>
+    <string name="a11y_expand_player">Open the player</string>
     <string name="action_scan_folder">Scan this folder</string>
     <string name="scan_listing">Listing the folder…</string>
     <string name="scan_progress">Opening files: %1$d of %2$d</string>

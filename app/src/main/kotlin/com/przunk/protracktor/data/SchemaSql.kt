@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 9
+    const val VERSION = 10
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -222,6 +222,18 @@ object SchemaSql {
         "ALTER TABLE catalogues ADD COLUMN backends TEXT NOT NULL DEFAULT ''",
     )
 
+    /**
+     * Whether to play every tune inside a file, added at version 10.
+     *
+     * A setting rather than a property of a track, and stored with the other playback modes for the
+     * same reason shuffle and repeat are: it applies to whatever plays next, not to one row. Off by
+     * default, which the owner chose — a file reporting 256 subsongs would otherwise take over a
+     * listening session the first time one appeared.
+     */
+    private val PLAY_ALL_SUBSONGS_V10: List<String> = listOf(
+        "ALTER TABLE player_state ADD COLUMN play_all_subsongs INTEGER NOT NULL DEFAULT 0",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -278,7 +290,7 @@ object SchemaSql {
         "INSERT INTO player_state (id) VALUES (0)",
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
-        CATALOGUE_BACKENDS_V9
+        CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10
 
 
 
@@ -298,6 +310,7 @@ object SchemaSql {
         7 to PLAY_HISTORY_V7,
         8 to LIBRARY_INDEX_V8,
         9 to CATALOGUE_BACKENDS_V9,
+        10 to PLAY_ALL_SUBSONGS_V10,
     )
 
     /**

@@ -73,6 +73,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun downloadSongLengths() = controller.downloadSongLengths()
 
+    fun selectSubsong(index: Int) = controller.selectSubsong(index)
+
+    fun toggleAllSubsongs() = controller.toggleAllSubsongs()
+
     fun clearHistory() = controller.clearHistory()
 
     fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)

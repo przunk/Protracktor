@@ -135,6 +135,18 @@ object NativeEngine {
 
         fun durationSeconds(): Double = nativeDurationSeconds(handle())
 
+        /** How many tunes are inside this file. One for a format that holds one. */
+        fun subsongCount(): Int = nativeSubsongCount(handle())
+
+        /**
+         * Plays tune [index], counted from zero.
+         *
+         * Handed to the audio callback rather than applied here, the same way a seek is: the
+         * callback is the only thread that touches the decoder, and swapping one underneath a read
+         * in progress is how a player crashes.
+         */
+        fun selectSubsong(index: Int) = nativeSelectSubsong(handle(), index)
+
         override fun close() {
             if (closed) return
             closed = true
@@ -160,6 +172,8 @@ object NativeEngine {
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
     @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
+    @JvmStatic private external fun nativeSubsongCount(handle: Long): Int
+    @JvmStatic private external fun nativeSelectSubsong(handle: Long, index: Int)
     @JvmStatic private external fun nativeSetDataPath(path: String)
     @JvmStatic private external fun nativeBackendsFingerprint(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)

@@ -81,6 +81,18 @@ public:
 
     /** 0 means "whatever the device prefers". Non-zero backends are resampled by Oboe if need be. */
     virtual int preferredSampleRate() const { return 0; }
+
+    /** How many tunes are inside. One for a format that holds one. */
+    virtual int subsongCount() const { return 1; }
+
+    /**
+     * Plays subsong [index], counted from **zero**.
+     *
+     * Zero-based at this boundary whatever the library underneath does -- sc68 numbers its tracks
+     * from one, and letting that leak upwards would put an off-by-one in every caller instead of in
+     * one conversion here. Returns whether the switch happened.
+     */
+    virtual bool selectSubsong(int index) { return index == 0; }
 };
 
 class OpenmptBackend : public Backend {
@@ -90,6 +102,21 @@ public:
 
     std::size_t render(int sampleRate, std::size_t frames, float *out) override {
         return module_->read_interleaved_stereo(sampleRate, frames, out);
+    }
+
+    int subsongCount() const override { return static_cast<int>(module_->get_num_subsongs()); }
+
+    bool selectSubsong(int index) override {
+        if (index < 0 || index >= subsongCount()) return false;
+        // Throws for an out-of-range subsong, which the check above prevents -- but a corrupted
+        // module can still surprise it, and an exception crossing JNI would take the app down.
+        try {
+            module_->select_subsong(index);
+            return true;
+        } catch (const std::exception &e) {
+            LOGE("libopenmpt refused subsong %d: %s", index, e.what());
+            return false;
+        }
     }
 
     bool canSeek() const override { return true; }
@@ -301,6 +328,18 @@ public:
 
     int preferredSampleRate() const override { return kSampleRate; }
 
+    int subsongCount() const override { return info_.tracks > 0 ? info_.tracks : 1; }
+
+    /** sc68 counts its tracks from one; the interface counts from zero. Converted here, once. */
+    bool selectSubsong(int index) override {
+        if (index < 0 || index >= subsongCount()) return false;
+        if (sc68_play(sc68_, index + 1, SC68_DEF_LOOP) < 0) return false;
+        sc68_music_info(sc68_, &info_, SC68_CUR_TRACK, nullptr);
+        rendered_ = 0;
+        ended_ = false;
+        return true;
+    }
+
 private:
     /**
      * `sc68_init` is process-wide and must happen exactly once, before any player is created.
@@ -477,6 +516,18 @@ public:
 
     int preferredSampleRate() const override { return kSampleRate; }
 
+    int subsongCount() const override { return ASAPInfo_GetSongs(info_); }
+
+    bool selectSubsong(int index) override {
+        if (index < 0 || index >= subsongCount()) return false;
+        song_ = index;
+        // ASAP wants the duration of the song being started; -1 lets it play to its own end.
+        durationMs_ = ASAPInfo_GetDuration(info_, song_);
+        if (!ASAP_PlaySong(asap_, song_, durationMs_)) return false;
+        ended_ = false;
+        return true;
+    }
+
 private:
     static constexpr int kSampleRate = 44100;
 
@@ -512,8 +563,8 @@ public:
         }
         if (!emu_) throw std::runtime_error("game-music-emu returned nothing");
 
-        gme_track_info(emu_, &info_, kTrack);
-        if (const gme_err_t err = gme_start_track(emu_, kTrack)) {
+        gme_track_info(emu_, &info_, track_);
+        if (const gme_err_t err = gme_start_track(emu_, track_)) {
             const std::string message = std::string("game-music-emu could not start it: ") + err;
             if (info_) gme_free_info(info_);
             gme_delete(emu_);
@@ -547,7 +598,22 @@ public:
 
     bool canSeek() const override { return true; }
     void seek(double seconds) override { gme_seek(emu_, static_cast<int>(seconds * 1000.0)); }
-    void rewind() override { gme_start_track(emu_, kTrack); }
+    void rewind() override { gme_start_track(emu_, track_); }
+
+    int subsongCount() const override { return emu_ ? gme_track_count(emu_) : 1; }
+
+    bool selectSubsong(int index) override {
+        if (!emu_ || index < 0 || index >= subsongCount()) return false;
+        if (const gme_err_t err = gme_start_track(emu_, index)) {
+            LOGE("gme refused track %d: %s", index, err);
+            return false;
+        }
+        track_ = index;
+        // The info is per track: a GBS names each tune and gives each its own length, and a stale
+        // struct would show the first one's title against the third one's audio.
+        gme_track_info(emu_, &info_, track_);
+        return true;
+    }
     double positionSeconds() const override { return gme_tell(emu_) / 1000.0; }
 
     double durationSeconds() const override {
@@ -574,7 +640,7 @@ public:
 private:
     static constexpr int kSampleRate = 44100;
     // Subsong selection is a UI feature that does not exist yet; some of these files hold hundreds.
-    static constexpr int kTrack = 0;
+    int track_ = 0;
 
     Music_Emu *emu_ = nullptr;
     gme_info_t *info_ = nullptr;
@@ -674,6 +740,28 @@ public:
     // actually hearing.
     double positionSeconds() const override {
         return static_cast<double>(rendered_) / static_cast<double>(rate_);
+    }
+
+    int subsongCount() const override { return info_ ? static_cast<int>(info_->songs()) : 1; }
+
+    /**
+     * libsidplayfp selects on the *tune* and the engine has to be handed it again.
+     *
+     * Its songs are numbered from one, like sc68's; the interface counts from zero. And unlike the
+     * others this cannot simply be told to jump -- the tune is reselected and the whole machine
+     * reloaded, which is why the mixer is initialised again as well. Forgetting that is a segfault,
+     * and it is the same one that cost a day when this backend was written.
+     */
+    bool selectSubsong(int index) override {
+        if (index < 0 || index >= subsongCount()) return false;
+        tune_.selectSong(static_cast<unsigned int>(index + 1));
+        if (!engine_.load(&tune_)) return false;
+        engine_.initMixer(false);
+        info_ = tune_.getInfo();
+        spare_.clear();
+        spareRead_ = 0;
+        rendered_ = 0;
+        return true;
     }
 
     // SID files carry no length. HVSC's Songlengths database is what supplies one, and that is a
@@ -781,6 +869,17 @@ class Player : public oboe::AudioStreamDataCallback {
 public:
     explicit Player(std::unique_ptr<Backend> backend) : backend_(std::move(backend)) {}
 
+    int subsongCount() const { return backend_->subsongCount(); }
+
+    /**
+     * Switches tune without stopping the stream.
+     *
+     * The audio callback is the only thread that touches the backend, so the switch is handed over
+     * to it rather than performed here -- the same trick seeking already uses, and for the same
+     * reason: a decoder cannot be changed underneath a read in progress.
+     */
+    void requestSubsong(int index) { pendingSubsong_.store(index, std::memory_order_release); }
+
     // Not locked, and deliberately so. Oboe's stop() blocks until an in-flight callback returns, and
     // every control path below stops the stream before touching the backend -- so the callback is
     // the only reader while it runs, and never concurrent with a writer. A mutex here would be a
@@ -793,6 +892,11 @@ public:
         // be moved under a read in progress, and the audio callback is the only thread that reads
         // it, so handing the request over and letting the callback act on it removes the race
         // without stopping the stream and clicking.
+        const int subsong = pendingSubsong_.exchange(-1, std::memory_order_acq_rel);
+        if (subsong >= 0 && backend_->selectSubsong(subsong)) {
+            finished_.store(false, std::memory_order_release);
+        }
+
         const double seekTo = pendingSeek_.exchange(NO_SEEK, std::memory_order_acq_rel);
         if (seekTo >= 0.0 && backend_->canSeek()) {
             backend_->seek(seekTo);
@@ -915,6 +1019,8 @@ private:
     // the callback both reads the request and clears it.
     static constexpr double NO_SEEK = -1.0;
     std::atomic<double> pendingSeek_{NO_SEEK};
+    /** -1 means nothing pending. Applied by the audio callback, like a seek. */
+    std::atomic<int> pendingSubsong_{-1};
 };
 
 Player *asPlayer(jlong handle) { return reinterpret_cast<Player *>(handle); }
@@ -979,6 +1085,17 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeIsFinished(JNIEnv *, jclas
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, jlong handle) {
     return asPlayer(handle)->restart() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSubsongCount(JNIEnv *, jclass, jlong handle) {
+    return asPlayer(handle)->subsongCount();
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSelectSubsong(JNIEnv *, jclass, jlong handle,
+                                                                   jint index) {
+    asPlayer(handle)->requestSubsong(index);
 }
 
 JNIEXPORT void JNICALL

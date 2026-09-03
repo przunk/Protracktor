@@ -93,7 +93,7 @@ class LibraryIndexStore(context: Context) {
     /** What a folder holds, in the form the playlist and browser take. */
     suspend fun tracksIn(folderUri: String): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT uri, path, file_name, size, title, author FROM library_index " +
+            "SELECT uri, path, file_name, size, title, author, subsongs FROM library_index " +
                 "WHERE folder_uri = ? ORDER BY path, file_name",
             arrayOf(folderUri),
         ).use { row ->
@@ -111,6 +111,7 @@ class LibraryIndexStore(context: Context) {
                             sizeBytes = row.getLong(3),
                             fileName = fileName,
                             author = row.getString(5),
+                            subsongs = row.getInt(6),
                         )
                     )
                 }
@@ -148,7 +149,7 @@ class LibraryIndexStore(context: Context) {
     suspend fun search(query: String, limit: Int): List<TrackRef> = withContext(Dispatchers.IO) {
         val like = "%${query.trim()}%"
         helper.readableDatabase.rawQuery(
-            "SELECT uri, path, file_name, size, title, author FROM library_index " +
+            "SELECT uri, path, file_name, size, title, author, subsongs FROM library_index " +
                 "WHERE title LIKE ? OR file_name LIKE ? OR author LIKE ? " +
                 "ORDER BY title LIMIT ?",
             arrayOf(like, like, like, limit.toString()),
@@ -164,6 +165,7 @@ class LibraryIndexStore(context: Context) {
                             sizeBytes = row.getLong(3),
                             fileName = fileName,
                             author = row.getString(5),
+                            subsongs = row.getInt(6),
                         )
                     )
                 }

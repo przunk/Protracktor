@@ -34,7 +34,7 @@ behind it: **what do next and previous mean while listening from a search?** The
 everything else here is that the results become the queue for as long as you are in them, the way
 Random has its own history. Playing from search must not quietly rewrite the playlist.
 
-## A2. Subsongs — decided 2026-09-01, UI still open
+## A2. ~~Subsongs~~ — DONE 2026-09-03
 
 
 game-music-emu reports track counts in the hundreds — one GBS in the sample said 99, an HES said 256
@@ -54,7 +54,41 @@ become a playlist of two thousand rows.
 - **(d)** It must be easy to reach: no clicking through several places, and no complicating the way
   back to the playlist.
 
-Nobody has a good design yet, his words included. **To be discussed before anything is built.**
+**Designed with him on 2026-09-03 and built.** What was agreed, and where each of his constraints
+landed:
+
+| | |
+| --- | --- |
+| **Dock — transport** | untouched. A control that does nothing for most files does not belong beside shuffle and repeat |
+| **Dock — title row** | now visibly a control, and says *"tune 3 of 15"* when the mode is on |
+| **Expanded player** | the strip of tunes and the mode toggle — **(c)**: that screen *is* the track, so nothing is covered |
+| **Playlist row** | the count, and only in "all tunes" — **(d)** without cluttering a row we had already agreed |
+
+**The mode decides what the transport means, and that is his correction rather than my design.** I
+proposed that `next` should walk tunes inside any multi-tune file. He pointed out that this makes a
+button mean different things depending on the *file* — which is not something the user chose — and
+tied it to the mode instead: **"all tunes"** and next walks them, **"first only"** and next is the
+next file. That is exactly the principle behind his first complaint about this app, that next and
+previous behaved unpredictably. I had it written down and proposed the opposite anyway.
+
+**Default is "first only"**, his choice: a file reporting 256 subsongs should not take over a
+listening session the first time one appears.
+
+**Two things he caught that the design would have failed on:**
+
+- The toggle belongs where the track's settings are, not in the transport bar. I read "in the dock"
+  and "in the place of the track's settings" as the same place; they are not, and he meant the
+  second.
+- **The dock's title row did not look clickable**, and it is the way to all of this. Fixed with the
+  same remedy the playlist name in the top bar needed: a visible surface and a chevron.
+
+**One hole in the design, named and closed:** with the count shown only in "all tunes" mode, there
+was no way to discover a file *had* tunes while in "first only". The dock now says so.
+
+**Still not solved, deliberately:** console formats over-report. A GBS claims 99 and an HES 256, and
+many are silence or sound effects rather than tunes. We already store per-subsong durations for SID
+and GME knows its own, so greying out the empty ones is reachable — but it is a separate question
+and is not tangled into this.
 
 Two observations to bring to that conversation:
 

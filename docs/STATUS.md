@@ -70,6 +70,11 @@ working and fetching serially, which he heard; that is fixed.
 
 ## Finished
 
+- **2026-09-03** — **Subsongs** (**A2**). A file holding fifteen tunes played one of them; now the
+  expanded player lists them and a mode decides whether they play through. All five backends could
+  already select — ASAP was calling `ASAP_PlaySong` with a fixed index — so the work was mostly
+  saying so. sc68 and libsidplayfp count their tunes from one and the rest from zero; that is
+  converted at the backend boundary rather than leaked to every caller.
 - **2026-09-03** — **A scrollbar you can grab**, at the edge of the playlist and of Browse's track
   lists (**A3**), and **bulk operations on the playlist** (**A4**): long press to select, then add
   the selection to a playlist — existing or new — or remove it. Undo brings a whole bulk removal

@@ -161,6 +161,17 @@ object PlayerIcons {
             "M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z",
         )
     }
+    /** Several tunes inside one file. A stack of layers rather than a list, which "playlist" is. */
+    val Subsongs: ImageVector by lazy {
+        icon(
+            "Subsongs",
+            "M12 2L2 8l10 6 10-6-10-6zm0 13.5L4.2 10.7 2 12l10 6 10-6-2.2-1.3L12 15.5z",
+        )
+    }
+    /** The chevron that says the row above the transport opens something. */
+    val Expand: ImageVector by lazy {
+        icon("Expand", "M12 8l-6 6 1.4 1.4L12 10.8l4.6 4.6L18 14z")
+    }
     val Download: ImageVector by lazy {
         icon("Download", "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z")
     }

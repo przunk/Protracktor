@@ -58,6 +58,16 @@ data class TrackRef(
      * display falls back to the source folder rather than to nothing.
      */
     val author: String = "",
+    /**
+     * How many tunes the file holds, where that is already known.
+     *
+     * Known for a **scanned local file** — the scan opened it and the index kept the answer — and
+     * **1 for everything else** until it has been played, because finding out means opening the
+     * file and a catalogue's index is a list of names on somebody else's server. So this is a hint
+     * for the list, never the authority: the authority is what the backend says once the file is
+     * open (`docs/BACKLOG.md` A2).
+     */
+    val subsongs: Int = 1,
 ) {
     /**
      * Whether two references point at the same actual file.

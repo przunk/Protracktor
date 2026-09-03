@@ -64,6 +64,7 @@ fun PlayerDock(
     modifier: Modifier = Modifier,
 ) {
     val loaded = state.current
+    val expandLabel = stringResource(R.string.a11y_expand_player)
     Surface(
         modifier = modifier.fillMaxWidth(),
         tonalElevation = 3.dp,
@@ -85,11 +86,23 @@ fun PlayerDock(
                 modifier = Modifier.padding(horizontal = 12.dp),
             )
 
+            // **It has to look like a control.** This row opens the player, and nothing said so --
+            // the owner pointed that out, and it matters more now that the tunes inside a file are
+            // reached through it. Same remedy as the playlist name in the top bar, which had the
+            // same problem: a surface you can see, and a chevron.
+            Surface(
+                onClick = if (loaded != null) onExpand else onBrowse,
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+                    .semantics { contentDescription = expandLabel },
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = if (loaded != null) onExpand else onBrowse)
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -127,6 +140,26 @@ fun PlayerDock(
                         Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
                     }
                 }
+                // Says there is more inside without adding a control: the tunes are chosen in
+                // the player this row opens. Only when there is more than one, and only in "play
+                // all" -- in "first only" a count would advertise something that will not happen.
+                if (state.playAllSubsongs && state.subsongCount > 1) {
+                    Text(
+                        text = stringResource(
+                            R.string.subsongs_position, state.subsong + 1, state.subsongCount
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                Icon(
+                    imageVector = PlayerIcons.Expand,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
             }
 
             Row(

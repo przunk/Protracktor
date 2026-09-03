@@ -53,6 +53,8 @@ fun NowPlaying(
     onShareFile: (() -> Unit)?,
     onShareLink: (() -> Unit)?,
     onAddToOtherPlaylist: (() -> Unit)? = null,
+    onSelectSubsong: (Int) -> Unit = {},
+    onToggleAllSubsongs: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val track = state.current
@@ -106,6 +108,16 @@ fun NowPlaying(
                 )
             }
         }
+
+        // Under the seek bar and above the actions: it is about what is playing, so it belongs
+        // with the transport rather than with the things you can do to the file.
+        SubsongStrip(
+            count = state.subsongCount,
+            current = state.subsong,
+            playAll = state.playAllSubsongs,
+            onSelect = onSelectSubsong,
+            onTogglePlayAll = onToggleAllSubsongs,
+        )
 
         // One row of icons with their names underneath, rather than a stack of full-width text
         // buttons that grew by two in a single day (`docs/BACKLOG.md` A17). Each is absent rather

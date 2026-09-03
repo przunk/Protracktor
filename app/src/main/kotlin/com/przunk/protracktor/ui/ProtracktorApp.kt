@@ -354,6 +354,8 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                             viewModel.showNeighboursOf(track)
                         }
                     },
+                onSelectSubsong = viewModel::selectSubsong,
+                onToggleAllSubsongs = viewModel::toggleAllSubsongs,
                 onShareFile = state.current?.let { track -> { viewModel.shareFile(track) } },
                 onShareLink = state.current
                     ?.takeIf { Catalogue.owning(it.id) != null }
