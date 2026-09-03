@@ -143,23 +143,28 @@ read.
 Real by inspection, not demonstrated to occur. Listed because the reasoning is worth keeping, not
 because they are known to bite.
 
-### R5 — `Sc68Backend::sharedDataPath()` is read while it may be written · **medium**
+### R5 — ~~`Sc68Backend::sharedDataPath()` is read while it may be written~~ · **medium** — FIXED
 
 A `static std::string` set once from JNI during start-up and read when the first sc68 file is
 opened. Nothing orders the two. Before round 5 a scan could not run alongside start-up; now it can.
 A torn read gives an empty replay path, and sc68 with no replay path loads files and plays silence —
 the failure that cost a day on 2.2.1 and looks exactly like a broken decoder.
 
-*Correction:* set it before the library is initialised and never after, or hold it behind the same
-one-time initialisation `ensureLibraryReady()` already uses.
+*Fixed:* both the setter and the reader take a mutex, and the reader takes a **copy** rather than
+handing out a reference into shared storage — a reference would have moved the race one line
+outwards rather than removing it.
 
-### R6 — playback counters are shared between the audio thread and the UI · **medium**
+### R6 — ~~playback counters are shared between the audio thread and the UI~~ · **medium** — FIXED
 
 `rendered_` and `ended_` in `Sc68Backend` and `SidBackend` are written by `render` on the audio
 thread and read by `positionSeconds()` / `isFinished()` from elsewhere, without atomics. On the
 architectures this ships for a `size_t` load will not tear in practice, and the visible consequence
 is a stale position readout rather than a crash — but it is a race by the language's rules and the
 rest of the player (`pendingSeek_`, `gain_`, `finished_`) already uses atomics for exactly this.
+
+*Fixed:* `std::atomic` on both backends' counters, at the default ordering. Relaxed would be enough
+for a counter and a flag; a fence per buffer next to emulating a 68000 is not worth the cleverness,
+and a comment claiming an ordering the code does not use is worse than no comment.
 
 ### R7 — two fetches of one URL share a temporary file · **low**
 

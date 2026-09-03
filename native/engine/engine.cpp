@@ -41,6 +41,7 @@ extern "C" {
 
 #include <android/log.h>
 #include <atomic>
+#include <mutex>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -138,9 +139,15 @@ public:
      * 68000 binaries that live on disk. Without them a file loads and then plays silence, which is
      * indistinguishable from a broken decoder and cost a day to diagnose on 2.2.1.
      */
-    static std::string &sharedDataPath() {
-        static std::string path;
-        return path;
+    static void setSharedDataPath(const std::string &path) {
+        std::lock_guard<std::mutex> held(sharedDataMutex());
+        sharedDataPath() = path;
+    }
+
+    /** A copy, taken under the lock. Callers must not hold a reference into it. */
+    static std::string sharedDataPathCopy() {
+        std::lock_guard<std::mutex> held(sharedDataMutex());
+        return sharedDataPath();
     }
 
     /**
@@ -311,7 +318,8 @@ private:
             init.flags.no_load_config = 1;
             init.flags.no_save_config = 1;
             if (sc68_init(&init) < 0) return false;
-            if (!sharedDataPath().empty()) rsc68_set_share(sharedDataPath().c_str());
+            const std::string share = sharedDataPathCopy();
+            if (!share.empty()) rsc68_set_share(share.c_str());
             return true;
         }();
         if (!ready) throw std::runtime_error("sc68 refused to initialise");
@@ -328,11 +336,34 @@ private:
      */
     static constexpr int kMaxIdlePasses = 8;
 
+    /**
+     * Where the replay binaries are, and the lock that makes reading it safe.
+     *
+     * Written once from JNI during start-up and read when a file is opened. Nothing ordered the two
+     * until now, and a library scan can reach an open while start-up is still running -- a torn
+     * read gives an empty path, and sc68 with no replay path loads files and plays silence, which
+     * is indistinguishable from a broken decoder and cost a day to diagnose once already
+     * (`docs/review.md` R5).
+     */
+    static std::string &sharedDataPath() {
+        static std::string path;
+        return path;
+    }
+
+    static std::mutex &sharedDataMutex() {
+        static std::mutex guard;
+        return guard;
+    }
+
     sc68_t *sc68_ = nullptr;
     sc68_music_info_t info_{};
     std::vector<short> scratch_;
-    std::size_t rendered_ = 0;
-    bool ended_ = false;
+    // Written by render() on the audio thread and read from elsewhere by positionSeconds(), which
+    // is a race by the language's rules however benign it looks on ARM (`docs/review.md` R6). The
+    // default sequentially-consistent ordering is more than a counter needs and costs one fence per
+    // buffer, which is nothing next to emulating a 68000 -- so it is left alone rather than tuned.
+    std::atomic<std::size_t> rendered_{0};
+    std::atomic<bool> ended_{false};
 };
 
 
@@ -672,8 +703,11 @@ private:
     static constexpr unsigned int kCyclesPerPass = 20000;
     static constexpr unsigned int kScratchSamples = 8192;
 
-    std::uint64_t rendered_ = 0;
-    int rate_ = kSampleRate;
+    // Both written by render() on the audio thread and read by positionSeconds() from elsewhere.
+    // Same reasoning as Sc68Backend: a race by the language's rules, and the default ordering costs
+    // a fence per buffer against the price of emulating a 6502 (`docs/review.md` R6).
+    std::atomic<std::uint64_t> rendered_{0};
+    std::atomic<int> rate_{kSampleRate};
 
     SidTune tune_;
     SIDLiteBuilder builder_;
@@ -983,7 +1017,7 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeBackendsFingerprint(JNIEnv
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetDataPath(JNIEnv *env, jclass, jstring path) {
     const char *chars = env->GetStringUTFChars(path, nullptr);
-    Sc68Backend::sharedDataPath() = chars ? chars : "";
+    Sc68Backend::setSharedDataPath(chars ? chars : "");
     env->ReleaseStringUTFChars(path, chars);
 }
 
