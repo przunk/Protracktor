@@ -510,6 +510,21 @@ callback — which is the whole trap.
 request for a callback that would never run. Nobody had reported it, because seeking a finished
 track is a thing people rarely do.
 
+### C12. ~~The notification had no skip buttons in Random~~ — FIXED 2026-09-04
+
+Reported by the owner, who also guessed correctly that it would not be only Random.
+
+**Cause.** The media session declared `ACTION_SKIP_TO_NEXT` and `ACTION_SKIP_TO_PREVIOUS` from
+`queue.hasNext` and `queue.hasPrevious` — that is, from the **playlist**. But next does not always
+walk the playlist: in Random it walks the picks, and in a search it walks the results. The app
+already had `canGoNext` and `canGoPrevious` for exactly that, and the notification was not asking
+them. So the buttons vanished in precisely the modes where the dock was still offering them, and
+search had the same fault.
+
+Since Android 13 the system builds a `MediaStyle` notification's buttons from the session's
+`PlaybackState` rather than from the notification's own actions — which is why the
+`Notification.Action`s, added unconditionally all along, were never the thing to look at.
+
 ### C3. R9 is addressed but unmeasured
 
 The next track is read while the current one plays and remote fetches are cached, but nobody has

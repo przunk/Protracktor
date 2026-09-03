@@ -137,8 +137,16 @@ class PlaybackService : Service() {
             PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_PAUSE or
             PlaybackState.ACTION_STOP
-        if (state.queue.hasNext) actions = actions or PlaybackState.ACTION_SKIP_TO_NEXT
-        if (state.queue.hasPrevious) actions = actions or PlaybackState.ACTION_SKIP_TO_PREVIOUS
+        // `canGoNext`, not `queue.hasNext`. The queue is the playlist, and next does not always
+        // walk the playlist: in Random it walks the picks, and in a search it walks the results.
+        // Asking the queue meant the notification hid its skip buttons in exactly the mode where
+        // the dock was showing them -- the owner found it in Random, and search had it too.
+        //
+        // Since Android 13 the system builds these buttons from the session's PlaybackState rather
+        // than from the notification's own actions, so this line is what decides whether they
+        // exist. The `Notification.Action`s below were always added and were never the problem.
+        if (state.canGoNext) actions = actions or PlaybackState.ACTION_SKIP_TO_NEXT
+        if (state.canGoPrevious) actions = actions or PlaybackState.ACTION_SKIP_TO_PREVIOUS
         // Advertised only when the backend can honour it. sc68 emulates a 68000 and cannot seek;
         // a lock screen offering a scrubber that does nothing is the same lie as an app that does.
         if (state.seekable) actions = actions or PlaybackState.ACTION_SEEK_TO
