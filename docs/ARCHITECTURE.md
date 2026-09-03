@@ -500,6 +500,20 @@ width comes from the caller as `weight(1f)` rather than a fixed size: a fixed ce
 equal columns on a screen wide enough to hold them, and on a phone the extras wrapped out of sight
 and read as missing.
 
+### A row's own actions live behind its three dots
+
+A track row in Browse and in the playlist puts everything you can do *to* that track behind an
+overflow menu, and since 2026-09-04 a playlist row in the switcher does the same: **rename, export,
+delete**. Before that the switcher had three shapes for the same idea — rename appeared only on the
+active row, delete sat beside it as a bare icon, and export was a button at the bottom that silently
+meant "whichever one is open". Naming the playlist in the menu you opened is also what makes export
+answer the obvious question, "can I export one I am not listening to".
+
+**Import is deliberately not in that menu.** It does not add to the row you opened; it creates a
+playlist of its own, always. It sits next to *New playlist* instead, because those two are the only
+things here that bring a playlist into existence — an "Import" among a row's own actions would
+promise precisely what it refuses to do.
+
 ### Anatomy
 
 Browse, search and history rows share one anatomy, and the playlist row is the same thing plus a

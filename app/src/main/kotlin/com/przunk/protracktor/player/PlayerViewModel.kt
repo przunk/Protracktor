@@ -58,7 +58,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun cycleRepeat() = controller.cycleRepeat()
 
     fun createPlaylist(name: String) = controller.createPlaylist(name)
-    fun renameActivePlaylist(name: String) = controller.renameActivePlaylist(name)
+    fun renamePlaylist(id: Long, name: String) = controller.renamePlaylist(id, name)
     fun deletePlaylist(id: Long) = controller.deletePlaylist(id)
     fun switchToPlaylist(id: Long) = controller.switchToPlaylist(id)
 
@@ -77,7 +77,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()
 
-    fun exportPlaylist() = controller.exportPlaylist()
+    fun exportPlaylist(id: Long) = controller.exportPlaylist(id)
 
     fun importPlaylist(uri: Uri) = controller.importPlaylist(uri)
 

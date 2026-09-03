@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -50,7 +52,7 @@ import com.przunk.protracktor.R
 import com.przunk.protracktor.data.SavedPlaylist
 
 /**
- * Choosing, creating, renaming and deleting playlists.
+ * Choosing and creating playlists, and acting on one of them.
  *
  * The active one is marked by a filled dot as well as by colour, for the same reason the playing row
  * is: a mark only colour can carry is a mark some users cannot read (AGENTS.md §8).
@@ -61,13 +63,14 @@ fun PlaylistSwitcher(
     activeId: Long,
     onSelect: (Long) -> Unit,
     onCreate: (String) -> Unit,
-    onRename: (String) -> Unit,
+    onRename: (Long, String) -> Unit,
     onDelete: (Long) -> Unit,
     onImport: () -> Unit,
-    onExport: () -> Unit,
+    onExport: (Long) -> Unit,
 ) {
     var naming by remember { mutableStateOf<NamingIntent?>(null) }
     var confirmingDelete by remember { mutableStateOf<SavedPlaylist?>(null) }
+    var menuFor by remember { mutableStateOf<Long?>(null) }
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
@@ -99,22 +102,48 @@ fun PlaylistSwitcher(
                             )
                         }
                     },
+                    // Everything you can do *to* this playlist, behind the same three dots a
+                    // track row uses in Browse and in the playlist. Rename used to appear only on
+                    // the active row and delete sat next to it unlabelled, while export was a
+                    // button at the bottom that silently meant "the open one" -- three different
+                    // shapes for three things that are all "act on one playlist".
                     trailingContent = {
-                        Row {
-                            if (active) {
-                                IconButton(onClick = {
-                                    naming = NamingIntent.Rename(playlist.name)
-                                }) {
-                                    Icon(
-                                        PlayerIcons.Rename,
-                                        stringResource(R.string.a11y_rename_playlist, playlist.name),
-                                    )
-                                }
-                            }
-                            IconButton(onClick = { confirmingDelete = playlist }) {
+                        Box {
+                            IconButton(onClick = { menuFor = playlist.id }) {
                                 Icon(
-                                    PlayerIcons.Remove,
-                                    stringResource(R.string.a11y_delete_playlist, playlist.name),
+                                    PlayerIcons.More,
+                                    stringResource(R.string.a11y_playlist_menu, playlist.name),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuFor == playlist.id,
+                                onDismissRequest = { menuFor = null },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.playlist_rename)) },
+                                    leadingIcon = { Icon(PlayerIcons.Rename, null) },
+                                    onClick = {
+                                        menuFor = null
+                                        naming = NamingIntent.Rename(playlist.id, playlist.name)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(R.string.action_export_playlist))
+                                    },
+                                    leadingIcon = { Icon(PlayerIcons.Export, null) },
+                                    onClick = {
+                                        menuFor = null
+                                        onExport(playlist.id)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_delete)) },
+                                    leadingIcon = { Icon(PlayerIcons.Remove, null) },
+                                    onClick = {
+                                        menuFor = null
+                                        confirmingDelete = playlist
+                                    },
                                 )
                             }
                         }
@@ -133,28 +162,19 @@ fun PlaylistSwitcher(
             }
         }
 
-        // A playlist as a file, both ways. Here rather than in a menu somewhere because this sheet
-        // is already "the place where playlists are dealt with" (`docs/BACKLOG.md` A25).
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(top = 4.dp),
-        ) {
-            LabelledAction(
-                icon = PlayerIcons.Download,
-                label = stringResource(R.string.action_import_playlist),
-                onClick = onImport,
-            )
-            LabelledAction(
-                icon = PlayerIcons.Export,
-                label = stringResource(R.string.action_export_playlist),
-                onClick = onExport,
-            )
+        // The two ways to end up with a playlist that was not there before, side by side.
+        // Import stays out of the row menu on purpose: it does not add to the playlist you opened
+        // the menu on, it makes a new one (`docs/ARCHITECTURE.md` §16), and an "Import" sitting
+        // among that row's own actions would promise exactly the thing it refuses to do.
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { naming = NamingIntent.Create },
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.playlist_new)) }
+            OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.action_import_playlist))
+            }
         }
-
-        OutlinedButton(
-            onClick = { naming = NamingIntent.Create },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.playlist_new)) }
     }
 
     naming?.let { intent ->
@@ -165,7 +185,10 @@ fun PlaylistSwitcher(
             ),
             onDismiss = { naming = null },
             onConfirm = { name ->
-                if (intent is NamingIntent.Create) onCreate(name) else onRename(name)
+                when (intent) {
+                    is NamingIntent.Create -> onCreate(name)
+                    is NamingIntent.Rename -> onRename(intent.id, name)
+                }
                 naming = null
             },
         )
@@ -196,7 +219,7 @@ fun PlaylistSwitcher(
 
 private sealed interface NamingIntent {
     data object Create : NamingIntent
-    data class Rename(val current: String) : NamingIntent
+    data class Rename(val id: Long, val current: String) : NamingIntent
 }
 
 @Composable

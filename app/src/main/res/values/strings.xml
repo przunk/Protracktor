@@ -82,6 +82,7 @@
     <string name="playlist_delete_body">The playlist goes; the tracks stay in your library.</string>
 
     <string name="a11y_forget_folder">Forget the folder %1$s</string>
+    <string name="a11y_playlist_menu">Actions for %1$s</string>
     <string name="a11y_rename_playlist">Rename %1$s</string>
     <string name="a11y_delete_playlist">Delete %1$s</string>
 

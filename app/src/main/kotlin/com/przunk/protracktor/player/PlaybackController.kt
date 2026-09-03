@@ -604,10 +604,10 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    fun renameActivePlaylist(name: String) {
+    fun renamePlaylist(id: Long, name: String) {
         if (name.isBlank()) return
         scope.launch {
-            store.renamePlaylist(playlistId, name)
+            store.renamePlaylist(id, name)
             _state.update { it.copy(playlists = store.playlists()) }
         }
     }
@@ -887,22 +887,25 @@ class PlaybackController private constructor(private val context: Context) {
     // --- playlists as files -----------------------------------------------------------------
 
     /**
-     * Writes the current playlist out and offers it to be shared.
+     * Writes one playlist out and offers it to be shared.
      *
      * Through the same copy-and-share path a track uses (`docs/ARCHITECTURE.md` §16), because a
      * playlist is a file like any other and nothing else here can hand a file to another app.
      */
-    fun exportPlaylist() {
+    fun exportPlaylist(id: Long) {
         scope.launch {
             val current = _state.value
-            if (current.queue.tracks.isEmpty()) {
+            // The open playlist is held in the queue, where reordering and removal have already
+            // happened; only for any other one is the database the truth.
+            val tracks =
+                if (id == current.activePlaylistId) current.queue.tracks else store.tracksIn(id)
+            if (tracks.isEmpty()) {
                 _state.update { it.copy(message = Message("There is nothing in this playlist.")) }
                 return@launch
             }
-            val name = (current.activePlaylistName ?: "playlist").replace(Regex("[^\\w -]"), "_")
-            val bytes = withContext(Dispatchers.Default) {
-                PlaylistFile.write(current.queue.tracks).toByteArray()
-            }
+            val label = current.playlists.firstOrNull { it.id == id }?.name ?: "playlist"
+            val name = label.replace(Regex("[^\\w -]"), "_")
+            val bytes = withContext(Dispatchers.Default) { PlaylistFile.write(tracks).toByteArray() }
             val uri = remoteFiles.shareableCopy("$name.m3u8", bytes)
             if (uri == null) {
                 _state.update { it.copy(message = Message("Could not prepare the playlist.")) }

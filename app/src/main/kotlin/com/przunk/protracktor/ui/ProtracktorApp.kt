@@ -450,10 +450,10 @@ private fun PlaylistSheet(
                 onDismiss()
             },
             onCreate = viewModel::createPlaylist,
-            onRename = viewModel::renameActivePlaylist,
+            onRename = viewModel::renamePlaylist,
             onDelete = viewModel::deletePlaylist,
             onImport = { onImport(); onDismiss() },
-            onExport = { viewModel.exportPlaylist(); onDismiss() },
+            onExport = { id -> viewModel.exportPlaylist(id); onDismiss() },
         )
     }
 }
