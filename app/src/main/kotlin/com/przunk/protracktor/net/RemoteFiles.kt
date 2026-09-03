@@ -168,11 +168,24 @@ class RemoteFiles(private val context: Context) {
     /**
      * What the permanent downloads hold — the ASMA archive and anything like it.
      *
-     * Reported separately because it is exempt from the ceiling by design and the user has no way
-     * to delete it (`docs/BACKLOG.md` A13). A number they can see is not a delete button, but it is
-     * the difference between an app that takes disk and an app that takes disk quietly.
+     * Reported separately because it is exempt from the ceiling by design. It used to say here
+     * that the user had no way to delete it; since 2026-09-04 they do, and the number is what the
+     * delete is next to.
      */
     fun permanentBytes(): Long = archiveDir.listFiles().orEmpty().sumOf { it.length() }
+
+    /** The size of one archive, or zero when it has not been downloaded. */
+    fun archiveBytes(catalogueId: String): Long =
+        archiveFile(catalogueId).let { if (it.isFile) it.length() else 0L }
+
+    /**
+     * Throws away one downloaded archive.
+     *
+     * Safe because it is re-fetchable: the catalogue knows where it came from and downloading it
+     * again is the same code path as downloading it the first time. That is the rule for
+     * everything the storage screen offers to delete — nothing there may be the only copy.
+     */
+    fun deleteArchive(catalogueId: String): Boolean = archiveFile(catalogueId).delete()
 
     fun clearCache() {
         cacheDir.listFiles()?.forEach { it.delete() }

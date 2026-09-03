@@ -147,7 +147,17 @@
     <string name="action_share_link">Udostępnij link</string>
     <string name="share_chooser">Udostępnij</string>
 
-    <string name="storage_summary">Muzyka w cache: %1$d MB z %2$d MB. Trwałe pobrania: %3$d MB.</string>
+    <string name="storage_title">Miejsce na tym telefonie</string>
+    <string name="storage_cache">Pobrana muzyka</string>
+    <string name="storage_cache_detail">%1$d MB z %2$d MB, najstarsze usuwane najpierw</string>
+    <string name="storage_archive">Archiwum %1$s</string>
+    <string name="storage_index">Indeks %1$s</string>
+    <string name="storage_megabytes">%1$d MB</string>
+    <string name="storage_confirm_title">Usunąć: %1$s?</string>
+    <string name="storage_confirm_archive">Można je pobrać ponownie z tego ekranu. Do tego czasu nic z tego katalogu nie zagra.</string>
+    <string name="storage_confirm_index">Można go pobrać ponownie z tego ekranu. Do tego czasu tego katalogu nie da się przeglądać ani przeszukiwać.</string>
+    <string name="storage_confirm_song_lengths">Można je pobrać ponownie z tego ekranu. Do tego czasu utwory SID nie pokażą czasu trwania.</string>
+    <string name="a11y_delete_storage">Usuń: %1$s</string>
     <plurals name="subsongs_count">
         <item quantity="one">%1$d utwór</item>
         <item quantity="few">%1$d utwory</item>

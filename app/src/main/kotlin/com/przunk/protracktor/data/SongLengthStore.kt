@@ -39,6 +39,17 @@ class SongLengthStore(context: Context) {
     }
 
     /**
+     * Throws the whole database away.
+     *
+     * 5.2 MB of somebody else's text, re-downloadable from the same button that fetched it. Losing
+     * it costs SID durations until it is fetched again, and nothing else.
+     */
+    suspend fun clear() = withContext(Dispatchers.IO) {
+        helper.writableDatabase.delete("song_lengths", null, null)
+        Unit
+    }
+
+    /**
      * Replaces the whole database.
      *
      * Wholesale rather than merged: HVSC publishes corrections as well as additions, so an entry

@@ -74,7 +74,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
-import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.BrowseState
@@ -101,6 +100,10 @@ fun BrowseScreen(
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
+    onClearCache: () -> Unit,
+    onDeleteArchive: (String) -> Unit,
+    onDeleteIndex: (String) -> Unit,
+    onClearSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
@@ -164,6 +167,10 @@ fun BrowseScreen(
                 onShareLink = onShareLink,
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
+                onClearCache = onClearCache,
+                onDeleteArchive = onDeleteArchive,
+                onDeleteIndex = onDeleteIndex,
+                onClearSongLengths = onClearSongLengths,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
                 onPlay = onPlay,
@@ -406,6 +413,10 @@ private fun OnlineDomain(
     onShareLink: (TrackRef) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
+    onClearCache: () -> Unit,
+    onDeleteArchive: (String) -> Unit,
+    onDeleteIndex: (String) -> Unit,
+    onClearSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onPlay: (Int) -> Unit,
@@ -546,25 +557,21 @@ private fun OnlineDomain(
                     },
                 )
             }
-            // What the app is holding, said out loud. It cannot be deleted from here yet
-            // (`docs/BACKLOG.md` A13), but an app that takes disk quietly is worse than one that
-            // takes the same disk and says so.
+            // What the app is holding, and how to make it stop. It used to be a sentence
+            // saying the size and admitting it could not be deleted; an app that takes disk and
+            // says so is better than one that takes it quietly, but not as good as one that gives
+            // it back (`docs/BACKLOG.md` A13).
             item {
-                val (cache, permanent) = browse.storageBytes
-                if (cache > 0 || permanent > 0) {
-                    HorizontalDivider()
-                    Text(
-                        text = stringResource(
-                            R.string.storage_summary,
-                            cache / (1024 * 1024),
-                            CacheBudget.DEFAULT_CEILING_BYTES / (1024 * 1024),
-                            permanent / (1024 * 1024),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                    )
-                }
+                StorageSection(
+                    cacheBytes = browse.storageBytes.first,
+                    archiveBytes = browse.archiveBytes,
+                    catalogues = browse.catalogues,
+                    songLengthCount = browse.songLengthCount,
+                    onClearCache = onClearCache,
+                    onDeleteArchive = onDeleteArchive,
+                    onDeleteIndex = onDeleteIndex,
+                    onClearSongLengths = onClearSongLengths,
+                )
             }
             item {
                 Text(

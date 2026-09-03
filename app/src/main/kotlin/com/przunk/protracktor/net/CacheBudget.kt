@@ -70,6 +70,30 @@ object CacheBudget {
     const val PARTIAL_SUFFIX = ".part"
 
     /** What [entries] hold, ignoring downloads that have not finished. */
+    /**
+     * What to say after freeing [bytes], in the units a person thinks in.
+     *
+     * Two rules, and both exist because the obvious formatting lies. **Never "Freed 0 MB"** — a
+     * delete that removed 300 KB really did work, and reporting zero reads as a delete that did
+     * nothing, which sends people back to press it again. And **never a fraction**: "Freed 0.3 MB"
+     * is precision nobody asked for about a number nobody is checking.
+     *
+     * Here rather than in the controller because it is arithmetic and a sentence, and both are
+     * things a JVM test can hold to account.
+     */
+    fun describeFreed(bytes: Long): Freed = when {
+        bytes <= 0L -> Freed.NOTHING
+        bytes < 1024L * 1024L -> Freed.LESS_THAN_A_MEGABYTE
+        else -> Freed.Megabytes(bytes / (1024L * 1024L))
+    }
+
+    /** The three things there are to say. */
+    sealed interface Freed {
+        data object NOTHING : Freed
+        data object LESS_THAN_A_MEGABYTE : Freed
+        data class Megabytes(val count: Long) : Freed
+    }
+
     fun totalBytes(entries: List<CacheEntry>): Long =
         entries.filterNot { it.name.endsWith(PARTIAL_SUFFIX) }.sumOf { it.sizeBytes }
 
