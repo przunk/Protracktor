@@ -28,8 +28,26 @@ data class CatalogueSummary(
     val trackCount: Int,
     val indexedAt: Long?,
     val isOnlineOnly: Boolean = false,
+    /**
+     * Which decoders built this index, or empty when it was built before that was recorded.
+     *
+     * An index is filtered at index time to what a backend can play, so one built by a different
+     * set is missing whatever arrived since — and looks empty rather than out of date.
+     */
+    val backends: String = "",
 ) {
     val indexed: Boolean get() = trackCount > 0 || isOnlineOnly
+
+    /**
+     * Whether this index was built by decoders this build no longer has — or by an unknown set.
+     *
+     * An empty `backends` means the index predates this column, which is exactly the case that
+     * prompted it: the owner's Modland index predated libsidplayfp and its 60,572 C64 tunes were
+     * simply absent. Treating "unknown" as stale is right, because unknown is how the problem
+     * looked.
+     */
+    fun isStale(current: String): Boolean =
+        !isOnlineOnly && trackCount > 0 && backends != current
 }
 
 /** A row of an online catalogue, ready to become a playable reference. */
@@ -57,11 +75,18 @@ class CatalogueStore(context: Context) {
 
     suspend fun summaries(): List<CatalogueSummary> = withContext(Dispatchers.IO) {
         val stored = helper.readableDatabase
-            .rawQuery("SELECT id, track_count, indexed_at FROM catalogues", null)
+            .rawQuery("SELECT id, track_count, indexed_at, backends FROM catalogues", null)
             .use { row ->
                 buildMap {
                     while (row.moveToNext()) {
-                        put(row.getString(0), row.getInt(1) to (if (row.isNull(2)) null else row.getLong(2)))
+                        put(
+                            row.getString(0),
+                            Triple(
+                                row.getInt(1),
+                                if (row.isNull(2)) null else row.getLong(2),
+                                row.getString(3).orEmpty(),
+                            ),
+                        )
                     }
                 }
             }
@@ -69,8 +94,15 @@ class CatalogueStore(context: Context) {
         // Driven by the catalogues the app knows about, not by what happens to be in the table.
         // A catalogue nobody has indexed yet still has to appear, or there is no way to index it.
         Catalogue.all.map { catalogue ->
-            val (count, at) = stored[catalogue.id] ?: (0 to null)
-            CatalogueSummary(catalogue.id, catalogue.displayName, count, at, catalogue.isOnlineOnly)
+            val (count, at, backends) = stored[catalogue.id] ?: Triple(0, null, "")
+            CatalogueSummary(
+                id = catalogue.id,
+                displayName = catalogue.displayName,
+                trackCount = count,
+                indexedAt = at,
+                isOnlineOnly = catalogue.isOnlineOnly,
+                backends = backends,
+            )
         }
     }
 
@@ -80,7 +112,7 @@ class CatalogueStore(context: Context) {
      * One transaction with a compiled statement: half a million rows inserted one autocommit at a
      * time would take minutes rather than seconds, and a half-written index is worse than none.
      */
-    suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>) =
+    suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String) =
         withContext(Dispatchers.IO) {
             val db = helper.writableDatabase
             db.transaction {
@@ -91,6 +123,9 @@ class CatalogueStore(context: Context) {
                         put("display_name", catalogue.displayName)
                         put("indexed_at", System.currentTimeMillis())
                         put("track_count", entries.size)
+                        // What produced this index. An index is filtered to the formats a backend
+                        // can play, so it is only as good as the decoders that built it.
+                        put("backends", backends)
                     },
                     android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
                 )

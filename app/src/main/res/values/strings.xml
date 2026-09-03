@@ -86,6 +86,7 @@
 
     <string name="browse_indexing">Indexing %1$s…</string>
     <string name="browse_unknown">(unknown)</string>
+    <string name="catalogue_stale">Indexed with older decoders — re-index to see formats added since.</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
     <plurals name="browse_selected">
         <item quantity="one">%1$d selected</item>

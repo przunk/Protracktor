@@ -475,18 +475,31 @@ private fun OnlineDomain(
                 ListItem(
                     headlineContent = { Text(catalogue.displayName) },
                     supportingContent = {
-                        Text(
-                            if (catalogue.isOnlineOnly) {
-                                stringResource(R.string.catalogue_online_search)
-                            } else if (catalogue.indexed) {
-                                pluralStringResource(
-                                    R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
+                        Column {
+                            Text(
+                                if (catalogue.isOnlineOnly) {
+                                    stringResource(R.string.catalogue_online_search)
+                                } else if (catalogue.indexed) {
+                                    pluralStringResource(
+                                        R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
+                                    )
+                                } else {
+                                    stringResource(R.string.catalogue_not_indexed)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            // An index keeps only the formats a decoder could play when it was
+                            // built, so one built by an older set is missing whatever arrived
+                            // since -- and looks empty rather than out of date. The owner lost
+                            // 60,572 C64 tunes to exactly this and nothing said why.
+                            if (catalogue.isStale(browse.backends)) {
+                                Text(
+                                    text = stringResource(R.string.catalogue_stale),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
-                            } else {
-                                stringResource(R.string.catalogue_not_indexed)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                            }
+                        }
                     },
                     leadingContent = { Icon(PlayerIcons.Cloud, contentDescription = null) },
                     trailingContent = if (catalogue.isOnlineOnly) {
