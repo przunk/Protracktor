@@ -162,6 +162,7 @@
         <item quantity="other">%d zaznaczonego</item>
     </plurals>
 
+    <string name="action_add_to_playlist">Dodaj do playlisty…</string>
     <string name="action_add_to_other_playlist">Dodaj do innej playlisty…</string>
     <string name="dialog_add_to_playlist_title">Dodaj do playlisty</string>
     <plurals name="dialog_add_tracks_to_playlist_title">

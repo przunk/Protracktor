@@ -382,7 +382,7 @@ private fun TrackRow(
                                 onClick = { menuOpen = false; onInfo() },
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_add_to_other_playlist)) },
+                                text = { Text(stringResource(R.string.action_add_to_playlist)) },
                                 leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
                                 onClick = { menuOpen = false; onAddToOtherPlaylist() },
                             )

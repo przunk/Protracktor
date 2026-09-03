@@ -18,6 +18,7 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.text.format.DateUtils
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.GrantedFolder
 import com.przunk.protracktor.data.LibraryStore
@@ -949,7 +950,17 @@ class PlaybackController private constructor(private val context: Context) {
             TrackRef(
                 id = entry.trackId,
                 title = entry.title,
-                subtitle = entry.subtitle,
+                // When, then where. "That tune two days ago" is the question history exists to
+                // answer (`docs/ARCHITECTURE.md` §15) and the ordering alone only says "before that
+                // other one" -- which the owner said plainly when he chose this over reordering the
+                // list on a replay (`docs/BACKLOG.md` A18).
+                //
+                // It borrows the source line rather than adding a third. Day headings might read
+                // better still and are the open half of `docs/WISHLIST.md` B15; this is the part
+                // that costs nothing.
+                subtitle = listOf(whenPlayed(entry.playedAt), entry.subtitle)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" · "),
                 sizeBytes = entry.sizeBytes,
                 fileName = entry.fileName,
                 author = entry.author,
@@ -959,6 +970,22 @@ class PlaybackController private constructor(private val context: Context) {
         // there is no reason history should be the one list you cannot add from.
         _browse.update { it.copy(history = played, tracks = played, loading = false) }
     }
+
+    /**
+     * "yesterday, 21:14", in the user's language and clock format.
+     *
+     * `DateUtils` rather than a pattern of our own: it says "yesterday" where a date would read
+     * worse, switches to a date once that stops being useful, and is translated by the system into
+     * languages this project does not ship.
+     */
+    private fun whenPlayed(millis: Long): String =
+        DateUtils.getRelativeDateTimeString(
+            context,
+            millis,
+            DateUtils.MINUTE_IN_MILLIS,
+            DateUtils.WEEK_IN_MILLIS,
+            0,
+        ).toString()
 
     fun clearHistory() {
         scope.launch {
@@ -1332,38 +1359,12 @@ class PlaybackController private constructor(private val context: Context) {
         appendTracks(tracks, ::describeAdded)
     }
 
-    /**
-     * Adds, and says so, for callers whose screen will not show the result.
-     *
-     * `describeAdded` stays silent on success on purpose: on the playlist screen the rows appear,
-     * and a notice would only repeat what is already visible. That reasoning does not survive being
-     * moved -- adding one track from a Browse row menu leaves you in Browse, looking at a list that
-     * does not change (`docs/STATUS.md` C7). The same rule, applied honestly, gives opposite answers
-     * in the two places, so the caller picks.
-     */
-    fun addToPlaylistAndSay(tracks: List<TrackRef>) {
-        if (tracks.isEmpty()) return
-        appendTracks(tracks) { added, skipped ->
-            val where = _state.value.activePlaylistName?.let { " to $it" }.orEmpty()
-            when {
-                added == 0 && skipped == 0 -> Message("Nothing playable to add.")
-                // Said rather than swallowed: an add that quietly does nothing because the track is
-                // already there is indistinguishable from a button that does not work.
-                added == 0 -> Message("Already in this playlist.")
-                added == 1 && skipped == 0 -> Message("Added \"${tracks.first().title}\"$where.")
-                skipped == 0 -> Message("Added $added tracks$where.")
-                else -> Message("Added $added$where; $skipped already there.")
-            }
-        }
-    }
+    // `addToPlaylistAndSay` lived here: it added to the current playlist and announced it, for the
+    // row menu that stayed in Browse (C7). That menu item is gone -- one "Add to playlist..." opens
+    // the picker instead (`docs/BACKLOG.md` A17) -- and the picker's own path already reports back
+    // and names the target, which is strictly better. Removed rather than kept for a caller that no
+    // longer exists.
 
-    /**
-     * Adds tracks to a specified playlist (B18).
-     *
-     * If [targetPlaylistId] is the active playlist, this edits the in-memory draft like [addToPlaylist].
-     * If [targetPlaylistId] is another playlist, the tracks are committed straight to disk without
-     * disturbing the active editing session, and a notification is displayed (ARCHITECTURE.md §17).
-     */
     fun addToPlaylist(targetPlaylistId: Long, tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
         if (targetPlaylistId == playlistId) {

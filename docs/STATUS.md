@@ -65,6 +65,12 @@ working and fetching serially, which he heard; that is fixed.
 
 ## Finished
 
+- **2026-09-03** — **One shape for an action, and one way to add.** Icons with their names
+  underneath, in a row, wherever a track offers actions and wherever Browse is entered or left
+  (**A17**, **A23**). The two add actions became one *"Add to playlist…"* opening the picker, with
+  the current playlist first and **each playlist's size beside its name** (**A21**). History says
+  **when** each track was played (**B15**), which is what the owner wanted from it rather than a
+  list that reorders itself.
 - **2026-09-03** — **A catalogue index says when it is out of date.** Every index records which
   decoders built it, and one built by a different set — or by an unrecorded set, which is every
   index that exists today — says so and points at the re-index button. This is what hid 60,572 C64

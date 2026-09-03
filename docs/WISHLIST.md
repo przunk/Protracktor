@@ -102,7 +102,7 @@ A Modland track's information should read `Modland/Przunk/name.mod`. Today the d
 catalogue track is `format · author` — right for a row, wrong for an information panel. Same
 underlying inconsistency as the wish above.
 
-## B15. History should say when
+## B15. ~~History should say when~~ — DONE 2026-09-03
 
 *owner, 2026-09-02, after using B8.*
 
@@ -117,6 +117,12 @@ grouping the list under day headings may be better than putting a timestamp on e
 **Raised again 2026-09-03**, and it is what the owner wanted from history all along: asked whether
 replaying should reorder the list (`docs/BACKLOG.md` A18) he said no, and *"what I care about more
 is the date and time in history."*
+
+**Built** with `DateUtils.getRelativeDateTimeString`, so it reads "yesterday, 21:14" while that is
+useful and becomes a date when it is not — and is translated by the system into languages this
+project does not ship. It shares the source line rather than adding a third. **Day headings remain
+the open half**: they may well read better than a stamp on every row, and nothing here forecloses
+them.
 
 ## B16. ~~The share-file and share-link icons are the same~~ — DONE 2026-09-02
 

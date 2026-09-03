@@ -16,6 +16,8 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +46,7 @@ import com.przunk.protracktor.player.PlayerUiState
  * message, which is where the scene put its greetings and is half the reason anyone keeps these
  * files. A visualiser returns later as something the user switches on (`docs/WISHLIST.md`).
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NowPlaying(
     state: PlayerUiState,
@@ -107,63 +110,28 @@ fun NowPlaying(
             }
         }
 
-        // The dock says what is playing; the list does not say where it is. This is the way from one
-        // to the other, and it is absent rather than disabled when there is nowhere to go.
-        onShowInPlaylist?.let { show ->
-            TextButton(onClick = show, modifier = Modifier.padding(top = 4.dp)) {
-                Icon(
-                    imageVector = PlayerIcons.Locate,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(stringResource(R.string.action_show_in_playlist))
+        // One row of icons with their names underneath, rather than a stack of full-width text
+        // buttons that grew by two in a single day (`docs/BACKLOG.md` A17). Each is absent rather
+        // than disabled when it has nowhere to go -- a local file has no catalogue folder and no
+        // address anyone else could open.
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            onShowInPlaylist?.let {
+                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it)
             }
-        }
-
-        // "That was good -- what else did they write." Absent rather than disabled for a local
-        // file, which has no catalogue folder to open.
-        onShowNeighbours?.let { show ->
-            TextButton(onClick = show) {
-                Icon(
-                    imageVector = PlayerIcons.Folder,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(stringResource(R.string.action_show_neighbours))
+            onShowNeighbours?.let {
+                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it)
             }
-        }
-
-        onShareFile?.let { share ->
-            TextButton(onClick = share) {
-                Icon(
-                    imageVector = PlayerIcons.Share,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(stringResource(R.string.action_share_file))
+            onAddToOtherPlaylist?.let {
+                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it)
             }
-        }
-
-        // Absent for a local file: there is no address anyone else could open.
-        onShareLink?.let { share ->
-            TextButton(onClick = share) {
-                Icon(
-                    imageVector = PlayerIcons.Link,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(stringResource(R.string.action_share_link))
+            onShareFile?.let {
+                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it)
             }
-        }
-
-        onAddToOtherPlaylist?.let { add ->
-            TextButton(onClick = add) {
-                Icon(
-                    imageVector = PlayerIcons.PlaylistAdd,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(stringResource(R.string.action_add_to_other_playlist))
+            onShareLink?.let {
+                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it)
             }
         }
 
