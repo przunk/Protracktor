@@ -173,6 +173,17 @@ on a dark indigo background (`res/drawable/ic_launcher_foreground.xml` and `ic_l
 along with pre-rendered fallback PNGs across all five screen densities (`mipmap-mdpi` through
 `mipmap-xxxhdpi`) including round variants (`ic_launcher_round`). Updated `AndroidManifest.xml`.
 
+**Odświeżone 2026-09-03:** właściciel wybrał znak „P + Play” z pierwszej planszy koncepcyjnej. Literę
+`P` tworzą cztery oddzielone kanały trackera z regularnymi komórkami w dwóch odcieniach; dwa kanały
+schodzą do dołu, a dwa budują brzuszek litery. Trójkąt Play jest przezroczystym wycięciem wyłącznie
+w trzecim kanale i kończy się tuż przed jego prawą krawędzią. Prawie czarne tło zastąpiło niebieskie
+koło, którego nie było w wybranym koncepcie.
+Generator `scripts/GenerateLauncherIcons.java` utrzymuje z jednej geometrii adaptive icon,
+monochromatyczną ikonę systemową Androida 13+ oraz fallbacki PNG dla starszych launcherów. Ten sam
+generator zapisuje pełny plik 512 × 512 px w
+`artwork/protracktor-launcher-icon-512.png`. Znak zajmuje 82% geometrii źródłowej wokół środka
+`54 × 54`, aby zachować margines także pod okrągłą maską launchera.
+
 ## A8. ~~Haptics for the gestures that deserve them~~ — MOSTLY DONE 2026-09-02
 
 Three of the four landed: picking a row up, putting it down, and each position it crosses, plus the
@@ -882,4 +893,3 @@ round trip dominates.
 - Remote catalogues — Modland and HVSC (`docs/ARCHITECTURE.md` §8, endpoints already measured).
 - The remaining backends: `libsidplayfp`, game-music-emu, UADE last.
 - Everything in `docs/WISHLIST.md`.
-
