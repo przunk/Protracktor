@@ -585,6 +585,14 @@ and solves it with a note asking a human to remember.
 catalogue index is a list of filenames on somebody else's server, and deciding by content would mean
 downloading half a million files to find out.
 
+**Which is why the recorded set is the decoders *and* the name list, since 2026-09-04.** Recording
+only the decoders was half the truth, and the missing half bit the same day it was noticed: five
+names were added to `SupportedFormats` for formats libopenmpt had always been able to play, and
+every index in existence was instantly missing 5,557 Modland files while reporting itself perfectly
+current — because no decoder had changed. `SupportedFormats.fingerprint` is folded into
+`NativeEngine.backendsFingerprint`, so a name added to that list expires exactly the indexes it
+would have changed, with nobody having to remember.
+
 ### Scanning while music plays
 
 Measured rather than assumed, and the answer changed. sc68 **2.2.1** kept its 68000 emulator in

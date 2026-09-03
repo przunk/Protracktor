@@ -36,6 +36,11 @@ object SupportedFormats {
         // Amiga and Atari lineage
         "med", "okt", "dbm", "digi", "ahx", "hvl", "stk", "sfx", "ice", "gmc", "unic", "kris",
         "puma", "tcb", "fc", "fc13", "fc14", "smod", "dsym", "symmod", "ftm", "etx",
+        // The same two formats under the names their archives actually use. libopenmpt identifies
+        // OctaMED by an "MMD" magic and Oktalyzer by its own, and never looks at the filename --
+        // so these played all along and were never offered. Measured 2026-09-04: 5,557 files in
+        // Modland alone, 6 of 6 sampled from each playing (`docs/PLAN_FORMATS.md` §4).
+        "mmd0", "mmd1", "mmd2", "mmd3", "okta",
         // PC and console lineage
         "far", "gdm", "imf", "mdl", "mtm", "ptm", "stm", "ult", "669", "amf", "ams", "dmf",
         "dsm", "dtm", "j2b", "mt2", "psm", "plm", "rtm", "c67", "cba", "gt2", "mo3", "xmf",
@@ -59,7 +64,7 @@ object SupportedFormats {
     )
 
     /** Filename prefixes used instead of extensions by several Amiga trackers. */
-    private val prefixes: Set<String> = setOf(
+    val prefixes: Set<String> = setOf(
         "mod", "med", "okt", "dbm", "digi", "ahx", "hvl", "stk", "sfx", "ice", "fc", "smod",
         "sndh",
     )
@@ -79,6 +84,25 @@ object SupportedFormats {
         if (prefix.isNotEmpty() && name.contains('.') && prefix in prefixes) return prefix.uppercase()
         return extension.uppercase()
     }
+
+    /**
+     * A short, stable digest of this list, for telling a stale index from a current one.
+     *
+     * An index — of a folder or of an online catalogue — is filtered at build time to names this
+     * object accepts, so it is only as good as **this list** and the decoders together. Recording
+     * only the decoders was half the truth and the half that had not yet bitten: on 2026-09-04
+     * five names were added for formats libopenmpt had been able to play all along, and every
+     * existing index was instantly missing 5,557 Modland files while still reporting itself
+     * current, because no decoder had changed.
+     *
+     * Order-independent and cheap, so adding a name here is all it takes to invalidate what the
+     * name would have changed. It is a fingerprint, not a checksum: it only has to differ when the
+     * list differs.
+     */
+    val fingerprint: String
+        get() = "names:%08x".format(
+            (extensions.sorted() + "|" + prefixes.sorted()).joinToString(",").hashCode()
+        )
 
     fun looksPlayable(fileName: String): Boolean {
         val name = fileName.lowercase()
