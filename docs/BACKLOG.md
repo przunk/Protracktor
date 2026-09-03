@@ -366,10 +366,13 @@ never think about again.
 gathering before designing it, because a settings screen designed before its contents is a screen of
 somebody's guesses:
 
-- **Storage.** Granted folders are managed from Browse today; a downloaded catalogue index, the ASMA
-  archive (20 MB) and the HVSC song lengths (5.2 MB) have **no way to be deleted at all**, and the
-  fetched-file cache has no budget (`docs/OPEN_QUESTIONS.md` Q5). This is the strongest candidate:
-  the app takes disk and offers no way to give it back.
+- ~~**Storage.**~~ **Done 2026-09-04**, as round 6 item 3, and deliberately without waiting for
+  this screen to be designed. Every stored thing now has a delete beside it — the fetched cache,
+  each downloaded archive, each catalogue index, the HVSC song lengths — in a `StorageSection` that
+  lives on the Online catalogues screen because Browse already answers "what does this app have of
+  mine" and needs no new navigation to do it. **That placement is the placeholder, not the
+  feature**: when this screen is designed the section moves in one piece. See
+  `docs/ARCHITECTURE.md` §19.
 - **Language.** Polish and English are chosen by the system today. An override is cheap.
 - **Behaviour that is currently a decision we made for the user.** Whether Random keeps going
   (A12), how far it reads ahead (A11), whether the playlist follows the playing track by default

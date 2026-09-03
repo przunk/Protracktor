@@ -640,6 +640,30 @@ the cache sit above its ceiling while reporting that it does not. When protected
 the ceiling, everything else goes and no more: deleting what is playing to satisfy an arithmetic
 target would be the cache breaking the app in order to obey itself.
 
+### And what the user can throw away themselves
+
+**Since 2026-09-04 everything the app stores has a delete next to it**, in a Storage section on the
+Online catalogues screen: the fetched-music cache, each downloaded archive (ASMA's is 20 MB), each
+catalogue index, and the HVSC song lengths (5.2 MB). Before that, the app took disk and said the
+number without offering any way to give it back — which is better than taking it quietly and still
+not good enough on a phone.
+
+**One rule holds the section together: everything on it is a copy.** Each item came from somewhere
+that still has it, and each is re-fetched by a button already on that screen. The user's own things
+are deliberately absent — playlists, granted folders and history are not storage to be reclaimed,
+and a screen that mixes "this is a cached download" with "this is your work" teaches people to be
+afraid of it.
+
+The fetched cache deletes without asking, because it refills itself as music plays and a mistaken
+tap costs one slower song. Everything else takes a real download to get back and asks first, naming
+what stops working until it is fetched again.
+
+**It lives in Browse, and that is a deliberate placeholder.** Granted folders are already managed
+from Browse and this is the same question — what does this app have of mine — so it needs no new
+navigation. The app has no top-level overflow menu, and adding one to reach a single screen is a
+navigation decision reserved for `docs/BACKLOG.md` A13. When A13 is designed, `StorageSection` moves
+in one piece.
+
 ### Why it is a separate object
 
 `CacheBudget` has no Android imports and **no clock** — it is handed a list and returns names to

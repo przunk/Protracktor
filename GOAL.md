@@ -636,7 +636,7 @@ Phase 4 on an exhausted context.
       website into a fragile parser to avoid reporting an obstacle. The same instruction was given
       for ASMA and it was the right one.
 
-- [ ] **3. Disk the app takes and cannot give back** (the half of `docs/BACKLOG.md` A13 that is a defect)
+- [x] **3. Disk the app takes and cannot give back** *(every stored thing now has a delete beside it; placed in Browse as a stated placeholder for A13)* (the half of `docs/BACKLOG.md` A13 that is a defect)
 
       The ASMA archive (20 MB), the HVSC song lengths (5.2 MB) and every downloaded catalogue index
       have **no way to be deleted at all**. That is not a missing preference, it is the app taking

@@ -112,6 +112,24 @@ class CatalogueStore(context: Context) {
      * One transaction with a compiled statement: half a million rows inserted one autocommit at a
      * time would take minutes rather than seconds, and a half-written index is worse than none.
      */
+    /**
+     * Throws one catalogue's index away, rows and all.
+     *
+     * The `catalogues` row goes too rather than being zeroed. A row with `track_count = 0` and a
+     * recorded `backends` is how an index that *failed* looks; a catalogue that was never indexed
+     * has no row at all, and that is the state being returned to. Leaving the row would make a
+     * deliberate delete indistinguishable from a broken download.
+     *
+     * Re-fetchable: the index is a file on the catalogue's own server and downloading it again is
+     * the button that is already there.
+     */
+    suspend fun clearIndex(catalogueId: String) = withContext(Dispatchers.IO) {
+        helper.writableDatabase.transaction {
+            delete("catalogue_tracks", "catalogue_id = ?", arrayOf(catalogueId))
+            delete("catalogues", "id = ?", arrayOf(catalogueId))
+        }
+    }
+
     suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String) =
         withContext(Dispatchers.IO) {
             val db = helper.writableDatabase

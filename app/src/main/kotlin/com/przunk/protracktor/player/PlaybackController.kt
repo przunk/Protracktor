@@ -36,6 +36,7 @@ import com.przunk.protracktor.data.PlaylistFile
 import com.przunk.protracktor.data.IndexedFile
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.SongLengths
+import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.engine.NativeEngine
@@ -215,6 +216,8 @@ data class BrowseState(
     val songLengthCount: Int = 0,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
+    /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
+    val archiveBytes: Map<String, Long> = emptyMap(),
     /** Which decoders this build has, for telling a stale catalogue index from a current one. */
     val backends: String = "",
 
@@ -1209,11 +1212,16 @@ class PlaybackController private constructor(private val context: Context) {
             val storage = withContext(Dispatchers.IO) {
                 remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
             }
+            val archives = withContext(Dispatchers.IO) {
+                Catalogue.all.associate { it.id to remoteFiles.archiveBytes(it.id) }
+                    .filterValues { it > 0 }
+            }
             _browse.update { current ->
                 current.copy(
                     catalogues = summaries,
                     songLengthCount = lengths,
                     storageBytes = storage,
+                    archiveBytes = archives,
                     backends = NativeEngine.backendsFingerprint(),
                     // Everything indexed is searched until the user says otherwise. Starting with
                     // none ticked would make the first search return nothing and look broken.
@@ -1224,6 +1232,81 @@ class PlaybackController private constructor(private val context: Context) {
             }
         }
     }
+
+    // --- giving the disk back -----------------------------------------------------------------
+
+    /**
+     * Everything here deletes something the app can fetch again.
+     *
+     * That is the rule, not a coincidence: the storage screen may only offer to delete what is a
+     * copy. The user's playlists, their granted folders and their history are not on it, and the
+     * one thing that looks like a copy but is not — a local library index, which is a record of
+     * files only that phone has seen — is only ever *rebuilt*, never dropped.
+     *
+     * Each of these ends in `refreshCatalogues()` so the numbers the user is looking at become
+     * true immediately. A delete that leaves the old size on screen reads as a delete that failed.
+     */
+    fun clearFetchedCache() {
+        scope.launch {
+            val freed = withContext(backgroundWork) {
+                val before = remoteFiles.cacheBytes()
+                remoteFiles.clearCache()
+                before - remoteFiles.cacheBytes()
+            }
+            _state.update { it.copy(message = Message(freedMessage(freed))) }
+            refreshCatalogues()
+        }
+    }
+
+    /** Throws away a downloaded catalogue archive, such as ASMA's 20 MB zip. */
+    fun deleteArchive(catalogueId: String) {
+        scope.launch {
+            val freed = withContext(backgroundWork) {
+                val before = remoteFiles.archiveBytes(catalogueId)
+                if (remoteFiles.deleteArchive(catalogueId)) before else 0L
+            }
+            _state.update { it.copy(message = Message(freedMessage(freed))) }
+            refreshCatalogues()
+        }
+    }
+
+    /**
+     * Throws away one catalogue's index.
+     *
+     * Stops playback of anything from that catalogue first, because the queue can hold tracks whose
+     * only description lives in the rows being deleted. Leaving them would give a playing row a
+     * title that no longer resolves to anything.
+     */
+    fun deleteCatalogueIndex(catalogueId: String) {
+        scope.launch {
+            catalogues.clearIndex(catalogueId)
+            _browse.update { current ->
+                current.copy(
+                    searchCatalogues = current.searchCatalogues - catalogueId,
+                    openCatalogue = current.openCatalogue?.takeIf { it.id != catalogueId },
+                )
+            }
+            _state.update { it.copy(message = Message("Index deleted. Download it again any time.")) }
+            refreshCatalogues()
+        }
+    }
+
+    /** Throws away the HVSC song lengths. SID durations go unknown until they are fetched again. */
+    fun clearSongLengths() {
+        scope.launch {
+            songLengths.clear()
+            _state.update { it.copy(message = Message("Song lengths deleted.")) }
+            refreshCatalogues()
+        }
+    }
+
+    /** The wording for what [CacheBudget.describeFreed] worked out. */
+    private fun freedMessage(bytes: Long): String =
+        when (val freed = CacheBudget.describeFreed(bytes)) {
+            CacheBudget.Freed.NOTHING -> "There was nothing to delete."
+            CacheBudget.Freed.LESS_THAN_A_MEGABYTE -> "Freed less than 1 MB."
+            is CacheBudget.Freed.Megabytes -> "Freed ${freed.count} MB."
+        }
 
     /**
      * Downloads a catalogue's index and stores it.

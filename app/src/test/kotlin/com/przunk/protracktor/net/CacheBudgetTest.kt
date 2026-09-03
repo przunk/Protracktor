@@ -104,4 +104,39 @@ class CacheBudgetTest {
     fun `the default ceiling is the documented 512 MB`() {
         assertEquals(512L * 1024 * 1024, CacheBudget.DEFAULT_CEILING_BYTES)
     }
+
+    /**
+     * What a delete says it did.
+     *
+     * Both cases here are ones the obvious `bytes / MB` would get wrong. Deleting 300 KB really
+     * did delete something, and "Freed 0 MB" reads as a button that failed — which sends the user
+     * back to press it again. Deleting nothing has to say so plainly rather than claim a
+     * suspiciously round success.
+     */
+    @Test
+    fun `freeing a little is not the same as freeing nothing`() {
+        assertEquals(CacheBudget.Freed.NOTHING, CacheBudget.describeFreed(0))
+        assertEquals(CacheBudget.Freed.NOTHING, CacheBudget.describeFreed(-1))
+        assertEquals(CacheBudget.Freed.LESS_THAN_A_MEGABYTE, CacheBudget.describeFreed(1))
+        assertEquals(
+            CacheBudget.Freed.LESS_THAN_A_MEGABYTE,
+            CacheBudget.describeFreed(1024L * 1024L - 1),
+        )
+    }
+
+    @Test
+    fun `megabytes are whole and rounded down`() {
+        assertEquals(
+            CacheBudget.Freed.Megabytes(1),
+            CacheBudget.describeFreed(1024L * 1024L),
+        )
+        assertEquals(
+            CacheBudget.Freed.Megabytes(1),
+            CacheBudget.describeFreed(2L * 1024 * 1024 - 1),
+        )
+        assertEquals(
+            CacheBudget.Freed.Megabytes(512),
+            CacheBudget.describeFreed(CacheBudget.DEFAULT_CEILING_BYTES),
+        )
+    }
 }
