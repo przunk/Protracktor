@@ -20,6 +20,10 @@ native/vendor/
 native/probe/*/build/
 native/probe/*/probe-*
 
+# probe-extensions.py loads probe-uade.py as a module to reuse its index and download plumbing
+# rather than copying it, and importlib leaves this behind.
+scripts/__pycache__/
+
 # IDE
 .idea/
 *.hprof

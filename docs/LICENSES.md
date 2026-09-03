@@ -133,6 +133,68 @@ So the three options are now:
 `.sc68` available to anyone who wants it, and moves the one genuinely doubtful 1.2 MB out of the
 APK — which is where the doubt actually lives.
 
+## UADE's replay binaries — the same question, with worse paperwork
+
+**Measured 2026-09-04 while doing `GOAL.md` round 6 item 1.** UADE is not integrated; this is what
+was found before deciding whether to integrate it, so that the decision is not made twice.
+
+UADE works the way sc68 does and more so: it emulates an Amiga in order to run **the original 68000
+replay routines**, and those routines ship as 176 binaries in its `players/` directory — 1,232 KB.
+Without them UADE plays almost nothing, because for these formats the tune file is note data and the
+player is a separate program.
+
+**Upstream's own statement is the weakest of any dependency here.** `COPYING`:
+
+> Files under players/ directory are licensed with various different licenses and quite a many
+> different copyright holders. See inside the player binaries for more details.
+
+So we looked inside. **118 of the 176 carry a copyright string**, and they name individuals and
+companies rather than UADE:
+
+```
+AM-Composer            (c) 1989 by Marc Hawlitzeck
+BeathovenSynthesizer   (c) 1987-91 by Thomas Lopatic
+BenDaglish             (c) 1988-92 by Colin Dooley & Ben Daglish
+Cinemaware             (c) 1990 by Cinemaware
+DavidWhittaker         (c) 1987-94 by David Whittaker & Rob Hubbard
+```
+
+This is a stronger version of the sc68 question, not a different one. sc68's `AUTHORS` at least
+credits one programmer and says nothing further; UADE states plainly that the directory is other
+people's work under unknown terms, and the binaries agree.
+
+**What this means for the decision the owner has deferred:** it is one decision, not two. Whatever
+policy settles sc68's 99 binaries settles UADE's 176, because the facts are the same shape and
+UADE's are better documented as third-party. Option 3 above — ship what is plainly ours, offer the
+rest as a download — extends to UADE unchanged, and the machinery it needs already exists.
+
+### What each option costs, measured 2026-09-04
+
+The same corpus, run twice: once with UADE's `players/` directory as shipped, once with it empty.
+
+| shipped | plays, of 300 files across 25 formats |
+| --- | --- |
+| all 176 binaries, 1,232 KB | **184** |
+| none | **12** |
+
+**UADE without its replay binaries is not a reduced player, it is not a player.** The twelve
+survivors are all Delitracker Custom — `.cus` files, which *are* 68000 programs and carry their own
+replay inside the tune. Everything else needs a binary from that directory.
+
+**This is where UADE differs from sc68 in kind, not degree.** sc68 had a middle option:
+`sndh_ice.bin` is plainly sc68's own, it is 4 KB, and keeping only it costs nothing for SNDH. UADE
+has no equivalent — there is no "our own" replay to keep, because running other people's replays is
+the entire technique. So the options are two, not three:
+
+1. **Ship all 176.** 1,232 KB of other people's code, explicitly described by upstream as
+   third-party under unknown terms, with 118 of them naming their authors on the way past.
+2. **Ship none and offer them as a download**, the way the ASMA archive and the HVSC song lengths
+   already work — the user fetches from the project that publishes them, and we redistribute
+   nothing. Until they do, the app plays 12 files in 300.
+
+There is no version of UADE worth shipping that does not answer this question first, which is
+exactly why `docs/BACKLOG.md` A5 put the licence before the code.
+
 ## Data the app downloads, and does not ship
 
 Distinct from the components above, and the distinction is the whole point: **none of this is in the
