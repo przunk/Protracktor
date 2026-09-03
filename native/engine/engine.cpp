@@ -214,7 +214,7 @@ public:
             sc68_ = nullptr;
             throw std::runtime_error("sc68 could not load this file");
         }
-        if (sc68_play(sc68_, 1, SC68_DEF_LOOP) < 0) {
+        if (sc68_play(sc68_, current_, SC68_DEF_LOOP) < 0) {
             sc68_destroy(sc68_);
             sc68_ = nullptr;
             throw std::runtime_error("sc68 loaded the file but refused to play it");
@@ -291,9 +291,17 @@ public:
     bool canSeek() const override { return false; }
     void seek(double) override {}
 
+    /**
+     * Back to the start of **what is playing**, which used to mean track 1 whatever was playing.
+     *
+     * `docs/STATUS.md` C13: repeat-one goes through here, so on a multi-tune SNDH sitting on
+     * subsong five it repeated subsong one. It did repeat -- just not the thing the user was
+     * listening to. ASAP replays `song_`, game-music-emu replays `track_`, libsidplayfp reloads
+     * with its selected song; sc68 was the one that forgot.
+     */
     void rewind() override {
         sc68_stop(sc68_);
-        sc68_play(sc68_, 1, SC68_DEF_LOOP);
+        sc68_play(sc68_, current_, SC68_DEF_LOOP);
         rendered_ = 0;
         ended_ = false;
     }
@@ -334,6 +342,9 @@ public:
     bool selectSubsong(int index) override {
         if (index < 0 || index >= subsongCount()) return false;
         if (sc68_play(sc68_, index + 1, SC68_DEF_LOOP) < 0) return false;
+        // Remembered so `rewind` can come back to it. Everything that replays this tune without
+        // choosing a subsong -- repeat-one, and replaying a finished track -- goes through there.
+        current_ = index + 1;
         sc68_music_info(sc68_, &info_, SC68_CUR_TRACK, nullptr);
         rendered_ = 0;
         ended_ = false;
@@ -396,6 +407,9 @@ private:
 
     sc68_t *sc68_ = nullptr;
     sc68_music_info_t info_{};
+    // Which track is playing, in sc68's own one-based numbering. One rather than zero because
+    // that is what `sc68_play` is given before any subsong has been chosen.
+    int current_ = 1;
     std::vector<short> scratch_;
     // Written by render() on the audio thread and read from elsewhere by positionSeconds(), which
     // is a race by the language's rules however benign it looks on ARM (`docs/review.md` R6). The

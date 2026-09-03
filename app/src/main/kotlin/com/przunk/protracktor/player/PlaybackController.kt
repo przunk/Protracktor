@@ -2039,11 +2039,22 @@ class PlaybackController private constructor(private val context: Context) {
     private fun handleTrackEnded() {
         // A file with more tunes in it runs on into the next one, but only in "play all". Off, a
         // 256-subsong file behaves like any other track and the playlist keeps moving -- which is
-        // exactly why the owner chose that as the default.
+        // exactly why the owner chose that as the default. The rule itself, including what
+        // repeat-one means here, is in `SubsongAdvance` where it can be tested.
         val now = _state.value
-        if (now.playAllSubsongs && now.subsong + 1 < now.subsongCount) {
-            selectSubsong(now.subsong + 1)
-            return
+        when (
+            val next = SubsongAdvance.after(
+                playAll = now.playAllSubsongs,
+                subsong = now.subsong,
+                subsongCount = now.subsongCount,
+                repeatOne = now.queue.repeat == RepeatMode.ONE,
+            )
+        ) {
+            is SubsongAdvance.Next.Subsong -> {
+                selectSubsong(next.index)
+                return
+            }
+            SubsongAdvance.Next.FileFinished -> Unit
         }
 
         _state.value.resultsQueue?.let { results ->
