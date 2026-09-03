@@ -169,6 +169,12 @@ hidden and not silently skipped: a press that does nothing and says nothing is a
 
 ## 9. Storage: hand-written SQLite, not Room
 
+> **One helper per process, since 2026-09-03.** Every store used to construct its own
+> `SQLiteOpenHelper` on the same file. That class synchronises within an instance and not between
+> them, so five of them meant five things that could independently run `onUpgrade` — and the
+> migration statements are plain `CREATE TABLE`, which fail on a second run. `docs/review.md` R3.
+
+
 Decided 2026-09-01.
 
 Room was the intention and is the obvious choice. It cannot be used here: Room's annotation
