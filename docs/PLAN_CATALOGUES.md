@@ -70,11 +70,36 @@ The reference collection of `.sap`. Natural pair with ASAP.
 - **Future direction:** `docs/WISHLIST.md` B19 envisions server-hosted periodic index dumps to allow
   offline browsing in addition to live search.
 
-### AMP (amp.dascene.net)
+### AMP (amp.dascene.net) — investigated 2026-09-04, and the answer is no
 
-- Responds (2026-09-01). Heavy on Amiga custom formats, which is exactly what we cannot play.
-- Index format unknown; historically a web interface rather than a published index.
-- **Blocked on UADE**, which has its own licensing question.
+`GOAL.md` round 6 item 2 said: if AMP publishes nothing machine-readable, stop and write that down
+rather than scraping a website into a fragile parser. It publishes nothing machine-readable, and
+there is a second reason that matters more.
+
+**What was checked:** `/api`, `/list.php`, `/downloads/`, `/sitemap.xml` — all 404. `/download.php`
+is a page about donating, not a data endpoint. There is no bulk archive the way ASMA publishes one
+and no tab-separated index the way Modland does. The site is a PHP front end over a database, and
+the only route to a module is `downmod.php?index=N`.
+
+**And `robots.txt` asks us not to take it:**
+
+```
+User-Agent: *
+Disallow: /downmod.php
+Disallow: /downmod.php?
+Disallow: /downmod.php*
+Disallow: /modules/
+```
+
+The download endpoint and the module directory are exactly what an index would have to walk and
+what the app would then fetch from. That is the site telling automated clients to stay off its
+music, and it is not ours to reinterpret because our automated client happens to have a person
+behind it. It changes this from "hard to parse" to "asked not to", which is a different kind of no.
+
+**So AMP is not blocked on UADE.** It was recorded that way, and after 2026-09-04 that is no longer
+the binding reason: even with every Amiga format playing, the sanctioned way in does not exist. If
+AMP is ever wanted, the move is to ask them — they have a forum and a contact page — not to write a
+parser.
 
 ### Aminet
 
@@ -106,3 +131,9 @@ Do **nothing** here until `docs/PLAN_FORMATS.md` items 1 and 2 are done. Every c
 Mod Archive is blocked on a decoder, and The Mod Archive is the one whose shape fits our design
 worst. The best next move for online music is not another archive — it is being able to play more of
 the one we already have.
+
+**2026-09-04 made that recommendation literal rather than rhetorical.** Five names added to
+`SupportedFormats` gave Modland 5,557 more playable files than adding any archive would have, at a
+fraction of the cost, and AMP — the archive this section was holding a place for — turns out not to
+be available on any terms we should take. Playing more of what we have is not a stopgap until the
+next catalogue; it is the better move on the numbers.

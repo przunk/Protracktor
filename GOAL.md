@@ -618,7 +618,7 @@ Phase 4 on an exhausted context.
       `subsongCount`/`selectSubsong` boundary already exists, zero-based, precisely so a new backend
       only has to fill it in.
 
-- [ ] **2. Re-index, and the archives UADE unlocks** (`docs/BACKLOG.md` A7)
+- [x] **2. Re-index, and the archives UADE unlocks** (`docs/BACKLOG.md` A7) *(the staleness marker would **not** have fired — fixed; AMP publishes no index and its `robots.txt` asks automated clients off its modules)*
 
       **Re-indexing is not optional after item 1.** The catalogue index deliberately keeps only
       entries whose filename some backend might handle, so every Amiga custom format is *absent*
