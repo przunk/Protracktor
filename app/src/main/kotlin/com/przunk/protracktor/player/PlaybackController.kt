@@ -18,6 +18,8 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
+import android.os.Process
 import android.text.format.DateUtils
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.GrantedFolder
@@ -39,6 +41,8 @@ import com.przunk.protracktor.engine.NativeEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import java.util.concurrent.Executors
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -233,6 +237,14 @@ class PlaybackController private constructor(private val context: Context) {
 
         /** Between files, so resolving hundreds does not saturate a network share. */
         private const val RESOLVE_GAP_MS = 120L
+
+        /**
+         * How long the track list waits before being written.
+         *
+         * Longer than [RESOLVE_GAP_MS] by an order of magnitude, so a run of resolutions collapses
+         * into one write rather than one write each.
+         */
+        private const val TRACK_WRITE_DEBOUNCE_MS = 1500L
         const val DEFAULT_PLAYLIST_NAME = "Playlist"
 
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
@@ -282,6 +294,26 @@ class PlaybackController private constructor(private val context: Context) {
     // Main.immediate so a press and the state change it causes land in the same frame; the work
     // itself moves to IO where it belongs.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * For work nobody asked for: identifying tracks in the background, and scanning a library.
+     *
+     * **`Dispatchers.IO` is the wrong tool for this.** Its threads run at default priority, so
+     * opening a decoder — which is real CPU work, and for sc68 means building a 68000 emulator —
+     * competes with the UI thread on equal terms. On a phone that is a list which stutters while
+     * the work runs, which is what the owner reported for the first twenty seconds after launch.
+     *
+     * A single thread at `THREAD_PRIORITY_BACKGROUND` puts this in Android's background cgroup,
+     * where it gets a small share of the processor and *cannot* starve drawing however long it
+     * takes. One thread rather than a pool, because these tasks are sequential by nature and two of
+     * them would only contend with each other.
+     */
+    private val backgroundWork = Executors.newSingleThreadExecutor { runnable ->
+        Thread({
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+            runnable.run()
+        }, "protracktor-background")
+    }.asCoroutineDispatcher()
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
@@ -384,6 +416,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Debounces writes. Every transport press changes state; the disk does not need each one. */
     private var saveJob: Job? = null
+    private var trackWriteJob: Job? = null
 
     init {
         // Before anything can be opened: sc68 reads its replay binaries from a path, and an asset
@@ -454,6 +487,28 @@ class PlaybackController private constructor(private val context: Context) {
                 )
             }
             resolveMetadataInBackground()
+        }
+    }
+
+    /**
+     * Writes the track list, shortly.
+     *
+     * **Debounced, and it has to be.** `replaceTracks` deletes every row of the playlist and
+     * reinserts it — two inserts per track — and background metadata resolution used to call it
+     * once per track it identified, every 120 ms. On a playlist of three hundred that is some six
+     * hundred inserts eight times a second, into the same database the list is being read from, for
+     * as long as the resolution runs. The owner reported it as the list stuttering for the first ten
+     * to twenty seconds after launch, and was right that it had nothing to do with the scrollbar he
+     * had just been given.
+     *
+     * The state still updates per track, so titles appear as they are learned. It is only the disk
+     * that waits.
+     */
+    private fun scheduleTrackWrite() {
+        trackWriteJob?.cancel()
+        trackWriteJob = scope.launch {
+            delay(TRACK_WRITE_DEBOUNCE_MS)
+            store.replaceTracks(playlistId, _state.value.queue.tracks)
         }
     }
 
@@ -714,7 +769,7 @@ class PlaybackController private constructor(private val context: Context) {
             var done = 0
             for (candidate in candidates) {
                 ensureActive()
-                withContext(Dispatchers.IO) { probe(candidate, folder.uri) }?.let(indexed::add)
+                withContext(backgroundWork) { probe(candidate, folder.uri) }?.let(indexed::add)
                 done++
                 // Every file would be a state update per file and a recomposition per file; every
                 // twenty-fifth is still movement on screen and costs almost nothing.
@@ -1503,8 +1558,14 @@ class PlaybackController private constructor(private val context: Context) {
         else -> Message("Added $added; $skipped already there.")
     }
 
-    /** What [undoRemoval] would put back. Cleared once its notice is gone. */
-    private var lastRemoval: Pair<Int, TrackRef>? = null
+    /**
+     * What [undoRemoval] would put back, as (position, track) pairs. Cleared once its notice is gone.
+     *
+     * A list rather than one pair, because a bulk delete is **one edit, not twenty**
+     * (`docs/BACKLOG.md` A4). Undoing it has to restore the whole selection: putting back one row of
+     * twenty is not an undo, it is a second surprise.
+     */
+    private var lastRemoval: List<TrackEditing.Removed> = emptyList()
 
     /**
      * Drops one track.
@@ -1516,23 +1577,44 @@ class PlaybackController private constructor(private val context: Context) {
      * No confirmation. Undo is the better answer for one row -- it costs nothing when the user meant
      * it, and a dialog on every delete is a toll paid by the people who did.
      */
-    fun removeTrack(index: Int) {
+    fun removeTrack(index: Int) = removeTracks(listOf(index))
+
+    /**
+     * Drops any number of tracks as one edit.
+     *
+     * Removing what is playing stops playback rather than jumping somewhere: silently starting a
+     * different track because the user deleted this one is a surprise, and there is no reading of
+     * "remove" that asks for it.
+     *
+     * No confirmation, for the same reason as before: undo costs nothing when the user meant it,
+     * and a dialog on every delete is a toll paid by the people who did. What changed for a group
+     * is that undo has to bring **all** of it back.
+     */
+    fun removeTracks(indices: List<Int>) {
         val currentState = _state.value
-        val removed = currentState.queue.tracks.getOrNull(index) ?: return
-        val wasPlaying = currentState.queue.currentIndex == index
+        val (kept, removed) = TrackEditing.remove(currentState.queue.tracks, indices)
+        if (removed.isEmpty()) return
+        val wasPlaying = removed.any { it.index == currentState.queue.currentIndex }
 
         if (wasPlaying) stopPlayback()
-        lastRemoval = index to removed
+        lastRemoval = removed
 
         _state.update {
             it.copy(
-                queue = it.queue.withTracks(it.queue.tracks.filterIndexed { i, _ -> i != index }),
+                queue = it.queue.withTracks(kept),
                 playing = if (wasPlaying) false else it.playing,
                 metadata = if (wasPlaying) emptyMap() else it.metadata,
                 positionSeconds = if (wasPlaying) 0.0 else it.positionSeconds,
                 durationSeconds = if (wasPlaying) 0.0 else it.durationSeconds,
                 dirty = true,
-                message = Message(text = "Removed ${removed.title}", actionLabel = UNDO),
+                message = Message(
+                    text = if (removed.size == 1) {
+                        "Removed ${removed.first().track.title}"
+                    } else {
+                        "Removed ${removed.size} tracks"
+                    },
+                    actionLabel = UNDO,
+                ),
             )
         }
     }
@@ -1554,21 +1636,22 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** Puts the last removed track back where it was. */
+    /** Puts everything the last removal took back where it was. */
     fun undoRemoval() {
-        val (index, track) = lastRemoval ?: return
-        lastRemoval = null
+        val removed = lastRemoval
+        if (removed.isEmpty()) return
+        lastRemoval = emptyList()
         _state.update {
-            val restored = it.queue.tracks.toMutableList().apply {
-                // The list may have changed since; clamp rather than throw.
-                add(index.coerceIn(0, size), track)
-            }
-            it.copy(queue = it.queue.withTracks(restored), dirty = true, message = null)
+            it.copy(
+                queue = it.queue.withTracks(TrackEditing.restore(it.queue.tracks, removed)),
+                dirty = true,
+                message = null,
+            )
         }
     }
 
     fun dismissMessage() {
-        lastRemoval = null
+        lastRemoval = emptyList()
         _state.update { it.copy(message = null) }
     }
 
@@ -1887,7 +1970,7 @@ class PlaybackController private constructor(private val context: Context) {
         // Written straight away rather than waiting for the user to press Save: this is not one of
         // their edits, it is the app learning something, and losing it would mean relearning it on
         // every launch.
-        scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
+        scheduleTrackWrite()
         return improved
     }
 
@@ -1919,15 +2002,29 @@ class PlaybackController private constructor(private val context: Context) {
                 while (track != null || _state.value.loadingTrack) delay(IDLE_CHECK_MS)
                 delay(RESOLVE_GAP_MS)
 
+                val startedAt = SystemClock.elapsedRealtime()
                 val bytes = loadBytes(ref) ?: continue
                 ensureActive()
                 if (track != null) continue // something started while the file was being read
 
-                val opened = withContext(Dispatchers.IO) {
-                    NativeEngine.open(bytes, ref.fileNameOrTitle).track
+                // describe() and close() were on the caller's thread, which is the main one --
+                // close() destroys a decoder, and for sc68 that is an emulator being torn down.
+                // All of it belongs on the background thread, not just the open.
+                val described = withContext(backgroundWork) {
+                    val opened = NativeEngine.open(bytes, ref.fileNameOrTitle).track
+                        ?: return@withContext null
+                    val text = opened.describe()
+                    opened.close()
+                    text
                 } ?: continue
-                val described = opened.describe()
-                opened.close()
+
+                // Logged rather than guessed at. The owner reported twenty seconds of stutter for
+                // twenty-two tracks and the first explanation -- a database write per track -- was
+                // wrong, which a number here would have shown immediately.
+                android.util.Log.d(
+                    "Protracktor",
+                    "resolved ${ref.fileNameOrTitle} in ${SystemClock.elapsedRealtime() - startedAt} ms",
+                )
                 adoptTitleFrom(described, ref)
             }
         }

@@ -70,6 +70,11 @@ working and fetching serially, which he heard; that is fixed.
 
 ## Finished
 
+- **2026-09-03** — **A scrollbar you can grab**, at the edge of the playlist and of Browse's track
+  lists (**A3**), and **bulk operations on the playlist** (**A4**): long press to select, then add
+  the selection to a playlist — existing or new — or remove it. Undo brings a whole bulk removal
+  back, which is the part that could have lost somebody's playlist and so is a tested object of its
+  own.
 - **2026-09-03** — **One shape for an action, and one way to add.** Icons with their names
   underneath, in a row, wherever a track offers actions and wherever Browse is entered or left
   (**A17**, **A23**). The two add actions became one *"Add to playlist…"* opening the picker, with
@@ -382,6 +387,94 @@ place content cannot be probed — half a million files live on somebody else's 
 using.
 
 SidMon 1 itself still needs UADE (`docs/BACKLOG.md` A5). Sixty-one files is not a reason to hurry.
+
+### C10. ~~The list stutters for the first ten to twenty seconds after launch~~ — NOT A DEFECT, 2026-09-03
+
+Reported by the owner, who also established it **predated the scrollbar he had just been given** by
+going back to the previous build. That mattered: it stopped the investigation looking at the new
+thing.
+
+**Cause.** Background metadata resolution opens each unidentified track to learn its real title, and
+`adoptTitleFrom` wrote the playlist to disk after every one. `LibraryStore.replaceTracks` deletes
+every row of the playlist and reinserts it — **two inserts per track** — so a three-hundred-track
+playlist meant some six hundred inserts, roughly eight times a second, into the same database the
+list was being read from, for as long as the resolution ran. Which is ten to twenty seconds.
+
+**That explanation was wrong**, and the owner disproved it in one sentence: it still stutters for
+twenty seconds on a playlist of **twenty-two** tracks. Twenty-two tracks is forty-four inserts per
+write — nothing. The debounce is kept because writing the whole playlist per resolved track was
+indefensible anyway, but it was not the cause.
+
+**Second attempt, and what is actually known.** Twenty seconds for twenty-two tracks is roughly a
+second each, which points at the per-track work rather than at anything cumulative: reading the
+file, building a decoder, tearing it down. Two things were wrong with how that ran, and both are
+fixed:
+
+- `describe()` and `close()` were on the **caller's thread, which is the main one**. `close()`
+  destroys a decoder — for sc68, an entire 68000 emulator.
+- All of it ran at **default priority**. `Dispatchers.IO` competes with the UI thread on equal
+  terms, so a second of native work per track is a second of contention per track. It now runs on
+  one thread at `THREAD_PRIORITY_BACKGROUND`, in Android's background cgroup, where it gets a small
+  share of the processor and cannot starve drawing however long it takes. The library scan uses the
+  same thread for the same reason.
+
+**And it is now measured rather than reasoned about.** Each resolution logs its own duration
+(`Protracktor` tag). The first explanation here was confidently wrong; a number would have shown
+that immediately.
+
+**Third attempt, and this one was found by his measurement rather than my reasoning.** He compared
+the two screens: *Browse with a local folder of 300 tracks does not stutter; the playlist with 22
+does.* That rules out the background work entirely — it runs the same either way — and points at
+what the two screens do differently.
+
+`PlaylistBody` took the whole `PlayerUiState`. `positionSeconds` is updated every **200 ms** while
+anything is playing, so every row, every drag modifier and every list item recomposed **five times a
+second**. Browse takes `BrowseState`, which does not tick, and stayed smooth at three hundred rows.
+It now takes the track list rather than the state, so a position tick cannot reach it.
+
+The scrollbar had the same shape of problem, smaller: it re-runs on every frame of a scroll — that
+is what a scrollbar is — and was doing it with `BoxWithConstraints`, a subcomposition. It is three
+weighted boxes now, which is pure layout.
+
+**A fourth thing, from him again:** after the first twenty seconds it still stuttered a little, and
+*most visibly when flinging the list hard*. A fling is a per-row cost rather than a per-second one,
+so that pointed at what each row does — and every playlist row carried
+`graphicsLayer { translationY = dragOffset }` unconditionally, which allocates a render node per
+row, created and thrown away again for every row a fling brings past. Browse's rows have no such
+modifier. At most one row is ever dragged, so the layer is now applied only to that one.
+
+**Then the shape of it changed the question.** The owner's fifth report is not about a per-item cost
+at all:
+
+> It stuttered. I added 200 SAP tracks — it still stuttered, but briefly. About five seconds after
+> adding them it ran **better than it had with 22**. Restarted the app: swiping stutters, and after
+> ten or fifteen swipes it stops.
+
+**More items made it faster, and repeated scrolling cures it.** No amount of per-row or per-second
+work behaves like that. That is a **warm-up** curve: ART interpreting until the JIT compiles the
+paths, and Compose composing each composable type for the first time.
+
+**Which makes the build type the first thing to rule out.** Every measurement so far has been on a
+**debug** APK, and a debug build is `debuggable=true` — which turns off a great deal of ART's
+optimisation and holds the JIT back, on top of having no R8. A release build is the honest
+comparison and has never been tried.
+
+**If it persists in release**, the answer is a **baseline profile**: this project has none, and
+"janky until it warms up, then fine" is precisely what one exists to fix. Generating a real one
+needs a device or emulator, so it would be the owner's run rather than a workshop one.
+
+**Answer: the release build has none of it.** The owner installed it and reported *"zero stuttering
+now"*. C10 was an artefact of testing on a **debug** APK, which is `debuggable=true` and gives up a
+great deal of ART's optimisation for it. There is no defect in the app that ships.
+
+**What that cost, and what it bought.** Four fixes went in chasing it, and all four were real
+problems worth keeping — a full playlist rewrite per resolved track, background work at foreground
+priority, the whole list recomposing five times a second while playing, and a render node allocated
+per row. None of them was the cause. The cheapest check of all, "is this the debug build", came
+fifth.
+
+**The rule that follows is in `AGENTS.md`:** performance is judged on a release build. A debug build
+is for finding out whether something *works*.
 
 ### C3. R9 is addressed but unmeasured
 
