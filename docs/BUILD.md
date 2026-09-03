@@ -180,6 +180,24 @@ Pushing is the owner's action. Agents do not hold tokens (AGENTS.md §3).
 There is no emulator in this environment. Nothing about on-screen behaviour is confirmed until the
 owner installs the APK on a phone. A build that compiles proves the build, and nothing else.
 
+## Telling a green suite from a green suite that ran
+
+`./scripts/test-protracktor.sh` prints how the result was reached, because Gradle has two ways of
+reporting a passing suite it did not execute:
+
+| what the script says | what happened |
+| --- | --- |
+| `87 tests passed in 15s` | they ran |
+| `… (up to date, not re-run)` | nothing changed since last time |
+| `… (from the build cache, not re-run)` | the answer came out of the build cache |
+
+Both of the second two print `BUILD SUCCESSFUL` and execute nothing. The FROM-CACHE case was
+invisible here until 2026-09-03, when a "genuinely executed" run at the end of a review turned out
+to have been served from the cache in one second.
+
+**`--really`** forces execution (`--rerun-tasks`). Worth it before claiming a suite is green on code
+nobody has actually run it against.
+
 ## What the test script checks, beyond the tests
 
 `./scripts/test-protracktor.sh` runs the unit tests and then two things the Kotlin compiler and

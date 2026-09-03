@@ -3,7 +3,10 @@
 # Runs the unit tests. Same bargain as the build scripts: Gradle's output goes to a log, the
 # terminal gets the result and, on failure, the tests that failed and why.
 #
-# Usage:  ./scripts/test-protracktor.sh [extra gradle args…]
+# Pass --really to force the tests to execute rather than be served from the cache. Worth it before
+# claiming a suite is green on code nobody has run it against.
+#
+# Usage:  ./scripts/test-protracktor.sh [--really] [extra gradle args…]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,11 +17,17 @@ cd "$PROTRACKTOR_DIR"
 LOG_FILE="$PROTRACKTOR_LOG_PREFIX-test.log"
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 
+force=""
+if [ "${1:-}" = "--really" ]; then
+    force="--rerun-tasks"
+    shift
+fi
+
 started_at=$(date +%s)
 echo "🧪 Protracktor — unit tests…"
 
 set +e
-./gradlew :app:testDebugUnitTest --console=plain "$@" > "$LOG_FILE" 2>&1
+./gradlew :app:testDebugUnitTest --console=plain $force "$@" > "$LOG_FILE" 2>&1
 status=$?
 set -e
 
@@ -35,9 +44,15 @@ totals="$(find "$RESULTS_DIR" -name 'TEST-*.xml' \
     | awk -F'"' '{a[$1]+=$2} END {printf "%d %d %d %d", a["tests="], a["failures="], a["errors="], a["skipped="]}')"
 read -r total failures errors skipped <<< "${totals:-0 0 0 0}"
 
+# Two ways Gradle reports a green suite it did not run, and only one of them was noticed here
+# before: UP-TO-DATE means nothing changed, FROM-CACHE means the answer came out of the build cache.
+# Both print BUILD SUCCESSFUL and neither executes a test. Saying which is the difference between
+# "87 tests passed" and "87 tests passed some time ago, possibly on other code".
 cached=""
 if grep -aq '^> Task :app:testDebugUnitTest UP-TO-DATE' "$LOG_FILE"; then
     cached=" (up to date, not re-run)"
+elif grep -aq '^> Task :app:testDebugUnitTest FROM-CACHE' "$LOG_FILE"; then
+    cached=" (from the build cache, not re-run)"
 fi
 
 # A compile error is not a test failure, and reporting stale counts from the previous run's XML
