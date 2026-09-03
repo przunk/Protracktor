@@ -644,6 +644,39 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
+## A25. Import and export a playlist
+
+Raised 2026-09-03 by the owner.
+
+**The hard part is not the file format, it is what a playlist refers to.** Rows point at three
+different kinds of thing and only some of them travel:
+
+| what a row is | portable? |
+| --- | --- |
+| a catalogue track — `https://modland.com/...` or `asma://...` | **yes**, it means the same anywhere |
+| a local file — a storage-access-framework document URI | **no**. The URI is issued by a provider on *this* device, and the framework hands out a different one for the same file reached a different way |
+
+So an export that simply writes the ids produces a file that works perfectly on the phone it came
+from and not at all anywhere else — which is the one case where somebody would want it.
+
+**What might survive the trip**, and what to decide between:
+
+- **Path and filename plus size**, and let import match against the local index on the other side.
+  `TrackRef.sameFileAs` already settles identity by name and size for exactly this reason, and
+  `library_index` is the thing that could answer the question. It would match a library that holds
+  the same tunes in a different place, which is the realistic case.
+- **A hash of the file's bytes.** Exact, survives renaming, and costs reading every file on both
+  sides — which the scan already does once, so it could be stored.
+- **Both**, with the hash as the authority and the name as the fallback.
+
+**Format:** M3U is the obvious choice — every player reads it, and `#EXTINF` carries a title. Its
+weakness is the same one above: it holds paths, and we hold URIs. An `#EXT` comment of our own could
+carry what M3U cannot, in a way other players ignore.
+
+**Worth deciding early:** whether export is *for another copy of this app* or *for other players*.
+They pull in opposite directions — the first wants our identifiers, the second wants plain paths —
+and trying to serve both is how a format ends up serving neither.
+
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 
