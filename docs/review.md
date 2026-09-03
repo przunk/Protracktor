@@ -60,10 +60,10 @@ backend's *interface* would have caught it; one that mirrors its *purpose* did n
 **Correction.** Loop until the buffer is full or the track genuinely ends, with a bound of eight
 consecutive empty passes so an idle decoder costs one silent buffer rather than a locked-up device.
 
-**Status:** **fixed**, and guarded. `native/probe/sc68/probe_render.c` mirrors the backend's
-*contract* rather than its purpose: it asks whether the **first** buffer comes back full. Five of
-five files answer `full` with the fix and `short:0` with the single-call logic restored, which was
-checked rather than assumed.
+**Status:** **fixed**, guarded, and **confirmed on a device** — the owner played SNDH on
+2026-09-03. `native/probe/sc68/probe_render.c` mirrors the backend's *contract* rather than its
+purpose: it asks whether the **first** buffer comes back full. Five of five files answer `full` with
+the fix and `short:0` with the single-call logic restored, which was checked rather than assumed.
 
 ### R2 — the shared open-error string is a data race · **high**
 
