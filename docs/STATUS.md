@@ -481,6 +481,25 @@ fifth.
 **The rule that follows is in `AGENTS.md`:** performance is judged on a release build. A debug build
 is for finding out whether something *works*.
 
+### C11. ~~Auto-advance raced through every tune in silence~~ — FIXED 2026-09-03
+
+Reported by the owner the day subsongs landed: pressing **next** moved to the following tune
+correctly, but *letting one end* skipped instantly through all the remaining ones without a sound.
+
+**Cause.** When a backend runs out, `onAudioReady` returns `Stop` and Oboe calls it no more. The
+stream object is still there — it is simply never entered again. A subsong switch is handed to that
+callback on purpose, because it is the only thread that touches the decoder; handed to it *after the
+end*, it sat there forever. `finished_` stayed true, the poll on the Kotlin side asked for the next
+tune, and the same thing happened again, all the way to the last.
+
+**Fix.** When nothing is running the switch is applied directly and the stream is started again. The
+test for "running" is **`stream_ != nullptr && !finished_`**, because the stream outlives the last
+callback — which is the whole trap.
+
+**`seek` had the same latent bug** and is fixed with it: seeking a tune that had just ended stored a
+request for a callback that would never run. Nobody had reported it, because seeking a finished
+track is a thing people rarely do.
+
 ### C3. R9 is addressed but unmeasured
 
 The next track is read while the current one plays and remote fetches are cached, but nobody has

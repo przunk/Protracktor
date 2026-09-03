@@ -872,13 +872,38 @@ public:
     int subsongCount() const { return backend_->subsongCount(); }
 
     /**
-     * Switches tune without stopping the stream.
+     * Switches tune.
      *
-     * The audio callback is the only thread that touches the backend, so the switch is handed over
-     * to it rather than performed here -- the same trick seeking already uses, and for the same
-     * reason: a decoder cannot be changed underneath a read in progress.
+     * While the stream is running the switch is handed to the audio callback rather than performed
+     * here: that callback is the only thread which touches the backend, and a decoder cannot be
+     * changed underneath a read in progress.
+     *
+     * **But a finished tune has no callback left to hand it to.** When a backend runs out,
+     * `onAudioReady` returns `Stop` and Oboe calls it no more -- `stream_` is still there, it is
+     * simply never entered again. A request stored then would sit forever, `finished_` would stay
+     * true, and the poll on the Kotlin side would ask for the next tune again and again: every
+     * subsong of the file "played" instantly and in silence, which is exactly what the owner saw.
+     * So when nothing is running, the switch happens here and the stream is started again.
      */
-    void requestSubsong(int index) { pendingSubsong_.store(index, std::memory_order_release); }
+    void requestSubsong(int index) {
+        if (running()) {
+            pendingSubsong_.store(index, std::memory_order_release);
+            return;
+        }
+        stop();
+        if (backend_->selectSubsong(index)) {
+            finished_.store(false, std::memory_order_release);
+            start();
+        }
+    }
+
+    /**
+     * Whether a callback is still being called.
+     *
+     * Not `stream_ != nullptr`: the stream outlives the last callback. Oboe is told to stop from
+     * inside the callback when a tune ends, and the object stays until somebody closes it.
+     */
+    bool running() const { return stream_ != nullptr && !isFinished(); }
 
     // Not locked, and deliberately so. Oboe's stop() blocks until an in-flight callback returns, and
     // every control path below stops the stream before touching the backend -- so the callback is
@@ -943,7 +968,9 @@ public:
     void seek(double seconds) {
         if (!backend_->canSeek()) return;
         const double target = seconds < 0.0 ? 0.0 : seconds;
-        if (stream_) {
+        // `running()`, not `stream_`: seeking a tune that has just ended would otherwise store a
+        // request for a callback that will never run again. Same trap as the subsong switch above.
+        if (running()) {
             pendingSeek_.store(target, std::memory_order_release);
         } else {
             backend_->seek(target);
