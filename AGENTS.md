@@ -70,3 +70,20 @@ the question.
 A useful tell, and the one that should have prompted it: **"it gets better the more you use it."**
 Warm-up curves — more items making it faster, repeated scrolling curing it — are about compilation,
 not about the code being wrong.
+
+### So the build handed over is the release build
+
+Asked for by the owner on 2026-09-03, immediately after the above: **build release, not debug, when
+handing work over for testing.**
+
+- **While iterating** — a compile error, a quick check that something links — use
+  `./scripts/build-debug.sh`. It is two to three times faster and nobody is judging anything by it.
+- **When handing an APK to the owner** — use `./scripts/build-release.sh`. It is what he will
+  actually experience, it goes through R8, and it is a quarter of the size.
+
+It also catches a class of problem debug cannot: a missing `keep` rule, a stripped resource, a JNI
+symbol renamed. Those only exist in a minified build, and finding them at hand-over is better than
+finding them at a release.
+
+**The one thing to remember:** when something *crashes* and a stack trace matters, a debug build is
+the readable one. Diagnose on debug, judge on release.

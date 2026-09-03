@@ -180,6 +180,25 @@ Pushing is the owner's action. Agents do not hold tokens (AGENTS.md §3).
 There is no emulator in this environment. Nothing about on-screen behaviour is confirmed until the
 owner installs the APK on a phone. A build that compiles proves the build, and nothing else.
 
+## Which build to hand over
+
+**Release.** Since 2026-09-03, the APK given to the owner for testing is the release build:
+
+```
+./scripts/build-release.sh
+```
+
+It is what he will actually experience — a debug build is `debuggable=true`, which costs a great
+deal of ART optimisation and once produced twenty seconds of stutter that did not exist in release
+(`docs/STATUS.md` C10). It also goes through R8, so a missing keep rule or a stripped resource
+surfaces at hand-over rather than at a release.
+
+Debug stays the right build **while iterating** — it is two to three times faster — and **when a
+crash needs a readable stack trace**. Diagnose on debug, judge on release.
+
+Without `PRZUNK_UPLOAD_*` configured the release APK is signed with the local debug key: sideloadable
+and not publishable. `build-release.sh` says which key signed it, every time.
+
 ## Telling a green suite from a green suite that ran
 
 `./scripts/test-protracktor.sh` prints how the result was reached, because Gradle has two ways of
