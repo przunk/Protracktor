@@ -17,11 +17,11 @@ package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
@@ -75,7 +75,7 @@ internal fun DraggableScrollbar(
     val positionFraction = dragFraction
         ?: (listState.firstVisibleItemIndex.toFloat() / lastFirstIndex).coerceIn(0f, 1f)
 
-    BoxWithConstraints(
+    Column(
         modifier = modifier
             .fillMaxHeight()
             .width(TRACK_WIDTH)
@@ -95,17 +95,21 @@ internal fun DraggableScrollbar(
                 }
             },
     ) {
-        val thumbHeight = maxHeight * thumbFraction
+        // Three weighted boxes rather than a measured offset. This composable re-runs on every
+        // frame of a scroll -- that is what a scrollbar is -- so it must not do anything expensive
+        // per frame, and `BoxWithConstraints` is a subcomposition. Weights are pure layout.
+        val slack = 1f - thumbFraction
+        Spacer(Modifier.weight((slack * positionFraction).coerceAtLeast(MIN_WEIGHT)))
         Box(
             modifier = Modifier
-                .offset(y = (maxHeight - thumbHeight) * positionFraction)
-                .width(TRACK_WIDTH)
-                .height(thumbHeight)
+                .weight(thumbFraction)
+                .fillMaxWidth()
                 .background(
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
                     MaterialTheme.shapes.small,
                 ),
         )
+        Spacer(Modifier.weight((slack * (1f - positionFraction)).coerceAtLeast(MIN_WEIGHT)))
     }
 }
 
@@ -114,3 +118,6 @@ private val TRACK_WIDTH = 10.dp
 
 /** However long the list, the thumb stays big enough to hit. */
 private const val MIN_THUMB = 0.06f
+
+/** A weight must be positive; at the very top or bottom one of the spacers would otherwise be zero. */
+private const val MIN_WEIGHT = 0.0001f

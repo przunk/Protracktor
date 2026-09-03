@@ -422,8 +422,21 @@ fixed:
 (`Protracktor` tag). The first explanation here was confidently wrong; a number would have shown
 that immediately.
 
-**Still open** until the owner says the stutter is gone. If it is not, the log says where the time
-goes.
+**Third attempt, and this one was found by his measurement rather than my reasoning.** He compared
+the two screens: *Browse with a local folder of 300 tracks does not stutter; the playlist with 22
+does.* That rules out the background work entirely — it runs the same either way — and points at
+what the two screens do differently.
+
+`PlaylistBody` took the whole `PlayerUiState`. `positionSeconds` is updated every **200 ms** while
+anything is playing, so every row, every drag modifier and every list item recomposed **five times a
+second**. Browse takes `BrowseState`, which does not tick, and stayed smooth at three hundred rows.
+It now takes the track list rather than the state, so a position tick cannot reach it.
+
+The scrollbar had the same shape of problem, smaller: it re-runs on every frame of a scroll — that
+is what a scrollbar is — and was doing it with `BoxWithConstraints`, a subcomposition. It is three
+weighted boxes now, which is pure layout.
+
+**Still open** until the owner says it is gone.
 
 ### C3. R9 is addressed but unmeasured
 

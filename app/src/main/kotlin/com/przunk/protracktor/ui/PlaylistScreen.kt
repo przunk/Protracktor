@@ -102,7 +102,7 @@ fun PlaylistScreen(
     // and more portable than a blur, which needs API 31 and this app runs from 29.
     if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
+            PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
                 randomMode = state.randomMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -118,7 +118,7 @@ fun PlaylistScreen(
     }
 
     PlaylistBody(
-        state = state,
+        tracks = state.queue.tracks,
         listState = listState,
         currentIndex = state.queue.currentIndex,
         onPlayAt = onPlayAt,
@@ -138,7 +138,12 @@ fun PlaylistScreen(
 
 @Composable
 private fun PlaylistBody(
-    state: PlayerUiState,
+    // **The track list, not the whole player state.** `positionSeconds` ticks every 200 ms while
+    // anything plays, so taking `PlayerUiState` here recomposed every row five times a second --
+    // which is what "as if the FPS were low" was. Browse takes `BrowseState`, which does not tick,
+    // and stayed smooth at three hundred rows while this stuttered at twenty-two. That comparison
+    // is what found it.
+    tracks: List<TrackRef>,
     listState: LazyListState,
     currentIndex: Int?,
     onPlayAt: (Int) -> Unit,
@@ -165,18 +170,18 @@ private fun PlaylistBody(
     // through a holder that is kept current. Capturing the track list directly is what broke the
     // drag after two rows: the handler kept answering with the position the row had when the
     // gesture began, so the third step was computed from a stale origin and threw the row back.
-    val tracks by rememberUpdatedState(state.queue.tracks)
+    val liveTracks by rememberUpdatedState(tracks)
     val move by rememberUpdatedState(onMove)
-    val indexOfTrack = remember { { id: String -> tracks.indexOfFirst { it.id == id } } }
-    val trackCount = remember { { tracks.size } }
+    val indexOfTrack = remember { { id: String -> liveTracks.indexOfFirst { it.id == id } } }
+    val trackCount = remember { { liveTracks.size } }
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
 
     var following by remember { mutableStateOf(false) }
     // Selection lives here and dies with the screen, the same as in Browse: a tick that survives a
     // reload would act on a row the user never saw (`docs/ARCHITECTURE.md` §17).
     var selected by remember { mutableStateOf(emptySet<String>()) }
-    LaunchedEffect(state.queue.tracks) {
-        selected = selected.intersect(state.queue.tracks.mapTo(mutableSetOf()) { it.id })
+    LaunchedEffect(tracks) {
+        selected = selected.intersect(tracks.mapTo(mutableSetOf()) { it.id })
     }
     val selecting = selected.isNotEmpty()
     // Takes back before the screen's own handler: leave the selection first, ticking nothing.
@@ -185,7 +190,7 @@ private fun PlaylistBody(
 
     Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
-        itemsIndexed(state.queue.tracks, key = { _, track -> track.id }) { index, track ->
+        itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
             TrackRow(
                 index = index,
                 track = track,
@@ -256,7 +261,7 @@ private fun PlaylistBody(
                         icon = PlayerIcons.PlaylistAdd,
                         label = stringResource(R.string.action_add_to_playlist),
                         onClick = {
-                            onAddSelectedToPlaylist(state.queue.tracks.filter { it.id in selected })
+                            onAddSelectedToPlaylist(tracks.filter { it.id in selected })
                             selected = emptySet()
                         },
                     )
@@ -265,8 +270,7 @@ private fun PlaylistBody(
                         label = stringResource(R.string.action_delete),
                         onClick = {
                             onRemoveMany(
-                                state.queue.tracks.indices
-                                    .filter { state.queue.tracks[it].id in selected }
+                                tracks.indices.filter { tracks[it].id in selected }
                             )
                             selected = emptySet()
                         },
