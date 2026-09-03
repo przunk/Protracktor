@@ -637,3 +637,18 @@ Position on the left, length on the right, the bar between them. Before, both sa
 as `0:36 / 2:20` — one string to decode, in a row that had become crowded once the tune count joined
 it. Flanking the bar, the two numbers read as **where this line starts and where it ends** rather
 than as a fraction to parse.
+
+## 21. The dock is sized for a glance, not for a desk
+
+Changed 2026-09-04, and the reason is the specification: *"when I am driving it is hard to hit
+them."*
+
+Material's 48dp touch target is the minimum that counts as reachable when you are sitting still and
+looking at the screen. The transport is **56dp with a 30dp glyph**, and play is **64dp with 34**.
+The glyph grows with the target deliberately — a large button around a small mark is harder to aim
+at than a small button, because the eye aims at the mark.
+
+The title moved from `titleSmall` to `titleMedium` and the author from `bodySmall` to `bodyMedium`,
+and **the dock grew to fit** rather than the text being squeezed to preserve its old height. The
+owner offered that trade before being asked for it, which is the right way round: the dock is on
+every screen, and the thing it is for is being read at a glance.

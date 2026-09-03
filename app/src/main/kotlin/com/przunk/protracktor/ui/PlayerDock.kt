@@ -127,7 +127,10 @@ fun PlayerDock(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = loaded?.title ?: stringResource(R.string.dock_idle_title),
-                        style = MaterialTheme.typography.titleSmall,
+                        // A size up from titleSmall. The owner reads this in a car, where a glance
+                        // is all there is; the dock grows to fit rather than the text being
+                        // squeezed to keep the dock's old height.
+                        style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -139,7 +142,7 @@ fun PlayerDock(
                             loaded != null -> loaded.displayAuthor.ifBlank { formatOf(state) }
                             else -> stringResource(R.string.dock_idle_subtitle)
                         },
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -194,8 +197,16 @@ fun PlayerDock(
                     onClick = onShuffle,
                 )
 
-                IconButton(onClick = onPrevious, enabled = state.canGoPrevious) {
-                    Icon(PlayerIcons.SkipPrevious, stringResource(R.string.a11y_previous))
+                IconButton(
+                    onClick = onPrevious,
+                    enabled = state.canGoPrevious,
+                    modifier = Modifier.size(TRANSPORT_TARGET),
+                ) {
+                    Icon(
+                        PlayerIcons.SkipPrevious,
+                        stringResource(R.string.a11y_previous),
+                        modifier = Modifier.size(TRANSPORT_GLYPH),
+                    )
                 }
 
                 FilledIconButton(
@@ -203,18 +214,27 @@ fun PlayerDock(
                     // A transient track counts: pressing Random with an empty playlist must still
                     // give you something you can pause.
                     enabled = state.current != null || state.queue.tracks.isNotEmpty(),
-                    modifier = Modifier.size(52.dp),
+                    modifier = Modifier.size(64.dp),
                 ) {
                     Icon(
                         imageVector = if (state.playing) PlayerIcons.Pause else PlayerIcons.Play,
+                        modifier = Modifier.size(34.dp),
                         contentDescription = stringResource(
                             if (state.playing) R.string.a11y_pause else R.string.a11y_play
                         ),
                     )
                 }
 
-                IconButton(onClick = onNext, enabled = state.canGoNext) {
-                    Icon(PlayerIcons.SkipNext, stringResource(R.string.a11y_next))
+                IconButton(
+                    onClick = onNext,
+                    enabled = state.canGoNext,
+                    modifier = Modifier.size(TRANSPORT_TARGET),
+                ) {
+                    Icon(
+                        PlayerIcons.SkipNext,
+                        stringResource(R.string.a11y_next),
+                        modifier = Modifier.size(TRANSPORT_GLYPH),
+                    )
                 }
 
                 // Shape carries the mode, not just tint: repeat-one is a different glyph from
@@ -245,16 +265,32 @@ private fun ToggleControl(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.semantics {
-        contentDescription = description
-    }) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .size(TRANSPORT_TARGET)
+            .semantics { contentDescription = description },
+    ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(TRANSPORT_GLYPH),
         )
     }
 }
+
+/**
+ * How big a transport control is, and how big its glyph.
+ *
+ * The owner's reason is the whole specification: *"when I am driving it is hard to hit them."*
+ * Material's 48dp is the minimum that counts as reachable sitting still and looking at it; this is
+ * a size up from that, and the glyph grows with the target so the button does not become a large
+ * area of nothing around a small mark.
+ */
+private val TRANSPORT_TARGET = 56.dp
+private val TRANSPORT_GLYPH = 30.dp
 
 private fun formatOf(state: PlayerUiState): String = state.metadata["format"].orEmpty()
 
