@@ -38,7 +38,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 8
+    const val VERSION = 9
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -206,6 +206,22 @@ object SchemaSql {
         "CREATE INDEX idx_library_title ON library_index(title)",
     )
 
+    /**
+     * Which decoders built a catalogue index, added at version 9.
+     *
+     * A catalogue index is filtered **at index time** to the formats a backend can play, so an
+     * index built before a backend existed is permanently missing that backend's formats — and it
+     * looks empty rather than stale. The owner met this on 2026-09-03: his Modland index predated
+     * libsidplayfp, so 60,572 C64 tunes were simply absent and nothing said why.
+     *
+     * `docs/BACKLOG.md` A7 had been carrying this as a note asking a human to remember, while the
+     * local library index (version 8) already recorded its decoder set and offered a rescan. This
+     * closes that asymmetry.
+     */
+    private val CATALOGUE_BACKENDS_V9: List<String> = listOf(
+        "ALTER TABLE catalogues ADD COLUMN backends TEXT NOT NULL DEFAULT ''",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -261,7 +277,8 @@ object SchemaSql {
 
         "INSERT INTO player_state (id) VALUES (0)",
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
-        PLAY_HISTORY_V7 + LIBRARY_INDEX_V8
+        PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
+        CATALOGUE_BACKENDS_V9
 
 
 
@@ -280,6 +297,7 @@ object SchemaSql {
         6 to SONG_LENGTHS_V6,
         7 to PLAY_HISTORY_V7,
         8 to LIBRARY_INDEX_V8,
+        9 to CATALOGUE_BACKENDS_V9,
     )
 
     /**

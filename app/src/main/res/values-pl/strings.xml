@@ -82,6 +82,7 @@
 
     <string name="browse_indexing">Indeksowanie %1$s…</string>
     <string name="browse_unknown">(nieznany)</string>
+    <string name="catalogue_stale">Zaindeksowany starszymi dekoderami — przeindeksuj, żeby zobaczyć formaty dodane później.</string>
     <string name="catalogue_not_indexed">Brak indeksu — dotknij strzałki, aby go pobrać</string>
     <string name="catalogue_more_coming">Kolejne archiwa są w planach. Trafiają tu tylko te, których format indeksu jest już obsłużony.</string>
     <string name="a11y_index_catalogue">Pobierz indeks dla %1$s</string>

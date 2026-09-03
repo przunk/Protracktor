@@ -491,7 +491,7 @@ Raised 2026-09-03 by the owner. Choosing where to add a track shows a list of na
 else, so there is no way to tell a playlist you filled from one you made and forgot. The count is
 already in the database — `LibraryStore.playlists()` reads the rows the picker shows.
 
-## A22. Online catalogue indexes go stale and nothing says so
+## A22. ~~Online catalogue indexes go stale and nothing says so~~ — DONE 2026-09-03
 
 Raised 2026-09-03 by the owner, after failing to find any C64 music: **his Modland index predates
 libsidplayfp**, so it contains no `.sid` entries at all. The index filters by filename *at index
@@ -507,10 +507,34 @@ human to remember. The owner hit that gap the first time it mattered.
 time and compared on open. The catalogue row already shows a track count and an indexed-at date;
 "indexed with older decoders — re-index to see C64 music" belongs beside them.
 
-**Worth deciding while doing it**, because the local answer may not transfer: a Modland re-index is
-a 5.75 MB download and half a million rows, where a folder rescan is local work. Whether that should
-happen automatically, on a prompt, or only when the user asks is a real question rather than an
-implementation detail.
+**Built**, and the decision that came with it: **the row says so and the user presses the button
+that was already there.** Not automatic. A Modland re-index is a 5.75 MB download and half a million
+rows, and starting that because somebody opened a screen would be indefensible; the catalogue row
+already carries a re-index button, so the notice only has to say *why* to press it. That also leaves
+the choice open — making it automatic later is adding a trigger, not redoing the mechanism.
+
+**And the owner closed that question on 2026-09-03, with a better reason than mine.** Automatic
+re-indexing is not deferred for taste: *"we can't do anything better until we have an online worker
+that indexes this for us automatically."* Re-indexing on the device means every user downloading
+5.75 MB and rebuilding half a million rows to learn what one server could have worked out once. So
+the notice is the right answer **for as long as the index is built on the phone**, and the real
+alternative is a different piece of infrastructure rather than a different trigger.
+
+**An index with no recorded decoder set counts as stale**, which is not a detail: every index that
+exists today predates the column, including the one that caused this. Treating "unknown" as current
+would have left the owner exactly where he started.
+
+**Also fixed here** (`docs/STATUS.md` C9): a catalogue track that no decoder can open now names the
+format the archive files it under — *"SidMon 1 is a format Protracktor cannot play yet"* rather than
+*"no backend recognised it"*. The archive knew; the app was not asking.
+
+## A23. The Browse button should be an icon with a label
+
+Raised 2026-09-03 by the owner: it is a bare text button, while the way *out* of Browse — added the
+day before for **A16** — is an icon with its name underneath. Two controls that do opposite things
+should not be told apart by one being drawn and the other written.
+
+Same treatment as A17's action row, and small enough to go with it.
 
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 

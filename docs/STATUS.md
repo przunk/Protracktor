@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-09-03 — version 0.2.0, versionCode 2, schema version 8
+Updated: 2026-09-03 — version 0.2.0, versionCode 2, schema version 9
 
 ## What works
 
@@ -65,6 +65,12 @@ working and fetching serially, which he heard; that is fixed.
 
 ## Finished
 
+- **2026-09-03** — **A catalogue index says when it is out of date.** Every index records which
+  decoders built it, and one built by a different set — or by an unrecorded set, which is every
+  index that exists today — says so and points at the re-index button. This is what hid 60,572 C64
+  tunes from the owner: his Modland index predated libsidplayfp, and an index filtered at index
+  time to what a backend can play looks *empty* rather than stale. Closes **A22** and the asymmetry
+  `docs/BACKLOG.md` A7 had been carrying as a note asking a human to remember.
 - **2026-09-03** — **C6 and C7.** Entering a Browse domain now forgets where you had got to, so
   choosing Online catalogues shows catalogues rather than an emptied folder; and adding one track
   from a row's menu stays in Browse and says what it did. The two rules about position are
@@ -339,7 +345,7 @@ already treated as "not loaded yet".
 waits while the level is loading as well as while its list is empty. It is a separate function so it
 could be tested: removing the loading check fails the test that catches this.
 
-### C9. "No backend recognised it" for files we could name
+### C9. ~~"No backend recognised it" for files we could name~~ — FIXED 2026-09-03
 
 Reported by the owner 2026-09-03: two `.sid` files from Modland refused with *"no backend recognised
 it: error reading file"*.
@@ -358,9 +364,13 @@ and the message is the fallback's.
 - **SidMon 1 needs UADE** (`docs/PLAN_FORMATS.md`, `docs/BACKLOG.md` A5). 61 files is not a reason
   to hurry, but it is a concrete instance of the Amiga gap rather than an abstract one.
 
-**Also worth noting:** the catalogue index admits these because it filters by extension, which is
-the one place that cannot probe content — half a million files live on somebody else's server
-(`docs/ARCHITECTURE.md` §18). The format directory is the information we do have and are not using.
+**Fixed:** a catalogue track that no decoder opens now names the format the archive files it under.
+The catalogue index still admits these files, because it filters by extension and that is the one
+place content cannot be probed — half a million files live on somebody else's server
+(`docs/ARCHITECTURE.md` §18). The format directory was information we already had and were not
+using.
+
+SidMon 1 itself still needs UADE (`docs/BACKLOG.md` A5). Sixty-one files is not a reason to hurry.
 
 ### C3. R9 is addressed but unmeasured
 

@@ -197,6 +197,8 @@ data class BrowseState(
     val songLengthCount: Int = 0,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
+    /** Which decoders this build has, for telling a stale catalogue index from a current one. */
+    val backends: String = "",
 
     // What has been played
     val history: List<TrackRef> = emptyList(),
@@ -787,6 +789,18 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
 
+    /**
+     * The format an online catalogue files a track under, if it came from one.
+     *
+     * Read from the index rather than guessed from the filename — the filename is what made this
+     * confusing in the first place.
+     */
+    private suspend fun catalogueFormatOf(ref: TrackRef): String? {
+        val catalogue = Catalogue.owning(ref.id) ?: return null
+        val path = catalogue.pathFrom(ref.id) ?: return null
+        return catalogues.locate(catalogue.id, path)?.format?.takeIf { it.isNotBlank() }
+    }
+
     // --- sharing ------------------------------------------------------------------------------
 
     /**
@@ -968,6 +982,7 @@ class PlaybackController private constructor(private val context: Context) {
                     catalogues = summaries,
                     songLengthCount = lengths,
                     storageBytes = storage,
+                    backends = NativeEngine.backendsFingerprint(),
                     // Everything indexed is searched until the user says otherwise. Starting with
                     // none ticked would make the first search return nothing and look broken.
                     searchCatalogues = current.searchCatalogues.ifEmpty {
@@ -1013,7 +1028,7 @@ class PlaybackController private constructor(private val context: Context) {
                 // case and is scanned by opening (`docs/BACKLOG.md` A6).
                 catalogue.parseIndex(bytes) { name -> SupportedFormats.looksPlayable(name) }
             }
-            catalogues.replaceIndex(catalogue, entries)
+            catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             _browse.update { it.copy(indexing = null, catalogues = catalogues.summaries()) }
             _state.update { it.copy(message = Message("Indexed ${entries.size} tracks from ${catalogue.displayName}.")) }
         }
@@ -1773,12 +1788,22 @@ class PlaybackController private constructor(private val context: Context) {
                 // The reason, not just the verdict. "Not a format we can play" is wrong when a
                 // backend claimed the file and then choked on it, which is exactly what sc68 does
                 // with some SNDH files -- and the two are indistinguishable from outside.
+                // The decoder's reason is true and often useless on its own. When the track came
+                // from a catalogue we know something better: the archive files it under a format
+                // name. Modland's `SidMon 1` directory holds 61 files with a `.sid` extension that
+                // are Amiga executables, not C64 tunes -- so "no backend recognised it" was
+                // accurate and told the owner nothing (`docs/STATUS.md` C9).
                 val reason = result.error
+                val format = catalogueFormatOf(ref)
                 _state.update {
                     it.copy(
                         message = Message(
-                            if (reason.isBlank()) "${ref.title}: no backend could open it"
-                            else "${ref.title}: $reason"
+                            when {
+                                format != null ->
+                                    "$format is a format Protracktor cannot play yet."
+                                reason.isBlank() -> "${ref.title}: no backend could open it"
+                                else -> "${ref.title}: $reason"
+                            }
                         )
                     )
                 }
