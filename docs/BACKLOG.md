@@ -402,7 +402,10 @@ The bulk button stays as it is, because it already names its target on its face.
 
 **Built.** The expanded player's actions are one wrapping row of icons with their names underneath,
 through a shared `LabelledAction` — the shape the owner had already asked for twice, now in one
-place rather than copied. The two add actions became one **"Add to playlist…"** opening the picker,
+place rather than copied. **Corrected after he saw it:** they are drawn in the accent colour,
+because the full-width text buttons they replaced were accented by default and losing that made
+them read as labels rather than controls; and every cell is one fixed width, because sized to their
+own text they came out ragged and a row of different-sized things does not read as a set of equals. The two add actions became one **"Add to playlist…"** opening the picker,
 with the current playlist sorted to the top.
 
 **And it took some code out.** `addToPlaylistAndSay` and the `onAddStayingHere` wiring existed to
@@ -503,6 +506,13 @@ already in the database — `LibraryStore.playlists()` reads the rows the picker
 
 **Built**, counted in the same query with a `LEFT JOIN` rather than by reading every playlist's
 tracks: the picker shows all of them at once, and one statement is one statement.
+
+**In both places, on the second try.** The first attempt changed only the *add-to* dialogue and
+missed the **switcher** in the top bar, which is where the owner actually looked. That row now shows
+the count where a dot used to say "this is the current one" — the dot spent a slot saying something
+the row can say by being highlighted, and left the question a list of bare names cannot answer.
+Highlighting the whole row is the same convention the playlist already uses for the playing track,
+so "which one am I in" is one idea rather than two.
 
 ## A22. ~~Online catalogue indexes go stale and nothing says so~~ — DONE 2026-09-03
 

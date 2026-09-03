@@ -18,7 +18,7 @@ package com.przunk.protracktor.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +29,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+
+/** One cell of the action grid. Every action is this wide, whatever its name. */
+private val CELL = 84.dp
 
 /**
  * An action drawn as an icon with its name underneath.
@@ -53,16 +56,26 @@ internal fun LabelledAction(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-            // A ceiling rather than a fixed width: a long label wraps to two lines instead of
-            // pushing its neighbours off the row.
-            .widthIn(max = 96.dp),
+            // **A fixed width, not a ceiling.** Sized to the content, these came out ragged --
+            // "Share" narrow, "More from this author" wide -- and a row of different-sized things
+            // does not read as a set of equals. One width makes them a grid.
+            .width(CELL)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
-        Icon(imageVector = icon, contentDescription = null)
+        // The accent colour, because these are controls. Drawn in the ordinary content colour they
+        // read as labels, which is what the owner noticed when the text buttons they replaced --
+        // which were accented by default -- stopped being.
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center,
+            maxLines = 2,
             modifier = Modifier.padding(top = 2.dp),
         )
     }

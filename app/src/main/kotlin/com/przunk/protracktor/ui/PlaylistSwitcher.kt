@@ -15,7 +15,6 @@
  */
 package com.przunk.protracktor.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,11 +26,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -81,15 +80,21 @@ fun PlaylistSwitcher(
                     headlineContent = {
                         Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     },
+                    // The size, where a dot used to say "this is the current one". The dot
+                    // spent a slot on something the row can say by being highlighted, and left the
+                    // question a list of bare names cannot answer: which of these has anything in
+                    // it (`docs/BACKLOG.md` A21).
                     leadingContent = {
-                        Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                            if (active) {
-                                Box(
-                                    Modifier
-                                        .size(10.dp)
-                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                                )
-                            }
+                        Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "${playlist.trackCount}",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (active) {
+                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
                         }
                     },
                     trailingContent = {
@@ -111,6 +116,15 @@ fun PlaylistSwitcher(
                                 )
                             }
                         }
+                    },
+                    // The whole row, the same way the playing track is marked in the playlist, so
+                    // "which one am I in" is one convention rather than two.
+                    colors = if (active) {
+                        ListItemDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    } else {
+                        ListItemDefaults.colors()
                     },
                     modifier = Modifier.clickable { onSelect(playlist.id) },
                 )
