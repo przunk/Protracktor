@@ -500,6 +500,20 @@ width comes from the caller as `weight(1f)` rather than a fixed size: a fixed ce
 equal columns on a screen wide enough to hold them, and on a phone the extras wrapped out of sight
 and read as missing.
 
+### A row's own actions live behind its three dots
+
+A track row in Browse and in the playlist puts everything you can do *to* that track behind an
+overflow menu, and since 2026-09-04 a playlist row in the switcher does the same: **rename, export,
+delete**. Before that the switcher had three shapes for the same idea — rename appeared only on the
+active row, delete sat beside it as a bare icon, and export was a button at the bottom that silently
+meant "whichever one is open". Naming the playlist in the menu you opened is also what makes export
+answer the obvious question, "can I export one I am not listening to".
+
+**Import is deliberately not in that menu.** It does not add to the row you opened; it creates a
+playlist of its own, always. It sits next to *New playlist* instead, because those two are the only
+things here that bring a playlist into existence — an "Import" among a row's own actions would
+promise precisely what it refuses to do.
+
 ### Anatomy
 
 Browse, search and history rows share one anatomy, and the playlist row is the same thing plus a
@@ -512,10 +526,15 @@ Playing something from Browse used to offer no way to keep it — the dock's **+
 Random. It now appears whenever something outside the playlist is playing, which is the natural
 moment to decide you want to keep a tune: just after hearing it.
 
-**And it says so.** Adding from the playlist screen stays silent on success, because there the rows
-appear and a notice would only repeat the screen. This button is pressed from the dock while looking
-at something else entirely, so nothing appears — and the owner had to navigate away to find out
-whether it had worked. The same rule, applied honestly, gives opposite answers in the two places.
+**And it says so — as does every other way of adding, since 2026-09-04.** The rule used to be
+"silent when the rows appear, spoken when they do not", and the silent half kept being wrong. Adding
+from a local folder closes Browse and lands on a playlist whose visible part may not change at all:
+the new rows are at the end. Scrolling to them is not something a person reads as an answer, and the
+owner reported the silence as a fault twice, in two different places.
+
+The reasoning behind the silence was that a notice covered the very rows it reported. That
+collision was fixed separately when the snackbar became swipeable, so what remained was a rule
+defending against a problem that no longer existed.
 
 ### Adding to other playlists
 
