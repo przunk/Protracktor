@@ -395,18 +395,19 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 
 - ~~**An App Bundle.**~~ `./scripts/build-bundle.sh`, written 2026-09-02. The key itself is still
   the owner's to create; the script asks for it and refuses to produce a debug-signed bundle.
-- **The launcher icon** (A9) is the system's `ic_media_play`. The store will not take that, and it
-  is the one asset visible on every home screen.
+- ~~**The launcher icon** (A9)~~ — done 2026-09-03: an adaptive icon with a monochrome layer for
+  themed icons, at every density.
 - **A privacy policy and a data-safety declaration.** Required for every listing. Ours is unusually
   easy and worth saying plainly: the app collects nothing, has no analytics, no accounts, no
   crash reporting, and the only network traffic is fetching music from archives the user chose.
 - **The GPL and the store.** Distributing a GPL-3 app through Play is fine, and the obligation is
   that source is offered to recipients — the public repository does that. Worth writing down once
   so it is not re-litigated. The **`sc68` replay binaries** question (`docs/LICENSES.md`) is a real
-  one to settle *before* publishing, not after.
+  one to settle *before* publishing, not after — and it is now **measured** rather than argued:
+  shipping only sc68's own replay costs nothing for SNDH and most of `.sc68`.
 - **Content rating, listing text, screenshots, a feature graphic.** Mechanical, but none exists.
-- **`versionCode` discipline.** Every upload needs a higher one; the scheme is in `docs/BUILD.md`
-  and has never been exercised against a store that rejects duplicates.
+- ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
+  count now and nobody has to remember it.
 
 **Not started, and not to be started without the owner**: publishing is his account, his key and
 his name on the listing.
@@ -655,7 +656,7 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
-## A25. Import and export a playlist
+## A25. ~~Import and export a playlist~~ — DONE 2026-09-03
 
 Raised 2026-09-03 by the owner.
 
@@ -687,6 +688,21 @@ carry what M3U cannot, in a way other players ignore.
 **Worth deciding early:** whether export is *for another copy of this app* or *for other players*.
 They pull in opposite directions — the first wants our identifiers, the second wants plain paths —
 and trying to serve both is how a format ends up serving neither.
+
+**Built 2026-09-03, and that question is answered by putting each thing where it belongs rather than
+choosing between them.** The file is M3U: the location line is what another player reads — a real
+URL for a catalogue track, a path for a local file — and our identifiers go in `#PROTRACKTOR:`
+comments, which every other program ignores by the format's own rules.
+
+**Import gives each line two chances.** Its recorded id, which is exact and makes a backup restore
+perfectly on the device that wrote it; and failing that a match on filename **and size** against the
+scanned library, which is how a list written on another phone finds the same tunes here. Size is not
+decoration — `elysium.mod` is a filename several hundred people have used.
+
+**Import always makes a new playlist**, never appends to the open one: an import that edited whatever
+happened to be in front of you would be a change nobody asked for, and undoing it means working out
+which rows were new. It says how many of the file's lines it could not place rather than quietly
+arriving shorter.
 
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 

@@ -157,6 +157,8 @@
     <string name="subsongs_all">Wszystkie</string>
     <string name="subsongs_first_only">Tylko pierwszy</string>
     <string name="a11y_expand_player">Otwórz odtwarzacz</string>
+    <string name="action_import_playlist">Importuj</string>
+    <string name="action_export_playlist">Eksportuj</string>
     <string name="action_scan_folder">Przeskanuj ten folder</string>
     <string name="scan_listing">Listowanie folderu…</string>
     <string name="scan_progress">Otwieranie plików: %1$d z %2$d</string>

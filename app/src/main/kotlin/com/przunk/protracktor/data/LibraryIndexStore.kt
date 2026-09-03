@@ -173,6 +173,43 @@ class LibraryIndexStore(context: Context) {
         }
     }
 
+    /**
+     * A file in the scanned library that matches a name and size.
+     *
+     * How an imported playlist finds its tracks on a device that did not write it: the document URI
+     * it carries was issued by a provider somewhere else and means nothing here, but the same tune
+     * under the same name and byte count almost certainly is the same tune. It is the rule
+     * `TrackRef.sameFileAs` already uses to stop one file appearing twice in a playlist.
+     *
+     * Size is part of it, not decoration -- `elysium.mod` is a filename several hundred people have
+     * used.
+     */
+    suspend fun findByFile(fileName: String, sizeBytes: Long): TrackRef? = withContext(Dispatchers.IO) {
+        val sql = StringBuilder(
+            "SELECT uri, path, file_name, size, title, author, subsongs FROM library_index " +
+                "WHERE file_name = ?"
+        )
+        val args = mutableListOf(fileName)
+        if (sizeBytes > 0) {
+            sql.append(" AND size = ?")
+            args += sizeBytes.toString()
+        }
+        sql.append(" LIMIT 1")
+        helper.readableDatabase.rawQuery(sql.toString(), args.toTypedArray()).use { row ->
+            if (!row.moveToFirst()) return@withContext null
+            val name = row.getString(2)
+            TrackRef(
+                id = row.getString(0),
+                title = row.getString(4).ifBlank { name },
+                subtitle = row.getString(1),
+                sizeBytes = row.getLong(3),
+                fileName = name,
+                author = row.getString(5),
+                subsongs = row.getInt(6),
+            )
+        }
+    }
+
     suspend fun forgetFolder(folderUri: String) = withContext(Dispatchers.IO) {
         helper.writableDatabase.delete("library_index", "folder_uri = ?", arrayOf(folderUri))
         Unit

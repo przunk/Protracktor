@@ -76,6 +76,10 @@ working and fetching serially, which he heard; that is fixed.
 
 ## Finished
 
+- **2026-09-03** — **A playlist is a file, both ways** (**A25**). Export writes M3U — readable by
+  other players, with our own identifiers in comments they ignore — and import reads it back,
+  matching each line by its recorded id first and by filename and size second, into a new playlist
+  of its own.
 - **2026-09-03** — **Subsongs** (**A2**). A file holding fifteen tunes played one of them; now the
   expanded player lists them and a mode decides whether they play through. All five backends could
   already select — ASAP was calling `ASAP_PlaySong` with a fixed index — so the work was mostly

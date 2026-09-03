@@ -33,6 +33,8 @@
     <string name="subsongs_all">All tunes</string>
     <string name="subsongs_first_only">First only</string>
     <string name="a11y_expand_player">Open the player</string>
+    <string name="action_import_playlist">Import</string>
+    <string name="action_export_playlist">Export</string>
     <string name="action_scan_folder">Scan this folder</string>
     <string name="scan_listing">Listing the folder…</string>
     <string name="scan_progress">Opening files: %1$d of %2$d</string>

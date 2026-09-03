@@ -104,6 +104,12 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) { viewModel.addFiles(uris); showBrowse = false } }
 
+    // A playlist file, not music. Any type: providers disagree about what an .m3u8 is, and a filter
+    // that greys out the file the user is pointing at is worse than no filter.
+    val playlistPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let(viewModel::importPlaylist) }
+
     // Opening Browse from a button starts at the top; opening it from a jump does not, because the
     // jump has already aimed it. Tying the reset to the button rather than to the sheet being shown
     // is what keeps those two apart.
@@ -379,6 +385,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
             onSelect = { id ->
                 if (state.dirty) pendingSwitch = id else viewModel.switchToPlaylist(id)
             },
+            onImport = { playlistPicker.launch(arrayOf("*/*")) },
             onDismiss = { showPlaylists = false },
         )
     }
@@ -428,6 +435,7 @@ private fun PlaylistSheet(
     state: com.przunk.protracktor.player.PlayerUiState,
     viewModel: PlayerViewModel,
     onSelect: (Long) -> Unit,
+    onImport: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
@@ -444,6 +452,8 @@ private fun PlaylistSheet(
             onCreate = viewModel::createPlaylist,
             onRename = viewModel::renameActivePlaylist,
             onDelete = viewModel::deletePlaylist,
+            onImport = { onImport(); onDismiss() },
+            onExport = { viewModel.exportPlaylist(); onDismiss() },
         )
     }
 }

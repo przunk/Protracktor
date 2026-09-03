@@ -157,6 +157,30 @@ a new playlist on the fly from the picker.
 
 **Related:** `docs/BACKLOG.md` A4 candidate bulk actions share this picker machinery.
 
+## B19. Should an export carry the music, not just the list?
+
+*owner, 2026-09-03, raised while looking at the export that had just been built.*
+
+Today an export is a list of references (`docs/BACKLOG.md` A25). A **zip holding the actual files**
+would make a playlist self-contained: it would open on a phone that has never seen those tunes, and
+survive the library being reorganised, both of which the reference form cannot do.
+
+**The reason it is a wish and not a task** is that it stops being a file-format question. Exporting a
+list of names is describing music; exporting a zip of the files **is distributing it**. Most of this
+is demoscene and game music of uncertain ownership — the same uncertainty already recorded for
+sc68's replay binaries in `docs/LICENSES.md` — and a button that quietly turns a personal library
+into a shareable archive deserves to be a decision rather than a side effect.
+
+Worth weighing when it is:
+
+- **Size.** These formats are kilobytes, so a hundred-track playlist is a few megabytes. That is the
+  argument *for*: unlike most music, this can actually travel.
+- **Which files.** A catalogue track is a URL that anyone can fetch, so including its bytes adds
+  weight for nothing. Local files are the ones that cannot travel otherwise — so a mixed export
+  would sensibly carry the local files and reference the rest.
+- **Import would need to unpack somewhere**, which means the app owns a copy of music the user
+  already had. That is a storage question on top of a licensing one (`docs/BACKLOG.md` A13).
+
 ## B4. Play MP3 too
 
 *owner, 2026-09-01.*
