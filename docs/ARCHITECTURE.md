@@ -512,10 +512,15 @@ Playing something from Browse used to offer no way to keep it — the dock's **+
 Random. It now appears whenever something outside the playlist is playing, which is the natural
 moment to decide you want to keep a tune: just after hearing it.
 
-**And it says so.** Adding from the playlist screen stays silent on success, because there the rows
-appear and a notice would only repeat the screen. This button is pressed from the dock while looking
-at something else entirely, so nothing appears — and the owner had to navigate away to find out
-whether it had worked. The same rule, applied honestly, gives opposite answers in the two places.
+**And it says so — as does every other way of adding, since 2026-09-04.** The rule used to be
+"silent when the rows appear, spoken when they do not", and the silent half kept being wrong. Adding
+from a local folder closes Browse and lands on a playlist whose visible part may not change at all:
+the new rows are at the end. Scrolling to them is not something a person reads as an answer, and the
+owner reported the silence as a fault twice, in two different places.
+
+The reasoning behind the silence was that a notice covered the very rows it reported. That
+collision was fixed separately when the snackbar became swipeable, so what remained was a rule
+defending against a problem that no longer existed.
 
 ### Adding to other playlists
 
