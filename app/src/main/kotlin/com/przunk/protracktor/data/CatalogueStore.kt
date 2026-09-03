@@ -53,7 +53,7 @@ data class CatalogueGroup(val name: String, val count: Int)
  */
 class CatalogueStore(context: Context) {
 
-    private val helper = ProtracktorDatabase(context.applicationContext)
+    private val helper = ProtracktorDatabase.of(context)
 
     suspend fun summaries(): List<CatalogueSummary> = withContext(Dispatchers.IO) {
         val stored = helper.readableDatabase

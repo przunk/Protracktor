@@ -45,7 +45,7 @@ data class IndexedFile(
  */
 class LibraryIndexStore(context: Context) {
 
-    private val helper = ProtracktorDatabase(context.applicationContext)
+    private val helper = ProtracktorDatabase.of(context)
 
     /**
      * Replaces one folder's contents wholesale.

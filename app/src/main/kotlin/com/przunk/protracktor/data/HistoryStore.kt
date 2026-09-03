@@ -40,7 +40,7 @@ data class PlayedTrack(
  */
 class HistoryStore(context: Context) {
 
-    private val helper = ProtracktorDatabase(context.applicationContext)
+    private val helper = ProtracktorDatabase.of(context)
 
     /**
      * Records a play, or moves an existing one to the top and counts it.

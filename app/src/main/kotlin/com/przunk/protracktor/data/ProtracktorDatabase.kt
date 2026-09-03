@@ -30,8 +30,35 @@ import android.database.sqlite.SQLiteOpenHelper
  *
  * All the SQL is in [SchemaSql] so it can be tested on the JVM. This class only executes it.
  */
-class ProtracktorDatabase(context: Context) :
+class ProtracktorDatabase private constructor(context: Context) :
     SQLiteOpenHelper(context, SchemaSql.NAME, null, SchemaSql.VERSION) {
+
+    companion object {
+        @Volatile
+        private var instance: ProtracktorDatabase? = null
+
+        /**
+         * The one helper for this process.
+         *
+         * **Not a style preference.** `SQLiteOpenHelper` synchronises within an instance and not
+         * between instances, so five stores each holding their own -- which is what this was --
+         * meant five connection pools on one file and five things that could independently decide
+         * to run `onUpgrade`. Two of them opening at once during an upgrade can both read the old
+         * version and both migrate; the statements are plain `CREATE TABLE` and the second run
+         * fails with "table already exists", on the launch that upgrades, which is the launch that
+         * matters. `docs/review.md` R3 has the reproduction.
+         *
+         * `IF NOT EXISTS` would have silenced the symptom and left five pools racing, which is the
+         * wrong half of the problem.
+         *
+         * Double-checked locking on a `@Volatile` field: the fast path is a read, and the slow one
+         * happens once per process.
+         */
+        fun of(context: Context): ProtracktorDatabase =
+            instance ?: synchronized(this) {
+                instance ?: ProtracktorDatabase(context.applicationContext).also { instance = it }
+            }
+    }
 
     override fun onConfigure(db: SQLiteDatabase) {
         // Off by default on Android. The schema leans on ON DELETE CASCADE, which without this is

@@ -43,7 +43,7 @@ data class GrantedFolder(val uri: String, val displayName: String)
  */
 class LibraryStore(context: Context) {
 
-    private val helper = ProtracktorDatabase(context.applicationContext)
+    private val helper = ProtracktorDatabase.of(context)
 
     // --- playlists ----------------------------------------------------------------------------
 

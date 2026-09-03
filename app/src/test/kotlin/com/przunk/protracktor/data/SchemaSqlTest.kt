@@ -420,6 +420,27 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `a migration run twice fails, which is why there is one database helper`() {
+        // Not a wish, a constraint. The statements are plain CREATE TABLE, so running a migration
+        // twice throws -- and `SQLiteOpenHelper` synchronises within an instance, not between
+        // instances. Five stores each holding their own helper (which is what this project had
+        // until 2026-09-03) meant five things that could independently decide to migrate, and two
+        // of them racing during an upgrade crashes the launch that upgrades.
+        //
+        // If somebody makes these idempotent and this test starts failing, the right response is
+        // not to delete it: it is to ask whether ProtracktorDatabase still needs to be a singleton,
+        // and to answer that question deliberately. `docs/review.md` R3.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            val again = runCatching { connection.run(SchemaSql.MIGRATIONS.getValue(SchemaSql.VERSION)) }
+            assertTrue(
+                "the newest migration replayed without error; see the comment above",
+                again.isFailure,
+            )
+        }
+    }
+
+    @Test
     fun `a missing migration step is an error rather than a silent skip`() {
         val thrown = runCatching { SchemaSql.migrationsBetween(SchemaSql.VERSION, SchemaSql.VERSION + 5) }
         assertTrue("upgrading past the last known version should refuse", thrown.isFailure)

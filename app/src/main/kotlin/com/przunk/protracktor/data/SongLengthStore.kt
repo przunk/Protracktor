@@ -29,7 +29,7 @@ import java.security.MessageDigest
  */
 class SongLengthStore(context: Context) {
 
-    private val helper = ProtracktorDatabase(context.applicationContext)
+    private val helper = ProtracktorDatabase.of(context)
 
     /** How many tunes are known. Zero means the database has not been downloaded. */
     suspend fun count(): Int = withContext(Dispatchers.IO) {

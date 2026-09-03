@@ -118,10 +118,13 @@ first migration: OK
 second migration: FAILS -> table library_index already exists
 ```
 
-**Correction.** One helper for the whole process, shared by every store. `IF NOT EXISTS` would
-silence the symptom while leaving five connection pools racing, which is the wrong half.
+**Correction.** One helper for the whole process, shared by every store, behind double-checked
+locking on a `@Volatile` field. `IF NOT EXISTS` would have silenced the symptom while leaving five
+connection pools racing, which is the wrong half of the problem.
 
-**Status:** fixed — see Phase 3.
+**Status:** **fixed**, with a test that keeps the reason alive: replaying the newest migration must
+fail. If somebody later makes the statements idempotent and that test starts failing, the right
+answer is not to delete it but to ask whether the singleton is still needed.
 
 ### R4 — a conditional whose branches are identical · **low**
 
