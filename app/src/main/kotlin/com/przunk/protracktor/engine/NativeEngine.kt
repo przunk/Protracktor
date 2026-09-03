@@ -15,6 +15,8 @@
  */
 package com.przunk.protracktor.engine
 
+import com.przunk.protracktor.player.SupportedFormats
+
 /**
  * The Kotlin side of the native player.
  *
@@ -60,7 +62,13 @@ object NativeEngine {
      * every "nothing can play this" the old set had written down became wrong. An index that cannot
      * notice that is an index that quietly outlives its own reasoning.
      */
-    fun backendsFingerprint(): String = nativeBackendsFingerprint()
+    /**
+     * What this build would put in an index: the decoders, and the names they are offered.
+     *
+     * Both halves matter and only one used to be recorded. See `SupportedFormats.fingerprint`.
+     */
+    fun backendsFingerprint(): String =
+        nativeBackendsFingerprint() + ";" + SupportedFormats.fingerprint
 
     /**
      * Opens a module from its bytes. Returns a handle, or `null` if the bytes are not a module the
