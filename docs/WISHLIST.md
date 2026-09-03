@@ -114,6 +114,10 @@ Cheap: `played_at` is already stored, to the millisecond. What needs deciding is
 "yesterday, 21:14" reads better than a date for anything recent and worse for anything old, and
 grouping the list under day headings may be better than putting a timestamp on every row.
 
+**Raised again 2026-09-03**, and it is what the owner wanted from history all along: asked whether
+replaying should reorder the list (`docs/BACKLOG.md` A18) he said no, and *"what I care about more
+is the date and time in history."*
+
 ## B16. ~~The share-file and share-link icons are the same~~ — DONE 2026-09-02
 
 *owner, 2026-09-02.* Both used `PlayerIcons.Share`. The link has its own now — two actions that do

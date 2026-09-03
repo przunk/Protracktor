@@ -233,7 +233,7 @@ track yet, so "nothing playing" must not mean "stop the service" — only an emp
 a non-empty one means playback is really over.
 
 It also has a deadline. Android gives a started service roughly five seconds to call
-`startForeground`, and the first track is still being read off disk — over SMB, on the owner's setup.
+`startForeground`, and the first track is still being read off disk.
 So the notification is posted immediately with whatever state exists and updated afterwards.
 
 ### What is missing
@@ -277,7 +277,7 @@ player branches on the scheme and nothing else in the app has to know the differ
 ### The cache is not an optimisation
 
 A measured Modland fetch took four seconds for 212 KB, and the owner's own local library sits on an
-SMB share, so "read the file" is a network round trip either way. Fetched bytes are cached by a hash
+network, so "read the file" is a round trip either way. Fetched bytes are cached by a hash
 of the URL — hashed rather than sanitised, because real Modland paths carry spaces, slashes, `@` and
 `$`, and any escaping scheme would eventually collide. Downloads land through a temporary file, so
 an interrupted one cannot leave a truncated file that looks valid forever after.

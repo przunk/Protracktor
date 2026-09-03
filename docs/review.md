@@ -222,7 +222,7 @@ more moving parts than they remove.
 ## Not reviewable here
 
 - Anything about **how it feels**: gesture timing, whether a list jumps under a thumb, whether a
-  scan of the owner's SMB share is bearable. Every defect this project has actually shipped was
+  scan of a real library is bearable. Every defect this project has actually shipped was
   found that way.
 - **R9 (instant start)** on the owner's network share, which is `docs/STATUS.md` C3 and needs his
   hardware.
