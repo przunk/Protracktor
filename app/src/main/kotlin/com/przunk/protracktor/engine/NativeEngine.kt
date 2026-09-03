@@ -42,7 +42,14 @@ object NativeEngine {
      * Empty when nothing failed. Worth showing: a file no backend claims and a file a backend
      * claimed and then choked on are different problems, and they look identical from outside.
      */
-    fun lastOpenError(): String = nativeLastOpenError()
+    /**
+     * What [open] produced: the track, or nothing and the reason.
+     *
+     * The reason is worth carrying. A file no backend claims and a file a backend claimed and then
+     * choked on are different problems, and they look identical from outside -- it took a host
+     * probe to find that sc68 2.2.1 loaded some SNDH files and failed validation on others.
+     */
+    data class Opened(val track: Track?, val error: String)
 
     /**
      * Which decoders this build has, and at which versions.
@@ -66,9 +73,17 @@ object NativeEngine {
      * formats ASAP handles are told apart by extension rather than by any header, and one of them
      * shares `.fc` with an Amiga format libopenmpt claims.
      */
-    fun open(bytes: ByteArray, fileName: String): Track? {
-        val handle = nativeOpen(bytes, fileName)
-        return if (handle == 0L) null else Track(handle)
+    fun open(bytes: ByteArray, fileName: String): Opened {
+        // The reason comes back with the call. It used to sit in a process-wide string that the
+        // caller collected afterwards, which was fine while one thread opened files at a time and
+        // became a data race -- confirmed under ThreadSanitizer -- the moment library scanning was
+        // made concurrent with playback (`docs/review.md` R2).
+        val reason = arrayOfNulls<String>(1)
+        val handle = nativeOpen(bytes, fileName, reason)
+        return Opened(
+            track = if (handle == 0L) null else Track(handle),
+            error = reason[0].orEmpty(),
+        )
     }
 
     /** An open module. Must be [close]d; the native side owns memory that GC does not see. */
@@ -134,7 +149,11 @@ object NativeEngine {
         }
     }
 
-    @JvmStatic private external fun nativeOpen(data: ByteArray, fileName: String): Long
+    @JvmStatic private external fun nativeOpen(
+        data: ByteArray,
+        fileName: String,
+        errorOut: Array<String?>,
+    ): Long
     @JvmStatic private external fun nativeClose(handle: Long)
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
     @JvmStatic private external fun nativeStop(handle: Long)
@@ -142,7 +161,6 @@ object NativeEngine {
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
     @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
     @JvmStatic private external fun nativeSetDataPath(path: String)
-    @JvmStatic private external fun nativeLastOpenError(): String
     @JvmStatic private external fun nativeBackendsFingerprint(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String

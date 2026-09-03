@@ -335,18 +335,6 @@ private:
     bool ended_ = false;
 };
 
-/**
- * Why the last open failed, in words.
- *
- * "Not a format we can play yet" is true of a file no backend claims and false of one a backend
- * claimed and then choked on -- and the owner cannot tell those apart from the outside. Neither
- * could I: it took a host probe to find that sc68 2.2.1 loads some SNDH files and fails validation
- * on others. Saying which happened costs one string.
- */
-std::string &lastOpenError() {
-    static std::string reason;
-    return reason;
-}
 
 /**
  * Atari 8-bit, through a 6502 and a POKEY.
@@ -696,8 +684,9 @@ private:
     std::size_t spareRead_ = 0;
 };
 
-std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name) {
-    lastOpenError().clear();
+std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name,
+                                     std::string &error) {
+    error.clear();
 
     // ASAP first when the name is one of its fourteen: several of its formats are told apart by
     // extension rather than by any header, so nothing else can make that call.
@@ -706,7 +695,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<AsapBackend>(bytes, name);
         } catch (const std::exception &e) {
             LOGE("ASAP claimed the name but refused: %s", e.what());
-            lastOpenError() = std::string("ASAP refused it: ") + e.what();
+            error = std::string("ASAP refused it: ") + e.what();
         }
     }
 
@@ -717,7 +706,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<SidBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("libsidplayfp refused it: %s", e.what());
-            lastOpenError() = e.what();
+            error = e.what();
         }
     }
 
@@ -728,7 +717,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<GmeBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("gme recognised the header but refused: %s", e.what());
-            lastOpenError() = e.what();
+            error = e.what();
         }
     }
 
@@ -740,15 +729,15 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<Sc68Backend>(bytes);
         } catch (const std::exception &e) {
             LOGE("sc68 recognised but refused: %s", e.what());
-            lastOpenError() = std::string("sc68 recognised this file but refused it: ") + e.what();
+            error = std::string("sc68 recognised this file but refused it: ") + e.what();
         }
     }
     try {
         return std::make_unique<OpenmptBackend>(bytes);
     } catch (const std::exception &e) {
         LOGE("libopenmpt refused: %s", e.what());
-        if (lastOpenError().empty()) {
-            lastOpenError() = std::string("no backend recognised it: ") + e.what();
+        if (error.empty()) {
+            error = std::string("no backend recognised it: ") + e.what();
         }
     }
     return nullptr;
@@ -902,7 +891,8 @@ extern "C" {
 
 JNIEXPORT jlong JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, jbyteArray data,
-                                                          jstring fileName) {
+                                                          jstring fileName,
+                                                          jobjectArray errorOut) {
     const jsize length = env->GetArrayLength(data);
     std::vector<char> bytes(static_cast<std::size_t>(length));
     env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
@@ -911,9 +901,23 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
     const std::string name = nameChars ? nameChars : "";
     env->ReleaseStringUTFChars(fileName, nameChars);
 
+    // The reason is a local and goes back with this call, not into a global for somebody to
+    // collect afterwards. It used to be one process-wide std::string; that was fine while one
+    // thread opened files at a time, and became a data race the moment library scanning was made
+    // concurrent with playback -- ThreadSanitizer confirmed it (`docs/review.md` R2). Two threads
+    // clearing and assigning one std::string is undefined behaviour, not merely a mixed-up message.
+    std::string error;
+
     // No backend recognising the bytes is reported as a handle of 0. The caller says so to the user
     // rather than failing silently.
-    auto backend = openBackend(std::move(bytes), name);
+    auto backend = openBackend(std::move(bytes), name, error);
+
+    if (errorOut && env->GetArrayLength(errorOut) > 0) {
+        jstring text = env->NewStringUTF(error.c_str());
+        env->SetObjectArrayElement(errorOut, 0, text);
+        env->DeleteLocalRef(text);
+    }
+
     if (!backend) return 0;
     return reinterpret_cast<jlong>(new Player(std::move(backend)));
 }
@@ -948,10 +952,6 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlo
     asPlayer(handle)->seek(seconds);
 }
 
-JNIEXPORT jstring JNICALL
-Java_com_przunk_protracktor_engine_NativeEngine_nativeLastOpenError(JNIEnv *env, jclass) {
-    return env->NewStringUTF(lastOpenError().c_str());
-}
 
 /**
  * Which decoders this build has, and at which versions.

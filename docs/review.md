@@ -78,18 +78,23 @@ resolution — because item 2 made scanning concurrent with playback on purpose.
 behaviour: concurrent `clear()` and assignment on a `std::string` can corrupt its internal state
 and crash the process.
 
-**Evidence.** The pattern reduced to its essentials and run under ThreadSanitizer
-(`/tmp/race.cc`, `setarch -R` because WSL2's ASLR upsets TSan):
+**Evidence.** `native/probe/engine/open_error_race.cc` holds both patterns and runs either:
 
 ```
-WARNING: ThreadSanitizer: data race
-SUMMARY: ThreadSanitizer: data race in std::__cxx11::basic_string<...>::_M_length
+g++ -fsanitize=thread -g -O1 -o /tmp/openrace native/probe/engine/open_error_race.cc -lpthread
+setarch -R /tmp/openrace before   -> 3 × WARNING: ThreadSanitizer: data race
+setarch -R /tmp/openrace after    -> clean
 ```
 
-**Correction.** Make the error per-open rather than per-process: return it with the failure instead
-of leaving it in a global for somebody to collect.
+`setarch -R` because ThreadSanitizer will not start under WSL2 with address-space randomisation on.
 
-**Status:** fixed — see Phase 3.
+**Correction.** Make the error per-open rather than per-process: `openBackend` takes it by
+reference, `nativeOpen` writes it into a one-element `Array<String?>`, and `NativeEngine.open`
+returns an `Opened(track, error)`. The global and its JNI accessor are gone — the release APK
+carries 13 native symbols where it carried 14.
+
+**Status:** **fixed**, and the before/after pair is kept in the tree so the claim can be re-run
+rather than believed.
 
 ### R3 — the schema migration is not idempotent, and five helpers can run it · **high**
 
