@@ -122,6 +122,11 @@ did not ask for it; it is not in.
 **Built.** Long press starts selecting, exactly as in Browse, and the checkbox takes the ordinal's
 slot — already reserved and already that size, so entering selection moves nothing.
 
+**Corrected after he used it:** the actions are icons with labels like everywhere else rather than
+bare text; the bar is one row, because the dock's height was being applied *inside* it and made it
+three; and the follow-track button is hidden while selecting, since it floats over the corner where
+the actions now are.
+
 **Two buttons for three actions, and that is not a shortcut.** *Add to playlist…* opens the picker,
 which offers an existing playlist **or a new one** — so "make a new playlist from these" is in there
 rather than missing. *Remove* is the other. Say if you would rather see three.

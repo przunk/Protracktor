@@ -231,14 +231,18 @@ private fun PlaylistBody(
         if (selecting) {
             Surface(
                 tonalElevation = 3.dp,
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    // The dock's height goes *outside* the bar, not inside it. Putting the whole
+                    // content padding within made the bar three rows tall and reaching a third of
+                    // the way up the screen -- it was clearing the dock by growing rather than by
+                    // sitting above it.
+                    .padding(bottom = contentPadding.calculateBottomPadding()),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(contentPadding)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
                 ) {
                     Text(
                         text = pluralStringResource(
@@ -247,20 +251,26 @@ private fun PlaylistBody(
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = {
-                        onAddSelectedToPlaylist(state.queue.tracks.filter { it.id in selected })
-                        selected = emptySet()
-                    }) {
-                        Text(stringResource(R.string.action_add_to_playlist))
-                    }
-                    TextButton(onClick = {
-                        onRemoveMany(
-                            state.queue.tracks.indices.filter { state.queue.tracks[it].id in selected }
-                        )
-                        selected = emptySet()
-                    }) {
-                        Text(stringResource(R.string.action_delete))
-                    }
+                    // Icon with its name underneath, like every other action in the app.
+                    LabelledAction(
+                        icon = PlayerIcons.PlaylistAdd,
+                        label = stringResource(R.string.action_add_to_playlist),
+                        onClick = {
+                            onAddSelectedToPlaylist(state.queue.tracks.filter { it.id in selected })
+                            selected = emptySet()
+                        },
+                    )
+                    LabelledAction(
+                        icon = PlayerIcons.Remove,
+                        label = stringResource(R.string.action_delete),
+                        onClick = {
+                            onRemoveMany(
+                                state.queue.tracks.indices
+                                    .filter { state.queue.tracks[it].id in selected }
+                            )
+                            selected = emptySet()
+                        },
+                    )
                 }
             }
         }
@@ -278,7 +288,9 @@ private fun PlaylistBody(
         }
     }
 
-    if (enabled) {
+    // Not while selecting: it floats over the bottom-right corner, which is where the actions are,
+    // and following the playing track is not what you are doing when you are choosing rows.
+    if (enabled && !selecting) {
         FollowTrackButton(
             listState = listState,
             currentIndex = currentIndex,

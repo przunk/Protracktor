@@ -233,6 +233,14 @@ class PlaybackController private constructor(private val context: Context) {
 
         /** Between files, so resolving hundreds does not saturate a network share. */
         private const val RESOLVE_GAP_MS = 120L
+
+        /**
+         * How long the track list waits before being written.
+         *
+         * Longer than [RESOLVE_GAP_MS] by an order of magnitude, so a run of resolutions collapses
+         * into one write rather than one write each.
+         */
+        private const val TRACK_WRITE_DEBOUNCE_MS = 1500L
         const val DEFAULT_PLAYLIST_NAME = "Playlist"
 
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
@@ -384,6 +392,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Debounces writes. Every transport press changes state; the disk does not need each one. */
     private var saveJob: Job? = null
+    private var trackWriteJob: Job? = null
 
     init {
         // Before anything can be opened: sc68 reads its replay binaries from a path, and an asset
@@ -454,6 +463,28 @@ class PlaybackController private constructor(private val context: Context) {
                 )
             }
             resolveMetadataInBackground()
+        }
+    }
+
+    /**
+     * Writes the track list, shortly.
+     *
+     * **Debounced, and it has to be.** `replaceTracks` deletes every row of the playlist and
+     * reinserts it — two inserts per track — and background metadata resolution used to call it
+     * once per track it identified, every 120 ms. On a playlist of three hundred that is some six
+     * hundred inserts eight times a second, into the same database the list is being read from, for
+     * as long as the resolution runs. The owner reported it as the list stuttering for the first ten
+     * to twenty seconds after launch, and was right that it had nothing to do with the scrollbar he
+     * had just been given.
+     *
+     * The state still updates per track, so titles appear as they are learned. It is only the disk
+     * that waits.
+     */
+    private fun scheduleTrackWrite() {
+        trackWriteJob?.cancel()
+        trackWriteJob = scope.launch {
+            delay(TRACK_WRITE_DEBOUNCE_MS)
+            store.replaceTracks(playlistId, _state.value.queue.tracks)
         }
     }
 
@@ -1915,7 +1946,7 @@ class PlaybackController private constructor(private val context: Context) {
         // Written straight away rather than waiting for the user to press Save: this is not one of
         // their edits, it is the app learning something, and losing it would mean relearning it on
         // every launch.
-        scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
+        scheduleTrackWrite()
         return improved
     }
 

@@ -388,6 +388,26 @@ using.
 
 SidMon 1 itself still needs UADE (`docs/BACKLOG.md` A5). Sixty-one files is not a reason to hurry.
 
+### C10. ~~The list stuttered for the first ten to twenty seconds after launch~~ — FIXED 2026-09-03
+
+Reported by the owner, who also established it **predated the scrollbar he had just been given** by
+going back to the previous build. That mattered: it stopped the investigation looking at the new
+thing.
+
+**Cause.** Background metadata resolution opens each unidentified track to learn its real title, and
+`adoptTitleFrom` wrote the playlist to disk after every one. `LibraryStore.replaceTracks` deletes
+every row of the playlist and reinserts it — **two inserts per track** — so a three-hundred-track
+playlist meant some six hundred inserts, roughly eight times a second, into the same database the
+list was being read from, for as long as the resolution ran. Which is ten to twenty seconds.
+
+**Fix.** The write is debounced by 1.5 s, an order of magnitude longer than the 120 ms gap between
+resolutions, so a run of them collapses into one write. The **state** still updates per track, so
+titles appear as they are learned; only the disk waits.
+
+**Worth keeping:** the comment justifying the immediate write said it was "the app learning
+something, and losing it would mean relearning it on every launch". That reasoning was right and
+survives — 1.5 s of risk against a stutter the owner could feel is not a trade worth defending.
+
 ### C3. R9 is addressed but unmeasured
 
 The next track is read while the current one plays and remote fetches are cached, but nobody has
