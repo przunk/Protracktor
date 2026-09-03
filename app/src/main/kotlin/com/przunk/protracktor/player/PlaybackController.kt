@@ -754,7 +754,7 @@ class PlaybackController private constructor(private val context: Context) {
             context.contentResolver.openInputStream(Uri.parse(candidate.uri))?.use { it.readBytes() }
         }.getOrNull() ?: return null
 
-        val opened = NativeEngine.open(bytes, candidate.fileName) ?: return null
+        val opened = NativeEngine.open(bytes, candidate.fileName).track ?: return null
         return try {
             val described = opened.describe()
             IndexedFile(
@@ -1767,12 +1767,13 @@ class PlaybackController private constructor(private val context: Context) {
                 return@launch
             }
 
-            val opened = withContext(Dispatchers.IO) { NativeEngine.open(bytes, ref.fileNameOrTitle) }
+            val result = withContext(Dispatchers.IO) { NativeEngine.open(bytes, ref.fileNameOrTitle) }
+            val opened = result.track
             if (opened == null) {
                 // The reason, not just the verdict. "Not a format we can play" is wrong when a
                 // backend claimed the file and then choked on it, which is exactly what sc68 does
                 // with some SNDH files -- and the two are indistinguishable from outside.
-                val reason = NativeEngine.lastOpenError()
+                val reason = result.error
                 _state.update {
                     it.copy(
                         message = Message(
@@ -1897,7 +1898,7 @@ class PlaybackController private constructor(private val context: Context) {
                 if (track != null) continue // something started while the file was being read
 
                 val opened = withContext(Dispatchers.IO) {
-                    NativeEngine.open(bytes, ref.fileNameOrTitle)
+                    NativeEngine.open(bytes, ref.fileNameOrTitle).track
                 } ?: continue
                 val described = opened.describe()
                 opened.close()
