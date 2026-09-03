@@ -67,7 +67,7 @@ Two observations to bring to that conversation:
 Schema is not a constraint: the owner has confirmed the database can change freely and he can
 reinstall, since nobody else uses the app yet.
 
-## A3. Getting up and down a long list — DESIGN AGREED 2026-09-03: a draggable scrollbar
+## A3. ~~Getting up and down a long list~~ — DONE 2026-09-03
 
 **The owner's decision**, after reserving this for a conversation on 2026-09-02: *"I want a visible
 scrollbar on the right that you can grab and drag down."* So it is a real thumb the user can take
@@ -77,6 +77,14 @@ Worth knowing before building: the playlist already has a drag handle per row fo
 draggable scrollbar is a second drag on the same screen. They must not be confusable — the handle is
 inside the row, the scrollbar is at the edge, and that separation has to survive selection mode
 (`docs/ARCHITECTURE.md` §17) where rows also respond to a long press.
+
+**Built**, on the playlist and on Browse's track lists. Ten device-independent pixels at the very
+edge: wide enough to take hold of, narrow enough that a thumb scrolling the list does not land on
+it. It positions by **item counts rather than pixels** — rows here are one height, and asking a lazy
+list for the pixel extent of half a million unmeasured items is not a question it can answer — and
+it drags with `scrollToItem` rather than an animated scroll, because a list animating its way
+towards a finger reads as lag. Absent when everything already fits, since a scrollbar for six rows
+is furniture.
 
 
 Raised 2026-09-01. Three hundred tracks is a lot of flicking.
@@ -100,7 +108,7 @@ The scrollbar can follow if flicking still annoys.
 position; a scrollbar reports it better and takes no row space. That is not a reason to remove the
 number now, but it is a reason to ask again then.
 
-## A4. Bulk operations on the playlist
+## A4. ~~Bulk operations on the playlist~~ — DONE 2026-09-03
 
 **Agreed 2026-09-02 (evening):** *"long-press/bulk operations should be implemented the same way on
 the playlist"*, and the actions were settled on 2026-09-03. So the gesture and its behaviour come straight from `docs/ARCHITECTURE.md` §17 —
@@ -110,6 +118,19 @@ checkbox arrives.
 **Decided 2026-09-03.** Three actions, in the owner's words: **add to another playlist**, **remove
 from this playlist**, and **make a new playlist from these**. *Play these only* was my guess and he
 did not ask for it; it is not in.
+
+**Built.** Long press starts selecting, exactly as in Browse, and the checkbox takes the ordinal's
+slot — already reserved and already that size, so entering selection moves nothing.
+
+**Two buttons for three actions, and that is not a shortcut.** *Add to playlist…* opens the picker,
+which offers an existing playlist **or a new one** — so "make a new playlist from these" is in there
+rather than missing. *Remove* is the other. Say if you would rather see three.
+
+**Undo restores the whole selection**, which was the thing that could lose data. `TrackEditing` is a
+separate object with a round-trip test over two hundred generated selections, because the ordering
+is the trick: putting the lowest index back first makes room for the next, and going the other way
+returns a list that is subtly wrong rather than obviously broken. Reversing that order fails three
+tests, which was checked by reversing it.
 
 **Two things §17 does not cover, because Browse does not have them:**
 

@@ -307,6 +307,8 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
                 onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
+                onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
+                onRemoveMany = viewModel::removeTracks,
                 onBrowse = openBrowse,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,

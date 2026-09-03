@@ -70,6 +70,11 @@ working and fetching serially, which he heard; that is fixed.
 
 ## Finished
 
+- **2026-09-03** — **A scrollbar you can grab**, at the edge of the playlist and of Browse's track
+  lists (**A3**), and **bulk operations on the playlist** (**A4**): long press to select, then add
+  the selection to a playlist — existing or new — or remove it. Undo brings a whole bulk removal
+  back, which is the part that could have lost somebody's playlist and so is a tested object of its
+  own.
 - **2026-09-03** — **One shape for an action, and one way to add.** Icons with their names
   underneath, in a row, wherever a track offers actions and wherever Browse is entered or left
   (**A17**, **A23**). The two add actions became one *"Add to playlist…"* opening the picker, with

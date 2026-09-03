@@ -1503,8 +1503,14 @@ class PlaybackController private constructor(private val context: Context) {
         else -> Message("Added $added; $skipped already there.")
     }
 
-    /** What [undoRemoval] would put back. Cleared once its notice is gone. */
-    private var lastRemoval: Pair<Int, TrackRef>? = null
+    /**
+     * What [undoRemoval] would put back, as (position, track) pairs. Cleared once its notice is gone.
+     *
+     * A list rather than one pair, because a bulk delete is **one edit, not twenty**
+     * (`docs/BACKLOG.md` A4). Undoing it has to restore the whole selection: putting back one row of
+     * twenty is not an undo, it is a second surprise.
+     */
+    private var lastRemoval: List<TrackEditing.Removed> = emptyList()
 
     /**
      * Drops one track.
@@ -1516,23 +1522,44 @@ class PlaybackController private constructor(private val context: Context) {
      * No confirmation. Undo is the better answer for one row -- it costs nothing when the user meant
      * it, and a dialog on every delete is a toll paid by the people who did.
      */
-    fun removeTrack(index: Int) {
+    fun removeTrack(index: Int) = removeTracks(listOf(index))
+
+    /**
+     * Drops any number of tracks as one edit.
+     *
+     * Removing what is playing stops playback rather than jumping somewhere: silently starting a
+     * different track because the user deleted this one is a surprise, and there is no reading of
+     * "remove" that asks for it.
+     *
+     * No confirmation, for the same reason as before: undo costs nothing when the user meant it,
+     * and a dialog on every delete is a toll paid by the people who did. What changed for a group
+     * is that undo has to bring **all** of it back.
+     */
+    fun removeTracks(indices: List<Int>) {
         val currentState = _state.value
-        val removed = currentState.queue.tracks.getOrNull(index) ?: return
-        val wasPlaying = currentState.queue.currentIndex == index
+        val (kept, removed) = TrackEditing.remove(currentState.queue.tracks, indices)
+        if (removed.isEmpty()) return
+        val wasPlaying = removed.any { it.index == currentState.queue.currentIndex }
 
         if (wasPlaying) stopPlayback()
-        lastRemoval = index to removed
+        lastRemoval = removed
 
         _state.update {
             it.copy(
-                queue = it.queue.withTracks(it.queue.tracks.filterIndexed { i, _ -> i != index }),
+                queue = it.queue.withTracks(kept),
                 playing = if (wasPlaying) false else it.playing,
                 metadata = if (wasPlaying) emptyMap() else it.metadata,
                 positionSeconds = if (wasPlaying) 0.0 else it.positionSeconds,
                 durationSeconds = if (wasPlaying) 0.0 else it.durationSeconds,
                 dirty = true,
-                message = Message(text = "Removed ${removed.title}", actionLabel = UNDO),
+                message = Message(
+                    text = if (removed.size == 1) {
+                        "Removed ${removed.first().track.title}"
+                    } else {
+                        "Removed ${removed.size} tracks"
+                    },
+                    actionLabel = UNDO,
+                ),
             )
         }
     }
@@ -1554,21 +1581,22 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** Puts the last removed track back where it was. */
+    /** Puts everything the last removal took back where it was. */
     fun undoRemoval() {
-        val (index, track) = lastRemoval ?: return
-        lastRemoval = null
+        val removed = lastRemoval
+        if (removed.isEmpty()) return
+        lastRemoval = emptyList()
         _state.update {
-            val restored = it.queue.tracks.toMutableList().apply {
-                // The list may have changed since; clamp rather than throw.
-                add(index.coerceIn(0, size), track)
-            }
-            it.copy(queue = it.queue.withTracks(restored), dirty = true, message = null)
+            it.copy(
+                queue = it.queue.withTracks(TrackEditing.restore(it.queue.tracks, removed)),
+                dirty = true,
+                message = null,
+            )
         }
     }
 
     fun dismissMessage() {
-        lastRemoval = null
+        lastRemoval = emptyList()
         _state.update { it.copy(message = null) }
     }
 

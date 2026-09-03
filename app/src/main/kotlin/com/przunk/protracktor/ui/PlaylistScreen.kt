@@ -17,6 +17,9 @@ package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +42,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.interaction.DragInteraction
@@ -46,6 +51,7 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +90,8 @@ fun PlaylistScreen(
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit = {},
+    onAddSelectedToPlaylist: (List<TrackRef>) -> Unit = {},
+    onRemoveMany: (List<Int>) -> Unit = {},
     onBrowse: () -> Unit,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
@@ -94,7 +102,7 @@ fun PlaylistScreen(
     // and more portable than a blur, which needs API 31 and this app runs from 29.
     if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, contentPadding, enabled = false)
+            PlaylistBody(state, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
                 randomMode = state.randomMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -120,6 +128,8 @@ fun PlaylistScreen(
         onShareFile = onShareFile,
         onShareLink = onShareLink,
         onAddToOtherPlaylist = onAddToOtherPlaylist,
+        onAddSelectedToPlaylist = onAddSelectedToPlaylist,
+        onRemoveMany = onRemoveMany,
         contentPadding = contentPadding,
         enabled = true,
         modifier = modifier,
@@ -138,6 +148,8 @@ private fun PlaylistBody(
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
+    onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
+    onRemoveMany: (List<Int>) -> Unit,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -160,9 +172,19 @@ private fun PlaylistBody(
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
 
     var following by remember { mutableStateOf(false) }
+    // Selection lives here and dies with the screen, the same as in Browse: a tick that survives a
+    // reload would act on a row the user never saw (`docs/ARCHITECTURE.md` §17).
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    LaunchedEffect(state.queue.tracks) {
+        selected = selected.intersect(state.queue.tracks.mapTo(mutableSetOf()) { it.id })
+    }
+    val selecting = selected.isNotEmpty()
+    // Takes back before the screen's own handler: leave the selection first, ticking nothing.
+    BackHandler(enabled = selecting) { selected = emptySet() }
     val haptics = rememberHaptics()
 
-    LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
+    Box(modifier = modifier.fillMaxSize()) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(state.queue.tracks, key = { _, track -> track.id }) { index, track ->
             TrackRow(
                 index = index,
@@ -171,6 +193,12 @@ private fun PlaylistBody(
                 enabled = enabled,
                 dragging = track.id == draggingId,
                 dragOffset = if (track.id == draggingId) dragOffset else 0f,
+                selecting = selecting,
+                ticked = track.id in selected,
+                onToggle = {
+                    selected = if (track.id in selected) selected - track.id else selected + track.id
+                },
+                onStartSelecting = { selected = selected + track.id },
                 onPlay = { onPlayAt(index) },
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
@@ -193,6 +221,59 @@ private fun PlaylistBody(
                     onMove = moveTrack,
                     haptics = haptics,
                 ),
+            )
+        }
+    }
+
+        // What you can do with what you ticked. Two buttons for the owner's three actions: the
+        // picker behind "Add to playlist..." offers an existing playlist *or* a new one, so
+        // "make a new playlist from these" is in there rather than missing (`docs/BACKLOG.md` A4).
+        if (selecting) {
+            Surface(
+                tonalElevation = 3.dp,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(contentPadding)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.browse_selected, selected.size, selected.size
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = {
+                        onAddSelectedToPlaylist(state.queue.tracks.filter { it.id in selected })
+                        selected = emptySet()
+                    }) {
+                        Text(stringResource(R.string.action_add_to_playlist))
+                    }
+                    TextButton(onClick = {
+                        onRemoveMany(
+                            state.queue.tracks.indices.filter { state.queue.tracks[it].id in selected }
+                        )
+                        selected = emptySet()
+                    }) {
+                        Text(stringResource(R.string.action_delete))
+                    }
+                }
+            }
+        }
+
+        // At the very edge, so the row's own drag handle and this one cannot be confused
+        // (`docs/BACKLOG.md` A3). Absent while the list is behind glass: dragging a scrollbar for a
+        // list you cannot touch would be a control that lies.
+        if (enabled) {
+            DraggableScrollbar(
+                listState = listState,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(contentPadding),
             )
         }
     }
@@ -322,6 +403,7 @@ private fun Modifier.dragToReorder(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TrackRow(
     index: Int,
@@ -330,6 +412,10 @@ private fun TrackRow(
     enabled: Boolean,
     dragging: Boolean,
     dragOffset: Float,
+    selecting: Boolean,
+    ticked: Boolean,
+    onToggle: () -> Unit,
+    onStartSelecting: () -> Unit,
     onPlay: () -> Unit,
     onRemove: () -> Unit,
     onInfo: () -> Unit,
@@ -350,8 +436,14 @@ private fun TrackRow(
             { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         },
         leadingContent = {
+            // The checkbox takes the ordinal's slot, which is already reserved and already this
+            // size -- so entering selection moves nothing (`docs/ARCHITECTURE.md` §17). The owner
+            // defended the ordinal for telling him where he is in three hundred rows; while
+            // selecting, what matters is which rows are ticked.
             Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
-                if (playing) {
+                if (selecting) {
+                    Checkbox(checked = ticked, onCheckedChange = { onToggle() })
+                } else if (playing) {
                     Icon(
                         imageVector = PlayerIcons.Play,
                         contentDescription = stringResource(R.string.a11y_now_playing_row),
@@ -368,7 +460,7 @@ private fun TrackRow(
                 }
             }
         },
-        trailingContent = if (!enabled) null else {
+        trailingContent = if (!enabled || selecting) null else {
             {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box {
@@ -432,7 +524,11 @@ private fun TrackRow(
             .fillMaxWidth()
             .zIndex(if (dragging) 1f else 0f)
             .graphicsLayer { translationY = dragOffset }
-            .clickable(enabled = enabled, onClick = onPlay),
+            .combinedClickable(
+                enabled = enabled,
+                onClick = { if (selecting) onToggle() else onPlay() },
+                onLongClick = { if (!selecting) onStartSelecting() },
+            ),
     )
 }
 

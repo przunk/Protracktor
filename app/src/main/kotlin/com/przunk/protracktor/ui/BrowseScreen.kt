@@ -881,7 +881,8 @@ private fun Selectable(
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
                 RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
-                LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+                Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
                     BrowseTrackRow(
                         track = track,
@@ -904,6 +905,12 @@ private fun Selectable(
                             ?.let { { onShareLink(it) } },
                     )
                 }
+            }
+
+                DraggableScrollbar(
+                    listState = listState,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
             }
             }
         }

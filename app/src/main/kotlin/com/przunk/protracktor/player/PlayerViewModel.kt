@@ -46,6 +46,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun addFolder(treeUri: Uri) = controller.addFolder(treeUri)
     fun addFiles(uris: List<Uri>) = controller.addFiles(uris)
     fun removeTrack(index: Int) = controller.removeTrack(index)
+
+    fun removeTracks(indices: List<Int>) = controller.removeTracks(indices)
     fun moveTrack(from: Int, to: Int) = controller.moveTrack(from, to)
     fun dismissMessage() = controller.dismissMessage()
     fun undoRemoval() = controller.undoRemoval()
