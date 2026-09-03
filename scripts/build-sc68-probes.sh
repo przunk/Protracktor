@@ -125,6 +125,10 @@ gcc -o "$PROBE/probe-concurrency" "$PROBE/probe_concurrency.c" "$BUILD/libsc68-n
     $NEW_INC -DNDEBUG=1 -lm -lpthread -w
 echo "   ✅ concurrency probe"
 
+gcc -o "$PROBE/probe-subsong-rewind" "$PROBE/probe_subsong_rewind.c" "$BUILD/libsc68-ndebug.a" \
+    $NEW_INC -DNDEBUG=1 -lm -w
+echo "   ✅ subsong-rewind probe (docs/STATUS.md C13)"
+
 echo
 echo "Probes built. Now: ./scripts/probe-sc68.py"
 echo "  and: SC68_SHARED_PATH=native/vendor/sc68-3/file68/data68 \\"

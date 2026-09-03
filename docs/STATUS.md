@@ -525,7 +525,7 @@ Since Android 13 the system builds a `MediaStyle` notification's buttons from th
 `PlaybackState` rather than from the notification's own actions — which is why the
 `Notification.Action`s, added unconditionally all along, were never the thing to look at.
 
-### C13. Repeat-one does not repeat a subsong
+### C13. ~~Repeat-one does not repeat a subsong~~ — FIXED 2026-09-04
 
 Reported 2026-09-04 by the owner: *"repeat one nie działa dla subtracków"*. Reading the code turns
 one report into **two independent faults**, and only the first is unambiguously a bug.
@@ -566,6 +566,27 @@ else in this app means one row of the playlist, and a multi-tune file is one row
 with all-subsongs on, the end of the last subsong goes back to the first and the whole file loops;
 with all-subsongs off, the current subsong loops. It is coherent and it is a guess — it belongs in a
 commit that says so, not in silence.
+
+**Fixed 2026-09-04, both halves, and the guess taken as stated.**
+
+`Sc68Backend` remembers what `selectSubsong` chose and rewinds to it.
+`native/probe/sc68/probe_subsong_rewind.c` demonstrates the fault rather than arguing it, on the
+same corpus the other sc68 probes use — six of the forty files have more than one tune, and all six
+show the same thing:
+
+```
+subsongs=21 chose=11 selected=11 before=1 after=11 DEMONSTRATED
+subsongs=9  chose=5  selected=5  before=1 after=5  DEMONSTRATED
+```
+
+Writing that probe found a second thing worth keeping: `sc68_play` sets the *pending* track and the
+change lands when processing next runs, so asking which track is current before rendering reports
+the previous one. The first version of the probe did exactly that and reported `selected=1` after
+choosing 11 — which is the same mechanism as C11, met again from the other side.
+
+The Kotlin half moved out of `onTrackEnded` into `SubsongAdvance`, which has no Android imports and
+six tests. This decision has now been wrong twice in a method that needs a phone to run; it is worth
+one small object that does not.
 
 ### C3. R9 is addressed but unmeasured
 

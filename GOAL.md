@@ -653,7 +653,7 @@ Phase 4 on an exhausted context.
       that this is a guess made to avoid prejudging Q1, so it can be moved cheaply when A13 is
       actually designed.
 
-- [ ] **4. Repeat-one and subsongs** (`docs/STATUS.md` C13)
+- [x] **4. Repeat-one and subsongs** (`docs/STATUS.md` C13) *(both faults; the sc68 one demonstrated on 6 of 6 multi-tune files, the Kotlin one extracted to `SubsongAdvance` with tests)*
 
       Reported 2026-09-04. Two independent faults behind one symptom, and C13 has both in full.
 
