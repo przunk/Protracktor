@@ -51,6 +51,9 @@ working and fetching serially, which he heard; that is fixed.
   confirmed — adding from a row's menu no longer closes Browse.
 - **2026-09-03**: **ASMA plays** (SAP files from the archive) and a **local SID plays**, so
   libsidplayfp is confirmed on a device. Reading a local library is confirmed correct.
+- **2026-09-03, late**: **subsongs work on a device.** The owner played Tactic (8 tunes) and
+  confirmed the strip scrolls with many more. **C11** — auto-advance racing through every tune in
+  silence — is confirmed fixed.
 - **2026-09-03, evening**: the **stale-index notice** appears on Modland; the **action row** in the
   expanded player, the **Browse** button, the **playlist counts** in both the switcher and the
   add-to dialogue, the **current playlist first**, and **history showing when** — all confirmed.
@@ -60,7 +63,10 @@ working and fetching serially, which he heard; that is fixed.
 **Still not verified by anyone on a device:**
 
 - **The console formats** (NSF, GBS, SPC, VGM, HES, AY, KSS) — built and measured on the host,
-  never played on the device.
+  never played on the device. Modland has 5,015 NSF and 918 GBS; real headers read on 2026-09-03
+  give `lil' monster.gbs` **68** tunes, `mario golf.gbs` 42 and `shinsenden.nsf` 39, which is also
+  the first real test of the subsong strip scrolling. They will only appear after a Modland
+  re-index — that index predates game-music-emu as well as libsidplayfp.
 - **HVSC song lengths** — downloaded and stored, but no SID has been seen showing a duration.
 - **C64 from a catalogue.** A local SID plays; Modland's SIDs are still invisible because the index
   predates libsidplayfp (**A22**).
