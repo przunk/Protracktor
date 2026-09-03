@@ -63,6 +63,8 @@ fun PlaylistSwitcher(
     onCreate: (String) -> Unit,
     onRename: (String) -> Unit,
     onDelete: (Long) -> Unit,
+    onImport: () -> Unit,
+    onExport: () -> Unit,
 ) {
     var naming by remember { mutableStateOf<NamingIntent?>(null) }
     var confirmingDelete by remember { mutableStateOf<SavedPlaylist?>(null) }
@@ -129,6 +131,24 @@ fun PlaylistSwitcher(
                     modifier = Modifier.clickable { onSelect(playlist.id) },
                 )
             }
+        }
+
+        // A playlist as a file, both ways. Here rather than in a menu somewhere because this sheet
+        // is already "the place where playlists are dealt with" (`docs/BACKLOG.md` A25).
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            LabelledAction(
+                icon = PlayerIcons.Download,
+                label = stringResource(R.string.action_import_playlist),
+                onClick = onImport,
+            )
+            LabelledAction(
+                icon = PlayerIcons.Share,
+                label = stringResource(R.string.action_export_playlist),
+                onClick = onExport,
+            )
         }
 
         OutlinedButton(

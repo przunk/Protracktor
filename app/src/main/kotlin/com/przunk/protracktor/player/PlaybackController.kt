@@ -32,6 +32,7 @@ import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.HistoryStore
 import com.przunk.protracktor.data.LibraryIndexStore
+import com.przunk.protracktor.data.PlaylistFile
 import com.przunk.protracktor.data.IndexedFile
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.SongLengths
@@ -881,6 +882,126 @@ class PlaybackController private constructor(private val context: Context) {
         val catalogue = Catalogue.owning(ref.id) ?: return null
         val path = catalogue.pathFrom(ref.id) ?: return null
         return catalogues.locate(catalogue.id, path)?.format?.takeIf { it.isNotBlank() }
+    }
+
+    // --- playlists as files -----------------------------------------------------------------
+
+    /**
+     * Writes the current playlist out and offers it to be shared.
+     *
+     * Through the same copy-and-share path a track uses (`docs/ARCHITECTURE.md` §16), because a
+     * playlist is a file like any other and nothing else here can hand a file to another app.
+     */
+    fun exportPlaylist() {
+        scope.launch {
+            val current = _state.value
+            if (current.queue.tracks.isEmpty()) {
+                _state.update { it.copy(message = Message("There is nothing in this playlist.")) }
+                return@launch
+            }
+            val name = (current.activePlaylistName ?: "playlist").replace(Regex("[^\\w -]"), "_")
+            val bytes = withContext(Dispatchers.Default) {
+                PlaylistFile.write(current.queue.tracks).toByteArray()
+            }
+            val uri = remoteFiles.shareableCopy("$name.m3u8", bytes)
+            if (uri == null) {
+                _state.update { it.copy(message = Message("Could not prepare the playlist.")) }
+                return@launch
+            }
+            _share.tryEmit(
+                Intent(Intent.ACTION_SEND).apply {
+                    // The registered type for M3U. Other players offer to open it; anything else
+                    // treats it as the text file it is.
+                    type = "audio/x-mpegurl"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, name)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            )
+        }
+    }
+
+    /**
+     * Reads a playlist file into a new playlist of its own.
+     *
+     * **A new one, never the current one.** An import that appended to whatever happened to be open
+     * would be an edit nobody asked for, and undoing it means finding which rows were new.
+     *
+     * Each line gets two chances. Its recorded id first, which is exact and works on the device that
+     * wrote the file — a backup restored after a reinstall is the common case and deserves to be
+     * perfect. Failing that, a match on filename and size against the scanned library, which is how
+     * a list written on another phone finds the same tunes here. A catalogue URL needs neither: it
+     * means the same everywhere.
+     */
+    fun importPlaylist(uri: Uri) {
+        scope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                }.getOrNull()?.toString(Charsets.UTF_8)
+            }
+            if (text.isNullOrBlank()) {
+                _state.update { it.copy(message = Message("Could not read that file.")) }
+                return@launch
+            }
+
+            val entries = withContext(Dispatchers.Default) { PlaylistFile.read(text) }
+            if (entries.isEmpty()) {
+                _state.update { it.copy(message = Message("No tracks in that file.")) }
+                return@launch
+            }
+
+            val known = store.allTracks().associateBy { it.id }
+            val found = entries.mapNotNull { entry -> resolve(entry, known) }
+
+            val name = MediaScanner.labelOf(uri).substringBeforeLast('.').ifBlank { "Imported" }
+            val playlistId = store.createPlaylist(name)
+            store.replaceTracks(playlistId, found)
+
+            _state.update { it.copy(playlists = store.playlists()) }
+            _state.update {
+                it.copy(
+                    message = Message(
+                        if (found.size == entries.size) {
+                            "Imported ${found.size} tracks into \"$name\"."
+                        } else {
+                            // Said, not swallowed. A playlist that silently arrived shorter than
+                            // the file it came from is worse than one that explains itself.
+                            "Imported ${found.size} of ${entries.size} into \"$name\"; " +
+                                "the rest are not on this device."
+                        }
+                    )
+                )
+            }
+        }
+    }
+
+    private suspend fun resolve(entry: PlaylistFile.Entry, known: Map<String, TrackRef>): TrackRef? {
+        // A catalogue URL, or an id this device issued: exact either way.
+        entry.id?.let { id ->
+            known[id]?.let { return it }
+            if (id.startsWith("http") || Catalogue.owning(id) != null) {
+                return TrackRef(
+                    id = id,
+                    title = entry.title,
+                    subtitle = entry.location.substringBeforeLast('/', ""),
+                    sizeBytes = entry.sizeBytes,
+                    fileName = entry.fileName,
+                    author = entry.author,
+                )
+            }
+        }
+        if (entry.location.startsWith("http")) {
+            return TrackRef(
+                id = entry.location,
+                title = entry.title,
+                subtitle = entry.location.substringBeforeLast('/', ""),
+                sizeBytes = entry.sizeBytes,
+                fileName = entry.fileName,
+                author = entry.author,
+            )
+        }
+        return libraryIndex.findByFile(entry.fileName, entry.sizeBytes)
     }
 
     // --- sharing ------------------------------------------------------------------------------

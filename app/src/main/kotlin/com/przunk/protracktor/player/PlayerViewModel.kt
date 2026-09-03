@@ -77,6 +77,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()
 
+    fun exportPlaylist() = controller.exportPlaylist()
+
+    fun importPlaylist(uri: Uri) = controller.importPlaylist(uri)
+
     fun clearHistory() = controller.clearHistory()
 
     fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)

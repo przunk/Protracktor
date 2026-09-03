@@ -656,7 +656,7 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
-## A25. Import and export a playlist
+## A25. ~~Import and export a playlist~~ — DONE 2026-09-03
 
 Raised 2026-09-03 by the owner.
 
@@ -688,6 +688,21 @@ carry what M3U cannot, in a way other players ignore.
 **Worth deciding early:** whether export is *for another copy of this app* or *for other players*.
 They pull in opposite directions — the first wants our identifiers, the second wants plain paths —
 and trying to serve both is how a format ends up serving neither.
+
+**Built 2026-09-03, and that question is answered by putting each thing where it belongs rather than
+choosing between them.** The file is M3U: the location line is what another player reads — a real
+URL for a catalogue track, a path for a local file — and our identifiers go in `#PROTRACKTOR:`
+comments, which every other program ignores by the format's own rules.
+
+**Import gives each line two chances.** Its recorded id, which is exact and makes a backup restore
+perfectly on the device that wrote it; and failing that a match on filename **and size** against the
+scanned library, which is how a list written on another phone finds the same tunes here. Size is not
+decoration — `elysium.mod` is a filename several hundred people have used.
+
+**Import always makes a new playlist**, never appends to the open one: an import that edited whatever
+happened to be in front of you would be a change nobody asked for, and undoing it means working out
+which rows were new. It says how many of the file's lines it could not place rather than quietly
+arriving shorter.
 
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
