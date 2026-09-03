@@ -714,7 +714,12 @@ not have to be rediscovered.
 - **`.sndh`** — should already work; see the defect in `docs/STATUS.md`. Fix before adding anything.
 - **SID, NSF, SPC, GBS, VGM, AY** — `libsidplayfp` and game-music-emu, in that order of value.
 - **Amiga custom (TFMX, Hippel, Future Composer, …)** — UADE, last, and its bundled replay binaries
-  need a licence decision of their own.
+  need a licence decision of their own. **Measured 2026-09-04** and the estimate in this item was
+  wrong: UADE's exclusive contribution is 4,163 Modland files, not tens of thousands, because more
+  than half of what it appeared to win — 5,557 files of OctaMED and Oktalyzer — is already played
+  by libopenmpt and merely never offered. Numbers, the
+  process-model problem and the licence trade are in `docs/PLAN_FORMATS.md` §4; nothing is
+  integrated.
 
 Each new backend also means **re-indexing the catalogues**: the index only keeps entries whose
 filename a backend might handle.

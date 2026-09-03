@@ -228,7 +228,7 @@ Two things worth remembering from it:
   libopenmpt. Checked rather than assumed — ASAP refuses the Amiga files, so they fall through
   correctly. Content probing would settle it properly; until then, whichever loads it wins.
 
-## 4. UADE — Amiga custom formats
+## 4. UADE — Amiga custom formats — MEASURED 2026-09-04, not integrated
 
 TFMX, Hippel, Future Composer, David Whittaker, SidMon and a hundred others. Emulates a whole Amiga
 to run the original replay routines.
@@ -238,6 +238,139 @@ extracted from commercial and shareware Amiga music programs. UADE's own code is
 are not clearly licensed. That is a **distribution** question and it has to be answered before any
 code is written, not after. If the answer is no, the formats can still be played by a user who
 supplies their own — which is a different feature.
+
+### What was built, and what it proved
+
+`GOAL.md` round 6 item 1 says to prove a backend on the host before integrating it.
+`./scripts/build-uade-probe.sh` does that from nothing: it fetches UADE 3.05 and the two libraries
+of its author's that it needs (bencodetools, libzakalwe), builds them at pinned revisions, and
+compiles `native/probe/uade/probe_uade.c` against the result. `./scripts/probe-uade.py` then measures
+against the Modland index.
+
+The probe asks the question R1 taught us to ask: **is the first buffer full**, not "is there audio
+eventually". The player treats a short first render as end-of-tune, so a probe that loops until it
+hears something measures a hope rather than a contract.
+
+### What it plays — measured 2026-09-04
+
+Two questions, and the first one is not "what can UADE play". libopenmpt already handles AHX, Future
+Composer, Puma, TCB and a dozen other Amiga formats, so what matters is **what UADE adds to what we
+already play**.
+
+**Reach**, counted over all 515,509 files Modland lists rather than sampled:
+
+| | files | |
+| --- | ---: | --- |
+| a backend we already have claims it | 314,340 | 61.0% |
+| we cannot play it, and UADE's `eagleplayer.conf` claims the name | 29,127 | 5.7% |
+| we cannot play it, and UADE does not claim it either | 172,042 | 33.4% |
+
+**That 5.7% is an upper bound and a large part of it is a name collision**, which is the whole
+reason the second pass renders instead of counting. Modland's `.psf` (Playstation Sound Format,
+3,845 files) matches UADE's `psf` prefix for SoundFactory; Sidplayer's `.mus` (5,028) matches `mus`
+for UFO. Neither is an Amiga file. `docs/ARCHITECTURE.md` §5 says extensions here are shared between
+unrelated formats; this is that, quantified.
+
+**Play** — 12 files from each of the 25 largest, actually rendered, first buffer checked:
+
+```
+OctaMED MMD0/1/2/3   48/48     Delitracker Custom  12/12     Sidplayer            0/12
+TFMX                 12/12     Musicline Editor    12/12     IFF-SMUS             0/12
+BP SoundMon 2/3      24/24     Art Of Noise        12/12     Playstation SF       0/12
+SidMon 2             12/12     Delta Music 2       12/12     Stereo Sidplayer     0/12
+Oktalyzer            11/12     Sonic Arranger      11/12     FAC SoundTracker     0/12
+David Whittaker      11/12     YMST                 7/12     Spectrum             0/12
+                                                             Hippel COSO / ST     0/12
+
+Overall: 184/300 full, 114 unsupported, 2 silent.
+```
+
+Every 0/12 in the right-hand column is a name collision the render pass caught, except the Hippel
+COSO pair — those are genuinely declared and genuinely do not load, in either naming convention
+(tested both ways round; renaming changes nothing, and plain `.hip` Hippel plays fine as Modland
+names it, so content detection is doing its job).
+
+### What UADE is actually worth — and the finding that undercuts it
+
+The formats UADE played cover **9,720 Modland files that nothing here plays today**. But
+**5,557 of those 9,720 are already playable by libopenmpt**, which is in the APK — OctaMED
+`.mmd0`…`.mmd3` (5,110) and Oktalyzer `.okta` (447), measured 6/6 each. libopenmpt identifies MED by
+an "MMD" magic in the header and never looks at the filename. The app simply never offers them,
+because `SupportedFormats.extensions` lists `med` and `okt` while Modland stores these as `.mmd1`
+and `.okta`.
+
+**So UADE's genuine, exclusive contribution is 4,163 files, not tens of thousands** —
+TFMX, Musicline Editor, Delitracker Custom, Oktalyzer, Sonic Arranger, BP SoundMon, Art Of Noise,
+David Whittaker, SidMon 2, Delta Music 2, YMST. That is a real body of music and it is the music
+this project is closest to. It is also a fraction of what `docs/BACKLOG.md` A5 assumed when it
+called this "the largest body of music left", and the estimate deserves correcting rather than
+quietly inheriting.
+
+### The process model — the real integration question
+
+This is the difference from the other four backends, and it was worth finding out before writing
+any Android code.
+
+**libuade does not decode anything itself.** It creates a `socketpair`, forks, and `execlp`s a
+separate `uadecore` executable, passing the descriptors as `-i` and `-o` arguments
+(`src/frontends/common/unixsupport.c:222`). Rendered audio comes back over that socket as
+`UADE_REPLY_DATA` messages. The emulator is a different process by construction.
+
+**That is less fatal than it sounds, and the reason is upstream's own structure:**
+
+- the transport is *already* a socketpair rather than anything process-specific;
+- `src/main.c` is three lines — `return uadecore_main(argc, argv);` — so the entry point is already
+  separated from the process;
+- `uadecore_main` returns rather than looping forever, and the audio sink is the IPC socket, not a
+  sound device.
+
+So the in-process route is: create the socketpair, and start a **thread** on `uadecore_main` instead
+of forking. The seam is one function.
+
+**What that route costs, stated rather than discovered later:**
+
+- **One instance per process, permanently.** The UAE-derived core is built on file-scope state —
+  roughly 160 definitions across `newcpu.c`, `memory.c`, `custom.c`, `audio.c`, `cia.c` and
+  `uade.c` — and `uadecore_ipc` is a single global. Two concurrent UADE tunes in one process is not
+  a tuning problem, it is impossible without forking the emulator.
+- **That constraint bites this app specifically.** `PlaybackController.probe` opens a second backend
+  while the first is playing, and round 5 made folder scanning run concurrently with playback on
+  purpose. Scanning a folder of TFMX while a TFMX tune plays is a real sequence, not a hypothetical.
+  There is a way out worth noting: `uade_is_our_file_from_buffer` resolves through
+  `uade_analyze_eagleplayer`, which is content analysis with **no emulator involved**, so
+  identification during a scan need not contend with playback. Duration, title and subsong count
+  would.
+- **51 `exit()` calls in uadecore.** In a forked child that is a clean death the parent survives; on
+  a thread inside the app it is the app disappearing.
+- `uade_signal_initializations()` sets process-wide signal dispositions.
+
+**The alternative is to keep upstream's fork+exec**, shipping `uadecore` inside the APK's
+`lib/<abi>/` as a `lib*.so` — the one place Android still permits executing from. That keeps
+instances independent and upstream unforked, at the cost of process lifecycle management.
+
+**Neither is chosen here.** Item 1 was to measure, and this is the measurement.
+
+### What this measurement recommends
+
+**Not integrating UADE yet, and doing the cheap thing first.** Setting out the trade rather than
+the conclusion, because the conclusion is the owner's:
+
+- what UADE exclusively adds is **4,163 Modland files**, not the tens of thousands A5 assumed;
+- it cannot ship without answering a licence question that is *worse* documented than sc68's, and
+  unlike sc68 it has **no middle option** — without the replay binaries it plays 12 files in 300;
+- it is the only backend here that is a second process, or else a single-instance-per-process
+  emulator inside ours, which collides with scanning-while-playing;
+- and **5,557 files of the 9,720 it appeared to win are already playable** by a backend in the APK,
+  blocked by five missing lines in `SupportedFormats`.
+
+The last point is the one worth acting on immediately: it is more files than UADE exclusively
+offers, for a change that costs five strings and a re-index. That does not make UADE not worth
+doing — TFMX and David Whittaker are exactly the music this project is for — but it does mean UADE
+is a considered choice with a licence decision attached, rather than the obvious next step.
+
+Everything needed to revisit it is committed: `./scripts/build-uade-probe.sh` rebuilds the whole
+toolchain from nothing, and `./scripts/probe-uade.py` re-runs the measurement on the same seeded
+corpus.
 
 ---
 

@@ -591,7 +591,7 @@ Phase 4 on an exhausted context.
 
 ## Phase 1 — the list
 
-- [ ] **1. UADE — the Amiga custom formats**
+- [x] **1. UADE — the Amiga custom formats** *(measured, not integrated: 184/300 plays, but 5,557 of its 9,720 files are already ours — `docs/PLAN_FORMATS.md` §4)*
 
       The largest body of music left. TFMX, Hippel, Future Composer, David Whittaker, Jochen Hippel,
       Mark Cooksey and the rest of the Amiga custom players are tens of thousands of files in
