@@ -195,6 +195,18 @@ public:
         }
     }
 
+    /**
+     * Fills the buffer, asking sc68 as many times as that takes.
+     *
+     * **A single call is not enough, and getting this wrong ends every track.** `sc68_process`
+     * returns `SC68_IDLE|SC68_CHANGE` and **zero frames** on its first call for a freshly played
+     * tune -- the machine has not been run yet -- and a short render means end-of-tune to the
+     * player: `onAudioReady` silences the rest of the buffer and stops the stream. Returning that
+     * first zero stopped every SNDH and `.sc68` file on the first audio callback
+     * (`docs/review.md` R1).
+     *
+     * Measured: three of three real files give `code=3 frames=0` on pass 0 and full buffers after.
+     */
     std::size_t render(int, std::size_t frames, float *out) override {
         if (ended_) return 0;
 
@@ -202,23 +214,42 @@ public:
         // the whole conversion on the audio thread and out of the rest of the engine.
         if (scratch_.size() < frames * 2) scratch_.resize(frames * 2);
 
-        int count = static_cast<int>(frames);
-        const int code = sc68_process(sc68_, scratch_.data(), &count);
+        std::size_t produced = 0;
+        int idlePasses = 0;
 
-        // `SC68_ERROR` is ~0 -- every bit set -- so testing it with `&` is true of any non-zero
-        // status, including the perfectly ordinary SC68_IDLE|SC68_CHANGE returned on the first
-        // pass. It is a failure only when it IS the value.
-        if (code == SC68_ERROR) {
-            ended_ = true;
-            return 0;
-        }
-        if (code & SC68_END) ended_ = true;
-        if (count <= 0) return ended_ ? 0 : 0;
+        while (produced < frames) {
+            int count = static_cast<int>(frames - produced);
+            const int code = sc68_process(sc68_, scratch_.data(), &count);
 
-        const std::size_t produced = static_cast<std::size_t>(count);
-        for (std::size_t i = 0; i < produced * 2; ++i) {
-            out[i] = static_cast<float>(scratch_[i]) / 32768.0f;
+            // `SC68_ERROR` is ~0 -- every bit set -- so testing it with `&` is true of any non-zero
+            // status, including the ordinary SC68_IDLE|SC68_CHANGE of the first pass. It is a
+            // failure only when it IS the value.
+            if (code == SC68_ERROR) {
+                ended_ = true;
+                break;
+            }
+
+            if (count > 0) {
+                const std::size_t got = static_cast<std::size_t>(count);
+                // `produced * 2` because both are interleaved stereo: frame n is samples 2n and
+                // 2n+1 in each.
+                for (std::size_t i = 0; i < got * 2; ++i) {
+                    out[produced * 2 + i] = static_cast<float>(scratch_[i]) / 32768.0f;
+                }
+                produced += got;
+                idlePasses = 0;
+            } else if (++idlePasses > kMaxIdlePasses) {
+                // A bound, because this runs on the audio thread. A decoder that never produces
+                // anything must cost one silent buffer, not a locked-up device.
+                break;
+            }
+
+            if (code & SC68_END) {
+                ended_ = true;
+                break;
+            }
         }
+
         rendered_ += produced;
         return produced;
     }
@@ -287,6 +318,15 @@ private:
     }
 
     static constexpr int kSampleRate = 44100;
+
+    /**
+     * How many empty passes to tolerate before giving up on a buffer.
+     *
+     * One is normal -- the first call after `sc68_play` always produces nothing. More than a
+     * handful means the decoder is not going to produce anything, and the audio thread is the
+     * wrong place to find out slowly.
+     */
+    static constexpr int kMaxIdlePasses = 8;
 
     sc68_t *sc68_ = nullptr;
     sc68_music_info_t info_{};
