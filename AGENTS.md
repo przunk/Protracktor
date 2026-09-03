@@ -87,3 +87,16 @@ finding them at a release.
 
 **The one thing to remember:** when something *crashes* and a stack trace matters, a debug build is
 the readable one. Diagnose on debug, judge on release.
+
+## Versions
+
+`docs/BUILD.md` has the scheme. The short of it:
+
+- **`versionCode` is the commit count** and nobody touches it. It moves on every merge by itself.
+- **`versionName` is typed and means something** — patch for a batch of fixes, minor for a round of
+  work that added capability, major reserved for "publishable". Bump it at hand-over, not at merge.
+
+The owner asked for a minor bump per merge. It was talked through and rejected for a reason worth
+keeping: twenty merges in a day would put it at 0.22.0 by evening and say nothing a timestamp does
+not. The half of the instinct that was right — *something* must move on every merge — is the
+versionCode, which now does.

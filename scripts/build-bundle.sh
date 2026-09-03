@@ -101,15 +101,14 @@ collect_signing_configuration() {
     echo "🔑 $PRZUNK_UPLOAD_STORE_FILE (alias $PRZUNK_UPLOAD_KEY_ALIAS) — passwords not stored"
 }
 
+# The versionName is still a literal in build.gradle.kts. The versionCode is not -- it is the commit
+# count, computed the same way here as there. A bundle cannot be asked what it contains the way an
+# APK can, so these two expressions have to agree; if build.gradle.kts changes how it counts, this
+# line changes with it.
 version_name="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
-# The declaration may interpolate a suffix at build time; the literal read out of the file still
-# carries the reference, and a filename is no place for it.
 version_name="${version_name%%\$*}"
-version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
+version_code="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 
-# No timestamp, unlike the APK names. Play identifies an upload by its versionCode, so that is what
-# the filename should be identified by too -- and two files differing only in a timestamp would be
-# two files Play considers the same.
 artifact="$DIST_DIR/protracktor-${version_name:-unknown}-${version_code:-0}.aab"
 
 echo "🔨 Protracktor — Play bundle ${version_name:-?} (${version_code:-?})"

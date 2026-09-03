@@ -6,6 +6,22 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+/**
+ * The number of commits behind HEAD, used as the versionCode.
+ *
+ * Through `providers.exec` rather than `ProcessBuilder`: Gradle 9 refuses to start an external
+ * process at configuration time, because doing so cannot be cached. The provider API exists for
+ * exactly this and its result participates in the configuration cache properly.
+ *
+ * Falls back to 1 outside a git checkout — a source archive, say — which is wrong but harmless:
+ * nothing built that way is going to a store.
+ */
+val gitCommitCount: Int = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+    workingDir = rootProject.projectDir
+    isIgnoreExitValue = true
+}.standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }.getOrElse(1)
+
 android {
     namespace = "com.przunk.protracktor"
     compileSdk = 36
@@ -19,8 +35,20 @@ android {
         applicationId = "com.przunk.protracktor"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        // Counted, not typed. Play rejects an upload whose versionCode it has seen before, and a
+        // number a person has to remember to raise is a number that eventually is not raised. The
+        // commit count only ever grows, changes on every merge without anyone doing anything, and
+        // needs no discipline at all.
+        //
+        // Falls back to 1 outside a git checkout -- a source archive, say -- which is wrong but
+        // harmless: nothing built that way is going to a store.
+        versionCode = gitCommitCount
+
+        // Typed, deliberately, and it means something. See docs/BUILD.md: patch for a batch of
+        // fixes, minor for a round of work that added capability, major reserved for "publishable".
+        // Bumping it per merge was considered and rejected -- twenty merges in a day would make it
+        // a second, worse timestamp.
+        versionName = "0.3.0"
 
         // Stated explicitly rather than left to whatever the NDK defaults to that month, because
         // native decoder builds are the expensive part of this project and the ABI list drives
