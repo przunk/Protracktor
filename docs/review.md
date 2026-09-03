@@ -57,10 +57,13 @@ numFrames)` → silence and stop.
 a short pass. It answers the question item 1 asked and not this one. A probe that mirrors the
 backend's *interface* would have caught it; one that mirrors its *purpose* did not.
 
-**Correction.** Loop until the buffer is full or the track genuinely ends, with a bound on
-consecutive empty passes so an idle decoder cannot spin the audio thread.
+**Correction.** Loop until the buffer is full or the track genuinely ends, with a bound of eight
+consecutive empty passes so an idle decoder costs one silent buffer rather than a locked-up device.
 
-**Status:** fixed — see Phase 3.
+**Status:** **fixed**, and guarded. `native/probe/sc68/probe_render.c` mirrors the backend's
+*contract* rather than its purpose: it asks whether the **first** buffer comes back full. Five of
+five files answer `full` with the fix and `short:0` with the single-call logic restored, which was
+checked rather than assumed.
 
 ### R2 — the shared open-error string is a data race · **high**
 
@@ -123,7 +126,7 @@ silence the symptom while leaving five connection pools racing, which is the wro
 differently depending on `ended_`, and it is not — which is how **R1** stayed invisible while being
 read.
 
-**Status:** fixed with R1.
+**Status:** fixed with R1 — the loop has no such expression.
 
 ---
 

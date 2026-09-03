@@ -117,6 +117,10 @@ gcc -o "$PROBE/probe-3.0.0b-ndebug" "$PROBE/probe_3_0_0b.c" "$BUILD/libsc68-ndeb
 echo "   ✅ $(ls "$BUILD"/obj-ndebug/*.o | wc -l) objects"
 echo "   ✅ $(ls "$BUILD"/obj-new/*.o | wc -l) objects"
 
+gcc -o "$PROBE/probe-render" "$PROBE/probe_render.c" "$BUILD/libsc68-ndebug.a" \
+    $NEW_INC -DNDEBUG=1 -lm -w
+echo "   ✅ render-contract probe"
+
 gcc -o "$PROBE/probe-concurrency" "$PROBE/probe_concurrency.c" "$BUILD/libsc68-ndebug.a" \
     $NEW_INC -DNDEBUG=1 -lm -lpthread -w
 echo "   ✅ concurrency probe"
