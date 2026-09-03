@@ -436,7 +436,15 @@ The scrollbar had the same shape of problem, smaller: it re-runs on every frame 
 is what a scrollbar is — and was doing it with `BoxWithConstraints`, a subcomposition. It is three
 weighted boxes now, which is pure layout.
 
-**Still open** until the owner says it is gone.
+**A fourth thing, from him again:** after the first twenty seconds it still stuttered a little, and
+*most visibly when flinging the list hard*. A fling is a per-row cost rather than a per-second one,
+so that pointed at what each row does — and every playlist row carried
+`graphicsLayer { translationY = dragOffset }` unconditionally, which allocates a render node per
+row, created and thrown away again for every row a fling brings past. Browse's rows have no such
+modifier. At most one row is ever dragged, so the layer is now applied only to that one.
+
+**Still open** until the owner says it is gone. Four explanations so far, three of them wrong and all
+four real problems; each was narrowed by a comparison he made rather than by reasoning here.
 
 ### C3. R9 is addressed but unmeasured
 

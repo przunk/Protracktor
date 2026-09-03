@@ -538,8 +538,18 @@ private fun TrackRow(
         },
         modifier = Modifier
             .fillMaxWidth()
-            .zIndex(if (dragging) 1f else 0f)
-            .graphicsLayer { translationY = dragOffset }
+            // **Only while this row is being dragged.** `graphicsLayer` allocates a render node,
+            // and applied unconditionally that is one per row -- allocated and thrown away again
+            // for every row a fling brings past. Browse's rows have no such modifier, which is why
+            // three hundred of them scroll smoothly while twenty-two of these did not. At most one
+            // row is ever dragged, so at most one layer is ever needed.
+            .then(
+                if (dragging) {
+                    Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset }
+                } else {
+                    Modifier
+                }
+            )
             .combinedClickable(
                 enabled = enabled,
                 onClick = { if (selecting) onToggle() else onPlay() },
