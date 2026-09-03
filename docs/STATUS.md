@@ -51,6 +51,11 @@ working and fetching serially, which he heard; that is fixed.
   confirmed — adding from a row's menu no longer closes Browse.
 - **2026-09-03**: **ASMA plays** (SAP files from the archive) and a **local SID plays**, so
   libsidplayfp is confirmed on a device. Reading a local library is confirmed correct.
+- **2026-09-03, evening**: the **stale-index notice** appears on Modland; the **action row** in the
+  expanded player, the **Browse** button, the **playlist counts** in both the switcher and the
+  add-to dialogue, the **current playlist first**, and **history showing when** — all confirmed.
+  The single **"Add to playlist…"** replacing the two add actions is confirmed too, which matters
+  because it changed a route the owner had already signed off as **C7**.
 
 **Still not verified by anyone on a device:**
 
