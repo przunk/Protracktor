@@ -525,6 +525,48 @@ Since Android 13 the system builds a `MediaStyle` notification's buttons from th
 `PlaybackState` rather than from the notification's own actions — which is why the
 `Notification.Action`s, added unconditionally all along, were never the thing to look at.
 
+### C13. Repeat-one does not repeat a subsong
+
+Reported 2026-09-04 by the owner: *"repeat one nie działa dla subtracków"*. Reading the code turns
+one report into **two independent faults**, and only the first is unambiguously a bug.
+
+**Fault 1 — `Sc68Backend::rewind()` hardcodes track 1.**
+
+```cpp
+void rewind() override {
+    sc68_stop(sc68_);
+    sc68_play(sc68_, 1, SC68_DEF_LOOP);   // <- always the first subsong
+    ...
+}
+```
+
+`restart()` is what repeat-one calls, and it goes through `rewind()`. So on a multi-tune SNDH sitting
+on subsong 5, repeat-one plays **subsong 1** — it does repeat, just not the thing that was playing.
+The other backends already do the right thing: ASAP replays `song_`, game-music-emu replays
+`track_`, and libsidplayfp reloads the tune with its selected song. sc68 is alone in forgetting.
+
+The fix is to remember what `selectSubsong` chose and rewind to that. It is provable on the host
+through `probe_render.c` without a device: select a subsong, rewind, check which one plays.
+
+**Fault 2 — with "play all subsongs" on, repeat-one is never consulted.**
+
+`onTrackEnded` walks to the next subsong *before* it looks at the repeat mode:
+
+```kotlin
+if (now.playAllSubsongs && now.subsong + 1 < now.subsongCount) { selectSubsong(now.subsong + 1); return }
+```
+
+So under all-subsongs + repeat-one, every subsong but the last ignores repeat-one entirely, and the
+last one then falls through to `restart()` — which on ASAP, GME and libsidplayfp loops that **last**
+subsong forever, and on sc68 jumps to the first. Three backends, three behaviours, none of them
+chosen.
+
+**What repeat-one should mean here is a real question, not an oversight to patch.** "One" everywhere
+else in this app means one row of the playlist, and a multi-tune file is one row. That reading says:
+with all-subsongs on, the end of the last subsong goes back to the first and the whole file loops;
+with all-subsongs off, the current subsong loops. It is coherent and it is a guess — it belongs in a
+commit that says so, not in silence.
+
 ### C3. R9 is addressed but unmeasured
 
 The next track is read while the current one plays and remote fetches are cached, but nobody has

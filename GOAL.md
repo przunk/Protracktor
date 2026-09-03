@@ -518,3 +518,198 @@ documenting.
 has tested it on his phone; the exception is an unattended run, which this was. Everything here is
 in `develop` having been verified by compilation, 87 unit tests and host probes — and by nothing
 else.
+
+---
+
+# Round 6 — set 2026-09-04, Amiga, the archives it unlocks, and disk
+
+## What belongs in a goal round, and why this one may be large
+
+The owner asked for the *character* of this work to be defined before the list, so that the list can
+afford big items. The rule that comes out of five rounds of evidence:
+
+> **An item belongs in a goal round when its verdict can be produced on this machine.**
+
+Not "can be written without him" — **can be proven** without him. The distinction is the whole
+lesson of the project so far.
+
+Everything that ended in a number or a test went well unattended: sc68 3.0.0b (14/30 → 30/30 SNDH),
+libsidplayfp (30 of 30 with no ROMs), ASMA, the Android-free extractions and their tests, and the
+Phase-2 review — which found R1, a bug that would have stopped **every** SNDH on its first audio
+callback and that no amount of careful writing had caught.
+
+Everything whose verdict lived on his phone or in his taste went badly: C10 took four wrong
+diagnoses before the answer turned out to be "it was a debug build"; the subsong UI, the placement
+of its toggle, and the silence after adding to a playlist were each decided alone and each decided
+wrongly; and a single SMB log line became a "fact" in five documents.
+
+So three shapes qualify, and they are what allows an item to be big:
+
+- **A backend or a catalogue** — probed on the host against a real corpus, verdict is a number.
+- **A defect or a piece of machinery** — extracted to Android-free code and covered by tests.
+- **A document** — correctness checkable by reading it.
+
+And a fourth phase that has earned its place: **review, then corrections selected from it**.
+
+Disqualified regardless of how tempting: anything that ends in "it works on the device"
+(`docs/STATUS.md` C3, the unconfirmed console formats), and anything where the owner's taste is the
+judge — the shape of a settings screen, per-format playback UI, what a control should be called.
+
+## The rules
+
+The rules at the top of this file apply unchanged. Restating the two that matter most here:
+
+- **One item, one branch from `develop`, one merge back.** Never `master`.
+- **Every item ends with `./scripts/test-protracktor.sh --really` and `./scripts/build-debug.sh`
+  green.** `--really` exists because a cached run once reported 87 tests "passing" in one second.
+- **Do not claim anything works on a device**, and do not decide anything reserved for the owner.
+  Where an item needs his decision, produce the *measurement* that makes his decision easy — that is
+  what turned the sc68 replay-binary question from an argument into a choice.
+
+## Explicitly out of scope
+
+- **The sc68 replay-binary licence decision.** Deferred by the owner on 2026-09-03 and still
+  deferred on 2026-09-04: *"pogadamy jutro"*. Item 1 raises the identical question for UADE. **Do
+  not settle either.** Measure both and write the numbers down.
+- **The settings screen as a screen** (`docs/BACKLOG.md` A13). Item 3 takes only the half that is a
+  defect. Its layout, where it is reached from, and `docs/OPEN_QUESTIONS.md` Q1 are a conversation.
+- **`docs/STATUS.md` C3** — needs his phone and his network.
+- **`docs/BACKLOG.md` A19** — deferred, and he asked not to have it raised unprompted.
+- **`master`.**
+
+## Phases
+
+1. implement the items below, in order;
+2. review the complete codebase and write the findings down;
+3. fix the most important confirmed findings;
+4. reconcile all documentation with the code that resulted.
+
+**Stopping cleanly between items is a good outcome.** Item 1 is the largest single piece of work
+this project has attempted and may be the entire round. Ending on a merged, building, documented
+item with an honest note in `docs/STATUS.md` about where it stopped is worth more than reaching
+Phase 4 on an exhausted context.
+
+## Phase 1 — the list
+
+- [ ] **1. UADE — the Amiga custom formats**
+
+      The largest body of music left. TFMX, Hippel, Future Composer, David Whittaker, Jochen Hippel,
+      Mark Cooksey and the rest of the Amiga custom players are tens of thousands of files in
+      Modland that this app currently cannot open at all. `docs/BACKLOG.md` A5 has kept this last on
+      purpose; the reasons it was last are now the reasons to do it — everything easier is done.
+
+      **Prove it on the host before integrating.** That has caught something every single time: sc68
+      2.2.1's half-broken SNDH, the SidMon files masquerading as `.sid`, and R1. Build the probe,
+      run a real Modland corpus through it, and report a pass rate the way sc68 and libsidplayfp
+      were reported.
+
+      **This is not a library, it is an emulator.** UADE runs the original m68k replay routines
+      under an emulated Amiga, so expect the integration to look unlike the other four backends:
+      a core to build, replay binaries to locate, and a score file mapping formats to players. Budget
+      for that honestly rather than assuming the `Backend` interface absorbs it — and if it does not
+      fit that interface, say so in the commit rather than distorting the interface quietly.
+
+      **The replay binaries are the owner's decision, not this item's.** They are the same question
+      sc68 raised and he has deferred twice. Do exactly what was done for sc68: **measure** what
+      each bundling choice costs in tracks played, and write the numbers into `docs/LICENSES.md`.
+      A number turns his decision into a choice; an argument does not.
+
+      **Subsongs come free and must be wired.** UADE files are frequently multi-tune, and the
+      `subsongCount`/`selectSubsong` boundary already exists, zero-based, precisely so a new backend
+      only has to fill it in.
+
+- [ ] **2. Re-index, and the archives UADE unlocks** (`docs/BACKLOG.md` A7)
+
+      **Re-indexing is not optional after item 1.** The catalogue index deliberately keeps only
+      entries whose filename some backend might handle, so every Amiga custom format is *absent*
+      from the existing Modland index rather than present-and-failing. Item 1 lands and changes
+      nothing visible until this runs. The decoder-set staleness marker added in round 5 is what
+      makes this detectable rather than silent — check that it actually fires here, because this is
+      the first real occasion it has had.
+
+      **AMP (Amiga Music Preservation)** is the archive that was blocked on this. `docs/PLAN_CATALOGUES.md`
+      records what is known. Two halves, and the second is the usual blocker: an index parser or a
+      live search against whatever it publishes, and `pathFrom` — the inverse of `urlFor` — because
+      "more from this author" is abstract and the compiler will ask.
+
+      **If AMP publishes nothing machine-readable, stop and write that down.** Do not scrape a
+      website into a fragile parser to avoid reporting an obstacle. The same instruction was given
+      for ASMA and it was the right one.
+
+- [ ] **3. Disk the app takes and cannot give back** (the half of `docs/BACKLOG.md` A13 that is a defect)
+
+      The ASMA archive (20 MB), the HVSC song lengths (5.2 MB) and every downloaded catalogue index
+      have **no way to be deleted at all**. That is not a missing preference, it is the app taking
+      storage with no route back — and on a phone that is a defect. The fetched-file cache already
+      has a budget (`CacheBudget`, 512 MB, LRU); these do not.
+
+      Show what is held and let it go, per item, with sizes. What is deleted must be re-fetchable —
+      deleting the ASMA zip has to leave the app able to download it again, not broken.
+
+      **Where it lives is an implementation guess, and should be made as one.** The app has no
+      top-level overflow menu and adding one is a navigation change the owner has reserved
+      (`docs/OPEN_QUESTIONS.md` Q1). Granted folders are managed from Browse today, so Browse is
+      the honest place for "what this app is storing" and needs no new navigation. Say in the commit
+      that this is a guess made to avoid prejudging Q1, so it can be moved cheaply when A13 is
+      actually designed.
+
+- [ ] **4. Repeat-one and subsongs** (`docs/STATUS.md` C13)
+
+      Reported 2026-09-04. Two independent faults behind one symptom, and C13 has both in full.
+
+      `Sc68Backend::rewind()` hardcodes `sc68_play(sc68_, 1, ...)`, so repeat-one on a multi-tune
+      SNDH replays the *first* subsong rather than the one playing. Provable on the host through
+      `probe_render.c`: select a subsong, rewind, see which one comes back. ASAP, GME and
+      libsidplayfp already remember; sc68 is alone.
+
+      Separately, `onTrackEnded` walks to the next subsong **before** consulting the repeat mode, so
+      under "play all subsongs" repeat-one is never consulted at all — and the last subsong then
+      loops forever on three backends and jumps to the first on the fourth.
+
+      **What repeat-one means here is a judgement, so make it explicitly.** "One" everywhere else in
+      this app means one row of the playlist, and a multi-tune file is one row: with all-subsongs on,
+      the end of the last subsong returns to the first and the file loops; with it off, the current
+      subsong loops. Implement that and name it as a guess in the commit — the owner has corrected
+      exactly this class of reasoning before, when a transport button would have meant different
+      things depending on the file.
+
+- [ ] **5. The documents the Play Store needs** (`docs/BACKLOG.md` A14)
+
+      No device, no taste, and they block publishing. Three things, all writing:
+
+      A **privacy policy** and the matching **data-safety declaration**. Ours is unusually short and
+      that is worth stating plainly rather than padding: no analytics, no accounts, no crash
+      reporting, nothing collected, and the only network traffic is fetching music from archives the
+      user chose. Write it so it can be published at a URL, because the listing requires one.
+
+      A note on **the GPL and the store** — distributing GPL-3 software through Play is fine, the
+      obligation is that source is offered to recipients, and the public repository discharges it.
+      Written down once so it is not re-litigated.
+
+      **Not the listing itself.** Screenshots, feature graphic, content rating and the store text are
+      his account and his name.
+
+## Phase 2 — review
+
+The same standard as round 5, which is the reason that phase exists: read the whole tree with fresh
+suspicion, write every finding down with its evidence, and rank by what would actually hurt someone
+using the app. Round 5's review found a bug that would have stopped every SNDH on its first audio
+callback — after the same code had been written, reviewed in passing and merged.
+
+Treat code written earlier in this same run with **more** suspicion, not less. That instruction was
+what earned R1.
+
+## Phase 3 — corrections
+
+Each independent correction gets its own branch and commit. Fix what the review confirmed; record
+what was deliberately not fixed and why. A finding dismissed with a reason is a result; a finding
+quietly dropped is not.
+
+## Phase 4 — reconcile the documentation
+
+`docs/STATUS.md`, `docs/ARCHITECTURE.md`, `docs/BACKLOG.md`, `docs/WISHLIST.md`, `docs/LICENSES.md`,
+`docs/PLAN_FORMATS.md`, `docs/PLAN_CATALOGUES.md`, `BUILD.md`, `AGENTS.md`. A document that lies is
+worse than one that is missing.
+
+State plainly, as round 5 did, that **nobody has run any of this on a device** — the unattended
+exception in `AGENTS.md` is why it is in `develop` at all.
