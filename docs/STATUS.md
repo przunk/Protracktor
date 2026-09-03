@@ -443,8 +443,28 @@ so that pointed at what each row does — and every playlist row carried
 row, created and thrown away again for every row a fling brings past. Browse's rows have no such
 modifier. At most one row is ever dragged, so the layer is now applied only to that one.
 
-**Still open** until the owner says it is gone. Four explanations so far, three of them wrong and all
-four real problems; each was narrowed by a comparison he made rather than by reasoning here.
+**Then the shape of it changed the question.** The owner's fifth report is not about a per-item cost
+at all:
+
+> It stuttered. I added 200 SAP tracks — it still stuttered, but briefly. About five seconds after
+> adding them it ran **better than it had with 22**. Restarted the app: swiping stutters, and after
+> ten or fifteen swipes it stops.
+
+**More items made it faster, and repeated scrolling cures it.** No amount of per-row or per-second
+work behaves like that. That is a **warm-up** curve: ART interpreting until the JIT compiles the
+paths, and Compose composing each composable type for the first time.
+
+**Which makes the build type the first thing to rule out.** Every measurement so far has been on a
+**debug** APK, and a debug build is `debuggable=true` — which turns off a great deal of ART's
+optimisation and holds the JIT back, on top of having no R8. A release build is the honest
+comparison and has never been tried.
+
+**If it persists in release**, the answer is a **baseline profile**: this project has none, and
+"janky until it warms up, then fine" is precisely what one exists to fix. Generating a real one
+needs a device or emulator, so it would be the owner's run rather than a workshop one.
+
+**Still open.** Five explanations, four of them wrong and all five real; every narrowing came from a
+comparison the owner made rather than from reasoning here.
 
 ### C3. R9 is addressed but unmeasured
 
