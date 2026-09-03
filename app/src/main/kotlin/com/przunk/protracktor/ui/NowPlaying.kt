@@ -16,8 +16,6 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,7 +44,6 @@ import com.przunk.protracktor.player.PlayerUiState
  * message, which is where the scene put its greetings and is half the reason anyone keeps these
  * files. A visualiser returns later as something the user switches on (`docs/WISHLIST.md`).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NowPlaying(
     state: PlayerUiState,
@@ -114,24 +111,29 @@ fun NowPlaying(
         // buttons that grew by two in a single day (`docs/BACKLOG.md` A17). Each is absent rather
         // than disabled when it has nowhere to go -- a local file has no catalogue folder and no
         // address anyone else could open.
-        FlowRow(
+        // Equal columns sharing the width that is there, rather than a fixed cell size: five fixed
+        // cells do not fit a phone, and the ones that wrapped read as missing rather than as a
+        // second row. `weight` makes them a grid however many there are -- and the number does
+        // vary, deliberately. "Show in playlist" is absent while what plays is not in the playlist,
+        // and a local file has neither an author folder nor an address anyone else could open.
+        Row(
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             onShowInPlaylist?.let {
-                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it)
+                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it, Modifier.weight(1f))
             }
             onShowNeighbours?.let {
-                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it)
+                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it, Modifier.weight(1f))
             }
             onAddToOtherPlaylist?.let {
-                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it)
+                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
             }
             onShareFile?.let {
-                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it)
+                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it, Modifier.weight(1f))
             }
             onShareLink?.let {
-                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it)
+                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it, Modifier.weight(1f))
             }
         }
 

@@ -18,7 +18,6 @@ package com.przunk.protracktor.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,9 +29,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-/** One cell of the action grid. Every action is this wide, whatever its name. */
-private val CELL = 84.dp
-
 /**
  * An action drawn as an icon with its name underneath.
  *
@@ -43,6 +39,12 @@ private val CELL = 84.dp
  *
  * Shared rather than repeated, because the version that existed was inline in the Browse header and
  * a second copy would have drifted from it by the third caller.
+ *
+ * **Width comes from the caller.** A row of these should be a grid of equals, and the way to get
+ * that is `Modifier.weight(1f)` so they share the space that is actually there. A fixed width was
+ * tried and was worse than ragged: at 84dp five of them are 420dp, a phone gives about 310, and the
+ * last two wrapped to a second line — which reads as actions having gone missing rather than as a
+ * grid. In a top bar, where there is no row to share, no width is right.
  */
 @Composable
 internal fun LabelledAction(
@@ -56,10 +58,6 @@ internal fun LabelledAction(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick)
-            // **A fixed width, not a ceiling.** Sized to the content, these came out ragged --
-            // "Share" narrow, "More from this author" wide -- and a row of different-sized things
-            // does not read as a set of equals. One width makes them a grid.
-            .width(CELL)
             .padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
         // The accent colour, because these are controls. Drawn in the ordinary content colour they
