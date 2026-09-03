@@ -624,3 +624,16 @@ tested.
 **A ceiling stops growth; it does not give the disk back.** Nothing in the app deletes the ASMA
 archive or the song lengths (A13). The online screen at least says what is held, because an app that
 takes disk quietly is worse than one that takes the same disk and says so.
+
+## 20. Where the time goes on screen
+
+Changed 2026-09-03, at the owner's suggestion and in his layout:
+
+```
+0:36  ─────────●──────────────  2:20
+```
+
+Position on the left, length on the right, the bar between them. Before, both sat beside the title
+as `0:36 / 2:20` — one string to decode, in a row that had become crowded once the tune count joined
+it. Flanking the bar, the two numbers read as **where this line starts and where it ends** rather
+than as a fraction to parse.

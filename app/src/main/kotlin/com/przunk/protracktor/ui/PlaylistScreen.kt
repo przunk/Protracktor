@@ -102,7 +102,7 @@ fun PlaylistScreen(
     // and more portable than a blur, which needs API 31 and this app runs from 29.
     if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state.queue.tracks, state.playAllSubsongs, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
+            PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
                 randomMode = state.randomMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -119,7 +119,6 @@ fun PlaylistScreen(
 
     PlaylistBody(
         tracks = state.queue.tracks,
-        showSubsongCounts = state.playAllSubsongs,
         listState = listState,
         currentIndex = state.queue.currentIndex,
         onPlayAt = onPlayAt,
@@ -145,7 +144,6 @@ private fun PlaylistBody(
     // and stayed smooth at three hundred rows while this stuttered at twenty-two. That comparison
     // is what found it.
     tracks: List<TrackRef>,
-    showSubsongCounts: Boolean,
     listState: LazyListState,
     currentIndex: Int?,
     onPlayAt: (Int) -> Unit,
@@ -202,7 +200,6 @@ private fun PlaylistBody(
                 dragOffset = if (track.id == draggingId) dragOffset else 0f,
                 selecting = selecting,
                 ticked = track.id in selected,
-                showSubsongCounts = showSubsongCounts,
                 onToggle = {
                     selected = if (track.id in selected) selected - track.id else selected + track.id
                 },
@@ -433,7 +430,6 @@ private fun TrackRow(
     dragOffset: Float,
     selecting: Boolean,
     ticked: Boolean,
-    showSubsongCounts: Boolean,
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
     onPlay: () -> Unit,
@@ -448,9 +444,9 @@ private fun TrackRow(
     var menuOpen by remember { mutableStateOf(false) }
 
     val label = SupportedFormats.labelFor(track.fileNameOrTitle)
-    // The tune count only in "play all". In "first only" it would advertise fourteen tunes the
-    // transport is not going to reach, which is worse than saying nothing.
-    val tunes = if (showSubsongCounts && track.subsongs > 1) {
+    // In both modes, for the same reason the dock shows it in both: a count you only see once you
+    // have switched to the mode tells you nothing you did not already know.
+    val tunes = if (track.subsongs > 1) {
         pluralStringResource(R.plurals.subsongs_count, track.subsongs, track.subsongs)
     } else {
         ""

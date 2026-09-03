@@ -62,7 +62,7 @@ landed:
 | **Dock — transport** | untouched. A control that does nothing for most files does not belong beside shuffle and repeat |
 | **Dock — title row** | now visibly a control, and says *"tune 3 of 15"* when the mode is on |
 | **Expanded player** | the strip of tunes and the mode toggle — **(c)**: that screen *is* the track, so nothing is covered |
-| **Playlist row** | the count, and only in "all tunes" — **(d)** without cluttering a row we had already agreed |
+| **Playlist row** | the count, in both modes |
 
 **The mode decides what the transport means, and that is his correction rather than my design.** I
 proposed that `next` should walk tunes inside any multi-tune file. He pointed out that this makes a
@@ -82,8 +82,11 @@ listening session the first time one appears.
 - **The dock's title row did not look clickable**, and it is the way to all of this. Fixed with the
   same remedy the playlist name in the top bar needed: a visible surface and a chevron.
 
-**One hole in the design, named and closed:** with the count shown only in "all tunes" mode, there
-was no way to discover a file *had* tunes while in "first only". The dock now says so.
+**One hole in the design, named and then closed properly.** We had agreed the count would appear
+only in "all tunes" — which meant you had to already know a file held fifteen tunes in order to
+switch to the mode that would tell you. I patched it by putting an indicator in the dock; the owner
+went further and removed the condition: *"we can always show 1 of n, even in play-only-one."* He is
+right, and it is the simpler rule. A count is true whatever the mode does with it.
 
 **Still not solved, deliberately:** console formats over-report. A GBS claims 99 and an HES 256, and
 many are silence or sound effects rather than tunes. We already store per-subsong durations for SID

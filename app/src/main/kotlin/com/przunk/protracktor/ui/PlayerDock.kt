@@ -76,15 +76,34 @@ fun PlayerDock(
             // The same seek control as the expanded player. The owner asked to be able to move
             // through a track from the main screen without opening anything first; a progress line
             // you cannot grab was the fault.
-            SeekBar(
-                positionSeconds = state.positionSeconds,
-                durationSeconds = state.durationSeconds,
-                enabled = state.seekable && loaded != null,
-                onSeek = onSeek,
-                compact = true,
-                label = stringResource(R.string.a11y_seek),
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
+            // Position on the left, length on the right, with the bar between them: the two
+            // numbers then read as where this line starts and where it ends. Written as
+            // "0:36 / 2:20" beside the title they were one string to decode, in a row that was
+            // getting crowded -- the owner's observation, and his layout.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            ) {
+                Text(
+                    text = formatTime(state.positionSeconds),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SeekBar(
+                    positionSeconds = state.positionSeconds,
+                    durationSeconds = state.durationSeconds,
+                    enabled = state.seekable && loaded != null,
+                    onSeek = onSeek,
+                    compact = true,
+                    label = stringResource(R.string.a11y_seek),
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                )
+                Text(
+                    text = formatTime(state.durationSeconds),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             // **It has to look like a control.** This row opens the player, and nothing said so --
             // the owner pointed that out, and it matters more now that the tunes inside a file are
@@ -126,12 +145,6 @@ fun PlayerDock(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
-                    text = "${formatTime(state.positionSeconds)} / ${formatTime(state.durationSeconds)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
                 // For anything playing that is not the playlist: a random pick, a search result, a
                 // track tapped while browsing. Keeping it is a decision made after hearing it,
                 // which is the only order that makes sense for something you did not choose.
@@ -141,9 +154,11 @@ fun PlayerDock(
                     }
                 }
                 // Says there is more inside without adding a control: the tunes are chosen in
-                // the player this row opens. Only when there is more than one, and only in "play
-                // all" -- in "first only" a count would advertise something that will not happen.
-                if (state.playAllSubsongs && state.subsongCount > 1) {
+                // the player this row opens. Shown in **both** modes -- gating it on "play all" was
+                // the first design and it closed a door on itself, since you then had to already
+                // know a file held fifteen tunes in order to switch to the mode that would tell
+                // you. The owner spotted that; "1 of 15" is true either way.
+                if (state.subsongCount > 1) {
                     Text(
                         text = stringResource(
                             R.string.subsongs_position, state.subsong + 1, state.subsongCount
