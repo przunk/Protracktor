@@ -492,6 +492,14 @@ three hundred", which the owner defended and is right; in Browse it would only s
 somebody else's archive". The space goes to the checkbox instead, so rows do not change width when
 selection begins.
 
+### Actions are icons with labels
+
+See `AGENTS.md`. Every control that does something is an icon with its name underneath, through
+`LabelledAction` — one shape, one implementation, so a row of them reads as a set of equals. Their
+width comes from the caller as `weight(1f)` rather than a fixed size: a fixed cell only produces
+equal columns on a screen wide enough to hold them, and on a phone the extras wrapped out of sight
+and read as missing.
+
 ### Anatomy
 
 Browse, search and history rows share one anatomy, and the playlist row is the same thing plus a

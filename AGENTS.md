@@ -33,3 +33,22 @@ looks puts them in `develop` as though they had passed something.
 **The exception** is an unattended run against `GOAL.md`, where the whole point is that he is not
 there: those rules stay as written in that file. Say plainly, when he comes back, what was merged
 without his having seen it.
+
+## An action is an icon with a label, not a word
+
+Stated by the owner on 2026-09-03, after asking for the same thing three times in two days: the way
+out of Browse, the actions on a track, and the way into Browse.
+
+**Any control that performs an action is drawn as an icon with its name underneath.** Use
+`LabelledAction`; do not reach for a bare `TextButton`. The name is not optional — an icon alone does
+not say where it goes — and neither is the icon, because a word alone does not read as a control and
+several words in a row do not read as a set.
+
+**Why it is a rule and not a preference.** Text buttons are what everyone reaches for out of habit,
+including me: I built `LabelledAction` and then used a `TextButton` for the selection bar two hours
+later. Written down, it is one line to check in review rather than a thing the owner has to notice
+again.
+
+**Where it does not apply:** a dialogue's confirm and cancel, which are Material's own convention and
+where a row of icons would be worse; and the transport controls in the dock, which are icons without
+labels because everyone alive knows what a triangle does.

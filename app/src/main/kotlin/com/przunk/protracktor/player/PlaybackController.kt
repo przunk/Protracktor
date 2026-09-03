@@ -18,6 +18,8 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
+import android.os.Process
 import android.text.format.DateUtils
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.GrantedFolder
@@ -39,6 +41,8 @@ import com.przunk.protracktor.engine.NativeEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import java.util.concurrent.Executors
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -290,6 +294,26 @@ class PlaybackController private constructor(private val context: Context) {
     // Main.immediate so a press and the state change it causes land in the same frame; the work
     // itself moves to IO where it belongs.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * For work nobody asked for: identifying tracks in the background, and scanning a library.
+     *
+     * **`Dispatchers.IO` is the wrong tool for this.** Its threads run at default priority, so
+     * opening a decoder — which is real CPU work, and for sc68 means building a 68000 emulator —
+     * competes with the UI thread on equal terms. On a phone that is a list which stutters while
+     * the work runs, which is what the owner reported for the first twenty seconds after launch.
+     *
+     * A single thread at `THREAD_PRIORITY_BACKGROUND` puts this in Android's background cgroup,
+     * where it gets a small share of the processor and *cannot* starve drawing however long it
+     * takes. One thread rather than a pool, because these tasks are sequential by nature and two of
+     * them would only contend with each other.
+     */
+    private val backgroundWork = Executors.newSingleThreadExecutor { runnable ->
+        Thread({
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+            runnable.run()
+        }, "protracktor-background")
+    }.asCoroutineDispatcher()
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
@@ -745,7 +769,7 @@ class PlaybackController private constructor(private val context: Context) {
             var done = 0
             for (candidate in candidates) {
                 ensureActive()
-                withContext(Dispatchers.IO) { probe(candidate, folder.uri) }?.let(indexed::add)
+                withContext(backgroundWork) { probe(candidate, folder.uri) }?.let(indexed::add)
                 done++
                 // Every file would be a state update per file and a recomposition per file; every
                 // twenty-fifth is still movement on screen and costs almost nothing.
@@ -1978,15 +2002,29 @@ class PlaybackController private constructor(private val context: Context) {
                 while (track != null || _state.value.loadingTrack) delay(IDLE_CHECK_MS)
                 delay(RESOLVE_GAP_MS)
 
+                val startedAt = SystemClock.elapsedRealtime()
                 val bytes = loadBytes(ref) ?: continue
                 ensureActive()
                 if (track != null) continue // something started while the file was being read
 
-                val opened = withContext(Dispatchers.IO) {
-                    NativeEngine.open(bytes, ref.fileNameOrTitle).track
+                // describe() and close() were on the caller's thread, which is the main one --
+                // close() destroys a decoder, and for sc68 that is an emulator being torn down.
+                // All of it belongs on the background thread, not just the open.
+                val described = withContext(backgroundWork) {
+                    val opened = NativeEngine.open(bytes, ref.fileNameOrTitle).track
+                        ?: return@withContext null
+                    val text = opened.describe()
+                    opened.close()
+                    text
                 } ?: continue
-                val described = opened.describe()
-                opened.close()
+
+                // Logged rather than guessed at. The owner reported twenty seconds of stutter for
+                // twenty-two tracks and the first explanation -- a database write per track -- was
+                // wrong, which a number here would have shown immediately.
+                android.util.Log.d(
+                    "Protracktor",
+                    "resolved ${ref.fileNameOrTitle} in ${SystemClock.elapsedRealtime() - startedAt} ms",
+                )
                 adoptTitleFrom(described, ref)
             }
         }

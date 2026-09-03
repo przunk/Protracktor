@@ -388,7 +388,7 @@ using.
 
 SidMon 1 itself still needs UADE (`docs/BACKLOG.md` A5). Sixty-one files is not a reason to hurry.
 
-### C10. ~~The list stuttered for the first ten to twenty seconds after launch~~ — FIXED 2026-09-03
+### C10. The list stutters for the first ten to twenty seconds after launch — STILL OPEN
 
 Reported by the owner, who also established it **predated the scrollbar he had just been given** by
 going back to the previous build. That mattered: it stopped the investigation looking at the new
@@ -400,13 +400,30 @@ every row of the playlist and reinserts it — **two inserts per track** — so 
 playlist meant some six hundred inserts, roughly eight times a second, into the same database the
 list was being read from, for as long as the resolution ran. Which is ten to twenty seconds.
 
-**Fix.** The write is debounced by 1.5 s, an order of magnitude longer than the 120 ms gap between
-resolutions, so a run of them collapses into one write. The **state** still updates per track, so
-titles appear as they are learned; only the disk waits.
+**That explanation was wrong**, and the owner disproved it in one sentence: it still stutters for
+twenty seconds on a playlist of **twenty-two** tracks. Twenty-two tracks is forty-four inserts per
+write — nothing. The debounce is kept because writing the whole playlist per resolved track was
+indefensible anyway, but it was not the cause.
 
-**Worth keeping:** the comment justifying the immediate write said it was "the app learning
-something, and losing it would mean relearning it on every launch". That reasoning was right and
-survives — 1.5 s of risk against a stutter the owner could feel is not a trade worth defending.
+**Second attempt, and what is actually known.** Twenty seconds for twenty-two tracks is roughly a
+second each, which points at the per-track work rather than at anything cumulative: reading the
+file, building a decoder, tearing it down. Two things were wrong with how that ran, and both are
+fixed:
+
+- `describe()` and `close()` were on the **caller's thread, which is the main one**. `close()`
+  destroys a decoder — for sc68, an entire 68000 emulator.
+- All of it ran at **default priority**. `Dispatchers.IO` competes with the UI thread on equal
+  terms, so a second of native work per track is a second of contention per track. It now runs on
+  one thread at `THREAD_PRIORITY_BACKGROUND`, in Android's background cgroup, where it gets a small
+  share of the processor and cannot starve drawing however long it takes. The library scan uses the
+  same thread for the same reason.
+
+**And it is now measured rather than reasoned about.** Each resolution logs its own duration
+(`Protracktor` tag). The first explanation here was confidently wrong; a number would have shown
+that immediately.
+
+**Still open** until the owner says the stutter is gone. If it is not, the log says where the time
+goes.
 
 ### C3. R9 is addressed but unmeasured
 
