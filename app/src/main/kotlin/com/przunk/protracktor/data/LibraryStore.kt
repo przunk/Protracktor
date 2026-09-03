@@ -30,7 +30,17 @@ data class SavedPlayerState(
     val repeat: RepeatMode,
 )
 
-data class SavedPlaylist(val id: Long, val name: String)
+data class SavedPlaylist(
+    val id: Long,
+    val name: String,
+    /**
+     * How many tracks are in it.
+     *
+     * Shown wherever a playlist is chosen: a list of bare names gives no way to tell one you filled
+     * from one you made and forgot (`docs/BACKLOG.md` A21).
+     */
+    val trackCount: Int = 0,
+)
 
 /** A folder the user granted, kept so browsing does not start at a file picker every session. */
 data class GrantedFolder(val uri: String, val displayName: String)
@@ -66,9 +76,20 @@ class LibraryStore(context: Context) {
 
     suspend fun playlists(): List<SavedPlaylist> = withContext(Dispatchers.IO) {
         helper.readableDatabase
-            .rawQuery("SELECT id, name FROM playlists ORDER BY position, id", null)
+            .rawQuery(
+                // Counted in the query rather than by reading every playlist's tracks: the picker
+                // shows all of them at once, and one statement is one statement.
+                "SELECT p.id, p.name, COUNT(t.track_id) " +
+                    "FROM playlists p LEFT JOIN playlist_tracks t ON t.playlist_id = p.id " +
+                    "GROUP BY p.id, p.name, p.position ORDER BY p.position, p.id",
+                null,
+            )
             .use { row ->
-                buildList { while (row.moveToNext()) add(SavedPlaylist(row.getLong(0), row.getString(1))) }
+                buildList {
+                    while (row.moveToNext()) {
+                        add(SavedPlaylist(row.getLong(0), row.getString(1), row.getInt(2)))
+                    }
+                }
             }
     }
 

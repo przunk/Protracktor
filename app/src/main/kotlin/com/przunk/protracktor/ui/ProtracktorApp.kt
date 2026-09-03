@@ -211,23 +211,12 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                     // four presses even when it is behaving correctly. This is one, from anywhere.
                     // Labelled as well as drawn, because an icon alone does not say where it goes.
                     if (showBrowse) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .clip(MaterialTheme.shapes.small)
-                                .clickable { showBrowse = false }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                        ) {
-                            Icon(
-                                imageVector = PlayerIcons.Playlist,
-                                contentDescription = null,
-                            )
-                            Text(
-                                text = stringResource(R.string.action_to_playlist),
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
+                        LabelledAction(
+                            icon = PlayerIcons.Playlist,
+                            label = stringResource(R.string.action_to_playlist),
+                            onClick = { showBrowse = false },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
                     }
                     if (!showBrowse) {
                         // Only while there is something to save. A permanently lit Save button
@@ -240,9 +229,14 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                                 Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
                             }
                         }
-                        TextButton(onClick = openBrowse) {
-                            Text(stringResource(R.string.action_browse))
-                        }
+                        // The same shape as the way out, one screen away. Two controls that do
+                        // opposite things should not be told apart by one being drawn and the
+                        // other written (`docs/BACKLOG.md` A23).
+                        LabelledAction(
+                            icon = PlayerIcons.Cloud,
+                            label = stringResource(R.string.action_browse),
+                            onClick = openBrowse,
+                        )
                     }
                 },
             )
@@ -294,13 +288,10 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
                 onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
-                // Two intentions, and they used to share one callback. Finishing a selection means
-                // you are done here; adding one track from its menu means you are not.
                 onAdd = { tracks ->
                     viewModel.addToPlaylist(tracks)
                     showBrowse = false
                 },
-                onAddStayingHere = viewModel::addToPlaylistAndSay,
                 onAddToOtherPlaylist = { tracks ->
                     pendingAddToPlaylist = tracks
                 },

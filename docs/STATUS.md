@@ -51,6 +51,11 @@ working and fetching serially, which he heard; that is fixed.
   confirmed — adding from a row's menu no longer closes Browse.
 - **2026-09-03**: **ASMA plays** (SAP files from the archive) and a **local SID plays**, so
   libsidplayfp is confirmed on a device. Reading a local library is confirmed correct.
+- **2026-09-03, evening**: the **stale-index notice** appears on Modland; the **action row** in the
+  expanded player, the **Browse** button, the **playlist counts** in both the switcher and the
+  add-to dialogue, the **current playlist first**, and **history showing when** — all confirmed.
+  The single **"Add to playlist…"** replacing the two add actions is confirmed too, which matters
+  because it changed a route the owner had already signed off as **C7**.
 
 **Still not verified by anyone on a device:**
 
@@ -65,6 +70,12 @@ working and fetching serially, which he heard; that is fixed.
 
 ## Finished
 
+- **2026-09-03** — **One shape for an action, and one way to add.** Icons with their names
+  underneath, in a row, wherever a track offers actions and wherever Browse is entered or left
+  (**A17**, **A23**). The two add actions became one *"Add to playlist…"* opening the picker, with
+  the current playlist first and **each playlist's size beside its name** (**A21**). History says
+  **when** each track was played (**B15**), which is what the owner wanted from it rather than a
+  list that reorders itself.
 - **2026-09-03** — **A catalogue index says when it is out of date.** Every index records which
   decoders built it, and one built by a different set — or by an unrecorded set, which is every
   index that exists today — says so and points at the re-index button. This is what hid 60,572 C64

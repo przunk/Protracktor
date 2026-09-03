@@ -106,21 +106,34 @@ fun AddToPlaylistDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (playlists.isNotEmpty()) {
+                    // The current playlist first. Since this dialogue became the *only* way to add
+                    // from a menu (`docs/BACKLOG.md` A17), adding to the one you are already in
+                    // must stay two unthinking taps rather than a hunt.
+                    val ordered = playlists.sortedByDescending { it.id == activePlaylistId }
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp)) {
-                        items(playlists, key = { it.id }) { playlist ->
+                        items(ordered, key = { it.id }) { playlist ->
                             val isActive = playlist.id == activePlaylistId
                             ListItem(
                                 headlineContent = {
                                     Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 },
-                                supportingContent = if (isActive) {
-                                    {
-                                        Text(
-                                            stringResource(R.string.playlist_active_indicator),
-                                            style = MaterialTheme.typography.labelSmall,
-                                        )
-                                    }
-                                } else null,
+                                supportingContent = {
+                                    Text(
+                                        text = listOfNotNull(
+                                            if (isActive) {
+                                                stringResource(R.string.playlist_active_indicator)
+                                            } else {
+                                                null
+                                            },
+                                            pluralStringResource(
+                                                R.plurals.track_count,
+                                                playlist.trackCount,
+                                                playlist.trackCount,
+                                            ),
+                                        ).joinToString(" · "),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                },
                                 leadingContent = {
                                     Icon(PlayerIcons.Playlist, contentDescription = null)
                                 },

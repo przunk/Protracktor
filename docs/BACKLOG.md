@@ -377,7 +377,7 @@ deep, and nothing made it easy to leave.
 
 **Related and unsettled**: `docs/OPEN_QUESTIONS.md` Q1, the navigation model, touches exactly this.
 
-## A17. The actions in a track's details need sorting out — DESIGN AGREED 2026-09-03
+## A17. ~~The actions in a track's details need sorting out~~ — DONE 2026-09-03
 
 Raised 2026-09-02 by the owner about two places at once:
 
@@ -399,6 +399,19 @@ the current one*: one item, **"Add to playlist…"**, opening the picker. The pi
 **current playlist first**, so the common case is still two unthinking taps. The dock's **+** keeps
 adding to the current playlist without asking — that is the reflex, and the menu is the decision.
 The bulk button stays as it is, because it already names its target on its face.
+
+**Built.** The expanded player's actions are one wrapping row of icons with their names underneath,
+through a shared `LabelledAction` — the shape the owner had already asked for twice, now in one
+place rather than copied. **Corrected after he saw it:** they are drawn in the accent colour,
+because the full-width text buttons they replaced were accented by default and losing that made
+them read as labels rather than controls; and every cell is one fixed width, because sized to their
+own text they came out ragged and a row of different-sized things does not read as a set of equals. The two add actions became one **"Add to playlist…"** opening the picker,
+with the current playlist sorted to the top.
+
+**And it took some code out.** `addToPlaylistAndSay` and the `onAddStayingHere` wiring existed to
+give the *current-playlist* menu item feedback while staying in Browse (`docs/STATUS.md` C7). That
+menu item is gone, and the picker's own path already reports back **and names the target**, which is
+strictly better. Removed rather than kept for a caller that no longer exists.
 
 ## A18. ~~Should playing something reorder the list it came from?~~ — DECIDED 2026-09-03: no
 
@@ -485,11 +498,21 @@ animate-when-near / jump-when-far helper is shared with B13 and B14 rather than 
   for the playlist. That helper should be reused rather than written twice.
 - **A16** (no way back to the playlist), which is about the same back button doing too many jobs.
 
-## A21. The playlist picker should say how big each playlist is
+## A21. ~~The playlist picker should say how big each playlist is~~ — DONE 2026-09-03
 
 Raised 2026-09-03 by the owner. Choosing where to add a track shows a list of names and nothing
 else, so there is no way to tell a playlist you filled from one you made and forgot. The count is
 already in the database — `LibraryStore.playlists()` reads the rows the picker shows.
+
+**Built**, counted in the same query with a `LEFT JOIN` rather than by reading every playlist's
+tracks: the picker shows all of them at once, and one statement is one statement.
+
+**In both places, on the second try.** The first attempt changed only the *add-to* dialogue and
+missed the **switcher** in the top bar, which is where the owner actually looked. That row now shows
+the count where a dot used to say "this is the current one" — the dot spent a slot saying something
+the row can say by being highlighted, and left the question a list of bare names cannot answer.
+Highlighting the whole row is the same convention the playlist already uses for the playing track,
+so "which one am I in" is one idea rather than two.
 
 ## A22. ~~Online catalogue indexes go stale and nothing says so~~ — DONE 2026-09-03
 
@@ -528,7 +551,7 @@ would have left the owner exactly where he started.
 format the archive files it under — *"SidMon 1 is a format Protracktor cannot play yet"* rather than
 *"no backend recognised it"*. The archive knew; the app was not asking.
 
-## A23. The Browse button should be an icon with a label
+## A23. ~~The Browse button should be an icon with a label~~ — DONE 2026-09-03
 
 Raised 2026-09-03 by the owner: it is a bare text button, while the way *out* of Browse — added the
 day before for **A16** — is an icon with its name underneath. Two controls that do opposite things
