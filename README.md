@@ -8,10 +8,10 @@ you leave the app, shuffle without a history, hold everything in a single playli
 seconds to start a track that is measured in kilobytes.
 
 **Status: it plays.** Tracker modules, Atari ST, Atari 8-bit, Commodore 64 and seven console
-families, with playlists, offline browsing of Modland and ASMA, background playback and a media
-session. See
-`docs/STATUS.md` for what is finished, what is known broken, and what has not been confirmed on a
-device.
+families, with playlists, background playback and a media session. Local folders are scanned by
+opening files rather than by trusting their names; Modland and ASMA browse offline, The Mod Archive
+searches live. See `docs/STATUS.md` for what is finished, what is known broken, and — the shortest
+list — what has actually been confirmed on a device.
 
 ## Documentation
 

@@ -488,3 +488,33 @@ Finish with one documentation commit, `./scripts/test-protracktor.sh`,
 - database/cache compatibility notes;
 - debug and release artifact paths and signing status;
 - an explicit list of everything still requiring a device check or owner decision.
+
+## Round 5 — closed 2026-09-03
+
+All four phases done. Six implementation items, a whole-tree review, its corrections, and this
+reconciliation.
+
+**What the review was for.** It found four confirmed defects, and the first of them —
+`docs/review.md` R1 — would have made the largest piece of work in the round look like it had broken
+Atari ST playback entirely: every SNDH and `.sc68` file stopped on the first audio callback. That
+code was a few hours old. The rule written into this file before the round started — *findings in
+code written earlier in the same run deserve more suspicion, not less* — earned its place on the
+first serious look, and would not have been there if the round had gone straight from building to
+documenting.
+
+**Three constraints added before the round changed what got built.**
+
+- The **sc68 global-state collision** turned out not to exist in 3.0.0b, which is instance-based and
+  measured safe across four threads. A documented limitation was lifted rather than worked around.
+- **Index invalidation** stopped being theoretical the moment item 1 landed: replacing sc68 made
+  every earlier "nothing can play this" wrong on the same morning.
+- The **testability question** for items 5 and 6 was answered per item, as the note allowed. C6 was
+  extracted and has real tests; C7 is two callbacks with no logic to test, and says so rather than
+  inventing a seam to claim coverage.
+
+**Stopping cleanly between phases was allowed and was not needed.**
+
+**What nobody has done: run any of it.** `AGENTS.md` says to leave a branch unmerged until the owner
+has tested it on his phone; the exception is an unattended run, which this was. Everything here is
+in `develop` having been verified by compilation, 87 unit tests and host probes — and by nothing
+else.
