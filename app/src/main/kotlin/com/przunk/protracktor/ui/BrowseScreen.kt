@@ -441,7 +441,7 @@ private fun OnlineDomain(
             } else {
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                RestorePosition(scroll, key, listState, browse.groups.map { it.name })
+                RestorePosition(scroll, key, listState, browse.groups.map { it.name }, browse.loading)
 
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                     items(browse.groups, key = { it.name }) { group ->
@@ -469,7 +469,7 @@ private fun OnlineDomain(
         else -> {
         val key = browse.levelKey()
         val listState = scroll.stateFor(key)
-        RestorePosition(scroll, key, listState, browse.catalogues.map { it.id })
+        RestorePosition(scroll, key, listState, browse.catalogues.map { it.id }, browse.loading)
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             items(browse.catalogues, key = { it.id }) { catalogue ->
                 ListItem(
@@ -781,13 +781,17 @@ private fun RestorePosition(
     key: String,
     listState: LazyListState,
     rowKeys: List<String>,
+    loading: Boolean,
 ) {
-    LaunchedEffect(key, rowKeys) {
-        val target = scroll.pendingReturn(key) ?: return@LaunchedEffect
-        if (rowKeys.isEmpty()) return@LaunchedEffect      // not loaded yet; ask again when it is
-        val index = rowKeys.indexOf(target)
-        if (index >= 0) listState.bringIntoView(index)
-        scroll.returned(key)
+    LaunchedEffect(key, rowKeys, loading) {
+        when (val what = scroll.restoreFor(key, rowKeys, loading)) {
+            is Restore.ScrollTo -> {
+                listState.bringIntoView(what.index)
+                scroll.returned(key)
+            }
+            Restore.Forget -> scroll.returned(key)
+            Restore.Wait, Restore.Nothing -> Unit
+        }
     }
 }
 
@@ -877,7 +881,7 @@ private fun Selectable(
             else -> {
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                RestorePosition(scroll, key, listState, browse.tracks.map { it.id })
+                RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
                 LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
                     BrowseTrackRow(

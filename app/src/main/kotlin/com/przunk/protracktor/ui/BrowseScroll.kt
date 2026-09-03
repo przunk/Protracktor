@@ -64,6 +64,42 @@ internal class BrowseScroll {
     fun returned(key: String) {
         entered.remove(key)
     }
+
+    /**
+     * What a level should do about its pending return, given the list it currently has.
+     *
+     * A decision rather than an action, so it can be tested: the composable that acts on it needs
+     * Compose and there is no emulator here.
+     */
+    fun restoreFor(key: String, rowKeys: List<String>, loading: Boolean): Restore {
+        val target = entered[key] ?: return Restore.Nothing
+
+        // **The list on screen may still belong to the level below.** Going back sets the new level
+        // immediately and fetches its contents asynchronously, so for a moment the key says
+        // "formats" while the list still holds authors. Reading that as "the row is gone" threw the
+        // marker away and the real list arrived with nothing left to restore -- which is exactly
+        // why back restored one level and landed at the top on the next.
+        if (loading || rowKeys.isEmpty()) return Restore.Wait
+
+        val index = rowKeys.indexOf(target)
+        // Absent from a list that genuinely belongs here means the row really has gone -- a rescan,
+        // a re-index, a deletion. Forget it, or a stale marker jumps the list on some later visit.
+        return if (index >= 0) Restore.ScrollTo(index) else Restore.Forget
+    }
+}
+
+/** What [BrowseScroll.restoreFor] concluded. */
+internal sealed interface Restore {
+    /** No pending return for this level. */
+    data object Nothing : Restore
+
+    /** The list is not this level's yet. Ask again when it is. */
+    data object Wait : Restore
+
+    data class ScrollTo(val index: Int) : Restore
+
+    /** The row is gone. Drop the marker. */
+    data object Forget : Restore
 }
 
 @Composable
