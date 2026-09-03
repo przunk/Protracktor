@@ -180,6 +180,38 @@ Pushing is the owner's action. Agents do not hold tokens (AGENTS.md §3).
 There is no emulator in this environment. Nothing about on-screen behaviour is confirmed until the
 owner installs the APK on a phone. A build that compiles proves the build, and nothing else.
 
+## Versions
+
+**`versionCode` is the commit count.** `git rev-list --count HEAD`, read by Gradle through
+`providers.exec`. It only ever grows, changes on every merge without anyone doing anything, and
+needs no discipline — which matters because Play refuses an upload whose code it has seen, and a
+number a person has to remember to raise is a number that eventually is not raised. It stood at 2
+for the whole project and blocked an upload; it is 199 as of 2026-09-03.
+
+Outside a git checkout it falls back to 1. That is wrong and harmless: nothing built that way is
+going to a store.
+
+**`versionName` is typed by hand and means something.**
+
+| | when |
+| --- | --- |
+| **patch** — 0.3.**1** | a batch of fixes handed over |
+| **minor** — 0.**4**.0 | a round of work that added capability |
+| **major** — **1**.0.0 | reserved for "publishable" |
+
+Bumped at **hand-over**, which is when the number gets used, not at merge.
+
+**Bumping the minor on every merge was considered and rejected.** There were about twenty merges on
+2026-09-03 alone, several of them documentation. It would have reached 0.22.0 in a day and told
+nobody anything a timestamp does not — while costing an edit and a commit each time. The instinct
+behind it was right, though: something *should* move on every merge. That something is the
+versionCode, and now it does.
+
+**Artifact names are read out of the artifact**, with `aapt2 dump badging`, rather than scraped from
+`build.gradle.kts`. There is no number in the source to scrape any more, and asking the APK what it
+is cannot disagree with what it is. A bundle cannot be asked, so `build-bundle.sh` recomputes the
+commit count the same way Gradle does — the two expressions have to agree, and the script says so.
+
 ## Which build to hand over
 
 **Release.** Since 2026-09-03, the APK given to the owner for testing is the release build:

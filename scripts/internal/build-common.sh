@@ -53,10 +53,19 @@ publish_artifact() {
         exit 1
     fi
 
-    local version_name version_code stamp infix artifact
-    version_name="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' "$PROTRACKTOR_DIR/app/build.gradle.kts" | head -n 1)"
-    version_name="${version_name%%\$*}"
-    version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' "$PROTRACKTOR_DIR/app/build.gradle.kts" | head -n 1)"
+    # Read out of the artifact rather than out of the source. The versionCode is derived from the
+    # commit count now, so there is no number in build.gradle.kts to scrape -- and asking the APK
+    # what it is cannot disagree with what it is.
+    local version_name version_code stamp infix artifact aapt
+    aapt="$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -n 1)"
+    if [ -x "$aapt" ]; then
+        local badging
+        badging="$("$aapt" dump badging "$build_apk" 2>/dev/null | head -n 1)"
+        version_name="$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$badging")"
+        version_code="$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$badging")"
+    fi
+    version_name="${version_name:-unknown}"
+    version_code="${version_code:-0}"
     stamp="$(date +%Y%m%d-%H%M%S)"
     infix=""
     [ "$kind" = "debug" ] && infix="debug-"
