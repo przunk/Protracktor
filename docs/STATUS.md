@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-09-02 (evening) — version 0.2.0, versionCode 2
+Updated: 2026-09-03 — version 0.2.0, versionCode 2, schema version 8
 
 ## What works
 
@@ -12,10 +12,13 @@ A usable player, as far as anything can be called that without a device saying s
   SPC, VGM, HES, AY, KSS). Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt seeks, sc68 and libsidplayfp cannot, and the UI reflects that.
 - **Online archives**: Modland, browsed offline from a downloaded index and fetched per track; ASMA,
-  which arrives as one 20 MB archive and then needs no network at all. HVSC's song lengths give SID
-  tunes the duration the format cannot carry.
+  which arrives as one 20 MB archive and then needs no network at all; The Mod Archive, searched
+  live. HVSC's song lengths give SID tunes the duration the format cannot carry. Fetched music is
+  capped at 512 MB, least recently used first (`docs/ARCHITECTURE.md` §19).
 - **Library**: folders granted through the storage access framework, remembered between sessions.
-  Browse shows what a folder holds and adds the ticked rows, not the whole thing.
+  A folder is **scanned by opening every file with a real decoder**, not by reading its name, and
+  the result is stored so later launches read an index instead of walking the tree
+  (`docs/ARCHITECTURE.md` §18).
 - **Playlists**: several, named, created, renamed, deleted, switched from the top bar. Shuffle and
   repeat work inside the active one.
 - **Transport**: a dock on every screen with shuffle, previous, play, next and repeat. Shuffle keeps
@@ -26,17 +29,32 @@ A usable player, as far as anything can be called that without a device saying s
   and becoming-noisy are honoured.
 - **Both languages**, Polish and English, from the first screen.
 
-Verified here: 51 unit tests, a release build through R8 with all ten JNI symbols intact, and
-`aapt2` on the artifact. Every backend was also run on the host against real files before it was
-integrated, which is where its measured coverage in this file comes from.
+Verified here: **87 unit tests**, genuinely executed rather than served from the build cache —
+`./scripts/test-protracktor.sh --really`, which exists because a "final verification" on 2026-09-03
+turned out to have come out of the cache in one second. A release build through R8 keeps all 13 JNI
+symbols, three ABIs and 99 sc68 replay binaries. Every backend was also run on the host against real
+files before it was integrated, which is where the measured coverage in this file comes from.
 
 Verified by the owner on a device: modules play (2026-08-31), SAP plays (2026-09-01), reordering a
 playlist works (2026-09-02), and on the evening of 2026-09-02 he tested all five of round 3 —
 **Random rolling on, history, "more from this author" and both shares all work**. Read-ahead was
 working and fetching serially, which he heard; that is fixed.
 
-**Not verified by anyone on a device**: SNDH, SID, console formats, ASMA and HVSC song lengths.
-Round 3's features are confirmed; the formats and archives from round 2 are not.
+**Not verified by anyone on a device**, and this is the list that matters most:
+
+- **Every Atari ST file.** sc68 3.0.0b replaced the 2003 release on 2026-09-03 and nobody has heard
+  one on a phone. A review the same day found that every such track would have stopped on the first
+  audio callback (`docs/review.md` R1); the fix is guarded by a probe and by nothing else.
+- **SID, the console formats, ASMA, HVSC song lengths** — built and measured on the host, never
+  played on the device.
+- **Scanning a real library.** What it costs on the owner's SMB share is unmeasured, and that number
+  decides whether the feature is usable at all.
+- **The 512 MB cache ceiling**, which nobody has yet had enough cached music to reach.
+- Everything added on 2026-09-03: the local index, the cache budget, Browse remembering its place,
+  and the C6/C7 fixes.
+
+Confirmed on a device: modules play (2026-08-31), SAP plays (2026-09-01), and round 3's five
+features — Random rolling on, history, "more from this author" and both shares (2026-09-02).
 
 ## Finished
 
@@ -439,5 +457,13 @@ A6 as well, because it is both a defect and a piece of work.
 
 - `master` — repository base. Merging to it is the owner's decision (`AGENTS.md` §3).
 - `develop` — current work; everything below is merged into it.
-- `feature/asma-catalogue`, `feature/hvsc-songlengths` — 2026-09-02, merged.
+- **2026-09-03, round 5** — all merged: `feature/sc68-3-0-0b`, `feature/local-index`,
+  `feature/cache-budget`, `feature/browse-scroll`, `fix/browse-defects`, `review/round-5`,
+  `fix/review-round-5`, `fix/open-error-race`, `fix/database-singleton`,
+  `fix/engine-shared-state`, `tooling/test-cache-honesty`, `docs/round-5-reconcile`.
+- 2026-09-02 — `feature/asma-catalogue`, `feature/hvsc-songlengths` and the round-3 branches, merged.
 - `feature/project-scaffold` — scaffolding and the Gradle skeleton. Not merged.
+
+**Merged without the owner having run any of it.** `AGENTS.md` says to wait for his device test
+before merging to `develop`; the exception is an unattended `/goal` run, which this was. Round 5 is
+therefore in `develop` unreviewed by anyone but its author.

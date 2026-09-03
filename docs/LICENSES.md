@@ -46,8 +46,19 @@ Recorded here so it is not forgotten before a release.
 Sources are fetched by `scripts/fetch-native-deps.sh`, pinned to an exact version and verified
 against a SHA-256 recorded in that script. They are not committed.
 
-**sc68 2.2.1**, checked on 2026-09-01. `COPYING` carries the GPL **version 2** text, which on its
-own would have invalidated our GPL-3 decision — but every one of the 51 licensed source files says:
+**sc68 3.0.0b**, checked on 2026-09-03 — SVN r713, fetched by `scripts/fetch-sc68-svn.py` against a
+SHA-256 manifest rather than a released tarball, because there is no release. All **78** licensed
+sources under `libsc68/`, `file68/` and `unice68/` say *"either version 3 of the License, or (at
+your option) any later version"*, and `COPYING` carries the GPL v3 text, so the two agree. The
+remaining 95 files are headers with no licence block and no competing claim.
+
+**GPL-2-or-later became GPL-3-or-later with that upgrade.** It is compatible either way — this app
+is GPL-3-or-later — but one thing that had to stay true no longer has to.
+
+**sc68 2.2.1** is still fetched, and only so `scripts/probe-sc68.py` can re-run the comparison that
+justified the change. Checked on 2026-09-01: `COPYING` carried the GPL **version 2** text, which on
+its own would have invalidated our GPL-3 decision — but every one of its 51 licensed source files
+said:
 
 > under the terms of the GNU General Public License as published by the Free Software Foundation;
 > either version 2 of the License, or (at your option) any later version.

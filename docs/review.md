@@ -202,6 +202,23 @@ Recorded so a later reader knows these were examined rather than skipped.
 
 ---
 
+## What is still open
+
+| | severity | status |
+| --- | --- | --- |
+| R1 render contract | critical | fixed, guarded by `probe-render` |
+| R2 open-error race | high | fixed, before/after kept in the tree |
+| R3 migration and five helpers | high | fixed, guarded by a test |
+| R4 identical branches | low | fixed with R1 |
+| R5 replay path race | medium | fixed |
+| R6 playback counters | medium | fixed |
+| **R7 shared `.part` name** | low | **open** — both writers produce identical bytes |
+| **R8 eviction during another fetch** | low | **open** — costs a re-download, breaks nothing |
+
+R7 and R8 are left deliberately. Both are correct by accident rather than by design, which is worth
+recording; neither has a consequence a user could notice, and inventing locks for them would add
+more moving parts than they remove.
+
 ## Not reviewable here
 
 - Anything about **how it feels**: gesture timing, whether a list jumps under a thumb, whether a
