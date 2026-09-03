@@ -98,10 +98,40 @@ his (`sndh_ice.bin` is sc68's own SNDH wrapper); others are named after commerci
 (`alteredbeast.bin`, `cabal.bin`, `armalyte.bin`) and look very much like routines lifted from those
 games, which is the **same** question already recorded above for UADE.
 
-For a private build this is academic. Before the repository goes public or anything reaches a store,
-the owner should decide: ship them, ship only the ones sc68 clearly authored, or have the user supply
-their own. Shipping them silently is the one option that should not happen by default, which is why
-this is written down rather than left in a commit message.
+For a private build this is academic. Before anything reaches a store, the owner should decide.
+
+### What each option actually costs, measured 2026-09-03
+
+The question stopped being a judgement call once it was measured. Of the 99 binaries, exactly
+**one** — `sndh_ice.bin` — is plainly sc68's own; the rest are named after commercial Atari ST games
+(`alteredbeast`, `cabal`, `armalyte`) and after other people's players (`chipmon2`,
+`bendaglish.deli`). `AUTHORS` says nothing about any of them.
+
+Run through the real backend with the replay directory cut down to that one file:
+
+| shipped | `.sndh` (30 files) | `.sc68` (10 files) |
+| --- | --- | --- |
+| all 99, 1.2 MB | **30 plays** | **10 plays** |
+| `sndh_ice.bin` only, 4 KB | **30 plays** | 4 plays, 6 silent |
+
+**Shipping only sc68's own replay costs nothing for SNDH.** That is the format this project was
+started for and 5,484 files in Modland. What it costs is most of `.sc68`, which is 1,775 files.
+
+So the three options are now:
+
+1. **Ship all 99.** What every comparable player does — UADE and Deliplayer carry the same kind of
+   extracted code — and the realistic worst case is a takedown rather than a lawsuit. "Everybody
+   does it" is still not a licence.
+2. **Ship `sndh_ice.bin` only.** SNDH is unaffected; `.sc68` largely stops working. Defensible
+   without argument, and 4 KB instead of 1.2 MB.
+3. **Ship `sndh_ice.bin` and offer the rest as a download.** The machinery exists — this is what
+   already happens for the ASMA archive and the HVSC song lengths, and
+   `docs/LICENSES.md` already records why downloading is different from distributing: the user
+   fetches it from the project that publishes it, and we redistribute nothing.
+
+**Recommended: 3.** It keeps the format the project exists for working out of the box, keeps
+`.sc68` available to anyone who wants it, and moves the one genuinely doubtful 1.2 MB out of the
+APK — which is where the doubt actually lives.
 
 ## Data the app downloads, and does not ship
 

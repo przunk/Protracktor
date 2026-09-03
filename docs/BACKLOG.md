@@ -395,18 +395,19 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 
 - ~~**An App Bundle.**~~ `./scripts/build-bundle.sh`, written 2026-09-02. The key itself is still
   the owner's to create; the script asks for it and refuses to produce a debug-signed bundle.
-- **The launcher icon** (A9) is the system's `ic_media_play`. The store will not take that, and it
-  is the one asset visible on every home screen.
+- ~~**The launcher icon** (A9)~~ — done 2026-09-03: an adaptive icon with a monochrome layer for
+  themed icons, at every density.
 - **A privacy policy and a data-safety declaration.** Required for every listing. Ours is unusually
   easy and worth saying plainly: the app collects nothing, has no analytics, no accounts, no
   crash reporting, and the only network traffic is fetching music from archives the user chose.
 - **The GPL and the store.** Distributing a GPL-3 app through Play is fine, and the obligation is
   that source is offered to recipients — the public repository does that. Worth writing down once
   so it is not re-litigated. The **`sc68` replay binaries** question (`docs/LICENSES.md`) is a real
-  one to settle *before* publishing, not after.
+  one to settle *before* publishing, not after — and it is now **measured** rather than argued:
+  shipping only sc68's own replay costs nothing for SNDH and most of `.sc68`.
 - **Content rating, listing text, screenshots, a feature graphic.** Mechanical, but none exists.
-- **`versionCode` discipline.** Every upload needs a higher one; the scheme is in `docs/BUILD.md`
-  and has never been exercised against a store that rejects duplicates.
+- ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
+  count now and nobody has to remember it.
 
 **Not started, and not to be started without the owner**: publishing is his account, his key and
 his name on the listing.
