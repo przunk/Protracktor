@@ -55,8 +55,8 @@ working and fetching serially, which he heard; that is fixed.
   played on the device.
 - **C7** — the owner had not recognised the defect by name when asked, so the fix is unconfirmed.
   The check is: three dots on a Browse row → *Add to the playlist* → the screen must **not** close.
-- **Scanning a real library.** It works, but what it *costs* on the owner's SMB share is still
-  unmeasured, and that number decides whether the feature is usable at scale.
+- **What a scan costs on a large library.** It works and reads correctly on the owner's phone
+  (confirmed 2026-09-03). How long it takes on a library of thousands is still unmeasured.
 - **The 512 MB cache ceiling**, which nobody has yet had enough cached music to reach.
 
 ## Finished
@@ -317,11 +317,36 @@ SNDH files — the same 2003 library, the same partial coverage, so C1's fix is 
 Kept in the list with its answer rather than deleted: the entry existed because the reasoning
 underneath it had gone stale, and the record of that is worth more than a shorter list.
 
+### C9. "No backend recognised it" for files we could name
+
+Reported by the owner 2026-09-03: two `.sid` files from Modland refused with *"no backend recognised
+it: error reading file"*.
+
+**Not a SID defect.** Of Modland's 60,633 `.sid` files, **60,572 are HVSC (Commodore 64) and 61 are
+"SidMon 1"** — an Amiga tracker format that happens to use the same extension. A SidMon file begins
+`08 f9 00 01 00 bf e0 01`, which is 68000 machine code (`bset.b #1,$bfe001`, the Amiga "stop the
+drive motor" idiom), not `PSID`. So libsidplayfp is never offered it, libopenmpt cannot parse it,
+and the message is the fallback's.
+
+**Two separate things follow, and neither is "fix SID".**
+
+- **The message is true and useless.** The app knows the file came from Modland's `SidMon 1`
+  directory: the catalogue index stores that as its format. Saying *"SidMon 1 is an Amiga format
+  Protracktor cannot play yet"* costs a lookup and turns a dead end into an answer.
+- **SidMon 1 needs UADE** (`docs/PLAN_FORMATS.md`, `docs/BACKLOG.md` A5). 61 files is not a reason
+  to hurry, but it is a concrete instance of the Amiga gap rather than an abstract one.
+
+**Also worth noting:** the catalogue index admits these because it filters by extension, which is
+the one place that cannot probe content — half a million files live on somebody else's server
+(`docs/ARCHITECTURE.md` §18). The format directory is the information we do have and are not using.
+
 ### C3. R9 is addressed but unmeasured
 
 The next track is read while the current one plays and remote fetches are cached, but nobody has
 measured whether that turns the owner's original five-to-thirty second wait into nothing **on his
-SMB share**, which is the only measurement that counts.
+own library**, which is the only measurement that counts. The five-to-thirty second wait was his
+complaint about another player and is real; the SMB share it was once attributed to was not
+(`docs/BACKLOG.md`, R9's correction).
 
 ### C5. ~~`%,1$d` in a plural would have crashed the online screen~~ — FIXED 2026-09-02
 

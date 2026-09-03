@@ -67,7 +67,16 @@ Two observations to bring to that conversation:
 Schema is not a constraint: the owner has confirmed the database can change freely and he can
 reinstall, since nobody else uses the app yet.
 
-## A3. Getting up and down a long list
+## A3. Getting up and down a long list — DESIGN AGREED 2026-09-03: a draggable scrollbar
+
+**The owner's decision**, after reserving this for a conversation on 2026-09-02: *"I want a visible
+scrollbar on the right that you can grab and drag down."* So it is a real thumb the user can take
+hold of, not a fast-scroll gesture and not jump-to-letter.
+
+Worth knowing before building: the playlist already has a drag handle per row for reordering, and a
+draggable scrollbar is a second drag on the same screen. They must not be confusable — the handle is
+inside the row, the scrollbar is at the edge, and that separation has to survive selection mode
+(`docs/ARCHITECTURE.md` §17) where rows also respond to a long press.
 
 
 Raised 2026-09-01. Three hundred tracks is a lot of flicking.
@@ -94,13 +103,13 @@ number now, but it is a reason to ask again then.
 ## A4. Bulk operations on the playlist
 
 **Agreed 2026-09-02 (evening):** *"long-press/bulk operations should be implemented the same way on
-the playlist"*. So the gesture and its behaviour come straight from `docs/ARCHITECTURE.md` §17 —
+the playlist"*, and the actions were settled on 2026-09-03. So the gesture and its behaviour come straight from `docs/ARCHITECTURE.md` §17 —
 long press to start, tap to tick, back to leave with nothing ticked, no layout shift when the
 checkbox arrives.
 
-**Which bulk actions the playlist gets is still the open part.** Delete is obvious and the owner
-named it; *move to another playlist*, *add to another playlist* and *play these only* remain my
-guesses. Ask before building those.
+**Decided 2026-09-03.** Three actions, in the owner's words: **add to another playlist**, **remove
+from this playlist**, and **make a new playlist from these**. *Play these only* was my guess and he
+did not ask for it; it is not in.
 
 **Two things §17 does not cover, because Browse does not have them:**
 
@@ -368,7 +377,7 @@ deep, and nothing made it easy to leave.
 
 **Related and unsettled**: `docs/OPEN_QUESTIONS.md` Q1, the navigation model, touches exactly this.
 
-## A17. The actions in a track's details need sorting out — to discuss
+## A17. The actions in a track's details need sorting out — DESIGN AGREED 2026-09-03
 
 Raised 2026-09-02 by the owner about two places at once:
 
@@ -379,10 +388,19 @@ Raised 2026-09-02 by the owner about two places at once:
   what a playlist row offers, and some of it does not belong on something that is not in a playlist.
 
 Not a layout tweak: the question is what a track's actions *are*, once there are more than fit
-comfortably. Candidates are an icon row rather than stacked text buttons, an overflow menu, or
-splitting "about this track" from "do something with this track".
+comfortably.
 
-## A18. Should playing something reorder the list it came from? — to discuss
+**Agreed with the owner 2026-09-03:** an **icon with its label above or below it**, and all of them
+**in one row**. The same shape as the *Playlist* action already in the Browse header, so the two
+will not read as different kinds of control.
+
+**And one action goes.** Since *add to another playlist* exists, he does not want a separate *add to
+the current one*: one item, **"Add to playlist…"**, opening the picker. The picker should put the
+**current playlist first**, so the common case is still two unthinking taps. The dock's **+** keeps
+adding to the current playlist without asking — that is the reflex, and the menu is the decision.
+The bulk button stays as it is, because it already names its target on its face.
+
+## A18. ~~Should playing something reorder the list it came from?~~ — DECIDED 2026-09-03: no
 
 Raised 2026-09-02 by the owner: what should happen to the order of the displayed list after one of
 its entries is played.
@@ -393,14 +411,24 @@ order is recency and playing something arguably *should* move it to the top — 
 the database, the view just does not refresh under you), and a browse or search result (where order
 is the archive's).
 
-The reason it needs a conversation rather than a decision: a list that reorders under a finger is
-the single most disorienting thing a list can do, and the owner has already said (defending the
+The reason it needed a conversation rather than a decision: a list that reorders under a finger is
+the single most disorienting thing a list can do, and the owner had already said (defending the
 ordinal numbers) that knowing where you are in three hundred rows matters to him.
 
-## A19. Should a jump also fetch the whole author's folder? — to discuss
+**Decided: no.** *"I don't think I want to reorder a list just because I clicked something again.
+The first play is what matters."* So history keeps the order it has while you are looking at it, and
+a replay does not move a row. Current behaviour is now the chosen behaviour rather than an accident.
+
+**What he actually wanted from history is the date and time**, which is `docs/WISHLIST.md` B15 and
+is now the live half of this conversation.
+
+## A19. Should a jump also fetch the whole author's folder? — DEFERRED 2026-09-03
 
 Raised 2026-09-02 by the owner, about **B2**: having jumped to an author's folder, pre-fetch what is
 in it so playing any of it is instant.
+
+**Deferred by the owner**, for the reason the entry already gave: *"an author is effectively the
+lowest-level folder and can have hundreds of tracks."* Not to be raised again unprompted.
 
 **Why it is not simply "yes".** An author's folder in Modland can hold a handful of tunes or a
 couple of hundred, and the app cannot tell before it fetches which it is. The read-ahead built for
@@ -456,6 +484,33 @@ animate-when-near / jump-when-far helper is shared with B13 and B14 rather than 
 - **B13/B14**, which already solved "put this row on screen, animate when near and jump when far"
   for the playlist. That helper should be reused rather than written twice.
 - **A16** (no way back to the playlist), which is about the same back button doing too many jobs.
+
+## A21. The playlist picker should say how big each playlist is
+
+Raised 2026-09-03 by the owner. Choosing where to add a track shows a list of names and nothing
+else, so there is no way to tell a playlist you filled from one you made and forgot. The count is
+already in the database — `LibraryStore.playlists()` reads the rows the picker shows.
+
+## A22. Online catalogue indexes go stale and nothing says so
+
+Raised 2026-09-03 by the owner, after failing to find any C64 music: **his Modland index predates
+libsidplayfp**, so it contains no `.sid` entries at all. The index filters by filename *at index
+time*, and the filter only admits formats a backend can play — so an index built before a backend
+existed is permanently missing that backend's formats, and looks simply empty rather than stale.
+
+**The asymmetry is the point.** Round 5 built exactly this mechanism for the *local* library: every
+row records which decoder set produced it, and a folder scanned by a different one says so and
+offers a rescan (`docs/ARCHITECTURE.md` §18). Catalogue indexes still rely on A7's note asking a
+human to remember. The owner hit that gap the first time it mattered.
+
+**The straightforward fix** is the same one: a `backends` column on `catalogues`, written at index
+time and compared on open. The catalogue row already shows a track count and an indexed-at date;
+"indexed with older decoders — re-index to see C64 music" belongs beside them.
+
+**Worth deciding while doing it**, because the local answer may not transfer: a Modland re-index is
+a 5.75 MB download and half a million rows, where a folder rescan is local work. Whether that should
+happen automatically, on a prompt, or only when the user asks is a real question rather than an
+implementation detail.
 
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
@@ -704,14 +759,24 @@ properly is nearly free.
 
 
 Read-ahead and a disk cache both landed. What is left is the measurement: whether the owner's
-five-to-thirty second wait on an SMB share actually became nothing. Also still open is the cache
+five-to-thirty second wait actually became nothing. Also still open is the cache
 eviction budget (`docs/OPEN_QUESTIONS.md` Q5) — nothing is ever deleted today.
 
 Nothing is cached and nothing is prepared ahead. A local module is fast because it is small.
 
-Two things make this real, and the owner's own setup shows why: his library sits on an **SMB share**
-(the `hierynomus.smbj` traces in his log are the SAF provider for it), so every read crosses a
-network before it reaches us.
+> **Correction, 2026-09-03.** This said the owner's library sits on an SMB share, inferred from a
+> `hierynomus.smbj` trace in one of his logs. **It does not** — his library is local on the phone,
+> and that log was incidental. The inference was recorded as a fact about him and then quietly
+> shaped several decisions: R9's justification, C3's measurement, and how urgent the fetched-file
+> read-ahead looked.
+>
+> **What survives the correction, and deliberately.** He asked to keep hardening against awkward
+> providers anyway: *"SMB is a nuisance and we should be robust to nuisances."* So the work stays —
+> but as a choice made on purpose, not as a response to a setup he does not have. The difference
+> matters, because the second kind of reasoning cannot be checked.
+
+Two things make this real: reads can cross a network, and these formats are small enough that the
+round trip dominates.
 
 - A cache of fetched bytes, keyed by source identity, with the eviction budget from
   `docs/OPEN_QUESTIONS.md` Q5.
