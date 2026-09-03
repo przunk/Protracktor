@@ -172,6 +172,15 @@ object PlayerIcons {
     val Expand: ImageVector by lazy {
         icon("Expand", "M12 8l-6 6 1.4 1.4L12 10.8l4.6 4.6L18 14z")
     }
+    /**
+     * Out of here. The mirror of [Download], and deliberately not [Share].
+     *
+     * Share is "hand this to somebody"; export is "get this out of the app", and the arrow says
+     * which way things are going without anybody reading the label.
+     */
+    val Export: ImageVector by lazy {
+        icon("Export", "M5 20h14v-2H5v2zM12 4l-7 7h4v6h6v-6h4l-7-7z")
+    }
     val Download: ImageVector by lazy {
         icon("Download", "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z")
     }

@@ -145,7 +145,7 @@ fun PlaylistSwitcher(
                 onClick = onImport,
             )
             LabelledAction(
-                icon = PlayerIcons.Share,
+                icon = PlayerIcons.Export,
                 label = stringResource(R.string.action_export_playlist),
                 onClick = onExport,
             )
