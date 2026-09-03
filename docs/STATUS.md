@@ -40,21 +40,24 @@ playlist works (2026-09-02), and on the evening of 2026-09-02 he tested all five
 **Random rolling on, history, "more from this author" and both shares all work**. Read-ahead was
 working and fetching serially, which he heard; that is fixed.
 
-**Not verified by anyone on a device**, and this is the list that matters most:
+**Confirmed on a device by the owner:**
 
-- **Every Atari ST file.** sc68 3.0.0b replaced the 2003 release on 2026-09-03 and nobody has heard
-  one on a phone. A review the same day found that every such track would have stopped on the first
-  audio callback (`docs/review.md` R1); the fix is guarded by a probe and by nothing else.
+- modules play (2026-08-31), SAP plays (2026-09-01)
+- round 3's five features — Random rolling on, history, "more from this author", both shares
+  (2026-09-02)
+- **2026-09-03, round 5**: **SNDH plays** — which also means `docs/review.md` R1 is genuinely fixed,
+  not merely fixed as far as a probe can tell; the **local index survives a restart** and is read
+  instead of rescanned; **Browse comes back to where you were**; **C6** looks right.
+
+**Still not verified by anyone on a device:**
+
 - **SID, the console formats, ASMA, HVSC song lengths** — built and measured on the host, never
   played on the device.
-- **Scanning a real library.** What it costs on the owner's SMB share is unmeasured, and that number
-  decides whether the feature is usable at all.
+- **C7** — the owner had not recognised the defect by name when asked, so the fix is unconfirmed.
+  The check is: three dots on a Browse row → *Add to the playlist* → the screen must **not** close.
+- **Scanning a real library.** It works, but what it *costs* on the owner's SMB share is still
+  unmeasured, and that number decides whether the feature is usable at scale.
 - **The 512 MB cache ceiling**, which nobody has yet had enough cached music to reach.
-- Everything added on 2026-09-03: the local index, the cache budget, Browse remembering its place,
-  and the C6/C7 fixes.
-
-Confirmed on a device: modules play (2026-08-31), SAP plays (2026-09-01), and round 3's five
-features — Random rolling on, history, "more from this author" and both shares (2026-09-02).
 
 ## Finished
 
