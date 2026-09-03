@@ -388,7 +388,7 @@ using.
 
 SidMon 1 itself still needs UADE (`docs/BACKLOG.md` A5). Sixty-one files is not a reason to hurry.
 
-### C10. The list stutters for the first ten to twenty seconds after launch — STILL OPEN
+### C10. ~~The list stutters for the first ten to twenty seconds after launch~~ — NOT A DEFECT, 2026-09-03
 
 Reported by the owner, who also established it **predated the scrollbar he had just been given** by
 going back to the previous build. That mattered: it stopped the investigation looking at the new
@@ -463,8 +463,18 @@ comparison and has never been tried.
 "janky until it warms up, then fine" is precisely what one exists to fix. Generating a real one
 needs a device or emulator, so it would be the owner's run rather than a workshop one.
 
-**Still open.** Five explanations, four of them wrong and all five real; every narrowing came from a
-comparison the owner made rather than from reasoning here.
+**Answer: the release build has none of it.** The owner installed it and reported *"zero stuttering
+now"*. C10 was an artefact of testing on a **debug** APK, which is `debuggable=true` and gives up a
+great deal of ART's optimisation for it. There is no defect in the app that ships.
+
+**What that cost, and what it bought.** Four fixes went in chasing it, and all four were real
+problems worth keeping — a full playlist rewrite per resolved track, background work at foreground
+priority, the whole list recomposing five times a second while playing, and a render node allocated
+per row. None of them was the cause. The cheapest check of all, "is this the debug build", came
+fifth.
+
+**The rule that follows is in `AGENTS.md`:** performance is judged on a release build. A debug build
+is for finding out whether something *works*.
 
 ### C3. R9 is addressed but unmeasured
 

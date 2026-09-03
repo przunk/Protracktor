@@ -52,3 +52,21 @@ again.
 **Where it does not apply:** a dialogue's confirm and cancel, which are Material's own convention and
 where a row of icons would be worse; and the transport controls in the dock, which are icons without
 labels because everyone alive knows what a triangle does.
+
+## Performance is judged on a release build
+
+Learned on 2026-09-03, expensively. The owner reported the playlist stuttering for the first ten to
+twenty seconds after launch. Four explanations followed, each plausible, each a real problem, none of
+them the cause — and then the release build turned out to have none of it.
+
+A **debug** APK is `debuggable=true`. That gives up a great deal of ART's optimisation, holds the JIT
+back, and skips R8 entirely. It is the right build for *does this work* and the wrong one for *is
+this fast*.
+
+**So: before investigating anything that feels slow, build release and check there.** It costs one
+command. It came fifth, after four rounds of the owner testing builds that could not have answered
+the question.
+
+A useful tell, and the one that should have prompted it: **"it gets better the more you use it."**
+Warm-up curves — more items making it faster, repeated scrolling curing it — are about compilation,
+not about the code being wrong.

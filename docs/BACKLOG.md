@@ -585,7 +585,7 @@ should not be told apart by one being drawn and the other written.
 
 Same treatment as A17's action row, and small enough to go with it.
 
-## A24. A baseline profile
+## A24. A baseline profile — NOT NEEDED FOR NOW, 2026-09-03
 
 Raised 2026-09-03 out of `docs/STATUS.md` C10. The list is janky until it has been scrolled ten or
 fifteen times, then it is fine — and adding **more** tracks made it faster. That is a warm-up curve,
@@ -600,9 +600,12 @@ macrobenchmark; this workshop has no emulator, so it is the owner's run rather t
 done here. A hand-written profile is possible and worth less — it guesses at what a real one
 measures.
 
-**Rule this out first:** everything so far was measured on a **debug** build, which is
-`debuggable=true` and gives up a great deal of ART optimisation for it. A release build may simply
-not have the problem.
+**Ruled out, and it was the whole thing.** Everything had been measured on a **debug** build. The
+release build stutters not at all — the owner's words were "zero stuttering now" — so there is
+nothing here to fix and this stays as a note rather than as work.
+
+**Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
+is genuinely for. Not before.
 
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
