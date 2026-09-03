@@ -85,6 +85,49 @@ class BrowseScrollTest {
     }
 
     @Test
+    fun `a list that still belongs to the level below is waited for, not acted on`() {
+        val scroll = BrowseScroll()
+        scroll.descendingFrom("online/modland", "Protracker")
+
+        // Going back sets the new level immediately and fetches its contents asynchronously, so for
+        // a moment the key says "formats" while the list still holds the authors from below.
+        // Reading that as "Protracker is gone" threw the marker away, and the real list arrived
+        // with nothing left to restore -- which is why back restored one level and then landed at
+        // the top on the next.
+        assertEquals(
+            Restore.Wait,
+            scroll.restoreFor("online/modland", listOf("4-Mat", "Jester"), loading = true),
+        )
+        assertEquals(Restore.Wait, scroll.restoreFor("online/modland", emptyList(), loading = false))
+
+        // The marker has to survive both of those.
+        assertEquals(
+            Restore.ScrollTo(1),
+            scroll.restoreFor("online/modland", listOf("Ad Lib", "Protracker"), loading = false),
+        )
+    }
+
+    @Test
+    fun `a row that has really gone is forgotten rather than kept forever`() {
+        val scroll = BrowseScroll()
+        scroll.descendingFrom("local/uri", "old.mod")
+        // A list that genuinely belongs to this level and does not contain it: a rescan removed it.
+        // Keeping the marker would jump the list on some later visit.
+        assertEquals(
+            Restore.Forget,
+            scroll.restoreFor("local/uri", listOf("a.mod", "b.mod"), loading = false),
+        )
+    }
+
+    @Test
+    fun `a level with nothing pending is left alone`() {
+        assertEquals(
+            Restore.Nothing,
+            BrowseScroll().restoreFor("online", listOf("modland"), loading = false),
+        )
+    }
+
+    @Test
     fun `levels do not share their pending returns`() {
         val scroll = BrowseScroll()
         scroll.descendingFrom("online", "modland")

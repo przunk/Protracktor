@@ -317,6 +317,24 @@ SNDH files — the same 2003 library, the same partial coverage, so C1's fix is 
 Kept in the list with its answer rather than deleted: the entry existed because the reasoning
 underneath it had gone stale, and the record of that is worth more than a shorter list.
 
+### C8. ~~Back restored the position for one level only~~ — FIXED 2026-09-03
+
+Reported by the owner the same day A20 was confirmed working: *"back really does go back to where I
+was, but only once — two folders down, the last level goes back and the one above starts at the top
+again."*
+
+**Cause.** Going back a level sets the new level immediately and fetches its contents
+asynchronously, so for a moment the level key is the parent's while the list on screen is still the
+child's. `RestorePosition` saw a non-empty list without the row it wanted, concluded the row had
+gone, and threw the marker away. The real list then arrived with nothing left to restore.
+
+The deepest level worked because its list is briefly *empty* rather than stale, and an empty list was
+already treated as "not loaded yet".
+
+**Fix.** The decision moved into `BrowseScroll.restoreFor`, which returns wait / scroll / forget, and
+waits while the level is loading as well as while its list is empty. It is a separate function so it
+could be tested: removing the loading check fails the test that catches this.
+
 ### C3. R9 is addressed but unmeasured
 
 The next track is read while the current one plays and remote fetches are cached, but nobody has
