@@ -60,11 +60,18 @@ class CatalogueSummaryTest {
         // "Not indexed yet" and "indexed with the wrong decoders" are different sentences and the
         // row shows a different one for each. Saying both would be noise.
         assertFalse(summary(count = 0, backends = "").isStale(current))
+        assertTrue(summary(count = 0, backends = "").requiresIndex)
     }
 
     @Test
     fun `a search-only catalogue is never stale`() {
         // The Mod Archive is queried live and holds no index, so there is nothing to go out of date.
         assertFalse(summary(count = 0, backends = "", onlineOnly = true).isStale(current))
+        assertFalse(summary(count = 0, backends = "", onlineOnly = true).requiresIndex)
+    }
+
+    @Test
+    fun `a downloaded catalogue stops requiring an index once it has tracks`() {
+        assertFalse(summary(count = 1).requiresIndex)
     }
 }

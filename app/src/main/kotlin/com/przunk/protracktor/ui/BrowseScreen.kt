@@ -490,6 +490,13 @@ private fun OnlineDomain(
                                     stringResource(R.string.catalogue_not_indexed)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
+                                // The sentence already carries the meaning; error colour reinforces
+                                // the reduced functionality without making colour the only signal.
+                                color = if (catalogue.requiresIndex) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                             )
                             // An index keeps only the formats a decoder could play when it was
                             // built, so one built by an older set is missing whatever arrived

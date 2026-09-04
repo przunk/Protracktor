@@ -40,7 +40,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -263,12 +262,16 @@ fun ProtracktorApp(
                         // Only while there is something to save. A permanently lit Save button
                         // teaches nothing about whether the list on screen is the list on disk.
                         if (state.dirty) {
-                            IconButton(onClick = viewModel::discardChanges) {
-                                Icon(PlayerIcons.Discard, stringResource(R.string.a11y_discard_changes))
-                            }
-                            FilledIconButton(onClick = viewModel::savePlaylist) {
-                                Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
-                            }
+                            LabelledAction(
+                                icon = PlayerIcons.Discard,
+                                label = stringResource(R.string.action_discard),
+                                onClick = viewModel::discardChanges,
+                            )
+                            LabelledAction(
+                                icon = PlayerIcons.Save,
+                                label = stringResource(R.string.action_save),
+                                onClick = viewModel::savePlaylist,
+                            )
                         }
                         LabelledAction(
                             icon = PlayerIcons.Settings,
