@@ -648,6 +648,11 @@ catalogue index, and the HVSC song lengths (5.2 MB). Before that, the app took d
 number without offering any way to give it back — which is better than taking it quietly and still
 not good enough on a phone.
 
+**A catalogue is one row, not two.** For an archive catalogue the downloaded zip *is* the index —
+ASMA publishes a single file that is stored whole and parsed in place — so offering the file and the
+rows as separate deletes offered two ways to break one thing. Taking either left the other
+describing a catalogue that no longer worked.
+
 **One rule holds the section together: everything on it is a copy.** Each item came from somewhere
 that still has it, and each is re-fetched by a button already on that screen. The user's own things
 are deliberately absent — playlists, granted folders and history are not storage to be reclaimed,

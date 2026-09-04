@@ -60,14 +60,15 @@ fun StorageSection(
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
     onClearCache: () -> Unit,
-    onDeleteArchive: (String) -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
 ) {
     var confirming by remember { mutableStateOf<Confirmation?>(null) }
 
-    val indexes = catalogues.filter { !it.isOnlineOnly && it.trackCount > 0 }
-    if (cacheBytes <= 0 && archiveBytes.isEmpty() && indexes.isEmpty() && songLengthCount <= 0) return
+    val stored = catalogues.filter {
+        !it.isOnlineOnly && (it.trackCount > 0 || (archiveBytes[it.id] ?: 0L) > 0L)
+    }
+    if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0) return
 
     HorizontalDivider()
     Text(
@@ -91,27 +92,23 @@ fun StorageSection(
         )
     }
 
-    archiveBytes.forEach { (id, bytes) ->
-        val name = Catalogue.all.firstOrNull { it.id == id }?.displayName ?: id
-        StorageRow(
-            title = stringResource(R.string.storage_archive, name),
-            detail = stringResource(R.string.storage_megabytes, bytes / (1024 * 1024)),
-            onDelete = {
-                confirming = Confirmation(
-                    title = name,
-                    body = R.string.storage_confirm_archive,
-                    act = { onDeleteArchive(id) },
-                )
-            },
+    // One row per catalogue, because for an archive catalogue the downloaded zip **is** the index
+    // -- ASMA publishes a single file that is stored whole and parsed in place. Listing them
+    // separately offered two deletes for one thing, and taking either left the other describing a
+    // catalogue that no longer worked (round 6 review R4).
+    catalogues.filter { !it.isOnlineOnly }.forEach { catalogue ->
+        val archived = archiveBytes[catalogue.id] ?: 0L
+        if (catalogue.trackCount <= 0 && archived <= 0L) return@forEach
+        val counted = pluralStringResource(
+            R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
         )
-    }
-
-    indexes.forEach { catalogue ->
         StorageRow(
             title = stringResource(R.string.storage_index, catalogue.displayName),
-            detail = pluralStringResource(
-                R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
-            ),
+            detail = if (archived > 0L) {
+                stringResource(R.string.storage_index_and_archive, counted, archived / (1024 * 1024))
+            } else {
+                counted
+            },
             onDelete = {
                 confirming = Confirmation(
                     title = catalogue.displayName,

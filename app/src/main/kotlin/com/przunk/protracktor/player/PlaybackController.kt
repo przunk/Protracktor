@@ -1258,35 +1258,44 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** Throws away a downloaded catalogue archive, such as ASMA's 20 MB zip. */
-    fun deleteArchive(catalogueId: String) {
-        scope.launch {
-            val freed = withContext(backgroundWork) {
-                val before = remoteFiles.archiveBytes(catalogueId)
-                if (remoteFiles.deleteArchive(catalogueId)) before else 0L
-            }
-            _state.update { it.copy(message = Message(freedMessage(freed))) }
-            refreshCatalogues()
-        }
-    }
-
     /**
      * Throws away one catalogue's index.
      *
-     * Stops playback of anything from that catalogue first, because the queue can hold tracks whose
-     * only description lives in the rows being deleted. Leaving them would give a playing row a
-     * title that no longer resolves to anything.
+     * **Playback is deliberately left alone, and this comment used to claim otherwise** (round 6
+     * review R3). A queued catalogue track carries its own id, and the URL to fetch it is derived
+     * from that id by `Catalogue.urlFor` rather than read from `catalogue_tracks` — so a track that
+     * is playing keeps playing, and one further down the playlist still plays when it is reached.
+     * What actually degrades is the format label (`catalogueFormatOf` finds nothing and returns
+     * null) and "more from this author". Both are cosmetic and both come back with the index.
+     *
+     * **An archive catalogue's index and its archive are one thing**, so this deletes both. ASMA
+     * publishes a single zip that `indexCatalogue` stores whole and parses in place; removing the
+     * rows and keeping the zip left a catalogue reporting its full track count, browsing normally
+     * and playing nothing (review R4).
      */
     fun deleteCatalogueIndex(catalogueId: String) {
         scope.launch {
             catalogues.clearIndex(catalogueId)
+            val freed = withContext(backgroundWork) {
+                if (Catalogue.byId(catalogueId)?.isArchive != true) return@withContext 0L
+                val before = remoteFiles.archiveBytes(catalogueId)
+                if (remoteFiles.deleteArchive(catalogueId)) before else 0L
+            }
             _browse.update { current ->
                 current.copy(
                     searchCatalogues = current.searchCatalogues - catalogueId,
                     openCatalogue = current.openCatalogue?.takeIf { it.id != catalogueId },
                 )
             }
-            _state.update { it.copy(message = Message("Index deleted. Download it again any time.")) }
+            // The rows cost no disk worth naming; the archive is 20 MB and the user just asked
+            // where their storage went, so it is the number worth saying when there is one.
+            _state.update {
+                it.copy(
+                    message = Message(
+                        if (freed > 0L) freedMessage(freed) else "Index deleted. Download it again any time."
+                    )
+                )
+            }
             refreshCatalogues()
         }
     }
@@ -1519,13 +1528,19 @@ class PlaybackController private constructor(private val context: Context) {
         // moment just after hearing it is when a person decides. It used to work for Random alone,
         // which is where the idea came from and not where it belongs.
         val ref = _state.value.transient ?: _state.value.resultsQueue?.current ?: return
-        addToPlaylist(listOf(ref))
-        // Said out loud, unlike adding from the playlist screen. `describeAdded` stays silent on
-        // success because there the rows visibly appear and a notice would repeat the screen -- but
-        // this button is pressed from the dock while looking at something else entirely, so nothing
-        // appears and nothing was said. The owner had to navigate away to find out whether it had
-        // worked.
-        _state.update { it.copy(message = Message("Added \"${ref.title}\" to the playlist.")) }
+        // Its own wording, because this one knows the track's name and the general notice does not.
+        //
+        // It used to add through `addToPlaylist` and then overwrite the message that produced --
+        // which worked only because `appendTracks` happens to be synchronous, and briefly put a
+        // second notice into a conflated flow on the way (round 6 review R5). Saying it once is
+        // both simpler and true regardless of ordering.
+        appendTracks(listOf(ref)) { added, _ ->
+            if (added > 0) {
+                Message("Added \"${ref.title}\" to the playlist.")
+            } else {
+                Message("\"${ref.title}\" is already in this playlist.")
+            }
+        }
     }
 
     /**
