@@ -12,6 +12,9 @@ A usable player, as far as anything can be called that without a device saying s
   SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
   and KSS routinely hold nothing at track 0). Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt seeks, sc68 and libsidplayfp cannot, and the UI reflects that.
+- **Ships no code it has no right to.** Of sc68's 99 replay routines the APK carries one — sc68's
+  own — and fetches the rest from sc68 if the user asks (`docs/LICENSES.md`). SNDH is unaffected;
+  `.sc68` waits for the download.
 - **Online archives**: Modland, browsed offline from a downloaded index and fetched per track; ASMA,
   which arrives as one 20 MB archive and then needs no network at all; The Mod Archive, searched
   live. HVSC's song lengths give SID tunes the duration the format cannot carry. Fetched music is

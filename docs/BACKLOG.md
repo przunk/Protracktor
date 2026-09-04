@@ -405,6 +405,10 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
   answers the data-safety form row by row. Both claims were checked against the source rather than
   assumed — no analytics SDK, no identifier read anywhere, five network hosts and all of them
   archives. `ACCESS_NETWORK_STATE` was found declared and unused, and removed.
+- ~~**The replay binaries.**~~ **Settled 2026-09-04**, which was the last thing genuinely blocking a
+  listing: the APK ships only sc68's own replay and downloads the rest at the user's request. The
+  letters to sc68 and UADE are in `docs/letters/`; the UADE one has been sent. Neither reply gates
+  anything.
 - ~~**The GPL and the store.**~~ **Written down 2026-09-04** in `docs/PLAY_STORE.md`, including why
   the Apple App Store problem people cite does not apply to Play. The **replay binaries** question
   (`docs/LICENSES.md`) is untouched by that and still the owner's to settle *before* publishing —
