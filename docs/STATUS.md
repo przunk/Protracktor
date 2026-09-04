@@ -39,7 +39,7 @@ A usable player, as far as anything can be called that without a device saying s
 - **Both languages**, Polish and English, selectable inside Settings alongside the system default.
   The override applies before the activity reads resources and works across the supported API range.
 
-Verified here: **134 unit tests**, genuinely executed rather than served from the build cache — the
+Verified here: **135 unit tests**, genuinely executed rather than served from the build cache — the
 full `:app:testDebugUnitTest` task ran on 2026-09-04 after the Settings changes. A controlled defect
 in the language mapping made two new tests fail before it was restored. `lintRelease` and a release
 build through R8 are green; the build keeps all 13 JNI symbols, three ABIs and the one bundled sc68
@@ -90,12 +90,16 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
   add-to dialogue, the **current playlist first**, and **history showing when** — all confirmed.
   The single **"Add to playlist…"** replacing the two add actions is confirmed too, which matters
   because it changed a route the owner had already signed off as **C7**.
+- **2026-09-04, late**: **Settings works on a device** — the gear and Browse placement look right,
+  System/Polish/English all switch the whole interface and survive a restart, playback survives the
+  activity recreation, and deleting stored catalogue data from its new home works.
 
 **Still not verified by anyone on a device:**
 
-- **Settings.** The labelled gear, Browse beside the playlist chooser, the language dialogue and
-  activity recreation all compile and their pure language mapping is tested, but their appearance
-  and behaviour have not yet been seen on a phone.
+- **The two corrections from the Settings device pass:** Save and Discard now have visible labels,
+  and a downloaded catalogue without an index reinforces its already explicit warning with the
+  error colour. Both compile and the index state is tested; neither correction has been seen on a
+  phone yet.
 - **The console formats** (NSF, GBS, SPC, VGM, HES, AY, KSS) — built and measured on the host,
   never played on the device. Modland has 5,015 NSF and 918 GBS; real headers read on 2026-09-03
   give `lil' monster.gbs` **68** tunes, `mario golf.gbs` 42 and `shinsenden.nsf` 39, which is also

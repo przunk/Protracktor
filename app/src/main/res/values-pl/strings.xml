@@ -57,9 +57,6 @@
     <string name="playlist_unsaved_title">Niezapisane zmiany</string>
     <string name="playlist_unsaved_body">Ta playlista ma zmiany, których jeszcze nie zapisano. Zapisz je przed przełączeniem albo odrzuć.</string>
     <string name="a11y_choose_playlist">Wybierz playlistę</string>
-    <string name="a11y_save_playlist">Zapisz playlistę</string>
-    <string name="a11y_discard_changes">Odrzuć zmiany</string>
-
     <string name="playlist_switch_title">Playlisty</string>
     <string name="playlist_new">Nowa playlista</string>
     <string name="playlist_rename">Zmień nazwę</string>

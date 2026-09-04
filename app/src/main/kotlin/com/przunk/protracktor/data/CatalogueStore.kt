@@ -37,6 +37,8 @@ data class CatalogueSummary(
     val backends: String = "",
 ) {
     val indexed: Boolean get() = trackCount > 0 || isOnlineOnly
+    /** A downloaded catalogue with no index cannot be browsed until the user fetches it again. */
+    val requiresIndex: Boolean get() = !isOnlineOnly && !indexed
 
     /**
      * Whether this index was built by decoders this build no longer has — or by an unknown set.
