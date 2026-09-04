@@ -98,8 +98,9 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
 
 - **The two corrections from the Settings device pass:** Save and Discard now have visible labels,
   and a downloaded catalogue without an index reinforces its already explicit warning with the
-  error colour. Both compile and the index state is tested; neither correction has been seen on a
-  phone yet.
+  error colour. The owner confirmed that the labelled right-side actions fit on a phone; their
+  spacing was then increased by 6 dp and that final spacing has not yet been seen on a device. The
+  missing-index colour also remains unverified on a phone.
 - **The console formats** (NSF, GBS, SPC, VGM, HES, AY, KSS) — built and measured on the host,
   never played on the device. Modland has 5,015 NSF and 918 GBS; real headers read on 2026-09-03
   give `lil' monster.gbs` **68** tunes, `mario golf.gbs` 42 and `shinsenden.nsf` 39, which is also
