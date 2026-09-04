@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -206,6 +207,10 @@ fun ProtracktorApp(
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 modifier = Modifier
                                     .weight(1f, fill = false)
+                                    // Capped, so a long name ellipsises instead of shoving the
+                                    // buttons across the bar. Without this the chip grew with the
+                                    // name and everything to its right moved with it.
+                                    .widthIn(max = PLAYLIST_PILL_MAX_WIDTH)
                                     // The same height as the buttons beside it, always. Its second
                                     // line only appears when the playlist has something in it, so
                                     // an empty one drew a pill half the height of its neighbours
@@ -245,11 +250,18 @@ fun ProtracktorApp(
                                     )
                                 }
                             }
-                            Spacer(Modifier.width(12.dp))
+                            // `LabelledAction` carries 3dp of its own on each side, so two of
+                            // them sit 6dp apart. This makes the chip-to-button seam the same
+                            // rather than the 12dp it was, which is why the gaps around Browse
+                            // looked unlike the gaps between Save, Discard and Settings.
+                            Spacer(Modifier.width(TOP_BAR_SEAM - LABELLED_ACTION_INSET))
                             LabelledAction(
                                 icon = PlayerIcons.Cloud,
                                 label = stringResource(R.string.action_browse),
                                 onClick = openBrowse,
+                                // The seam across the title/actions boundary, which the two slots
+                                // do not otherwise share. Same 6dp as everywhere else on this bar.
+                                modifier = Modifier.padding(end = TOP_BAR_SEAM - LABELLED_ACTION_INSET),
                             )
                         }
                     }
@@ -264,7 +276,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
                             onClick = { showBrowse = false },
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }
                     if (!showBrowse && !showSettings) {
@@ -286,7 +298,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Settings,
                             label = stringResource(R.string.settings_title),
                             onClick = { showSettings = true },
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }
                 },
@@ -544,3 +556,27 @@ private fun PlaylistSheet(
  * playlist filled and emptied, which the owner spotted.
  */
 private val PLAYLIST_PILL_HEIGHT = 52.dp
+
+/**
+ * How wide the playlist chip may get before its name starts ellipsising.
+ *
+ * A cap rather than a fixed width: a short name should not be padded out to a slab. The reason it
+ * needs one at all is that a long name pushed every button on the bar to the right, so where Browse
+ * sat depended on what the playlist was called.
+ */
+private val PLAYLIST_PILL_MAX_WIDTH = 220.dp
+
+/** The gap between any two controls on the top bar. */
+private val TOP_BAR_SEAM = 6.dp
+
+/** The inset between the last control and the edge of the screen. Not a seam; a margin. */
+private val TOP_BAR_EDGE = 8.dp
+
+/**
+ * What `LabelledAction` already puts on each of its own sides.
+ *
+ * Subtracted wherever a seam is built by hand, so the bar's gaps are equal whether the two things
+ * either side are both buttons, or a button and the playlist chip. Getting this wrong is what made
+ * the space around Browse look unlike the space between Discard, Save and Settings.
+ */
+private val LABELLED_ACTION_INSET = 3.dp
