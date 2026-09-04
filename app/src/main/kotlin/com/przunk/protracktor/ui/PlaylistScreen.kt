@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -599,7 +600,24 @@ private fun EmptyPlaylist(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onBrowse) { Text(stringResource(R.string.action_browse)) }
+            // The same pair the top bar's actions and the follow-track button use, rather than
+            // the primary colour a bare `Button` defaults to. This is the same *offer* as Browse
+            // up there -- the owner asked for them to look alike, and two controls that do the
+            // same thing should not be told apart by their colour.
+            Button(
+                onClick = onBrowse,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+            ) {
+                Icon(
+                    imageVector = PlayerIcons.Cloud,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(stringResource(R.string.action_browse))
+            }
         }
     }
 }
