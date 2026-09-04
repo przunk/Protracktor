@@ -33,7 +33,7 @@ class SupportedFormatsTest {
      * The names the archives actually use.
      *
      * libopenmpt has always played these; the app listed `med` and `okt` while Modland files them
-     * as `.mmd1` and `.okta`, so 5,557 files were invisible for want of five strings
+     * as `.mmd1` and `.okta`, so 5,558 files were invisible for want of five strings
      * (`docs/PLAN_FORMATS.md` §4). Named here so a future tidy-up of the list cannot quietly undo
      * it: every one of these was measured playing before it was added.
      */

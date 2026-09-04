@@ -48,13 +48,26 @@ PROBE = ROOT / "native" / "probe" / "uade" / "build" / "probe-uade"
 TIMEOUT = 90
 
 
-def supported_extensions() -> set[str]:
+def supported_extensions(revision: str | None = None) -> set[str]:
     """Read them out of the app rather than restating them.
 
     A copy of this list in a script is a copy that goes stale the day a backend lands, and the
     whole point of the measurement is "what we cannot play *today*".
+
+    A revision is accepted only for reproducing a historical corpus. The first UADE measurement
+    changed this list as one of its own findings, so rerunning its old 300 files otherwise silently
+    selects a different set of formats and produces a number that cannot be compared with it.
     """
-    source = (ROOT / "app/src/main/kotlin/com/przunk/protracktor/player/SupportedFormats.kt").read_text()
+    relative = "app/src/main/kotlin/com/przunk/protracktor/player/SupportedFormats.kt"
+    if revision:
+        source = subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{revision}:{relative}"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    else:
+        source = (ROOT / relative).read_text()
     tail = source.split("val extensions: Set<String> = setOf(", 1)[1]
     # Comments first, then the closing bracket. Splitting on the first ")" read the list as ending
     # inside a comment the moment one of them cited a document in parentheses, and returned 28
@@ -249,6 +262,10 @@ def main() -> int:
     parser.add_argument("--formats", type=int, default=25, help="how many claimed formats to play")
     parser.add_argument("--seed", type=int, default=68)
     parser.add_argument("--reach-only", action="store_true")
+    parser.add_argument(
+        "--supported-formats-revision",
+        help="read SupportedFormats.kt from this git revision to reproduce an older corpus",
+    )
     args = parser.parse_args()
 
     if not PROBE.is_file():
@@ -258,7 +275,7 @@ def main() -> int:
         print("❌ UADE_BASE_DIR is not set. ./scripts/build-uade-probe.sh prints what to export.")
         return 1
 
-    extensions = supported_extensions()
+    extensions = supported_extensions(args.supported_formats_revision)
     prefixes = uade_prefixes()
     print(f"Reading the Modland index…")
     print(f"  the app claims {len(extensions)} extensions; UADE declares {len(prefixes)} prefixes "

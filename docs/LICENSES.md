@@ -293,8 +293,14 @@ The same corpus, run twice: once with UADE's `players/` directory as shipped, on
 
 | shipped | plays, of 300 files across 25 formats |
 | --- | --- |
-| all 176 binaries, 1,232 KB | **184** |
+| all 176 binaries, 1,232 KB | **196** |
 | none | **12** |
+
+The first published run said 184. That was a probe defect, not a UADE limitation:
+`UC_CONTENT_DETECTION` enables strict content-only identification and disabled the filename fallback
+some players require. The corrected figure is from the same seeded 300 files. The empty-directory
+result is unchanged: its twelve successes are self-contained Delitracker Custom executables and do
+not depend on filename fallback or a binary from `players/`.
 
 **UADE without its replay binaries is not a reduced player, it is not a player.** The twelve
 survivors are all Delitracker Custom — `.cus` files, which *are* 68000 programs and carry their own

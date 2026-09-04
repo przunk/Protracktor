@@ -54,7 +54,7 @@ playlist works (2026-09-02), and on the evening of 2026-09-02 he tested all five
 working and fetching serially, which he heard; that is fixed.
 
 **2026-09-04, round 6 on a device.** Indexes correctly reported themselves stale after the name list
-changed, and re-indexing worked. **OctaMED `.mmd0`–`.mmd3` and Oktalyzer `.okta` play** — the 5,652
+changed, and re-indexing worked. **OctaMED `.mmd0`–`.mmd3` and Oktalyzer `.okta` play** — the 5,653
 files that were always playable and never offered. Freeing and re-downloading the ASMA archive
 works. Adding to a playlist reports what it did; the playlist row menus work.
 

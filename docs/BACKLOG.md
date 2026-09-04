@@ -723,9 +723,10 @@ not have to be rediscovered.
 - **SID, NSF, SPC, GBS, VGM, AY** — `libsidplayfp` and game-music-emu, in that order of value.
 - **Amiga custom (TFMX, Hippel, Future Composer, …)** — UADE, last, and its bundled replay binaries
   need a licence decision of their own. **Measured 2026-09-04** and the estimate in this item was
-  wrong: UADE's exclusive contribution is 5,596 Modland files, not tens of thousands, because more
-  than half of what it appeared to win — 5,557 files of OctaMED and Oktalyzer — is already played
-  by libopenmpt and merely never offered. Numbers, the
+  wrong: the corrected current top-25 sample reaches successful format directories holding 5,799
+  Modland files, not tens of thousands. The first 184/300 result was also wrong because the probe
+  enabled UADE's strict content-only mode; the same historical corpus is 196/300, with Hippel COSO
+  at 11 full plus 1 silent first buffer instead of 0/12. Numbers, the
   process-model problem and the licence trade are in `docs/PLAN_FORMATS.md` §4; nothing is
   integrated.
 

@@ -73,9 +73,12 @@ int main(int argc, char **argv) {
     uade_config_set_option(config, UC_BASE_DIR, base);
     if (core) uade_config_set_option(config, UC_UADECORE_FILE, core);
     uade_config_set_option(config, UC_FREQUENCY, "44100");
-    /* Content detection, because Modland's directory says what a file is and its name often does
-     * not -- the same reason the app stopped trusting extensions (docs/BACKLOG.md A6). */
-    uade_config_set_option(config, UC_CONTENT_DETECTION, NULL);
+    /* Do not set UC_CONTENT_DETECTION here. Despite the broad name, UADE exposes it in uade123 as
+     * "detect strictly by file content": get_eagleplayer() then rejects a filename match whenever
+     * the bytes alone did not identify the format. Several real formats need their prefix or
+     * suffix; Hippel COSO was the case that caught this, after this probe falsely reported 0/12
+     * while uade123 played the same files out of the box. UADE's default still tries content first
+     * and then permits its filename match, which is the behaviour an integrating player needs. */
     /* Without a bound, a tune that plays forever holds the probe forever. These are the timeouts
      * uade123 uses by default, stated rather than inherited. */
     uade_config_set_option(config, UC_TIMEOUT_VALUE, "20");
