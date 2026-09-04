@@ -50,8 +50,10 @@ changed, and re-indexing worked. **OctaMED `.mmd0`–`.mmd3` and Oktalyzer `.okt
 files that were always playable and never offered. Freeing and re-downloading the ASMA archive
 works. Adding to a playlist reports what it did; the playlist row menus work.
 
-Two things came back wrong and are fixed: **repeat-one still advanced through subsongs** (see C13
-below), and the seek bar looked draggable on tracks that cannot seek.
+Three things came back wrong and are fixed: **repeat-one still advanced through subsongs** (see C13
+below — his rule, not mine, and the simpler one), the seek bar looked draggable on tracks that
+cannot seek, and **a SID played for ever** because nothing acted on the length HVSC had been
+supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he confirmed them.
 
 **Confirmed on a device by the owner:**
 
