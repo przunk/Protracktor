@@ -681,7 +681,7 @@ class PlaybackController private constructor(private val context: Context) {
                 stopPlayback()
                 _state.update {
                     it.copy(
-                        queue = PlayQueue(shuffle = it.queue.shuffle, repeat = it.queue.repeat),
+                        queue = PlayQueue(tracks = emptyList(), shuffle = it.queue.shuffle, repeat = it.queue.repeat),
                         playlists = store.playlists(),
                         playing = false,
                         dirty = false,
@@ -974,7 +974,9 @@ class PlaybackController private constructor(private val context: Context) {
             }
             val label = current.playlists.firstOrNull { it.id == id }?.name ?: "playlist"
             val name = label.replace(Regex("[^\\w -]"), "_")
-            val bytes = withContext(Dispatchers.Default) { PlaylistFile.write(tracks).toByteArray() }
+            val bytes = withContext(Dispatchers.Default) {
+                PlaylistFile.write(label, tracks).toByteArray()
+            }
             val uri = remoteFiles.shareableCopy("$name.m3u8", bytes)
             if (uri == null) {
                 _state.update { it.copy(message = Message("Could not prepare the playlist.")) }
@@ -1029,7 +1031,14 @@ class PlaybackController private constructor(private val context: Context) {
             // once; the count reported below is of what was found, which is what the file offered.
             val found = entries.mapNotNull { entry -> resolve(entry, known) }
 
-            val name = MediaScanner.labelOf(uri).substringBeforeLast('.').ifBlank { "Imported" }
+            // The file's own name first. A filename is a poor second: `labelOf` reads a *tree*
+            // document id, and handed the document URI of a picked file it returned things like
+            // "primary:Download/Favorites" -- an identifier, not a title. Kept as the fallback for
+            // files written by other players, which carry no name at all.
+            val name = PlaylistFile.nameIn(text)
+                ?: MediaScanner.labelOf(uri).substringAfterLast('/').substringAfterLast(':')
+                    .substringBeforeLast('.')
+                    .ifBlank { "Imported" }
             val playlistId = store.createPlaylist(name)
             store.replaceTracks(playlistId, found)
 

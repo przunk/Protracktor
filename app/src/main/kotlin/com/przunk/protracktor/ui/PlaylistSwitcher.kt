@@ -205,7 +205,7 @@ fun PlaylistSwitcher(
             title = {
                 Text(
                     stringResource(
-                        if (playlists.size <= 1) R.string.playlist_empty_title
+                        if (playlists.size <= 1) R.string.playlist_clear_title
                         else R.string.playlist_delete_title,
                         playlist.name,
                     )
@@ -214,7 +214,7 @@ fun PlaylistSwitcher(
             text = {
                 Text(
                     stringResource(
-                        if (playlists.size <= 1) R.string.playlist_empty_body
+                        if (playlists.size <= 1) R.string.playlist_clear_body
                         else R.string.playlist_delete_body
                     )
                 )

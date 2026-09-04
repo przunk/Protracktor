@@ -59,6 +59,16 @@ object PlaylistFile {
     private const val INFO = "#EXTINF:"
     private const val OURS = "#PROTRACKTOR:"
 
+    /**
+     * What the list is called, written into the file rather than inferred from it.
+     *
+     * `#PLAYLIST:` is the de-facto extended-M3U tag for this, so other players understand it and
+     * it is not another `#PROTRACKTOR:` line only we can read. It exists because the filename is a
+     * bad guess: importing produced names like `primary:Download/Favorites` — a document id, not a
+     * title — and even at its best a filename is what the user's *file manager* called it.
+     */
+    private const val NAME = "#PLAYLIST:"
+
     /** One line of an imported file, before anything has been matched against a library. */
     data class Entry(
         /** The exact id, when the file carried one. Meaningful only on the device that wrote it. */
@@ -73,8 +83,9 @@ object PlaylistFile {
         val fileName: String get() = location.substringAfterLast('/')
     }
 
-    fun write(tracks: List<TrackRef>): String = buildString {
+    fun write(name: String, tracks: List<TrackRef>): String = buildString {
         appendLine(HEADER)
+        if (name.isNotBlank()) appendLine("$NAME$name")
         tracks.forEach { track ->
             // Seconds are not known for most of these formats without opening the file, and M3U
             // takes -1 for "unknown" rather than requiring a lie.
@@ -107,6 +118,19 @@ object PlaylistFile {
      * the wrong trade. A line that is not a comment is a location, which is what M3U has always
      * meant.
      */
+    /**
+     * The name the file gives itself, or null when it does not.
+     *
+     * Separate from [read] so that reading a playlist and naming it stay separate questions — a
+     * file written by another player has entries and no name, and that is not an error.
+     */
+    fun nameIn(text: String): String? = text.lineSequence()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith(NAME) }
+        ?.removePrefix(NAME)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
     fun read(text: String): List<Entry> {
         val entries = mutableListOf<Entry>()
         var title = ""

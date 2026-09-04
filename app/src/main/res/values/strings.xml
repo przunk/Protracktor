@@ -105,8 +105,8 @@
     <string name="playlist_new">New playlist</string>
     <string name="playlist_rename">Rename playlist</string>
     <string name="playlist_name_label">Name</string>
-    <string name="playlist_empty_title">Empty %1$s?</string>
-    <string name="playlist_empty_body">It is your only playlist, so it stays — emptied and renamed. The tracks stay in your library.</string>
+    <string name="playlist_clear_title">Empty %1$s?</string>
+    <string name="playlist_clear_body">It is your only playlist, so it stays — emptied and renamed. The tracks stay in your library.</string>
     <string name="action_empty">Empty</string>
     <string name="playlist_delete_title">Delete %1$s?</string>
     <string name="playlist_delete_body">The playlist goes; the tracks stay in your library.</string>
