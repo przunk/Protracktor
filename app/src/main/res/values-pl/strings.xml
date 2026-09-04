@@ -148,6 +148,7 @@
     <string name="share_chooser">Udostępnij</string>
 
     <string name="storage_title">Miejsce na tym telefonie</string>
+    <string name="storage_database">Playlisty, historia i indeksy, które nie są plikami: %1$d MB. Zostaje, bo są tu twoje własne listy.</string>
     <string name="storage_cache">Pobrana muzyka</string>
     <string name="storage_cache_detail">%1$d MB z %2$d MB, najstarsze usuwane najpierw</string>
     <string name="storage_index">Indeks %1$s</string>
