@@ -20,7 +20,7 @@ Nothing here is confirmed by running the app on a device. That remains true of t
 
 ## Confirmed defects
 
-### R1 — `current_` is written on the audio thread and read on the control thread · **serious**
+### R1 — `current_` is written on the audio thread and read on the control thread · **serious** — FIXED
 
 **Where:** `native/engine/engine.cpp`, `Sc68Backend`. Written today, fixing `docs/STATUS.md` C13.
 
@@ -38,7 +38,7 @@ declared eleven lines below the new field.
 **Evidence.** Structural and specific: engine.cpp:935 is inside `onAudioReady`'s path and calls
 `backend_->selectSubsong`, and `Sc68Backend::selectSubsong` assigns `current_` unconditionally.
 
-### R2 — the same `selectSubsong` writes a whole struct across threads · **serious**
+### R2 — the same `selectSubsong` writes a whole struct across threads · **serious** — FIXED
 
 **Where:** `native/engine/engine.cpp`, `Sc68Backend::selectSubsong` → `info_`. **Pre-existing**, not
 from today, and larger than R1.
@@ -54,6 +54,16 @@ moment" and never reported.
 
 **Evidence.** Structural. Note this is a *pre-existing* hazard that R1 walked into rather than
 created; finding R1 is what made it visible.
+
+**Fixed together with R1.** `current_` is an atomic; `info_` is behind a `mutex` that
+`selectSubsong` takes when it refills the struct and the three readers take when they read it.
+
+**A lock on the audio thread is the part worth defending.** It is taken once per *subsong change*,
+never per buffer, and holds one library call filling a struct already in memory. The alternative was
+publishing half a dozen scalars and several strings as separate atomics — more machinery guarding
+the same thing less clearly, and every future field added to that struct would have to remember the
+rule. `probe_subsong_rewind` still reports DEMONSTRATED on all six multi-tune files afterwards, so
+the C13 fix survived its own correction.
 
 ### R3 — a doc comment describes work the function does not do · **moderate**
 

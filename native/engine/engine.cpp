@@ -214,7 +214,7 @@ public:
             sc68_ = nullptr;
             throw std::runtime_error("sc68 could not load this file");
         }
-        if (sc68_play(sc68_, current_, SC68_DEF_LOOP) < 0) {
+        if (sc68_play(sc68_, current_.load(std::memory_order_relaxed), SC68_DEF_LOOP) < 0) {
             sc68_destroy(sc68_);
             sc68_ = nullptr;
             throw std::runtime_error("sc68 loaded the file but refused to play it");
@@ -301,7 +301,7 @@ public:
      */
     void rewind() override {
         sc68_stop(sc68_);
-        sc68_play(sc68_, current_, SC68_DEF_LOOP);
+        sc68_play(sc68_, current_.load(std::memory_order_acquire), SC68_DEF_LOOP);
         rendered_ = 0;
         ended_ = false;
     }
@@ -317,10 +317,12 @@ public:
      * real length rather than none.
      */
     double durationSeconds() const override {
+        const std::lock_guard<std::mutex> held(infoGuard_);
         return static_cast<double>(info_.trk.time_ms) / 1000.0;
     }
 
     std::string describe() const override {
+        const std::lock_guard<std::mutex> held(infoGuard_);
         const auto text = [](const char *value) { return value ? value : ""; };
         std::ostringstream o;
         o << "title\t" << text(info_.title) << '\n'
@@ -336,7 +338,10 @@ public:
 
     int preferredSampleRate() const override { return kSampleRate; }
 
-    int subsongCount() const override { return info_.tracks > 0 ? info_.tracks : 1; }
+    int subsongCount() const override {
+        const std::lock_guard<std::mutex> held(infoGuard_);
+        return info_.tracks > 0 ? info_.tracks : 1;
+    }
 
     /** sc68 counts its tracks from one; the interface counts from zero. Converted here, once. */
     bool selectSubsong(int index) override {
@@ -344,8 +349,11 @@ public:
         if (sc68_play(sc68_, index + 1, SC68_DEF_LOOP) < 0) return false;
         // Remembered so `rewind` can come back to it. Everything that replays this tune without
         // choosing a subsong -- repeat-one, and replaying a finished track -- goes through there.
-        current_ = index + 1;
-        sc68_music_info(sc68_, &info_, SC68_CUR_TRACK, nullptr);
+        current_.store(index + 1, std::memory_order_release);
+        {
+            const std::lock_guard<std::mutex> held(infoGuard_);
+            sc68_music_info(sc68_, &info_, SC68_CUR_TRACK, nullptr);
+        }
         rendered_ = 0;
         ended_ = false;
         return true;
@@ -406,10 +414,37 @@ private:
     }
 
     sc68_t *sc68_ = nullptr;
+
+    /**
+     * What sc68 says about the tune, and the lock that makes reading it legal.
+     *
+     * **`selectSubsong` runs on the audio thread.** A pending subsong is applied inside the audio
+     * callback (`Player::render`) precisely so a switch cannot land under a read in progress -- and
+     * that is also what puts this struct on two threads, because `selectSubsong` refills it while
+     * `describe()`, `durationSeconds()` and `subsongCount()` read it whenever the UI asks what is
+     * playing. Filling a struct on one thread and reading it on another is a race whatever the
+     * hardware does about it (`docs/review.md` R6, and round 6's R1 and R2).
+     *
+     * **A lock on the audio thread is deliberate here and is not the usual mistake.** It is taken
+     * once per *subsong change* -- never per buffer -- and the section it holds is one library call
+     * that fills a struct already in memory. The alternative was publishing half a dozen scalars
+     * and a handful of strings as atomics, which is more machinery guarding the same thing less
+     * clearly.
+     */
+    mutable std::mutex infoGuard_;
     sc68_music_info_t info_{};
-    // Which track is playing, in sc68's own one-based numbering. One rather than zero because
-    // that is what `sc68_play` is given before any subsong has been chosen.
-    int current_ = 1;
+
+    /**
+     * Which track is playing, in sc68's own one-based numbering.
+     *
+     * Atomic for the reason its neighbours below are: written by the audio thread in
+     * `selectSubsong`, read by the control thread in `rewind`. `restart()` stops the stream before
+     * rewinding, so in practice the write is already visible -- which is exactly the argument round
+     * 5 declined to rely on.
+     *
+     * One rather than zero because that is what `sc68_play` is given before any subsong is chosen.
+     */
+    std::atomic<int> current_{1};
     std::vector<short> scratch_;
     // Written by render() on the audio thread and read from elsewhere by positionSeconds(), which
     // is a race by the language's rules however benign it looks on ARM (`docs/review.md` R6). The
