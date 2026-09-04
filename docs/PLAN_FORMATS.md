@@ -432,9 +432,12 @@ one ripper's habits.
 
 ### And then Matti Tiainen answered, and this section was wrong too
 
-Within the hour, UADE's other maintainer replied: The Hippel and TFMX families are a mess to distribute, with different collections using prefix and suffix conventions that contradict each other. And he pointed at the fix he
-already maintains — a `song.conf` of **md5 overrides** at
-<https://github.com/mvtiaine/audacious-uade/blob/master/conf/song.conf>, which covers the Modland files in question.
+Within the hour, UADE's other maintainer replied. The Hippel and TFMX families are a mess, he said —
+not the formats themselves but the way they are distributed, with different collections and sites
+using prefix and suffix conventions that contradict each other. And he pointed at the fix he already
+maintains: a `song.conf` of **md5 overrides** at
+<https://github.com/mvtiaine/audacious-uade/blob/master/conf/song.conf>, which he said covers the
+Modland files in question.
 
 It does. Dropped into UADE's base directory, where `uade_load_initial_song_conf` looks for it:
 
@@ -465,7 +468,10 @@ same README says *"Songdb (`conf/songdb`) is licensed under CC BY-NC-SA 4.0"*, w
 
 ### RMC — the format that would make most of this moot
 
-Heikki added it for the record: RMC states exactly what a song is and what it needs: a container holding an optional player, the song, and metadata including subsong durations. — `git clone git://zakalwe.fi/rmc-chip`.
+Heikki added it for the record. RMC was designed as a single-file format that states exactly what a
+song is and what it needs: a torrent-like container holding an optional player, the song itself, and
+metadata including subsong durations. He describes it as solving many of these compatibility
+problems. — `git clone git://zakalwe.fi/rmc-chip`.
 
 **libuade already implements it**, which is what makes this worth writing down rather than filing
 away: `uade_is_rmc`, `uade_rmc_get_subsongs` (a dictionary of subsong number to length in

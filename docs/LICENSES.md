@@ -186,7 +186,9 @@ left at the end is a person saying yes.
 Heikki Orsila replied within the day and copied Matti Tiainen, UADE's other maintainer. Three things
 in it change what this document can say, and all three were checked against the tree afterwards.
 
-**1. There is exactly one known objection, and it is specific.** In twenty years the only objection has come from the Delitracker authors, about their own work. Twenty
+**1. There is exactly one known objection, and it is specific.** In twenty years of shipping these
+binaries, the only people who have ever objected are the Delitracker authors, about their own work.
+Twenty
 years of shipping 176 binaries and one complaint, from an identifiable group about identifiable
 work.
 
@@ -220,10 +222,13 @@ So: **at most 42 of the 176 have no source in the tree**, probably fewer, and th
 is much smaller than `COPYING` alone suggests. Turning "probably" into a list means reading the
 `EP_*.readme` files, which is work worth doing before anyone relies on it.
 
-He is careful about the limit of that, and reverse-engineering a routine is not the same as being given permission for it. A routine somebody reverse-engineered is
-not a routine somebody licensed.
+He is careful about the limit of that, and the limit is the important half: reverse-engineering a
+routine is not the same as being given permission for it. A routine somebody worked out from the
+bytes is not a routine somebody licensed.
 
-**3. He invites the download outright.** Fetching the players from GitLab is between us and GitLab; he distributes the official binaries himself and is happy for them to be taken from there.
+**3. He invites the download outright.** Fetching the players from GitLab is between us and GitLab,
+he says; he distributes the official binaries himself at <https://zakalwe.fi/uade/download.html> and
+is happy for them to be taken from there.
 
 So when UADE is integrated the download route is not merely defensible, it is the one its maintainer
 offers. He notes the trade himself: zakalwe.fi is his and can serve any shape we need, GitLab is
