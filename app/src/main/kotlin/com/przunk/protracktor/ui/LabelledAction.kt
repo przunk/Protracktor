@@ -56,8 +56,8 @@ internal fun LabelledAction(
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = 3.dp)
@@ -67,17 +67,17 @@ internal fun LabelledAction(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
         ) {
-            // A filled accent surface makes the whole pair read as a button. onPrimary is the
-            // matching cut-out colour and keeps the contrast correct in both application themes.
+            // The same quieter pair as the follow-track navigation button. Using the named
+            // content colour with its container keeps contrast intact for dynamic colour schemes.
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 modifier = Modifier.padding(top = 2.dp),
