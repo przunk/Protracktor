@@ -9,7 +9,11 @@
  * "Very likely" is not a measurement, which is what this is for. It asks libopenmpt directly,
  * exactly as the app's own backend does: from a memory buffer, no filename involved.
  *
- * Prints one verdict per file: full | short:N | silent | unsupported
+ * **The verdict line is tagged.** libopenmpt writes its own load errors to stdout ahead of
+ * anything this prints, so a reader taking the first line files "openmpt: openmpt_module_create..."
+ * as a result. That exact mistake was found and fixed in the UADE probe and then repeated here.
+ *
+ * Prints one verdict per file: VERDICT full | short:N | silent | unsupported
  *
  * Build: see ./scripts/probe-extensions.py, which builds it if needed.
  */
@@ -25,14 +29,14 @@ int main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: probe-openmpt FILE\n"); return 2; }
 
     FILE *file = fopen(argv[1], "rb");
-    if (!file) { printf("unreadable\n"); return 2; }
+    if (!file) { printf("VERDICT unreadable\n"); return 2; }
     fseek(file, 0, SEEK_END);
     const long length = ftell(file);
     fseek(file, 0, SEEK_SET);
-    if (length <= 0) { fclose(file); printf("empty\n"); return 2; }
+    if (length <= 0) { fclose(file); printf("VERDICT empty\n"); return 2; }
     void *bytes = malloc((size_t) length);
     if (!bytes || fread(bytes, 1, (size_t) length, file) != (size_t) length) {
-        fclose(file); free(bytes); printf("unreadable\n"); return 2;
+        fclose(file); free(bytes); printf("VERDICT unreadable\n"); return 2;
     }
     fclose(file);
 
@@ -40,7 +44,7 @@ int main(int argc, char **argv) {
     openmpt_module *module = openmpt_module_create_from_memory2(
         bytes, (size_t) length, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
     free(bytes);
-    if (!module) { printf("unsupported\n"); return 1; }
+    if (!module) { printf("VERDICT unsupported\n"); return 1; }
 
     float buffer[FRAMES * 2];
     size_t first = openmpt_module_read_interleaved_float_stereo(module, RATE, FRAMES, buffer);
@@ -70,7 +74,7 @@ int main(int argc, char **argv) {
     else if (peak == 0.0f) snprintf(verdict, sizeof verdict, "silent");
     else snprintf(verdict, sizeof verdict, "full");
 
-    printf("%s peak=%.3f seconds=%.1f fmt=\"%s\" title=\"%s\"\n",
+    printf("VERDICT %s peak=%.3f seconds=%.1f fmt=\"%s\" title=\"%s\"\n",
            verdict, (double) peak, (double) rendered / RATE,
            type ? type : "", title ? title : "");
 

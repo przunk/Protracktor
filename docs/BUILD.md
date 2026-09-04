@@ -89,6 +89,7 @@ host-specific.
 ./scripts/build-gme-probe.sh       # the seven console families, which went in unmeasured
 ./scripts/probe-gme.py             #   and were 100/141 until the probe said why
 
+./scripts/probe-openmpt.py         # the backend that carries 61% of the library
 ./scripts/probe-extensions.py      # what libopenmpt would play if the app ever offered the file
 ```
 

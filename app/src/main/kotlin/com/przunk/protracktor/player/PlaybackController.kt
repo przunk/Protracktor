@@ -2273,8 +2273,12 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             track = opened
-            val started = opened.start()
+            // **Described before it starts.** `describe()` reads the decoder's own metadata, and
+            // libopenmpt says an object must be touched from one thread at a time -- asking it
+            // after the audio callback has begun is the same race the position poll had. Before
+            // `start()` there is no other thread to race with.
             val described = opened.describe()
+            val started = opened.start()
             // A SID has no length in it, so the backend reports none and HVSC's database is asked
             // instead. Only when the backend has nothing: a format that knows its own length knows
             // it better than a lookup on a hash could.

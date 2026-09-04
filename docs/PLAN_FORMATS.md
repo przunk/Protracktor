@@ -162,6 +162,45 @@ is unsupported. A file no backend claims and a file a backend claimed and then c
 different problems and were indistinguishable from outside — it took a host probe to tell them apart,
 which is not a thing the owner can do.
 
+## 0b. libopenmpt — measured 2026-09-04, having carried the library unmeasured
+
+Four backends had numbers and the one holding **sixty-one per cent of everything the app claims**
+did not. `./scripts/probe-openmpt.py` asks the same contract as the others — is the *first* buffer
+full, and is there sound in it — across every extension the app hands it, sampled from Modland and
+weighted by what the archive actually holds.
+
+**390 of 457 sampled, which is 98.0% of the 178,795 files those extensions cover.**
+
+The four that matter are perfect: `.mod` 12/12 (85,023 files), `.xm` 12/12 (44,260), `.it` 12/12
+(25,570), `.s3m` 12/12 (11,215). So is everything in the Amiga group that libopenmpt actually
+implements — `.dbm`, `.sfx`, `.smod`, `.symmod`, `.digi`, `.dsym`, `.fc`, `.gmc`, `.puma`, `.tcb`,
+and the `.mmd0`/`.mmd1` added that morning.
+
+### What the two per cent is, and why almost none of it is a defect
+
+| | played | Modland | what the failures actually are |
+| --- | --- | --- | --- |
+| `.ahx` | 0/12 | 1,389 | **libopenmpt has no AHX loader at all** — removed from the list |
+| `.hvl` | 0/12 | 44 | same; HivelyTracker, no loader — removed |
+| `.ftm` | 1/12 | 1,874 | libopenmpt's FTM is **Face The Music**; Modland's are **FamiTracker** |
+| `.imf` | 3/12 | 210 | libopenmpt's IMF is **Imago Orpheus**; Modland's are **id Software AdLib** |
+| `.psm` | 6/12 | 141 | libopenmpt's PSM is **Epic MegaGames MASI**; half of Modland's are **Spectrum Pro Sound Maker** |
+| `.med` | 1/12 | 140 | magic `MED\x04` — **Music Editor**, the older Amiga format, not MMD |
+
+**Five of those six are one extension standing for two unrelated formats**, which is precisely what
+`docs/ARCHITECTURE.md` §5 says extensions do in this world. It is now measured rather than asserted:
+2,365 Modland files are filed under a name whose owner is a different program.
+
+**Nothing more was removed.** Each of those extensions genuinely loads the format libopenmpt
+implements; the failures are files that merely share the name, and dropping the extension would
+throw away the real ones with them. `.ahx` and `.hvl` were different — **no** loader exists, so the
+entries were pure loss, and they come back the day UADE lands.
+
+**The real answer is `docs/BACKLOG.md` A6**, probing content instead of trusting names. A local
+folder is already scanned that way. A catalogue index is a list of filenames on somebody else's
+server, so it cannot be — and this table is the price of that, quantified: about 1.3% of what the
+app offers from Modland is a name collision. That is the trade, and it is a good one.
+
 ## 1. ~~`libsidplayfp` — Commodore 64~~ — DONE 2026-09-02
 
 Version 3.1.1, GPL-2.0-or-later, verified in the sources rather than in `COPYING` for the third time
@@ -354,7 +393,13 @@ an "MMD" magic in the header and never looks at the filename. The app simply nev
 because `SupportedFormats.extensions` lists `med` and `okt` while Modland stores these as `.mmd1`
 and `.okta`.
 
-**So UADE's genuine, exclusive contribution is 4,163 files, not tens of thousands** —
+**Corrected 2026-09-04, later the same day: 5,596, not 4,163.** Measuring libopenmpt found that it
+does **not** play AHX or HVL — no loader in its source, neither name in its format table, 0 of 12
+and 0 of 6 measured. Those 1,433 Modland files were counted as "already ours" because the extension
+list claimed them, and they are in fact among the formats UADE would add. The reasoning below said
+"libopenmpt already handles AHX" and that was simply wrong.
+
+**So UADE's genuine, exclusive contribution is 5,596 files, not tens of thousands** —
 TFMX, Musicline Editor, Delitracker Custom, Oktalyzer, Sonic Arranger, BP SoundMon, Art Of Noise,
 David Whittaker, SidMon 2, Delta Music 2, YMST. That is a real body of music and it is the music
 this project is closest to. It is also a fraction of what `docs/BACKLOG.md` A5 assumed when it
@@ -410,7 +455,8 @@ instances independent and upstream unforked, at the cost of process lifecycle ma
 **Not integrating UADE yet, and doing the cheap thing first.** Setting out the trade rather than
 the conclusion, because the conclusion is the owner's:
 
-- what UADE exclusively adds is **4,163 Modland files**, not the tens of thousands A5 assumed;
+- what UADE exclusively adds is **5,596 Modland files** — corrected upward from 4,163 once AHX and
+  HVL turned out not to be played by anything we ship — still not the tens of thousands A5 assumed;
 - it cannot ship without answering a licence question that is *worse* documented than sc68's, and
   unlike sc68 it has **no middle option** — without the replay binaries it plays 12 files in 300;
 - it is the only backend here that is a second process, or else a single-instance-per-process

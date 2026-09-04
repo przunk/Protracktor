@@ -43,8 +43,11 @@ def ask(local: pathlib.Path) -> str:
     """One verdict. No filename is passed on: the question is whether the content is enough."""
     try:
         result = subprocess.run([str(PROBE), str(local)], capture_output=True, text=True, timeout=90)
-        line = (result.stdout.strip().split("\n") or [""])[0].strip()
-        return line or (f"exit{result.returncode}" if result.returncode else "crash")
+        # The tagged line, not the first: libopenmpt prints load errors to stdout ahead of it,
+        # so reading line one files "openmpt: openmpt_module_create..." as a verdict.
+        verdict = next((l[len("VERDICT "):].strip() for l in result.stdout.splitlines()
+                        if l.startswith("VERDICT ")), "")
+        return verdict or (f"exit{result.returncode}" if result.returncode else "crash")
     except subprocess.TimeoutExpired:
         return "timeout"
     except Exception as error:                                       # noqa: BLE001

@@ -34,7 +34,12 @@ object SupportedFormats {
         // The mainstream trackers
         "mod", "xm", "s3m", "it", "mptm",
         // Amiga and Atari lineage
-        "med", "okt", "dbm", "digi", "ahx", "hvl", "stk", "sfx", "ice", "gmc", "unic", "kris",
+        // "ahx" and "hvl" are deliberately absent, and were listed here from the start on the
+        // assumption that libopenmpt handled them. It does not: there is no AHX loader in its
+        // source and neither name appears in its format table. Measured 2026-09-04 -- 0 of 12 AHX
+        // and 0 of 6 HVL open -- so listing them indexed 1,433 Modland files that nothing here can
+        // play. **UADE plays them** (`docs/PLAN_FORMATS.md` §4), which is where they come back from.
+        "med", "okt", "dbm", "digi", "stk", "sfx", "ice", "gmc", "unic", "kris",
         "puma", "tcb", "fc", "fc13", "fc14", "smod", "dsym", "symmod", "ftm", "etx",
         // The same two formats under the names their archives actually use. libopenmpt identifies
         // OctaMED by an "MMD" magic and Oktalyzer by its own, and never looks at the filename --
@@ -73,7 +78,8 @@ object SupportedFormats {
 
     /** Filename prefixes used instead of extensions by several Amiga trackers. */
     val prefixes: Set<String> = setOf(
-        "mod", "med", "okt", "dbm", "digi", "ahx", "hvl", "stk", "sfx", "ice", "fc", "smod",
+        // "ahx" and "hvl" are absent here for the same reason as above: nothing we ship loads them.
+        "mod", "med", "okt", "dbm", "digi", "stk", "sfx", "ice", "fc", "smod",
         "sndh",
     )
 
