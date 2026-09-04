@@ -174,6 +174,31 @@ in the scene, whose interest is in the music being heard.
 **None of the above is legal advice**, and the letters exist because the one route with no "but"
 left at the end is a person saying yes.
 
+### Built 2026-09-04
+
+- **The APK ships one replay**, `sndh_ice.bin`, 424 bytes. It was 99 files and 1.2 MB; the generated
+  asset directory is now 16 KB. SNDH is unaffected — 30 of 30 before and after.
+- **The other 98 are fetched from sc68's own SourceForge**, at revision 713, the same one the
+  vendored library was built from. A tune names a replay and the two have to agree about what that
+  name means, so fetching HEAD would be fetching another library's data.
+- **Ninety-eight requests, not an archive**, because sc68 publishes no archive of them: 3.0.0b
+  exists only in SVN, whose HTTP interface serves a listing and the files under it. Slower than a
+  zip, and the only route that keeps somebody else the publisher. Verified against the live server:
+  the listing parses to exactly 98 names, none with a path separator in it, and sampled fetches
+  return the right bytes.
+- **Downloads live outside the tree an app update wipes.** `NativeData.ensureUnpacked` deletes and
+  rebuilds its directory whenever the version changes — deliberately, so a stale replay cannot
+  outlive an update — and downloaded files would have gone with it silently, leaving `.sc68` broken
+  again after an update with nothing to explain why.
+- **The notice comes before the download** and says what these are: other people's code of
+  unestablished status, and that this app is not the one handing it out. Honesty, not a shield.
+- **They can be deleted**, from the same storage section as everything else, with the consequence
+  named: `.sc68` goes back to mostly silence and SNDH does not notice.
+
+A `Sync` task replaced a `Copy` while doing this. `Copy` only ever adds, so narrowing the task from
+99 files to one would have left the other 98 in the generated assets and shipped them anyway — and
+the same would have happened to any file dropped upstream, silently and in the APK.
+
 ## UADE's replay binaries — the same question, with worse paperwork
 
 **Measured 2026-09-04 while doing `GOAL.md` round 6 item 1.** UADE is not integrated; this is what
