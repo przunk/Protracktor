@@ -430,6 +430,11 @@ observation is reported to UADE's maintainer and the explanation left to him.
 remains what the app *browses*, but a format measured only against it is a format measured against
 one ripper's habits.
 
+**Not reported upstream.** The owner closed the correspondence on 2026-09-05, and the draft sits
+unsent in `docs/letters/`. Heikki had offered to take interesting cases; an offer is not an
+obligation and nobody is waiting on this. It is a note to ourselves, which is what it was worth
+either way — the reference-set lesson above is the part that changes how we work.
+
 ### What UADE is actually worth — and the finding that undercuts it
 
 In the corrected historical top-25 run, formats with a successful sample cover **9,813 Modland
