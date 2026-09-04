@@ -418,6 +418,12 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 - ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
   count now and nobody has to remember it.
 
+- **`docs/letters/` before the repository goes public.** The listing points at the source, so
+  publishing the app publishes the repository, and that directory holds correspondence with other
+  projects' maintainers. It is gitignored as of 2026-09-05, which only stops new ones — the five
+  already committed are in the history, and taking them out means rewriting it before the first
+  public push or deciding they are public. `docs/PLAY_STORE.md` has both options.
+
 **Not started, and not to be started without the owner**: publishing is his account, his key and
 his name on the listing.
 

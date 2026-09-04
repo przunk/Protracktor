@@ -78,6 +78,32 @@ provenance is unclear, and the same question would arrive with UADE's 176 if it 
 integrated. That is not a GPL question — it is whether we have the right to distribute other
 people's code at all — and it is the owner's to answer **before** publishing, not after.
 
+## Before the repository goes public
+
+The listing points at the source, so publishing the app publishes the repository. One thing has to
+happen first.
+
+**`docs/letters/` must go.** It holds drafts and sent correspondence with the maintainers of
+libraries we use — their replies, their names, and half-finished thoughts addressed to them. Useful
+to keep locally; not ours to publish. It is in `.gitignore` as of 2026-09-05, which stops new ones
+being added.
+
+**Ignoring is not removing, and this is the part that needs deciding rather than doing.** Five
+letters are already committed across ten commits. `git rm -r docs/letters` takes them out of the
+head, and they remain in the history — anybody who clones a public repository has every version of
+every file that was ever in it. So there are two honest options:
+
+1. **Rewrite the history** before the first push to a public remote — `git filter-repo --path
+   docs/letters --invert-paths`, or a fresh orphan commit if the history is not worth keeping. Only
+   the owner can do this: it changes every commit hash after the first letter landed, and
+   `AGENTS.md` §3 puts pushes in his hands anyway.
+2. **Accept that they are public.** Re-read them first with that in mind. They were written to be
+   sent, not to be found — but nothing in them is a secret, and one of them is a measurement other
+   people might genuinely want.
+
+**Deciding late is the expensive version**, because after the first public push the history is out
+and no rewrite recalls it. Worth settling in the same hour as the first push, not after.
+
 ## What is still missing, and is his
 
 Mechanical, and none of it exists:
