@@ -1024,7 +1024,16 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
 
 class Player : public oboe::AudioStreamDataCallback {
 public:
-    explicit Player(std::unique_ptr<Backend> backend) : backend_(std::move(backend)) {}
+    /**
+     * Takes the backend, and reads its numbers once while it is safe to.
+     *
+     * Nothing is rendering yet, so this is the one place the control thread may ask the backend
+     * anything at all. Afterwards the audio thread publishes and everybody else reads.
+     */
+    explicit Player(std::unique_ptr<Backend> backend) : backend_(std::move(backend)) {
+        publishPosition();
+        publishDuration();
+    }
 
     int subsongCount() const { return backend_->subsongCount(); }
 
@@ -1050,6 +1059,9 @@ public:
         stop();
         if (backend_->selectSubsong(index)) {
             finished_.store(false, std::memory_order_release);
+            // Stopped, so this thread owns the backend and may ask it directly.
+            publishPosition();
+            publishDuration();
             start();
         }
     }
@@ -1077,6 +1089,8 @@ public:
         const int subsong = pendingSubsong_.exchange(-1, std::memory_order_acq_rel);
         if (subsong >= 0 && backend_->selectSubsong(subsong)) {
             finished_.store(false, std::memory_order_release);
+            // A different tune is a different length, and this is the thread allowed to ask.
+            publishDuration();
         }
 
         const double seekTo = pendingSeek_.exchange(NO_SEEK, std::memory_order_acq_rel);
@@ -1096,6 +1110,10 @@ public:
             for (std::size_t i = 0; i < rendered * 2; ++i) out[i] *= gain;
         }
 
+        // Published here rather than asked for later: the poll runs on another thread and these
+        // libraries are not safe to touch from two at once.
+        publishPosition();
+
         if (rendered < static_cast<std::size_t>(numFrames)) {
             // End of the tune. Silence the remainder rather than leaving whatever the buffer held,
             // then ask Oboe to stop -- a player that runs off the end into noise is worse than one
@@ -1113,6 +1131,10 @@ public:
     }
 
     bool isFinished() const { return finished_.load(std::memory_order_acquire); }
+
+    /** Reads the backend's own numbers. **Audio thread only**, or at open before it starts. */
+    void publishPosition() { position_.store(backend_->positionSeconds(), std::memory_order_release); }
+    void publishDuration() { duration_.store(backend_->durationSeconds(), std::memory_order_release); }
 
     /** 1.0 is untouched. Used for ducking under a transient interruption. */
     void setGain(float gain) { gain_.store(gain, std::memory_order_relaxed); }
@@ -1132,6 +1154,7 @@ public:
         } else {
             backend_->seek(target);
             finished_.store(false, std::memory_order_release);
+            publishPosition();
         }
     }
 
@@ -1140,6 +1163,7 @@ public:
         stop();
         backend_->rewind();
         finished_.store(false, std::memory_order_release);
+        publishPosition();
         return start();
     }
 
@@ -1189,8 +1213,32 @@ public:
 
     ~Player() override { stop(); }
 
-    double positionSeconds() const { return backend_->positionSeconds(); }
-    double durationSeconds() const { return backend_->durationSeconds(); }
+    /**
+     * Where the tune is, read from a value the audio thread publishes.
+     *
+     * **Not by asking the backend.** libopenmpt says in its own header that "individual libopenmpt
+     * objects are not thread-safe" and that a given object must be touched "from a single thread at
+     * a time"; game-music-emu's `gme_tell` reads emulator state that `gme_play` is mutating. Both
+     * were being asked from the polling coroutine, every tick, while the audio callback rendered --
+     * an unsynchronised concurrent access to a library that says not to, on the two backends that
+     * carry most of the library.
+     *
+     * sc68 and libsidplayfp never had this problem because they count frames into an atomic
+     * (`docs/review.md` R6). This gives the other two the same shape rather than giving them a lock:
+     * the audio thread already has the value and publishing it costs one store per buffer, while a
+     * mutex would put the polling thread in a position to delay the one thread that must never be
+     * late.
+     */
+    double positionSeconds() const { return position_.load(std::memory_order_acquire); }
+
+    /**
+     * How long it is, captured when it can change rather than polled.
+     *
+     * Read on the audio thread at the only two moments it can differ -- when the tune is opened and
+     * when a subsong switch is applied -- because `openmpt::module::get_duration_seconds` is not a
+     * cheap accessor and has no business running once per buffer.
+     */
+    double durationSeconds() const { return duration_.load(std::memory_order_acquire); }
     std::string describe() const { return backend_->describe(); }
 
 private:
@@ -1203,6 +1251,9 @@ private:
     // the callback both reads the request and clears it.
     static constexpr double NO_SEEK = -1.0;
     std::atomic<double> pendingSeek_{NO_SEEK};
+    /** Published by the audio thread so the poll never touches a backend that is rendering. */
+    std::atomic<double> position_{0.0};
+    std::atomic<double> duration_{0.0};
     /** -1 means nothing pending. Applied by the audio callback, like a seek. */
     std::atomic<int> pendingSubsong_{-1};
 };
