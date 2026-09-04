@@ -136,7 +136,16 @@ APK — which is where the doubt actually lives.
 ### Decided 2026-09-04: option 3, for sc68 and UADE alike
 
 **And two letters, because the only genuinely clean route is to ask.** Drafts are in
-`docs/letters/`; sending them is the owner's.
+`docs/letters/`.
+
+| | sent | to | status |
+| --- | --- | --- | --- |
+| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | awaiting a reply |
+| sc68 | not yet | SourceForge ticket | the owner is holding off |
+
+**Neither the work nor the release waits on either.** `sndh_ice.bin` is sc68's own file in sc68's
+own GPL tree and needs no permission, and UADE is not integrated at all. The letters improve what
+this document can say; they do not gate anything.
 
 **What actually reduces the risk, in order of how much it does:**
 
