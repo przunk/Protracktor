@@ -38,6 +38,10 @@ Three layers, only one of which is a real destination.
   catalogues. You add or play from it and dismiss it.
 - **The playlist switcher** is a bottom sheet, opened by tapping the playlist name in the top bar.
 
+- **Settings** opens as a second full-screen modal, from a gear in the top bar. Added 2026-09-04,
+  and it is the model's first real test: a new screen that needed no new idea, because "a modal you
+  open and dismiss" already existed and back already meant one thing.
+
 Back always descends one layer, which is the only rule the user has to learn.
 
 ### Why not a bottom navigation bar

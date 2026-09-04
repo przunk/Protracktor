@@ -82,6 +82,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
     var showBrowse by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -161,14 +162,20 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    if (showBrowse) {
+                    if (showSettings) {
+                        IconButton(onClick = { showSettings = false }) {
+                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                        }
+                    } else if (showBrowse) {
                         IconButton(onClick = { if (!viewModel.browseBack()) showBrowse = false }) {
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     }
                 },
                 title = {
-                    if (showBrowse) {
+                    if (showSettings) {
+                        Text(stringResource(R.string.settings_title))
+                    } else if (showBrowse) {
                         Text(stringResource(R.string.browse_title))
                     } else {
                         // A chevron and a filled shape, because the owner could not tell the name
@@ -224,7 +231,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                             modifier = Modifier.padding(end = 8.dp),
                         )
                     }
-                    if (!showBrowse) {
+                    if (!showBrowse && !showSettings) {
                         // Only while there is something to save. A permanently lit Save button
                         // teaches nothing about whether the list on screen is the list on disk.
                         if (state.dirty) {
@@ -243,6 +250,15 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                             label = stringResource(R.string.action_browse),
                             onClick = openBrowse,
                         )
+                        // Unlabelled, deliberately, and the only control here that is. Browse and
+                        // the way back out are the two things a person is looking for while using
+                        // the app, so they say their names; settings is the thing you go to on
+                        // purpose, once, and a gear is understood everywhere. Labelling it would
+                        // cost width on a bar that already holds three controls when the playlist
+                        // is dirty.
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(PlayerIcons.Settings, stringResource(R.string.a11y_settings))
+                        }
                     }
                 },
             )
@@ -263,7 +279,29 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
     ) { insets ->
-        if (showBrowse) {
+        if (showSettings) {
+            // The storage figures are read by `refreshCatalogues`, which until now only ran when
+            // somebody opened the online catalogues. Settings can be reached without ever going
+            // near Browse, and a storage section reporting zero because nobody asked would be
+            // worse than one that is missing.
+            LaunchedEffect(Unit) { viewModel.refreshCatalogues() }
+            SettingsScreen(
+                playAllSubsongs = state.playAllSubsongs,
+                cacheBytes = browse.storageBytes.first,
+                archiveBytes = browse.archiveBytes,
+                databaseBytes = browse.databaseBytes,
+                replayCount = browse.replayCount,
+                replayBytes = browse.replayBytes,
+                catalogues = browse.catalogues,
+                songLengthCount = browse.songLengthCount,
+                contentPadding = insets,
+                onToggleAllSubsongs = viewModel::toggleAllSubsongs,
+                onClearCache = viewModel::clearFetchedCache,
+                onDeleteIndex = viewModel::deleteCatalogueIndex,
+                onClearSongLengths = viewModel::clearSongLengths,
+                onDeleteReplays = viewModel::deleteReplays,
+            )
+        } else if (showBrowse) {
             BrowseScreen(
                 browse = browse,
                 playlistName = state.activePlaylistName,
@@ -277,10 +315,6 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
                 onDownloadReplays = viewModel::downloadReplays,
-                onDeleteReplays = viewModel::deleteReplays,
-                onClearCache = viewModel::clearFetchedCache,
-                onDeleteIndex = viewModel::deleteCatalogueIndex,
-                onClearSongLengths = viewModel::clearSongLengths,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
                 onRandom = { viewModel.playRandom(); showBrowse = false },
@@ -329,6 +363,10 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
 
     // One level at a time, out of Browse and then out of the screen -- the rule the rest of the
     // navigation follows.
+    if (showSettings) {
+        BackHandler { showSettings = false }
+    }
+
     if (showBrowse) {
         BackHandler { if (!viewModel.browseBack()) showBrowse = false }
     }

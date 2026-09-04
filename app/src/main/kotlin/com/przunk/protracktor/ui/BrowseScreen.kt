@@ -97,10 +97,6 @@ fun BrowseScreen(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadReplays: () -> Unit,
-    onDeleteReplays: () -> Unit,
-    onClearCache: () -> Unit,
-    onDeleteIndex: (String) -> Unit,
-    onClearSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
@@ -165,10 +161,6 @@ fun BrowseScreen(
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onDownloadReplays = onDownloadReplays,
-                onDeleteReplays = onDeleteReplays,
-                onClearCache = onClearCache,
-                onDeleteIndex = onDeleteIndex,
-                onClearSongLengths = onClearSongLengths,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
                 onPlay = onPlay,
@@ -412,10 +404,6 @@ private fun OnlineDomain(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadReplays: () -> Unit,
-    onDeleteReplays: () -> Unit,
-    onClearCache: () -> Unit,
-    onDeleteIndex: (String) -> Unit,
-    onClearSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onPlay: (Int) -> Unit,
@@ -591,25 +579,9 @@ private fun OnlineDomain(
                 }
             }
 
-            // What the app is holding, and how to make it stop. It used to be a sentence
-            // saying the size and admitting it could not be deleted; an app that takes disk and
-            // says so is better than one that takes it quietly, but not as good as one that gives
-            // it back (`docs/BACKLOG.md` A13).
-            item {
-                StorageSection(
-                    cacheBytes = browse.storageBytes.first,
-                    archiveBytes = browse.archiveBytes,
-                    databaseBytes = browse.databaseBytes,
-                    replayCount = browse.replayCount,
-                    replayBytes = browse.replayBytes,
-                    onDeleteReplays = onDeleteReplays,
-                    catalogues = browse.catalogues,
-                    songLengthCount = browse.songLengthCount,
-                    onClearCache = onClearCache,
-                        onDeleteIndex = onDeleteIndex,
-                    onClearSongLengths = onClearSongLengths,
-                )
-            }
+            // The storage section lived here from 2026-09-04 until the settings screen existed,
+            // which was always the plan and was said so at the time. Browse is for finding music;
+            // what the app is keeping on the phone is not that.
             item {
                 Text(
                     text = stringResource(R.string.catalogue_more_coming),

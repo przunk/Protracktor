@@ -356,7 +356,7 @@ the gap between tracks becomes the only thing the listener notices.
 **Built.** Repeat-one is honoured — it says "keep playing this" on the dock while Random runs, and
 skipping under it would be the app contradicting its own button. Not confirmed on a device.
 
-## A13. Application settings
+## A13. ~~Application settings~~ — DONE 2026-09-04
 
 Raised 2026-09-02 by the owner. There is no settings screen at all today, and several decisions
 that are currently hard-coded or implicit are exactly the kind a person wants to change once and
