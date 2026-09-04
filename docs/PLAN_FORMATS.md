@@ -294,7 +294,11 @@ names it, so content detection is doing its job).
 
 The formats UADE played cover **9,720 Modland files that nothing here plays today**. But
 **5,557 of those 9,720 are already playable by libopenmpt**, which is in the APK — OctaMED
-`.mmd0`…`.mmd3` (5,110) and Oktalyzer `.okta` (447), measured 6/6 each. libopenmpt identifies MED by
+`.mmd0`…`.mmd3` (5,110) and Oktalyzer `.okta` (447), measured 6/6 each. Widening the sweep from 60
+formats to 150 added two more of the same kind, Graoumf Tracker `.gtk` and MultiMedia Sound `.mms`,
+for 5,652 in total; nothing else in Modland's unplayable third turns out to be free, and the rest
+of it is console dumps (`.minigsf`, `.mini2sf`, `.minipsf` — 66,000 files) that no backend here
+opens. libopenmpt identifies MED by
 an "MMD" magic in the header and never looks at the filename. The app simply never offers them,
 because `SupportedFormats.extensions` lists `med` and `okt` while Modland stores these as `.mmd1`
 and `.okta`.

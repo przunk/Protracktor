@@ -41,6 +41,10 @@ object SupportedFormats {
         // so these played all along and were never offered. Measured 2026-09-04: 5,557 files in
         // Modland alone, 6 of 6 sampled from each playing (`docs/PLAN_FORMATS.md` §4).
         "mmd0", "mmd1", "mmd2", "mmd3", "okta",
+        // Two more of the same kind, found by widening the sweep from 60 formats to 150. Small --
+        // 95 files between them in Modland -- and free, which is the whole argument. Both play 3
+        // of 3 sampled.
+        "gtk", "mms",
         // PC and console lineage
         "far", "gdm", "imf", "mdl", "mtm", "ptm", "stm", "ult", "669", "amf", "ams", "dmf",
         "dsm", "dtm", "j2b", "mt2", "psm", "plm", "rtm", "c67", "cba", "gt2", "mo3", "xmf",

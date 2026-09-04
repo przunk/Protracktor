@@ -38,10 +38,10 @@ class SupportedFormatsTest {
      * it: every one of these was measured playing before it was added.
      */
     @Test
-    fun `OctaMED and Oktalyzer are recognised under their archive names`() {
+    fun `the formats libopenmpt plays are recognised under their archive names`() {
         for (name in listOf(
             "demon enclosure.mmd1", "starkelsesirap.mmd0", "cd sequence.mmd2", "sun.mmd3",
-            "beyond music.okta",
+            "beyond music.okta", "tune.gtk", "sample.mms",
         )) {
             assertTrue(name, SupportedFormats.looksPlayable(name))
         }
