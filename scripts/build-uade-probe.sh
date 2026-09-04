@@ -108,8 +108,33 @@ gcc -O2 -Wall -o "$ROOT/native/probe/uade/build/probe-uade" \
     -Wl,-rpath,"$INSTALL/lib" -Wl,-rpath,"$DEPS/lib" \
     -luade -lbencodetools -lzakalwe -lm
 
+# The song database, without which several formats fail in a way that looks like the format not
+# working. UADE cannot tell from a filename which player a Hippel or TFMX variant needs -- the
+# collections disagree about prefixes and suffixes -- so Matti Tiainen, one of UADE's maintainers,
+# keeps a table of md5 overrides for the Audacious plugin. Its own maintainer pointed us at it on
+# 2026-09-05, and it is the difference between 196/300 and 206/300 on our corpus, and between 0/12
+# and 11/12 on Modland's Hippel ST COSO.
+#
+# `conf/song.conf` and **not** `conf/songdb`: the project is GPL-2.0-or-later, which is compatible
+# with ours, but the songdb directory beside it is CC BY-NC-SA 4.0 and could never ship in a store
+# app (`docs/LICENSES.md`).
+SONG_CONF_URL="https://raw.githubusercontent.com/mvtiaine/audacious-uade/master/conf/song.conf"
+if [ ! -f "$INSTALL/share/uade/song.conf" ]; then
+    echo "=== song database"
+    if curl -sSL --max-time 60 -o "$INSTALL/share/uade/song.conf.part" "$SONG_CONF_URL" &&
+       [ -s "$INSTALL/share/uade/song.conf.part" ]; then
+        mv "$INSTALL/share/uade/song.conf.part" "$INSTALL/share/uade/song.conf"
+    else
+        rm -f "$INSTALL/share/uade/song.conf.part"
+        echo "  ⚠️  could not fetch song.conf -- Hippel and TFMX variants will under-report" >&2
+    fi
+fi
+
 echo
 echo "✅ built. $(ls "$INSTALL/share/uade/players" | wc -l) replay binaries, $(du -sh "$INSTALL/share/uade/players" | cut -f1) total."
+echo
+[ -f "$INSTALL/share/uade/song.conf" ] &&
+    echo "   $(grep -c '^md5=' "$INSTALL/share/uade/song.conf") song database overrides."
 echo
 echo "Run the measurement with:"
 echo

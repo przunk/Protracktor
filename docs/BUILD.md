@@ -83,8 +83,8 @@ host-specific.
 ./scripts/build-sc68-probes.sh     # sc68 2.2.1 vs 3.0.0b, the render contract, concurrency,
 ./scripts/probe-sc68.py            #   and the subsong-rewind demonstration for C13
 
-./scripts/build-uade-probe.sh      # fetches and builds UADE 3.05 and its two support libraries
-./scripts/probe-uade.py            #   from nothing, then measures it against the Modland index
+./scripts/build-uade-probe.sh      # fetches and builds UADE 3.05, its two support libraries,
+./scripts/probe-uade.py            #   and the song database, then measures against Modland
 
 ./scripts/build-gme-probe.sh       # the seven console families, which went in unmeasured
 ./scripts/probe-gme.py             #   and were 100/141 until the probe said why
