@@ -22,54 +22,59 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.przunk.protracktor.AppLanguage
+import com.przunk.protracktor.AppTheme
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.PlaybackController
 import com.przunk.protracktor.player.PlayerViewModel
+import kotlinx.coroutines.launch
 
 /**
  * The three-layer shell decided in `docs/OPEN_QUESTIONS.md` Q1.
@@ -84,12 +89,23 @@ fun ProtracktorApp(
     viewModel: PlayerViewModel = viewModel(),
     selectedLanguage: AppLanguage = AppLanguage.SYSTEM,
     onLanguageSelected: (AppLanguage) -> Unit = {},
+    selectedTheme: AppTheme = AppTheme.SYSTEM,
+    onThemeSelected: (AppTheme) -> Unit = {},
+    dynamicColour: Boolean = true,
+    onDynamicColourChanged: (Boolean) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
-    var showBrowse by remember { mutableStateOf(false) }
-    var showSettings by remember { mutableStateOf(false) }
+
+    // **Saved, not merely remembered.** Which full-screen destination is open is navigation state,
+    // and it has to survive the activity being rebuilt. Changing the language or the theme calls
+    // `recreate()` -- deliberately, so the window is built with the new one -- and with a plain
+    // `remember` that dropped the user back on the playlist from inside Settings, which is where
+    // they had just been changing the setting. Rotation lost the same thing, silently, and had
+    // done all along.
+    var showBrowse by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -199,15 +215,21 @@ fun ProtracktorApp(
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 modifier = Modifier
                                     .weight(1f, fill = false)
+                                    // Capped, so a long name ellipsises instead of shoving the
+                                    // buttons across the bar. Without this the chip grew with the
+                                    // name and everything to its right moved with it.
+                                    .widthIn(max = PLAYLIST_PILL_MAX_WIDTH)
+                                    // The same height as the buttons beside it, always. Its second
+                                    // line only appears when the playlist has something in it, so
+                                    // an empty one drew a pill half the height of its neighbours
+                                    // and the bar changed shape as tracks came and went.
+                                    .height(PLAYLIST_PILL_HEIGHT)
                                     .semantics { contentDescription = choosePlaylistLabel },
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(
-                                        start = 14.dp,
-                                        end = 6.dp,
-                                        top = 6.dp,
-                                        bottom = 6.dp,
-                                    ),
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .padding(start = 14.dp, end = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f, fill = false)) {
@@ -236,11 +258,21 @@ fun ProtracktorApp(
                                     )
                                 }
                             }
-                            Spacer(Modifier.width(12.dp))
+                            // `LabelledAction` carries 3dp of its own on each side, so two of
+                            // them sit 6dp apart. This makes the chip-to-button seam the same
+                            // rather than the 12dp it was, which is why the gaps around Browse
+                            // looked unlike the gaps between Save, Discard and Settings.
+                            Spacer(Modifier.width(TOP_BAR_SEAM - LABELLED_ACTION_INSET))
                             LabelledAction(
                                 icon = PlayerIcons.Cloud,
                                 label = stringResource(R.string.action_browse),
                                 onClick = openBrowse,
+                                // The seam across the title/actions boundary, which the two slots
+                                // do not otherwise share -- so it is the one gap on this bar that
+                                // cannot be derived and had to be looked at.
+                                modifier = Modifier.padding(
+                                    end = TOP_BAR_SEAM - LABELLED_ACTION_INSET + TOP_BAR_SLOT_SEAM,
+                                ),
                             )
                         }
                     }
@@ -255,7 +287,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
                             onClick = { showBrowse = false },
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }
                     if (!showBrowse && !showSettings) {
@@ -277,7 +309,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Settings,
                             label = stringResource(R.string.settings_title),
                             onClick = { showSettings = true },
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }
                 },
@@ -316,6 +348,10 @@ fun ProtracktorApp(
                 catalogues = browse.catalogues,
                 songLengthCount = browse.songLengthCount,
                 contentPadding = insets,
+                selectedTheme = selectedTheme,
+                dynamicColour = dynamicColour,
+                onThemeSelected = onThemeSelected,
+                onDynamicColourChanged = onDynamicColourChanged,
                 onToggleAllSubsongs = viewModel::toggleAllSubsongs,
                 onLanguageSelected = onLanguageSelected,
                 onClearCache = viewModel::clearFetchedCache,
@@ -522,3 +558,46 @@ private fun PlaylistSheet(
         )
     }
 }
+
+/**
+ * The playlist chip matches the buttons beside it rather than its own contents.
+ *
+ * `LabelledAction` is 52dp at its smallest, and the chip's second line — the track count — is
+ * absent on an empty playlist. Without a fixed height the top bar visibly changed shape as a
+ * playlist filled and emptied, which the owner spotted.
+ */
+private val PLAYLIST_PILL_HEIGHT = 52.dp
+
+/**
+ * How wide the playlist chip may get before its name starts ellipsising.
+ *
+ * A cap rather than a fixed width: a short name should not be padded out to a slab. The reason it
+ * needs one at all is that a long name pushed every button on the bar to the right, so where Browse
+ * sat depended on what the playlist was called.
+ */
+private val PLAYLIST_PILL_MAX_WIDTH = 220.dp
+
+/** The gap between any two controls on the top bar. */
+private val TOP_BAR_SEAM = 6.dp
+
+/** The inset between the last control and the edge of the screen. Not a seam; a margin. */
+private val TOP_BAR_EDGE = 8.dp
+
+/**
+ * What the title/actions boundary swallows, added back.
+ *
+ * **Measured on a device, not computed.** Every other gap on this bar is arithmetic — two known
+ * paddings either side of a known spacer — but this one crosses between two slots the top bar lays
+ * out itself, and how much they leave between them is not ours to know. The owner looked at it and
+ * said it was a pixel short, which is the only instrument there is for this.
+ */
+private val TOP_BAR_SLOT_SEAM = 1.dp
+
+/**
+ * What `LabelledAction` already puts on each of its own sides.
+ *
+ * Subtracted wherever a seam is built by hand, so the bar's gaps are equal whether the two things
+ * either side are both buttons, or a button and the playlist chip. Getting this wrong is what made
+ * the space around Browse look unlike the space between Discard, Save and Settings.
+ */
+private val LABELLED_ACTION_INSET = 3.dp

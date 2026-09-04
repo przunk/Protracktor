@@ -49,7 +49,7 @@ class PlaylistFileTest {
 
     @Test
     fun `what we wrote comes back`() {
-        val entries = PlaylistFile.read(PlaylistFile.write(listOf(local, remote)))
+        val entries = PlaylistFile.read(PlaylistFile.write("Favourites", listOf(local, remote)))
         assertEquals(2, entries.size)
         assertEquals(local.id, entries[0].id)
         assertEquals("elysium", entries[0].title)
@@ -59,13 +59,13 @@ class PlaylistFileTest {
 
     @Test
     fun `a catalogue track's location is a real URL another player could fetch`() {
-        val text = PlaylistFile.write(listOf(remote))
+        val text = PlaylistFile.write("Favourites", listOf(remote))
         assertTrue(text.lineSequence().any { it == remote.id })
     }
 
     @Test
     fun `a local file's location is a path, not a document URI`() {
-        val text = PlaylistFile.write(listOf(local))
+        val text = PlaylistFile.write("Favourites", listOf(local))
         // The URI means nothing on another device -- it is issued by a provider on this one -- so
         // the line another player reads is the path. The URI still goes in a comment, because on
         // *this* device it restores the playlist exactly.
@@ -127,8 +127,46 @@ class PlaylistFileTest {
 
     @Test
     fun `an empty playlist writes a header and reads back as nothing`() {
-        val text = PlaylistFile.write(emptyList())
+        val text = PlaylistFile.write("Favourites", emptyList())
         assertTrue(text.startsWith("#EXTM3U"))
         assertTrue(PlaylistFile.read(text).isEmpty())
+    }
+
+    /**
+     * The list's own name survives a round trip.
+     *
+     * It is written because the alternative — guessing from the filename — produced
+     * `primary:Download/Favorites` on import: a document identifier rather than a title. `#PLAYLIST:`
+     * is the extended-M3U tag other players already understand, so this costs no compatibility.
+     */
+    @Test
+    fun `the playlist name is written and read back`() {
+        val text = PlaylistFile.write("Fjortis facials", listOf(local))
+        assertEquals("Fjortis facials", PlaylistFile.nameIn(text))
+    }
+
+    /** A file from another player has entries and no name, which is not an error. */
+    @Test
+    fun `a file without a name yields null rather than a guess`() {
+        val text = """
+            #EXTM3U
+            #EXTINF:-1,Somebody - A tune
+            /music/a tune.mod
+        """.trimIndent()
+        assertNull(PlaylistFile.nameIn(text))
+        assertEquals(1, PlaylistFile.read(text).size)
+    }
+
+    @Test
+    fun `a blank name is not written`() {
+        assertNull(PlaylistFile.nameIn(PlaylistFile.write("   ", listOf(local))))
+    }
+
+    /** Names are user text: spaces, punctuation and non-Latin script all have to survive. */
+    @Test
+    fun `an awkward name survives`() {
+        for (name in listOf("Ulubione — 2026", "d-bug #197", "Ćma barowa", "a, b, c")) {
+            assertEquals(name, PlaylistFile.nameIn(PlaylistFile.write(name, listOf(local))))
+        }
     }
 }

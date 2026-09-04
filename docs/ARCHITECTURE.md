@@ -758,6 +758,22 @@ with the application's rule that an action has both an icon and its name. Browse
 beside the playlist chooser with a 12 dp gap, while Settings stays on the right. This keeps the two
 ways of choosing what plays together without making them look like one compound control.
 
+**A choice you can see is better than a choice you have to open.** Language and theme are both
+"pick one of three", and both were a dialog: a tap to find out what the options are, and then the
+answer hidden again behind a summary line. They are segmented buttons now — every option and the
+current answer visible at once, changed in one tap. `SettingChoice` is one component used twice,
+because two controls that behave identically should be one piece of code or they drift.
+
+**Changing either recreates the activity**, exactly as a language change already did. A theme
+applied after Compose has drawn is a flash of the wrong colours, which is the visual equivalent of
+the half-translated screen `AppLocale.wrap` exists to prevent — so both are read in
+`attachBaseContext` and `setContent` rather than remembered in composition.
+
+**The wallpaper palette is a separate switch, and absent below Android 12.** It is a different
+question from light-or-dark — *where do the colours come from* rather than *how bright are they* —
+and the platform below 12 has no palette to take, so offering a switch there would be a promise it
+cannot keep. On by default where it exists, because that is what a Material app is expected to do.
+
 **One scrolling screen with sections, not a tree.** With this little in it a tree is ceremony, and
 every extra tap stands between somebody and the thing they came to change.
 

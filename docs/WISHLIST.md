@@ -10,6 +10,40 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B21. The player notification is grey, tall and belongs to nothing
+
+*owner, 2026-09-05: the controls themselves are fine; the bar around them is the problem.*
+
+**Both complaints have the same cause, and it is one we can fix.** Since Android 12 a `MediaStyle`
+notification takes its colour from the artwork it is given — `setColorized` on its own does nothing
+without one — and reserves the tall media layout whether artwork arrives or not. We give it none:
+`PlaybackService` sets a title, an artist, an album and a duration, and no
+`METADATA_KEY_ALBUM_ART`. So the platform draws the large player it always draws, in the default
+surface grey, around a hole where the cover would be.
+
+**These formats have no cover art and never will**, which is the interesting part rather than the
+obstacle. What could fill it:
+
+- **Something generated per track.** A deterministic image from the file's own identity — the format
+  name over a colour derived from a hash of the title, say. Every tune gets a stable, distinct
+  square, and it costs one bitmap per track change.
+- **Something generated per *format*.** Twelve or so images, one per backend or format family, drawn
+  once and reused. Cheaper, and arguably truer: what a `.sndh` looks like is a real fact about it,
+  where a colour from its title is decoration.
+- **The launcher icon.** Cheapest and worst — every tune identical, which tells the user nothing and
+  makes the notification look like a mistake.
+
+**The height is the platform's and cannot be argued with**, but a filled artwork slot is what that
+layout is for, so filling it is the closest thing to a fix.
+
+**Worth measuring before choosing:** whether `setColorized(true)` plus artwork actually recolours on
+the owner's Android version, and how a generated bitmap looks at the two sizes the shade and the
+lock screen use. Both are questions a device answers in ten minutes and a document cannot.
+
+**Related:** `docs/STATUS.md` C12, where the same notification lost its skip buttons because Android
+13 takes them from `PlaybackState` rather than from the actions we add — this part of the platform
+rewards checking over assuming.
+
 ## B20. The year a tune was released
 
 *owner, 2026-09-04: "fajnie by było gdyby dało się zobaczyć rok wydania utworu (np. w info o

@@ -16,36 +16,26 @@
 package com.przunk.protracktor.ui
 
 import android.os.Build
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.AppLanguage
+import com.przunk.protracktor.AppTheme
+import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.engine.NativeEngine
@@ -77,6 +67,10 @@ fun SettingsScreen(
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
     contentPadding: PaddingValues,
+    selectedTheme: AppTheme,
+    dynamicColour: Boolean,
+    onThemeSelected: (AppTheme) -> Unit,
+    onDynamicColourChanged: (Boolean) -> Unit,
     onToggleAllSubsongs: () -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearCache: () -> Unit,
@@ -85,8 +79,6 @@ fun SettingsScreen(
     onDeleteReplays: () -> Unit,
 ) {
     val context = LocalContext.current
-    var choosingLanguage by remember { mutableStateOf(false) }
-    var pendingLanguage by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
     // Asked of the package manager rather than of `BuildConfig`, which this build does not
     // generate — and which would report what was compiled rather than what is installed.
     val version = remember(context) {
@@ -122,22 +114,48 @@ fun SettingsScreen(
             )
         }
 
-        // Kept inside the app on every supported Android version. Sending the user to a system
-        // screen only worked on Android 13+, and made a basic app setting disappear on 10--12.
+        // Two settings, one shape. Both are "pick one of a handful", both show every option and
+        // the current answer at once, and both used to be a dialog -- which cost a tap to find out
+        // what the options were and then hid the answer again behind a summary line.
         item {
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_language)) },
-                supportingContent = {
-                    Text(
-                        selectedLanguage.label(),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                },
-                modifier = Modifier.clickable {
-                    pendingLanguage = selectedLanguage
-                    choosingLanguage = true
-                },
+            SettingChoice(
+                label = stringResource(R.string.settings_language),
+                options = AppLanguage.entries,
+                selected = selectedLanguage,
+                labelOf = { it.label() },
+                onSelect = onLanguageSelected,
             )
+        }
+
+        item { HorizontalDivider(); Section(R.string.settings_appearance) }
+
+        item {
+            SettingChoice(
+                label = stringResource(R.string.settings_theme),
+                options = AppTheme.entries,
+                selected = selectedTheme,
+                labelOf = { it.label() },
+                onSelect = onThemeSelected,
+            )
+        }
+
+        // Absent below Android 12 rather than present and dead: there is no wallpaper palette to
+        // take, so a switch would be a promise the platform cannot keep.
+        if (Appearance.supportsDynamicColour) {
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_dynamic_colour)) },
+                    supportingContent = {
+                        Text(
+                            stringResource(R.string.settings_dynamic_colour_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Switch(checked = dynamicColour, onCheckedChange = onDynamicColourChanged)
+                    },
+                )
+            }
         }
 
         item {
@@ -198,48 +216,16 @@ fun SettingsScreen(
             )
         }
     }
-
-    if (choosingLanguage) {
-        AlertDialog(
-            onDismissRequest = { choosingLanguage = false },
-            title = { Text(stringResource(R.string.settings_language_choose)) },
-            text = {
-                Column {
-                    AppLanguage.entries.forEach { language ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = pendingLanguage == language,
-                                    role = Role.RadioButton,
-                                    onClick = { pendingLanguage = language },
-                                )
-                                .padding(vertical = 10.dp),
-                        ) {
-                            RadioButton(
-                                selected = pendingLanguage == language,
-                                onClick = null,
-                            )
-                            Text(language.label(), modifier = Modifier.padding(start = 12.dp))
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    choosingLanguage = false
-                    onLanguageSelected(pendingLanguage)
-                }) { Text(stringResource(R.string.action_apply)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { choosingLanguage = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
-        )
-    }
 }
+
+@Composable
+private fun AppTheme.label(): String = stringResource(
+    when (this) {
+        AppTheme.SYSTEM -> R.string.settings_theme_system
+        AppTheme.LIGHT -> R.string.settings_theme_light
+        AppTheme.DARK -> R.string.settings_theme_dark
+    }
+)
 
 @Composable
 private fun AppLanguage.label(): String = stringResource(

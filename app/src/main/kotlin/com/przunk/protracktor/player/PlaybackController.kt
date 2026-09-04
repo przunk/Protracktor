@@ -661,10 +661,36 @@ class PlaybackController private constructor(private val context: Context) {
      * The last playlist cannot be deleted -- an app with nowhere to put anything is a state with no
      * way out, and "delete" is not a request to be stranded.
      */
+    /**
+     * Deletes a playlist — or empties it, when it is the only one there is.
+     *
+     * **The last playlist is not refused, it is reset.** It used to answer "the last playlist
+     * cannot be deleted", which is a rule the user did not agree to and could not see: they pressed
+     * Delete, confirmed it, and nothing happened. The notice explaining why lost a race with the
+     * sheet the button lives in, so even the explanation did not arrive.
+     *
+     * Somebody deleting their only playlist wants it gone, and the closest thing to gone that can
+     * exist is empty and called what a new one would be called. There is nothing to undo that the
+     * confirmation did not already ask about.
+     */
     fun deletePlaylist(id: Long) {
         scope.launch {
             if (store.playlists().size <= 1) {
-                _state.update { it.copy(message = Message("The last playlist cannot be deleted.")) }
+                store.replaceTracks(id, emptyList())
+                store.renamePlaylist(id, DEFAULT_PLAYLIST_NAME)
+                stopPlayback()
+                _state.update {
+                    it.copy(
+                        queue = PlayQueue(tracks = emptyList(), shuffle = it.queue.shuffle, repeat = it.queue.repeat),
+                        playlists = store.playlists(),
+                        playing = false,
+                        dirty = false,
+                        metadata = emptyMap(),
+                        positionSeconds = 0.0,
+                        durationSeconds = 0.0,
+                        message = Message("Playlist emptied. It is the only one, so it stays."),
+                    )
+                }
                 return@launch
             }
             store.deletePlaylist(id)
@@ -948,7 +974,9 @@ class PlaybackController private constructor(private val context: Context) {
             }
             val label = current.playlists.firstOrNull { it.id == id }?.name ?: "playlist"
             val name = label.replace(Regex("[^\\w -]"), "_")
-            val bytes = withContext(Dispatchers.Default) { PlaylistFile.write(tracks).toByteArray() }
+            val bytes = withContext(Dispatchers.Default) {
+                PlaylistFile.write(label, tracks).toByteArray()
+            }
             val uri = remoteFiles.shareableCopy("$name.m3u8", bytes)
             if (uri == null) {
                 _state.update { it.copy(message = Message("Could not prepare the playlist.")) }
@@ -1003,7 +1031,14 @@ class PlaybackController private constructor(private val context: Context) {
             // once; the count reported below is of what was found, which is what the file offered.
             val found = entries.mapNotNull { entry -> resolve(entry, known) }
 
-            val name = MediaScanner.labelOf(uri).substringBeforeLast('.').ifBlank { "Imported" }
+            // The file's own name first. A filename is a poor second: `labelOf` reads a *tree*
+            // document id, and handed the document URI of a picked file it returned things like
+            // "primary:Download/Favorites" -- an identifier, not a title. Kept as the fallback for
+            // files written by other players, which carry no name at all.
+            val name = PlaylistFile.nameIn(text)
+                ?: MediaScanner.labelOf(uri).substringAfterLast('/').substringAfterLast(':')
+                    .substringBeforeLast('.')
+                    .ifBlank { "Imported" }
             val playlistId = store.createPlaylist(name)
             store.replaceTracks(playlistId, found)
 
