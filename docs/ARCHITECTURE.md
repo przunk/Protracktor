@@ -123,6 +123,16 @@ worth testing. There is no emulator in this environment (AGENTS.md §3), so anyt
 be verified by running the UI is verified by the owner on a real phone, and everything else is
 verified by tests that run here.
 
+What has been pulled out this way, and why each earned it: `PlayQueue`, `SchemaSql`, `SongLengths`,
+`CacheBudget`, `BrowseNavigation`, `BrowseScroll`, `TrackEditing`, `PlaylistFile`,
+`SupportedFormats` and — since 2026-09-04 — `SubsongAdvance`.
+
+**The rule for when to extract is not "when it is easy".** It is *when the decision has been wrong
+before*. `SubsongAdvance` holds one question — what a file with several tunes in it does when one
+ends — and that question has now been answered wrongly twice inside a method that needs a phone to
+run: C11 raced through every subsong in silence, and C13 never consulted repeat-one at all. Sixty
+lines of object and six tests is a cheap way to stop a third time.
+
 ## 8. Two kinds of source behind one index
 
 Decided 2026-08-31, after the owner asked whether online catalogues with a local cache were

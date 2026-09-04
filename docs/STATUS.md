@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-09-03 — version 0.2.0, versionCode 2, schema version 9
+Updated: 2026-09-04 — version 0.3.0, versionCode from the commit count, schema version 10
 
 ## What works
 
@@ -19,8 +19,13 @@ A usable player, as far as anything can be called that without a device saying s
   A folder is **scanned by opening every file with a real decoder**, not by reading its name, and
   the result is stored so later launches read an index instead of walking the tree
   (`docs/ARCHITECTURE.md` §18).
-- **Playlists**: several, named, created, renamed, deleted, switched from the top bar. Shuffle and
-  repeat work inside the active one.
+- **Playlists**: several, named, created, renamed, deleted, exported and imported as M3U, switched
+  from the top bar — each row's own actions behind the same three dots a track row uses. Shuffle and
+  repeat work inside the active one, and repeat-one on a file with several tunes in it loops the
+  file rather than its last tune.
+- **Storage you can reclaim**: everything the app has downloaded — the fetched-music cache, each
+  catalogue index and archive, the HVSC song lengths — is listed with its size and a delete, and
+  every one of them is re-fetchable (`docs/ARCHITECTURE.md` §19).
 - **Transport**: a dock on every screen with shuffle, previous, play, next and repeat. Shuffle keeps
   a real history so backward returns to what was actually played; without shuffle, backward is the
   row above. Seeking where the backend allows it.
@@ -29,7 +34,7 @@ A usable player, as far as anything can be called that without a device saying s
   and becoming-noisy are honoured.
 - **Both languages**, Polish and English, from the first screen.
 
-Verified here: **87 unit tests**, genuinely executed rather than served from the build cache —
+Verified here: **124 unit tests**, genuinely executed rather than served from the build cache —
 `./scripts/test-protracktor.sh --really`, which exists because a "final verification" on 2026-09-03
 turned out to have come out of the cache in one second. A release build through R8 keeps all 13 JNI
 symbols, three ABIs and 99 sc68 replay binaries. Every backend was also run on the host against real
@@ -733,6 +738,12 @@ A6 as well, because it is both a defect and a piece of work.
 
 - `master` — repository base. Merging to it is the owner's decision (`AGENTS.md` §3).
 - `develop` — current work; everything below is merged into it.
+- **2026-09-04, round 6** — all merged: `feature/add-feedback`, `docs/round-6-goal`,
+  `feature/uade`, `fix/missing-extensions`, `docs/amp-and-reindex`, `feature/storage-you-can-free`,
+  `fix/repeat-one-subsongs-c13`, `docs/play-store-readiness`, `fix/two-more-extensions`,
+  `review/round-6`, `fix/review-round-6-engine`, `fix/review-round-6-storage`,
+  `docs/round-6-reconcile`.
+- 2026-09-04 — `feature/bigger-dock`, `feature/launcher-icon` (Codex's), merged before the round.
 - **2026-09-03, round 5** — all merged: `feature/sc68-3-0-0b`, `feature/local-index`,
   `feature/cache-budget`, `feature/browse-scroll`, `fix/browse-defects`, `review/round-5`,
   `fix/review-round-5`, `fix/open-error-race`, `fix/database-singleton`,
@@ -740,6 +751,8 @@ A6 as well, because it is both a defect and a piece of work.
 - 2026-09-02 — `feature/asma-catalogue`, `feature/hvsc-songlengths` and the round-3 branches, merged.
 - `feature/project-scaffold` — scaffolding and the Gradle skeleton. Not merged.
 
+- `feature/play-store-readiness` — Codex's, **not merged** and left alone at the owner's word.
+
 **Merged without the owner having run any of it.** `AGENTS.md` says to wait for his device test
-before merging to `develop`; the exception is an unattended `/goal` run, which this was. Round 5 is
-therefore in `develop` unreviewed by anyone but its author.
+before merging to `develop`; the exception is an unattended `/goal` run, which rounds 5 and 6 both
+were. Both are therefore in `develop` unreviewed by anyone but their author.
