@@ -689,7 +689,11 @@ Phase 4 on an exhausted context.
       **Not the listing itself.** Screenshots, feature graphic, content rating and the store text are
       his account and his name.
 
-## Phase 2 — review
+## Phase 2 — review — DONE 2026-09-04, `docs/review-round-6.md`
+
+Six findings, four of them in code written earlier the same day, and the most serious is a data race
+introduced *while fixing* C13 — eleven lines above the comment explaining why its neighbours are
+atomic. The rule about suspecting this run's own code earned its place for the second round running.
 
 The same standard as round 5, which is the reason that phase exists: read the whole tree with fresh
 suspicion, write every finding down with its evidence, and rank by what would actually hurt someone
