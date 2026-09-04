@@ -673,7 +673,7 @@ Phase 4 on an exhausted context.
       exactly this class of reasoning before, when a transport button would have meant different
       things depending on the file.
 
-- [ ] **5. The documents the Play Store needs** (`docs/BACKLOG.md` A14)
+- [x] **5. The documents the Play Store needs** (`docs/BACKLOG.md` A14) *(`docs/PRIVACY.md`, `docs/PLAY_STORE.md`; every claim checked against the source, and one unused permission removed)*
 
       No device, no taste, and they block publishing. Three things, all writing:
 
