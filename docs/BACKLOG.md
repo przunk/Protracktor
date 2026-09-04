@@ -421,8 +421,10 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 - **`docs/letters/` before the repository goes public.** The listing points at the source, so
   publishing the app publishes the repository, and that directory holds correspondence with other
   projects' maintainers. It is gitignored as of 2026-09-05, which only stops new ones — the five
-  already committed are in the history, and taking them out means rewriting it before the first
-  public push or deciding they are public. `docs/PLAY_STORE.md` has both options.
+  already committed are in the history. The owner's decision is to rewrite it and force-push;
+  `docs/PLAY_STORE.md` has the command, tried on a copy. **It does not remove the quotations** —
+  Heikki Orsila's and Matti Tiainen's replies are quoted verbatim in `LICENSES.md`,
+  `PLAN_FORMATS.md` and several commit messages, and those are the words that are not ours.
 
 **Not started, and not to be started without the owner**: publishing is his account, his key and
 his name on the listing.

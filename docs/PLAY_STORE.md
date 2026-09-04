@@ -88,21 +88,51 @@ libraries we use — their replies, their names, and half-finished thoughts addr
 to keep locally; not ours to publish. It is in `.gitignore` as of 2026-09-05, which stops new ones
 being added.
 
-**Ignoring is not removing, and this is the part that needs deciding rather than doing.** Five
-letters are already committed across ten commits. `git rm -r docs/letters` takes them out of the
-head, and they remain in the history — anybody who clones a public repository has every version of
-every file that was ever in it. So there are two honest options:
+**Ignoring is not removing.** Five letters are already committed across ten commits, and anybody
+cloning a public repository gets every version of every file that was ever in it. The owner's
+decision, 2026-09-05: **rewrite the history and force-push.**
 
-1. **Rewrite the history** before the first push to a public remote — `git filter-repo --path
-   docs/letters --invert-paths`, or a fresh orphan commit if the history is not worth keeping. Only
-   the owner can do this: it changes every commit hash after the first letter landed, and
-   `AGENTS.md` §3 puts pushes in his hands anyway.
-2. **Accept that they are public.** Re-read them first with that in mind. They were written to be
-   sent, not to be found — but nothing in them is a secret, and one of them is a measurement other
-   people might genuinely want.
+### The recipe, tried on a copy first
 
-**Deciding late is the expensive version**, because after the first public push the history is out
-and no rewrite recalls it. Worth settling in the same hour as the first push, not after.
+`git-filter-repo` is a single Python file and is not installed here; it does not need to be.
+
+```bash
+curl -sSLo /tmp/git-filter-repo \
+  https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo
+cd /mnt/workspace/Protracktor
+python3 /tmp/git-filter-repo --path docs/letters --invert-paths --force
+```
+
+Run against a copy of this repository on 2026-09-05 it finished in under a second, left 309 commits
+and **no file ever named `docs/letters/*` in any of them**. Two things it does that are worth
+knowing before running it for real:
+
+- **It removes the `origin` remote**, by design, so a stale push cannot restore what was cut. Add it
+  back and force-push every branch afterwards.
+- **It changes every commit hash** from the first letter onward. Any other clone is dead; the merge
+  history and the messages survive intact.
+
+### What the rewrite does not remove, and is the part worth thinking about
+
+The letters are drafts in the owner's own words. **The quotations are other people's.**
+`docs/LICENSES.md` and `docs/PLAN_FORMATS.md` quote Heikki Orsila and Matti Tiainen verbatim — the
+`players/` licence position, the invitation to download from zakalwe.fi, the limit on what counts as permission, the RMC note — and several commit messages do too.
+Filtering `docs/letters` leaves all of it.
+
+That is not obviously wrong: quoting a maintainer's technical answer, attributed, in the reasoning
+it produced is ordinary engineering practice, and none of it is unflattering. But these were private
+replies rather than a public list, so it is a courtesy question and not a legal one. Three ways to
+settle it, cheapest first:
+
+1. **Ask them.** They answered a cold question within a day and copied each other in; "may I quote
+   your replies in the project's documentation?" would very likely get a yes, and a yes is worth
+   more than either alternative.
+2. **Keep the facts, drop the verbatim.** The measurements and the conclusions are ours; the
+   sentences are theirs. Paraphrasing costs a little colour and no information.
+3. **Leave it.** Defensible, and it is the option that cannot be taken back.
+
+**Deciding late is the expensive version** — after the first public push the history is out and no
+rewrite recalls it. Worth settling in the same hour as that push, not after.
 
 ## What is still missing, and is his
 
