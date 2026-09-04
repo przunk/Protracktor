@@ -400,6 +400,41 @@ commented-out `"snd"` as an extension. Correcting that changes the whole-index h
 314,340 / 29,127 / 172,042 to **314,317 / 29,128 / 172,064**, but the one newly reachable SND file
 is outside the top 25 and does not change the 300-file play corpus.
 
+### Hippel ST COSO is Modland's problem, not UADE's — established 2026-09-05
+
+The one directory still at 0/12 after the probe was corrected, and the answer came from the
+reference set Heikki pointed at: `git clone git://zakalwe.fi/chip`, which he describes as UADE's
+test-case repository, with an example of every format it supports.
+
+| | accepted |
+| --- | --- |
+| `jochen_hippel_coso/SOC.*` from `zakalwe.fi/chip` | **66 of 67** (the exception is `SOC.samp`) |
+| Modland `Hippel ST COSO`, seeded sample | **0 of 12** |
+
+**Renaming does not explain it.** The reference set uses the Amiga `SOC.name` convention and Modland
+uses `name.soc`; the Modland files were re-tested under both and failed under both. That was the
+obvious theory and it is wrong.
+
+**The files differ in size by about a factor of seven** for what appear to be the same tunes —
+GhostBattle world2 is 3,806 bytes from Modland and 30,012 from the Wanted Team rip; the sampled
+means are 3,732 against 26,796. Both carry the same `COSO` magic and the same `TFMX` marker at
+offset 0x20, so they are the same format rather than two different ones.
+
+**No diagnosis beyond that is offered, deliberately.** A header-offset theory was tried and
+discarded within the hour: Modland's files appear "truncated" by that measure and so do reference
+files that play perfectly, which means the measure was reading the format wrong. After
+`UC_CONTENT_DETECTION`, a second confident wrong theory is the thing most worth avoiding — the
+observation is reported to UADE's maintainer and the explanation left to him.
+
+**What follows from it for us:** `zakalwe.fi/chip` is the reference set now, not Modland. Modland
+remains what the app *browses*, but a format measured only against it is a format measured against
+one ripper's habits.
+
+**Not reported upstream.** The owner closed the correspondence on 2026-09-05, and the draft sits
+unsent in `docs/letters/`. Heikki had offered to take interesting cases; an offer is not an
+obligation and nobody is waiting on this. It is a note to ourselves, which is what it was worth
+either way — the reference-set lesson above is the part that changes how we work.
+
 ### What UADE is actually worth — and the finding that undercuts it
 
 In the corrected historical top-25 run, formats with a successful sample cover **9,813 Modland

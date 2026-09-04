@@ -140,7 +140,7 @@ APK — which is where the doubt actually lives.
 
 | | sent | to | status |
 | --- | --- | --- | --- |
-| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | **answered the same day** — see below |
+| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | answered, exchange **closed 2026-09-05** |
 | sc68 | not yet | SourceForge ticket | the owner is holding off |
 
 **Neither the work nor the release waits on either.** `sndh_ice.bin` is sc68's own file in sc68's
