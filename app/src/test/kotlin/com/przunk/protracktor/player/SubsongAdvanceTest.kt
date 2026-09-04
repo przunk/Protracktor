@@ -41,15 +41,28 @@ class SubsongAdvanceTest {
     }
 
     /**
-     * The fault as reported. Repeat-one used to be unreachable with "play all" on: the walk
-     * returned first for every tune but the last, and the last fell through to a plain restart.
+     * The rule, in the owner's own three words: *"one to one"*.
+     *
+     * Repeat-one outranks "play all". While it is on, nothing advances — not between tunes, not at
+     * the end of the file — and the tune that just ended plays again. `Next.FileFinished` is how
+     * that is said here, because repeating what is playing is the caller's `restart()`, the same
+     * path an ordinary track already uses.
+     *
+     * **The first version of this test asserted the opposite** and passed: it said repeat-one on
+     * the last tune should go back to the first, on the reasoning that "one" meant one row of the
+     * playlist. He tried it and the answer was immediate — with "play all" on, repeat-one still
+     * moved him off the tune he was listening to, and a repeat that goes somewhere else is not a
+     * repeat.
      */
     @Test
-    fun `repeat-one loops the whole file, not its last tune`() {
-        assertEquals(
-            Next.Subsong(0),
-            SubsongAdvance.after(playAll = true, subsong = 7, subsongCount = 8, repeatOne = true),
-        )
+    fun `repeat-one repeats the tune that is playing, wherever it is in the file`() {
+        for (subsong in 0..7) {
+            assertEquals(
+                "subsong $subsong",
+                Next.FileFinished,
+                SubsongAdvance.after(playAll = true, subsong = subsong, subsongCount = 8, repeatOne = true),
+            )
+        }
     }
 
     @Test
@@ -87,23 +100,18 @@ class SubsongAdvanceTest {
         }
     }
 
-    /**
-     * Under repeat-one with "play all", a file must cycle for ever and never report itself
-     * finished — walked here rather than asserted at one point, because "for ever" is the claim.
-     */
+    /** With repeat off, "play all" still walks the file to its end and then stops. */
     @Test
-    fun `repeat-one with play-all cycles through every tune, for ever`() {
+    fun `play-all without repeat walks once and stops`() {
+        val visited = mutableListOf(0)
         var subsong = 0
-        val visited = mutableSetOf(0)
-        val order = mutableListOf<Int>()
-        repeat(500) { step ->
-            val next = SubsongAdvance.after(true, subsong, subsongCount = 3, repeatOne = true)
-            assertTrue("step $step from $subsong reported the file finished", next is Next.Subsong)
+        while (true) {
+            val next = SubsongAdvance.after(true, subsong, subsongCount = 4, repeatOne = false)
+            if (next is Next.FileFinished) break
             subsong = (next as Next.Subsong).index
             visited += subsong
-            if (order.size < 6) order += subsong
+            assertTrue("walked past the end", visited.size <= 4)
         }
-        assertEquals("every tune is reached", setOf(0, 1, 2), visited)
-        assertEquals("and in order, wrapping at the end", listOf(1, 2, 0, 1, 2, 0), order)
+        assertEquals(listOf(0, 1, 2, 3), visited)
     }
 }

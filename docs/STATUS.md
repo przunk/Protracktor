@@ -45,6 +45,14 @@ playlist works (2026-09-02), and on the evening of 2026-09-02 he tested all five
 **Random rolling on, history, "more from this author" and both shares all work**. Read-ahead was
 working and fetching serially, which he heard; that is fixed.
 
+**2026-09-04, round 6 on a device.** Indexes correctly reported themselves stale after the name list
+changed, and re-indexing worked. **OctaMED `.mmd0`–`.mmd3` and Oktalyzer `.okta` play** — the 5,652
+files that were always playable and never offered. Freeing and re-downloading the ASMA archive
+works. Adding to a playlist reports what it did; the playlist row menus work.
+
+Two things came back wrong and are fixed: **repeat-one still advanced through subsongs** (see C13
+below), and the seek bar looked draggable on tracks that cannot seek.
+
 **Confirmed on a device by the owner:**
 
 - modules play (2026-08-31), SAP plays (2026-09-01)
@@ -572,9 +580,22 @@ with all-subsongs on, the end of the last subsong goes back to the first and the
 with all-subsongs off, the current subsong loops. It is coherent and it is a guess — it belongs in a
 commit that says so, not in silence.
 
-**Fixed 2026-09-04, both halves, and the guess taken as stated.**
+**Fixed 2026-09-04, both halves — and the guess in the paragraph above was wrong.**
 
-`Sc68Backend` remembers what `selectSubsong` chose and rewinds to it.
+The owner tested it the same day: *"repeat one na wielościeżkowym przechodzi do kolejnych
+subutworów (źle); niezależnie od play all / first only, repeat one powinno zawsze powtarzać jeden.
+One to one."* **Repeat-one outranks "play all".** While it is on nothing advances, and the tune that
+just ended plays again, whether it is a whole file or the fifth tune inside one.
+
+The reading it replaces — "one" means one row of the playlist, so a multi-tune file loops from its
+first tune — is defensible on paper and fails the only test that counts: with "play all" on,
+pressing repeat-one still moved him off the tune he was listening to. **A repeat that goes somewhere
+else is not a repeat.** This is the second time a subsong control was designed to mean different
+things in different modes and the second time he corrected it to the simpler rule; the pattern is
+worth naming rather than meeting again.
+
+That correction rests on the other half, which was right: `Sc68Backend` remembers what
+`selectSubsong` chose and rewinds to it — so "repeat what is playing" reaches the right tune.
 `native/probe/sc68/probe_subsong_rewind.c` demonstrates the fault rather than arguing it, on the
 same corpus the other sc68 probes use — six of the forty files have more than one tune, and all six
 show the same thing:

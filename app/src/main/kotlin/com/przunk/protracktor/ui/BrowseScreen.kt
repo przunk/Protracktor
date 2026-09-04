@@ -475,13 +475,27 @@ private fun OnlineDomain(
                     headlineContent = { Text(catalogue.displayName) },
                     supportingContent = {
                         Column {
+                            // What it holds, and what that costs. The size used to appear only
+                            // in the storage section and, oddly, in the notice after deleting it --
+                            // so the one moment you were told how much a catalogue weighed was the
+                            // moment you no longer had it. It belongs where the decision is made.
+                            val archived = browse.archiveBytes[catalogue.id] ?: 0L
                             Text(
                                 if (catalogue.isOnlineOnly) {
                                     stringResource(R.string.catalogue_online_search)
                                 } else if (catalogue.indexed) {
-                                    pluralStringResource(
+                                    val counted = pluralStringResource(
                                         R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
                                     )
+                                    if (archived > 0L) {
+                                        stringResource(
+                                            R.string.catalogue_count_and_size,
+                                            counted,
+                                            archived / (1024 * 1024),
+                                        )
+                                    } else {
+                                        counted
+                                    }
                                 } else {
                                     stringResource(R.string.catalogue_not_indexed)
                                 },

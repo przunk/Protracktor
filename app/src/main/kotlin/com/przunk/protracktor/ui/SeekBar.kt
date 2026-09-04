@@ -16,8 +16,10 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -79,11 +81,21 @@ fun SeekBar(
         thumb = {
             // A visible grab point, which is what the owner asked for: a progress line with nothing
             // to take hold of does not look like something you can move.
-            SliderDefaults.Thumb(
-                interactionSource = interaction,
-                thumbSize = if (compact) DpSize(14.dp, 14.dp) else DpSize(20.dp, 20.dp),
-                enabled = enabled,
-            )
+            //
+            // **And nothing to take hold of when there is nothing to move.** SID and Atari ST
+            // cannot seek — libsidplayfp is running a program and has no notion of a position at
+            // all — and since HVSC started supplying SID durations, the bar shows a real length and
+            // looked exactly like a bar you could drag. The owner tried, on 2026-09-04. A greyed
+            // thumb reads as "not now"; no thumb reads as "this is progress", which is the truth.
+            if (enabled) {
+                SliderDefaults.Thumb(
+                    interactionSource = interaction,
+                    thumbSize = if (compact) DpSize(14.dp, 14.dp) else DpSize(20.dp, 20.dp),
+                    enabled = true,
+                )
+            } else {
+                Box(Modifier.size(0.dp))
+            }
         },
         track = { state ->
             SliderDefaults.Track(
