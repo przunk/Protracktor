@@ -703,13 +703,17 @@ callback — after the same code had been written, reviewed in passing and merge
 Treat code written earlier in this same run with **more** suspicion, not less. That instruction was
 what earned R1.
 
-## Phase 3 — corrections
+## Phase 3 — corrections — DONE 2026-09-04
+
+All five findings fixed, on two branches — `fix/review-round-6-engine` (R1, R2) and
+`fix/review-round-6-storage` (R3, R4, R5) — because each branch holds one problem rather than one
+finding, and R1/R2 are the same problem seen twice, as are R3/R4.
 
 Each independent correction gets its own branch and commit. Fix what the review confirmed; record
 what was deliberately not fixed and why. A finding dismissed with a reason is a result; a finding
 quietly dropped is not.
 
-## Phase 4 — reconcile the documentation
+## Phase 4 — reconcile the documentation — DONE 2026-09-04
 
 `docs/STATUS.md`, `docs/ARCHITECTURE.md`, `docs/BACKLOG.md`, `docs/WISHLIST.md`, `docs/LICENSES.md`,
 `docs/PLAN_FORMATS.md`, `docs/PLAN_CATALOGUES.md`, `BUILD.md`, `AGENTS.md`. A document that lies is
@@ -717,3 +721,38 @@ worse than one that is missing.
 
 State plainly, as round 5 did, that **nobody has run any of this on a device** — the unattended
 exception in `AGENTS.md` is why it is in `develop` at all.
+
+## Round 6 — closed 2026-09-04
+
+**All five items, the review, the corrections and the documentation.** Stopping cleanly between
+items was allowed and was not needed.
+
+**The round's own subject turned out to be the least of what it produced.** Item 1 was UADE, and the
+honest answer is not to integrate it: its exclusive contribution is 4,163 Modland files rather than
+the tens of thousands `docs/BACKLOG.md` A5 assumed, it needs a licence decision worse-documented
+than sc68's with no middle option, and it is either a second process or a single-instance emulator
+inside ours. Measuring that found something better — **5,652 files the app could already play and
+never offered**, because `SupportedFormats` listed `med` and `okt` while Modland files them as
+`.mmd1` and `.okta`. Five strings and a re-index beat a whole backend.
+
+**Two things went wrong on the way, and both were caught by measuring rather than reasoning.**
+Counting UADE's reach by filename prefix alone returned 807 files where the truth is 29,127, because
+Modland stores half these formats with the marker at the other end of the name. And the first probe
+used an API whose own header says it does not do multifile — reporting TFMX, the largest Amiga
+custom format in the archive, as unplayable. Either would have argued this backend was worthless.
+
+**The rule about suspecting this run's own code earned its place for the second round running.**
+Four of the review's six findings are from code written earlier the same day, and the most serious
+is a data race introduced *while fixing* C13 — a plain `int` shared with the audio thread, eleven
+lines above the comment explaining why its neighbours are atomic.
+
+**Three items were answered by finding out rather than by building.** AMP publishes no index and its
+`robots.txt` asks automated clients off its modules, so it is not blocked on UADE at all. The
+re-index half of item 2 turned out to be a defect: the staleness marker watched the decoders and not
+the name list that equally decides what an index holds, so it would not have fired on its first real
+occasion. And item 5's privacy claims were checked against the source instead of written from
+memory, which is how `ACCESS_NETWORK_STATE` was found declared and unused.
+
+**What nobody has done: run any of it.** `AGENTS.md` says to leave a branch unmerged until the owner
+has tested it on his phone; the exception is an unattended run, which this was. Everything is in
+`develop` having been verified by 124 unit tests, host probes and compilation — and by nothing else.

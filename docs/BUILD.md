@@ -71,6 +71,31 @@ ninja -C /tmp/protracktor-nativetest
 `PROTRACKTOR_BUILD_ENGINE=OFF` is required outside Gradle: the engine links Oboe, which arrives as a
 prefab package unpacked from an AAR, and only the Gradle build unpacks it.
 
+### Trying a decoder on the host before believing in it
+
+Every backend here was run on this machine against real files before it was integrated, and that has
+caught something every time — sc68 2.2.1's half-broken SNDH, the SidMon executables hiding among
+Modland's `.sid` files, and the render-contract bug that would have stopped every Atari ST track on
+its first audio callback. The probes are committed; their binaries are not, because they are
+host-specific.
+
+```bash
+./scripts/build-sc68-probes.sh     # sc68 2.2.1 vs 3.0.0b, the render contract, concurrency,
+./scripts/probe-sc68.py            #   and the subsong-rewind demonstration for C13
+
+./scripts/build-uade-probe.sh      # fetches and builds UADE 3.05 and its two support libraries
+./scripts/probe-uade.py            #   from nothing, then measures it against the Modland index
+
+./scripts/probe-extensions.py      # what libopenmpt would play if the app ever offered the file
+```
+
+Each downloads a deterministic, seeded sample from Modland and caches it under `~/.protracktor`, so
+a second run measures the same files and can be compared with the first. `build-uade-probe.sh`
+prints the two environment variables `probe-uade.py` needs.
+
+**Set `PYTHONUNBUFFERED=1` when redirecting one of these to a file**, or the progress lines sit in
+Python's buffer and a long run looks hung.
+
 ## Builds
 
 ```bash
@@ -238,7 +263,7 @@ reporting a passing suite it did not execute:
 
 | what the script says | what happened |
 | --- | --- |
-| `87 tests passed in 15s` | they ran |
+| `124 tests passed in 13s` | they ran |
 | `… (up to date, not re-run)` | nothing changed since last time |
 | `… (from the build cache, not re-run)` | the answer came out of the build cache |
 
