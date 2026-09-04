@@ -576,6 +576,7 @@ private fun OnlineDomain(
                 StorageSection(
                     cacheBytes = browse.storageBytes.first,
                     archiveBytes = browse.archiveBytes,
+                    databaseBytes = browse.databaseBytes,
                     catalogues = browse.catalogues,
                     songLengthCount = browse.songLengthCount,
                     onClearCache = onClearCache,

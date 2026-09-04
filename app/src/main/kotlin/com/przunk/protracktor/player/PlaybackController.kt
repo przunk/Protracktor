@@ -30,6 +30,7 @@ import com.przunk.protracktor.data.CatalogueStore
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.data.SavedPlaylist
+import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.HistoryStore
 import com.przunk.protracktor.data.LibraryIndexStore
 import com.przunk.protracktor.data.PlaylistFile
@@ -218,6 +219,8 @@ data class BrowseState(
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
     val archiveBytes: Map<String, Long> = emptyMap(),
+    /** Bytes the database file holds — playlists, history, and every index that is rows not a file. */
+    val databaseBytes: Long = 0L,
     /** Which decoders this build has, for telling a stale catalogue index from a current one. */
     val backends: String = "",
 
@@ -370,6 +373,16 @@ class PlaybackController private constructor(private val context: Context) {
     private var track: NativeEngine.Track? = null
 
     /**
+     * HVSC's lengths for the open file, one per tune, or empty when it did not supply any.
+     *
+     * Kept because the backend cannot be asked twice. libsidplayfp reports no length at all — the
+     * database is the only source — and a subsong switch used to clear the duration and wait for a
+     * backend that would never answer, so tune two onwards showed no length and, once the player
+     * started stopping at a known length, would have played for ever again.
+     */
+    private var openSongLengths: List<Double> = emptyList()
+
+    /**
      * The in-flight open. Cancelled before a new one starts.
      *
      * Two quick presses of next used to start two audio streams at once: each press launched its
@@ -464,20 +477,40 @@ class PlaybackController private constructor(private val context: Context) {
 
                 if (open.isFinished()) {
                     handleTrackEnded()
-                } else {
-                    _state.update {
-                        it.copy(
-                            positionSeconds = open.positionSeconds(),
-                            // Picked up here because a subsong switch is applied on the audio
-                            // thread: the new tune's length does not exist until it has been.
-                            durationSeconds = if (it.durationSeconds <= 0.0) {
-                                open.durationSeconds()
-                            } else {
-                                it.durationSeconds
-                            },
-                        )
-                    }
+                    continue
                 }
+
+                val position = open.positionSeconds()
+                _state.update {
+                    it.copy(
+                        positionSeconds = position,
+                        // Picked up here because a subsong switch is applied on the audio
+                        // thread: the new tune's length does not exist until it has been.
+                        durationSeconds = if (it.durationSeconds <= 0.0) {
+                            open.durationSeconds()
+                        } else {
+                            it.durationSeconds
+                        },
+                    )
+                }
+
+                // **A tune that never ends still ends when we know how long it is.**
+                //
+                // `isFinished` is set by the engine when a backend renders a short buffer, and some
+                // never do: libsidplayfp is running a 6502 in a loop and has no idea the music is
+                // over, so a SID played until the user pressed something. Since HVSC started
+                // supplying lengths the app *knows* the answer and was not acting on it — the
+                // owner's observation on 2026-09-04, and it applies to every format, not just SID.
+                //
+                // Whatever supplied the duration is trusted to be right: HVSC for SID, sc68's
+                // database for SNDH, the file itself elsewhere. A wrong entry cuts a tune short,
+                // which is the same trade every player using these databases makes, and the
+                // alternative is the one being fixed — playing for ever.
+                //
+                // `handleTrackEnded` and not something of its own, so repeat, shuffle, subsongs and
+                // Random all behave exactly as they do at a real end of tune.
+                val known = _state.value.durationSeconds
+                if (known > 0.0 && position >= known) handleTrackEnded()
             }
         }
     }
@@ -1216,12 +1249,20 @@ class PlaybackController private constructor(private val context: Context) {
                 Catalogue.all.associate { it.id to remoteFiles.archiveBytes(it.id) }
                     .filterValues { it > 0 }
             }
+            // Measured as a file, because that is the only honest measurement available. Only an
+            // archive catalogue is a file of its own; Modland's index is rows in this database,
+            // sharing its pages, its indexes and its free list with the playlists and the history.
+            // Splitting that number between catalogues would be a guess presented as a size.
+            val database = withContext(Dispatchers.IO) {
+                context.getDatabasePath(SchemaSql.NAME).let { if (it.isFile) it.length() else 0L }
+            }
             _browse.update { current ->
                 current.copy(
                     catalogues = summaries,
                     songLengthCount = lengths,
                     storageBytes = storage,
                     archiveBytes = archives,
+                    databaseBytes = database,
                     backends = NativeEngine.backendsFingerprint(),
                     // Everything indexed is searched until the user says otherwise. Starting with
                     // none ticked would make the first search return nothing and look broken.
@@ -1973,10 +2014,11 @@ class PlaybackController private constructor(private val context: Context) {
             it.copy(
                 subsong = index,
                 positionSeconds = 0.0,
-                // The length is per tune, and the backend only knows it after the switch has been
-                // applied -- which happens on the audio thread. Cleared rather than left showing
-                // the previous tune's, and the position poll puts the real one back.
-                durationSeconds = 0.0,
+                // The length is per tune. Backends that know their own only know it after the
+                // switch has been applied on the audio thread, so this is cleared rather than left
+                // showing the previous tune's and the position poll puts the real one back --
+                // except where the backend never knows, and then HVSC's list for this file does.
+                durationSeconds = openSongLengths.getOrNull(index) ?: 0.0,
             )
         }
     }
@@ -2236,8 +2278,9 @@ class PlaybackController private constructor(private val context: Context) {
             // A SID has no length in it, so the backend reports none and HVSC's database is asked
             // instead. Only when the backend has nothing: a format that knows its own length knows
             // it better than a lookup on a hash could.
+            openSongLengths = songLengths.secondsFor(bytes).orEmpty()
             val duration = opened.durationSeconds().takeIf { it > 0.0 }
-                ?: songLengths.secondsFor(bytes)?.firstOrNull()
+                ?: openSongLengths.firstOrNull()
                 ?: 0.0
             _state.update {
                 it.copy(

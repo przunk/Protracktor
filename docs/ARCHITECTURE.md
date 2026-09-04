@@ -392,6 +392,28 @@ accept a drag.
 The other backend without a duration is a tracker module with an unbounded pattern loop, where the
 length genuinely depends on what the tune does. Nothing here fixes that.
 
+
+### And what the duration is *for*
+
+Until 2026-09-04 it was for the label and the progress bar, and nothing else. That left a hole the
+owner walked into: a SID played for ever. `isFinished` is set by the engine when a backend hands
+back a short buffer, and libsidplayfp never does — it is running a 6502 in a loop and has no idea
+the music is over — so nothing ever ended the track and the playlist never moved on.
+
+**So a known duration now ends the tune.** The position poll already had both numbers; reaching the
+length calls the same `handleTrackEnded` a real end calls, so repeat, shuffle, subsongs and Random
+all behave identically whether the tune ended by itself or by the clock. This is not SID-specific
+and deliberately so — any backend that loops for ever now stops when something knows better.
+
+**It trusts whatever supplied the number.** A wrong HVSC entry cuts a tune short; that is the trade
+every player using these databases makes, and the alternative is the one being fixed.
+
+**Per subsong, which is what made this more than one line.** HVSC stores a length for every tune in
+the file and only the first was ever used. Switching subsongs cleared the duration and waited for a
+backend that would never answer — so tune two onwards showed no length, and would have played for
+ever again the moment the rest of this worked. The list is now kept for the open file and indexed by
+subsong.
+
 ## 15. History is not a log
 
 Added 2026-09-02 with `docs/WISHLIST.md` B8.

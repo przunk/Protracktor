@@ -57,6 +57,7 @@ import com.przunk.protracktor.net.Catalogue
 fun StorageSection(
     cacheBytes: Long,
     archiveBytes: Map<String, Long>,
+    databaseBytes: Long,
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
     onClearCache: () -> Unit,
@@ -68,7 +69,7 @@ fun StorageSection(
     val stored = catalogues.filter {
         !it.isOnlineOnly && (it.trackCount > 0 || (archiveBytes[it.id] ?: 0L) > 0L)
     }
-    if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0) return
+    if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0 && databaseBytes <= 0) return
 
     HorizontalDivider()
     Text(
@@ -134,6 +135,20 @@ fun StorageSection(
                     act = onClearSongLengths,
                 )
             },
+        )
+    }
+
+    // The database, and no delete beside it — the one thing here that is **not** a copy. It holds
+    // the playlists, the history and the granted folders alongside every index that is rows rather
+    // than a file, which is why Modland has no size of its own above: its rows share this file's
+    // pages, indexes and free list with the user's own work, and splitting the number between them
+    // would be a guess presented as a measurement.
+    if (databaseBytes > 0) {
+        Text(
+            text = stringResource(R.string.storage_database, databaseBytes / (1024 * 1024)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 
