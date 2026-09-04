@@ -73,7 +73,7 @@ fun PlayerDock(
         // The surface still paints behind the gesture bar -- only the controls move up. Padding the
         // Surface instead would leave a strip of the wrong colour under the dock.
         Column(modifier = Modifier.navigationBarsPadding()) {
-            // The same seek control as the expanded player. The owner asked to be able to move
+            // The same seek control as Now Playing. The owner asked to be able to move
             // through a track from the main screen without opening anything first; a progress line
             // you cannot grab was the fault.
             // Position on the left, length on the right, with the bar between them: the two

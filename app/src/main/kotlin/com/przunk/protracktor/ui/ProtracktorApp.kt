@@ -136,7 +136,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     var pendingSwitch by remember { mutableStateOf<Long?>(null) }
     var pendingAddToPlaylist by remember { mutableStateOf<List<com.przunk.protracktor.player.TrackRef>?>(null) }
-    // Hoisted so the expanded player can send the list to the playing track without owning the list.
+    // Hoisted so Now Playing can send the list to the playing track without owning the list.
     val playlistState = rememberLazyListState()
 
     // Newly added tracks land at the end of the list, out of sight. Going to them is the

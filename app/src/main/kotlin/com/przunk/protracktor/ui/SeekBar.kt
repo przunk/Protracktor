@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
 /**
- * The seek control, used by both the dock and the expanded player.
+ * The seek control, used by both the dock and Now Playing.
  *
  * One component in two places so the two cannot drift apart. The owner asked to be able to move
  * through a track without opening anything first, and a bar that reads differently in each place

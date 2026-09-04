@@ -73,7 +73,7 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
   confirmed the strip scrolls with many more. **C11** — auto-advance racing through every tune in
   silence — is confirmed fixed.
 - **2026-09-03, evening**: the **stale-index notice** appears on Modland; the **action row** in the
-  expanded player, the **Browse** button, the **playlist counts** in both the switcher and the
+  Now Playing, the **Browse** button, the **playlist counts** in both the switcher and the
   add-to dialogue, the **current playlist first**, and **history showing when** — all confirmed.
   The single **"Add to playlist…"** replacing the two add actions is confirmed too, which matters
   because it changed a route the owner had already signed off as **C7**.
@@ -99,7 +99,7 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
   matching each line by its recorded id first and by filename and size second, into a new playlist
   of its own.
 - **2026-09-03** — **Subsongs** (**A2**). A file holding fifteen tunes played one of them; now the
-  expanded player lists them and a mode decides whether they play through. All five backends could
+  Now Playing lists them and a mode decides whether they play through. All five backends could
   already select — ASAP was calling `ASAP_PlaySong` with a fixed index — so the work was mostly
   saying so. sc68 and libsidplayfp count their tunes from one and the rest from zero; that is
   converted at the backend boundary rather than leaked to every caller.
@@ -154,7 +154,7 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
 - **2026-09-02** — **Sharing**: the file, from anywhere, through a `FileProvider` copy; and a link,
   for catalogue tracks, which is the file's own URL where the catalogue publishes one and the
   collection plus the path inside it where it does not.
-- **2026-09-02** — **"More from this author"**, from the expanded player and from a track's menu:
+- **2026-09-02** — **"More from this author"**, from Now Playing and from a track's menu:
   opens Browse at the author's folder in the catalogue the tune came from. **Catalogue tracks only** —
   a local file's neighbours would be its directory, and the local browser lists a whole granted tree
   flat rather than directory by directory, so there is no folder to open.
@@ -186,7 +186,7 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
 - **2026-09-02** — Haptics on the three gestures the screen does not already answer: a row picked up,
   put down, and each position it crosses; plus the snackbar's dismiss threshold.
 
-- **2026-09-02** — Finding the playing track: a "Show in playlist" action in the expanded player, and
+- **2026-09-02** — Finding the playing track: a "Show in playlist" action in Now Playing, and
   a follow toggle over the list that is off by default, hides itself while following, and switches
   off the moment the user scrolls by hand.
 

@@ -32,6 +32,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -45,7 +49,7 @@ import com.przunk.protracktor.R
  * owner's own example — Tactic — is one of those. Console formats are worse: a GBS in the sample
  * reported 99 and an HES 256.
  *
- * **It lives on the expanded player and nowhere else**, which is the owner's constraint (c): that
+ * **It lives on Now Playing and nowhere else**, which is the owner's constraint (c): that
  * screen *is* the track, so a strip there covers nothing. It appears only when there is more than
  * one tune, so a MOD's view is exactly what it was.
  *
@@ -60,13 +64,37 @@ internal fun SubsongStrip(
     playAll: Boolean,
     onSelect: (Int) -> Unit,
     onTogglePlayAll: () -> Unit,
+    trackKey: Any? = null,
     modifier: Modifier = Modifier,
 ) {
     if (count <= 1) return
 
     val listState = rememberLazyListState()
-    // Follows what is playing. With 256 of them the current one is otherwise off screen for good.
-    LaunchedEffect(current) { listState.bringIntoView(current) }
+
+    // Which tune the strip last moved for. Reset per file, because a new file's strip starts
+    // wherever that file opened -- which for a KSS can be tune 47 of 256.
+    var lastSeen by remember(trackKey, count) { mutableStateOf(-1) }
+
+    // **Follows the music only while you are watching the music.**
+    //
+    // It used to follow unconditionally, and the owner found what that costs: scroll out to tune
+    // 240 of 256 to see what is there, and the moment the current tune ends the strip yanks itself
+    // back to tune 68 — so reading the far end of a long file is impossible while it plays. Worse,
+    // `bringIntoView` scrolls the item to the *start* of the view, so even an ordinary advance
+    // dragged the whole strip and put everything before the playing tune out of reach.
+    //
+    // The signal for "am I watching the music" is the playing chip itself: if the tune that just
+    // finished was on screen, the user is looking at the playing area and following is what they
+    // want. If it was not, they are reading somewhere else and must be left there.
+    //
+    // Opening a file is the exception and follows regardless — that is being taken somewhere, not
+    // being kept somewhere, and it is the one moment the strip must move.
+    LaunchedEffect(trackKey, current, count) {
+        val opening = lastSeen < 0
+        val watching = opening || listState.isVisible(lastSeen)
+        lastSeen = current
+        if (opening) listState.bringIntoView(current) else listState.keepInView(current, watching)
+    }
 
     Column(modifier = modifier.fillMaxWidth().padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
