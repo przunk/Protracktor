@@ -78,6 +78,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteCatalogueIndex(catalogueId: String) = controller.deleteCatalogueIndex(catalogueId)
     fun clearSongLengths() = controller.clearSongLengths()
 
+    // The sc68 replay routines the app does not ship (`docs/LICENSES.md`).
+    fun downloadReplays() = controller.downloadReplays()
+    fun deleteReplays() = controller.deleteReplays()
+
     fun selectSubsong(index: Int) = controller.selectSubsong(index)
 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()

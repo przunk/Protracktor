@@ -96,6 +96,8 @@ fun BrowseScreen(
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
+    onDownloadReplays: () -> Unit,
+    onDeleteReplays: () -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
@@ -162,6 +164,8 @@ fun BrowseScreen(
                 onShareLink = onShareLink,
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
+                onDownloadReplays = onDownloadReplays,
+                onDeleteReplays = onDeleteReplays,
                 onClearCache = onClearCache,
                 onDeleteIndex = onDeleteIndex,
                 onClearSongLengths = onClearSongLengths,
@@ -407,6 +411,8 @@ private fun OnlineDomain(
     onShareLink: (TrackRef) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
+    onDownloadReplays: () -> Unit,
+    onDeleteReplays: () -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
@@ -564,6 +570,27 @@ private fun OnlineDomain(
                     },
                 )
             }
+            // Not a catalogue either, and offered rather than shipped. sc68 needs a small 68000
+            // routine for each tune and the app carries exactly one of the ninety-nine -- sc68's
+            // own. The rest are other people's code of unestablished status, so the device fetches
+            // them from sc68 instead of us handing them out (`docs/LICENSES.md`).
+            item {
+                if (browse.replayCount == 0) {
+                    HorizontalDivider()
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.replays_title)) },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.replays_none),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
+                        modifier = Modifier.clickable { onDownloadReplays() },
+                    )
+                }
+            }
+
             // What the app is holding, and how to make it stop. It used to be a sentence
             // saying the size and admitting it could not be deleted; an app that takes disk and
             // says so is better than one that takes it quietly, but not as good as one that gives
@@ -573,6 +600,9 @@ private fun OnlineDomain(
                     cacheBytes = browse.storageBytes.first,
                     archiveBytes = browse.archiveBytes,
                     databaseBytes = browse.databaseBytes,
+                    replayCount = browse.replayCount,
+                    replayBytes = browse.replayBytes,
+                    onDeleteReplays = onDeleteReplays,
                     catalogues = browse.catalogues,
                     songLengthCount = browse.songLengthCount,
                     onClearCache = onClearCache,
