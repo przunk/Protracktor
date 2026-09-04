@@ -60,6 +60,12 @@ changed, and re-indexing worked. **OctaMED `.mmd0`–`.mmd3` and Oktalyzer `.okt
 files that were always playable and never offered. Freeing and re-downloading the ASMA archive
 works. Adding to a playlist reports what it did; the playlist row menus work.
 
+**2026-09-05.** Ten things found by using it and fixed the same night: deleting the only playlist
+did nothing at all, an exported list came back named after its document id, the top bar changed
+shape with the playlist's name and its gaps came from three unrelated sources, and changing the
+language or theme threw you out of Settings. Theme and language are segmented choices now, with a
+separate switch for the wallpaper palette. All confirmed on his device.
+
 **2026-09-04, afternoon.** The console formats confirmed on his device: HES plays, KSS mostly plays,
 subsongs walk. Two faults came out of that session and are fixed — the search for an audible track
 stopped after twelve tracks and missed `aleste 2.kss`, whose first tune is number 47 of 256, and the
