@@ -450,6 +450,12 @@ instances independent and upstream unforked, at the cost of process lifecycle ma
 
 **Neither is chosen here.** Item 1 was to measure, and this is the measurement.
 
+**The licence half moved on 2026-09-04**, after UADE's maintainer answered: the replay binaries are
+to be downloaded rather than shipped, from <https://zakalwe.fi/uade/download.html> which he offers
+for exactly that, with GitLab as the fallback when his server is not up. `docs/LICENSES.md` has
+what he said and what it settles. That removes the objection that made this item's cost look
+open-ended — what remains is the emulator, the process model and 5,596 files.
+
 ### What this measurement recommends
 
 **Not integrating UADE yet, and doing the cheap thing first.** Setting out the trade rather than

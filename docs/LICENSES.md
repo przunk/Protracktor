@@ -140,7 +140,7 @@ APK — which is where the doubt actually lives.
 
 | | sent | to | status |
 | --- | --- | --- | --- |
-| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | awaiting a reply |
+| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | **answered the same day** — see below |
 | sc68 | not yet | SourceForge ticket | the owner is holding off |
 
 **Neither the work nor the release waits on either.** `sndh_ice.bin` is sc68's own file in sc68's
@@ -173,6 +173,45 @@ in the scene, whose interest is in the music being heard.
 
 **None of the above is legal advice**, and the letters exist because the one route with no "but"
 left at the end is a person saying yes.
+
+### What UADE's maintainer answered, 2026-09-04
+
+Heikki Orsila replied within the day and copied Matti Tiainen, UADE's other maintainer. Three things
+in it change what this document can say, and all three were checked against the tree afterwards.
+
+**1. There is exactly one known objection, and it is specific.** In twenty years the only objection has come from the Delitracker authors, about their own work. Twenty
+years of shipping 176 binaries and one complaint, from an identifiable group about identifiable
+work.
+
+That is directly relevant to us and not only to UADE. sc68's replay set contains **eight
+Delitracker-derived files** — `bendaglish.deli`, `hippel-coso_note.deli`, `mon_old.deli`,
+`robhubbard.deli`, each in two forms — and our download fetches all 98. UADE has one,
+`DaveLowe_Deli`. We do not distribute them and never did, but "the one family anybody has ever
+objected to" is worth knowing by name rather than discovering later.
+
+**2. `amigasrc/` is a stronger statement than `COPYING`.** He points at it, and its own README says:
+*"All these files are certainly distributable, but some are not Open Source Initiative approved."*
+That is a much better position than `COPYING`'s "various different licenses and quite a many
+different copyright holders" about `players/`.
+
+Measured: **99 of the 176 shipped binaries have a source directory under `amigasrc/players/`** — 19
+UADE's own, 98 by the Wanted Team, 7 other, 5 marked defective. 77 do not. So a clear majority of
+what UADE ships is covered by a tree its authors call certainly distributable, and the doubtful
+remainder is smaller than `COPYING` alone suggests.
+
+He is careful about the limit of that, and reverse-engineering a routine is not the same as being given permission for it. A routine somebody reverse-engineered is
+not a routine somebody licensed.
+
+**3. He invites the download outright.** Fetching the players from GitLab is between us and GitLab; he distributes the official binaries himself and is happy for them to be taken from there.
+
+So when UADE is integrated the download route is not merely defensible, it is the one its maintainer
+offers. He notes the trade himself: zakalwe.fi is his and can serve any shape we need, GitLab is
+more reliably up. **Prefer zakalwe.fi and fall back to GitLab** — taking what the author offers, and
+staying working when his server is not.
+
+**What this does not settle**: the 77 binaries with no source in the tree, and whether the
+Delitracker family should be left out of a download by choice rather than by necessity. Both are the
+owner's, and neither blocks anything today.
 
 ### Built 2026-09-04
 
