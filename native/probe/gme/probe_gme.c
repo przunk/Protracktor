@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* The engine's rate and buffer, so a short pass here is a short pass there. */
 enum { RATE = 44100, FRAMES = 1024, SECONDS = 8 };
@@ -101,9 +102,12 @@ int main(int argc, char **argv) {
      * bounded at twelve, exactly as the backend bounds it. */
     int opened = 0;
     if (peakOfTrack(emu, 0, 1) == 0) {
+        /* Bounded by time, exactly as the backend bounds it: a fixed track count was the first
+         * version and it missed `aleste 2.kss`, whose first audible tune is number 47 of 256. */
         const int count = gme_track_count(emu);
-        const int limit = count < 12 ? count : 12;
-        for (int t = 1; t < limit; t++) {
+        const clock_t deadline = clock() + (clock_t) (0.3 * CLOCKS_PER_SEC);
+        for (int t = 1; t < count; t++) {
+            if (clock() > deadline) break;
             if (peakOfTrack(emu, t, 1) > 0) { opened = t; break; }
         }
     }
@@ -136,7 +140,8 @@ int main(int argc, char **argv) {
 
     if (allTracks) {
         int audible = 0, checked = 0, firstAudible = -1;
-        const int limit = tracks < 24 ? tracks : 24;
+        const int cap = getenv("GME_TRACK_LIMIT") ? atoi(getenv("GME_TRACK_LIMIT")) : 24;
+        const int limit = tracks < cap ? tracks : cap;
         for (int t = 0; t < limit; t++) {
             const long p = peakOfTrack(emu, t, 3);
             if (p < 0) continue;
@@ -148,6 +153,13 @@ int main(int argc, char **argv) {
         }
         printf("VERDICT tracks=%d checked=%d audible=%d first=%d\n",
                tracks, checked, audible, firstAudible);
+        if (getenv("GME_LIST_AUDIBLE")) {
+            printf("audible tracks:");
+            for (int t = 0; t < limit; t++) {
+                if (peakOfTrack(emu, t, 2) > 0) printf(" %d", t);
+            }
+            printf("\n");
+        }
         if (info) gme_free_info(info);
         gme_delete(emu);
         return 0;

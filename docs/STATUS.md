@@ -40,7 +40,7 @@ Verified here: **124 unit tests**, genuinely executed rather than served from th
 turned out to have come out of the cache in one second. A release build through R8 keeps all 13 JNI
 symbols, three ABIs and 99 sc68 replay binaries. Every backend was also run on the host against real
 files, which is where the measured coverage in this file comes from — **including the console
-families, measured 2026-09-04 after three months of not being** (114 of 141, up from 100 before the
+families, measured 2026-09-04 after three months of not being** (116 of 141, up from 100 before the
 measurement found what was wrong; `docs/PLAN_FORMATS.md` §2).
 
 Verified by the owner on a device: modules play (2026-08-31), SAP plays (2026-09-01), reordering a

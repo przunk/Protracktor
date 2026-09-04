@@ -645,14 +645,20 @@ public:
      * so a third of the format appeared broken while the music sat one track along. KSS is the same
      * shape. These are sound *banks* as much as albums; track 0 is often an empty slot or an effect.
      *
-     * So when the first track renders nothing, look for one that does. Bounded hard, because this
-     * runs while somebody is waiting to hear something: a fifth of a second of audio per track and
-     * at most twelve tracks, entered **only** when track 0 was silent. gme emulates far faster than
-     * real time, so the worst case is a few tens of milliseconds and the common case is zero — a
-     * file that starts with music never gets here.
+     * So when the first track renders nothing, look for one that does — entered **only** when
+     * track 0 was silent, so a file that starts with music never pays for this.
      *
-     * It does not touch `gme_track_count`, which reports a flat 256 for these formats whatever the
-     * file holds. That number is wrong and this is not the place to fix it.
+     * **Bounded by time rather than by a track count**, which is the second version of this. The
+     * first stopped after twelve tracks, and the owner immediately found `aleste 2.kss`: 256
+     * tracks, 82 of them audible, and **the first is number 47**. Twelve was a guess dressed as a
+     * limit. A wall-clock budget makes no guess about how fast the phone is — a quick device
+     * searches further, a slow one stops sooner and behaves as it did before — and it is the
+     * quantity that actually matters, since what is being protected is the wait before sound.
+     *
+     * It does not touch `gme_track_count`, which reports a flat 256 for KSS and HES whatever the
+     * file holds. That number is wrong — `aleste 2.kss` really has 82 tunes, not 256 — and finding
+     * the truth means rendering every one of them, which is not something to do while somebody
+     * waits. Recorded in `docs/PLAN_FORMATS.md` §2 rather than guessed at here.
      */
     void openAtSomethingAudible() {
         if (!emu_ || audible(kProbeFrames)) {
@@ -660,8 +666,10 @@ public:
             return;
         }
 
-        const int limit = std::min(gme_track_count(emu_), kMaxTracksToTry);
+        const auto deadline = std::chrono::steady_clock::now() + kSearchBudget;
+        const int limit = gme_track_count(emu_);
         for (int candidate = 1; candidate < limit; ++candidate) {
+            if (std::chrono::steady_clock::now() > deadline) break;
             if (gme_start_track(emu_, candidate)) continue;
             if (!audible(kProbeFrames)) continue;
 
@@ -778,8 +786,16 @@ private:
     static constexpr int kSampleRate = 44100;
     /** A fifth of a second is plenty to tell music from an empty slot, and cheap to throw away. */
     static constexpr std::size_t kProbeFrames = kSampleRate / 5;
-    /** Twelve is past every silent run seen in the measurement, and bounds the wait either way. */
-    static constexpr int kMaxTracksToTry = 12;
+    /**
+     * How long the search may take, measured on the clock the listener is also watching.
+     *
+     * 300 ms is the number because it is roughly where a delay stops reading as "loading" and
+     * starts reading as "broken", and because the alternative it replaced -- a fixed twelve tracks
+     * -- missed a file whose first tune is number 47. On a phone that emulates at fifty times real
+     * time this reaches well past that; on a slow one it gives up early, which is the behaviour it
+     * had before and no worse.
+     */
+    static constexpr std::chrono::milliseconds kSearchBudget{300};
     // Subsong selection is a UI feature that does not exist yet; some of these files hold hundreds.
     int track_ = 0;
 
