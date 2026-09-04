@@ -40,7 +40,7 @@
     <string name="settings_play_all_subsongs_detail">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_detail">Choose the language used by Protracktor.</string>
-    <string name="settings_language_system">System default</string>
+    <string name="settings_language_system">System</string>
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
     <string name="settings_about">About</string>

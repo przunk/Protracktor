@@ -163,7 +163,7 @@
     <string name="settings_play_all_subsongs_detail">Niektóre pliki mieszczą kilkadziesiąt utworów. Wyłączone — gra tylko pierwszy, a playlista idzie dalej.</string>
     <string name="settings_language">Język</string>
     <string name="settings_language_detail">Wybierz język używany przez Protracktor.</string>
-    <string name="settings_language_system">Język systemu</string>
+    <string name="settings_language_system">Systemowy</string>
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
     <string name="settings_about">O aplikacji</string>

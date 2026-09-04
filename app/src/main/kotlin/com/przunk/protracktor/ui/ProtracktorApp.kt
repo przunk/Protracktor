@@ -52,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -96,8 +97,15 @@ fun ProtracktorApp(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
-    var showBrowse by remember { mutableStateOf(false) }
-    var showSettings by remember { mutableStateOf(false) }
+
+    // **Saved, not merely remembered.** Which full-screen destination is open is navigation state,
+    // and it has to survive the activity being rebuilt. Changing the language or the theme calls
+    // `recreate()` -- deliberately, so the window is built with the new one -- and with a plain
+    // `remember` that dropped the user back on the playlist from inside Settings, which is where
+    // they had just been changing the setting. Rotation lost the same thing, silently, and had
+    // done all along.
+    var showBrowse by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
