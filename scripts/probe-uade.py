@@ -55,8 +55,23 @@ def supported_extensions() -> set[str]:
     whole point of the measurement is "what we cannot play *today*".
     """
     source = (ROOT / "app/src/main/kotlin/com/przunk/protracktor/player/SupportedFormats.kt").read_text()
-    block = source.split("val extensions: Set<String> = setOf(", 1)[1].split(")", 1)[0]
-    return {m.lower() for m in re.findall(r'"([^"]+)"', block)}
+    tail = source.split("val extensions: Set<String> = setOf(", 1)[1]
+    # Comments first, then the closing bracket. Splitting on the first ")" read the list as ending
+    # inside a comment the moment one of them cited a document in parentheses, and returned 28
+    # extensions instead of 85 -- silently, which is the part worth guarding against.
+    lines = []
+    for line in tail.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("//"):
+            continue
+        if stripped.startswith(")"):
+            break
+        lines.append(line)
+    found = {m.lower() for m in re.findall(r'"([^"]+)"', "\n".join(lines))}
+    if len(found) < 40:
+        raise SystemExit(f"only {len(found)} extensions parsed from SupportedFormats.kt -- "
+                         "the parser has drifted from the file, fix it rather than trusting this")
+    return found
 
 
 def modland_index() -> list[tuple[int, str]]:

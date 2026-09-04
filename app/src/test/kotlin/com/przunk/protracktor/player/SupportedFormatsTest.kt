@@ -100,6 +100,24 @@ class SupportedFormatsTest {
         assertEquals("order must not change it", same, shuffled)
     }
 
+    /**
+     * Formats that were listed on an assumption nobody checked.
+     *
+     * `ahx` and `hvl` sat in this list from the first day, on the belief that libopenmpt handled
+     * them. It has no AHX loader and neither name is in its format table, and measuring on
+     * 2026-09-04 confirmed it: 0 of 12 AHX files and 0 of 6 HVL opened. 1,433 Modland files were
+     * being indexed and offered with nothing behind them.
+     *
+     * They belong here again the day UADE lands, which plays them — so this test is a reminder of
+     * the condition, not a ban.
+     */
+    @Test
+    fun `formats no backend loads are not claimed`() {
+        for (name in listOf("cruisin.ahx", "headcrash.hvl", "x.gym")) {
+            assertFalse(name, SupportedFormats.looksPlayable(name))
+        }
+    }
+
     @Test
     fun `a name with no dot is not playable`() {
         assertFalse(SupportedFormats.looksPlayable("README"))
