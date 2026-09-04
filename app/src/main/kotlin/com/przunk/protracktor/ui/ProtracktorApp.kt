@@ -277,7 +277,6 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
                 onClearCache = viewModel::clearFetchedCache,
-                onDeleteArchive = viewModel::deleteArchive,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,
                 onClearSongLengths = viewModel::clearSongLengths,
                 onOpenCatalogue = viewModel::openCatalogue,

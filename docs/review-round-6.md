@@ -65,7 +65,7 @@ the same thing less clearly, and every future field added to that struct would h
 rule. `probe_subsong_rewind` still reports DEMONSTRATED on all six multi-tune files afterwards, so
 the C13 fix survived its own correction.
 
-### R3 — a doc comment describes work the function does not do · **moderate**
+### R3 — a doc comment describes work the function does not do · **moderate** — FIXED
 
 **Where:** `PlaybackController.deleteCatalogueIndex`. Written today.
 
@@ -81,7 +81,10 @@ unaffected by deleting an index. What actually degrades is the format label
 A comment that promises a safety measure nobody implemented is worse than no comment: the next
 person reads it and trusts it.
 
-### R4 — deleting an archive leaves its catalogue looking healthy and playing nothing · **moderate**
+**Fixed by correcting the comment rather than adding the stop**, because the stop is not wanted: a
+playing track should keep playing when an index it does not depend on is deleted.
+
+### R4 — deleting an archive leaves its catalogue looking healthy and playing nothing · **moderate** — FIXED
 
 **Where:** `StorageSection` + `PlaybackController.deleteArchive`. Written today.
 
@@ -96,7 +99,12 @@ reason to press download again.
 
 They are one thing and should be deleted as one thing.
 
-### R5 — two messages race for one snackbar after the dock's plus · **minor**
+**Fixed on both sides.** The storage section shows one row per catalogue, naming the archive inside
+it (*"124 tracks, including a 20 MB archive"*), and deleting it removes the rows and the zip
+together. `PlaybackController.deleteArchive` is gone — with the rows and the file always going
+together, it was a second function doing the same job and no longer reachable from anywhere.
+
+### R5 — two messages race for one snackbar after the dock's plus · **minor** — FIXED
 
 **Where:** `PlaybackController.keepTransient`. Introduced today by the change that made adding speak.
 
@@ -107,6 +115,9 @@ a collector timed between the two updates could show the generic notice.
 
 The comment above it still explains that it speaks *because* `describeAdded` stays silent on
 success. That has not been true since this morning.
+
+**Fixed by saying it once**: the plus now appends with its own describer rather than adding through
+the general path and overwriting what that said. Simpler, and true regardless of ordering.
 
 ---
 

@@ -75,7 +75,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Giving disk back, one copy at a time (`docs/ARCHITECTURE.md` §19).
     fun clearFetchedCache() = controller.clearFetchedCache()
-    fun deleteArchive(catalogueId: String) = controller.deleteArchive(catalogueId)
     fun deleteCatalogueIndex(catalogueId: String) = controller.deleteCatalogueIndex(catalogueId)
     fun clearSongLengths() = controller.clearSongLengths()
 

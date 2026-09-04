@@ -101,7 +101,6 @@ fun BrowseScreen(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onClearCache: () -> Unit,
-    onDeleteArchive: (String) -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -168,7 +167,6 @@ fun BrowseScreen(
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onClearCache = onClearCache,
-                onDeleteArchive = onDeleteArchive,
                 onDeleteIndex = onDeleteIndex,
                 onClearSongLengths = onClearSongLengths,
                 onOpenCatalogue = onOpenCatalogue,
@@ -414,7 +412,6 @@ private fun OnlineDomain(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onClearCache: () -> Unit,
-    onDeleteArchive: (String) -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -568,8 +565,7 @@ private fun OnlineDomain(
                     catalogues = browse.catalogues,
                     songLengthCount = browse.songLengthCount,
                     onClearCache = onClearCache,
-                    onDeleteArchive = onDeleteArchive,
-                    onDeleteIndex = onDeleteIndex,
+                        onDeleteIndex = onDeleteIndex,
                     onClearSongLengths = onClearSongLengths,
                 )
             }
