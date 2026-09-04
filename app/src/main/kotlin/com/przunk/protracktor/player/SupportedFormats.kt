@@ -43,7 +43,7 @@ object SupportedFormats {
         "puma", "tcb", "fc", "fc13", "fc14", "smod", "dsym", "symmod", "ftm", "etx",
         // The same two formats under the names their archives actually use. libopenmpt identifies
         // OctaMED by an "MMD" magic and Oktalyzer by its own, and never looks at the filename --
-        // so these played all along and were never offered. Measured 2026-09-04: 5,557 files in
+        // so these played all along and were never offered. Measured 2026-09-04: 5,558 files in
         // Modland alone, 6 of 6 sampled from each playing (`docs/PLAN_FORMATS.md` §4).
         "mmd0", "mmd1", "mmd2", "mmd3", "okta",
         // Two more of the same kind, found by widening the sweep from 60 formats to 150. Small --
@@ -106,7 +106,7 @@ object SupportedFormats {
      * object accepts, so it is only as good as **this list** and the decoders together. Recording
      * only the decoders was half the truth and the half that had not yet bitten: on 2026-09-04
      * five names were added for formats libopenmpt had been able to play all along, and every
-     * existing index was instantly missing 5,557 Modland files while still reporting itself
+     * existing index was instantly missing 5,558 Modland files while still reporting itself
      * current, because no decoder had changed.
      *
      * Order-independent and cheap, so adding a name here is all it takes to invalidate what the

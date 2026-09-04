@@ -133,7 +133,7 @@ worst. The best next move for online music is not another archive — it is bein
 the one we already have.
 
 **2026-09-04 made that recommendation literal rather than rhetorical.** Five names added to
-`SupportedFormats` gave Modland 5,557 more playable files than adding any archive would have, at a
+`SupportedFormats` gave Modland 5,558 more playable files than adding any archive would have, at a
 fraction of the cost, and AMP — the archive this section was holding a place for — turns out not to
 be available on any terms we should take. Playing more of what we have is not a stopgap until the
 next catalogue; it is the better move on the numbers.

@@ -140,7 +140,7 @@ APK — which is where the doubt actually lives.
 
 | | sent | to | status |
 | --- | --- | --- | --- |
-| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | awaiting a reply |
+| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | **answered the same day** — see below |
 | sc68 | not yet | SourceForge ticket | the owner is holding off |
 
 **Neither the work nor the release waits on either.** `sndh_ice.bin` is sc68's own file in sc68's
@@ -173,6 +173,59 @@ in the scene, whose interest is in the music being heard.
 
 **None of the above is legal advice**, and the letters exist because the one route with no "but"
 left at the end is a person saying yes.
+
+### What UADE's maintainer answered, 2026-09-04
+
+Heikki Orsila replied within the day and copied Matti Tiainen, UADE's other maintainer. Three things
+in it change what this document can say, and all three were checked against the tree afterwards.
+
+**1. There is exactly one known objection, and it is specific.** In twenty years the only objection has come from the Delitracker authors, about their own work. Twenty
+years of shipping 176 binaries and one complaint, from an identifiable group about identifiable
+work.
+
+That is directly relevant to us and not only to UADE. sc68's replay set contains **eight
+Delitracker-derived files** — `bendaglish.deli`, `hippel-coso_note.deli`, `mon_old.deli`,
+`robhubbard.deli`, each in two forms — and our download fetches all 98. UADE has one,
+`DaveLowe_Deli`. We do not distribute them and never did, but "the one family anybody has ever
+objected to" is worth knowing by name rather than discovering later.
+
+**2. `amigasrc/` is a stronger statement than `COPYING`.** He points at it, and its own README says:
+*"All these files are certainly distributable, but some are not Open Source Initiative approved."*
+That is a much better position than `COPYING`'s "various different licenses and quite a many
+different copyright holders" about `players/`.
+
+Counted, and **the count is a name match, not an authority** — that matters, so it is said before
+the number. `amigasrc/players/` holds 19 directories under `uade`, 98 under `wanted_team`, 7 under
+`other` and 5 under `defect`. Matching those names against the 176 shipped binaries:
+
+| | |
+| --- | --- |
+| exact name match | **99** |
+| plausible but not exact | **35** |
+| no candidate at all | **42** |
+
+The middle row is why the first number cannot be quoted alone. `players/BenDaglish` and
+`amigasrc/players/wanted_team/BennDaglish` are obviously the same player and differ by a letter;
+`ArtOfNoise-4V` and `uade/artofnoise` are obviously related and do not match at all. A first pass
+that only compared normalised names reported 99 and 77, and 77 was wrong.
+
+So: **at most 42 of the 176 have no source in the tree**, probably fewer, and the doubtful remainder
+is much smaller than `COPYING` alone suggests. Turning "probably" into a list means reading the
+`EP_*.readme` files, which is work worth doing before anyone relies on it.
+
+He is careful about the limit of that, and reverse-engineering a routine is not the same as being given permission for it. A routine somebody reverse-engineered is
+not a routine somebody licensed.
+
+**3. He invites the download outright.** Fetching the players from GitLab is between us and GitLab; he distributes the official binaries himself and is happy for them to be taken from there.
+
+So when UADE is integrated the download route is not merely defensible, it is the one its maintainer
+offers. He notes the trade himself: zakalwe.fi is his and can serve any shape we need, GitLab is
+more reliably up. **Prefer zakalwe.fi and fall back to GitLab** — taking what the author offers, and
+staying working when his server is not.
+
+**What this does not settle**: the 77 binaries with no source in the tree, and whether the
+Delitracker family should be left out of a download by choice rather than by necessity. Both are the
+owner's, and neither blocks anything today.
 
 ### Built 2026-09-04
 
@@ -240,8 +293,14 @@ The same corpus, run twice: once with UADE's `players/` directory as shipped, on
 
 | shipped | plays, of 300 files across 25 formats |
 | --- | --- |
-| all 176 binaries, 1,232 KB | **184** |
+| all 176 binaries, 1,232 KB | **196** |
 | none | **12** |
+
+The first published run said 184. That was a probe defect, not a UADE limitation:
+`UC_CONTENT_DETECTION` enables strict content-only identification and disabled the filename fallback
+some players require. The corrected figure is from the same seeded 300 files. The empty-directory
+result is unchanged: its twelve successes are self-contained Delitracker Custom executables and do
+not depend on filename fallback or a binary from `players/`.
 
 **UADE without its replay binaries is not a reduced player, it is not a player.** The twelve
 survivors are all Delitracker Custom — `.cus` files, which *are* 68000 programs and carry their own

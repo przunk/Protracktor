@@ -591,7 +591,7 @@ Phase 4 on an exhausted context.
 
 ## Phase 1 — the list
 
-- [x] **1. UADE — the Amiga custom formats** *(measured, not integrated: 184/300 plays, but 5,557 of its 9,720 files are already ours — `docs/PLAN_FORMATS.md` §4)*
+- [x] **1. UADE — the Amiga custom formats** *(measured, not integrated; corrected same-corpus result: 196/300 plays — `docs/PLAN_FORMATS.md` §4)*
 
       The largest body of music left. TFMX, Hippel, Future Composer, David Whittaker, Jochen Hippel,
       Mark Cooksey and the rest of the Amiga custom players are tens of thousands of files in
@@ -728,12 +728,19 @@ exception in `AGENTS.md` is why it is in `develop` at all.
 items was allowed and was not needed.
 
 **The round's own subject turned out to be the least of what it produced.** Item 1 was UADE, and the
-honest answer is not to integrate it: its exclusive contribution is 4,163 Modland files rather than
-the tens of thousands `docs/BACKLOG.md` A5 assumed, it needs a licence decision worse-documented
-than sc68's with no middle option, and it is either a second process or a single-instance emulator
-inside ours. Measuring that found something better — **5,652 files the app could already play and
+honest answer is not to integrate it yet: the current top-25 sample proves successful reach into
+format directories holding 5,799 Modland files rather than the tens of thousands
+`docs/BACKLOG.md` A5 assumed, it needs a licence decision worse-documented than sc68's with no
+middle option, and it is either a second process or a single-instance emulator inside ours.
+Measuring that found something cheaper — **5,653 files the app could already play and
 never offered**, because `SupportedFormats` listed `med` and `okt` while Modland files them as
 `.mmd1` and `.okta`. Five strings and a re-index beat a whole backend.
+
+**Correction after upstream reproduced Hippel COSO:** the original probe enabled UADE's strict
+content-only mode and therefore falsely reported Hippel COSO as 0/12. With uade123-compatible
+defaults, the same historical corpus is 196/300 rather than 184/300, and Hippel COSO is 11 full
+plus 1 silent first buffer. `docs/PLAN_FORMATS.md` §4 records the rerun and the separate current-app
+measurement.
 
 **Two things went wrong on the way, and both were caught by measuring rather than reasoning.**
 Counting UADE's reach by filename prefix alone returned 807 files where the truth is 29,127, because

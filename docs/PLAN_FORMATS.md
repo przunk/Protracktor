@@ -341,70 +341,93 @@ The probe asks the question R1 taught us to ask: **is the first buffer full**, n
 eventually". The player treats a short first render as end-of-tune, so a probe that loops until it
 hears something measures a hope rather than a contract.
 
-### What it plays — measured 2026-09-04
+### What it plays — measured and corrected 2026-09-04
 
-Two questions, and the first one is not "what can UADE play". libopenmpt already handles AHX, Future
+Two questions, and the first one is not "what can UADE play". libopenmpt already handles Future
 Composer, Puma, TCB and a dozen other Amiga formats, so what matters is **what UADE adds to what we
-already play**.
+already play**. AHX was once included in that list by assumption; the measured correction below
+explains why it is not.
 
-**Reach**, counted over all 515,509 files Modland lists rather than sampled:
+**Reach in the current application**, counted over all 515,509 files Modland lists rather than
+sampled:
 
 | | files | |
 | --- | ---: | --- |
-| a backend we already have claims it | 314,340 | 61.0% |
-| we cannot play it, and UADE's `eagleplayer.conf` claims the name | 29,127 | 5.7% |
-| we cannot play it, and UADE does not claim it either | 172,042 | 33.4% |
+| a backend we already have claims it | 318,275 | 61.7% |
+| we cannot play it, and UADE's `eagleplayer.conf` claims the name | 24,916 | 4.8% |
+| we cannot play it, and UADE does not claim it either | 172,318 | 33.4% |
 
-**That 5.7% is an upper bound and a large part of it is a name collision**, which is the whole
+**That 4.8% is an upper bound and a large part of it is a name collision**, which is the whole
 reason the second pass renders instead of counting. Modland's `.psf` (Playstation Sound Format,
 3,845 files) matches UADE's `psf` prefix for SoundFactory; Sidplayer's `.mus` (5,028) matches `mus`
 for UFO. Neither is an Amiga file. `docs/ARCHITECTURE.md` §5 says extensions here are shared between
 unrelated formats; this is that, quantified.
 
-**Play** — 12 files from each of the 25 largest, actually rendered, first buffer checked:
+**Play in the current application** — 12 files from each of the 25 largest remaining directories,
+actually rendered, first buffer checked:
 
 ```
-OctaMED MMD0/1/2/3   48/48     Delitracker Custom  12/12     Sidplayer            0/12
-TFMX                 12/12     Musicline Editor    12/12     IFF-SMUS             0/12
-BP SoundMon 2/3      24/24     Art Of Noise        12/12     Playstation SF       0/12
-SidMon 2             12/12     Delta Music 2       12/12     Stereo Sidplayer     0/12
-Oktalyzer            11/12     Sonic Arranger      11/12     FAC SoundTracker     0/12
-David Whittaker      11/12     YMST                 7/12     Spectrum             0/12
-                                                             Hippel COSO / ST     0/12
+AHX                  12/12     Delitracker Custom  12/12     Sidplayer             0/12
+TFMX                 12/12     Musicline Editor    12/12     IFF-SMUS              0/12
+BP SoundMon 2/3      24/24     Art Of Noise        12/12     Playstation SF        0/12
+SidMon 2             12/12     Delta Music 2       12/12     Stereo Sidplayer      0/12
+Digital Mugician     12/12     MusicMaker V8       12/12     FAC SoundTracker      0/12
+Sonic Arranger       11/12     David Whittaker     11/12     Spectrum              0/12
+YMST                 11/12     Hippel COSO         10/12     Hippel ST COSO        0/12
+                                                             SCC-Musixx            0/12
+                                                             GoatTracker           0/12
+                                                             Richard Joseph        0/12
 
-Overall: 184/300 full, 114 unsupported, 2 silent.
+Overall: 175/300 full, 122 unsupported, 3 silent.
 ```
 
-Every 0/12 in the right-hand column is a name collision the render pass caught, except the Hippel
-COSO pair — those are genuinely declared and genuinely do not load, in either naming convention
-(tested both ways round; renaming changes nothing, and plain `.hip` Hippel plays fine as Modland
-names it, so content detection is doing its job).
+The successful format directories in this current run contain **5,799 Modland files that nothing
+in the application claims today**. This is evidence of reach, not a claim that every file in those
+directories plays: the render pass is deliberately sampled.
+
+**Why the previous result was wrong.** The original probe set `UC_CONTENT_DETECTION`, believing the
+name enabled additional detection. UADE exposes that option in `uade123` as strict content-only
+detection. It therefore rejected the filename match whenever the bytes alone did not identify the
+format. Heikki Orsila caught this by playing `amberstar (03).hipc` with stock `uade123`; removing
+the option made the exact file render here too with player `Hippel-COSO`.
+
+The old result can be compared exactly rather than guessed. `scripts/probe-uade.py
+--supported-formats-revision 95da64a` restores the supported-format list used to choose the original
+top 25, and seed 68 consequently selects the same 300 files. The rerun is **196/300 full, 101
+unsupported and 3 silent**, not 184/300. Hippel COSO changes from the false 0/12 to **11 full and 1
+silent first buffer**; Hippel ST COSO remains 0/12. The old parser also accidentally counted
+commented-out `"snd"` as an extension. Correcting that changes the whole-index historical reach from
+314,340 / 29,127 / 172,042 to **314,317 / 29,128 / 172,064**, but the one newly reachable SND file
+is outside the top 25 and does not change the 300-file play corpus.
 
 ### What UADE is actually worth — and the finding that undercuts it
 
-The formats UADE played cover **9,720 Modland files that nothing here plays today**. But
-**5,557 of those 9,720 are already playable by libopenmpt**, which is in the APK — OctaMED
-`.mmd0`…`.mmd3` (5,110) and Oktalyzer `.okta` (447), measured 6/6 each. Widening the sweep from 60
+In the corrected historical top-25 run, formats with a successful sample cover **9,813 Modland
+files**. **5,558 of those are already playable by libopenmpt**, which is in the APK — OctaMED
+`.mmd0`…`.mmd3` (5,111) and Oktalyzer `.okta` (447), measured 6/6 each. Widening the sweep from 60
 formats to 150 added two more of the same kind, Graoumf Tracker `.gtk` and MultiMedia Sound `.mms`,
-for 5,652 in total; nothing else in Modland's unplayable third turns out to be free, and the rest
+for 5,653 in total; nothing else in Modland's unplayable third turns out to be free, and the rest
 of it is console dumps (`.minigsf`, `.mini2sf`, `.minipsf` — 66,000 files) that no backend here
 opens. libopenmpt identifies MED by
 an "MMD" magic in the header and never looks at the filename. The app simply never offers them,
 because `SupportedFormats.extensions` lists `med` and `okt` while Modland stores these as `.mmd1`
 and `.okta`.
 
-**Corrected 2026-09-04, later the same day: 5,596, not 4,163.** Measuring libopenmpt found that it
-does **not** play AHX or HVL — no loader in its source, neither name in its format table, 0 of 12
-and 0 of 6 measured. Those 1,433 Modland files were counted as "already ours" because the extension
-list claimed them, and they are in fact among the formats UADE would add. The reasoning below said
-"libopenmpt already handles AHX" and that was simply wrong.
+Another part of the earlier correction remains valid: libopenmpt does **not** play AHX or HVL — no
+loader exists in its source, neither name appears in its format table, and 0 of 12 AHX plus 0 of 6
+HVL files opened. Those 1,433 Modland files had been counted as "already ours" merely because the
+extension list claimed them. The old text then turned that correction into an exact 5,596-file
+exclusive total. The corrected probe shows why that precision was unjustified: Hippel COSO and
+successful directories newly entering the current top 25 were absent from that arithmetic. The
+5,799-file sampled-directory lower bound above is the defensible figure.
 
-**So UADE's genuine, exclusive contribution is 5,596 files, not tens of thousands** —
-TFMX, Musicline Editor, Delitracker Custom, Oktalyzer, Sonic Arranger, BP SoundMon, Art Of Noise,
-David Whittaker, SidMon 2, Delta Music 2, YMST. That is a real body of music and it is the music
-this project is closest to. It is also a fraction of what `docs/BACKLOG.md` A5 assumed when it
-called this "the largest body of music left", and the estimate deserves correcting rather than
-quietly inheriting.
+**The current top-25 run proves successful reach into directories holding 5,799 files**, including
+TFMX, Musicline Editor, Delitracker Custom, Sonic Arranger, BP SoundMon, Art Of Noise, David
+Whittaker, SidMon 2, Delta Music 2, YMST and Hippel COSO. It is a lower bound on useful reach, not an
+exact count of playable files: twelve samples cannot certify a whole directory, while smaller
+successful directories outside the top 25 are omitted. That is still a real body of music and the
+music this project is closest to, but it is a fraction of the tens of thousands assumed in
+`docs/BACKLOG.md` A5.
 
 ### The process model — the real integration question
 
@@ -450,24 +473,32 @@ instances independent and upstream unforked, at the cost of process lifecycle ma
 
 **Neither is chosen here.** Item 1 was to measure, and this is the measurement.
 
+**The licence half moved on 2026-09-04**, after UADE's maintainer answered: the replay binaries are
+to be downloaded rather than shipped, from <https://zakalwe.fi/uade/download.html> which he offers
+for exactly that, with GitLab as the fallback when his server is not up. `docs/LICENSES.md` has
+what he said and what it settles. That removes the objection that made this item's cost look
+open-ended — what remains is the emulator, the process model and at least the 5,799 files covered
+by successful directories in the current top-25 sample.
+
 ### What this measurement recommends
 
 **Not integrating UADE yet, and doing the cheap thing first.** Setting out the trade rather than
 the conclusion, because the conclusion is the owner's:
 
-- what UADE exclusively adds is **5,596 Modland files** — corrected upward from 4,163 once AHX and
-  HVL turned out not to be played by anything we ship — still not the tens of thousands A5 assumed;
+- the current top-25 sample finds successful formats covering **5,799 Modland files** that nothing
+  in the app claims — a measured lower bound, not the tens of thousands A5 assumed;
 - it cannot ship without answering a licence question that is *worse* documented than sc68's, and
   unlike sc68 it has **no middle option** — without the replay binaries it plays 12 files in 300;
 - it is the only backend here that is a second process, or else a single-instance-per-process
   emulator inside ours, which collides with scanning-while-playing;
-- and **5,557 files of the 9,720 it appeared to win are already playable** by a backend in the APK,
+- and **5,558 files in the historical top-25 set were already playable** by a backend in the APK,
   blocked by five missing lines in `SupportedFormats`.
 
-The last point is the one worth acting on immediately: it is more files than UADE exclusively
-offers, for a change that costs five strings and a re-index. That does not make UADE not worth
-doing — TFMX and David Whittaker are exactly the music this project is for — but it does mean UADE
-is a considered choice with a licence decision attached, rather than the obvious next step.
+The last point was worth acting on immediately and already has been: almost as many files as the
+current sampled UADE lower bound became visible for five strings and a re-index. That does not make
+UADE not worth doing — TFMX and David Whittaker are exactly the music this project is for — but it
+does mean UADE is a considered choice with a licence decision attached, rather than the obvious
+next step.
 
 Everything needed to revisit it is committed: `./scripts/build-uade-probe.sh` rebuilds the whole
 toolchain from nothing, and `./scripts/probe-uade.py` re-runs the measurement on the same seeded
