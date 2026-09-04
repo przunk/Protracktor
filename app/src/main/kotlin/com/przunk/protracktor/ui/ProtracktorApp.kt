@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.przunk.protracktor.AppLanguage
+import com.przunk.protracktor.AppTheme
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
@@ -86,6 +87,10 @@ fun ProtracktorApp(
     viewModel: PlayerViewModel = viewModel(),
     selectedLanguage: AppLanguage = AppLanguage.SYSTEM,
     onLanguageSelected: (AppLanguage) -> Unit = {},
+    selectedTheme: AppTheme = AppTheme.SYSTEM,
+    onThemeSelected: (AppTheme) -> Unit = {},
+    dynamicColour: Boolean = true,
+    onDynamicColourChanged: (Boolean) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
@@ -320,6 +325,10 @@ fun ProtracktorApp(
                 catalogues = browse.catalogues,
                 songLengthCount = browse.songLengthCount,
                 contentPadding = insets,
+                selectedTheme = selectedTheme,
+                dynamicColour = dynamicColour,
+                onThemeSelected = onThemeSelected,
+                onDynamicColourChanged = onDynamicColourChanged,
                 onToggleAllSubsongs = viewModel::toggleAllSubsongs,
                 onLanguageSelected = onLanguageSelected,
                 onClearCache = viewModel::clearFetchedCache,

@@ -35,11 +35,26 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ProtracktorTheme {
+            // Read here rather than remembered in Compose: a theme change recreates the activity,
+            // exactly as a language change does, so this reads the new value on the way back in.
+            // Recreating is heavier than recomposing and it is the honest way to change something
+            // the window itself was built with.
+            ProtracktorTheme(
+                theme = Appearance.theme(this),
+                dynamicColour = Appearance.dynamicColour(this),
+            ) {
                 ProtracktorApp(
                     selectedLanguage = AppLocale.selected(this),
                     onLanguageSelected = { language ->
                         if (AppLocale.select(this, language)) recreate()
+                    },
+                    selectedTheme = Appearance.theme(this),
+                    onThemeSelected = { theme ->
+                        if (Appearance.selectTheme(this, theme)) recreate()
+                    },
+                    dynamicColour = Appearance.dynamicColour(this),
+                    onDynamicColourChanged = { enabled ->
+                        if (Appearance.selectDynamicColour(this, enabled)) recreate()
                     },
                 )
             }
