@@ -430,10 +430,58 @@ observation is reported to UADE's maintainer and the explanation left to him.
 remains what the app *browses*, but a format measured only against it is a format measured against
 one ripper's habits.
 
-**Not reported upstream.** The owner closed the correspondence on 2026-09-05, and the draft sits
-unsent in `docs/letters/`. Heikki had offered to take interesting cases; an offer is not an
-obligation and nobody is waiting on this. It is a note to ourselves, which is what it was worth
-either way — the reference-set lesson above is the part that changes how we work.
+### And then Matti Tiainen answered, and this section was wrong too
+
+Within the hour, UADE's other maintainer replied: The Hippel and TFMX families are a mess to distribute, with different collections using prefix and suffix conventions that contradict each other. And he pointed at the fix he
+already maintains — a `song.conf` of **md5 overrides** at
+<https://github.com/mvtiaine/audacious-uade/blob/master/conf/song.conf>, which covers the Modland files in question.
+
+It does. Dropped into UADE's base directory, where `uade_load_initial_song_conf` looks for it:
+
+| | before | after |
+| --- | --- | --- |
+| Modland Hippel ST COSO, the same 12 files | 0/12 | **11/12** |
+| the historical 300-file corpus | 196/300 | **206/300** |
+
+All twelve of the sampled files are named in that table by md5. Hippel COSO goes to 11/12, David
+Whittaker to 12/12.
+
+**So "Modland's rips are broken" was wrong**, and it was the second confident diagnosis in two days
+to be corrected by the people who maintain the thing. The files are fine; UADE cannot tell from
+their names which player to use, and the table says so per file. The size difference recorded above
+is real and was a red herring — the Wanted Team rips simply carry more with them.
+
+**What this changes for an integration, and it is not small.** A UADE backend needs three things
+from upstream, not two: the emulator, `players/`, **and a song database**. Without the third,
+formats fail in a way that looks like the format not working — which is exactly how it looked here
+for a day.
+
+**The licence of that table is fine, and the trap next to it is not.** `audacious-uade`'s README:
+*"The project as a whole is licensed under GPL-2.0-or-later"* — compatible with our GPL-3. But the
+same README says *"Songdb (`conf/songdb`) is licensed under CC BY-NC-SA 4.0"*, which is
+**non-commercial** and could not ship in a store app. `conf/song.conf` is the one we want and
+`conf/songdb` is the one to keep away from. GitHub's own API reports the repository as plain
+"GPL-2.0"; the README is the accurate source.
+
+### RMC — the format that would make most of this moot
+
+Heikki added it for the record: RMC states exactly what a song is and what it needs: a container holding an optional player, the song, and metadata including subsong durations. — `git clone git://zakalwe.fi/rmc-chip`.
+
+**libuade already implements it**, which is what makes this worth writing down rather than filing
+away: `uade_is_rmc`, `uade_rmc_get_subsongs` (a dictionary of subsong number to length in
+milliseconds) and `uade_rmc_get_song_length`. And `uade_get_time_position` documents the difference
+in one line — *"Function returns a negative value for non-rmc songs. Time is always returned with
+RMC files."*
+
+That is three of this project's standing problems in one container: which player a file needs, how
+long each subsong is, and how many subsongs there really are. Compare what we do instead — HVSC's
+md5 table for SID lengths (`docs/ARCHITECTURE.md` §14), game-music-emu reporting a flat 256 tracks
+for KSS and HES whatever the file holds, and a timed search for the first audible track. Worth a
+serious look before any UADE work starts, and possibly worth a look regardless of UADE.
+
+**Nothing was reported upstream.** The owner closed the correspondence on 2026-09-05 and the draft
+sits unsent in `docs/letters/`. Both maintainers volunteered all of the above without being asked
+twice, which is the part worth remembering.
 
 ### What UADE is actually worth — and the finding that undercuts it
 

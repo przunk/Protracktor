@@ -140,7 +140,14 @@ APK — which is where the doubt actually lives.
 
 | | sent | to | status |
 | --- | --- | --- | --- |
-| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | answered, exchange **closed 2026-09-05** |
+| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | answered by **both maintainers**, exchange closed 2026-09-05 |
+
+**A third thing an integration would need, found on the way out.** UADE cannot identify several
+Hippel and TFMX variants from their filenames, and the fix is a `song.conf` of md5 overrides that
+Matti Tiainen maintains for the Audacious plugin. Its licence is **GPL-2.0-or-later** — compatible
+with ours — but the `conf/songdb` beside it is **CC BY-NC-SA 4.0**, non-commercial, and could not
+ship in a store app. Take `conf/song.conf`; leave `conf/songdb`. GitHub's API labels the whole
+repository "GPL-2.0"; the README is the accurate source (`docs/PLAN_FORMATS.md` §4).
 | sc68 | not yet | SourceForge ticket | the owner is holding off |
 
 **Neither the work nor the release waits on either.** `sndh_ice.bin` is sc68's own file in sc68's
