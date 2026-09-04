@@ -10,6 +10,40 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B20. The year a tune was released
+
+*owner, 2026-09-04: "fajnie by było gdyby dało się zobaczyć rok wydania utworu (np. w info o
+utworze, w liście albo wyszukiwaniu)".*
+
+**Half of this is nearly free and the other half is not, and the difference is worth stating before
+anyone starts.**
+
+`Sc68Backend::describe()` **already emits a `year` field**, and `NowPlaying`'s `FIELDS` list does
+not include it — so for every SNDH and `.sc68` the year is read out of the file, carried across JNI
+and then dropped on the floor. Showing it in Now Playing is one entry in that list and one string.
+
+The other backends can supply one too, none of them do yet, and each needs a line:
+
+| backend | where the year is |
+| --- | --- |
+| sc68 | `info_.year` — **already emitted**, just not shown |
+| ASAP | `ASAPInfo_GetYear` / `ASAPInfo_GetDate` |
+| libsidplayfp | the tune's "released" line, `infoString(2)` — usually `1987 Rob Hubbard` |
+| game-music-emu | `gme_info_t::copyright`, which normally starts with the year |
+| libopenmpt | `get_metadata("date")`, present in IT and MPTM and rare elsewhere |
+
+Two of those are not a year but a string that usually contains one, so this ends in a small parser
+and a decision about what to show when it says `1987-1989` or nothing at all.
+
+**"In the list or in search" is the expensive half.** A row is drawn from the index, not from an
+open file, so a year would have to be *stored* — a column in `library_index` and in
+`catalogue_tracks`, a schema migration, and a re-index to fill it. Worth doing if the year is wanted
+for sorting or filtering; not worth it to decorate a row.
+
+**Suggested order:** show it in Now Playing first, from whatever the backend already knows. That is
+an afternoon, it answers the question for the file you are listening to, and it says how often a
+year is actually there before anything is stored.
+
 ## B19. Server-hosted periodically updated catalogue indexes (Cloudflare / Google Cloud)
 
 *owner, 2026-09-02.*
