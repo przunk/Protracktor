@@ -133,6 +133,47 @@ So the three options are now:
 `.sc68` available to anyone who wants it, and moves the one genuinely doubtful 1.2 MB out of the
 APK — which is where the doubt actually lives.
 
+### Decided 2026-09-04: option 3, for sc68 and UADE alike
+
+**And two letters, because the only genuinely clean route is to ask.** Drafts are in
+`docs/letters/`.
+
+| | sent | to | status |
+| --- | --- | --- | --- |
+| UADE | **2026-09-04** | `heikki.orsila@iki.fi` | awaiting a reply |
+| sc68 | not yet | SourceForge ticket | the owner is holding off |
+
+**Neither the work nor the release waits on either.** `sndh_ice.bin` is sc68's own file in sc68's
+own GPL tree and needs no permission, and UADE is not integrated at all. The letters improve what
+this document can say; they do not gate anything.
+
+**What actually reduces the risk, in order of how much it does:**
+
+1. **Not shipping the files.** Copyright is about copying and distributing. In the APK we are the
+   distributor, to every install. Fetched by the user's device from SourceForge or GitLab, the
+   distributor is SourceForge or GitLab. That is a real difference, not a formal one, and it is
+   where nearly all of the benefit comes from.
+2. **Fetching from the project's own published location** — never a mirror we control, which would
+   put us straight back to distributing.
+3. **Not misrepresenting what they are.** The notice says plainly: other people's code, of
+   unestablished status, extracted from programs of the 1980s and 90s.
+4. **A notice the user reads before it downloads.** This is honesty and evidence of good faith.
+
+**What a disclaimer does not do is transfer liability**, and it is worth writing down because it is
+the intuitive and wrong answer. "The user accepted the terms" does not turn an infringing act into a
+non-infringing one; if the copying were unlawful, a checkbox would not launder it. The safety comes
+from item 1, not from consent.
+
+**What remains, honestly:** inducement is a real doctrine, and an app that exists to fetch and run
+unlicensed code does not answer it by declining to host the code. Our position is stronger than that
+— these files have been published openly by their projects for twenty years and nobody has been
+challenged — but that is an argument about *risk*, not about *cleanliness*. The realistic worst case
+is a takedown request rather than litigation; most of the rights holders are individuals, many still
+in the scene, whose interest is in the music being heard.
+
+**None of the above is legal advice**, and the letters exist because the one route with no "but"
+left at the end is a person saying yes.
+
 ## UADE's replay binaries — the same question, with worse paperwork
 
 **Measured 2026-09-04 while doing `GOAL.md` round 6 item 1.** UADE is not integrated; this is what
