@@ -194,10 +194,24 @@ objected to" is worth knowing by name rather than discovering later.
 That is a much better position than `COPYING`'s "various different licenses and quite a many
 different copyright holders" about `players/`.
 
-Measured: **99 of the 176 shipped binaries have a source directory under `amigasrc/players/`** — 19
-UADE's own, 98 by the Wanted Team, 7 other, 5 marked defective. 77 do not. So a clear majority of
-what UADE ships is covered by a tree its authors call certainly distributable, and the doubtful
-remainder is smaller than `COPYING` alone suggests.
+Counted, and **the count is a name match, not an authority** — that matters, so it is said before
+the number. `amigasrc/players/` holds 19 directories under `uade`, 98 under `wanted_team`, 7 under
+`other` and 5 under `defect`. Matching those names against the 176 shipped binaries:
+
+| | |
+| --- | --- |
+| exact name match | **99** |
+| plausible but not exact | **35** |
+| no candidate at all | **42** |
+
+The middle row is why the first number cannot be quoted alone. `players/BenDaglish` and
+`amigasrc/players/wanted_team/BennDaglish` are obviously the same player and differ by a letter;
+`ArtOfNoise-4V` and `uade/artofnoise` are obviously related and do not match at all. A first pass
+that only compared normalised names reported 99 and 77, and 77 was wrong.
+
+So: **at most 42 of the 176 have no source in the tree**, probably fewer, and the doubtful remainder
+is much smaller than `COPYING` alone suggests. Turning "probably" into a list means reading the
+`EP_*.readme` files, which is work worth doing before anyone relies on it.
 
 He is careful about the limit of that, and reverse-engineering a routine is not the same as being given permission for it. A routine somebody reverse-engineered is
 not a routine somebody licensed.
