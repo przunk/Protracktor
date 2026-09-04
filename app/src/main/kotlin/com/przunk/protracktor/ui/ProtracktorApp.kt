@@ -260,8 +260,11 @@ fun ProtracktorApp(
                                 label = stringResource(R.string.action_browse),
                                 onClick = openBrowse,
                                 // The seam across the title/actions boundary, which the two slots
-                                // do not otherwise share. Same 6dp as everywhere else on this bar.
-                                modifier = Modifier.padding(end = TOP_BAR_SEAM - LABELLED_ACTION_INSET),
+                                // do not otherwise share -- so it is the one gap on this bar that
+                                // cannot be derived and had to be looked at.
+                                modifier = Modifier.padding(
+                                    end = TOP_BAR_SEAM - LABELLED_ACTION_INSET + TOP_BAR_SLOT_SEAM,
+                                ),
                             )
                         }
                     }
@@ -571,6 +574,16 @@ private val TOP_BAR_SEAM = 6.dp
 
 /** The inset between the last control and the edge of the screen. Not a seam; a margin. */
 private val TOP_BAR_EDGE = 8.dp
+
+/**
+ * What the title/actions boundary swallows, added back.
+ *
+ * **Measured on a device, not computed.** Every other gap on this bar is arithmetic — two known
+ * paddings either side of a known spacer — but this one crosses between two slots the top bar lays
+ * out itself, and how much they leave between them is not ours to know. The owner looked at it and
+ * said it was a pixel short, which is the only instrument there is for this.
+ */
+private val TOP_BAR_SLOT_SEAM = 1.dp
 
 /**
  * What `LabelledAction` already puts on each of its own sides.
