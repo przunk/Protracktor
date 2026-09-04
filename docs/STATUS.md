@@ -53,6 +53,12 @@ changed, and re-indexing worked. **OctaMED `.mmd0`–`.mmd3` and Oktalyzer `.okt
 files that were always playable and never offered. Freeing and re-downloading the ASMA archive
 works. Adding to a playlist reports what it did; the playlist row menus work.
 
+**2026-09-04, afternoon.** The console formats confirmed on his device: HES plays, KSS mostly plays,
+subsongs walk. Two faults came out of that session and are fixed — the search for an audible track
+stopped after twelve tracks and missed `aleste 2.kss`, whose first tune is number 47 of 256, and the
+subsong strip yanked the view back to the playing tune, making the far end of a long file unreadable
+while it played.
+
 Three things came back wrong and are fixed: **repeat-one still advanced through subsongs** (see C13
 below — his rule, not mine, and the simpler one), the seek bar looked draggable on tracks that
 cannot seek, and **a SID played for ever** because nothing acted on the length HVSC had been
