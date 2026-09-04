@@ -2286,7 +2286,11 @@ class PlaybackController private constructor(private val context: Context) {
                 it.copy(
                     playing = started,
                     metadata = described,
-                    subsong = 0,
+                    // Where the backend actually opened, which is not always the beginning. A HES
+                    // or KSS file often has nothing at track 0, so `GmeBackend` starts at the first
+                    // track with sound in it and says so here; assuming zero would leave the
+                    // subsong strip pointing at silence while music played.
+                    subsong = described["subsong"]?.toIntOrNull() ?: 0,
                     subsongCount = opened.subsongCount().coerceAtLeast(1),
                     durationSeconds = duration,
                     positionSeconds = 0.0,

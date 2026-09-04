@@ -86,6 +86,9 @@ host-specific.
 ./scripts/build-uade-probe.sh      # fetches and builds UADE 3.05 and its two support libraries
 ./scripts/probe-uade.py            #   from nothing, then measures it against the Modland index
 
+./scripts/build-gme-probe.sh       # the seven console families, which went in unmeasured
+./scripts/probe-gme.py             #   and were 100/141 until the probe said why
+
 ./scripts/probe-extensions.py      # what libopenmpt would play if the app ever offered the file
 ```
 

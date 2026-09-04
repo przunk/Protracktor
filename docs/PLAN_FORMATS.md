@@ -205,8 +205,48 @@ Two things that were not obvious:
 binary should not carry two answers to one question. `GME_YM2612_EMU` is "Nuked" (LGPL) rather than
 "MAME" (GPL) — both would be compatible, the weaker copyleft leaves more room.
 
-**Subsong selection is now overdue.** Some of these files hold hundreds of tracks — one GBS reported
-99, an HES reported 256 — and we play track 0 and nothing else.
+~~**Subsong selection is now overdue.**~~ Done in round 6's A2. Some of these files hold hundreds of
+tracks — one GBS reported 99, an HES reported 256.
+
+### Measured 2026-09-04, three years late
+
+This backend went in on build notes and **not one number**, while sc68 has 30 of 30, libsidplayfp
+30 of 30 and ASAP 12 of 12. It is also the part of the app nobody has ever listened to, so it was
+heading into a store listing on trust. `./scripts/build-gme-probe.sh` and `./scripts/probe-gme.py`
+measure it, asking `GmeBackend`'s contract rather than hoping: is the **first** buffer full (R1), and
+does the track ever end.
+
+| | before | after | Modland |
+| --- | --- | --- | --- |
+| `.spc` | 20/20 | 20/20 | 36,903 |
+| `.vgz` | 19/20 | 19/20 | 14,167 |
+| `.nsf` | 19/20 | **20/20** | 5,015 |
+| `.gbs` | 20/20 | 20/20 | 918 |
+| `.hes` | 13/20 | **20/20** | 421 |
+| `.kss` | 9/20 | **15/20** | 393 |
+| `.gym` | 0/20 | — removed | 265 |
+| **total** | **100/141** | **114/141** | |
+
+**What "before" was failing at is the finding.** HES and KSS routinely hold nothing at track 0 —
+they are sound *banks* as much as albums, and track 0 is often an empty slot or an effect. Every one
+of twenty HES files had music in it; seven of them were silent where the app opened them. So a third
+of the format looked broken while the music sat one track along.
+
+`GmeBackend::openAtSomethingAudible` now starts at the first track with sound in it, bounded hard: a
+fifth of a second of audio per track, at most twelve tracks, and **only** when track 0 was silent.
+gme emulates far faster than real time, so the common case costs nothing and the worst case is tens
+of milliseconds. It reports where it opened through `describe()`, because the subsong strip has to
+agree with what is audible.
+
+**`.gym` is removed from `SupportedFormats`.** All forty sampled Modland GYM files are packed, and
+game-music-emu refuses packed GYM unconditionally — `"Packed GYM file not supported"` is in
+`Gym_Emu.cpp` with no build option behind it. Listing the extension only indexed 265 files that
+could not open. (First measured wrongly: a hand-written header check read `loop_start` where
+`packed` lives and reported 39 of 40 *un*packed. The probe was right and the shortcut was not.)
+
+**What still fails, and is not worth chasing:** one `.vgz` using the YM2413 chip this build does not
+include, one `.vgm` that renders silence, and five `.kss` with nothing audible in the first
+twenty-four tracks. Six files in a hundred and twenty, across formats worth 58,000.
 
 ## 3. ~~ASAP — Atari 8-bit~~ — DONE 2026-09-01
 

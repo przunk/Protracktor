@@ -93,6 +93,15 @@ public:
      * one conversion here. Returns whether the switch happened.
      */
     virtual bool selectSubsong(int index) { return index == 0; }
+
+    /**
+     * Which subsong is playing, zero-based.
+     *
+     * Almost always zero, and `GmeBackend` is why this exists at all: HES and KSS files routinely
+     * hold nothing at track 0, so it opens at the first track with sound in it and the rest of the
+     * app has to be told where that was.
+     */
+    virtual int currentSubsong() const { return 0; }
 };
 
 class OpenmptBackend : public Backend {
@@ -624,6 +633,66 @@ public:
         // Without a fade the last buffer stops dead. GME applies one relative to the track length
         // it reports, which for files that do not state a length is its own two-and-a-half minutes.
         if (info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
+
+        openAtSomethingAudible();
+    }
+
+    /**
+     * Start where the music is, not where the file starts.
+     *
+     * **HES and KSS routinely put nothing at track 0.** Measured 2026-09-04 across forty files from
+     * Modland: every one of twenty HES files had music, and seven of them were silent at track 0 —
+     * so a third of the format appeared broken while the music sat one track along. KSS is the same
+     * shape. These are sound *banks* as much as albums; track 0 is often an empty slot or an effect.
+     *
+     * So when the first track renders nothing, look for one that does. Bounded hard, because this
+     * runs while somebody is waiting to hear something: a fifth of a second of audio per track and
+     * at most twelve tracks, entered **only** when track 0 was silent. gme emulates far faster than
+     * real time, so the worst case is a few tens of milliseconds and the common case is zero — a
+     * file that starts with music never gets here.
+     *
+     * It does not touch `gme_track_count`, which reports a flat 256 for these formats whatever the
+     * file holds. That number is wrong and this is not the place to fix it.
+     */
+    void openAtSomethingAudible() {
+        if (!emu_ || audible(kProbeFrames)) {
+            gme_start_track(emu_, track_);
+            return;
+        }
+
+        const int limit = std::min(gme_track_count(emu_), kMaxTracksToTry);
+        for (int candidate = 1; candidate < limit; ++candidate) {
+            if (gme_start_track(emu_, candidate)) continue;
+            if (!audible(kProbeFrames)) continue;
+
+            track_ = candidate;
+            if (info_) { gme_free_info(info_); info_ = nullptr; }
+            gme_track_info(emu_, &info_, track_);
+            if (info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
+            gme_start_track(emu_, track_);
+            return;
+        }
+
+        // Nothing audible anywhere we looked. Back to the beginning: a silent file is still that
+        // file, and starting it somewhere arbitrary would be worse than starting it where it says.
+        gme_start_track(emu_, track_);
+    }
+
+    /** Renders a moment and says whether any of it was above silence. Consumes what it renders. */
+    bool audible(std::size_t frames) {
+        const std::size_t samples = frames * 2;
+        if (scratch_.size() < samples) scratch_.resize(samples);
+        std::size_t done = 0;
+        while (done < samples) {
+            const std::size_t chunk = std::min<std::size_t>(2048, samples - done);
+            if (gme_track_ended(emu_)) break;
+            if (gme_play(emu_, static_cast<int>(chunk), scratch_.data())) break;
+            for (std::size_t i = 0; i < chunk; ++i) {
+                if (scratch_[i] != 0) return true;
+            }
+            done += chunk;
+        }
+        return false;
     }
 
     ~GmeBackend() override {
@@ -651,6 +720,9 @@ public:
 
     int subsongCount() const override { return emu_ ? gme_track_count(emu_) : 1; }
 
+    /** Which track is playing. Not always zero: see `openAtSomethingAudible`. */
+    int currentSubsong() const override { return track_; }
+
     bool selectSubsong(int index) override {
         if (!emu_ || index < 0 || index >= subsongCount()) return false;
         if (const gme_err_t err = gme_start_track(emu_, index)) {
@@ -660,7 +732,19 @@ public:
         track_ = index;
         // The info is per track: a GBS names each tune and gives each its own length, and a stale
         // struct would show the first one's title against the third one's audio.
+        //
+        // **Freed first.** `gme_track_info` allocates and its header says so -- "Must be freed
+        // after use" -- and this overwrote the pointer, so every subsong change leaked a struct and
+        // its strings. Small, and a 256-track HES walked through under "play all" leaks it 256
+        // times. The destructor only ever freed the last one.
+        if (info_) { gme_free_info(info_); info_ = nullptr; }
         gme_track_info(emu_, &info_, track_);
+
+        // **And the fade has to move with it**, because in this library the fade is what ends the
+        // track: "Once fade ends track_ended() returns true". It was set once in the constructor
+        // from track 0's length, so every later tune in a GBS faded at the first tune's time --
+        // early for the long ones, and for a file whose first track states no length, not at all.
+        if (info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
         return true;
     }
     double positionSeconds() const override { return gme_tell(emu_) / 1000.0; }
@@ -679,6 +763,10 @@ public:
           << "copyright\t" << (info_ ? field(info_->copyright) : "") << '\n'
           << "dumper\t" << (info_ ? field(info_->dumper) : "") << '\n'
           << "subsongs\t" << (emu_ ? gme_track_count(emu_) : 0) << '\n'
+          // Where this file actually opened. Zero for nearly everything; not for a HES whose first
+          // track is an empty slot (`openAtSomethingAudible`), and the playlist row and the subsong
+          // strip both have to agree with the audio.
+          << "subsong\t" << track_ << '\n'
           << "seekable\t1" << '\n'
           << "message\t" << (info_ ? field(info_->comment) : "");
         return o.str();
@@ -688,6 +776,10 @@ public:
 
 private:
     static constexpr int kSampleRate = 44100;
+    /** A fifth of a second is plenty to tell music from an empty slot, and cheap to throw away. */
+    static constexpr std::size_t kProbeFrames = kSampleRate / 5;
+    /** Twelve is past every silent run seen in the measurement, and bounds the wait either way. */
+    static constexpr int kMaxTracksToTry = 12;
     // Subsong selection is a UI feature that does not exist yet; some of these files hold hundreds.
     int track_ = 0;
 
