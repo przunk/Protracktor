@@ -31,3 +31,11 @@ scripts/__pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Correspondence. Drafts and sent letters to the maintainers of libraries we use -- other people's
+# names, other people's replies, and half-finished thoughts addressed to them by name. Useful to
+# keep locally and not ours to publish.
+#
+# **This only stops new ones.** The five already committed are in the history and stay there until
+# somebody rewrites it -- see `docs/PLAY_STORE.md`.
+docs/letters/
