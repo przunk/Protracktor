@@ -61,6 +61,9 @@
     <string name="playlist_new">Nowa playlista</string>
     <string name="playlist_rename">Zmień nazwę</string>
     <string name="playlist_name_label">Nazwa</string>
+    <string name="playlist_empty_title">Opróżnić %1$s?</string>
+    <string name="playlist_empty_body">To twoja jedyna playlista, więc zostaje — pusta i z domyślną nazwą. Utwory zostają w bibliotece.</string>
+    <string name="action_empty">Opróżnij</string>
     <string name="playlist_delete_title">Usunąć %1$s?</string>
     <string name="playlist_delete_body">Playlista znika; utwory zostają w bibliotece.</string>
 

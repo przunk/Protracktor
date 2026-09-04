@@ -200,13 +200,36 @@ fun PlaylistSwitcher(
     confirmingDelete?.let { playlist ->
         AlertDialog(
             onDismissRequest = { confirmingDelete = null },
-            title = { Text(stringResource(R.string.playlist_delete_title, playlist.name)) },
-            text = { Text(stringResource(R.string.playlist_delete_body)) },
+            // The last one is emptied rather than removed, because one has to exist. The dialog
+            // says which of the two is about to happen instead of promising the same thing twice.
+            title = {
+                Text(
+                    stringResource(
+                        if (playlists.size <= 1) R.string.playlist_empty_title
+                        else R.string.playlist_delete_title,
+                        playlist.name,
+                    )
+                )
+            },
+            text = {
+                Text(
+                    stringResource(
+                        if (playlists.size <= 1) R.string.playlist_empty_body
+                        else R.string.playlist_delete_body
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete(playlist.id)
                     confirmingDelete = null
-                }) { Text(stringResource(R.string.action_delete)) }
+                }) {
+                    Text(
+                        stringResource(
+                            if (playlists.size <= 1) R.string.action_empty else R.string.action_delete
+                        )
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { confirmingDelete = null }) {
