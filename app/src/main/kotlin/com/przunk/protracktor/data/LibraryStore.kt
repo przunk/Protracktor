@@ -183,9 +183,21 @@ class LibraryStore(context: Context) {
      * These lists are hundreds of rows, not millions.
      */
     suspend fun replaceTracks(playlistId: Long, tracks: List<TrackRef>) = withContext(Dispatchers.IO) {
+        // **A playlist cannot hold the same track twice, and this is the one place that can
+        // promise it.** Every write of a playlist comes through here, so the guarantee is made
+        // once rather than remembered at five call sites -- one of which, importing an M3U, takes
+        // a text file anybody can write.
+        //
+        // It is not a tidiness rule. A playlist row is a `LazyColumn` item keyed by track id, and
+        // a repeated key throws on the main thread while drawing; the same shape of duplicate in
+        // search results crashed the app on 2026-09-04. Note the old code would not even have
+        // stored the repeat -- `playlist_tracks` conflicts on the same track id and the second
+        // insert replaced the first, leaving a gap in `position` and a list shorter than the
+        // caller thinks. Quietly wrong instead of loudly wrong.
+        val unique = tracks.distinctBy { it.id }
         helper.writableDatabase.transaction {
             delete("playlist_tracks", "playlist_id = ?", arrayOf(playlistId.toString()))
-            tracks.forEachIndexed { position, track ->
+            unique.forEachIndexed { position, track ->
                 insertWithOnConflict(
                     "tracks", null,
                     ContentValues().apply {

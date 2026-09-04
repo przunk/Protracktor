@@ -630,6 +630,39 @@ The Kotlin half moved out of `onTrackEnded` into `SubsongAdvance`, which has no 
 six tests. This decision has now been wrong twice in a method that needs a phone to run; it is worth
 one small object that does not.
 
+### C14. ~~The app crashed when a search found a track that was also in a playlist~~ — FIXED 2026-09-04
+
+Reported by the owner with the sequence, which is the ordinary one and that is the point of it:
+find a Modland tune by searching, play it, add it to a playlist, search for it again.
+
+```
+java.lang.IllegalArgumentException: Key "https://modland.com/pub/modules/SNDH/Dubmood/
+Tempest_fjortisfacials.sndh" was already used. If you are using LazyColumn/Row please make
+sure you provide a unique key for each item.
+```
+
+A hard crash on the main thread, from `dispatchDraw` — a stack trace with nothing in it about
+search, because by the time it throws the only thing left is a list drawing itself.
+
+**`runSearch` merges four sources and de-duplicated only the first two.** The scanned library and
+the playlists were guarded against each other; the catalogue indexes and The Mod Archive were then
+concatenated on the end. Once a catalogue track is in a playlist it comes back from **both** the
+playlist scan and the catalogue search — and for a catalogue track the id *is* its URL, so the two
+are identical. The list is a `LazyColumn` keyed by track id.
+
+Fixed in `SearchResults`, which has no Android imports and takes all four sources at once, keeping
+the first occurrence of each id. Order decides which copy wins and is chosen rather than inherited:
+library, playlists, catalogues, live search — a tune you already have should present itself as
+yours rather than as a download. Five tests, one of them walking all six pairs of sources, because
+the old code guarded exactly one of the six.
+
+**The same shape existed on the other side and is closed too.** Nothing stopped an imported M3U
+naming a tune twice, and a playlist row is keyed by id as well. `LibraryStore.replaceTracks` is the
+single funnel every playlist write goes through, so the guarantee is made there once rather than
+remembered at five call sites. Worth noting what the old code actually did with a repeat: the
+second insert conflicted on the track id and *replaced* the first, leaving a hole in `position` and
+a playlist shorter than the caller believed. Quietly wrong rather than loudly wrong, which is worse.
+
 ### C3. R9 is addressed but unmeasured
 
 The next track is read while the current one plays and remote fetches are cached, but nobody has
