@@ -205,8 +205,59 @@ Two things that were not obvious:
 binary should not carry two answers to one question. `GME_YM2612_EMU` is "Nuked" (LGPL) rather than
 "MAME" (GPL) — both would be compatible, the weaker copyleft leaves more room.
 
-**Subsong selection is now overdue.** Some of these files hold hundreds of tracks — one GBS reported
-99, an HES reported 256 — and we play track 0 and nothing else.
+~~**Subsong selection is now overdue.**~~ Done in round 6's A2. Some of these files hold hundreds of
+tracks — one GBS reported 99, an HES reported 256.
+
+### Measured 2026-09-04, three years late
+
+This backend went in on build notes and **not one number**, while sc68 has 30 of 30, libsidplayfp
+30 of 30 and ASAP 12 of 12. It is also the part of the app nobody has ever listened to, so it was
+heading into a store listing on trust. `./scripts/build-gme-probe.sh` and `./scripts/probe-gme.py`
+measure it, asking `GmeBackend`'s contract rather than hoping: is the **first** buffer full (R1), and
+does the track ever end.
+
+| | before | after | Modland |
+| --- | --- | --- | --- |
+| `.spc` | 20/20 | 20/20 | 36,903 |
+| `.vgz` | 19/20 | 19/20 | 14,167 |
+| `.nsf` | 19/20 | **20/20** | 5,015 |
+| `.gbs` | 20/20 | 20/20 | 918 |
+| `.hes` | 13/20 | **20/20** | 421 |
+| `.kss` | 9/20 | **17/20** | 393 |
+| `.gym` | 0/20 | — removed | 265 |
+| **total** | **100/141** | **116/141** | |
+
+**What "before" was failing at is the finding.** HES and KSS routinely hold nothing at track 0 —
+they are sound *banks* as much as albums, and track 0 is often an empty slot or an effect. Every one
+of twenty HES files had music in it; seven of them were silent where the app opened them. So a third
+of the format looked broken while the music sat one track along.
+
+`GmeBackend::openAtSomethingAudible` now starts at the first track with sound in it, entered only
+when track 0 was silent, so a file that begins with music never pays for it. It reports where it
+opened through `describe()`, because the subsong strip has to agree with what is audible.
+
+**Bounded by time, which is the second version.** The first stopped after twelve tracks and the
+owner found the counter-example within minutes: `aleste 2.kss` has 256 tracks, 82 of them audible,
+and **the first is number 47**. Twelve was a guess dressed as a limit. A 300 ms wall-clock budget
+makes no guess about how fast the phone is — a quick device searches further, a slow one stops
+sooner and behaves exactly as it did before — and it bounds the quantity that actually matters,
+which is the wait before sound. That took `.kss` from 15/20 to 17/20.
+
+**What is still wrong and is gme's, not ours:** `gme_track_count` returns a flat **256** for KSS and
+HES whatever the file holds. `aleste 2.kss` really has 82 tunes; the subsong strip shows 256 chips
+and most lead to silence. Finding the truth means rendering all 256, which is minutes, not
+milliseconds — so it is recorded here rather than guessed at. The formats affected are 814 Modland
+files between them.
+
+**`.gym` is removed from `SupportedFormats`.** All forty sampled Modland GYM files are packed, and
+game-music-emu refuses packed GYM unconditionally — `"Packed GYM file not supported"` is in
+`Gym_Emu.cpp` with no build option behind it. Listing the extension only indexed 265 files that
+could not open. (First measured wrongly: a hand-written header check read `loop_start` where
+`packed` lives and reported 39 of 40 *un*packed. The probe was right and the shortcut was not.)
+
+**What still fails, and is not worth chasing:** one `.vgz` using the YM2413 chip this build does not
+include, one `.vgm` that renders silence, and three `.kss` with nothing audible within the budget.
+Five files in a hundred and twenty, across formats worth 58,000.
 
 ## 3. ~~ASAP — Atari 8-bit~~ — DONE 2026-09-01
 

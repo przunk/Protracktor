@@ -9,7 +9,8 @@ A usable player, as far as anything can be called that without a device saying s
 - **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more), Atari ST
   through sc68 3.0.0b (SNDH, YM, `.sc68`), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
   through libsidplayfp (PSID, RSID) and seven console families through game-music-emu (NSF, GBS,
-  SPC, VGM, HES, AY, KSS). Backends sit behind one interface and are asked what they can do rather
+  SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
+  and KSS routinely hold nothing at track 0). Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt seeks, sc68 and libsidplayfp cannot, and the UI reflects that.
 - **Online archives**: Modland, browsed offline from a downloaded index and fetched per track; ASMA,
   which arrives as one 20 MB archive and then needs no network at all; The Mod Archive, searched
@@ -38,7 +39,9 @@ Verified here: **124 unit tests**, genuinely executed rather than served from th
 `./scripts/test-protracktor.sh --really`, which exists because a "final verification" on 2026-09-03
 turned out to have come out of the cache in one second. A release build through R8 keeps all 13 JNI
 symbols, three ABIs and 99 sc68 replay binaries. Every backend was also run on the host against real
-files before it was integrated, which is where the measured coverage in this file comes from.
+files, which is where the measured coverage in this file comes from — **including the console
+families, measured 2026-09-04 after three months of not being** (116 of 141, up from 100 before the
+measurement found what was wrong; `docs/PLAN_FORMATS.md` §2).
 
 Verified by the owner on a device: modules play (2026-08-31), SAP plays (2026-09-01), reordering a
 playlist works (2026-09-02), and on the evening of 2026-09-02 he tested all five of round 3 —

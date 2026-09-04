@@ -59,7 +59,11 @@ object SupportedFormats {
         "sap", "cmc", "cm3", "cmr", "cms", "dmc", "dlt", "mpt", "mpd", "rmt", "tmc", "tm2", "tm8",
         // Consoles, through game-music-emu. It identifies by content, so these extensions only
         // decide what a folder scan picks up -- not what plays.
-        "nsf", "nsfe", "spc", "gbs", "vgm", "vgz", "gym", "hes", "ay", "kss",
+        // "gym" is deliberately absent. Measured 2026-09-04: all 40 sampled Modland GYM files are
+        // packed, and game-music-emu refuses packed GYM unconditionally -- "Packed GYM file not
+        // supported" is in its source with no build option behind it. Listing the extension only
+        // indexed 265 files that cannot open.
+        "nsf", "nsfe", "spc", "gbs", "vgm", "vgz", "hes", "ay", "kss",
         // Commodore 64, through libsidplayfp. Identified by a four-byte magic, so these extensions
         // only decide what a folder scan picks up.
         "sid", "psid", "rsid",
