@@ -267,16 +267,11 @@ fun ProtracktorApp(
                                 label = stringResource(R.string.action_discard),
                                 onClick = viewModel::discardChanges,
                             )
-                            Spacer(Modifier.width(6.dp))
                             LabelledAction(
                                 icon = PlayerIcons.Save,
                                 label = stringResource(R.string.action_save),
                                 onClick = viewModel::savePlaylist,
                             )
-                            // The three labelled actions fit, but without an explicit gutter their
-                            // icons read as one tight group on a phone. Keep the air between actions
-                            // here instead of widening LabelledAction in every other compact row.
-                            Spacer(Modifier.width(6.dp))
                         }
                         LabelledAction(
                             icon = PlayerIcons.Settings,
