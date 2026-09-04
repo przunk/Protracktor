@@ -155,3 +155,35 @@ Recommendation: **(c)**. Threshold to be measured once something plays.
 The repository is private for now, with a possible public release later. If Protracktor ever goes
 to a store, GPL-3 means sources must be published at that point. F-Droid or Google Play — or
 neither, and just an APK. No decision needed yet; noted so it is not a surprise.
+
+## Q8 — Should a playlist edit need saving at all?
+
+*Raised by the owner, 2026-09-04: he leaves the app without noticing the list was never saved.*
+
+Editing the active playlist builds a **draft**: reordering and removal change `queue` and set
+`dirty`, and nothing reaches the database until Save. Discard throws the draft away. Adding to a
+*different* playlist writes immediately, which is already the opposite rule in the same app.
+
+**What he actually reported is not "the marker is too subtle".** It is that the marker exists at
+all: a person who reorders a list and walks away has, in their own mind, reordered the list. Every
+music player they have ever used behaves that way. The draft is asking them to remember a step whose
+purpose is invisible from where they stand.
+
+Three ways out, and the middle one is his suggestion:
+
+- **(a) Keep the draft, mark it harder.** Cheapest, and it treats the symptom. If the current
+  marker is missed, a louder one is a bet that the next one will not be.
+- **(b) Save on every change, and confirm only what cannot be undone.** A reorder writes
+  immediately; a removal asks first, or offers undo the way it already does for a single track. This
+  is a **change of requirements**, not a bug fix — the draft was a deliberate decision — and it
+  deletes a whole class of "did I save it?" from the app.
+- **(c) Save on leaving the screen**, silently. Removes the question without changing what the
+  buttons mean, but "when did that happen" becomes the new invisible step.
+
+**Not decided here.** (b) is the owner's leaning and is the one with a real cost to weigh: the Save
+/ Discard pair goes, the undo path has to cover removal properly, and anything relying on `dirty`
+has to be re-read. Worth an hour of conversation before an hour of code.
+
+**Related:** `docs/ARCHITECTURE.md` §17 records why adding to another playlist writes immediately
+while the active one drafts — the reasoning is sound and it is also exactly the inconsistency a user
+cannot see.
