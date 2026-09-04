@@ -998,6 +998,9 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val known = store.allTracks().associateBy { it.id }
+            // An M3U is a text file anybody can write and nothing stops it naming the same tune
+            // twice. `LibraryStore.replaceTracks` is where that is dealt with, for every writer at
+            // once; the count reported below is of what was found, which is what the file offered.
             val found = entries.mapNotNull { entry -> resolve(entry, known) }
 
             val name = MediaScanner.labelOf(uri).substringBeforeLast('.').ifBlank { "Imported" }
@@ -1724,12 +1727,18 @@ class PlaybackController private constructor(private val context: Context) {
                 emptyList()
             }
 
-            // The index first and de-duplicated against it by id: a file can be both indexed and
-            // sitting in a playlist, and showing it twice makes a search look broken.
-            val indexedIds = fromIndex.mapTo(mutableSetOf()) { it.id }
-            val local = fromIndex + fromLocal.filterNot { it.id in indexedIds }
+            // De-duplicated across **all four**, not just the first two. The old code guarded
+            // index-against-playlists and then concatenated the catalogues, which crashed the app
+            // the moment somebody added an online track to a playlist and searched for it again --
+            // see `SearchResults`.
+            val results = SearchResults.combine(
+                fromIndex = fromIndex,
+                fromPlaylists = fromLocal,
+                fromCatalogues = fromOnline,
+                fromLiveSearch = fromModArchive,
+            )
 
-            _browse.update { it.copy(tracks = local + fromOnline + fromModArchive, loading = false) }
+            _browse.update { it.copy(tracks = results, loading = false) }
         }
     }
 
