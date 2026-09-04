@@ -400,14 +400,15 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
   the owner's to create; the script asks for it and refuses to produce a debug-signed bundle.
 - ~~**The launcher icon** (A9)~~ — done 2026-09-03: an adaptive icon with a monochrome layer for
   themed icons, at every density.
-- **A privacy policy and a data-safety declaration.** Required for every listing. Ours is unusually
-  easy and worth saying plainly: the app collects nothing, has no analytics, no accounts, no
-  crash reporting, and the only network traffic is fetching music from archives the user chose.
-- **The GPL and the store.** Distributing a GPL-3 app through Play is fine, and the obligation is
-  that source is offered to recipients — the public repository does that. Worth writing down once
-  so it is not re-litigated. The **`sc68` replay binaries** question (`docs/LICENSES.md`) is a real
-  one to settle *before* publishing, not after — and it is now **measured** rather than argued:
-  shipping only sc68's own replay costs nothing for SNDH and most of `.sc68`.
+- ~~**A privacy policy and a data-safety declaration.**~~ **Written 2026-09-04** as round 6 item 5:
+  `docs/PRIVACY.md` is the policy, publishable at its own GitHub URL, and `docs/PLAY_STORE.md`
+  answers the data-safety form row by row. Both claims were checked against the source rather than
+  assumed — no analytics SDK, no identifier read anywhere, five network hosts and all of them
+  archives. `ACCESS_NETWORK_STATE` was found declared and unused, and removed.
+- ~~**The GPL and the store.**~~ **Written down 2026-09-04** in `docs/PLAY_STORE.md`, including why
+  the Apple App Store problem people cite does not apply to Play. The **replay binaries** question
+  (`docs/LICENSES.md`) is untouched by that and still the owner's to settle *before* publishing —
+  it is now measured for both sc68 and UADE rather than argued.
 - **Content rating, listing text, screenshots, a feature graphic.** Mechanical, but none exists.
 - ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
   count now and nobody has to remember it.
