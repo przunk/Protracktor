@@ -460,7 +460,7 @@ deep, and nothing made it easy to leave.
 
 Raised 2026-09-02 by the owner about two places at once:
 
-- **The expanded player**, where every action is its own full-width row — *show in playlist*, *more
+- **Now Playing**, where every action is its own full-width row — *show in playlist*, *more
   from this author*, *share the file*, *share a link* — and the list grows every time one is added.
   Four now, and A10 and B2 added two of them in a day.
 - **The history list**, where the owner says the actions are *"średnio"* — the row menu offers
@@ -479,7 +479,7 @@ the current one*: one item, **"Add to playlist…"**, opening the picker. The pi
 adding to the current playlist without asking — that is the reflex, and the menu is the decision.
 The bulk button stays as it is, because it already names its target on its face.
 
-**Built.** The expanded player's actions are one wrapping row of icons with their names underneath,
+**Built.** Now Playing's actions are one wrapping row of icons with their names underneath,
 through a shared `LabelledAction` — the shape the owner had already asked for twice, now in one
 place rather than copied. **Corrected after he saw it:** they are drawn in the accent colour,
 because the full-width text buttons they replaced were accented by default and losing that made

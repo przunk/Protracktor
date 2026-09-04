@@ -117,6 +117,9 @@ fun NowPlaying(
             playAll = state.playAllSubsongs,
             onSelect = onSelectSubsong,
             onTogglePlayAll = onToggleAllSubsongs,
+            // So the strip knows a *different file* is playing rather than inferring it from the
+            // count, which two unrelated files can easily share.
+            trackKey = track?.id,
         )
 
         // One row of icons with their names underneath, rather than a stack of full-width text

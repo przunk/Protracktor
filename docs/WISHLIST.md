@@ -35,12 +35,12 @@ fast. Live search provides immediate utility, but full browsing requires the ser
 *owner, 2026-09-01.*
 
 The dock says what is playing; the list does not say where it is. Tapping the identity row — or the
-expanded player it opens — should take you to that row in the playlist.
+Now Playing it opens — should take you to that row in the playlist.
 
 Cheap: `LazyListState.animateScrollToItem` on the index the queue already knows. It shares its
 mechanism with B14 and with `docs/BACKLOG.md` A3.
 
-**Built** as the locate button in the expanded player. Not confirmed on a device.
+**Built** as the locate button in Now Playing. Not confirmed on a device.
 
 ## B14. ~~A follow-the-playing-track toggle~~ — DONE 2026-09-02
 
@@ -84,7 +84,7 @@ next and previous walk what you found and the playlist is untouched.
 *owner, 2026-09-01.*
 
 Something plays at random, it is good, and the question is "what else did they write". An action — from the row's overflow menu or from the
-expanded player — that opens the browser **at the place the track came from**: the author's folder
+Now Playing — that opens the browser **at the place the track came from**: the author's folder
 in Modland, the folder on disk.
 
 His refinement is the good part: for a **local** file this should not open the browser at all, it

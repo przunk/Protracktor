@@ -536,6 +536,34 @@ width comes from the caller as `weight(1f)` rather than a fixed size: a fixed ce
 equal columns on a screen wide enough to hold them, and on a phone the extras wrapped out of sight
 and read as missing.
 
+### One name for the panel: **Now Playing**
+
+Settled 2026-09-04, because it had two. The composable is `NowPlaying`; the documentation said
+"the expanded player", which describes how you reach it rather than what it is. One name now, in
+code and in prose. It is the panel that opens upward from the dock and holds the seek bar, the
+file's metadata, the actions and — when there is more than one tune in the file — the subsong strip.
+
+### The subsong strip follows the music only while you are watching it
+
+A file can hold 256 tunes and the strip is a row of 256 chips, so it moves itself to keep the
+playing one in view. Following unconditionally is what that used to mean, and it makes the far end
+of a long file unreadable: scroll out to tune 240 to see what is there, and the moment the current
+tune ends the strip snaps back to tune 68.
+
+**The signal for "am I watching the music" is the playing chip itself.** If the tune that just
+finished was on screen, the user is looking at the playing area and following is what they want. If
+it was not, they are reading somewhere else and are left there. No toggle, no timer, no tracking of
+who scrolled last — the thing being followed answers the question by being visible or not.
+
+Opening a file is the exception and always moves, because that is being *taken* somewhere rather
+than *kept* somewhere — and it is the one moment the strip must move, since a KSS can open at tune
+47 of 256 (`docs/PLAN_FORMATS.md` §2).
+
+**And it moves the minimum.** `bringIntoView` puts an item at the *start* of the view, which is
+right when you are being taken somewhere and wrong when you are being kept somewhere: following
+with it pinned the playing tune to the left edge and put everything before it out of reach, on every
+single advance. `keepInView` does nothing at all when the item is already visible.
+
 ### A row's own actions live behind its three dots
 
 A track row in Browse and in the playlist puts everything you can do *to* that track behind an
