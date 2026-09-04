@@ -356,7 +356,7 @@ the gap between tracks becomes the only thing the listener notices.
 **Built.** Repeat-one is honoured — it says "keep playing this" on the dock while Random runs, and
 skipping under it would be the app contradicting its own button. Not confirmed on a device.
 
-## A13. Application settings
+## A13. ~~Application settings~~ — DONE 2026-09-04
 
 Raised 2026-09-02 by the owner. There is no settings screen at all today, and several decisions
 that are currently hard-coded or implicit are exactly the kind a person wants to change once and
@@ -373,7 +373,8 @@ somebody's guesses:
   mine" and needs no new navigation to do it. **That placement is the placeholder, not the
   feature**: when this screen is designed the section moves in one piece. See
   `docs/ARCHITECTURE.md` §19.
-- **Language.** Polish and English are chosen by the system today. An override is cheap.
+- ~~**Language.**~~ **Done 2026-09-04:** System, Polish and English are selected inside the app and
+  work across its whole supported API range, rather than handing Android 13+ off to a system page.
 - **Behaviour that is currently a decision we made for the user.** Whether Random keeps going
   (A12), how far it reads ahead (A11), whether the playlist follows the playing track by default
   (B14 is off by default and forgets when you leave the screen).

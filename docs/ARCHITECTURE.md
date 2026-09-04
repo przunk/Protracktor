@@ -727,11 +727,9 @@ The fetched cache deletes without asking, because it refills itself as music pla
 tap costs one slower song. Everything else takes a real download to get back and asks first, naming
 what stops working until it is fetched again.
 
-**It lives in Browse, and that is a deliberate placeholder.** Granted folders are already managed
-from Browse and this is the same question — what does this app have of mine — so it needs no new
-navigation. The app has no top-level overflow menu, and adding one to reach a single screen is a
-navigation decision reserved for `docs/BACKLOG.md` A13. When A13 is designed, `StorageSection` moves
-in one piece.
+**It lived in Browse until 2026-09-04 and has moved to Settings**, in one piece, which is what the
+placeholder note here promised. Browse is for finding music; what the app is keeping on the phone
+is not that.
 
 ### Why it is a separate object
 
@@ -744,6 +742,35 @@ tested.
 **A ceiling stops growth; it does not give the disk back.** Nothing in the app deletes the ASMA
 archive or the song lengths (A13). The online screen at least says what is held, because an app that
 takes disk quietly is worse than one that takes the same disk and says so.
+
+## 19b. Settings, and the gear that opens it
+
+`docs/BACKLOG.md` A13, built 2026-09-04.
+
+**A full-screen modal, exactly like Browse.** Same shape, same back rule, same way out. That is the
+whole reason for the choice: `docs/OPEN_QUESTIONS.md` Q1 describes a navigation model with one rule
+— back descends one layer — and a second modal costs nothing to learn. A bottom sheet was the
+alternative and fights the dock as soon as it scrolls.
+
+**A labelled gear, not an overflow menu.** A menu holding a single item is worse than the button it
+hides. The first version used an unlabelled gear; the owner rejected it on 2026-09-04, consistently
+with the application's rule that an action has both an icon and its name. Browse sits on the left,
+beside the playlist chooser with a 12 dp gap, while Settings stays on the right. This keeps the two
+ways of choosing what plays together without making them look like one compound control.
+
+**One scrolling screen with sections, not a tree.** With this little in it a tree is ceremony, and
+every extra tap stands between somebody and the thing they came to change.
+
+**Nothing in it was invented for it.** Every switch is a setting the app already had somewhere less
+findable — "play every tune in a file" was global all along and reachable only from inside Now
+Playing, on a file that happened to have more than one tune. Storage moved from Browse. Language is
+chosen inside the application from System, Polish and English on every supported Android version.
+The choice is stored privately and applied to the activity context before Compose reads resources;
+returning to System removes the override rather than copying today's system language into it.
+
+**About is not decoration.** A GPL-3 app distributed through a store should be able to say what is
+inside it: the version, the decoders and their versions — read from the engine's own fingerprint,
+the same string an index records to know it is stale — and where the source is.
 
 ## 20. Where the time goes on screen
 

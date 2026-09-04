@@ -79,6 +79,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun clearSongLengths() = controller.clearSongLengths()
 
     // The sc68 replay routines the app does not ship (`docs/LICENSES.md`).
+    /** Re-reads what is stored. Settings shows those numbers and can be opened without Browse. */
+    fun refreshCatalogues() = controller.refreshCatalogues()
+
     fun downloadReplays() = controller.downloadReplays()
     fun deleteReplays() = controller.deleteReplays()
 

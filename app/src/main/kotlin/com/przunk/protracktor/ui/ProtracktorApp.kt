@@ -22,8 +22,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -60,8 +62,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
@@ -77,11 +81,16 @@ import com.przunk.protracktor.player.PlayerViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
+fun ProtracktorApp(
+    viewModel: PlayerViewModel = viewModel(),
+    selectedLanguage: AppLanguage = AppLanguage.SYSTEM,
+    onLanguageSelected: (AppLanguage) -> Unit = {},
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
     var showBrowse by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -161,53 +170,79 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    if (showBrowse) {
+                    if (showSettings) {
+                        IconButton(onClick = { showSettings = false }) {
+                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                        }
+                    } else if (showBrowse) {
                         IconButton(onClick = { if (!viewModel.browseBack()) showBrowse = false }) {
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     }
                 },
                 title = {
-                    if (showBrowse) {
+                    if (showSettings) {
+                        Text(stringResource(R.string.settings_title))
+                    } else if (showBrowse) {
                         Text(stringResource(R.string.browse_title))
                     } else {
-                        // A chevron and a filled shape, because the owner could not tell the name
-                        // was a button. A control that only looks like a label is a control nobody
-                        // presses.
-                        Surface(
-                            onClick = { showPlaylists = true },
-                            shape = MaterialTheme.shapes.large,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            modifier = Modifier.semantics { contentDescription = choosePlaylistLabel },
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Row(
-                                modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                            // A chevron and a filled shape, because the owner could not tell the
+                            // name was a button. It shares the left side with Browse: the two ways
+                            // to choose what plays belong together, with enough air to remain two
+                            // controls rather than one compound control.
+                            Surface(
+                                onClick = { showPlaylists = true },
+                                shape = MaterialTheme.shapes.large,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .semantics { contentDescription = choosePlaylistLabel },
                             ) {
-                                Column {
-                                    Text(
-                                        text = state.activePlaylistName
-                                            ?: stringResource(R.string.playlist_default_name),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        maxLines = 1,
-                                    )
-                                    if (state.queue.tracks.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier.padding(
+                                        start = 14.dp,
+                                        end = 6.dp,
+                                        top = 6.dp,
+                                        bottom = 6.dp,
+                                    ),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f, fill = false)) {
                                         Text(
-                                            text = pluralStringResource(
-                                                R.plurals.track_count,
-                                                state.queue.tracks.size,
-                                                state.queue.tracks.size,
-                                            ),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            text = state.activePlaylistName
+                                                ?: stringResource(R.string.playlist_default_name),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
+                                        if (state.queue.tracks.isNotEmpty()) {
+                                            Text(
+                                                text = pluralStringResource(
+                                                    R.plurals.track_count,
+                                                    state.queue.tracks.size,
+                                                    state.queue.tracks.size,
+                                                ),
+                                                style = MaterialTheme.typography.labelSmall,
+                                            )
+                                        }
                                     }
+                                    Icon(
+                                        imageVector = PlayerIcons.DropDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(start = 2.dp),
+                                    )
                                 }
-                                Icon(
-                                    imageVector = PlayerIcons.DropDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(start = 2.dp),
-                                )
                             }
+                            Spacer(Modifier.width(12.dp))
+                            LabelledAction(
+                                icon = PlayerIcons.Cloud,
+                                label = stringResource(R.string.action_browse),
+                                onClick = openBrowse,
+                            )
                         }
                     }
                 },
@@ -224,7 +259,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                             modifier = Modifier.padding(end = 8.dp),
                         )
                     }
-                    if (!showBrowse) {
+                    if (!showBrowse && !showSettings) {
                         // Only while there is something to save. A permanently lit Save button
                         // teaches nothing about whether the list on screen is the list on disk.
                         if (state.dirty) {
@@ -235,13 +270,11 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                                 Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
                             }
                         }
-                        // The same shape as the way out, one screen away. Two controls that do
-                        // opposite things should not be told apart by one being drawn and the
-                        // other written (`docs/BACKLOG.md` A23).
                         LabelledAction(
-                            icon = PlayerIcons.Cloud,
-                            label = stringResource(R.string.action_browse),
-                            onClick = openBrowse,
+                            icon = PlayerIcons.Settings,
+                            label = stringResource(R.string.settings_title),
+                            onClick = { showSettings = true },
+                            modifier = Modifier.padding(end = 8.dp),
                         )
                     }
                 },
@@ -263,7 +296,31 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
     ) { insets ->
-        if (showBrowse) {
+        if (showSettings) {
+            // The storage figures are read by `refreshCatalogues`, which until now only ran when
+            // somebody opened the online catalogues. Settings can be reached without ever going
+            // near Browse, and a storage section reporting zero because nobody asked would be
+            // worse than one that is missing.
+            LaunchedEffect(Unit) { viewModel.refreshCatalogues() }
+            SettingsScreen(
+                playAllSubsongs = state.playAllSubsongs,
+                selectedLanguage = selectedLanguage,
+                cacheBytes = browse.storageBytes.first,
+                archiveBytes = browse.archiveBytes,
+                databaseBytes = browse.databaseBytes,
+                replayCount = browse.replayCount,
+                replayBytes = browse.replayBytes,
+                catalogues = browse.catalogues,
+                songLengthCount = browse.songLengthCount,
+                contentPadding = insets,
+                onToggleAllSubsongs = viewModel::toggleAllSubsongs,
+                onLanguageSelected = onLanguageSelected,
+                onClearCache = viewModel::clearFetchedCache,
+                onDeleteIndex = viewModel::deleteCatalogueIndex,
+                onClearSongLengths = viewModel::clearSongLengths,
+                onDeleteReplays = viewModel::deleteReplays,
+            )
+        } else if (showBrowse) {
             BrowseScreen(
                 browse = browse,
                 playlistName = state.activePlaylistName,
@@ -277,10 +334,6 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
                 onDownloadReplays = viewModel::downloadReplays,
-                onDeleteReplays = viewModel::deleteReplays,
-                onClearCache = viewModel::clearFetchedCache,
-                onDeleteIndex = viewModel::deleteCatalogueIndex,
-                onClearSongLengths = viewModel::clearSongLengths,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
                 onRandom = { viewModel.playRandom(); showBrowse = false },
@@ -329,6 +382,10 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
 
     // One level at a time, out of Browse and then out of the screen -- the rule the rest of the
     // navigation follows.
+    if (showSettings) {
+        BackHandler { showSettings = false }
+    }
+
     if (showBrowse) {
         BackHandler { if (!viewModel.browseBack()) showBrowse = false }
     }

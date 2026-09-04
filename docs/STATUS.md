@@ -36,12 +36,14 @@ A usable player, as far as anything can be called that without a device saying s
 - **Survives a restart**: playlist, settings and the track last played all come back.
 - **Survives leaving the app**: a foreground service with transport in its notification. Audio focus
   and becoming-noisy are honoured.
-- **Both languages**, Polish and English, from the first screen.
+- **Both languages**, Polish and English, selectable inside Settings alongside the system default.
+  The override applies before the activity reads resources and works across the supported API range.
 
-Verified here: **124 unit tests**, genuinely executed rather than served from the build cache —
-`./scripts/test-protracktor.sh --really`, which exists because a "final verification" on 2026-09-03
-turned out to have come out of the cache in one second. A release build through R8 keeps all 13 JNI
-symbols, three ABIs and 99 sc68 replay binaries. Every backend was also run on the host against real
+Verified here: **134 unit tests**, genuinely executed rather than served from the build cache — the
+full `:app:testDebugUnitTest` task ran on 2026-09-04 after the Settings changes. A controlled defect
+in the language mapping made two new tests fail before it was restored. `lintRelease` and a release
+build through R8 are green; the build keeps all 13 JNI symbols, three ABIs and the one bundled sc68
+replay routine. Every backend was also run on the host against real
 files, which is where the measured coverage in this file comes from — **including the console
 families and libopenmpt, both measured 2026-09-04 having never been** — the consoles 116 of 141, up
 from 100 once the measurement found what was wrong, and libopenmpt 390 of 457, which is 98.0% of the
@@ -91,6 +93,9 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
 
 **Still not verified by anyone on a device:**
 
+- **Settings.** The labelled gear, Browse beside the playlist chooser, the language dialogue and
+  activity recreation all compile and their pure language mapping is tested, but their appearance
+  and behaviour have not yet been seen on a phone.
 - **The console formats** (NSF, GBS, SPC, VGM, HES, AY, KSS) — built and measured on the host,
   never played on the device. Modland has 5,015 NSF and 918 GBS; real headers read on 2026-09-03
   give `lil' monster.gbs` **68** tunes, `mario golf.gbs` 42 and `shinsenden.nsf` 39, which is also
