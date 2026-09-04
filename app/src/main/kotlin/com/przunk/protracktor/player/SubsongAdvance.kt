@@ -25,7 +25,8 @@ package com.przunk.protracktor.player
  * Both were reasoned about in a method that needs a phone to run. This part needs nothing.
  *
  * It answers only the subsong question. What happens when the *file* is finished — the next track,
- * the next random pick, stopping — belongs to the queue and stays there.
+ * the next random pick, repeating what just played, stopping — belongs to the queue and stays
+ * there.
  */
 object SubsongAdvance {
 
@@ -42,19 +43,26 @@ object SubsongAdvance {
      * @param subsongCount how many the file has
      * @param repeatOne whether repeat-one is on
      *
-     * **"One" means one row of the playlist, and a multi-tune file is one row.** So with "play all"
-     * on, repeat-one loops the whole file from its first tune rather than leaving the last tune
-     * looping on its own. That is a judgement, not the only possible reading — and the alternative
-     * was rejected for the reason the owner gave about the transport buttons: a control should not
-     * mean a different thing depending on which file happens to be open.
+     * **Repeat-one repeats the tune you are hearing. Always.** It outranks "play all": while it is
+     * on, nothing advances, and the subsong that just ended plays again. The owner put it in three
+     * words — *"one to one"* — and it does not matter whether the thing being repeated is a whole
+     * file or the fifth tune inside one.
      *
-     * With "play all" off, a multi-tune file behaves like any other track: it does not walk, and
-     * repeat-one repeats the tune that was playing. That is the caller's `restart()`, not a subsong
-     * decision, so it reports [Next.FileFinished] here.
+     * This is the second reading of that control, and the first was mine and wrong. It said "one"
+     * meant one row of the playlist, so a multi-tune file would loop from its first tune. That is
+     * defensible on paper and it fails the only test that counts: with "play all" on, pressing
+     * repeat-one still moved you off the tune you were listening to. A repeat that goes somewhere
+     * else is not a repeat.
+     *
+     * Reported as [Next.FileFinished] rather than `Subsong(subsong)` because repeating what is
+     * playing is the caller's `restart()` — the same path that already serves repeat-one for an
+     * ordinary track, and, since `Sc68Backend` learned to remember its subsong, the one that comes
+     * back to the right tune.
      */
     fun after(playAll: Boolean, subsong: Int, subsongCount: Int, repeatOne: Boolean): Next {
+        if (repeatOne) return Next.FileFinished
         if (!playAll || subsongCount <= 1) return Next.FileFinished
         if (subsong + 1 < subsongCount) return Next.Subsong(subsong + 1)
-        return if (repeatOne) Next.Subsong(0) else Next.FileFinished
+        return Next.FileFinished
     }
 }

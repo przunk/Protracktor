@@ -127,6 +127,10 @@ What has been pulled out this way, and why each earned it: `PlayQueue`, `SchemaS
 `CacheBudget`, `BrowseNavigation`, `BrowseScroll`, `TrackEditing`, `PlaylistFile`,
 `SupportedFormats` and — since 2026-09-04 — `SubsongAdvance`.
 
+It also made the correction cheap. When the owner said repeat-one was still advancing, the fix was
+one line in `SubsongAdvance` and a rewritten test that says why the old rule was wrong — rather than
+a change inside a method nothing can exercise here.
+
 **The rule for when to extract is not "when it is easy".** It is *when the decision has been wrong
 before*. `SubsongAdvance` holds one question — what a file with several tunes in it does when one
 ends — and that question has now been answered wrongly twice inside a method that needs a phone to
