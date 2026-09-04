@@ -126,14 +126,24 @@ android {
 // whether a lazily supplied directory is generated or hand-written.
 val sc68Assets: File = layout.buildDirectory.dir("generated/sc68-assets").get().asFile
 
-val copySc68Data = tasks.register<Copy>("copySc68Data") {
+// `Sync` rather than `Copy`, so the destination ends up matching the source exactly. A `Copy` only
+// ever adds: when this task was narrowed from 99 replays to one, the other 98 stayed in the
+// generated assets and would have shipped anyway. The same would happen to any file dropped
+// upstream, silently and in the APK.
+val copySc68Data = tasks.register<Sync>("copySc68Data") {
     // sc68 3.0.0b keeps them under file68/data68 rather than 2.2.1's data/, and ships 99 replays
     // where 2.2.1 shipped 84 -- which is part of why more SNDH files play.
     from(rootProject.file("native/vendor/sc68-3/file68/data68")) {
-        // Replay only. 2.2.1 also had a Sample/ directory; 3.0.0b does not, and the rest of
-        // data68 (Players/ is assembler source, Windows/ is an installer, sc68.cfg is a config we
-        // deliberately never load) has no business in an APK.
-        include("Replay/**")
+        // **One replay, not ninety-nine** — see `docs/LICENSES.md`. `sndh_ice.bin` is sc68's own
+        // SNDH wrapper, sitting in sc68's own GPL-3-or-later tree, so shipping it needs nobody's
+        // permission. The other 98 are named after commercial Atari ST games and after other
+        // people's players, and sc68 says nothing about where they came from; they are downloaded
+        // from sc68's own SourceForge at the user's request instead, which leaves the
+        // distributing to SourceForge.
+        //
+        // Measured before deciding: this costs nothing for SNDH -- 30 of 30 either way, and 5,484
+        // Modland files -- and takes `.sc68` from 10 of 10 to 4 of 10 until the rest is fetched.
+        include("Replay/sndh_ice.bin")
     }
     into(File(sc68Assets, "sc68"))
 }

@@ -58,18 +58,23 @@ fun StorageSection(
     cacheBytes: Long,
     archiveBytes: Map<String, Long>,
     databaseBytes: Long,
+    replayCount: Int,
+    replayBytes: Long,
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
+    onDeleteReplays: () -> Unit,
 ) {
     var confirming by remember { mutableStateOf<Confirmation?>(null) }
 
     val stored = catalogues.filter {
         !it.isOnlineOnly && (it.trackCount > 0 || (archiveBytes[it.id] ?: 0L) > 0L)
     }
-    if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0 && databaseBytes <= 0) return
+    if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0 && databaseBytes <= 0 &&
+        replayCount <= 0
+    ) return
 
     HorizontalDivider()
     Text(
@@ -115,6 +120,21 @@ fun StorageSection(
                     title = catalogue.displayName,
                     body = R.string.storage_confirm_index,
                     act = { onDeleteIndex(catalogue.id) },
+                )
+            },
+        )
+    }
+
+    if (replayCount > 0) {
+        val replaysName = stringResource(R.string.replays_title)
+        StorageRow(
+            title = replaysName,
+            detail = pluralStringResource(R.plurals.replays_count, replayCount, replayCount),
+            onDelete = {
+                confirming = Confirmation(
+                    title = replaysName,
+                    body = R.string.storage_confirm_replays,
+                    act = onDeleteReplays,
                 )
             },
         )

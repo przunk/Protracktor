@@ -18,47 +18,49 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.SystemClock
 import android.os.Process
+import android.os.SystemClock
 import android.text.format.DateUtils
 import com.przunk.protracktor.R
-import com.przunk.protracktor.data.GrantedFolder
-import com.przunk.protracktor.data.LibraryStore
-import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.CatalogueGroup
 import com.przunk.protracktor.data.CatalogueStore
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.CatalogueTrack
+import com.przunk.protracktor.data.GrantedFolder
+import com.przunk.protracktor.data.HistoryStore
+import com.przunk.protracktor.data.IndexedFile
+import com.przunk.protracktor.data.LibraryIndexStore
+import com.przunk.protracktor.data.LibraryStore
+import com.przunk.protracktor.data.PlaylistFile
+import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
-import com.przunk.protracktor.data.HistoryStore
-import com.przunk.protracktor.data.LibraryIndexStore
-import com.przunk.protracktor.data.PlaylistFile
-import com.przunk.protracktor.data.IndexedFile
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.SongLengths
+import com.przunk.protracktor.engine.NativeData
+import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.RemoteFiles
-import com.przunk.protracktor.engine.NativeEngine
+import com.przunk.protracktor.net.Sc68Replays
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import java.util.concurrent.Executors
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -221,6 +223,10 @@ data class BrowseState(
     val archiveBytes: Map<String, Long> = emptyMap(),
     /** Bytes the database file holds — playlists, history, and every index that is rows not a file. */
     val databaseBytes: Long = 0L,
+    /** How many downloaded sc68 replay routines are present. Zero until the user fetches them. */
+    val replayCount: Int = 0,
+    /** Bytes those replays hold. */
+    val replayBytes: Long = 0L,
     /** Which decoders this build has, for telling a stale catalogue index from a current one. */
     val backends: String = "",
 
@@ -289,6 +295,7 @@ class PlaybackController private constructor(private val context: Context) {
             "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5"
 
         private const val SONG_LENGTHS_LABEL = "SID song lengths"
+        private const val REPLAYS_LABEL = "Atari ST replay routines"
 
         private fun archiveCatalogueOf(id: String): Catalogue? =
             Catalogue.all.firstOrNull { it.isArchive && id.startsWith("${it.id}://") }
@@ -1256,6 +1263,9 @@ class PlaybackController private constructor(private val context: Context) {
             val database = withContext(Dispatchers.IO) {
                 context.getDatabasePath(SchemaSql.NAME).let { if (it.isFile) it.length() else 0L }
             }
+            val replays = withContext(Dispatchers.IO) {
+                Sc68Replays.count(context) to Sc68Replays.bytes(context)
+            }
             _browse.update { current ->
                 current.copy(
                     catalogues = summaries,
@@ -1263,6 +1273,8 @@ class PlaybackController private constructor(private val context: Context) {
                     storageBytes = storage,
                     archiveBytes = archives,
                     databaseBytes = database,
+                    replayCount = replays.first,
+                    replayBytes = replays.second,
                     backends = NativeEngine.backendsFingerprint(),
                     // Everything indexed is searched until the user says otherwise. Starting with
                     // none ticked would make the first search return nothing and look broken.
@@ -1427,6 +1439,52 @@ class PlaybackController private constructor(private val context: Context) {
             songLengths.replaceAll(entries)
             _browse.update { it.copy(indexing = null, songLengthCount = entries.size) }
             _state.update { it.copy(message = Message("Song lengths for ${entries.size} SID tunes.")) }
+        }
+    }
+
+    /**
+     * Fetches the sc68 replay routines the app deliberately does not ship.
+     *
+     * `docs/LICENSES.md` has the reasoning; `Sc68Replays` has the mechanism. The app ships one
+     * replay of the ninety-nine — sc68's own — and this brings the rest from sc68's own
+     * SourceForge, which is what keeps us out of the business of distributing other people's code.
+     *
+     * Ninety-eight small files, so it reports progress: an indeterminate bar for a minute of
+     * downloads says nothing, and this is the one download in the app that is not a single file.
+     */
+    fun downloadReplays() {
+        scope.launch {
+            _browse.update { it.copy(indexing = REPLAYS_LABEL) }
+            val fetched = Sc68Replays.download(context) { done, total ->
+                _browse.update { it.copy(indexing = "$REPLAYS_LABEL $done/$total") }
+            }
+            _browse.update { it.copy(indexing = null) }
+            if (fetched == null || fetched == 0) {
+                _state.update {
+                    it.copy(message = Message("Could not download the replay routines."))
+                }
+                return@launch
+            }
+            // Put them where sc68 will look, now rather than at the next update. It is handed a
+            // path once and reads what is under it each time it opens a tune, so this is enough --
+            // no restart, and the next `.sc68` works.
+            withContext(backgroundWork) { NativeData.adoptDownloadedReplays(context) }
+            _state.update {
+                it.copy(message = Message("$fetched replay routines downloaded. .sc68 files should play now."))
+            }
+            refreshCatalogues()
+        }
+    }
+
+    /** Throws the downloaded replay routines away. `.sc68` goes back to mostly silent; SNDH does not care. */
+    fun deleteReplays() {
+        scope.launch {
+            val freed = withContext(backgroundWork) {
+                val before = Sc68Replays.bytes(context)
+                if (Sc68Replays.delete(context)) before else 0L
+            }
+            _state.update { it.copy(message = Message(freedMessage(freed))) }
+            refreshCatalogues()
         }
     }
 
