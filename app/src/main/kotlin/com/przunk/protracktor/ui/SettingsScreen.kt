@@ -15,28 +15,37 @@
  */
 package com.przunk.protracktor.ui
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.engine.NativeEngine
@@ -59,6 +68,7 @@ import com.przunk.protracktor.engine.NativeEngine
 @Composable
 fun SettingsScreen(
     playAllSubsongs: Boolean,
+    selectedLanguage: AppLanguage,
     cacheBytes: Long,
     archiveBytes: Map<String, Long>,
     databaseBytes: Long,
@@ -68,12 +78,15 @@ fun SettingsScreen(
     songLengthCount: Int,
     contentPadding: PaddingValues,
     onToggleAllSubsongs: () -> Unit,
+    onLanguageSelected: (AppLanguage) -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
     onDeleteReplays: () -> Unit,
 ) {
     val context = LocalContext.current
+    var choosingLanguage by remember { mutableStateOf(false) }
+    var pendingLanguage by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
     // Asked of the package manager rather than of `BuildConfig`, which this build does not
     // generate — and which would report what was compiled rather than what is installed.
     val version = remember(context) {
@@ -109,30 +122,22 @@ fun SettingsScreen(
             )
         }
 
-        // Android owns per-app language from 13 onwards and does it better than we would: it is in
-        // the same place for every app, and the system remembers it across reinstalls. Below 13
-        // there is no such screen, so there is nothing honest to offer and the row is absent
-        // rather than present and dead.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_language)) },
-                    supportingContent = {
-                        Text(
-                            stringResource(R.string.settings_language_detail),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        runCatching {
-                            context.startActivity(
-                                Intent(AndroidSettings.ACTION_APP_LOCALE_SETTINGS)
-                                    .setData(Uri.fromParts("package", context.packageName, null))
-                            )
-                        }
-                    },
-                )
-            }
+        // Kept inside the app on every supported Android version. Sending the user to a system
+        // screen only worked on Android 13+, and made a basic app setting disappear on 10--12.
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_language)) },
+                supportingContent = {
+                    Text(
+                        selectedLanguage.label(),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                },
+                modifier = Modifier.clickable {
+                    pendingLanguage = selectedLanguage
+                    choosingLanguage = true
+                },
+            )
         }
 
         item {
@@ -193,7 +198,57 @@ fun SettingsScreen(
             )
         }
     }
+
+    if (choosingLanguage) {
+        AlertDialog(
+            onDismissRequest = { choosingLanguage = false },
+            title = { Text(stringResource(R.string.settings_language_choose)) },
+            text = {
+                Column {
+                    AppLanguage.entries.forEach { language ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = pendingLanguage == language,
+                                    role = Role.RadioButton,
+                                    onClick = { pendingLanguage = language },
+                                )
+                                .padding(vertical = 10.dp),
+                        ) {
+                            RadioButton(
+                                selected = pendingLanguage == language,
+                                onClick = null,
+                            )
+                            Text(language.label(), modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    choosingLanguage = false
+                    onLanguageSelected(pendingLanguage)
+                }) { Text(stringResource(R.string.action_apply)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { choosingLanguage = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
 }
+
+@Composable
+private fun AppLanguage.label(): String = stringResource(
+    when (this) {
+        AppLanguage.SYSTEM -> R.string.settings_language_system
+        AppLanguage.POLISH -> R.string.settings_language_polish
+        AppLanguage.ENGLISH -> R.string.settings_language_english
+    }
+)
 
 @Composable
 private fun Section(label: Int) {

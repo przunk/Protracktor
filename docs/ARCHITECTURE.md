@@ -752,21 +752,21 @@ whole reason for the choice: `docs/OPEN_QUESTIONS.md` Q1 describes a navigation 
 — back descends one layer — and a second modal costs nothing to learn. A bottom sheet was the
 alternative and fights the dock as soon as it scrolls.
 
-**A gear, not an overflow menu.** A menu holding a single item is worse than the button it hides,
-and the owner's call was to try the plain gear first and look at it. It is the only unlabelled
-control on that bar, which is deliberate: Browse and the way back out are what a person hunts for
-*while* using the app, so they say their names; settings is somewhere you go on purpose, once, and
-a gear is understood everywhere. Labelling it would also cost width on a bar that already carries
-three controls when the playlist is unsaved.
+**A labelled gear, not an overflow menu.** A menu holding a single item is worse than the button it
+hides. The first version used an unlabelled gear; the owner rejected it on 2026-09-04, consistently
+with the application's rule that an action has both an icon and its name. Browse sits on the left,
+beside the playlist chooser with a 12 dp gap, while Settings stays on the right. This keeps the two
+ways of choosing what plays together without making them look like one compound control.
 
 **One scrolling screen with sections, not a tree.** With this little in it a tree is ceremony, and
 every extra tap stands between somebody and the thing they came to change.
 
 **Nothing in it was invented for it.** Every switch is a setting the app already had somewhere less
 findable — "play every tune in a file" was global all along and reachable only from inside Now
-Playing, on a file that happened to have more than one tune. Storage moved from Browse. The language
-row hands over to Android's own per-app language screen, which exists from 13 onwards and does the
-job better than we would; below 13 the row is absent rather than present and dead.
+Playing, on a file that happened to have more than one tune. Storage moved from Browse. Language is
+chosen inside the application from System, Polish and English on every supported Android version.
+The choice is stored privately and applied to the activity context before Compose reads resources;
+returning to System removes the override rather than copying today's system language into it.
 
 **About is not decoration.** A GPL-3 app distributed through a store should be able to say what is
 inside it: the version, the decoders and their versions — read from the engine's own fingerprint,

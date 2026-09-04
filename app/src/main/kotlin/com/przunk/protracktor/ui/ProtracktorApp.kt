@@ -22,8 +22,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -60,8 +62,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
@@ -77,7 +81,11 @@ import com.przunk.protracktor.player.PlayerViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
+fun ProtracktorApp(
+    viewModel: PlayerViewModel = viewModel(),
+    selectedLanguage: AppLanguage = AppLanguage.SYSTEM,
+    onLanguageSelected: (AppLanguage) -> Unit = {},
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
@@ -178,43 +186,63 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                     } else if (showBrowse) {
                         Text(stringResource(R.string.browse_title))
                     } else {
-                        // A chevron and a filled shape, because the owner could not tell the name
-                        // was a button. A control that only looks like a label is a control nobody
-                        // presses.
-                        Surface(
-                            onClick = { showPlaylists = true },
-                            shape = MaterialTheme.shapes.large,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            modifier = Modifier.semantics { contentDescription = choosePlaylistLabel },
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Row(
-                                modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                            // A chevron and a filled shape, because the owner could not tell the
+                            // name was a button. It shares the left side with Browse: the two ways
+                            // to choose what plays belong together, with enough air to remain two
+                            // controls rather than one compound control.
+                            Surface(
+                                onClick = { showPlaylists = true },
+                                shape = MaterialTheme.shapes.large,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .semantics { contentDescription = choosePlaylistLabel },
                             ) {
-                                Column {
-                                    Text(
-                                        text = state.activePlaylistName
-                                            ?: stringResource(R.string.playlist_default_name),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        maxLines = 1,
-                                    )
-                                    if (state.queue.tracks.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier.padding(
+                                        start = 14.dp,
+                                        end = 6.dp,
+                                        top = 6.dp,
+                                        bottom = 6.dp,
+                                    ),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f, fill = false)) {
                                         Text(
-                                            text = pluralStringResource(
-                                                R.plurals.track_count,
-                                                state.queue.tracks.size,
-                                                state.queue.tracks.size,
-                                            ),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            text = state.activePlaylistName
+                                                ?: stringResource(R.string.playlist_default_name),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
+                                        if (state.queue.tracks.isNotEmpty()) {
+                                            Text(
+                                                text = pluralStringResource(
+                                                    R.plurals.track_count,
+                                                    state.queue.tracks.size,
+                                                    state.queue.tracks.size,
+                                                ),
+                                                style = MaterialTheme.typography.labelSmall,
+                                            )
+                                        }
                                     }
+                                    Icon(
+                                        imageVector = PlayerIcons.DropDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(start = 2.dp),
+                                    )
                                 }
-                                Icon(
-                                    imageVector = PlayerIcons.DropDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(start = 2.dp),
-                                )
                             }
+                            Spacer(Modifier.width(12.dp))
+                            LabelledAction(
+                                icon = PlayerIcons.Cloud,
+                                label = stringResource(R.string.action_browse),
+                                onClick = openBrowse,
+                            )
                         }
                     }
                 },
@@ -242,23 +270,12 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                                 Icon(PlayerIcons.Save, stringResource(R.string.a11y_save_playlist))
                             }
                         }
-                        // The same shape as the way out, one screen away. Two controls that do
-                        // opposite things should not be told apart by one being drawn and the
-                        // other written (`docs/BACKLOG.md` A23).
                         LabelledAction(
-                            icon = PlayerIcons.Cloud,
-                            label = stringResource(R.string.action_browse),
-                            onClick = openBrowse,
+                            icon = PlayerIcons.Settings,
+                            label = stringResource(R.string.settings_title),
+                            onClick = { showSettings = true },
+                            modifier = Modifier.padding(end = 8.dp),
                         )
-                        // Unlabelled, deliberately, and the only control here that is. Browse and
-                        // the way back out are the two things a person is looking for while using
-                        // the app, so they say their names; settings is the thing you go to on
-                        // purpose, once, and a gear is understood everywhere. Labelling it would
-                        // cost width on a bar that already holds three controls when the playlist
-                        // is dirty.
-                        IconButton(onClick = { showSettings = true }) {
-                            Icon(PlayerIcons.Settings, stringResource(R.string.a11y_settings))
-                        }
                     }
                 },
             )
@@ -287,6 +304,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
             LaunchedEffect(Unit) { viewModel.refreshCatalogues() }
             SettingsScreen(
                 playAllSubsongs = state.playAllSubsongs,
+                selectedLanguage = selectedLanguage,
                 cacheBytes = browse.storageBytes.first,
                 archiveBytes = browse.archiveBytes,
                 databaseBytes = browse.databaseBytes,
@@ -296,6 +314,7 @@ fun ProtracktorApp(viewModel: PlayerViewModel = viewModel()) {
                 songLengthCount = browse.songLengthCount,
                 contentPadding = insets,
                 onToggleAllSubsongs = viewModel::toggleAllSubsongs,
+                onLanguageSelected = onLanguageSelected,
                 onClearCache = viewModel::clearFetchedCache,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,
                 onClearSongLengths = viewModel::clearSongLengths,
