@@ -44,6 +44,60 @@ lock screen use. Both are questions a device answers in ten minutes and a docume
 13 takes them from `PlaybackState` rather than from the actions we add — this part of the platform
 rewards checking over assuming.
 
+## B22. Random, but within something
+
+*owner, 2026-09-05: random for a particular platform, author or other domain.*
+
+**Most of this already exists in the query.** `CatalogueStore.randomSample` takes a set of catalogue
+ids and appends `ORDER BY RANDOM() LIMIT n`; the rows it draws from carry `catalogue_id`, `format`
+and `author` as columns, and `formats()` and `authors()` already group by them. Narrowing the sample
+is another `WHERE` clause, not a new index.
+
+**The question is the interface, and it is the same question as B23 below.** "Random within this"
+needs somewhere to say what *this* is. Three shapes, and they are not equal:
+
+- **From where you already are.** Random inside the folder, author or format currently open in
+  Browse — no new screen, no new vocabulary, and it reads as "more of what I am looking at".
+  Cheapest, and it covers the common case.
+- **A scope the dice button remembers.** Set it once, and Random keeps meaning that. More powerful
+  and it introduces a mode with no obvious place to display itself, which is how a dice button
+  stops being a dice button.
+- **Ask each time.** Rejected before it is built: Random exists to be pressed without thinking.
+
+**Worth deciding with B23**, because "platform" as a way of narrowing Random and "platform" as a way
+of narrowing search want the same list of platforms to exist.
+
+## B23. Search by platform, not by service
+
+*owner, 2026-09-05: the online section should offer AMIGA, C64 and so on rather than Modland, ASMA
+and The Mod Archive — searching every service available, but narrowed to a platform or format.*
+
+**This is the better model and it is worth saying why.** A person looking for C64 music does not
+care which archive holds it; the service names are our plumbing showing through. The current filter
+asks the user to know that ASMA is Atari 8-bit and that Modland has everything — which is knowledge
+about *us*, not about music.
+
+**What exists already:** every catalogue row carries a `format` string, and `formats()` groups by
+it. What does not exist is the map from format to platform. Modland alone has 339 format
+directories; the app's own backends already imply a grouping — sc68 is Atari ST, libsidplayfp is
+C64, ASAP is Atari 8-bit, game-music-emu is consoles, libopenmpt is trackers across everything —
+but that is a grouping by *decoder*, and decoder is not platform. AHX is Amiga and libopenmpt does
+not play it (`docs/PLAN_FORMATS.md` §0b); `.mod` is Amiga by origin and plays everywhere.
+
+**So the work is a table, and the table is the decision.** Which platforms exist as choices, and
+which of Modland's 339 directories belongs to each. It can be wrong in two directions — a platform
+nobody picks, or a format filed under the wrong one — and the second is worse because it hides
+music rather than merely failing to offer it.
+
+**Two things make it cheaper than it sounds.** The set of formats actually present is known from the
+index rather than guessed, so the table only has to cover what is really there. And it does not have
+to be complete to be useful: the six or seven platforms that cover most of the archive are worth
+having even if a long tail stays filed under "other".
+
+**Related:** B22 wants the same list to exist, and `docs/BACKLOG.md` A7 records that every catalogue
+except The Mod Archive is blocked on a decoder — so the platform list is also a way of showing what
+is *not* playable yet without pretending otherwise.
+
 ## B20. The year a tune was released
 
 *owner, 2026-09-04: "fajnie by było gdyby dało się zobaczyć rok wydania utworu (np. w info o
