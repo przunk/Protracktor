@@ -74,12 +74,67 @@ static void printTitle(const char *name) {
         putchar(*p < 0x20 || *p == '"' ? ' ' : *p);
 }
 
+/**
+ * Renders through a ring buffer at a block size the replayer did not choose, and checks the samples
+ * are the ones it would have produced on its own.
+ *
+ * `HivelyBackend` is the only backend here that has to do this: `hvl_DecodeFrame` fills exactly one
+ * PAL frame and picks that size itself, while Oboe asks for whatever it likes. The arithmetic has a
+ * trap in it -- the frame holds `rate/50/multiplier*multiplier` samples, which is **880 and not
+ * 882** when the speed multiplier is four -- and getting it wrong emits two stale samples fifty
+ * times a second, which is a buzz, not a crash. So it is checked rather than reasoned about.
+ *
+ * Returns the index of the first sample that differs, or -1 if they agree.
+ */
+static long ringDiffers(struct hvl_tune *ht, int block, int frames) {
+    const uint32 multiplier = ht->ht_SpeedMultiplier ? ht->ht_SpeedMultiplier : 1;
+    const int perCall = (int) (RATE / 50 / multiplier * multiplier);
+    const long wanted = (long) frames * perCall;
+
+    short *straight = malloc(sizeof(short) * 2 * (size_t) wanted);
+    short *ringed = malloc(sizeof(short) * 2 * (size_t) wanted);
+    if (!straight || !ringed) { free(straight); free(ringed); return -2; }
+
+    hvl_InitSubsong(ht, 0);
+    ht->ht_SongEndReached = 0;
+    for (int f = 0; f < frames; f++)
+        hvl_DecodeFrame(ht, (int8 *) (straight + (long) f * perCall * 2),
+                        (int8 *) (straight + (long) f * perCall * 2) + 2, 4);
+
+    /* The backend's loop, transcribed: decode when the buffer runs dry, otherwise serve from it. */
+    hvl_InitSubsong(ht, 0);
+    ht->ht_SongEndReached = 0;
+    long produced = 0;
+    int pos = perCall;
+    while (produced < wanted) {
+        if (pos == perCall) {
+            hvl_DecodeFrame(ht, frame, &frame[2], 4);
+            pos = 0;
+        }
+        long take = block < perCall - pos ? block : perCall - pos;
+        if (take > wanted - produced) take = wanted - produced;
+        memcpy(ringed + produced * 2, (const short *) frame + (long) pos * 2,
+               sizeof(short) * 2 * (size_t) take);
+        pos += (int) take;
+        produced += take;
+    }
+
+    long differs = -1;
+    for (long i = 0; i < wanted * 2 && differs < 0; i++)
+        if (straight[i] != ringed[i]) differs = i;
+    free(straight);
+    free(ringed);
+    return differs;
+}
+
 int main(int argc, char **argv) {
     int allSubsongs = 0;
+    int ring = 0;
     while (argc > 1 && argv[1][0] == '-') {
         if (strcmp(argv[1], "--subsongs") == 0) { allSubsongs = 1; argv++; argc--; }
+        else if (strcmp(argv[1], "--ring") == 0) { ring = 1; argv++; argc--; }
         else if (strcmp(argv[1], "--seconds") == 0 && argc > 2) { seconds = atoi(argv[2]); argv += 2; argc -= 2; }
-        else { fprintf(stderr, "usage: probe-hively [--subsongs] [--seconds N] FILE\n"); return 2; }
+        else { fprintf(stderr, "usage: probe-hively [--subsongs] [--ring] [--seconds N] FILE\n"); return 2; }
     }
     if (argc < 2) { fprintf(stderr, "usage: probe-hively [--subsongs] [--seconds N] FILE\n"); return 2; }
 
@@ -123,6 +178,18 @@ int main(int argc, char **argv) {
                played / 50, peak, (int) ht->ht_Version);
         printTitle(ht->ht_Name);
         puts("\"");
+    }
+
+    if (ring) {
+        /* 1024 is Oboe's usual ask and shares no factor with 880 or 882; 3 and 1 are the sizes that
+         * cross a frame boundary in the middle of every block. */
+        static const int blocks[] = {1024, 441, 3, 1};
+        for (size_t i = 0; i < sizeof(blocks) / sizeof(blocks[0]); i++) {
+            const long differs = ringDiffers(ht, blocks[i], 40);
+            printf("  ring block=%-5d %s\n", blocks[i],
+                   differs < 0 ? "identical" : "DIFFERS");
+            if (differs >= 0) printf("    first difference at sample %ld\n", differs);
+        }
     }
 
     if (allSubsongs) {
