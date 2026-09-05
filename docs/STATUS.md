@@ -8,10 +8,12 @@ A usable player, as far as anything can be called that without a device saying s
 
 - **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more), Atari ST
   through sc68 3.0.0b (SNDH, YM, `.sc68`), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
-  through libsidplayfp (PSID, RSID) and seven console families through game-music-emu (NSF, GBS,
+  through libsidplayfp (PSID, RSID), seven console families through game-music-emu (NSF, GBS,
   SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
-  and KSS routinely hold nothing at track 0). Backends sit behind one interface and are asked what they can do rather
-  than assumed — libopenmpt seeks, sc68 and libsidplayfp cannot, and the UI reflects that.
+  and KSS routinely hold nothing at track 0), and the Amiga synth trackers through HivelyTracker
+  (AHX, HVL). Backends sit behind one interface and are asked what they can do rather
+  than assumed — libopenmpt and HivelyTracker seek, sc68 and libsidplayfp cannot, and the UI
+  reflects that.
 - **Ships no code it has no right to.** Of sc68's 99 replay routines the APK carries one — sc68's
   own — and fetches the rest from sc68 if the user asks (`docs/LICENSES.md`). SNDH is unaffected;
   `.sc68` waits for the download.
@@ -121,6 +123,15 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
 
 ## Finished
 
+- **2026-09-05** — **AHX and HVL** (`docs/PLAN_FORMATS.md` §6). The two names this app claimed on an
+  assumption, removed on 2026-09-04 when the assumption was measured, and back a day later with
+  something behind them: HivelyTracker's standalone replayer, BSD-3-Clause, three source files —
+  the smallest vendored decoder here. **80 of 80 sampled Modland files loaded from a buffer, were
+  audible and reached a song end**, the first backend to come back clean on both halves, across
+  1,433 files. It is also the first to arrive with a **duration and a working seek bar**: running
+  the sequencer without the mixer costs about a millisecond, so the length is measured at load
+  rather than looked up. The probe is built twice, with 32- and 64-bit typedefs, because
+  armeabi-v7a is one of our three ABIs and this is Amiga code that predates the question.
 - **2026-09-03** — **A playlist is a file, both ways** (**A25**). Export writes M3U — readable by
   other players, with our own identifiers in comments they ignore — and import reads it back,
   matching each line by its recorded id first and by filename and size second, into a new playlist

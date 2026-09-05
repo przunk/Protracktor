@@ -180,8 +180,8 @@ and the `.mmd0`/`.mmd1` added that morning.
 
 | | played | Modland | what the failures actually are |
 | --- | --- | --- | --- |
-| `.ahx` | 0/12 | 1,389 | **libopenmpt has no AHX loader at all** — removed from the list |
-| `.hvl` | 0/12 | 44 | same; HivelyTracker, no loader — removed |
+| `.ahx` | 0/12 | 1,389 | **libopenmpt has no AHX loader at all** — removed, and back in §6 |
+| `.hvl` | 0/12 | 44 | same; no loader — removed, and back in §6 |
 | `.ftm` | 1/12 | 1,874 | libopenmpt's FTM is **Face The Music**; Modland's are **FamiTracker** |
 | `.imf` | 3/12 | 210 | libopenmpt's IMF is **Imago Orpheus**; Modland's are **id Software AdLib** |
 | `.psm` | 6/12 | 141 | libopenmpt's PSM is **Epic MegaGames MASI**; half of Modland's are **Spectrum Pro Sound Maker** |
@@ -193,8 +193,8 @@ and the `.mmd0`/`.mmd1` added that morning.
 
 **Nothing more was removed.** Each of those extensions genuinely loads the format libopenmpt
 implements; the failures are files that merely share the name, and dropping the extension would
-throw away the real ones with them. `.ahx` and `.hvl` were different — **no** loader exists, so the
-entries were pure loss, and they come back the day UADE lands.
+throw away the real ones with them. `.ahx` and `.hvl` were different — **no** loader existed, so the
+entries were pure loss. They came back the following day through HivelyTracker (§6), not UADE.
 
 **The real answer is `docs/BACKLOG.md` A6**, probing content instead of trusting names. A local
 folder is already scanned that way. A catalogue index is a list of filenames on somebody else's
@@ -656,7 +656,10 @@ ZXTune's Mercurial-era tree, a Bitbucket repository).
 and the only entry on this page whose absence is currently a lie in the extension list rather than a
 gap in ambition.
 
-## 6. AHX and HivelyTracker — measured 2026-09-05
+*Picked, and done the same day — §6.* It took one afternoon, which is the argument for this survey
+in miniature: the research had already been done, so the work was building and measuring.
+
+## 6. ~~AHX and HivelyTracker~~ — DONE 2026-09-05
 
 `.ahx` and `.hvl` were removed from `SupportedFormats.kt` on 2026-09-04 because §0b found libopenmpt
 has no loader for either. That was the right removal and it left the only gap in the format table
@@ -720,18 +723,36 @@ the probe and not the replayer. Two translation units then read the same struct 
 offsets, which looks exactly like a portability bug and is not one — it reported subsong counts of
 5, 11 and 17 for files whose header byte says 1. The header byte is what settled it.
 
-### What is left before it plays on a phone
+### What integration actually needed
 
-Three things worth writing down rather than discovering later:
+`HivelyBackend` in `native/engine/engine.cpp`, and three things the probe had turned up:
 
-- **The replayer emits one PAL frame per call** — `hvl_DecodeFrame` fills exactly `rate*2*2/50`
-  bytes and chooses that size itself. Every other backend renders however many frames we ask for.
-  This one needs a ring buffer in the backend; it is the only structural difference.
-- **`replay.c` prints to stdout** on its error paths, including a bare `"Invalid file."`. Harmless
-  on Android, but the backend should gate the file itself rather than let the library decide.
-- **`strncpy(ht->ht_Name, &buf[(buf[4]<<8)|buf[5]], 128)` is not bounds-checked against `buflen`.**
-  A truncated or hostile file reads past the buffer. A player that opens whatever the user points it
-  at should not do that, so the backend validates the name offset before handing the bytes over.
+- **The replayer emits one PAL frame per call.** `hvl_DecodeFrame` fills exactly one 1/50s buffer
+  and chooses that size itself; every other backend renders however many frames it is asked for. So
+  this is the only backend with a ring buffer. The size is `rate/50/multiplier*multiplier`, which is
+  **880, not 882**, when the speed multiplier is four — taking the obvious 882 would have emitted
+  two stale samples every frame, fifty times a second.
+- **The loader never checks the file's length.** It walks the header computing sizes, and
+  `strncpy(ht_Name, &buf[(buf[4]<<8)|buf[5]], 128)` takes its offset straight from the header. A
+  truncated file reads past the end. Restating its walk in the backend would be a second copy of a
+  parser, so instead the bytes go in inside a zeroed allocation with **a mebibyte of slack** — and
+  that number is arithmetic, not a guess: every count the loader reads is a byte or a twelve-bit
+  field, so the worst walk any header can ask for is under 960 KB. Zeros also terminate both walks
+  early, since a zero row is not `0x3f` and a zero instrument has no program.
+- **`replay.c` prints to stdout** on its error paths, including a bare `"Invalid file."`. The
+  backend gates the two header magics itself so the library is never asked a question it would
+  answer that way.
+
+**The length comes free, and that is the nice part.** `hvl_play_irq` is the sequencer without the
+mixer — about 1ms to run a tune to its end where full decoding takes 30 — so `HivelyBackend`
+measures the duration at load, unconditionally. Sequencer-only and full-render lengths were checked
+against each other on the host and agreed on every file. AHX and HVL therefore arrive with a real
+duration and a working seek bar, which sc68 and libsidplayfp still do not have; seeking re-starts
+and decodes forward, which is the only way in and costs about 30ms per minute skipped.
+
+Not measured, because Modland has none: **subsongs**. The path is written and the arithmetic is
+upstream's (`ht_SubsongNr` is the count of *extras*, so a plain file reports one tune), but nothing
+in 80 files exercised it.
 
 ## Not planned
 
