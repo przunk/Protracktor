@@ -656,6 +656,83 @@ ZXTune's Mercurial-era tree, a Bitbucket repository).
 and the only entry on this page whose absence is currently a lie in the extension list rather than a
 gap in ambition.
 
+## 6. AHX and HivelyTracker — measured 2026-09-05
+
+`.ahx` and `.hvl` were removed from `SupportedFormats.kt` on 2026-09-04 because §0b found libopenmpt
+has no loader for either. That was the right removal and it left the only gap in the format table
+that is **our own doing**: 1,433 Modland files the app used to list and now does not, missing not
+because the format is out of scope but because nothing we vendor could open it.
+
+HivelyTracker closes it, and it is the cheapest backend on this page by a wide margin.
+
+### What it is
+
+`hvl2wav/` inside `pete-gordon/hivelytracker` is a standalone replayer: **`replay.c`, `replay.h`,
+`types.h`**, about 70 KB, plus a command-line example that renders to a WAV. No build system to
+configure, no second process, no replay binaries, no emulated machine. Compare the four before it:
+sc68 needed its own SVN fetcher and 99 replay binaries, UADE needed two support libraries and a
+`uadecore` it forks and talks to over pipes, gme was "the only vendored library that ships a working
+CMake", ASAP was a transpiled single file — this is smaller than ASAP.
+
+**BSD 3-Clause, Copyright (c) 2006-2018 Pete Gordon.** The licence question that cost a day each on
+sc68 and UADE does not arise: permissive, no replay-binary distribution problem, compatible with our
+GPL-3 without argument.
+
+`hvl_reset(buf, len, …)` loads **from memory** and dispatches AHX (`THX`) and HVL itself, so the
+header gate the backend needs already exists upstream. That matters more than it sounds: the app
+never has a path, only bytes from SAF, and two of the five existing backends needed work to accept
+that.
+
+### The measurement
+
+`./scripts/build-hively-probe.sh` then `./scripts/probe-hively.py`, 40 files of each name sampled
+from Modland:
+
+**80 of 80 loaded from a buffer and were audible. 80 of 80 reached a song end.**
+
+That is the first backend to come back clean on both halves. Lengths run **4s to 307s, median 97s**,
+which is a real duration from the replayer itself — `.ahx` and `.hvl` would show a seek bar without
+needing `SongLengths` at all. None of the 80 had more than one subsong; AHX supports them
+(`ht_SubsongNr`, byte 13 of the header) but Modland's do not use them, so the subsong path is
+present and untested rather than absent.
+
+Modland holds **1,389 `.ahx` and 44 `.hvl`**, all filed as suffixes — no prefix convention here, so
+the mistake that made UADE's reach look like 807 files instead of 29,127 does not repeat.
+
+### The one portability finding, and why the probe is built twice
+
+Upstream's `types.h` says `typedef unsigned long uint32`. That is 32 bits on the Amiga this replayer
+comes from and **64 bits on arm64 and x86_64** — two of the app's three ABIs. The third,
+**armeabi-v7a, is 32**. So the two widths are not hypothetical; they are targets we ship, and a
+replayer that behaved differently between them would be broken on exactly the older phones nobody
+here tests.
+
+The probe is therefore built twice, once with upstream's typedefs and once with fixed-width ones
+forced in through `-include`, and every file is run through both. **They agree on every file about
+what plays, how many subsongs it has, whether it ends and how long it is.** 16 of 80 render a
+slightly different peak sample — the two widths do not wrap identically, most likely the noise
+generator — so arm64 and armeabi-v7a will not be sample-identical. That is a difference in the last
+bits of a chiptune's noise channel, not a difference in what plays.
+
+The first attempt at this comparison measured nothing at all: `replay.c` says `#include "types.h"`,
+and the quoted form searches the including file's own directory first, so an `-I` override reached
+the probe and not the replayer. Two translation units then read the same struct at different
+offsets, which looks exactly like a portability bug and is not one — it reported subsong counts of
+5, 11 and 17 for files whose header byte says 1. The header byte is what settled it.
+
+### What is left before it plays on a phone
+
+Three things worth writing down rather than discovering later:
+
+- **The replayer emits one PAL frame per call** — `hvl_DecodeFrame` fills exactly `rate*2*2/50`
+  bytes and chooses that size itself. Every other backend renders however many frames we ask for.
+  This one needs a ring buffer in the backend; it is the only structural difference.
+- **`replay.c` prints to stdout** on its error paths, including a bare `"Invalid file."`. Harmless
+  on Android, but the backend should gate the file itself rather than let the library decide.
+- **`strncpy(ht->ht_Name, &buf[(buf[4]<<8)|buf[5]], 128)` is not bounds-checked against `buflen`.**
+  A truncated or hostile file reads past the buffer. A player that opens whatever the user points it
+  at should not do that, so the backend validates the name offset before handing the bytes over.
+
 ## Not planned
 
 `.sc68` container files reference external replay binaries we do not ship, so they will not play even
