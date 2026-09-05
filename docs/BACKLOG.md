@@ -730,6 +730,9 @@ not have to be rediscovered.
 - **`.sap`** — Atari 8-bit. Needs ASAP (GPL-2.0-or-later, by Piotr Fusik, has an Android port).
 - **`.sndh`** — should already work; see the defect in `docs/STATUS.md`. Fix before adding anything.
 - **SID, NSF, SPC, GBS, VGM, AY** — `libsidplayfp` and game-music-emu, in that order of value.
+- **AHX and HVL** — 1,433 Modland files, removed from `SupportedFormats` on 2026-09-04 because
+  nothing here plays them. HivelyTracker is a small standalone library and would be the cheapest
+  format win available (`docs/PLAN_FORMATS.md` §5).
 - **Amiga custom (TFMX, Hippel, Future Composer, …)** — UADE, last, and its bundled replay binaries
   need a licence decision of their own. **Measured 2026-09-04** and the estimate in this item was
   wrong: the corrected current top-25 sample reaches successful format directories holding 5,799
