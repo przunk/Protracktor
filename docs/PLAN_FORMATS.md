@@ -601,6 +601,11 @@ corpus.
 It bundles **48 decoder libraries** and its README links each one to its own upstream. That map is
 the value here, and it lines up almost exactly with what we measured as unplayable.
 
+**The full list is copied to `docs/reference/modizer-libraries.md`** — all 50 entries with their
+homes, split into what we already have, the 39 we do not, and the iOS furniture that is not a
+decoder at all. Kept because reconstructing it means reading somebody else's Xcode project. The
+table below is the part that matters; that file is the part that would be tedious to find twice.
+
 **Take nothing from the repository itself.** It has **no licence file**, which means all rights
 reserved — an aggregator's convenience copy, not something to vendor from. Every library in it has
 its own home and its own terms, and those are where to go.
