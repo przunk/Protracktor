@@ -19,7 +19,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -104,6 +106,11 @@ fun PlayerDock(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            // Dead space between the seek bar and the button under it. The bar now claims a
+            // proper 48dp of finger, and this is the margin for error beyond that: a low miss
+            // lands on nothing instead of opening Now Playing, which is what it did in the car.
+            Spacer(Modifier.height(6.dp))
 
             // **It has to look like a control.** This row opens the player, and nothing said so --
             // the owner pointed that out, and it matters more now that the tunes inside a file are
