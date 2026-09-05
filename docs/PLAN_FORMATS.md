@@ -595,6 +595,62 @@ corpus.
 
 ---
 
+## 5. Modizer as a map — surveyed 2026-09-05
+
+<https://github.com/yoyofr/modizer>, an iOS chiptune player, raised by the owner as worth looking at.
+It bundles **48 decoder libraries** and its README links each one to its own upstream. That map is
+the value here, and it lines up almost exactly with what we measured as unplayable.
+
+**Take nothing from the repository itself.** It has **no licence file**, which means all rights
+reserved — an aggregator's convenience copy, not something to vendor from. Every library in it has
+its own home and its own terms, and those are where to go.
+
+### What it covers that we do not
+
+Matched against the Modland counts in §0b and §2, largest first:
+
+| unplayable here | files | what Modizer uses |
+| --- | ---: | --- |
+| Nintendo DS `.mini2sf` | 31,117 | [VIO2SF](https://bitbucket.org/kode54/vio2sf/), [in_xsf](https://github.com/CyberBotX/in_xsf) |
+| Gameboy `.minigsf` | 23,775 | [PlayGSF](https://github.com/yshui/playgsf) |
+| Spectrum `.pt3`/`.pt2` | 22,631 | [PT3Player](https://github.com/Volutar/pt3player), [ZXTune](https://bitbucket.org/zxtune/zxtune/) |
+| Playstation `.minipsf` | 16,840 | [Highly Experimental](https://gitlab.com/kode54/highly_experimental/) |
+| FMP `.ovi`/`.opi` | 12,801 | [FMPmini](https://github.com/myon98/98fmplayer) |
+| MDX | 7,467 | [mdxmini](https://github.com/gzaffin/mdxmini) |
+| Ultra64 `.miniusf` | 6,462 | [LazyUSF](https://github.com/derselbst/lazyusf) |
+| Saturn / Dreamcast | 10,081 | [Highly Theoretical](https://gitlab.com/kode54/highly_theoretical/) |
+| Euphony `.eup` | 3,067 | [Eupmini](https://github.com/gzaffin/eupmini) |
+| PMD | 1,510 | [Pmdmini](https://github.com/mistydemeo/pmdmini) |
+| **AHX / HVL** | **1,433** | [HivelyTracker](https://github.com/pete-gordon/hivelytracker) |
+
+**AHX is the one to notice.** It is 1,433 files we removed from `SupportedFormats` on 2026-09-04
+because nothing here plays them, and the fix is a small standalone library rather than the whole of
+UADE. That makes it the cheapest single win on this page — and it shrinks UADE's exclusive
+contribution again, from 5,596 to about 4,160.
+
+The `*SF` family alone — DS, Gameboy, Playstation, Ultra64, Saturn, Dreamcast — is roughly **95,000
+files**, which is more than everything the app currently plays from Modland outside the trackers.
+They are also the least like this project: emulator cores for machines nobody would call a chiptune
+platform, and `docs/PLAN_FORMATS.md`'s own opening argument was that volume is not the only measure.
+
+### The other half: it integrates catalogues we do not
+
+Its description names **vgmrips, snesmusic and zxart** alongside Modland, HVSC and ASMA. Those are
+three archives `docs/PLAN_CATALOGUES.md` has never looked at, and at least two of them are exactly
+the platforms `docs/WISHLIST.md` B23 would want to offer.
+
+### What to do with this
+
+**Nothing yet, and deliberately.** This is a survey, not a plan: it says which library to fetch when
+a format is wanted, so that question never has to be researched again. Each one still needs the five
+things `docs/PLAN_FORMATS.md` opens with — a licence checked against its sources, a host probe, a
+measurement, and a re-index — and the licences here are genuinely varied (kode54's GitLab projects,
+ZXTune's Mercurial-era tree, a Bitbucket repository).
+
+**If one is picked first, AHX.** Smallest library, a format we already know we are missing by name,
+and the only entry on this page whose absence is currently a lie in the extension list rather than a
+gap in ambition.
+
 ## Not planned
 
 `.sc68` container files reference external replay binaries we do not ship, so they will not play even
