@@ -115,9 +115,10 @@ knowing before running it for real:
 ### What the rewrite does not remove, and is the part worth thinking about
 
 The letters are drafts in the owner's own words. **The quotations are other people's.**
-`docs/LICENSES.md` and `docs/PLAN_FORMATS.md` quote Heikki Orsila and Matti Tiainen verbatim — the
-`players/` licence position, the invitation to download from zakalwe.fi, the limit on what counts as permission, the RMC note — and several commit messages do too.
-Filtering `docs/letters` leaves all of it.
+`docs/LICENSES.md` and `docs/PLAN_FORMATS.md` quoted Heikki Orsila and Matti Tiainen verbatim — the
+`players/` licence position, the invitation to fetch the binaries from zakalwe.fi, the limit on what
+counts as permission, the RMC note — and several commit messages did too. Filtering `docs/letters`
+leaves all of it.
 
 That is not obviously wrong: quoting a maintainer's technical answer, attributed, in the reasoning
 it produced is ordinary engineering practice, and none of it is unflattering. But these were private
