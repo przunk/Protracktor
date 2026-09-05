@@ -98,6 +98,47 @@ having even if a long tail stays filed under "other".
 except The Mod Archive is blocked on a decoder — so the platform list is also a way of showing what
 is *not* playable yet without pretending otherwise.
 
+## B24. Open a chiptune link with Protracktor
+
+*owner, 2026-09-05: somebody sends a link to `Nukes_Chiptune.sndh`, he taps it, and his player opens
+and plays it.*
+
+**The playing half is nearly free.** `RemoteFiles.fetch` already takes any URL and `playTransient`
+already plays something that is in no playlist — that is what Random and a search result do. A URL
+arriving from outside is the same shape of thing.
+
+**The recognising half is where the work and the disappointment live**, so both are worth knowing
+before this is started.
+
+`MainActivity` declares only `MAIN`/`LAUNCHER` today. Adding an `ACTION_VIEW` filter is the
+mechanism, and it splits into two cases that behave nothing alike:
+
+- **A file** — tapped in a file manager, a chat app, a download. Arrives as `content://` with a mime
+  type, and the mime type is almost always `application/octet-stream`, so it identifies nothing.
+  Matching has to be by extension.
+- **A web link** — the case he actually described. Arrives as `https://…/Nukes_Chiptune.sndh`.
+
+**Android's `pathPattern` is not a regular expression**, and this is the trap: its `.*` does not
+backtrack, so the natural `.*\.sndh` fails on any path containing an earlier dot — which a real
+URL usually has. The workarounds are a pattern per dot-count, or `pathAdvancedPattern`, which is
+API 31+ and `minSdk` here is 29.
+
+**And the web-link case cannot do what he pictured, on any modern Android.** Since Android 12 an
+unverified web link opens the browser without offering a chooser at all. Being offered requires
+App Links — an `assetlinks.json` served from the domain — and we do not own `modland.com` or
+anybody else's archive. What remains is the user going into *Open by default → Add link* for the
+app once, per domain. That is a real feature for somebody who wants it and it is not "tap and it
+plays".
+
+**So the honest shape of this is probably the file case first**: a tune saved or received opens in
+Protracktor from the share sheet and the file manager, which needs no domain, no verification and no
+`assetlinks.json`. The web link is the same intent filter with a caveat attached, and the caveat
+belongs in whatever text offers it.
+
+**Worth checking on a device before committing to either**, because both claims above are about
+platform behaviour that varies with version and manufacturer: whether a `content://` open reaches us
+with a usable name, and what a tapped `.sndh` link actually does on his phone today.
+
 ## B20. The year a tune was released
 
 *owner, 2026-09-04: "fajnie by było gdyby dało się zobaczyć rok wydania utworu (np. w info o
