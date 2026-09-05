@@ -15,6 +15,12 @@
 # history that was deliberately rewritten locally. It uses --force-with-lease, which refuses if the
 # remote has moved since the last fetch — so it can overwrite your own rewrite, but not somebody
 # else's work that arrived in the meantime.
+#
+# PROTRACKTOR_FORCE_PUSH=hard uses a plain --force instead, and exists because a lease is not always
+# possible. `git filter-repo` deletes the remote and its tracking refs by design, so after a rewrite
+# there is nothing for the lease to compare against and git refuses with "stale info". A lease you
+# cannot take is not a safety net — this says so out loud rather than letting the safer-looking
+# option fail in a way that invites guessing.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,13 +36,15 @@ git remote get-url "$REMOTE" >/dev/null 2>&1 ||
     { echo "❌ No remote '$REMOTE'. Add it with: git remote add $REMOTE <url>"; exit 1; }
 
 push_flags=(--set-upstream)
-if [ "${PROTRACKTOR_FORCE_PUSH:-0}" = "1" ]; then
-    push_flags+=(--force-with-lease)
-fi
+case "${PROTRACKTOR_FORCE_PUSH:-0}" in
+    1) push_flags+=(--force-with-lease) ;;
+    hard) push_flags+=(--force) ;;
+esac
 
 echo "🌐 $(git remote get-url "$REMOTE")"
 echo "   branches: ${branches[*]}"
 [ "${PROTRACKTOR_FORCE_PUSH:-0}" = "1" ] && echo "   ⚠️  force (--force-with-lease): the remote history will be replaced"
+[ "${PROTRACKTOR_FORCE_PUSH:-0}" = "hard" ] && echo "   ⚠️  force (--force, no lease): the remote history will be replaced with no check"
 
 if [ -t 0 ]; then
     current="${PROTRACKTOR_GITHUB_USER:-przunk}"
