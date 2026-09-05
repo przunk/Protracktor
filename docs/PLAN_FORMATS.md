@@ -180,8 +180,8 @@ and the `.mmd0`/`.mmd1` added that morning.
 
 | | played | Modland | what the failures actually are |
 | --- | --- | --- | --- |
-| `.ahx` | 0/12 | 1,389 | **libopenmpt has no AHX loader at all** — removed from the list |
-| `.hvl` | 0/12 | 44 | same; HivelyTracker, no loader — removed |
+| `.ahx` | 0/12 | 1,389 | **libopenmpt has no AHX loader at all** — removed, and back in §6 |
+| `.hvl` | 0/12 | 44 | same; no loader — removed, and back in §6 |
 | `.ftm` | 1/12 | 1,874 | libopenmpt's FTM is **Face The Music**; Modland's are **FamiTracker** |
 | `.imf` | 3/12 | 210 | libopenmpt's IMF is **Imago Orpheus**; Modland's are **id Software AdLib** |
 | `.psm` | 6/12 | 141 | libopenmpt's PSM is **Epic MegaGames MASI**; half of Modland's are **Spectrum Pro Sound Maker** |
@@ -193,8 +193,8 @@ and the `.mmd0`/`.mmd1` added that morning.
 
 **Nothing more was removed.** Each of those extensions genuinely loads the format libopenmpt
 implements; the failures are files that merely share the name, and dropping the extension would
-throw away the real ones with them. `.ahx` and `.hvl` were different — **no** loader exists, so the
-entries were pure loss, and they come back the day UADE lands.
+throw away the real ones with them. `.ahx` and `.hvl` were different — **no** loader existed, so the
+entries were pure loss. They came back the following day through HivelyTracker (§6), not UADE.
 
 **The real answer is `docs/BACKLOG.md` A6**, probing content instead of trusting names. A local
 folder is already scanned that way. A catalogue index is a list of filenames on somebody else's
@@ -655,6 +655,104 @@ ZXTune's Mercurial-era tree, a Bitbucket repository).
 **If one is picked first, AHX.** Smallest library, a format we already know we are missing by name,
 and the only entry on this page whose absence is currently a lie in the extension list rather than a
 gap in ambition.
+
+*Picked, and done the same day — §6.* It took one afternoon, which is the argument for this survey
+in miniature: the research had already been done, so the work was building and measuring.
+
+## 6. ~~AHX and HivelyTracker~~ — DONE 2026-09-05
+
+`.ahx` and `.hvl` were removed from `SupportedFormats.kt` on 2026-09-04 because §0b found libopenmpt
+has no loader for either. That was the right removal and it left the only gap in the format table
+that is **our own doing**: 1,433 Modland files the app used to list and now does not, missing not
+because the format is out of scope but because nothing we vendor could open it.
+
+HivelyTracker closes it, and it is the cheapest backend on this page by a wide margin.
+
+### What it is
+
+`hvl2wav/` inside `pete-gordon/hivelytracker` is a standalone replayer: **`replay.c`, `replay.h`,
+`types.h`**, about 70 KB, plus a command-line example that renders to a WAV. No build system to
+configure, no second process, no replay binaries, no emulated machine. Compare the four before it:
+sc68 needed its own SVN fetcher and 99 replay binaries, UADE needed two support libraries and a
+`uadecore` it forks and talks to over pipes, gme was "the only vendored library that ships a working
+CMake", ASAP was a transpiled single file — this is smaller than ASAP.
+
+**BSD 3-Clause, Copyright (c) 2006-2018 Pete Gordon.** The licence question that cost a day each on
+sc68 and UADE does not arise: permissive, no replay-binary distribution problem, compatible with our
+GPL-3 without argument.
+
+`hvl_reset(buf, len, …)` loads **from memory** and dispatches AHX (`THX`) and HVL itself, so the
+header gate the backend needs already exists upstream. That matters more than it sounds: the app
+never has a path, only bytes from SAF, and two of the five existing backends needed work to accept
+that.
+
+### The measurement
+
+`./scripts/build-hively-probe.sh` then `./scripts/probe-hively.py`, 40 files of each name sampled
+from Modland:
+
+**80 of 80 loaded from a buffer and were audible. 80 of 80 reached a song end.**
+
+That is the first backend to come back clean on both halves. Lengths run **4s to 307s, median 97s**,
+which is a real duration from the replayer itself — `.ahx` and `.hvl` would show a seek bar without
+needing `SongLengths` at all. None of the 80 had more than one subsong; AHX supports them
+(`ht_SubsongNr`, byte 13 of the header) but Modland's do not use them, so the subsong path is
+present and untested rather than absent.
+
+Modland holds **1,389 `.ahx` and 44 `.hvl`**, all filed as suffixes — no prefix convention here, so
+the mistake that made UADE's reach look like 807 files instead of 29,127 does not repeat.
+
+### The one portability finding, and why the probe is built twice
+
+Upstream's `types.h` says `typedef unsigned long uint32`. That is 32 bits on the Amiga this replayer
+comes from and **64 bits on arm64 and x86_64** — two of the app's three ABIs. The third,
+**armeabi-v7a, is 32**. So the two widths are not hypothetical; they are targets we ship, and a
+replayer that behaved differently between them would be broken on exactly the older phones nobody
+here tests.
+
+The probe is therefore built twice, once with upstream's typedefs and once with fixed-width ones
+forced in through `-include`, and every file is run through both. **They agree on every file about
+what plays, how many subsongs it has, whether it ends and how long it is.** 16 of 80 render a
+slightly different peak sample — the two widths do not wrap identically, most likely the noise
+generator — so arm64 and armeabi-v7a will not be sample-identical. That is a difference in the last
+bits of a chiptune's noise channel, not a difference in what plays.
+
+The first attempt at this comparison measured nothing at all: `replay.c` says `#include "types.h"`,
+and the quoted form searches the including file's own directory first, so an `-I` override reached
+the probe and not the replayer. Two translation units then read the same struct at different
+offsets, which looks exactly like a portability bug and is not one — it reported subsong counts of
+5, 11 and 17 for files whose header byte says 1. The header byte is what settled it.
+
+### What integration actually needed
+
+`HivelyBackend` in `native/engine/engine.cpp`, and three things the probe had turned up:
+
+- **The replayer emits one PAL frame per call.** `hvl_DecodeFrame` fills exactly one 1/50s buffer
+  and chooses that size itself; every other backend renders however many frames it is asked for. So
+  this is the only backend with a ring buffer. The size is `rate/50/multiplier*multiplier`, which is
+  **880, not 882**, when the speed multiplier is four — taking the obvious 882 would have emitted
+  two stale samples every frame, fifty times a second.
+- **The loader never checks the file's length.** It walks the header computing sizes, and
+  `strncpy(ht_Name, &buf[(buf[4]<<8)|buf[5]], 128)` takes its offset straight from the header. A
+  truncated file reads past the end. Restating its walk in the backend would be a second copy of a
+  parser, so instead the bytes go in inside a zeroed allocation with **a mebibyte of slack** — and
+  that number is arithmetic, not a guess: every count the loader reads is a byte or a twelve-bit
+  field, so the worst walk any header can ask for is under 960 KB. Zeros also terminate both walks
+  early, since a zero row is not `0x3f` and a zero instrument has no program.
+- **`replay.c` prints to stdout** on its error paths, including a bare `"Invalid file."`. The
+  backend gates the two header magics itself so the library is never asked a question it would
+  answer that way.
+
+**The length comes free, and that is the nice part.** `hvl_play_irq` is the sequencer without the
+mixer — about 1ms to run a tune to its end where full decoding takes 30 — so `HivelyBackend`
+measures the duration at load, unconditionally. Sequencer-only and full-render lengths were checked
+against each other on the host and agreed on every file. AHX and HVL therefore arrive with a real
+duration and a working seek bar, which sc68 and libsidplayfp still do not have; seeking re-starts
+and decodes forward, which is the only way in and costs about 30ms per minute skipped.
+
+Not measured, because Modland has none: **subsongs**. The path is written and the arithmetic is
+upstream's (`ht_SubsongNr` is the count of *extras*, so a plain file reports one tune), but nothing
+in 80 files exercised it.
 
 ## Not planned
 

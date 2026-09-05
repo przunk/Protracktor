@@ -34,11 +34,13 @@ object SupportedFormats {
         // The mainstream trackers
         "mod", "xm", "s3m", "it", "mptm",
         // Amiga and Atari lineage
-        // "ahx" and "hvl" are deliberately absent, and were listed here from the start on the
-        // assumption that libopenmpt handled them. It does not: there is no AHX loader in its
-        // source and neither name appears in its format table. Measured 2026-09-04 -- 0 of 12 AHX
-        // and 0 of 6 HVL open -- so listing them indexed 1,433 Modland files that nothing here can
-        // play. **UADE plays them** (`docs/PLAN_FORMATS.md` §4), which is where they come back from.
+        // "ahx" and "hvl" were here from the start on the assumption that libopenmpt handled them.
+        // It does not -- no AHX loader exists in its source -- so they were removed on 2026-09-04
+        // after measuring 0 of 12 and 0 of 6. They are back because HivelyTracker's replayer is now
+        // a backend, and this time the number is 80 of 80: loaded from a buffer, audible, and
+        // reaching a song end (`docs/PLAN_FORMATS.md` §6). Identified by content -- "THX" and "HVL"
+        // at offset zero -- so these two only decide what a folder scan picks up.
+        "ahx", "hvl",
         "med", "okt", "dbm", "digi", "stk", "sfx", "ice", "gmc", "unic", "kris",
         "puma", "tcb", "fc", "fc13", "fc14", "smod", "dsym", "symmod", "ftm", "etx",
         // The same two formats under the names their archives actually use. libopenmpt identifies
@@ -78,7 +80,10 @@ object SupportedFormats {
 
     /** Filename prefixes used instead of extensions by several Amiga trackers. */
     val prefixes: Set<String> = setOf(
-        // "ahx" and "hvl" are absent here for the same reason as above: nothing we ship loads them.
+        // "ahx" and "hvl" are listed for symmetry with the extensions, though Modland files all
+        // use the suffix form -- 1,389 and 44, none with a prefix. Costs nothing, and the archives
+        // that do use prefixes are not all indexed yet.
+        "ahx", "hvl",
         "mod", "med", "okt", "dbm", "digi", "stk", "sfx", "ice", "fc", "smod",
         "sndh",
     )

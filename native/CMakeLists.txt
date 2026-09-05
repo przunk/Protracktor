@@ -16,6 +16,7 @@ add_subdirectory(backends/sc68)
 add_subdirectory(backends/asap)
 add_subdirectory(backends/gme)
 add_subdirectory(backends/sidplayfp)
+add_subdirectory(backends/hively)
 
 if(PROTRACKTOR_BUILD_ENGINE)
     add_subdirectory(engine)

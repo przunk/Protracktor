@@ -103,19 +103,37 @@ class SupportedFormatsTest {
     /**
      * Formats that were listed on an assumption nobody checked.
      *
-     * `ahx` and `hvl` sat in this list from the first day, on the belief that libopenmpt handled
-     * them. It has no AHX loader and neither name is in its format table, and measuring on
-     * 2026-09-04 confirmed it: 0 of 12 AHX files and 0 of 6 HVL opened. 1,433 Modland files were
-     * being indexed and offered with nothing behind them.
+     * `gym` is what is left of that group. All 40 sampled Modland GYM files are packed, and
+     * game-music-emu refuses packed GYM unconditionally — the message is in its source with no
+     * build option behind it — so listing the name indexed 265 files that cannot open.
      *
-     * They belong here again the day UADE lands, which plays them — so this test is a reminder of
-     * the condition, not a ban.
+     * `ahx` and `hvl` were here too, for the same reason: listed from the first day on the belief
+     * that libopenmpt handled them, measured 0 of 12 and 0 of 6 on 2026-09-04, removed. They are
+     * claimed again as of 2026-09-05, and the test below is what that costs — the condition was
+     * "when something loads them", and HivelyTracker does.
      */
     @Test
     fun `formats no backend loads are not claimed`() {
-        for (name in listOf("cruisin.ahx", "headcrash.hvl", "x.gym")) {
-            assertFalse(name, SupportedFormats.looksPlayable(name))
+        assertFalse(SupportedFormats.looksPlayable("x.gym"))
+    }
+
+    /**
+     * The two names that came back.
+     *
+     * A claim in this list is a promise that a file will open, and these two broke it for a while.
+     * `docs/PLAN_FORMATS.md` §6 is the evidence they can be made again: 80 of 80 sampled files
+     * loaded from a buffer, were audible and reached a song end through HivelyTracker's replayer.
+     *
+     * Both conventions are asserted although Modland uses only the suffix — the prefix entries are
+     * there for archives not yet indexed, and a test is how they stay there.
+     */
+    @Test
+    fun `ahx and hvl are claimed again`() {
+        for (name in listOf("cruisin.ahx", "headcrash.hvl", "ahx.cruisin", "hvl.headcrash")) {
+            assertTrue(name, SupportedFormats.looksPlayable(name))
         }
+        assertEquals("AHX", SupportedFormats.labelFor("cruisin.ahx"))
+        assertEquals("HVL", SupportedFormats.labelFor("hvl.headcrash"))
     }
 
     @Test
