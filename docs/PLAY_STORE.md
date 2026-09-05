@@ -109,6 +109,13 @@ knowing before running it for real:
 
 - **It removes the `origin` remote**, by design, so a stale push cannot restore what was cut. Add it
   back and force-push every branch afterwards.
+- **And with it the remote-tracking refs**, which is what `--force-with-lease` compares against — so
+  the safer force refuses with "stale info" until something fetches again. Push with
+  `PROTRACKTOR_FORCE_PUSH=hard ./scripts/push-protracktor.sh develop master`, which uses a plain
+  `--force`. A lease you cannot take is not a safety net, and the script says which one it is using.
+- **`--set-upstream` is not optional afterwards** either: the rewritten branches have no upstream,
+  which is the first error a push reports and the least informative one. The script always passes
+  it.
 - **It changes every commit hash** from the first letter onward. Any other clone is dead; the merge
   history and the messages survive intact.
 
