@@ -31,6 +31,16 @@ extern "C" {
 #include <sc68/file68_rsc.h>
 #include <asap.h>
 #include <gme.h>
+/* HivelyTracker. `types.h` is a generic name and its typedefs -- TEXT, BOOL, CONST, TRUE, FALSE --
+ * are unqualified Amiga ones, so it goes last in this block, after the four headers that would
+ * otherwise have to live with them. */
+#include <types.h>
+#include <replay.h>
+/* `hvl_play_irq` is the sequencer half of `hvl_DecodeFrame` and upstream does not declare it in
+ * `replay.h`, though it exports it. `HivelyBackend` uses it to measure a tune's length without
+ * mixing a note -- 1ms instead of 30ms, and the same answer. Declared here rather than patched into
+ * the vendored header because the vendored tree is fetched, not committed. */
+void hvl_play_irq(struct hvl_tune *ht);
 }
 
 #include <sidplayfp/sidplayfp.h>
@@ -963,6 +973,216 @@ private:
     std::size_t spareRead_ = 0;
 };
 
+/**
+ * AHX and HVL, through HivelyTracker's standalone replayer.
+ *
+ * The Amiga synth trackers: no samples in the file, a handful of waveforms and a per-instrument
+ * program that bends them. libopenmpt has **no loader for either** -- measured in
+ * `docs/PLAN_FORMATS.md` §0b, 0/12 and 0/12 -- which is why `.ahx` and `.hvl` were taken out of
+ * `SupportedFormats` on 2026-09-04 and why they are back now. 1,433 Modland files.
+ *
+ * Measured on the host before integration (§6): **80 of 80 sampled files loaded from a buffer, were
+ * audible and reached a song end.** The first backend here to come back clean on both halves.
+ *
+ * Two things make it unlike the other five:
+ *
+ * **It renders a PAL frame at a time.** `hvl_DecodeFrame` fills exactly one 1/50s buffer and picks
+ * that size itself; everything else here renders however many frames it is asked for. So this is
+ * the one backend that carries a ring buffer, and `framesPerCall_` is computed the way
+ * `hvl_DecodeFrame` computes it -- `rate/50/multiplier*multiplier`, which is 880 rather than 882
+ * when the speed multiplier is four. Assuming 882 would emit two stale samples every frame.
+ *
+ * **It knows how long the tune is, cheaply.** `hvl_play_irq` is the sequencer without the mixer, so
+ * running a tune to its end costs about a millisecond instead of thirty. The length is therefore
+ * measured at load, unconditionally, and `.ahx` and `.hvl` get a real duration and a working seek
+ * bar without `SongLengths` knowing anything about them. Verified on the host: sequencer-only and
+ * full-render lengths agreed on every file tried.
+ */
+class HivelyBackend : public Backend {
+public:
+    /** Both of the replayer's own magics. AHX is "THX" -- the format is older than its tracker. */
+    static bool recognises(const std::vector<char> &bytes) {
+        if (bytes.size() < 16) return false;
+        const auto *b = reinterpret_cast<const unsigned char *>(bytes.data());
+        return (b[0] == 'T' && b[1] == 'H' && b[2] == 'X' && b[3] < 3) ||
+               (b[0] == 'H' && b[1] == 'V' && b[2] == 'L' && b[3] < 2);
+    }
+
+    explicit HivelyBackend(const std::vector<char> &bytes) {
+        static std::once_flag once;
+        std::call_once(once, [] { hvl_InitReplayer(); });
+
+        // The loader walks the file computing sizes and **never checks against its length**: a
+        // truncated file sends it reading past the end, and `strncpy(ht_Name, &buf[offset], 128)`
+        // does the same with an offset taken straight from the header. Rather than restate its
+        // data-dependent walk here -- a second copy of a parser is a copy that goes stale -- the
+        // bytes are handed over inside a padded, zeroed allocation big enough that the walk cannot
+        // leave it.
+        //
+        // The bound is arithmetic, not a guess. Every count it reads is a byte or a twelve-bit
+        // field: at most 4,095 positions of 67 channels x 2, 256 tracks x 255 rows x 5 bytes, and
+        // 64 instruments of 22 + 255 x 5. That is under 960 KB, so a mebibyte of zeros past the end
+        // is provably past the worst the header can ask for -- and zeros terminate both walks
+        // early, because a zero row is not 0x3f and a zero instrument has no program.
+        std::vector<unsigned char> padded(bytes.size() + kLoaderSlack, 0);
+        std::memcpy(padded.data(), bytes.data(), bytes.size());
+
+        ahx_ = static_cast<unsigned char>(bytes[0]) == 'T';
+
+        // freeit = 0: `padded` stays ours and is dropped on the way out of this constructor. The
+        // tune is one allocation of its own by then.
+        ht_ = hvl_reset(padded.data(), static_cast<uint32>(bytes.size()), kStereoSeparation,
+                        static_cast<uint32>(kSampleRate), 0);
+        if (!ht_) throw std::runtime_error("HivelyTracker could not load this file");
+
+        const uint32 multiplier = ht_->ht_SpeedMultiplier ? ht_->ht_SpeedMultiplier : 1;
+        framesPerCall_ = static_cast<std::size_t>(kSampleRate / 50 / multiplier) * multiplier;
+        frame_.resize(framesPerCall_ * 2);
+
+        duration_ = measureSeconds(0);
+        startSubsong(0);
+    }
+
+    ~HivelyBackend() override {
+        if (ht_) hvl_FreeTune(ht_);
+    }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        std::size_t written = 0;
+        while (written < frames) {
+            if (framePos_ == framesPerCall_) {
+                // A tune that has reached its end is not decoded again: the replayer would happily
+                // keep going round, and a short render is what tells the engine the file is over.
+                if (ht_->ht_SongEndReached) break;
+                hvl_DecodeFrame(ht_, reinterpret_cast<int8 *>(frame_.data()),
+                                reinterpret_cast<int8 *>(frame_.data()) + 2, 4);
+                framePos_ = 0;
+            }
+            const std::size_t take = std::min(frames - written, framesPerCall_ - framePos_);
+            for (std::size_t i = 0; i < take; ++i) {
+                out[(written + i) * 2] = frame_[(framePos_ + i) * 2] / 32768.0f;
+                out[(written + i) * 2 + 1] = frame_[(framePos_ + i) * 2 + 1] / 32768.0f;
+            }
+            framePos_ += take;
+            written += take;
+        }
+        rendered_ += written;
+        return written;
+    }
+
+    bool canSeek() const override { return true; }
+
+    /**
+     * Seeks by starting again and decoding forward, because the replayer has no other way in.
+     *
+     * Decoding rather than sequencing alone: the sequencer gives the right position but the wrong
+     * voice state, and the difference is audible as a wrong note at the seek point. Full decoding
+     * costs about 30ms per minute skipped on a desktop, which is what a seek can afford and a load
+     * cannot -- the length measurement is the other way round for exactly that reason.
+     */
+    void seek(double seconds) override {
+        const auto target = static_cast<std::size_t>(std::max(0.0, seconds) * kSampleRate);
+        startSubsong(subsong_);
+        while (rendered_ + framesPerCall_ <= target && !ht_->ht_SongEndReached) {
+            hvl_DecodeFrame(ht_, reinterpret_cast<int8 *>(frame_.data()),
+                            reinterpret_cast<int8 *>(frame_.data()) + 2, 4);
+            rendered_ += framesPerCall_;
+        }
+        framePos_ = framesPerCall_;
+    }
+
+    void rewind() override { startSubsong(subsong_); }
+
+    double positionSeconds() const override {
+        return static_cast<double>(rendered_) / kSampleRate;
+    }
+
+    double durationSeconds() const override { return duration_; }
+
+    std::string describe() const override {
+        std::ostringstream o;
+        o << "title\t" << title() << '\n'
+          << "format\t" << (ahx_ ? "Amiga AHX (HivelyTracker)" : "Amiga HVL (HivelyTracker)") << '\n'
+          << "channels\t" << ht_->ht_Channels << '\n'
+          << "subsongs\t" << subsongCount() << '\n'
+          << "seekable\t1";
+        return o.str();
+    }
+
+    int preferredSampleRate() const override { return kSampleRate; }
+
+    // `ht_SubsongNr` is how many *extra* subsongs there are -- `hvl_InitSubsong` accepts indices up
+    // to and including it -- so a file with none reports zero and holds one tune.
+    int subsongCount() const override { return static_cast<int>(ht_->ht_SubsongNr) + 1; }
+
+    int currentSubsong() const override { return subsong_; }
+
+    bool selectSubsong(int index) override {
+        if (index < 0 || index >= subsongCount()) return false;
+        duration_ = measureSeconds(index);
+        if (!startSubsong(index)) return false;
+        return true;
+    }
+
+private:
+    // 44100 divides by 50, which the replayer's frame size assumes without saying so.
+    static constexpr int kSampleRate = 44100;
+
+    // 4 is upstream's "Paula" setting: full stereo separation, the Amiga's own. It only affects AHX;
+    // HVL files carry their own panning.
+    static constexpr uint32 kStereoSeparation = 4;
+
+    // Derived in the constructor's comment. A mebibyte, once per file loaded.
+    static constexpr std::size_t kLoaderSlack = 1024 * 1024;
+
+    bool startSubsong(int index) {
+        if (!hvl_InitSubsong(ht_, static_cast<uint32>(index))) return false;
+        ht_->ht_SongEndReached = 0;
+        subsong_ = index;
+        rendered_ = 0;
+        framePos_ = framesPerCall_;      // nothing buffered; the next render decodes
+        return true;
+    }
+
+    /**
+     * How long a subsong runs, by running the sequencer without the mixer.
+     *
+     * Bounded at ten minutes, which is what `hvl2wav` uses, because a tune that never sets
+     * `ht_SongEndReached` would otherwise spin here. A zero return reads as "unknown" upstream and
+     * disables the scrubber rather than offering a wrong one.
+     */
+    double measureSeconds(int index) {
+        if (!hvl_InitSubsong(ht_, static_cast<uint32>(index))) return 0.0;
+        ht_->ht_SongEndReached = 0;
+        const uint32 multiplier = ht_->ht_SpeedMultiplier ? ht_->ht_SpeedMultiplier : 1;
+        long ticks = 0;
+        const long limit = 600 * 50;
+        for (; ticks < limit && !ht_->ht_SongEndReached; ++ticks)
+            for (uint32 i = 0; i < multiplier; ++i) hvl_play_irq(ht_);
+        return ticks >= limit ? 0.0 : static_cast<double>(ticks) / 50.0;
+    }
+
+    /** `ht_Name` is filled by a 128-byte `strncpy` that need not have terminated it. */
+    std::string title() const {
+        const char *name = ht_->ht_Name;
+        const std::size_t length = static_cast<std::size_t>(
+            std::find(name, name + sizeof(ht_->ht_Name), '\0') - name);
+        std::string out(name, length);
+        std::replace_if(out.begin(), out.end(),
+                        [](char c) { return static_cast<unsigned char>(c) < 0x20; }, ' ');
+        return out;
+    }
+
+    struct hvl_tune *ht_ = nullptr;
+    bool ahx_ = false;
+    std::size_t framesPerCall_ = 0;
+    std::size_t framePos_ = 0;
+    std::vector<short> frame_;
+    std::size_t rendered_ = 0;
+    double duration_ = 0.0;
+    int subsong_ = 0;
+};
+
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name,
                                      std::string &error) {
     error.clear();
@@ -985,6 +1205,17 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<SidBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("libsidplayfp refused it: %s", e.what());
+            error = e.what();
+        }
+    }
+
+    // HivelyTracker next. "THX" and "HVL" plus a version byte at offset zero are as unambiguous as
+    // SID's, and nothing else here loads either format, so a match cannot be a stray claim.
+    if (HivelyBackend::recognises(bytes)) {
+        try {
+            return std::make_unique<HivelyBackend>(bytes);
+        } catch (const std::exception &e) {
+            LOGE("HivelyTracker recognised the header but refused: %s", e.what());
             error = e.what();
         }
     }

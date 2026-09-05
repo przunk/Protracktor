@@ -17,6 +17,7 @@ source we vendor, at the moment we vendor it, and this table is corrected then. 
 | libsidplayfp 3.1.1 | C64: PSID, RSID | GPL-2.0-**or-later** | **yes, 2026-09-02** |
 | game-music-emu 0.6.5 | NSF, NSFE, GBS, SPC, VGM, VGZ, GYM, HES, AY, KSS | LGPL-2.1-**or-later** | **yes, 2026-09-01** |
 | ASAP 8.0.0 | Atari 8-bit: SAP + 13 tracker formats | GPL-2.0-**or-later** | **yes, 2026-09-01** |
+| HivelyTracker V1_9 | Amiga AHX and HVL | BSD-3-Clause | **yes, 2026-09-05** |
 | UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
 | Oboe 1.10.0 | audio output | Apache-2.0 | no |
 
@@ -82,6 +83,20 @@ option) any later version". Compatible with GPL-3.
 CHARGEN are Commodore's and cannot be distributed. Thirty random Modland SIDs all played without
 them and none was BASIC-compatible, so the question the owner was asked to decide turns out to be
 much smaller than it looked. It is still his to decide if a tune ever needs them.
+
+**HivelyTracker V1_9**, read from `LICENSE` in the tag tarball on 2026-09-05:
+
+> BSD 3-Clause License
+> Copyright (c) 2006-2018, Pete Gordon
+> All rights reserved.
+
+The three-clause text in full, with the usual non-endorsement clause. `hvl2wav/` — the three files
+we build — carries no other notice, and no file in it claims different terms.
+
+**The easiest licence question in this project.** Permissive, so it combines with GPL-3 without
+argument; and unlike sc68 and UADE there are no replay binaries, because AHX and HVL are note data
+played by code we compile ourselves. Its one obligation is attribution, which this file and
+`app/src/main/res/` discharge.
 
 ## sc68's replay binaries — a question for the owner
 

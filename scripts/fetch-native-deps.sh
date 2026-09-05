@@ -111,6 +111,22 @@ fetch sidplayfp \
       "12b79190593bf480b2d11481b5c2de62bac07f344437a66cd8d887329875c626" \
       1
 
+# HivelyTracker -- BSD-3-Clause (verified 2026-09-05: LICENSE is the three-clause text, Copyright
+# (c) 2006-2018 Pete Gordon, and `hvl2wav/` carries no other notice). AHX and HVL, the Amiga
+# synth-tracker formats libopenmpt has no loader for at all.
+#
+# The whole backend is `hvl2wav/replay.c` plus two headers -- the smallest vendored decoder here,
+# smaller than ASAP. The rest of the archive is the tracker's GUI and is not built.
+#
+# GitHub generates tag tarballs rather than storing them, so this checksum can in principle change
+# without the tag changing. It is pinned anyway: a download nobody checks is worse than one that
+# occasionally needs a deliberate look.
+fetch hively \
+      "V1_9" \
+      "https://github.com/pete-gordon/hivelytracker/archive/refs/tags/V1_9.tar.gz" \
+      "a3c6d8a041fe9952f0a72a31953461254b497d3bfbf3d07301d1bf4e9e8fb65d" \
+      1
+
 # sc68 3.0.0b is not a release and has no tarball: it lives only in SourceForge SVN. Its fetch
 # pins a revision and verifies a checksum manifest, which the tarball fetch above gets for free
 # from a published sha256 -- so it is a separate script rather than another `fetch` line.
