@@ -850,6 +850,11 @@ private fun Selectable(
         mutableStateOf(emptySet<String>())
     }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
+    // Reset when the list underneath changes: following a row in a folder you have just left is
+    // following nothing.
+    var following by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
+        mutableStateOf(false)
+    }
     LaunchedEffect(browse.tracks) {
         selected = selected.intersect(browse.tracks.map { it.id }.toSet())
     }
@@ -920,6 +925,23 @@ private fun Selectable(
                 val listState = scroll.stateFor(key)
                 RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
                 Box(modifier = Modifier.weight(1f)) {
+                // The same button the playlist has. These are the lists you scroll a long way down
+                // while something plays -- a folder, a search, an author's other tunes -- so losing
+                // the playing row here costs more than it does on the playlist, not less.
+                //
+                // Hidden while selecting for the reason it is hidden there: it floats over the
+                // bottom-right corner, which is where the actions are, and following the music is
+                // not what you are doing when you are ticking rows.
+                if (!selecting) {
+                    FollowTrackButton(
+                        listState = listState,
+                        currentIndex = browse.tracks.indexOfFirst { it.id == playingId }
+                            .takeIf { it >= 0 },
+                        contentPadding = PaddingValues(0.dp),
+                        following = following,
+                        onFollowingChange = { following = it },
+                    )
+                }
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
                     BrowseTrackRow(
