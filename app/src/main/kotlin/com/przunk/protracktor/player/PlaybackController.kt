@@ -2078,10 +2078,25 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * Adds tracks to the playlist being edited, and commits them unless an edit is already pending.
+     *
+     * **Adding does not need saving** (`docs/OPEN_QUESTIONS.md` Q8). It arrives from somewhere else
+     * -- a search result, a folder, another playlist -- and nothing about it is provisional: you
+     * asked for a tune to be in the list and it is. Save belongs to the edits you make *inside* the
+     * list, where a wrong drag or a mistaken removal is a real risk and undoing it matters.
+     *
+     * **Unless something is already unsaved.** Writing the list to disk writes all of it, so an
+     * auto-saved add made while a removal is pending would quietly commit the removal too --
+     * turning a convenience into a way of losing tracks without pressing anything. When an edit is
+     * in progress the add joins it, and one Save covers both. That is the one case where this rule
+     * bends, and it bends towards the user keeping what they have.
+     */
     private fun appendTracks(found: List<TrackRef>, describe: (added: Int, skipped: Int) -> Message?) {
         var added = 0
         var skipped = 0
         var firstAdded = 0
+        val hadPendingEdit = _state.value.dirty
         _state.update { current ->
             // Rebuilding the queue rather than mutating it keeps the play history meaningful: the
             // indices it holds must keep pointing at the same tracks.
@@ -2098,13 +2113,21 @@ class PlaybackController private constructor(private val context: Context) {
             current.copy(
                 queue = current.queue.withTracks(merged),
                 scanning = false,
-                dirty = current.dirty || added > 0,
+                // Left alone when the add is about to be written; raised only when it is joining
+                // an edit that was already unsaved.
+                dirty = current.dirty || (added > 0 && hadPendingEdit),
                 // Only replaces the current message when there is something to say; a null must
                 // not silently clear a message the user has not read.
                 message = describe(added, skipped) ?: current.message,
             )
         }
         resolveMetadataInBackground()
+
+        if (added > 0 && !hadPendingEdit) {
+            // Written from the state rather than from `found`, so it stores exactly the list the
+            // screen is showing -- including whatever the de-duplication above decided.
+            scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
+        }
 
         // Adding appends to the end, so without this nothing visibly happens -- which matters more
         // now that the confirming message was deliberately removed.

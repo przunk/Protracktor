@@ -160,7 +160,7 @@ The repository is private for now, with a possible public release later. If Prot
 to a store, GPL-3 means sources must be published at that point. F-Droid or Google Play — or
 neither, and just an APK. No decision needed yet; noted so it is not a surprise.
 
-## Q8 — Should a playlist edit need saving at all?
+## Q8 — ~~Should a playlist edit need saving at all?~~ — ANSWERED 2026-09-06
 
 *Raised by the owner, 2026-09-04: he leaves the app without noticing the list was never saved.*
 
@@ -184,9 +184,24 @@ Three ways out, and the middle one is his suggestion:
 - **(c) Save on leaving the screen**, silently. Removes the question without changing what the
   buttons mean, but "when did that happen" becomes the new invisible step.
 
-**Not decided here.** (b) is the owner's leaning and is the one with a real cost to weigh: the Save
-/ Discard pair goes, the undo path has to cover removal properly, and anything relying on `dirty`
-has to be re-read. Worth an hour of conversation before an hour of code.
+**Answered 2026-09-06, and with a fourth option none of the three above had.** The owner:
+
+> dodawanie do playlisty "spoza playlisty" (np. w wyszukiwaniu) powinno dodawać do niej bez
+> konieczności zapisywania (zrobić autosave). Save rezerwujemy na operacje typu remove/reorder
+
+**Split by the kind of edit, not by when it happens.** An add arrives from *outside* the list — a
+search result, a folder, another playlist — and nothing about it is provisional: you asked for a
+tune to be in the list and it is. Removal and reordering happen *inside* the list, where a wrong
+drag or a mistaken removal is a real risk, and that is where Save and Discard earn their place.
+
+This is better than (b), which was the leaning before: it removes the "did I save it?" question from
+the case that raised it while keeping the safety net exactly where the danger is. It also removes
+the inconsistency `docs/ARCHITECTURE.md` §17 records, from the other end — adding to *any* playlist
+now writes immediately, whether it is the active one or not.
+
+**One case bends the rule, and it bends towards keeping your tracks.** Writing the list to disk
+writes all of it, so an auto-saved add made while a removal is pending would quietly commit the
+removal too. When an edit is already unsaved the add joins it and one Save covers both.
 
 **Related:** `docs/ARCHITECTURE.md` §17 records why adding to another playlist writes immediately
 while the active one drafts — the reasoning is sound and it is also exactly the inconsistency a user
