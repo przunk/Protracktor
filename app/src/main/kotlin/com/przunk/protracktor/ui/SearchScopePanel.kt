@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -134,7 +135,7 @@ private fun ScopeTile(
         ),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier.fillMaxSize().padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -143,10 +144,17 @@ private fun ScopeTile(
             // three things nobody reads; the icons carry it, and the field's own label says which
             // one is active in words anyway.
             if (!compact) {
+                // `minLines = 2` is what keeps the three icons on one line. The group is centred
+                // vertically, so a tile whose label wraps is taller in its text and pushes its icon
+                // up relative to its neighbours -- "Online catalogues" wraps and "By platform" does
+                // not. Reserving both lines everywhere makes the three tiles the same shape, and
+                // then centring puts the icons at the same height by construction rather than by
+                // a hand-tuned padding that would break in the other language.
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium,
                     textAlign = TextAlign.Center,
+                    minLines = 2,
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }

@@ -879,15 +879,25 @@ private fun Selectable(
 
         when {
             browse.loading -> Loading()
-            browse.tracks.isEmpty() -> Text(
-                text = stringResource(
-                    if (browse.domain == BrowseDomain.SEARCH) R.string.search_nothing_found
-                    else R.string.browse_nothing_found
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(24.dp),
-            )
+            // An empty list is two different states and only one of them is a disappointment.
+            // Nothing searched yet reads as ordinary text; nothing *found* borrows the colour the
+            // stale-index warnings use, because it is the same kind of news.
+            browse.tracks.isEmpty() -> {
+                val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
+                Text(
+                    text = stringResource(
+                        when {
+                            browse.domain != BrowseDomain.SEARCH -> R.string.browse_nothing_found
+                            browse.searched -> R.string.search_nothing_found
+                            else -> R.string.search_not_yet
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (searchedAndEmpty) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(24.dp),
+                )
+            }
             else -> {
                 // Said above the list rather than at its end, because the end is 2,000 rows away and
                 // the point of the line is to stop the scrolling, not to reward it.

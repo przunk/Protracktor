@@ -246,6 +246,13 @@ data class BrowseState(
      */
     val platformCounts: Map<String, Int> = emptyMap(),
     /**
+     * Whether a search has been run for the scope now shown.
+     *
+     * An empty list means two different things and the screen used to say the alarming one for
+     * both. Nothing typed yet is not the same as nothing out there.
+     */
+    val searched: Boolean = false,
+    /**
      * How many rows the two capped sources matched in total, or 0 when nothing is capped.
      *
      * "About", because the sources overlap and are de-duplicated afterwards — a tune that is both
@@ -1748,29 +1755,35 @@ class PlaybackController private constructor(private val context: Context) {
     fun toggleSearchCatalogue(id: String) = _browse.update {
         val scope = it.searchScope as? SearchScope.Online ?: return@update it
         val ids = if (id in scope.catalogueIds) scope.catalogueIds - id else scope.catalogueIds + id
-        it.copy(searchScope = SearchScope.Online(ids)).withoutStaleResults()
+        it.copy(searchScope = SearchScope.Online(ids))
     }
 
     /** Ticks one platform. Same shape, and the same rule: empty means all of them. */
     fun toggleSearchPlatform(id: String) = _browse.update {
         val scope = it.searchScope as? SearchScope.ByPlatform ?: return@update it
         val ids = if (id in scope.platformIds) scope.platformIds - id else scope.platformIds + id
-        it.copy(searchScope = SearchScope.ByPlatform(ids)).withoutStaleResults()
+        it.copy(searchScope = SearchScope.ByPlatform(ids))
     }
 
     /**
-     * Results belong to the scope that produced them.
+     * Results belong to the *kind* of search that produced them.
      *
-     * Left on screen after the scope changes they are a lie the app tells with a straight face: the
-     * owner switched to `Online` and saw his own local files sitting there, looking like an answer.
-     * The label had already changed, which made it worse rather than better -- two things on one
-     * screen disagreeing about what you are looking at.
+     * Left on screen after switching between local, online and by-platform they are a lie the app
+     * tells with a straight face: the owner switched to `Online` and saw his own local files
+     * sitting there, looking like an answer. The label had already changed, which made it worse
+     * rather than better -- two things on one screen disagreeing about what you are looking at.
+     *
+     * **Ticking one more catalogue or platform does not do this**, and that was a correction. It
+     * widens the same question rather than asking a different one, so throwing the answer away
+     * because Modland has been joined by ASMA reads as the app losing your place. The results are
+     * incomplete until you search again, which is the ordinary state of a filter you are still
+     * adjusting.
      *
      * This is the counterpart to back keeping results, not a contradiction of it. What must survive
-     * is **leaving and returning**; what must not is a list that no longer matches the question.
+     * is **leaving and returning**; what must not is a list produced by a different kind of search.
      */
     private fun BrowseState.withoutStaleResults() =
-        copy(tracks = emptyList(), searchMatches = 0)
+        copy(tracks = emptyList(), searchMatches = 0, searched = false)
 
     /**
      * Runs the search the scope describes.
@@ -1871,7 +1884,9 @@ class PlaybackController private constructor(private val context: Context) {
                     })
             }
 
-            _browse.update { it.copy(tracks = results, searchMatches = matches, loading = false) }
+            _browse.update {
+                it.copy(tracks = results, searchMatches = matches, searched = true, loading = false)
+            }
         }
     }
 

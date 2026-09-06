@@ -396,6 +396,25 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C15. The Mod Archive returns nothing
+
+*Owner, 2026-09-06, while testing the platform filter. Deferred by him to after that work.*
+
+Every search against The Mod Archive comes back with zero results. Modland and ASMA answer normally
+in the same search, so it is this one source rather than the search.
+
+**What has been ruled out:** not the catalogue being treated as unindexed. `CatalogueSummary.indexed`
+is `trackCount > 0 || isOnlineOnly`, and The Mod Archive sets `isOnlineOnly`, so it is in the set an
+empty selection expands to and reaches `ModArchive.search` normally.
+
+**What is left to check**, in the order that costs least: whether the request is being made at all,
+what the service answers, and whether the response shape it is parsed against still matches. It is
+the only source that is a live call to somebody else's server, so it is also the only one that can
+break without anything here changing.
+
+**Not the blank-query change.** That skips The Mod Archive deliberately — there is no index here to
+list — but the owner's report is about typed searches.
+
 ### C1. ~~Roughly half of `.sndh` files do not play~~ — FIXED 2026-09-03 by sc68 3.0.0b
 
 Measured on thirty random Modland files through the real backend logic: **16 play, 5 load and render

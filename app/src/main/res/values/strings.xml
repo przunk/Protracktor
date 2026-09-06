@@ -97,7 +97,8 @@
     <string name="browse_select_all">Select all</string>
     <string name="browse_select_none">Select none</string>
     <string name="browse_nothing_found">Nothing playable in this folder.</string>
-    <string name="search_nothing_found">Nothing found. An empty search finds everything in scope.</string>
+    <string name="search_nothing_found">Nothing found for this search.</string>
+    <string name="search_not_yet">Search, or leave the field empty to find everything in scope.</string>
     <!-- The three search scopes. The tile labels are short; the field label below them is the one
          that has to state the whole scope, so it can be longer. -->
     <string name="scope_local">Local library</string>
