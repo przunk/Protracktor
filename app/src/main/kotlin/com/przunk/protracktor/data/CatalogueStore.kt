@@ -195,7 +195,6 @@ class CatalogueStore(context: Context) {
             ).use { it.toTracks() }
         }
 
-    /** Title search. [catalogueIds] empty means every indexed catalogue. */
     /** How many rows [search] would return without its limit. Same `WHERE`, no `ORDER BY`. */
     suspend fun countMatches(
         query: String,
@@ -203,7 +202,8 @@ class CatalogueStore(context: Context) {
         formats: Set<String> = emptySet(),
     ): Int =
         withContext(Dispatchers.IO) {
-            if (query.isBlank()) return@withContext 0
+            // Blank is allowed here too; see `search`. A count that refused would report zero
+            // matches beside a screen full of them.
             val scope = if (catalogueIds.isEmpty()) {
                 "" to emptyArray<String>()
             } else {
@@ -244,6 +244,13 @@ class CatalogueStore(context: Context) {
         }
     }
 
+    /**
+     * Title and author search.
+     *
+     * @param catalogueIds empty means every indexed catalogue.
+     * @param formats empty means every format; otherwise Modland directory names, from `Platforms`.
+     * @param query may be blank, which matches everything the other two allow.
+     */
     suspend fun search(
         query: String,
         catalogueIds: Set<String>,
@@ -251,7 +258,13 @@ class CatalogueStore(context: Context) {
         formats: Set<String> = emptySet(),
     ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
-            if (query.isBlank()) return@withContext emptyList()
+            // No blank guard. It made sense while typing was the only way to narrow a search --
+            // an empty box asked nothing -- and stopped making sense when a scope became a question
+            // of its own. `%%` matches every row, so "everything on the Commodore 64" is a platform
+            // and an empty field, and the caller's per-source cap is what bounds it.
+            //
+            // The controller was changed to allow this and this was not, so the search returned the
+            // one track that came from a playlist and looked like a broken filter.
             val scope = if (catalogueIds.isEmpty()) {
                 "" to emptyArray<String>()
             } else {
