@@ -396,7 +396,7 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C15. The Mod Archive returns nothing
+### C15. ~~The Mod Archive returns nothing~~ — FIXED 2026-09-06
 
 *Owner, 2026-09-06, while testing the platform filter. Deferred by him to after that work.*
 
@@ -450,9 +450,27 @@ readily as none. `parseSearchResults` now refuses any page without the results h
 page is saved as a second test fixture.
 
 The live search reports three outcomes now, not two: reached and read, could not reach, and answered
-with something unreadable. The last is what the owner should see if the markup has moved on his
-device but not on this machine — which is the remaining explanation, and the one the app could not
-previously tell anybody about.
+with something unreadable.
+
+**Confirmed fixed on the owner's device**: `elysium` returns its two modules. So the cause was the
+burial — forty live results appended after a full catalogue page — and not the network or the
+markup.
+
+**An empty query is a separate case and stays skipped.** The archive answers one with the same
+"perhaps enjoy" page: it has no way to list itself, so there is nothing to ask for. The screen used
+to say "nothing found", which is a claim about the archive rather than about what we did; it now
+says the source is searched live and needs a term, and only when that is the whole story.
+
+### What The Mod Archive does not publish
+
+**The artist is not in the search listing**, and this was checked rather than assumed: the expanded
+view (`&detail=1`) adds Module ID, genre, size, channels, downloads, date and licence — and not the
+author. So a result carries a blank author and a subtitle of `The Mod Archive/MOD`, where the second
+part is the format because there is no folder to name; unlike Modland, this archive is flat.
+
+Getting the artist means one request per result to the module page — forty requests for a page of
+results. The shape that would work is the one the app already uses for local metadata: fetch it
+lazily, when the user opens a track's information. Not started, and worth doing only if it is wanted.
 
 ### C1. ~~Roughly half of `.sndh` files do not play~~ — FIXED 2026-09-03 by sc68 3.0.0b
 
