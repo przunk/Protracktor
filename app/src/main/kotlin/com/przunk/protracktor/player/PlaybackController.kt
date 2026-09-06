@@ -1851,13 +1851,21 @@ class PlaybackController private constructor(private val context: Context) {
             // The Mod Archive is the one source an empty query cannot ask: it is a live search
             // against somebody else's server, with no index here to list. Skipped rather than sent
             // an empty query it would answer badly or refuse.
-            val fromModArchive = if (searching.searchesOnline && current.query.isNotBlank() &&
+            val liveSearch = if (searching.searchesOnline && current.query.isNotBlank() &&
                 com.przunk.protracktor.net.ModArchive.id in wanted) {
-                com.przunk.protracktor.net.ModArchive.search(current.query).filter {
-                    platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds)
-                }
+                com.przunk.protracktor.net.ModArchive.search(current.query)
             } else {
                 emptyList()
+            }
+            // Null means the request could not be made, which is not the same as finding nothing.
+            // Reported rather than folded into the count, because the difference between "the
+            // archive does not have it" and "we could not ask" is the difference between a fact
+            // and a fault -- C15 was reported as the former and may well be the latter.
+            val fromModArchive = liveSearch.orEmpty().filter {
+                platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds)
+            }
+            if (liveSearch == null) {
+                _state.update { it.copy(message = Message("The Mod Archive could not be reached.")) }
             }
 
             // De-duplicated across **all four**, not just the first two. The old code guarded

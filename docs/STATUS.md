@@ -415,6 +415,32 @@ break without anything here changing.
 **Not the blank-query change.** That skips The Mod Archive deliberately — there is no index here to
 list — but the owner's report is about typed searches.
 
+### Worked on 2026-09-06 — the parser was fine, and two other things were not
+
+**The scraper works.** `https://modarchive.org/index.php?request=search…&query=elysium` was fetched
+with the app's own User-Agent: HTTP 200, no redirect, and the page contains two results in ordinary
+`<tr>` rows. Every one of the parser's five patterns matches them. That page is now saved as
+`app/src/test/resources/modarchive-search-elysium.html` and `ModArchiveSearchTest` parses it —
+pinning a scraper to a real page is the only honest way to test one, and when the site changes that
+test is what says so.
+
+So the defect was somewhere else, and two candidates were found without a device:
+
+**The failure was swallowed.** `runCatching { … }.getOrDefault(emptyList())` turned a blocked
+request, a dead network and a changed page into the same answer as "this tune is not in the
+archive". `search` now returns **null** when it could not ask, logs what the server said, and the
+search reports "The Mod Archive could not be reached." A fact and a fault are different things and
+the app was saying only one of them.
+
+**The results were buried.** `SearchResults.combine` appended the live search last, after the
+offline indexes — which return up to `PER_SOURCE_LIMIT`, two thousand rows. Forty live results at
+row two thousand and one are present, correct and unreachable, which is exactly what "returns
+nothing" looks like from the sofa, with nothing broken at all. Display order and de-duplication
+precedence are now separate: a live result is placed with the local ones, while a duplicate is still
+resolved in favour of the copy you already have.
+
+**Still open** until the owner runs it: which of the two he was seeing. The message says so now.
+
 ### C1. ~~Roughly half of `.sndh` files do not play~~ — FIXED 2026-09-03 by sc68 3.0.0b
 
 Measured on thirty random Modland files through the real backend logic: **16 play, 5 load and render

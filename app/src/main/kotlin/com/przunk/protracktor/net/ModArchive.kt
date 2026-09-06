@@ -15,6 +15,7 @@
  */
 package com.przunk.protracktor.net
 
+import android.util.Log
 import com.przunk.protracktor.player.TrackRef
 import java.net.HttpURLConnection
 import java.net.URL
@@ -65,21 +66,56 @@ object ModArchive : Catalogue(
     /**
      * Searches The Mod Archive using their web search interface.
      *
-     * Returns a list of playable [TrackRef] instances with download URLs and extracted titles.
+     * **Returns null when the search could not be made**, and an empty list when it was made and
+     * found nothing. Those are different facts and this used to report both as "no results":
+     * `runCatching { … }.getOrDefault(emptyList())` swallowed every failure, so a blocked request,
+     * a changed page or a dead network all looked exactly like a tune that is not in the archive
+     * (`docs/STATUS.md` C15). The caller can now say which happened.
+     *
+     * The HTTP status is checked rather than assumed. `inputStream` on a 4xx or 5xx throws, which
+     * the old code caught and discarded; reading it deliberately means the log says *what* the
+     * server said instead of only that something went wrong.
      */
-    suspend fun search(query: String): List<TrackRef> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String): List<TrackRef>? = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
-        runCatching {
+        try {
             val encoded = URLEncoder.encode(query, "UTF-8")
             val connection = (URL(SEARCH_URL + encoded).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 15_000
-                setRequestProperty("User-Agent", "Protracktor/0.2.0 (Android)")
+                setRequestProperty("User-Agent", USER_AGENT)
+                instanceFollowRedirects = true
+            }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                Log.w(TAG, "search refused: HTTP $status for \"$query\"")
+                connection.disconnect()
+                return@withContext null
             }
             val html = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            parseSearchResults(html)
-        }.getOrDefault(emptyList())
+            val results = parseSearchResults(html)
+            // A page that came back but yielded nothing is worth distinguishing in the log from a
+            // page that came back empty-handed honestly: the markup here is scraped, so "parsed
+            // zero out of a page this big" is the shape a silent breakage takes.
+            if (results.isEmpty() && html.contains("downloads.php")) {
+                Log.w(TAG, "page has download links but nothing parsed -- markup may have changed")
+            }
+            results
+        } catch (e: Exception) {
+            Log.w(TAG, "search failed for \"$query\"", e)
+            null
+        }
     }
+
+    private const val TAG = "ModArchive"
+
+    /**
+     * Named for the app rather than the version it was written in.
+     *
+     * The old one said 0.2.0 forever, which is the sort of thing that makes a server's logs lie
+     * about which build is calling it.
+     */
+    private const val USER_AGENT = "Protracktor (Android; +https://github.com/przunk/protracktor)"
 
     private val ROW_PATTERN = Pattern.compile("<tr.*?</tr>", Pattern.DOTALL)
     private val MODULE_ID_PATTERN = Pattern.compile("moduleid=(\\d+)")
