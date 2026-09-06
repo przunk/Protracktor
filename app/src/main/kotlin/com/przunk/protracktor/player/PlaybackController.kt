@@ -148,6 +148,16 @@ data class PlayerUiState(
     val seekable: Boolean get() = metadata["seekable"] != "0" && durationSeconds > 0.0
 
     /**
+     * The year the tune was released, or empty when nothing in the file says.
+     *
+     * Derived rather than stored, like [seekable] above: it is a reading of the metadata that is
+     * already here, and a copy would only be a second thing to keep in step. See [ReleaseYear] for
+     * why it takes a parser -- five backends record the year five ways and only one of them
+     * records a year.
+     */
+    val releaseYear: String get() = ReleaseYear.from(metadata)
+
+    /**
      * What the transport can do right now.
      *
      * Asked of the mode rather than always of the queue: during Random the buttons walk the random

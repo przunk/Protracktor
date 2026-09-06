@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
+import com.przunk.protracktor.player.Platforms
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.RepeatMode
 
@@ -144,9 +145,28 @@ fun PlayerDock(
                     Text(
                         // Said out loud, because on a network share this is seconds. A player that
                         // looks idle while it works gets pressed again.
+                        // Author, then the machine and the year -- the owner asked for
+                        // "AMIGA | 1992" while driving, and this is the line that had room for it
+                        // without making the dock taller. The author comes first and the whole
+                        // line ellipsises, so a long name pushes out the decoration rather than
+                        // the other way round.
+                        //
+                        // With no author the platform *replaces* the format rather than joining
+                        // it: "MOD · Amiga" says one thing twice.
                         text = when {
                             state.loadingTrack -> stringResource(R.string.dock_loading)
-                            loaded != null -> loaded.displayAuthor.ifBlank { formatOf(state) }
+                            loaded != null -> {
+                                val machine = Platforms.forFileName(loaded.fileName)?.name
+                                val year = state.releaseYear
+                                val lead = loaded.displayAuthor.ifBlank {
+                                    machine ?: formatOf(state)
+                                }
+                                listOfNotNull(
+                                    lead,
+                                    machine.takeIf { loaded.displayAuthor.isNotBlank() },
+                                    year.takeIf { it.isNotBlank() },
+                                ).joinToString(" \u00b7 ")
+                            }
                             else -> stringResource(R.string.dock_idle_subtitle)
                         },
                         style = MaterialTheme.typography.bodyMedium,

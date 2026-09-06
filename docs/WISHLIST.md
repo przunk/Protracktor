@@ -250,7 +250,7 @@ belongs in whatever text offers it.
 platform behaviour that varies with version and manufacturer: whether a `content://` open reaches us
 with a usable name, and what a tapped `.sndh` link actually does on his phone today.
 
-## B20. The year a tune was released
+## B20. ~~The year a tune was released~~ — DONE 2026-09-06 for Now Playing and the dock
 
 *owner, 2026-09-04: "fajnie by było gdyby dało się zobaczyć rok wydania utworu (np. w info o
 utworze, w liście albo wyszukiwaniu)".*
@@ -283,6 +283,33 @@ for sorting or filtering; not worth it to decorate a row.
 **Suggested order:** show it in Now Playing first, from whatever the backend already knows. That is
 an afternoon, it answers the question for the file you are listening to, and it says how often a
 year is actually there before anything is stored.
+
+### Built 2026-09-06 — Now Playing and the dock, nothing stored
+
+**Four of the five backends were already sending something across.** The table above says sc68's
+`year` was being dropped on the floor; in fact ASAP's `date`, game-music-emu's `copyright` and
+libsidplayfp's `copyright` were all crossing JNI too and being ignored just as quietly. Only
+libopenmpt's `date` was genuinely not sent, and that is one line of C++.
+
+`ReleaseYear` is the parser this always needed. It reads `year`, then `date`, then `copyright` — in
+that order because sc68 states a year, ASAP states a date, and a copyright line is prose that
+happens to contain one. **The four-digit search is bounded to 1970..2099 rather than being `\d{4}`**,
+because game-music-emu's copyright carries whatever the ripper typed and `KMCA-1234` must not become
+1234.
+
+A range is kept as a range: `1987-1989` is what the file says, and picking its first year would be
+us deciding something the composer did not. Two years separated by anything but a dash are two
+numbers in a sentence, not a span — `1987 Rob Hubbard, remastered 2019` is 1987.
+
+**In the dock it joins the author line rather than adding one.** `4-Mat · Amiga · 1992`, ellipsised
+from the right, so a long author pushes out the decoration instead of the title growing a third row
+— the dock's height has been argued about once already. With no author the platform *replaces* the
+format, because "MOD · Amiga" says one thing twice. The machine comes from `Platforms`, which the
+search filter built the day before and which needs no backend to answer.
+
+**Still not stored, deliberately**, so the expensive half of this item stands unchanged: a year in a
+list or a search still means a column in two tables, a migration and a re-index. Using it in Now
+Playing is what will say whether that is worth it.
 
 ## B19. Server-hosted periodically updated catalogue indexes (Cloudflare / Google Cloud)
 
