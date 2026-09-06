@@ -110,6 +110,7 @@
     <string name="browse_title">Dodaj muzykę</string>
     <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
 
+    <string name="field_year">Rok</string>
     <string name="field_format">Format</string>
     <string name="field_tracker">Tracker</string>
     <string name="field_artist">Autor</string>

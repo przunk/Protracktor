@@ -150,6 +150,9 @@ public:
           << "format\t" << module_->get_metadata("type_long") << '\n'
           << "tracker\t" << module_->get_metadata("tracker") << '\n'
           << "artist\t" << module_->get_metadata("artist") << '\n'
+          // Present in IT and MPTM and rare elsewhere, and it was never sent across at all --
+          // libopenmpt knew the date of every module that carried one and nobody asked.
+          << "date\t" << module_->get_metadata("date") << '\n'
           << "channels\t" << module_->get_num_channels() << '\n'
           << "patterns\t" << module_->get_num_patterns() << '\n'
           << "instruments\t" << module_->get_num_instruments() << '\n'

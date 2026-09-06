@@ -153,7 +153,13 @@ fun NowPlaying(
         }
 
         val message = state.metadata["message"].orEmpty()
-        val rows = FIELDS.mapNotNull { (key, label) ->
+        // The year is derived rather than looked up, because no two backends record it under the
+        // same name and one of them does not record a year at all -- see `ReleaseYear`. It goes
+        // first: of everything in this list it is the one fact about the tune rather than about
+        // the file.
+        val rows = listOfNotNull(
+            state.releaseYear.takeIf { it.isNotBlank() }?.let { R.string.field_year to it }
+        ) + FIELDS.mapNotNull { (key, label) ->
             state.metadata[key]?.takeIf { it.isNotBlank() && it != "0" }?.let { label to it }
         }
 
