@@ -197,7 +197,11 @@ class CatalogueStore(context: Context) {
 
     /** Title search. [catalogueIds] empty means every indexed catalogue. */
     /** How many rows [search] would return without its limit. Same `WHERE`, no `ORDER BY`. */
-    suspend fun countMatches(query: String, catalogueIds: Set<String>): Int =
+    suspend fun countMatches(
+        query: String,
+        catalogueIds: Set<String>,
+        formats: Set<String> = emptySet(),
+    ): Int =
         withContext(Dispatchers.IO) {
             if (query.isBlank()) return@withContext 0
             val scope = if (catalogueIds.isEmpty()) {
@@ -207,14 +211,45 @@ class CatalogueStore(context: Context) {
                 " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
             }
             val pattern = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            val byFormat = if (formats.isEmpty()) {
+                "" to emptyArray<String>()
+            } else {
+                val placeholders = formats.joinToString(",") { "?" }
+                " AND format COLLATE NOCASE IN ($placeholders)" to formats.toTypedArray()
+            }
             helper.readableDatabase.rawQuery(
                 "SELECT COUNT(*) FROM catalogue_tracks " +
-                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')${scope.first}",
-                arrayOf(pattern, pattern) + scope.second,
+                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')" +
+                    "${scope.first}${byFormat.first}",
+                arrayOf(pattern, pattern) + scope.second + byFormat.second,
             ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
         }
 
-    suspend fun search(query: String, catalogueIds: Set<String>, limit: Int): List<CatalogueTrack> =
+    /**
+     * How many indexed rows each format directory holds.
+     *
+     * What makes the platform chips honest. **A catalogue index only ever contains files this build
+     * claims** — `Catalogue.parseIndex` is handed a `keep` predicate and drops the rest at index
+     * time — so a count here is a count of tunes that will actually open, and a platform with none
+     * has nothing to offer rather than merely nothing indexed. That is the difference between
+     * greying a chip out for a reason and greying it out on a hunch.
+     *
+     * One grouped scan, and only when the filter is drawn.
+     */
+    suspend fun formatCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(
+            "SELECT format, COUNT(*) FROM catalogue_tracks GROUP BY format", emptyArray(),
+        ).use { row ->
+            buildMap { while (row.moveToNext()) put(row.getString(0), row.getInt(1)) }
+        }
+    }
+
+    suspend fun search(
+        query: String,
+        catalogueIds: Set<String>,
+        limit: Int,
+        formats: Set<String> = emptySet(),
+    ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             if (query.isBlank()) return@withContext emptyList()
             val scope = if (catalogueIds.isEmpty()) {
@@ -226,11 +261,20 @@ class CatalogueStore(context: Context) {
             // Escaped so a user typing % or _ searches for those characters instead of matching
             // everything -- a search box that silently means something else is worse than no search.
             val pattern = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            // Modland's directory name is what the `format` column holds, so narrowing to a platform
+            // is one `IN (…)` over a column that already exists. `COLLATE NOCASE` because the table
+            // stores the archive's own capitalisation and `Platforms` states everything lower-cased.
+            val byFormat = if (formats.isEmpty()) {
+                "" to emptyArray<String>()
+            } else {
+                val placeholders = formats.joinToString(",") { "?" }
+                " AND format COLLATE NOCASE IN ($placeholders)" to formats.toTypedArray()
+            }
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
-                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')${scope.first} " +
-                    "ORDER BY title LIMIT ?",
-                arrayOf(pattern, pattern) + scope.second + arrayOf(limit.toString()),
+                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')" +
+                    "${scope.first}${byFormat.first} ORDER BY title LIMIT ?",
+                arrayOf(pattern, pattern) + scope.second + byFormat.second + arrayOf(limit.toString()),
             ).use { it.toTracks() }
         }
 

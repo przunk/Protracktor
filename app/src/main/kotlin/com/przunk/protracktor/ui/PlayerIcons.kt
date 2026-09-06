@@ -104,6 +104,26 @@ object PlayerIcons {
     val Folder: ImageVector by lazy {
         icon("Folder", "M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z")
     }
+    /**
+     * A CX40 — the Atari 2600 stick — for the "by platform" filter.
+     *
+     * Drawn as three subpaths with **even-odd** fill so the fire button is a hole rather than a
+     * shape of its own. That is also why the ball and the shaft are one outline instead of a circle
+     * overlapping a rectangle: under even-odd an overlap cancels, and the first attempt had a notch
+     * bitten out of the stick where the two met. The path was rasterised and looked at before it
+     * went in, which is how that was found.
+     */
+    val Joystick: ImageVector by lazy {
+        icon(
+            "Joystick",
+            "M5,16 L19,16 A2,2 0 0,1 21,18 L21,20 A2,2 0 0,1 19,22 L5,22 " +
+                "A2,2 0 0,1 3,20 L3,18 A2,2 0 0,1 5,16 Z " +
+                "M10.6,16 L10.6,8.75 A3,3 0 1,1 13.4,8.75 L13.4,16 Z " +
+                "M5.2,19 A1.8,1.8 0 1,1 8.8,19 A1.8,1.8 0 1,1 5.2,19 Z",
+            hollow = true,
+        )
+    }
+
     val Cloud: ImageVector by lazy {
         icon(
             "Cloud",

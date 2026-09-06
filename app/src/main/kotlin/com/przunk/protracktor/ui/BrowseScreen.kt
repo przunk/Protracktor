@@ -73,6 +73,7 @@ import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
 
 /**
@@ -101,9 +102,9 @@ fun BrowseScreen(
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
     onQueryChange: (String) -> Unit,
-    onToggleLocal: () -> Unit,
-    onToggleOnline: () -> Unit,
+    onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
+    onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
     playingId: String?,
@@ -189,9 +190,9 @@ fun BrowseScreen(
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
                 onQueryChange = onQueryChange,
-                onToggleLocal = onToggleLocal,
-                onToggleOnline = onToggleOnline,
+                onScope = onScope,
                 onToggleCatalogue = onToggleCatalogue,
+                onTogglePlatform = onTogglePlatform,
                 onSearch = onSearch,
                 onPlay = onPlay,
                 onAdd = onAdd,
@@ -617,9 +618,9 @@ private fun SearchDomain(
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onQueryChange: (String) -> Unit,
-    onToggleLocal: () -> Unit,
-    onToggleOnline: () -> Unit,
+    onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
+    onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -630,7 +631,7 @@ private fun SearchDomain(
             value = browse.query,
             onValueChange = onQueryChange,
             singleLine = true,
-            label = { Text(stringResource(R.string.search_label)) },
+            label = { Text(scopeLabel(browse)) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             trailingIcon = {
@@ -641,48 +642,12 @@ private fun SearchDomain(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
-        // Two levels: which side to search, then which catalogues within the online side. The
-        // earlier version treated "no catalogue ticked" as "all of them", which made the filter look
-        // broken -- unticking Modland searched Modland anyway.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(
-                selected = browse.searchLocal,
-                onClick = onToggleLocal,
-                label = { Text(stringResource(R.string.search_scope_local)) },
-            )
-            FilterChip(
-                selected = browse.searchOnline,
-                onClick = onToggleOnline,
-                label = { Text(stringResource(R.string.search_scope_online)) },
-            )
-        }
-
-        val indexed = browse.catalogues.filter { it.indexed }
-        if (browse.searchOnline && indexed.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                indexed.forEach { catalogue ->
-                    FilterChip(
-                        selected = catalogue.id in browse.searchCatalogues,
-                        onClick = { onToggleCatalogue(catalogue.id) },
-                        label = { Text(catalogue.displayName) },
-                    )
-                }
-            }
-        }
-        if (browse.searchOnline && indexed.isEmpty()) {
-            Text(
-                text = stringResource(R.string.search_no_catalogues),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-        }
+        SearchScopePanel(
+            browse = browse,
+            onScope = onScope,
+            onToggleCatalogue = onToggleCatalogue,
+            onTogglePlatform = onTogglePlatform,
+        )
 
         if (browse.loading) {
             Loading()

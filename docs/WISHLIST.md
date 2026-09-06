@@ -96,7 +96,7 @@ needs somewhere to say what *this* is. Three shapes, and they are not equal:
 **Worth deciding with B23**, because "platform" as a way of narrowing Random and "platform" as a way
 of narrowing search want the same list of platforms to exist.
 
-## B23. Search by platform, not by service
+## B23. ~~Search by platform, not by service~~ — DONE 2026-09-06
 
 *owner, 2026-09-05: the online section should offer AMIGA, C64 and so on rather than Modland, ASMA
 and The Mod Archive — searching every service available, but narrowed to a platform or format.*
@@ -126,6 +126,67 @@ having even if a long tail stays filed under "other".
 **Related:** B22 wants the same list to exist, and `docs/BACKLOG.md` A7 records that every catalogue
 except The Mod Archive is blocked on a decoder — so the platform list is also a way of showing what
 is *not* playable yet without pretending otherwise.
+
+### Built 2026-09-06 — one scope, said out loud
+
+**The design changed shape in conversation and came out better than either starting point.** The
+owner's objection was that the filter was "napierdzielone" — up to five chips in two rows — and his
+answer was three large tiles: `LOCAL LIBRARY`, `ONLINE CATALOGUES`, `BY PLATFORM`. The design's real
+move, though, was his second one: **the search field's own label states the scope** — `Everywhere`,
+`Amiga`, `Online: Modland, Aminet`.
+
+That is what made the rest fall out. The earlier sketches kept running into "what does ONLINE *and*
+BY PLATFORM mean", because the tiles were two different axes wearing one shape. Once the scope is a
+single value displayed in one place, there is no conjunction to resolve, and `SearchScope` is a
+sealed type with four cases rather than three booleans and a set.
+
+It also made an empty selection safe again. "No catalogue ticked means all of them" had to be
+reversed once, because unticking Modland searched Modland anyway and the filter looked broken. It is
+back — tapping `ONLINE CATALOGUES` with nothing ticked searches everything — for the one reason it
+was not safe before: **the label says so out loud.**
+
+**The tiles shrink rather than disappear.** At rest they are large and share the width; once a scope
+is set they collapse to a row of icons with the active one lit and the chips appear below. An earlier
+version replaced the tiles with the chip list and needed a small back arrow to escape; keeping the
+icons means switching from platforms to catalogues is one tap, there is nothing to go back from, and
+the system back button keeps a single meaning.
+
+**Back.** Inside search there is one level and it is the scope: back widens it to `Everywhere`, and
+a second press leaves. It must never destroy the typed query or the results, and `browseBack` used
+to clear `tracks` on the way out of any domain — right for a folder you walked out of, wrong for a
+search you are coming straight back to. Back always meaning "leave" is only safe because leaving
+costs nothing.
+
+### The table, and what measuring it found
+
+`Platforms` maps thirteen machines to Modland's directory names *and* to file extensions, because a
+catalogue row carries a `format` column and a local file carries only its name. One table, keyed by
+platform, so B22 can use it unchanged.
+
+`./scripts/probe-platforms.py` measures it against the archive: **98.2% of Modland's 515,509 files
+land on a platform**, and the largest unmapped directory holds 486. That is the number the design
+rested on — 339 directories sounds like a research project until you see that the top twenty are 84%
+and 240 of them hold under a hundred files each.
+
+Two things it caught that reading would not have:
+
+- **FMP, PMD and S98 had been filed under Sharp X68000.** They are NEC PC-98 sound drivers — 22,513
+  files under the wrong machine. Nothing on screen would have looked wrong, because neither platform
+  plays anything yet.
+- **`gtk` and `mms` belonged to no platform at all**, having been added to `SupportedFormats` a day
+  earlier. A test now asserts that every name the app claims belongs to some platform, because the
+  failure is silent: picking a platform would drop files the app can play and say nothing.
+
+`.ftm` is the honest awkward case, and it is recorded rather than smoothed over: 1,779 of Modland's
+1,874 are FamiTracker and 95 are Face The Music. The directories are certain and are mapped
+separately; the *extension* has to pick one, and it goes with the majority — while libopenmpt is the
+one that plays the minority.
+
+**Greyed for a measured reason.** A platform chip is disabled when the user's indexes hold nothing
+for it. That is a real count, not a hard-coded support list: a catalogue index only ever contains
+files this build claims, because `Catalogue.parseIndex` is handed a `keep` predicate, so a count of
+rows is a count of tunes that will open. A hard-coded flag would have been wrong the day after AHX
+landed — and one did land the day before.
 
 ## B24. Open a chiptune link with Protracktor
 

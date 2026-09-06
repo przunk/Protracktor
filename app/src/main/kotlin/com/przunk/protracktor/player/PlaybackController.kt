@@ -235,9 +235,16 @@ data class BrowseState(
 
     // Search
     val query: String = "",
-    val searchLocal: Boolean = true,
-    val searchOnline: Boolean = true,
-    val searchCatalogues: Set<String> = emptySet(),
+    /** What the search covers, as one value shown in the field's own label. See [SearchScope]. */
+    val searchScope: SearchScope = SearchScope.Everywhere,
+    /**
+     * How many indexed, playable tunes each platform holds, by platform id.
+     *
+     * Counted from the catalogue index, which contains only files this build claims, so a platform
+     * missing from this map has nothing to offer and its chip is drawn disabled. Computed rather
+     * than declared: a hard-coded "supported" list would have been wrong the day after AHX landed.
+     */
+    val platformCounts: Map<String, Int> = emptyMap(),
     /**
      * How many rows the two capped sources matched in total, or 0 when nothing is capped.
      *
@@ -749,7 +756,11 @@ class PlaybackController private constructor(private val context: Context) {
         _browse.update { BrowseNavigation.enteringDomain(it, domain) }
         when (domain) {
             BrowseDomain.LOCAL -> refreshFolders()
-            BrowseDomain.ONLINE, BrowseDomain.SEARCH -> refreshCatalogues()
+            BrowseDomain.ONLINE -> refreshCatalogues()
+            BrowseDomain.SEARCH -> {
+                refreshCatalogues()
+                refreshPlatformCounts()
+            }
             BrowseDomain.HISTORY -> openHistory()
             BrowseDomain.ROOT -> Unit
         }
@@ -768,6 +779,21 @@ class PlaybackController private constructor(private val context: Context) {
             return false
         }
 
+        // Inside search there is one level, and it is the scope. The filter row and the results are
+        // the same screen -- filters above, list below -- so there is nothing to navigate between;
+        // the only thing that can be undone is having narrowed the search. Back widens it, which is
+        // visible in the field's label going from `Amiga` to `Everywhere`, and a second press
+        // leaves.
+        //
+        // What back must never do here is destroy the typed query or the results. The rest of this
+        // method clears `tracks` on the way out of a domain, which is right for a folder you walked
+        // out of and wrong for a search you may be coming straight back to. See `docs/WISHLIST.md`
+        // B23: back always meaning "leave" is only safe because leaving costs nothing.
+        if (current.domain == BrowseDomain.SEARCH && current.searchScope != SearchScope.Everywhere) {
+            _browse.update { it.copy(searchScope = SearchScope.Everywhere) }
+            return true
+        }
+
         val next = when {
             current.openAuthor != null -> current.copy(openAuthor = null, tracks = emptyList())
                 .also { openFormat(current.openFormat.orEmpty()) }
@@ -775,6 +801,8 @@ class PlaybackController private constructor(private val context: Context) {
                 .also { current.openCatalogue?.let(::openCatalogue) }
             current.openCatalogue != null -> current.copy(openCatalogue = null, groups = emptyList())
             current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList())
+            // Search keeps its results and its query; every other domain drops them.
+            current.domain == BrowseDomain.SEARCH -> current.copy(domain = BrowseDomain.ROOT)
             current.domain != BrowseDomain.ROOT -> current.copy(domain = BrowseDomain.ROOT, tracks = emptyList())
             else -> return false
         }
@@ -1322,11 +1350,6 @@ class PlaybackController private constructor(private val context: Context) {
                     replayCount = replays.first,
                     replayBytes = replays.second,
                     backends = NativeEngine.backendsFingerprint(),
-                    // Everything indexed is searched until the user says otherwise. Starting with
-                    // none ticked would make the first search return nothing and look broken.
-                    searchCatalogues = current.searchCatalogues.ifEmpty {
-                        summaries.filter { it.indexed }.map { it.id }.toSet()
-                    },
                 )
             }
         }
@@ -1382,7 +1405,11 @@ class PlaybackController private constructor(private val context: Context) {
             }
             _browse.update { current ->
                 current.copy(
-                    searchCatalogues = current.searchCatalogues - catalogueId,
+                    // A deleted catalogue drops out of an online scope that named it. Left in, the
+                    // label would go on claiming a source that no longer exists.
+                    searchScope = (current.searchScope as? SearchScope.Online)
+                        ?.let { SearchScope.Online(it.catalogueIds - catalogueId) }
+                        ?: current.searchScope,
                     openCatalogue = current.openCatalogue?.takeIf { it.id != catalogueId },
                 )
             }
@@ -1717,56 +1744,77 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun setQuery(query: String) = _browse.update { it.copy(query = query) }
 
-    fun toggleSearchLocal() = _browse.update { it.copy(searchLocal = !it.searchLocal) }
-
-    /** Turning the whole online side off leaves the individual choices as they were. */
-    fun toggleSearchOnline() = _browse.update { it.copy(searchOnline = !it.searchOnline) }
-
+    /** Ticks one catalogue inside an online scope. Only meaningful while that is the scope. */
     fun toggleSearchCatalogue(id: String) = _browse.update {
-        it.copy(
-            searchCatalogues = if (id in it.searchCatalogues) it.searchCatalogues - id else it.searchCatalogues + id
-        )
+        val scope = it.searchScope as? SearchScope.Online ?: return@update it
+        val ids = if (id in scope.catalogueIds) scope.catalogueIds - id else scope.catalogueIds + id
+        it.copy(searchScope = SearchScope.Online(ids))
+    }
+
+    /** Ticks one platform. Same shape, and the same rule: empty means all of them. */
+    fun toggleSearchPlatform(id: String) = _browse.update {
+        val scope = it.searchScope as? SearchScope.ByPlatform ?: return@update it
+        val ids = if (id in scope.platformIds) scope.platformIds - id else scope.platformIds + id
+        it.copy(searchScope = SearchScope.ByPlatform(ids))
     }
 
     fun runSearch() {
         val current = _browse.value
         if (current.query.isBlank()) return
+        val searching = current.searchScope
+        // The two narrowings the scope implies, worked out once. A platform scope with nothing
+        // ticked means every platform, which is why an empty set has to become an empty filter
+        // rather than an empty result -- the label says "All platforms" and the search must agree.
+        val platformIds = (searching as? SearchScope.ByPlatform)?.platformIds.orEmpty()
+        val formats = Platforms.catalogueFormatsOf(platformIds)
+
         scope.launch {
             _browse.update { it.copy(loading = true, tracks = emptyList()) }
 
             // The scanned library first: it knows tunes by their real titles, and it knows files
             // nobody has added to any playlist. Then the playlists, for anything indexed folders do
             // not cover -- an individually picked file, or a folder whose grant is gone.
-            val fromIndex = if (current.searchLocal) {
-                libraryIndex.search(current.query, limit = SearchResults.PER_SOURCE_LIMIT)
+            val fromIndex = if (searching.searchesLocal) {
+                libraryIndex.search(current.query, SearchResults.PER_SOURCE_LIMIT, platformIds)
             } else {
                 emptyList()
             }
 
-            val fromLocal = if (current.searchLocal) {
+            val fromLocal = if (searching.searchesLocal) {
                 // The library, meaning every playlist's tracks -- searching only the active one
                 // would answer a question nobody asked.
                 store.allTracks().filter {
-                    it.title.contains(current.query, ignoreCase = true) ||
-                        it.fileName.contains(current.query, ignoreCase = true)
+                    (it.title.contains(current.query, ignoreCase = true) ||
+                        it.fileName.contains(current.query, ignoreCase = true)) &&
+                        (platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds))
                 }
             } else {
                 emptyList()
             }
 
             // Explicit. "No catalogue ticked means all of them" was the earlier rule and it made
-            // the filter look broken: unticking Modland searched Modland anyway. Nothing ticked now
-            // means nothing searched, which is what unticking a box has always meant.
-            val dbCatalogues = current.searchCatalogues.filter { it != com.przunk.protracktor.net.ModArchive.id }.toSet()
-            val fromOnline = if (current.searchOnline && dbCatalogues.isNotEmpty()) {
-                catalogues.search(current.query, dbCatalogues, SearchResults.PER_SOURCE_LIMIT)
-                    .map(::toTrackRef)
+            // the filter look broken: unticking Modland searched Modland anyway. It is safe again
+            // here for the one reason it was not then -- the label states the scope out loud, so
+            // "Online" plainly covers everything and "Online: Modland" plainly does not.
+            val chosen = (searching as? SearchScope.Online)?.catalogueIds.orEmpty()
+            val indexed = current.catalogues.filter { it.indexed }.map { it.id }.toSet()
+            val wanted = (if (chosen.isEmpty()) indexed else chosen)
+            val dbCatalogues = wanted.filter { it != com.przunk.protracktor.net.ModArchive.id }.toSet()
+            val fromOnline = if (searching.searchesOnline && dbCatalogues.isNotEmpty()) {
+                catalogues.search(
+                    current.query, dbCatalogues, SearchResults.PER_SOURCE_LIMIT, formats,
+                ).map(::toTrackRef)
             } else {
                 emptyList()
             }
 
-            val fromModArchive = if (current.searchOnline && com.przunk.protracktor.net.ModArchive.id in current.searchCatalogues) {
-                com.przunk.protracktor.net.ModArchive.search(current.query)
+            // The Mod Archive is searched live and has no index to narrow, so a platform scope
+            // cannot reach it at the query -- its results are filtered here instead of being
+            // dropped, which would have made "Amiga" quietly mean "Amiga except The Mod Archive".
+            val fromModArchive = if (searching.searchesOnline && com.przunk.protracktor.net.ModArchive.id in wanted) {
+                com.przunk.protracktor.net.ModArchive.search(current.query).filter {
+                    platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds)
+                }
             } else {
                 emptyList()
             }
@@ -1787,15 +1835,39 @@ class PlaybackController private constructor(private val context: Context) {
             val capped = fromIndex.size == SearchResults.PER_SOURCE_LIMIT ||
                 fromOnline.size == SearchResults.PER_SOURCE_LIMIT
             val matches = if (!capped) 0 else {
-                (if (current.searchLocal) libraryIndex.countMatches(current.query) else 0) +
-                    (if (current.searchOnline && dbCatalogues.isNotEmpty()) {
-                        catalogues.countMatches(current.query, dbCatalogues)
+                (if (searching.searchesLocal) libraryIndex.countMatches(current.query) else 0) +
+                    (if (searching.searchesOnline && dbCatalogues.isNotEmpty()) {
+                        catalogues.countMatches(current.query, dbCatalogues, formats)
                     } else {
                         0
                     })
             }
 
             _browse.update { it.copy(tracks = results, searchMatches = matches, loading = false) }
+        }
+    }
+
+    /**
+     * Changes what the search covers.
+     *
+     * Does not re-run the search. Choosing a scope is setting up a question, not asking it -- and
+     * re-running on every tick of a platform chip would fire a query per tap while somebody picks
+     * three of them.
+     */
+    fun setSearchScope(scope: SearchScope) {
+        _browse.update { it.copy(searchScope = scope) }
+    }
+
+    /** Counts the platform chips, once, when the search screen is opened. */
+    private fun refreshPlatformCounts() {
+        scope.launch {
+            val counts = catalogues.formatCounts()
+            val byPlatform = mutableMapOf<String, Int>()
+            for ((format, n) in counts) {
+                val platform = Platforms.forCatalogueFormat(format) ?: continue
+                byPlatform[platform.id] = (byPlatform[platform.id] ?: 0) + n
+            }
+            _browse.update { it.copy(platformCounts = byPlatform) }
         }
     }
 

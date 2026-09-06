@@ -83,16 +83,14 @@ class BrowseNavigationTest {
     fun `things that are not about where you are survive`() {
         val withSettings = deepInsideOnline.copy(
             query = "elysium",
-            searchLocal = false,
-            searchCatalogues = setOf("modland"),
+            searchScope = SearchScope.ByPlatform(setOf("amiga")),
             songLengthCount = 61157,
         )
         val fresh = BrowseNavigation.enteringDomain(withSettings, BrowseDomain.ONLINE)
         // Search scope and downloaded-data counts are the user's settings and the app's facts, not
         // a position in a hierarchy. Clearing them here would be a second bug wearing C6's clothes.
         assertEquals("elysium", fresh.query)
-        assertFalse(fresh.searchLocal)
-        assertEquals(setOf("modland"), fresh.searchCatalogues)
+        assertEquals(SearchScope.ByPlatform(setOf("amiga")), fresh.searchScope)
         assertEquals(61157, fresh.songLengthCount)
     }
 }

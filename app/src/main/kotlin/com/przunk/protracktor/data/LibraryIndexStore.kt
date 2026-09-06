@@ -16,6 +16,7 @@
 package com.przunk.protracktor.data
 
 import android.content.Context
+import com.przunk.protracktor.player.Platforms
 import com.przunk.protracktor.player.TrackRef
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -154,6 +155,16 @@ class LibraryIndexStore(context: Context) {
      * both would hide one. What must never drift is the predicate, and that is what a reader can
      * check by looking down.
      */
+    /**
+     * How far past the wanted count the query reaches when a platform filter is on.
+     *
+     * A filter that keeps one row in ten would otherwise return a tenth of a page. Five is a guess
+     * and is written down as one; it is bounded work either way, because the local index is a user's
+     * own folders. If it is ever the wrong shape the fix is a `platform` column at scan time, which
+     * is a schema migration and a re-index and is not worth it for this.
+     */
+    private val PLATFORM_SCAN_FACTOR = 5
+
     suspend fun countMatches(query: String): Int = withContext(Dispatchers.IO) {
         val like = "%${query.trim()}%"
         helper.readableDatabase.rawQuery(
@@ -162,17 +173,32 @@ class LibraryIndexStore(context: Context) {
         ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
-    suspend fun search(query: String, limit: Int): List<TrackRef> = withContext(Dispatchers.IO) {
+    /**
+     * @param platforms when non-empty, only files belonging to one of these platform ids.
+     *
+     * Applied in Kotlin as the cursor is walked, not in SQL. A local index has no `format` column,
+     * so the alternative is sixty `file_name LIKE` patterns for Amiga alone — over a table that is
+     * one user's folders rather than half a million catalogue rows. Filtering here also means the
+     * limit counts what survives the filter instead of what preceded it.
+     */
+    suspend fun search(
+        query: String,
+        limit: Int,
+        platforms: Set<String> = emptySet(),
+    ): List<TrackRef> = withContext(Dispatchers.IO) {
         val like = "%${query.trim()}%"
         helper.readableDatabase.rawQuery(
             "SELECT uri, path, file_name, size, title, author, subsongs FROM library_index " +
                 "WHERE title LIKE ? OR file_name LIKE ? OR author LIKE ? " +
                 "ORDER BY title LIMIT ?",
-            arrayOf(like, like, like, limit.toString()),
+            // No SQL limit: the platform filter runs below, and a limit applied first would cut
+            // rows the filter was going to keep. The loop stops itself once it has enough.
+            arrayOf(like, like, like, (limit * PLATFORM_SCAN_FACTOR).toString()),
         ).use { row ->
             buildList {
-                while (row.moveToNext()) {
+                while (row.moveToNext() && size < limit) {
                     val fileName = row.getString(2)
+                    if (platforms.isNotEmpty() && !Platforms.matches(fileName, platforms)) continue
                     add(
                         TrackRef(
                             id = row.getString(0),
