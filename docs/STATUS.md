@@ -776,6 +776,21 @@ A6 as well, because it is both a defect and a piece of work.
 
 ## Fixed
 
+- **2026-09-06 — Search silently threw away most of its results.** The owner searched `.sap` and
+  got 506, then `.mod` and got 308, and said it felt like too few. It was: **200 + 300 + 6** and
+  **300 + 8**. Two hard caps, 200 on the scanned library and 300 on the catalogues — different
+  numbers for no reason anybody wrote down — applied with nothing on screen to say a limit had been
+  reached. An archive of 6,335 SAP files answering "506" reads as a broken index, not a full page.
+
+  One cap now, 2,000, in `SearchResults` beside the rest of the search policy, and the count of
+  what was left out shown above the list. The cap is not a memory limit — a `TrackRef` is small and
+  the list is drawn lazily — it is the point past which the answer to "where is my tune" is a better
+  query. Browse by format has no cap and is the tool for "every SAP file".
+
+  The lesson is the one this project keeps relearning: **a number chosen once and never explained
+  becomes a bug the day somebody counts.** The 12-track bound on gme's audible search went the same
+  way (C9).
+
 - ~~**Play/Stop label goes stale when a module reaches its end.**~~ Fixed 2026-08-31 by the polling
   loop: the native side raises a flag when a module ends and the tick that drives the progress bar
   notices it.
