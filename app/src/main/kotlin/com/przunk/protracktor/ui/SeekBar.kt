@@ -15,11 +15,13 @@
  */
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -76,7 +78,12 @@ fun SeekBar(
         interactionSource = interaction,
         modifier = modifier
             .fillMaxWidth()
-            .then(if (compact) Modifier.height(28.dp) else Modifier)
+            // **The height is the touch target, not the look of the line.** The track's thickness
+            // is set on the track itself, so this can be a proper 48dp finger without the bar
+            // getting any fatter. It was 28dp, under Material's minimum, with a full-width button
+            // immediately below it -- so a low miss did not do nothing, it opened Now Playing. The
+            // owner met that in a car, which is where a small target costs the most.
+            .then(if (compact) Modifier.height(COMPACT_TOUCH_HEIGHT) else Modifier)
             .then(label?.let { text -> Modifier.semantics { contentDescription = text } } ?: Modifier),
         thumb = {
             // A visible grab point, which is what the owner asked for: a progress line with nothing
@@ -87,11 +94,17 @@ fun SeekBar(
             // all — and since HVSC started supplying SID durations, the bar shows a real length and
             // looked exactly like a bar you could drag. The owner tried, on 2026-09-04. A greyed
             // thumb reads as "not now"; no thumb reads as "this is progress", which is the truth.
+            //
+            // **Drawn here rather than by `SliderDefaults.Thumb`**, which grows while pressed. The
+            // track is inset by the thumb's radius, so a thumb that changes size makes the line
+            // itself widen at both ends the moment you touch it — which is what the owner saw. A
+            // fixed circle keeps the bar still under the finger.
             if (enabled) {
-                SliderDefaults.Thumb(
-                    interactionSource = interaction,
-                    thumbSize = if (compact) DpSize(14.dp, 14.dp) else DpSize(20.dp, 20.dp),
-                    enabled = true,
+                val size = if (compact) 14.dp else 20.dp
+                Box(
+                    modifier = Modifier
+                        .size(size)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
                 )
             } else {
                 Box(Modifier.size(0.dp))
@@ -111,3 +124,11 @@ fun SeekBar(
         ),
     )
 }
+
+/**
+ * How much finger the dock's seek bar answers to.
+ *
+ * Material asks for 48dp and the bar was 28dp, which is fine on a desk and not in a car. The line
+ * still draws 4dp thick — this is the target around it, not the thing you see.
+ */
+private val COMPACT_TOUCH_HEIGHT = 48.dp

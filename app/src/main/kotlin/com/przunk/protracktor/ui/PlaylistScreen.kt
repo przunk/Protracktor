@@ -311,58 +311,6 @@ private fun PlaylistBody(
 }
 
 /**
- * The follow-the-playing-track toggle.
- *
- * Off by default, because a list that scrolls itself while you are reading it is a feature people
- * turn off. Tapping it turns following on and hides the button, because it has nothing left to
- * offer; scrolling by hand turns following off and brings it back — the gesture that cancels it is
- * exactly the gesture that means "I want to look somewhere else".
- */
-@Composable
-private fun FollowTrackButton(
-    listState: LazyListState,
-    currentIndex: Int?,
-    contentPadding: PaddingValues,
-    following: Boolean,
-    onFollowingChange: (Boolean) -> Unit,
-) {
-    // A real drag from the user, not our own scrolling. isScrollInProgress cannot tell those apart,
-    // and mistaking one for the other would switch following off the instant it was switched on.
-    LaunchedEffect(listState) {
-        listState.interactionSource.interactions.collect { interaction ->
-            if (interaction is DragInteraction.Start) onFollowingChange(false)
-        }
-    }
-
-    LaunchedEffect(following, currentIndex) {
-        if (following && currentIndex != null) listState.bringIntoView(currentIndex)
-    }
-
-    if (following || currentIndex == null) return
-
-    Box(
-        modifier = Modifier.fillMaxSize().padding(contentPadding).padding(12.dp),
-        contentAlignment = Alignment.BottomEnd,
-    ) {
-        // Small and icon-only. The label made it discoverable and made it cover the list, and the
-        // owner has now seen it -- so the trade goes the other way. Its content description still
-        // says what it does, which is where discoverability belongs once you know the button exists.
-        SmallFloatingActionButton(
-            onClick = { onFollowingChange(true) },
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp),
-        ) {
-            Icon(
-                imageVector = PlayerIcons.Locate,
-                contentDescription = stringResource(R.string.action_follow_track),
-            )
-        }
-    }
-}
-
-
-
-/**
  * Drag to reorder, from the handle only.
  *
  * On the handle rather than the whole row, and without a long press: a dedicated grip is what says
