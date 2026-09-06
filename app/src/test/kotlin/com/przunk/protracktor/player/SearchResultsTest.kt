@@ -81,15 +81,23 @@ class SearchResultsTest {
         assertEquals(listOf("a", "b"), combined.map { it.id })
     }
 
+    /**
+     * Display order: library, playlists, **live search**, then the offline indexes.
+     *
+     * This used to end with the live search and was changed on 2026-09-06. Precedence — which copy
+     * of a duplicate survives — still runs in the old order and is asserted separately below. The
+     * two were the same list until a catalogue page of two thousand rows made the difference
+     * matter.
+     */
     @Test
-    fun `order runs library, playlists, catalogues, live search`() {
+    fun `display order puts the live search ahead of the offline indexes`() {
         val combined = SearchResults.combine(
             fromIndex = listOf(track("i")),
             fromPlaylists = listOf(track("p")),
             fromCatalogues = listOf(track("c")),
             fromLiveSearch = listOf(track("l")),
         )
-        assertEquals(listOf("i", "p", "c", "l"), combined.map { it.id })
+        assertEquals(listOf("i", "p", "l", "c"), combined.map { it.id })
     }
 
     @Test
@@ -98,5 +106,60 @@ class SearchResultsTest {
             emptyList<TrackRef>(),
             SearchResults.combine(emptyList(), emptyList(), emptyList(), emptyList()),
         )
+    }
+
+    /**
+     * A live search's handful of results is not buried under the offline indexes' two thousand.
+     *
+     * `docs/STATUS.md` C15 was reported as "The Mod Archive returns nothing", and this is one way
+     * that happens with nothing broken: forty results appended after a full catalogue page sit at
+     * row two thousand and one. Present, correct, and never seen.
+     */
+    @Test
+    fun `live results are placed where they can be seen`() {
+        val bulk = (1..2_000).map { track("catalogue/$it") }
+        val live = listOf(track("live/a"), track("live/b"))
+        val combined = SearchResults.combine(
+            fromIndex = listOf(track("local/1")),
+            fromPlaylists = emptyList(),
+            fromCatalogues = bulk,
+            fromLiveSearch = live,
+        )
+        assertEquals(2_003, combined.size)
+        assertEquals("local/1", combined[0].id)
+        assertEquals("live/a", combined[1].id)
+        assertEquals("live/b", combined[2].id)
+        assertEquals("catalogue/1", combined[3].id)
+    }
+
+    /**
+     * Being placed early does not make the live copy win a duplicate.
+     *
+     * The two orders are separate on purpose: a tune you already have should present itself as
+     * yours, whichever source is listed first on screen.
+     */
+    @Test
+    fun `precedence still prefers the local copy of a duplicate`() {
+        val combined = SearchResults.combine(
+            fromIndex = listOf(track("same", title = "mine")),
+            fromPlaylists = emptyList(),
+            fromCatalogues = emptyList(),
+            fromLiveSearch = listOf(track("same", title = "theirs")),
+        )
+        assertEquals(1, combined.size)
+        assertEquals("mine", combined[0].title)
+    }
+
+    /** De-duplication across sources must not shift the boundary the placement counts from. */
+    @Test
+    fun `placement counts what survived, not what was offered`() {
+        val combined = SearchResults.combine(
+            fromIndex = listOf(track("a"), track("b")),
+            // Both already seen, so nothing from here survives and nothing shifts.
+            fromPlaylists = listOf(track("a"), track("b")),
+            fromCatalogues = listOf(track("c")),
+            fromLiveSearch = listOf(track("d")),
+        )
+        assertEquals(listOf("a", "b", "d", "c"), combined.map { it.id })
     }
 }

@@ -15,6 +15,7 @@
  */
 package com.przunk.protracktor.net
 
+import android.util.Log
 import com.przunk.protracktor.player.TrackRef
 import java.net.HttpURLConnection
 import java.net.URL
@@ -63,23 +64,82 @@ object ModArchive : Catalogue(
     override fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry> = emptyList()
 
     /**
+     * What a live search actually did.
+     *
+     * Three outcomes, because they were one before and that is the whole of `docs/STATUS.md` C15:
+     * a blocked request, a changed page and a tune the archive does not have all came back as an
+     * empty list. The user was then told "nothing found" for all three, which is true of exactly
+     * one of them.
+     */
+    sealed interface Outcome {
+        /** The archive answered a search page. The list may still be empty, honestly. */
+        data class Found(val tracks: List<TrackRef>) : Outcome
+
+        /** Could not ask: no network, a refusal, a timeout. */
+        data object NotReached : Outcome
+
+        /** Answered with something that is not a search page. The markup has moved. */
+        data object Unreadable : Outcome
+    }
+
+    /**
      * Searches The Mod Archive using their web search interface.
      *
-     * Returns a list of playable [TrackRef] instances with download URLs and extracted titles.
+     * There is no index to download here — this is scraped, live, from somebody else's HTML — so it
+     * is the one source in the app that can break with nothing here changing. Which is why it now
+     * reports [Outcome] rather than a list that means three different things.
      */
-    suspend fun search(query: String): List<TrackRef> = withContext(Dispatchers.IO) {
-        if (query.isBlank()) return@withContext emptyList()
-        runCatching {
+    suspend fun search(query: String): Outcome = withContext(Dispatchers.IO) {
+        if (query.isBlank()) return@withContext Outcome.Found(emptyList())
+        try {
             val encoded = URLEncoder.encode(query, "UTF-8")
             val connection = (URL(SEARCH_URL + encoded).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 15_000
-                setRequestProperty("User-Agent", "Protracktor/0.2.0 (Android)")
+                setRequestProperty("User-Agent", USER_AGENT)
+                setRequestProperty("Accept", "text/html,application/xhtml+xml")
+                instanceFollowRedirects = true
+            }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                Log.w(TAG, "search refused: HTTP $status for \"$query\"")
+                connection.disconnect()
+                return@withContext Outcome.NotReached
             }
             val html = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            parseSearchResults(html)
-        }.getOrDefault(emptyList())
+            when {
+                html.contains(RESULTS_MARKER) -> Outcome.Found(parseSearchResults(html))
+                // The archive's own way of saying it found nothing, and it is not a blank page: it
+                // offers ten unrelated modules under "Or perhaps enjoy some of these...". Those
+                // carry download links, so a parser that only looked for links would have returned
+                // them as if they were results.
+                html.contains(NO_RESULTS_MARKER) -> Outcome.Found(emptyList())
+                else -> {
+                    Log.w(TAG, "search page not recognised (${html.length} bytes) for \"$query\"")
+                    Outcome.Unreadable
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "search failed for \"$query\"", e)
+            Outcome.NotReached
+        }
     }
+
+    private const val TAG = "ModArchive"
+
+    /**
+     * Named for the app rather than the version it was written in.
+     *
+     * The old one said 0.2.0 forever, which is the sort of thing that makes a server's logs lie
+     * about which build is calling it.
+     */
+    private const val USER_AGENT = "Protracktor (Android; +https://github.com/przunk/protracktor)"
+
+    /** The heading a real result page carries. Verified against the live site on 2026-09-06. */
+    private const val RESULTS_MARKER = "site-wide-page-head-title\">Search Results"
+
+    /** And what it says instead when there are none. */
+    private const val NO_RESULTS_MARKER = "perhaps enjoy"
 
     private val ROW_PATTERN = Pattern.compile("<tr.*?</tr>", Pattern.DOTALL)
     private val MODULE_ID_PATTERN = Pattern.compile("moduleid=(\\d+)")
@@ -88,7 +148,16 @@ object ModArchive : Catalogue(
     private val TITLE_PATTERN = Pattern.compile("<span class=\"module-listing\">\\s*([^<]+?)\\s*</span>")
     private val TITLE_ATTR_PATTERN = Pattern.compile("class=\"standard-link\"[^>]*title=\"([^\"]+)\"")
 
+    /**
+     * The modules a search page lists, or nothing at all if it is not a search page.
+     *
+     * **The gate is not a formality.** The archive's "no results" answer carries ten unrelated
+     * modules under "Or perhaps enjoy some of these…", each with a working download link — so a
+     * parser that went looking for links alone returned all ten as matches. Checking the heading
+     * first is what tells a page of answers from a page of consolation.
+     */
     internal fun parseSearchResults(html: String): List<TrackRef> {
+        if (!html.contains(RESULTS_MARKER)) return emptyList()
         val results = mutableListOf<TrackRef>()
         val rowMatcher = ROW_PATTERN.matcher(html)
 

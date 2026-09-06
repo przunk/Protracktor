@@ -41,6 +41,7 @@ import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.net.Sc68Replays
 import java.util.concurrent.Executors
@@ -252,6 +253,15 @@ data class BrowseState(
      * both. Nothing typed yet is not the same as nothing out there.
      */
     val searched: Boolean = false,
+    /**
+     * True when the only source the scope could ask was the live one, and the query was blank.
+     *
+     * The Mod Archive has no index here to list, and asking it for nothing returns its
+     * "Or perhaps enjoy some of these…" page rather than the archive. So a blank query skips it --
+     * correctly -- and the screen then said "nothing found", which is a claim about the archive
+     * rather than about what we did. It found nothing because nothing was asked.
+     */
+    val liveSearchNeededQuery: Boolean = false,
     /**
      * How many rows the two capped sources matched in total, or 0 when nothing is capped.
      *
@@ -1783,7 +1793,7 @@ class PlaybackController private constructor(private val context: Context) {
      * is **leaving and returning**; what must not is a list produced by a different kind of search.
      */
     private fun BrowseState.withoutStaleResults() =
-        copy(tracks = emptyList(), searchMatches = 0, searched = false)
+        copy(tracks = emptyList(), searchMatches = 0, searched = false, liveSearchNeededQuery = false)
 
     /**
      * Runs the search the scope describes.
@@ -1851,13 +1861,25 @@ class PlaybackController private constructor(private val context: Context) {
             // The Mod Archive is the one source an empty query cannot ask: it is a live search
             // against somebody else's server, with no index here to list. Skipped rather than sent
             // an empty query it would answer badly or refuse.
-            val fromModArchive = if (searching.searchesOnline && current.query.isNotBlank() &&
-                com.przunk.protracktor.net.ModArchive.id in wanted) {
-                com.przunk.protracktor.net.ModArchive.search(current.query).filter {
-                    platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds)
-                }
+            val liveInScope = searching.searchesOnline && ModArchive.id in wanted
+            val live = if (liveInScope && current.query.isNotBlank()) {
+                ModArchive.search(current.query)
             } else {
-                emptyList()
+                ModArchive.Outcome.Found(emptyList())
+            }
+            // Said out loud, because the difference between "the archive does not have it", "we
+            // could not ask" and "it answered with something we cannot read" is the difference
+            // between a fact and two different faults. C15 was reported as the first and the app
+            // had no way of telling anyone it might be one of the others.
+            when (live) {
+                is ModArchive.Outcome.NotReached ->
+                    _state.update { it.copy(message = Message("The Mod Archive could not be reached.")) }
+                is ModArchive.Outcome.Unreadable ->
+                    _state.update { it.copy(message = Message("The Mod Archive answered, but not with a page we can read.")) }
+                is ModArchive.Outcome.Found -> Unit
+            }
+            val fromModArchive = (live as? ModArchive.Outcome.Found)?.tracks.orEmpty().filter {
+                platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds)
             }
 
             // De-duplicated across **all four**, not just the first two. The old code guarded
@@ -1885,7 +1907,16 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             _browse.update {
-                it.copy(tracks = results, searchMatches = matches, searched = true, loading = false)
+                it.copy(
+                    tracks = results,
+                    searchMatches = matches,
+                    searched = true,
+                    // Only worth saying when it is the whole story: with Modland also in scope, the
+                    // live source contributing nothing to a blank search is unremarkable.
+                    liveSearchNeededQuery = liveInScope && current.query.isBlank() &&
+                        dbCatalogues.isEmpty() && !searching.searchesLocal,
+                    loading = false,
+                )
             }
         }
     }

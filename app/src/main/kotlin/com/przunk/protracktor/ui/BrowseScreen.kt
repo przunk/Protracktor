@@ -895,6 +895,9 @@ private fun Selectable(
                     text = stringResource(
                         when {
                             browse.domain != BrowseDomain.SEARCH -> R.string.browse_nothing_found
+                            // Said before "nothing found", because it is the reason there is
+                            // nothing rather than a result.
+                            browse.liveSearchNeededQuery -> R.string.search_live_needs_query
                             browse.searched -> R.string.search_nothing_found
                             else -> R.string.search_not_yet
                         }

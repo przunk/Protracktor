@@ -47,6 +47,7 @@
     <string name="browse_select_none">Odznacz wszystko</string>
     <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
     <string name="search_nothing_found">Nie znaleziono żadnego wyniku.</string>
+    <string name="search_live_needs_query">The Mod Archive przeszukiwany jest na żywo i potrzebuje frazy.</string>
     <string name="search_not_yet">Wyszukaj albo zostaw puste pole, żeby znaleźć wszystko w zakresie.</string>
     <string name="scope_local">Biblioteka lokalna</string>
     <string name="scope_online">Katalogi online</string>

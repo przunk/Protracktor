@@ -396,7 +396,7 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C15. The Mod Archive returns nothing
+### C15. ~~The Mod Archive returns nothing~~ — FIXED 2026-09-06
 
 *Owner, 2026-09-06, while testing the platform filter. Deferred by him to after that work.*
 
@@ -414,6 +414,63 @@ break without anything here changing.
 
 **Not the blank-query change.** That skips The Mod Archive deliberately — there is no index here to
 list — but the owner's report is about typed searches.
+
+### Worked on 2026-09-06 — the parser was fine, and two other things were not
+
+**The scraper works.** `https://modarchive.org/index.php?request=search…&query=elysium` was fetched
+with the app's own User-Agent: HTTP 200, no redirect, and the page contains two results in ordinary
+`<tr>` rows. Every one of the parser's five patterns matches them. That page is now saved as
+`app/src/test/resources/modarchive-search-elysium.html` and `ModArchiveSearchTest` parses it —
+pinning a scraper to a real page is the only honest way to test one, and when the site changes that
+test is what says so.
+
+So the defect was somewhere else, and two candidates were found without a device:
+
+**The failure was swallowed.** `runCatching { … }.getOrDefault(emptyList())` turned a blocked
+request, a dead network and a changed page into the same answer as "this tune is not in the
+archive". `search` now returns **null** when it could not ask, logs what the server said, and the
+search reports "The Mod Archive could not be reached." A fact and a fault are different things and
+the app was saying only one of them.
+
+**The results were buried.** `SearchResults.combine` appended the live search last, after the
+offline indexes — which return up to `PER_SOURCE_LIMIT`, two thousand rows. Forty live results at
+row two thousand and one are present, correct and unreachable, which is exactly what "returns
+nothing" looks like from the sofa, with nothing broken at all. Display order and de-duplication
+precedence are now separate: a live result is placed with the local ones, while a duplicate is still
+resolved in favour of the copy you already have.
+
+**The owner ran it and got "Nothing found for this search."** — so the request was made, the server
+answered, and nothing was parsed. That rules out the network and points at the page.
+
+Which turned up a third thing, found by asking the site rather than the code: **its "no results"
+answer is not an empty page.** Searching for `zzzzqqqq` returns *"Or perhaps enjoy some of these…"*
+and ten unrelated modules, each with a working download link. A parser that went looking for
+download links returned all ten as matches — so this catalogue could report the wrong tunes as
+readily as none. `parseSearchResults` now refuses any page without the results heading, and that
+page is saved as a second test fixture.
+
+The live search reports three outcomes now, not two: reached and read, could not reach, and answered
+with something unreadable.
+
+**Confirmed fixed on the owner's device**: `elysium` returns its two modules. So the cause was the
+burial — forty live results appended after a full catalogue page — and not the network or the
+markup.
+
+**An empty query is a separate case and stays skipped.** The archive answers one with the same
+"perhaps enjoy" page: it has no way to list itself, so there is nothing to ask for. The screen used
+to say "nothing found", which is a claim about the archive rather than about what we did; it now
+says the source is searched live and needs a term, and only when that is the whole story.
+
+### What The Mod Archive does not publish
+
+**The artist is not in the search listing**, and this was checked rather than assumed: the expanded
+view (`&detail=1`) adds Module ID, genre, size, channels, downloads, date and licence — and not the
+author. So a result carries a blank author and a subtitle of `The Mod Archive/MOD`, where the second
+part is the format because there is no folder to name; unlike Modland, this archive is flat.
+
+Getting the artist means one request per result to the module page — forty requests for a page of
+results. The shape that would work is the one the app already uses for local metadata: fetch it
+lazily, when the user opens a track's information. Not started, and worth doing only if it is wanted.
 
 ### C1. ~~Roughly half of `.sndh` files do not play~~ — FIXED 2026-09-03 by sc68 3.0.0b
 

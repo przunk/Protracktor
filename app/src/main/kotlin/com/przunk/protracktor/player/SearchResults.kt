@@ -52,10 +52,21 @@ object SearchResults {
     /**
      * One list, first occurrence of each id kept.
      *
-     * **Order is the answer to "which copy wins".** The scanned library first because it knows
-     * real titles and covers files nobody put in a playlist; then the playlists, for anything the
-     * folders miss; then the offline indexes; then live search. A tune you already have should
-     * present itself as yours rather than as a download.
+     * **Two orders, not one, and separating them is the point.**
+     *
+     * *Which copy wins* is unchanged: the scanned library first because it knows real titles and
+     * covers files nobody put in a playlist; then the playlists; then the offline indexes; and the
+     * live search last, because a tune you already have should present itself as yours rather than
+     * as a download.
+     *
+     * *Where each lands on screen* is not the same question. The offline indexes can return
+     * [PER_SOURCE_LIMIT] rows and the live search returns a page of about forty, so appending the
+     * live results put them at row two thousand and one — present, correct, and unreachable. That
+     * is what "The Mod Archive returns nothing" looks like from the sofa (`docs/STATUS.md` C15),
+     * and it needs no network fault to happen.
+     *
+     * So the live results are placed with the local ones and the bulk follows, while the *identity*
+     * of a duplicate is still decided by the precedence above. Forty rows cannot bury anything.
      */
     fun combine(
         fromIndex: List<TrackRef>,
@@ -64,14 +75,23 @@ object SearchResults {
         fromLiveSearch: List<TrackRef>,
     ): List<TrackRef> {
         val seen = HashSet<String>()
-        val out = ArrayList<TrackRef>(
-            fromIndex.size + fromPlaylists.size + fromCatalogues.size + fromLiveSearch.size
-        )
-        for (source in listOf(fromIndex, fromPlaylists, fromCatalogues, fromLiveSearch)) {
+        val local = ArrayList<TrackRef>(fromIndex.size + fromPlaylists.size)
+        val bulk = ArrayList<TrackRef>(fromCatalogues.size)
+        val live = ArrayList<TrackRef>(fromLiveSearch.size)
+
+        // Precedence order, so a duplicate keeps the copy the earlier source described. Where each
+        // kept row is put is decided by which list it lands in, and is counted rather than
+        // predicted -- a source's size is not how many of its rows survived de-duplication.
+        for ((source, into) in listOf(
+            fromIndex to local,
+            fromPlaylists to local,
+            fromCatalogues to bulk,
+            fromLiveSearch to live,
+        )) {
             for (track in source) {
-                if (seen.add(track.id)) out += track
+                if (seen.add(track.id)) into += track
             }
         }
-        return out
+        return local + live + bulk
     }
 }
