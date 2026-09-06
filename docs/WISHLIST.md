@@ -307,6 +307,24 @@ from the right, so a long author pushes out the decoration instead of the title 
 format, because "MOD · Amiga" says one thing twice. The machine comes from `Platforms`, which the
 search filter built the day before and which needs no backend to answer.
 
+### Why most tunes have no year, and it is not our doing
+
+The owner's first observation on using it: plenty of tracks show nothing. That is the format, not the
+reading, and it is worth writing down so nobody investigates it twice.
+
+**The formats that can carry a date are the minority.** libopenmpt's `date` is the module's
+last-saved stamp, and grepping the vendored loaders for the file-history structure that produces it
+gives exactly five: **DMF, GT2, IT, PT36 and S3M**. Plain `.mod` and `.xm` have nowhere in the file
+to put one — between them that is about 125,000 of Modland's files, the two biggest directories in
+the archive. No parser can find what was never written.
+
+Where a year does exist it is usually reliable: SID's released line, SAP's `DATE`, SNDH's `YEAR`,
+and IT/S3M's save date. So the field is worth showing and worth leaving blank.
+
+**Getting a year for a `.mod` means an external database**, keyed by something like the file's hash —
+which is the same shape as HVSC's song lengths and would be its own piece of work, not an extension
+of this one.
+
 **Still not stored, deliberately**, so the expensive half of this item stands unchanged: a year in a
 list or a search still means a column in two tables, a migration and a re-index. Using it in Now
 Playing is what will say whether that is worth it.
