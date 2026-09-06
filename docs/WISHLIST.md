@@ -10,7 +10,7 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B21. The player notification is grey, tall and belongs to nothing
+## B21. ~~The player notification is grey, tall and belongs to nothing~~ — DONE 2026-09-06
 
 *owner, 2026-09-05: the controls themselves are fine; the bar around them is the problem.*
 
@@ -43,6 +43,35 @@ lock screen use. Both are questions a device answers in ten minutes and a docume
 **Related:** `docs/STATUS.md` C12, where the same notification lost its skip buttons because Android
 13 takes them from `PlaybackState` rather than from the actions we add — this part of the platform
 rewards checking over assuming.
+
+### Built 2026-09-06 — the format over a colour taken from the file
+
+**A hybrid of the first two options rather than either.** The glyph is the format — `AHX`, `SNDH`,
+`SID` — because that is a fact about the file; the colour is per-tune, because it is what makes a
+track change visible and what stops the bar being grey. Split that way each half answers one of the
+two complaints, and neither option alone did.
+
+`TrackArtwork` holds the arithmetic and is Android-free; `TrackArtworkBitmaps` draws the 512-pixel
+square and caches one, which matters because the media session republishes five times a second.
+
+**Two things the tests found that no amount of looking would have.**
+
+*The colour was illegible on a sixth of the wheel.* At one fixed HSL lightness a yellow and a blue
+have wildly different perceived brightness — 2.6:1 and 12:1 against the same label. Each hue is now
+given the lightness that lands it at a fixed **luminance**, so all 360 read at 5.6:1. The test sweeps
+every one rather than sampling, and asserts the range is narrow rather than merely above the bar:
+uniformity is what tells a working construction from one that passes today.
+
+*The hash put similar names next to each other.* `part 1`, `part 2`, `part 3` — the normal case in
+these archives, and the covers a listener sees one after another. Java's `hashCode` gives them
+consecutive hues, 344/345/346; plain FNV-1a fixed the neighbours and left every *second* one two
+degrees apart, so the alternation was the hash's pattern rather than the music's. An avalanche step
+on the end of FNV scatters them, and the hue distribution was checked over 20,000 names before that
+was believed.
+
+**Not proven, and it needs the owner's phone:** whether `setColorized(true)` is honoured on his
+Android version. Several manufacturers ignore it. The design does not depend on it — the square is
+coloured either way — but the "grey" half of the complaint does.
 
 ## B22. Random, but within something
 
