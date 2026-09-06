@@ -196,7 +196,25 @@ class CatalogueStore(context: Context) {
         }
 
     /** Title search. [catalogueIds] empty means every indexed catalogue. */
-    suspend fun search(query: String, catalogueIds: Set<String>, limit: Int = 300): List<CatalogueTrack> =
+    /** How many rows [search] would return without its limit. Same `WHERE`, no `ORDER BY`. */
+    suspend fun countMatches(query: String, catalogueIds: Set<String>): Int =
+        withContext(Dispatchers.IO) {
+            if (query.isBlank()) return@withContext 0
+            val scope = if (catalogueIds.isEmpty()) {
+                "" to emptyArray<String>()
+            } else {
+                val placeholders = catalogueIds.joinToString(",") { "?" }
+                " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
+            }
+            val pattern = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            helper.readableDatabase.rawQuery(
+                "SELECT COUNT(*) FROM catalogue_tracks " +
+                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')${scope.first}",
+                arrayOf(pattern, pattern) + scope.second,
+            ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+        }
+
+    suspend fun search(query: String, catalogueIds: Set<String>, limit: Int): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             if (query.isBlank()) return@withContext emptyList()
             val scope = if (catalogueIds.isEmpty()) {

@@ -97,6 +97,9 @@
     <string name="browse_select_all">Select all</string>
     <string name="browse_select_none">Select none</string>
     <string name="browse_nothing_found">Nothing playable in this folder.</string>
+    <!-- A search returns at most 2,000 rows per source. Saying so, with the real total, is the
+         difference between a limit and a list that looks wrong. -->
+    <string name="browse_search_capped">Showing %1$d of about %2$d matches — narrow the search, or browse by format.</string>
     <plurals name="browse_add_selected">
         <item quantity="one">Add %d track</item>
         <item quantity="other">Add %d tracks</item>
