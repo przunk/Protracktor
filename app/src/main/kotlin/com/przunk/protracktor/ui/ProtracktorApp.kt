@@ -377,8 +377,8 @@ fun ProtracktorApp(
                 onOpenGroup = viewModel::openGroup,
                 onRandom = { viewModel.playRandom(); showBrowse = false },
                 onQueryChange = viewModel::setQuery,
-                onToggleLocal = viewModel::toggleSearchLocal,
-                onToggleOnline = viewModel::toggleSearchOnline,
+                onScope = viewModel::setSearchScope,
+                onTogglePlatform = viewModel::toggleSearchPlatform,
                 onToggleCatalogue = viewModel::toggleSearchCatalogue,
                 onSearch = viewModel::runSearch,
                 // Playing from Browse never adds anything and never touches the playlist: whatever

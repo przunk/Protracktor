@@ -117,7 +117,10 @@ internal fun BrowseState.levelKey(): String = when (domain) {
     BrowseDomain.LOCAL -> openFolder?.let { "local/${it.uri}" } ?: "local"
     BrowseDomain.ONLINE ->
         listOfNotNull("online", openCatalogue?.id, openFormat, openAuthor).joinToString("/")
-    // The query is part of it: searching for something else is a different list, not a scrolled one.
-    BrowseDomain.SEARCH -> "search/$query"
+    // The query is part of it: searching for something else is a different list, not a scrolled
+    // one. So is the **scope** -- "mod" in Amiga and "mod" in Commodore 64 are two lists, and
+    // without this the first one's scroll position is restored into the second. Quietly, and only
+    // sometimes, which is the worst kind.
+    BrowseDomain.SEARCH -> "search/${searchScope}/$query"
     BrowseDomain.HISTORY -> "history"
 }

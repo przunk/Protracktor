@@ -73,6 +73,7 @@ import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
 
 /**
@@ -101,9 +102,9 @@ fun BrowseScreen(
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
     onQueryChange: (String) -> Unit,
-    onToggleLocal: () -> Unit,
-    onToggleOnline: () -> Unit,
+    onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
+    onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
     playingId: String?,
@@ -189,9 +190,9 @@ fun BrowseScreen(
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
                 onQueryChange = onQueryChange,
-                onToggleLocal = onToggleLocal,
-                onToggleOnline = onToggleOnline,
+                onScope = onScope,
                 onToggleCatalogue = onToggleCatalogue,
+                onTogglePlatform = onTogglePlatform,
                 onSearch = onSearch,
                 onPlay = onPlay,
                 onAdd = onAdd,
@@ -230,7 +231,7 @@ private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> 
         }
         item {
             DomainRow(
-                icon = PlayerIcons.Info,
+                icon = PlayerIcons.History,
                 title = stringResource(R.string.domain_history_title),
                 subtitle = stringResource(R.string.domain_history_body),
                 onClick = { onOpenDomain(BrowseDomain.HISTORY) },
@@ -617,9 +618,9 @@ private fun SearchDomain(
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onQueryChange: (String) -> Unit,
-    onToggleLocal: () -> Unit,
-    onToggleOnline: () -> Unit,
+    onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
+    onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -630,7 +631,14 @@ private fun SearchDomain(
             value = browse.query,
             onValueChange = onQueryChange,
             singleLine = true,
-            label = { Text(stringResource(R.string.search_label)) },
+            // One line, always. "Online: ASMA (Atari 8-bit), The Mod Archive" wrapped and made the
+            // field taller, so adding a third catalogue -- which shortens the text to
+            // "Modland, ASMA (Atari 8-bit) +1" -- made the whole screen jump back up. The label is
+            // a statement of scope, not a place to read catalogue names in full; the chips
+            // underneath show which are lit.
+            label = {
+                Text(scopeLabel(browse), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             trailingIcon = {
@@ -641,48 +649,12 @@ private fun SearchDomain(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
-        // Two levels: which side to search, then which catalogues within the online side. The
-        // earlier version treated "no catalogue ticked" as "all of them", which made the filter look
-        // broken -- unticking Modland searched Modland anyway.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(
-                selected = browse.searchLocal,
-                onClick = onToggleLocal,
-                label = { Text(stringResource(R.string.search_scope_local)) },
-            )
-            FilterChip(
-                selected = browse.searchOnline,
-                onClick = onToggleOnline,
-                label = { Text(stringResource(R.string.search_scope_online)) },
-            )
-        }
-
-        val indexed = browse.catalogues.filter { it.indexed }
-        if (browse.searchOnline && indexed.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                indexed.forEach { catalogue ->
-                    FilterChip(
-                        selected = catalogue.id in browse.searchCatalogues,
-                        onClick = { onToggleCatalogue(catalogue.id) },
-                        label = { Text(catalogue.displayName) },
-                    )
-                }
-            }
-        }
-        if (browse.searchOnline && indexed.isEmpty()) {
-            Text(
-                text = stringResource(R.string.search_no_catalogues),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-        }
+        SearchScopePanel(
+            browse = browse,
+            onScope = onScope,
+            onToggleCatalogue = onToggleCatalogue,
+            onTogglePlatform = onTogglePlatform,
+        )
 
         if (browse.loading) {
             Loading()
@@ -914,12 +886,25 @@ private fun Selectable(
 
         when {
             browse.loading -> Loading()
-            browse.tracks.isEmpty() -> Text(
-                text = stringResource(R.string.browse_nothing_found),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(24.dp),
-            )
+            // An empty list is two different states and only one of them is a disappointment.
+            // Nothing searched yet reads as ordinary text; nothing *found* borrows the colour the
+            // stale-index warnings use, because it is the same kind of news.
+            browse.tracks.isEmpty() -> {
+                val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
+                Text(
+                    text = stringResource(
+                        when {
+                            browse.domain != BrowseDomain.SEARCH -> R.string.browse_nothing_found
+                            browse.searched -> R.string.search_nothing_found
+                            else -> R.string.search_not_yet
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (searchedAndEmpty) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(24.dp),
+                )
+            }
             else -> {
                 // Said above the list rather than at its end, because the end is 2,000 rows away and
                 // the point of the line is to stop the scrolling, not to reward it.

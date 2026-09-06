@@ -104,6 +104,48 @@ object PlayerIcons {
     val Folder: ImageVector by lazy {
         icon("Folder", "M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z")
     }
+    /**
+     * A CX40 — the Atari 2600 stick — for the "by platform" filter.
+     *
+     * Drawn as three subpaths with **even-odd** fill so the fire button is a hole rather than a
+     * shape of its own. That is also why the ball and the shaft are one outline instead of a circle
+     * overlapping a rectangle: under even-odd an overlap cancels, and the first attempt had a notch
+     * bitten out of the stick where the two met. The path was rasterised and looked at before it
+     * went in, which is how that was found.
+     */
+    /**
+     * A calendar, for the history of what was played.
+     *
+     * It used to be the information "i", which said nothing about time. A clock would be the
+     * conventional choice for "recent"; the owner asked for a calendar, and it suits what the list
+     * actually shows -- entries carry the day they were played (`docs/WISHLIST.md` B15).
+     *
+     * Even-odd again, so the page is a hole and the header a band. The two tabs stop exactly at the
+     * body's top edge rather than overlapping it, because an overlap under even-odd cancels.
+     */
+    val History: ImageVector by lazy {
+        icon(
+            "History",
+            "M5,4 L19,4 A2,2 0 0,1 21,6 L21,19 A2,2 0 0,1 19,21 L5,21 " +
+                "A2,2 0 0,1 3,19 L3,6 A2,2 0 0,1 5,4 Z " +
+                "M5.5,9.5 L18.5,9.5 L18.5,18.5 L5.5,18.5 Z " +
+                "M7,2 L9,2 L9,4 L7,4 Z M15,2 L17,2 L17,4 L15,4 Z " +
+                "M8,12 L11,12 L11,15 L8,15 Z",
+            hollow = true,
+        )
+    }
+
+    val Joystick: ImageVector by lazy {
+        icon(
+            "Joystick",
+            "M5,16 L19,16 A2,2 0 0,1 21,18 L21,20 A2,2 0 0,1 19,22 L5,22 " +
+                "A2,2 0 0,1 3,20 L3,18 A2,2 0 0,1 5,16 Z " +
+                "M10.6,16 L10.6,8.75 A3,3 0 1,1 13.4,8.75 L13.4,16 Z " +
+                "M5.2,19 A1.8,1.8 0 1,1 8.8,19 A1.8,1.8 0 1,1 5.2,19 Z",
+            hollow = true,
+        )
+    }
+
     val Cloud: ImageVector by lazy {
         icon(
             "Cloud",

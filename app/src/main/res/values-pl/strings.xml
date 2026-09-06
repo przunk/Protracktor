@@ -46,6 +46,17 @@
     <string name="browse_select_all">Zaznacz wszystko</string>
     <string name="browse_select_none">Odznacz wszystko</string>
     <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
+    <string name="search_nothing_found">Nie znaleziono żadnego wyniku.</string>
+    <string name="search_not_yet">Wyszukaj albo zostaw puste pole, żeby znaleźć wszystko w zakresie.</string>
+    <string name="scope_local">Biblioteka lokalna</string>
+    <string name="scope_online">Katalogi online</string>
+    <string name="scope_platform">Wg platformy</string>
+    <string name="scope_label_everywhere">Wszędzie</string>
+    <string name="scope_label_local">Biblioteka lokalna</string>
+    <string name="scope_label_online">Online</string>
+    <string name="scope_label_online_some">Online: %1$s</string>
+    <string name="scope_label_all_platforms">Wszystkie platformy</string>
+    <string name="scope_label_more">%1$s +%2$d</string>
     <string name="browse_search_capped">Pokazano %1$d z około %2$d dopasowań — zawęź wyszukiwanie lub przeglądaj według formatu.</string>
     <plurals name="browse_add_selected">
         <item quantity="one">Dodaj %d utwór</item>

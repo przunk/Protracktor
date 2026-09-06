@@ -1,0 +1,245 @@
+/*
+ * Protracktor -- a player for retro platform music formats.
+ * Copyright (C) 2026 Przunk
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
+ * the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <https://www.gnu.org/licenses/>.
+ */
+package com.przunk.protracktor.player
+
+/**
+ * Which machine a tune was written for.
+ *
+ * The search filter used to offer **Modland, ASMA, The Mod Archive** — which is our plumbing showing
+ * through. Somebody looking for C64 music does not care which archive holds it, and asking them to
+ * know that ASMA is Atari 8-bit is asking them to know about us rather than about music
+ * (`docs/WISHLIST.md` B23).
+ *
+ * **The table is the decision, and it can be wrong in two directions.** A platform nobody picks is a
+ * wasted row; a format filed under the wrong platform *hides music*, which is worse. So it is built
+ * from the archive rather than from memory: Modland's 339 format directories were counted, and the
+ * mapping below covers the ones that matter — the top twenty directories are 84% of the archive and
+ * 240 of the 339 hold fewer than a hundred files each.
+ *
+ * **What is deliberately not here is how much of each platform plays.** That is counted from the
+ * index at the moment the filter is drawn, because it is a fact about this build and this user's
+ * downloads, not about the platforms. A hard-coded "supported" flag would be a claim that goes stale
+ * the day a backend lands — and one did land yesterday.
+ *
+ * Two ways in, because the two sources name formats differently. A catalogue row carries Modland's
+ * directory name in its `format` column; a local file carries only its own name. Both are listed
+ * per platform so neither source needs a second table.
+ */
+object Platforms {
+
+    data class Platform(
+        val id: String,
+        /** Shown on the chip. Proper nouns, so the same in every language. */
+        val name: String,
+        /** Modland's directory names, lower-cased. What a catalogue row's `format` column holds. */
+        val catalogueFormats: Set<String>,
+        /** Extensions and Amiga-style prefixes, matching [SupportedFormats]. */
+        val names: Set<String>,
+    )
+
+    val AMIGA = Platform(
+        id = "amiga",
+        name = "Amiga",
+        catalogueFormats = setOf(
+            "protracker", "soundtracker", "soundtracker 2.6", "startrekker", "startrekker amos",
+            "noisetracker", "his master's noise", "octamed mmd0", "octamed mmd1", "octamed mmd2",
+            "octamed mmd3", "octamed", "med", "ahx", "hively tracker", "oktalyzer",
+            "digibooster pro", "digibooster", "tfmx", "delitracker custom", "musicline editor",
+            "iff-smus", "future composer", "future composer 1.3", "future composer 1.4",
+            "sidmon 1.0", "sidmon 2.0", "the player 6.1a", "the player 6.0a", "the player 5.0a",
+            "art of noise", "dynamic synthesizer", "sound programming language", "puma tracker",
+            "tcb tracker", "grave composer", "unic tracker", "kris tracker", "sonic arranger",
+            "symphonie", "digital symphony", "in stereo", "audiosculpture", "musicmaker",
+            "images music system", "jamcracker", "protracker ist", "soundfx", "bp soundmon 2",
+            "bp soundmon 3",
+        ),
+        names = setOf(
+            "mod", "med", "mmd0", "mmd1", "mmd2", "mmd3", "ahx", "hvl", "okt", "okta", "dbm",
+            "digi", "stk", "sfx", "ice", "gmc", "unic", "kris", "puma", "tcb", "fc", "fc13",
+            "fc14", "smod", "dsym", "symmod", "gtk", "mms",
+        ),
+    )
+
+    val C64 = Platform(
+        id = "c64",
+        name = "Commodore 64",
+        catalogueFormats = setOf("hvsc", "realsid", "sidplayer", "stereo sidplayer", "sid"),
+        names = setOf("sid", "psid", "rsid"),
+    )
+
+    val ATARI_ST = Platform(
+        id = "atari-st",
+        name = "Atari ST",
+        catalogueFormats = setOf(
+            "sndh", "sc68", "ym", "ymst", "quartet st", "quartet", "face the music", "easytrax",
+        ),
+        names = setOf("sndh", "sc68", "ym", "etx"),
+    )
+
+    val ATARI_8BIT = Platform(
+        id = "atari-8bit",
+        name = "Atari 8-bit",
+        catalogueFormats = setOf(
+            "slight atari player", "asma", "chaos music composer", "raster music tracker",
+            "theta music composer", "delta music composer", "music protracker",
+        ),
+        names = setOf(
+            "sap", "cmc", "cm3", "cmr", "cms", "dmc", "dlt", "mpt", "mpd", "rmt", "tmc", "tm2",
+            "tm8",
+        ),
+    )
+
+    val PC = Platform(
+        id = "pc",
+        name = "PC",
+        catalogueFormats = setOf(
+            "fasttracker 2", "fasttracker", "impulsetracker", "screamtracker 3", "screamtracker",
+            "multitracker", "ad lib", "psycle", "digitrakker", "madtracker 2", "imago orpheus",
+            "composer 669", "farandole composer", "general digimusic", "graoumftracker",
+            "epic megagames masi", "liquid tracker", "octamed soundstudio", "x-tracker",
+            "screamtracker 2",
+        ),
+        names = setOf(
+            "xm", "it", "s3m", "mptm", "far", "gdm", "imf", "mdl", "mtm", "ptm", "stm", "ult",
+            "669", "amf", "ams", "dmf", "dsm", "dtm", "j2b", "mt2", "psm", "plm", "rtm", "c67",
+            "cba", "gt2", "mo3", "xmf", "mmcmp", "pp20", "xpk", "umx",
+        ),
+    )
+
+    val NINTENDO = Platform(
+        id = "nintendo",
+        name = "Nintendo",
+        catalogueFormats = setOf(
+            "nintendo spc", "nintendo sound format", "gameboy sound system", "famitracker",
+            "super nintendo sound format", "nintendo ds sound format", "gameboy sound format",
+            "ultra64 sound format", "gameboy advance sound format",
+        ),
+        // `ftm` is here on the archive's evidence rather than on ours: 1,779 of Modland's 1,874
+        // are FamiTracker and 95 are Face The Music, whose directory is filed under Atari ST above
+        // where the path makes it certain. The extension alone cannot be, so it goes with the
+        // majority -- and libopenmpt, awkwardly, is the one that plays the minority
+        // (`docs/PLAN_FORMATS.md` §0b). A name standing for two formats is the normal case here.
+        names = setOf("spc", "nsf", "nsfe", "gbs", "ftm"),
+    )
+
+    val SEGA = Platform(
+        id = "sega",
+        name = "Sega",
+        catalogueFormats = setOf(
+            "video game music", "deflemask", "saturn sound format", "dreamcast sound format",
+            "genecyst", "sega master system", "sgc", "megadrive gym",
+        ),
+        names = setOf("vgm", "vgz"),
+    )
+
+    val MSX = Platform(
+        id = "msx",
+        name = "MSX",
+        catalogueFormats = setOf(
+            "kss", "moonblaster", "mgsdrv", "fac soundtracker", "musica", "oplldrv",
+            "soundtracker pro", "musica2",
+        ),
+        names = setOf("kss"),
+    )
+
+    val PC_ENGINE = Platform(
+        id = "pc-engine",
+        name = "PC Engine",
+        catalogueFormats = setOf("hes"),
+        names = setOf("hes"),
+    )
+
+    val SPECTRUM = Platform(
+        id = "spectrum",
+        name = "ZX Spectrum",
+        catalogueFormats = setOf("spectrum", "ay emul", "zx spectrum"),
+        names = setOf("ay"),
+    )
+
+    val SHARP = Platform(
+        id = "sharp",
+        name = "Sharp X68000",
+        catalogueFormats = setOf("mdx", "piston collage", "piston collage protected"),
+        names = emptySet(),
+    )
+
+    /**
+     * NEC's PC-98, which is not the Sharp X68000 however Japanese both are.
+     *
+     * They were one entry until `./scripts/probe-platforms.py` was pointed at the archive: FMP, PMD
+     * and S98 are PC-98 sound drivers and had been filed under Sharp, 22,513 files of them. Nothing
+     * on screen would have looked wrong, because neither platform plays anything yet — which is the
+     * argument for measuring a table instead of reading it.
+     */
+    val PC98 = Platform(
+        id = "pc98",
+        name = "NEC PC-98",
+        catalogueFormats = setOf("fm sound driver (fmp)", "pmd", "s98", "euphony"),
+        names = emptySet(),
+    )
+
+    val SONY = Platform(
+        id = "sony",
+        name = "PlayStation",
+        catalogueFormats = setOf("playstation sound format", "playstation 2 sound format"),
+        names = emptySet(),
+    )
+
+    /**
+     * Every platform, in the order the chips appear.
+     *
+     * Ordered by how much of Modland each holds, biggest first, so the row reads like the archive
+     * rather than like an alphabet. That order is fixed here rather than sorted at runtime: a filter
+     * whose buttons move as an index grows is a filter you have to re-read every time.
+     */
+    val all: List<Platform> = listOf(
+        AMIGA, PC, C64, NINTENDO, SEGA, ATARI_ST, ATARI_8BIT, SPECTRUM, PC98, SHARP, SONY, MSX,
+        PC_ENGINE,
+    )
+
+    private val byCatalogueFormat: Map<String, Platform> =
+        all.flatMap { p -> p.catalogueFormats.map { it to p } }.toMap()
+
+    private val byName: Map<String, Platform> =
+        all.flatMap { p -> p.names.map { it to p } }.toMap()
+
+    fun byId(id: String): Platform? = all.firstOrNull { it.id == id }
+
+    /** The platform a catalogue row belongs to, from its `format` column. Null when unmapped. */
+    fun forCatalogueFormat(format: String): Platform? = byCatalogueFormat[format.trim().lowercase()]
+
+    /**
+     * The platform a file belongs to, from its name.
+     *
+     * Both conventions, the same two rules `SupportedFormats` uses: the extension, or the prefix
+     * before the first dot. Modland names ProTracker files `mod.title`, so the prefix rule is not a
+     * curiosity.
+     */
+    fun forFileName(fileName: String): Platform? {
+        val name = fileName.lowercase()
+        if (!name.contains('.')) return null
+        byName[name.substringAfterLast('.')]?.let { return it }
+        return byName[name.substringBefore('.')]
+    }
+
+    /** Every Modland directory name the given platforms cover, for one `IN (…)` clause. */
+    fun catalogueFormatsOf(ids: Set<String>): Set<String> =
+        all.filter { it.id in ids }.flatMap { it.catalogueFormats }.toSet()
+
+    /** True when the file belongs to one of the given platforms. */
+    fun matches(fileName: String, ids: Set<String>): Boolean =
+        forFileName(fileName)?.id in ids
+}
