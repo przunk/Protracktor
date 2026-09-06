@@ -238,6 +238,14 @@ data class BrowseState(
     val searchLocal: Boolean = true,
     val searchOnline: Boolean = true,
     val searchCatalogues: Set<String> = emptySet(),
+    /**
+     * How many rows the two capped sources matched in total, or 0 when nothing is capped.
+     *
+     * "About", because the sources overlap and are de-duplicated afterwards — a tune that is both
+     * in a playlist and in Modland is counted twice here and shown once. It is a number for
+     * deciding whether to narrow the query, not for quoting.
+     */
+    val searchMatches: Int = 0,
 
     /** Whatever the current level lists, in the form the playlist takes. */
     val tracks: List<TrackRef> = emptyList(),
@@ -1730,7 +1738,7 @@ class PlaybackController private constructor(private val context: Context) {
             // nobody has added to any playlist. Then the playlists, for anything indexed folders do
             // not cover -- an individually picked file, or a folder whose grant is gone.
             val fromIndex = if (current.searchLocal) {
-                libraryIndex.search(current.query, limit = 200)
+                libraryIndex.search(current.query, limit = SearchResults.PER_SOURCE_LIMIT)
             } else {
                 emptyList()
             }
@@ -1751,7 +1759,8 @@ class PlaybackController private constructor(private val context: Context) {
             // means nothing searched, which is what unticking a box has always meant.
             val dbCatalogues = current.searchCatalogues.filter { it != com.przunk.protracktor.net.ModArchive.id }.toSet()
             val fromOnline = if (current.searchOnline && dbCatalogues.isNotEmpty()) {
-                catalogues.search(current.query, dbCatalogues).map(::toTrackRef)
+                catalogues.search(current.query, dbCatalogues, SearchResults.PER_SOURCE_LIMIT)
+                    .map(::toTrackRef)
             } else {
                 emptyList()
             }
@@ -1773,7 +1782,20 @@ class PlaybackController private constructor(private val context: Context) {
                 fromLiveSearch = fromModArchive,
             )
 
-            _browse.update { it.copy(tracks = results, loading = false) }
+            // Asked only when a cap was actually reached. A COUNT over a couple of hundred thousand
+            // catalogue rows is cheap but not free, and a search that fits does not need it.
+            val capped = fromIndex.size == SearchResults.PER_SOURCE_LIMIT ||
+                fromOnline.size == SearchResults.PER_SOURCE_LIMIT
+            val matches = if (!capped) 0 else {
+                (if (current.searchLocal) libraryIndex.countMatches(current.query) else 0) +
+                    (if (current.searchOnline && dbCatalogues.isNotEmpty()) {
+                        catalogues.countMatches(current.query, dbCatalogues)
+                    } else {
+                        0
+                    })
+            }
+
+            _browse.update { it.copy(tracks = results, searchMatches = matches, loading = false) }
         }
     }
 

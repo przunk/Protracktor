@@ -916,6 +916,20 @@ private fun Selectable(
                 modifier = Modifier.padding(24.dp),
             )
             else -> {
+                // Said above the list rather than at its end, because the end is 2,000 rows away and
+                // the point of the line is to stop the scrolling, not to reward it.
+                if (browse.searchMatches > browse.tracks.size) {
+                    Text(
+                        text = stringResource(
+                            R.string.browse_search_capped,
+                            browse.tracks.size,
+                            browse.searchMatches,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                    )
+                }
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
                 RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)

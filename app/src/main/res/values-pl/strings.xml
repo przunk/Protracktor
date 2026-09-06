@@ -46,6 +46,7 @@
     <string name="browse_select_all">Zaznacz wszystko</string>
     <string name="browse_select_none">Odznacz wszystko</string>
     <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
+    <string name="browse_search_capped">Pokazano %1$d z około %2$d dopasowań — zawęź wyszukiwanie lub przeglądaj według formatu.</string>
     <plurals name="browse_add_selected">
         <item quantity="one">Dodaj %d utwór</item>
         <item quantity="few">Dodaj %d utwory</item>

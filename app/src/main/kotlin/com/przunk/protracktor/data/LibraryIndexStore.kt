@@ -146,6 +146,22 @@ class LibraryIndexStore(context: Context) {
     }
 
     /** Everything indexed, for searching across folders. */
+    /**
+     * How many rows [search] would return without its limit.
+     *
+     * The same `WHERE` as [search], deliberately duplicated rather than shared through a helper:
+     * the two are three lines apart and a mismatch is visible here, where a builder that generated
+     * both would hide one. What must never drift is the predicate, and that is what a reader can
+     * check by looking down.
+     */
+    suspend fun countMatches(query: String): Int = withContext(Dispatchers.IO) {
+        val like = "%${query.trim()}%"
+        helper.readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM library_index WHERE title LIKE ? OR file_name LIKE ? OR author LIKE ?",
+            arrayOf(like, like, like),
+        ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+    }
+
     suspend fun search(query: String, limit: Int): List<TrackRef> = withContext(Dispatchers.IO) {
         val like = "%${query.trim()}%"
         helper.readableDatabase.rawQuery(

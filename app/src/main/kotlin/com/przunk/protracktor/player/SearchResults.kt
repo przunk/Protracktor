@@ -34,6 +34,22 @@ package com.przunk.protracktor.player
 object SearchResults {
 
     /**
+     * How many rows a single source will return for one query.
+     *
+     * There has always been a cap -- 200 on the scanned library and 300 on the catalogues -- and
+     * the trouble was that it was silent and that the two numbers were different for no reason.
+     * Searching ".sap" returned 506 and ".mod" returned 308, which are 200+300+6 and 300+8: the
+     * caps, not the archive. The owner read that as the search being broken, and he was right to.
+     *
+     * Two thousand, and the count of what was left out is now shown. The number is not a guess
+     * about memory -- a `TrackRef` is small and the list is drawn lazily, so ten times this would
+     * still render -- it is a guess about people: past a couple of thousand rows the answer to
+     * "where is my tune" is a better query, not more scrolling. Browse by format is the tool for
+     * "every SAP file", and it has no cap at all.
+     */
+    const val PER_SOURCE_LIMIT = 2_000
+
+    /**
      * One list, first occurrence of each id kept.
      *
      * **Order is the answer to "which copy wins".** The scanned library first because it knows
