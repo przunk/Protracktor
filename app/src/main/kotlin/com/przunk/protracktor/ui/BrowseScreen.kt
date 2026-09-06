@@ -231,7 +231,7 @@ private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> 
         }
         item {
             DomainRow(
-                icon = PlayerIcons.Info,
+                icon = PlayerIcons.History,
                 title = stringResource(R.string.domain_history_title),
                 subtitle = stringResource(R.string.domain_history_body),
                 onClick = { onOpenDomain(BrowseDomain.HISTORY) },
@@ -631,7 +631,14 @@ private fun SearchDomain(
             value = browse.query,
             onValueChange = onQueryChange,
             singleLine = true,
-            label = { Text(scopeLabel(browse)) },
+            // One line, always. "Online: ASMA (Atari 8-bit), The Mod Archive" wrapped and made the
+            // field taller, so adding a third catalogue -- which shortens the text to
+            // "Modland, ASMA (Atari 8-bit) +1" -- made the whole screen jump back up. The label is
+            // a statement of scope, not a place to read catalogue names in full; the chips
+            // underneath show which are lit.
+            label = {
+                Text(scopeLabel(browse), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             trailingIcon = {
