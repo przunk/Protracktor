@@ -790,7 +790,7 @@ class PlaybackController private constructor(private val context: Context) {
         // out of and wrong for a search you may be coming straight back to. See `docs/WISHLIST.md`
         // B23: back always meaning "leave" is only safe because leaving costs nothing.
         if (current.domain == BrowseDomain.SEARCH && current.searchScope != SearchScope.Everywhere) {
-            _browse.update { it.copy(searchScope = SearchScope.Everywhere) }
+            _browse.update { it.copy(searchScope = SearchScope.Everywhere).withoutStaleResults() }
             return true
         }
 
@@ -1748,19 +1748,40 @@ class PlaybackController private constructor(private val context: Context) {
     fun toggleSearchCatalogue(id: String) = _browse.update {
         val scope = it.searchScope as? SearchScope.Online ?: return@update it
         val ids = if (id in scope.catalogueIds) scope.catalogueIds - id else scope.catalogueIds + id
-        it.copy(searchScope = SearchScope.Online(ids))
+        it.copy(searchScope = SearchScope.Online(ids)).withoutStaleResults()
     }
 
     /** Ticks one platform. Same shape, and the same rule: empty means all of them. */
     fun toggleSearchPlatform(id: String) = _browse.update {
         val scope = it.searchScope as? SearchScope.ByPlatform ?: return@update it
         val ids = if (id in scope.platformIds) scope.platformIds - id else scope.platformIds + id
-        it.copy(searchScope = SearchScope.ByPlatform(ids))
+        it.copy(searchScope = SearchScope.ByPlatform(ids)).withoutStaleResults()
     }
 
+    /**
+     * Results belong to the scope that produced them.
+     *
+     * Left on screen after the scope changes they are a lie the app tells with a straight face: the
+     * owner switched to `Online` and saw his own local files sitting there, looking like an answer.
+     * The label had already changed, which made it worse rather than better -- two things on one
+     * screen disagreeing about what you are looking at.
+     *
+     * This is the counterpart to back keeping results, not a contradiction of it. What must survive
+     * is **leaving and returning**; what must not is a list that no longer matches the question.
+     */
+    private fun BrowseState.withoutStaleResults() =
+        copy(tracks = emptyList(), searchMatches = 0)
+
+    /**
+     * Runs the search the scope describes.
+     *
+     * **An empty query is a question, not a mistake.** `%%` matches every row, so "everything on the
+     * Amiga" is a scope with nothing typed -- which is the natural way to ask it and used to return
+     * silently. The per-source cap and the count beside it were already built for exactly this
+     * shape of answer.
+     */
     fun runSearch() {
         val current = _browse.value
-        if (current.query.isBlank()) return
         val searching = current.searchScope
         // The two narrowings the scope implies, worked out once. A platform scope with nothing
         // ticked means every platform, which is why an empty set has to become an empty filter
@@ -1783,11 +1804,14 @@ class PlaybackController private constructor(private val context: Context) {
             val fromLocal = if (searching.searchesLocal) {
                 // The library, meaning every playlist's tracks -- searching only the active one
                 // would answer a question nobody asked.
-                store.allTracks().filter {
+                // Capped like the other two. It never was, because a typed query is its own limit
+                // -- but an empty query matches every track in every playlist, and this is the one
+                // source that would have handed back all of them.
+                store.allTracks().asSequence().filter {
                     (it.title.contains(current.query, ignoreCase = true) ||
                         it.fileName.contains(current.query, ignoreCase = true)) &&
                         (platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds))
-                }
+                }.take(SearchResults.PER_SOURCE_LIMIT).toList()
             } else {
                 emptyList()
             }
@@ -1811,7 +1835,11 @@ class PlaybackController private constructor(private val context: Context) {
             // The Mod Archive is searched live and has no index to narrow, so a platform scope
             // cannot reach it at the query -- its results are filtered here instead of being
             // dropped, which would have made "Amiga" quietly mean "Amiga except The Mod Archive".
-            val fromModArchive = if (searching.searchesOnline && com.przunk.protracktor.net.ModArchive.id in wanted) {
+            // The Mod Archive is the one source an empty query cannot ask: it is a live search
+            // against somebody else's server, with no index here to list. Skipped rather than sent
+            // an empty query it would answer badly or refuse.
+            val fromModArchive = if (searching.searchesOnline && current.query.isNotBlank() &&
+                com.przunk.protracktor.net.ModArchive.id in wanted) {
                 com.przunk.protracktor.net.ModArchive.search(current.query).filter {
                     platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds)
                 }
@@ -1855,7 +1883,7 @@ class PlaybackController private constructor(private val context: Context) {
      * three of them.
      */
     fun setSearchScope(scope: SearchScope) {
-        _browse.update { it.copy(searchScope = scope) }
+        _browse.update { it.copy(searchScope = scope).withoutStaleResults() }
     }
 
     /** Counts the platform chips, once, when the search screen is opened. */

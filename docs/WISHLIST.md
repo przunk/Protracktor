@@ -182,6 +182,27 @@ Two things it caught that reading would not have:
 separately; the *extension* has to pick one, and it goes with the majority — while libopenmpt is the
 one that plays the minority.
 
+### Three corrections from the first device run
+
+**Results outlived their scope.** Switching to `Online` left the local files on screen, looking like
+an answer — with the label already saying `Online`, so two things on one screen disagreed about what
+you were looking at. A scope change now clears them. That is not a contradiction of "back keeps the
+results": what has to survive is *leaving and returning*, not a list that no longer matches the
+question.
+
+**The chips are one scrolling row after all.** They were a wrapping grid on the argument that a
+horizontal row hides its own contents. The argument lost to a phone: thirteen platforms wrap to four
+rows, and with the field and the tiles above them **two results were left visible**. A filter that
+costs you the answer is worse than one you have to drag. The fixed order earns its keep here — the
+biggest platforms are the ones reachable without dragging.
+
+**An empty query means "everything in scope".** It used to return silently. `%%` matches every row,
+the per-source cap and the count beside it were already built for exactly this answer, and "show me
+everything on the Amiga" is a scope with nothing typed — which is how anyone would ask it. The Mod
+Archive is skipped for it, being a live search against somebody else's server with no index here to
+list; and the playlist source, which had never needed a cap because a typed query is its own limit,
+got one.
+
 **Greyed for a measured reason.** A platform chip is disabled when the user's indexes hold nothing
 for it. That is a real count, not a hard-coded support list: a catalogue index only ever contains
 files this build claims, because `Catalogue.parseIndex` is handed a `keep` predicate, so a count of

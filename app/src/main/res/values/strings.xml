@@ -97,6 +97,7 @@
     <string name="browse_select_all">Select all</string>
     <string name="browse_select_none">Select none</string>
     <string name="browse_nothing_found">Nothing playable in this folder.</string>
+    <string name="search_nothing_found">Nothing found. An empty search finds everything in scope.</string>
     <!-- The three search scopes. The tile labels are short; the field label below them is the one
          that has to state the whole scope, so it can be longer. -->
     <string name="scope_local">Local library</string>
@@ -108,7 +109,6 @@
     <string name="scope_label_online_some">Online: %1$s</string>
     <string name="scope_label_all_platforms">All platforms</string>
     <string name="scope_label_more">%1$s +%2$d</string>
-    <string name="search_platforms_unindexed">Nothing indexed yet for %1$s.</string>
     <!-- A search returns at most 2,000 rows per source. Saying so, with the real total, is the
          difference between a limit and a list that looks wrong. -->
     <string name="browse_search_capped">Showing %1$d of about %2$d matches — narrow the search, or browse by format.</string>

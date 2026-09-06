@@ -880,7 +880,10 @@ private fun Selectable(
         when {
             browse.loading -> Loading()
             browse.tracks.isEmpty() -> Text(
-                text = stringResource(R.string.browse_nothing_found),
+                text = stringResource(
+                    if (browse.domain == BrowseDomain.SEARCH) R.string.search_nothing_found
+                    else R.string.browse_nothing_found
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(24.dp),

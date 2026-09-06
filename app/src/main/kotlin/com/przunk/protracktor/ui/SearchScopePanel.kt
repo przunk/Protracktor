@@ -17,8 +17,7 @@ package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +30,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -154,7 +154,30 @@ private fun ScopeTile(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * One row that scrolls sideways, for both chip lists.
+ *
+ * This was a wrapping grid first, on the argument that a horizontal row hides its own contents. The
+ * owner ran it and the argument lost: thirteen platforms wrap to four rows, and with the field and
+ * the tiles above them **two results were left visible**. A filter that costs you the answer is
+ * worse than one you have to drag.
+ *
+ * The order is fixed — biggest share of the archive first — so the chips that matter are the ones
+ * you reach without dragging, and nothing moves as an index grows.
+ */
+@Composable
+private fun ChipRow(content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        content()
+    }
+}
+
 @Composable
 private fun CatalogueChips(
     browse: BrowseState,
@@ -171,10 +194,7 @@ private fun CatalogueChips(
         )
         return
     }
-    FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    ChipRow {
         indexed.forEach { catalogue ->
             FilterChip(
                 selected = catalogue.id in scope.catalogueIds,
@@ -188,25 +208,18 @@ private fun CatalogueChips(
 /**
  * One chip per platform, wrapped rather than scrolled sideways.
  *
- * A single scrolling row hides its own contents — you cannot tell whether Atari ST is further along
- * without dragging — and there is a whole screen underneath doing nothing. Wrapping shows all
- * thirteen at once.
- *
- * A platform with nothing indexed is drawn **disabled with the reason on it**, rather than left out.
- * Leaving it out would say the archive is smaller than it is; showing it says which machines are
- * waiting on a decoder, which is the truth and doubles as a roadmap.
+ * A platform with nothing indexed is drawn **disabled**, rather than left out. Leaving it out would
+ * say the archive is smaller than it is; showing it says which machines are waiting on a decoder,
+ * which is the truth and doubles as a roadmap. The order puts them last on their own, because it is
+ * by share of the archive and the unplayable machines are the small ones.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PlatformChips(
     browse: BrowseState,
     scope: SearchScope.ByPlatform,
     onToggle: (String) -> Unit,
 ) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    ChipRow {
         Platforms.all.forEach { platform ->
             val held = browse.platformCounts[platform.id] ?: 0
             FilterChip(
@@ -217,18 +230,6 @@ private fun PlatformChips(
                 colors = FilterChipDefaults.filterChipColors(),
             )
         }
-    }
-    val silent = Platforms.all.filter { (browse.platformCounts[it.id] ?: 0) == 0 }
-    if (silent.isNotEmpty()) {
-        Text(
-            text = stringResource(
-                R.string.search_platforms_unindexed,
-                silent.joinToString(", ") { it.name },
-            ),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
-        )
     }
 }
 
