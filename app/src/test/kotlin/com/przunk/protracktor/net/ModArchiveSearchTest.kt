@@ -73,4 +73,24 @@ class ModArchiveSearchTest {
     fun `an unrelated page yields nothing without complaining`() {
         assertTrue(ModArchive.parseSearchResults("<html><body>No results.</body></html>").isEmpty())
     }
+
+    /**
+     * The archive's "no results" page is not a blank one, and that is the trap.
+     *
+     * It answers with **"Or perhaps enjoy some of these…"** and ten unrelated modules, each with a
+     * working download link. A parser that only looked for download links returned all ten as
+     * though they were matches — measured against the live site on 2026-09-06, searching for
+     * `zzzzqqqq`. The page is saved here unedited.
+     */
+    @Test
+    fun `a no-results page offers suggestions and none of them are results`() {
+        val html = noResultsPage()
+        assertTrue("the page really does carry download links", html.contains("downloads.php"))
+        assertTrue("and it is not a results page", !html.contains("site-wide-page-head-title\">Search Results"))
+        assertTrue("so nothing here is a match", ModArchive.parseSearchResults(html).isEmpty())
+    }
+
+    private fun noResultsPage(): String =
+        checkNotNull(javaClass.classLoader?.getResourceAsStream("modarchive-search-no-results.html"))
+            .bufferedReader().use { it.readText() }
 }

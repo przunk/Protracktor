@@ -41,6 +41,7 @@ import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.net.Sc68Replays
 import java.util.concurrent.Executors
@@ -1851,21 +1852,25 @@ class PlaybackController private constructor(private val context: Context) {
             // The Mod Archive is the one source an empty query cannot ask: it is a live search
             // against somebody else's server, with no index here to list. Skipped rather than sent
             // an empty query it would answer badly or refuse.
-            val liveSearch = if (searching.searchesOnline && current.query.isNotBlank() &&
+            val live = if (searching.searchesOnline && current.query.isNotBlank() &&
                 com.przunk.protracktor.net.ModArchive.id in wanted) {
                 com.przunk.protracktor.net.ModArchive.search(current.query)
             } else {
-                emptyList()
+                ModArchive.Outcome.Found(emptyList())
             }
-            // Null means the request could not be made, which is not the same as finding nothing.
-            // Reported rather than folded into the count, because the difference between "the
-            // archive does not have it" and "we could not ask" is the difference between a fact
-            // and a fault -- C15 was reported as the former and may well be the latter.
-            val fromModArchive = liveSearch.orEmpty().filter {
+            // Said out loud, because the difference between "the archive does not have it", "we
+            // could not ask" and "it answered with something we cannot read" is the difference
+            // between a fact and two different faults. C15 was reported as the first and the app
+            // had no way of telling anyone it might be one of the others.
+            when (live) {
+                is ModArchive.Outcome.NotReached ->
+                    _state.update { it.copy(message = Message("The Mod Archive could not be reached.")) }
+                is ModArchive.Outcome.Unreadable ->
+                    _state.update { it.copy(message = Message("The Mod Archive answered, but not with a page we can read.")) }
+                is ModArchive.Outcome.Found -> Unit
+            }
+            val fromModArchive = (live as? ModArchive.Outcome.Found)?.tracks.orEmpty().filter {
                 platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds)
-            }
-            if (liveSearch == null) {
-                _state.update { it.copy(message = Message("The Mod Archive could not be reached.")) }
             }
 
             // De-duplicated across **all four**, not just the first two. The old code guarded

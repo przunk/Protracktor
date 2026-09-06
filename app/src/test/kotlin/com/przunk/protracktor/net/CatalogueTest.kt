@@ -93,9 +93,18 @@ class CatalogueTest {
         )
     }
 
+    /**
+     * One row, field by field. `ModArchiveSearchTest` parses the page the site really returned; this
+     * stays because it says which pattern produces which field, which a whole page does not.
+     *
+     * The heading is part of the fixture and not decoration: the parser refuses anything that is
+     * not a results page, because the archive answers a fruitless search with ten unrelated modules
+     * that carry download links of their own.
+     */
     @Test
     fun `ModArchive parses search results HTML correctly`() {
         val sampleHtml = """
+            <h1 class="site-wide-page-head-title">Search Results</h1>
             <tr>
             <td valign="top" width="75">
             <a href="https://api.modarchive.org/downloads.php?moduleid=67183#dalezy-lotus_drei_remix.xm" title="Download">

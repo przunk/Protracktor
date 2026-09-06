@@ -439,7 +439,20 @@ nothing" looks like from the sofa, with nothing broken at all. Display order and
 precedence are now separate: a live result is placed with the local ones, while a duplicate is still
 resolved in favour of the copy you already have.
 
-**Still open** until the owner runs it: which of the two he was seeing. The message says so now.
+**The owner ran it and got "Nothing found for this search."** — so the request was made, the server
+answered, and nothing was parsed. That rules out the network and points at the page.
+
+Which turned up a third thing, found by asking the site rather than the code: **its "no results"
+answer is not an empty page.** Searching for `zzzzqqqq` returns *"Or perhaps enjoy some of these…"*
+and ten unrelated modules, each with a working download link. A parser that went looking for
+download links returned all ten as matches — so this catalogue could report the wrong tunes as
+readily as none. `parseSearchResults` now refuses any page without the results heading, and that
+page is saved as a second test fixture.
+
+The live search reports three outcomes now, not two: reached and read, could not reach, and answered
+with something unreadable. The last is what the owner should see if the markup has moved on his
+device but not on this machine — which is the remaining explanation, and the one the app could not
+previously tell anybody about.
 
 ### C1. ~~Roughly half of `.sndh` files do not play~~ — FIXED 2026-09-03 by sc68 3.0.0b
 
