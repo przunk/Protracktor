@@ -130,6 +130,16 @@ class PlaybackService : Service() {
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, state.metadata["artist"].orEmpty())
                 .putString(MediaMetadata.METADATA_KEY_ALBUM, track?.subtitle.orEmpty())
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, (state.durationSeconds * 1000).toLong())
+                // The generated cover, for the lock screen and Android Auto. Cached by
+                // `TrackArtworkBitmaps`, which matters here: this method runs five times a second.
+                .apply {
+                    track?.let {
+                        putBitmap(
+                            MediaMetadata.METADATA_KEY_ALBUM_ART,
+                            TrackArtworkBitmaps.forTrack(it.fileName, it.title, it.id),
+                        )
+                    }
+                }
                 .build()
         )
 
@@ -163,8 +173,15 @@ class PlaybackService : Service() {
         )
     }
 
-    private fun contentOf(state: PlayerUiState) =
-        NotificationContent(state.current?.title, state.current?.subtitle, state.playing)
+    private fun contentOf(state: PlayerUiState) = NotificationContent(
+        title = state.current?.title,
+        subtitle = state.current?.subtitle,
+        // Part of the key `distinctUntilChanged` compares, because they decide the picture. Without
+        // them, two tracks with the same title and subtitle would keep the first one's cover.
+        fileName = state.current?.fileName.orEmpty(),
+        id = state.current?.id.orEmpty(),
+        playing = state.playing,
+    )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -196,6 +213,8 @@ class PlaybackService : Service() {
     private data class NotificationContent(
         val title: String?,
         val subtitle: String?,
+        val fileName: String,
+        val id: String,
         val playing: Boolean,
     )
 
@@ -239,6 +258,23 @@ class PlaybackService : Service() {
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(content.title ?: getString(R.string.dock_idle_title))
             .setContentText(content.subtitle.orEmpty())
+            // The two lines that answer B21, and they only work together. Since Android 12 the
+            // media notification takes its colour from the artwork, so `setColorized` alone does
+            // nothing -- which is why the bar was grey while the controls were fine.
+            //
+            // Whether the platform honours the colour at all is the device's business: several
+            // manufacturers ignore it, and Android only applies it to a foreground service's own
+            // notification -- which this is, including while paused, because the service stays in
+            // the foreground until playback is actually over. The design does not depend on it: the
+            // square is
+            // coloured either way, so an uncoloured bar still gets a cover that says what is
+            // playing -- which was the other half of the complaint.
+            .setLargeIcon(
+                content.title?.let {
+                    TrackArtworkBitmaps.forTrack(content.fileName, it, content.id)
+                }
+            )
+            .setColorized(true)
             .setContentIntent(open)
             .setOngoing(content.playing)
             .setShowWhen(false)
