@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Can UADE play this, and does it fill the first buffer?
  *
  * `GOAL.md` round 6 item 1 asks for a pass rate on a real corpus before anything is integrated.

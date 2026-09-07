@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Does game-music-emu actually play what we claim it plays?
  *
  * Seven console families — NSF, GBS, SPC, VGM/VGZ, HES, AY, KSS — about 80,000 Modland files, and

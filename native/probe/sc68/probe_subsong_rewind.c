@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Does a rewind come back to the subsong that was playing?
  *
  * `docs/STATUS.md` C13. `Sc68Backend::rewind()` called `sc68_play(sc68_, 1, ...)` with a literal

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Can sc68 3.x be used from several threads at once?
  *
  * This matters because of a documented limitation: sc68 2.2.1 kept its 68000 emulator in global

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Does sc68 2.2.1 play this file? One verdict per run, on stdout.
  *
  * Mirrors Sc68Backend in native/engine/engine.cpp deliberately, including the worthTrying

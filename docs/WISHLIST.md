@@ -73,6 +73,31 @@ was believed.
 Android version. Several manufacturers ignore it. The design does not depend on it — the square is
 coloured either way — but the "grey" half of the complaint does.
 
+## B25. A swipe on a track row — to discuss
+
+*owner, 2026-09-07, relaying a colleague's suggestion: swipe a row to "add to the play queue", the
+way Spotify does. His own preference is "add to playlist", or nothing.*
+
+**Two things make this a conversation rather than a task.**
+
+*There is no queue to add to.* In Protracktor the queue **is** the playlist — `PlayQueue` holds what
+the playlist holds, and there is no separate "up next" list. Adding a gesture would mean inventing
+that concept first, which is doing it backwards: the gesture would be justifying the feature rather
+than the other way round.
+
+*The playlist row has no gesture budget left.* Tap plays, long press selects, drag reorders, and
+three dots hold everything else. A fourth is where these systems start misfiring — an accidental
+horizontal swipe during a vertical scroll is the common failure, and this row is one somebody uses
+in a car.
+
+**Where a swipe would earn its place is Browse and search results**, and for a different reason:
+those rows do not reorder, so they carry two gestures rather than four, and "add to playlist" is
+genuinely the dominant action there. The same gesture is right in one list and wrong in another
+because the lists differ in both respects.
+
+**Deferred by the owner on the day it was raised.** Recorded so the reasoning survives the
+conversation.
+
 ## B22. Random, but within something
 
 *owner, 2026-09-05: random for a particular platform, author or other domain.*
