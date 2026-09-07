@@ -43,6 +43,7 @@ class SchemaSqlTest {
                 setOf(
                     "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
                     "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
+                    "track_metadata",
                 ),
                 connection.tableNames(),
             )
