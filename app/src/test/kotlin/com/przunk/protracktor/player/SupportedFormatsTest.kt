@@ -70,7 +70,9 @@ class SupportedFormatsTest {
      */
     @Test
     fun `formats nothing here plays are not claimed`() {
-        for (name in listOf("x.minigsf", "x.mini2sf", "x.minipsf", "x.pt3", "x.mbm", "x.ptcop")) {
+        // `x.pt3` was on this list until 2026-09-07 and is now claimed: ZXTune plays it, along with
+        // the rest of the ZX Spectrum trackers. The `*SF` family stays, being console emulators.
+        for (name in listOf("x.minigsf", "x.mini2sf", "x.minipsf", "x.mbm", "x.ptcop")) {
             assertFalse(name, SupportedFormats.looksPlayable(name))
         }
     }

@@ -754,6 +754,242 @@ Not measured, because Modland has none: **subsongs**. The path is written and th
 upstream's (`ht_SubsongNr` is the count of *extras*, so a plain file reports one tune), but nothing
 in 80 files exercised it.
 
+## 7. ZX Spectrum — measured 2026-09-07, **blocked on a licence**
+
+`./scripts/probe-platforms.py` says ZX Spectrum holds **23,891 Modland files and this build plays
+58**. It is the largest dark platform in the archive and the only large one that is a chiptune in
+the same sense as the rest of the app: `.pt3`, `.pt2`, `.stc`, `.asc` and `.sqt` are trackers
+driving an AY-3-8912, not console emulators. The `*SF` family is bigger — about 95,000 files across
+PlayStation, DS, GBA and N64 — and is emulator cores, which is a different kind of program to put
+inside this one.
+
+### The formats work, and the number is not close
+
+`./scripts/build-ayfly-probe.sh` then `./scripts/probe-ayfly.py`, against **ayfly** — a ~900 KB AY
+replay library whose `players/` covers every name Modland files under Spectrum:
+
+**46 of 48 sampled files loaded from a buffer and were audible — 99.6% weighted by what Modland
+actually holds, of 21,639 files.** The two failures are both `.psc`, a format worth 239 files.
+
+Every one of them **states its own length**, median 130s. So these files would arrive with a
+duration and a working seek bar, the way AHX did, with nothing stored and no song-length database.
+
+It also renders into a buffer of whatever size it is asked for — `ay_rendersongbuffer`, interleaved
+16-bit stereo — so unlike HivelyTracker it needs no ring buffer. Technically this is the easiest
+integration since ASAP.
+
+### And it cannot be shipped
+
+**`docs/LICENSES.md` says to stop here and raise it rather than work around it, so that is what this
+is.** Three findings, in increasing order of seriousness:
+
+- **The repository carries no `LICENSE` or `COPYING` file at all.** Not in the root, not in `src`,
+  and no licence statement in `README`, `configure.ac` or `ChangeLog`. GitHub's API reports no
+  licence for it.
+- **The twelve player headers carry no notice** — and they are precisely the files we need. Of the
+  27 sources in `libayfly`, 15 carry GPL-2.0-**or-later**, which would be fine; the other 12 are
+  `players/PT3Play.h`, `PT2Play.h`, `STCPlay.h`, `ASCPlay.h`, `SQTPlay.h` and their siblings, and
+  they carry an author credit and nothing else. `PT3Play.h` opens with *"Pro tracker 3.x player was
+  written by S.V. Bulba"* and no terms.
+- **`z80ex` says "Released under GNU GPL v2"** with no "or later". **GPL-2-only is incompatible with
+  our GPL-3**, and it is not separable: five of the eight library sources reference it, including
+  `ay.cpp` and `formats.cpp`, not only the `.ay` path one might hope to drop.
+
+This is the case `docs/LICENSES.md` warns about in as many words — "a dependency that turns out to be
+GPL-2-**only** cannot be combined with our Apache-2.0 UI stack under GPL-3, and invalidates the
+licence decision". It is the fourth time in this project that reading `COPYING` alone would have
+given the wrong answer, and the first time the answer is no.
+
+### What to do instead
+
+**ZXTune** — named in `docs/reference/modizer-libraries.md`, LGPL-3.0 by GitHub's reading, covering
+every one of these formats and many more. It is a 182 MB C++ project with its own build system,
+which is why it was not tried first; the measurement above is the argument for paying that cost,
+because it says the formats themselves are worth 21,639 files at 99.6%.
+
+### ZXTune checked, 2026-09-07: the licence is clean and the size is not the problem
+
+**Licence.** `LICENSE.md` in the root is the LGPL-3 text, and the sources we would build carry no
+per-file notice contradicting it — a doxygen `@file`/`@author` block and nothing else. LGPL-3
+combines with our GPL-3 without argument.
+
+**`3rdparty/` is where the danger was, and it is avoidable.** It bundles 34 components, `z80ex`
+among them — the same GPL-2-only Z80 emulator that blocked ayfly. In ZXTune it is reached from
+exactly two files: `src/devices/z80/z80.cpp`, which wraps it, and `src/module/players/aym/ayemul.cpp`,
+which is the plugin for `.ay` — Z80 machine code rather than tracker data. **Leave that one file out
+and z80ex never enters the build.** It costs Modland's "AY Emul" directory, 1,202 files of 23,891,
+and none of the tracker formats. That is not working around a licence; it is not using the
+component.
+
+Compiling the whole AY path with everything else missing, and collecting what it asked for, the
+answer is **one** third-party dependency: **`fmt`**, MIT. (`src/sound/impl/resampler.cpp` reaches
+for `lazyusf2`, an N64 emulator, and is not needed — Oboe does our rate conversion.)
+
+**Size, which is the owner's question.** The repository is 182 MB and almost none of it would ship:
+
+| | |
+| --- | --- |
+| `3rdparty/` | 280 MB — **none of it built** except `fmt` |
+| checked-in HVSC song-length databases under `src/core` | ~60 MB of `.md5` files, not code |
+| **the AY source set we would compile** | **1.9 MB of C++ in ~235 files** |
+
+For scale, the libopenmpt and game-music-emu sources this project already compiles are **36 MB**,
+and the release APK is 14 MB. ZXTune's AY support is about 5% of the source already going through
+the compiler. It is not a 100 MB proposition.
+
+**And it compiles.** `-I src -I include -I .` under **C++20**, which is already this project's
+standard — `-std=c++17` fails on `std::to_address` and a `concept` declaration, which is the sort of
+thing that would otherwise be discovered halfway through a build.
+
+### Measured 2026-09-07: 72 of 72
+
+`./scripts/build-zxtune-probe.sh` then `./scripts/probe-zxtune.py`, twelve files of each format
+sampled from Modland:
+
+**72 of 72 loaded from a buffer and were audible — 100% weighted by what Modland holds, of 20,521
+files.** ayfly, which cannot be shipped, scored 46 of 48 on the same corpus.
+
+**Every one states its own length**, median 149s. So `.pt3`, `.pt2`, `.stc`, `.asc`, `.sqt` and
+`.stp` would arrive with a duration and a working seek bar, with nothing stored — the third backend
+to manage that, after AHX and the trackers.
+
+### What it cost, and what the next person should know
+
+The formats were never the difficulty. Three days of this page were spent on libraries that play
+things; this one was spent on a build.
+
+**The dependency closure has to be discovered by compiling.** A sweep of `src/module` pulls in the
+PlayStation, DS, GBA and N64 players, each wanting a different part of `3rdparty`; `src/sound`
+pulls in ALSA and OSS; `src/binary` pulls in zlib and lhasa; `src/l10n` wants Boost. None of that is
+on the path from the bytes of a `.pt3` to samples, and the only way to learn which files are is to
+build and read the linker. The answer is **90 sources**, listed in the build script.
+
+**Three things were wrong in the probe and each looked like the library failing:**
+
+- **Two shapes of factory.** ProTracker3 hands back a full `Module::Factory` that produces a holder;
+  every other AY plugin hands back an `AYM::Factory` that produces a *chiptune*, and
+  `AYM::CreateHolder` is the step between. The plugin layer that normally does this drags in the
+  whole plugin registry, so the probe does it by hand — and the backend will have to as well.
+- **`binary/format/full` versus `lite`.** Both define `Binary::CreateFormat`; `lite` drops the
+  pattern syntax the chiptune decoders' format strings use. Building neither is one undefined symbol
+  at the end of a ninety-file link.
+- **The renderer needs the module's own properties.** `CreateRenderer` was given a fresh empty
+  parameter container, and the AY renderer reads its frequency table from parameters —
+  `aym_parameters.cpp` says *"frequency table is mandatory!!!"* and throws. It throws at the first
+  `Render`, not at construction, so all 48 files aborted with `exit-6` and it looked like a decoder
+  that could not decode. The table is something the *file* chose and the chiptune had already put
+  there; `holder->GetModuleProperties()` is what carries it.
+
+**And one thing about the build itself:** a single `g++` over ninety sources recompiles all of them
+every time an include path turns out to be wrong, which on a library this size is most of an
+afternoon. The script compiles one object per source, in parallel, and keeps them.
+
+### Integrated 2026-09-07 — and the phone found four things the host could not
+
+`ZxTuneBackend`, ZXTune's 91 sources building for all three ABIs, and thirteen names back in
+`SupportedFormats`: `pt3`, `pt2`, `pt1`, `stc`, `st1`, `st3`, `asc`, `as0`, `sqt`, `stp`, `psm`,
+`ftc`, `gtr`.
+
+**The release APK goes from 14.2 MB to 17 MB.** That is the answer to the question that opened this
+section: ZXTune costs **2.8 MB across three ABIs**, not the 100 MB its 182 MB repository suggests.
+
+**Every remaining obstacle was clang against GCC**, which is exactly what a host probe cannot show:
+
+- **`std::char_traits<uint16_t>` does not exist in libc++.** ZXTune's `encoding.cpp` uses
+  `basic_string_view<uint16_t>`; libstdc++ still has a generic primary template and libc++ has only
+  the character types the standard names. The file was dropped for one round and the link refused —
+  `sanitize.cpp` calls `ToAutoUtf8`, and sanitising is what cleans a title before it is shown. A
+  `char_traits` shim is force-included into that one translation unit, and
+  `native/backends/zxtune/uint16_char_traits.h` says plainly what that costs.
+- **`fmt`'s compile-time format checking does not survive this clang.** The fix is
+  `-DFMT_CONSTEVAL=`, and the *first* attempt used `FMT_USE_CONSTEVAL=0`, which `core.h` consults
+  only when `FMT_CONSTEVAL` is undefined — so it changed nothing and produced the identical error a
+  second time.
+- **Two vendored libraries ship a `types.h`.** ZXTune's defines `uint_t` and `int_t`, which its
+  other headers use and none of them includes; HivelyTracker's is on the include path too and won.
+  The error surfaced sixty lines away, inside a third library's header, saying a type did not exist.
+  `#include <include/types.h>` is the disambiguation and the path is load-bearing.
+- **`RangeChecker` lives in `src/tools/src`, not `src/tools`**, which holds only headers. One glob
+  short, four undefined symbols.
+
+**What the app does with them**, beyond playing: ZXTune states a duration for every one of these
+files, so they arrive with a working seek bar; `Platforms` claims the names, so the ZX Spectrum chip
+in the search filter stops being greyed out; and changing `SupportedFormats` changes
+`backendsFingerprint`, so every index built before today is stale and will be rebuilt.
+
+`.ay` stays with game-music-emu. ZXTune's own reader for it is `ayemul`, the one plugin whose
+licence cannot be taken.
+
+### The owner ran it, and found the list promising more than the code delivered
+
+`SupportedFormats` and the backend's `worthTrying` claimed **thirteen** names. `ZxTuneBackend`
+implemented **ten**. So `.psm`, `.ftc` and `.gtr` were offered, taken, refused — and the app said
+*"is a format Protracktor cannot play yet"*, which is the message for a missing decoder and was true
+only because a list of factories was three lines short. `.pt1` was a fourth instance, found a moment
+later by the probe rather than by him.
+
+**The probe now measures what `SupportedFormats` promises**, which is the only guard that crosses
+the language boundary: the format list is Kotlin and the decoders are C++, so no unit test can
+compare them. With all thirteen: **73 of 80, 99.5% weighted by what Modland holds.**
+
+The seven failures are honest and worth reading. Six are `.psm` files from Modland's *Epic Megagames
+MASI* directory, which ZXTune's Pro Sound Maker decoder correctly refuses — in the app those fall
+through to libopenmpt and play, which is a fallback the probe does not have. One `.ftc` did not load.
+
+### And a second thing he found, which was not about ZX Spectrum at all
+
+`Could not read ice.pt2` — then it played on the second attempt. That message comes from the path
+where the file never arrived, `bytes == null`, before any decoder sees it: a transient fetch failure
+from Modland.
+
+**The two messages send you to opposite places and look alike from an armchair.** "Could not read"
+is the network; "cannot play yet" is a missing decoder. Both of us spent a few minutes looking at
+the wrong one. It is the same shape as C15, where a swallowed failure and an honest absence were
+reported identically — worth a defect of its own rather than a note here.
+
+### `.stc` — some files, not the platform, and not our doing
+
+The owner reported `.stc` not playing, then narrowed it himself: `#######.stc` and `(letsgo).stc`
+play, `&SFTDEMO.stc` does not, and the message is *"Spectrum is a format Protracktor cannot play
+yet"* — the decoder refusing, not the network.
+
+**Reproduced on this machine with the same files**, which moves it out of Android entirely.
+`&SFTDEMO.stc` and `Info1.stc` are refused; the other two play. All four have plausible Sound
+Tracker headers — a tempo byte and ascending section pointers — so they are not packed files wearing
+the wrong name.
+
+**Measured: 76 of 80 sampled `.stc` play, 95%.** Across Modland's 3,639 that is roughly 180 files
+ZXTune's Sound Tracker decoder will not take.
+
+All three variants are already tried — `Ver1` compiled, `Ver1` uncompiled, and `Ver3`, which is every
+one ZXTune's own plugins use for this extension. So ZXTune refuses these files too; this is not a
+gap in the integration, and closing it would mean changing somebody else's decoder.
+
+Three causes ruled out along the way, each worth writing down so nobody pays for them twice:
+
+- **Not the buffer's lifetime.** `Binary::CreateContainer(View)` copies into a `Dump` rather than
+  referencing the caller's bytes. Worth checking because the probe keeps its bytes alive to the end
+  of `main` and `openBackend` does not.
+- **Not `char` signedness.** Plain `char` is signed on x86-64 and unsigned on ARM, the classic
+  reason a decoder works on a desktop and fails on a phone.
+  `./scripts/build-zxtune-probe.sh` now takes `PROBE_CHAR_FLAGS=-funsigned-char` and builds a second
+  binary beside the first: **0 of 25 differ.** The switch stays, because the next "works here" will
+  want it.
+- **Not another backend taking the name.** ASAP's extension list has no `stc`, and game-music-emu
+  identifies by header.
+
+**Nothing else has been heard on a phone.**
+
+### Two things the probe found that were not about the formats
+
+- **`ay_startsong` dereferences the song's audio player without checking it for null**, while
+  `ay_songstarted` three lines away does check. Rendering into a buffer needs no player, so the
+  first run segfaulted on all 32 files. It is not needed at all: `ay_rendersongbuffer` drives the
+  chip directly.
+- **`ay_getsonglength` returns fiftieths of a second**, which `ayfly.h` says on the field and
+  nothing repeats. Read as milliseconds it made every tune about six seconds long — plausible
+  enough to be believed, and wrong. The median is 130 seconds.
+
 ## Not planned
 
 `.sc68` container files reference external replay binaries we do not ship, so they will not play even

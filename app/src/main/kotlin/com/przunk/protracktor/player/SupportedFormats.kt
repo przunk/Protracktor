@@ -71,6 +71,13 @@ object SupportedFormats {
         // supported" is in its source with no build option behind it. Listing the extension only
         // indexed 265 files that cannot open.
         "nsf", "nsfe", "spc", "gbs", "vgm", "vgz", "hes", "ay", "kss",
+        // ZX Spectrum, through ZXTune. AY-3-8912 trackers: 23,891 Modland files, of which this app
+        // played 58 before -- and those 58 only because `.ay` is a name game-music-emu also uses.
+        // Measured 2026-09-07: 72 of 72 sampled files played (`docs/PLAN_FORMATS.md` §7).
+        // "ay" is deliberately absent from this group: it stays with game-music-emu, whose AY
+        // support is the ZX Spectrum *snapshot* format rather than a tracker, and ZXTune's own
+        // reader for it is the one plugin whose licence we cannot take.
+        "pt3", "pt2", "pt1", "stc", "st1", "st3", "asc", "as0", "sqt", "stp", "psm", "ftc", "gtr",
         // Commodore 64, through libsidplayfp. Identified by a four-byte magic, so these extensions
         // only decide what a folder scan picks up.
         "sid", "psid", "rsid",

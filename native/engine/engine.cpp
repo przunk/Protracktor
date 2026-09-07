@@ -43,6 +43,41 @@ extern "C" {
 void hvl_play_irq(struct hvl_tune *ht);
 }
 
+// ZXTune. C++ with its own namespaces, so outside the `extern "C"` block above.
+//
+// `include/types.h` first, and **the path is not decoration**. It defines `uint_t` and `int_t`,
+// which every other ZXTune header uses and none of them includes -- their own sources get it from a
+// compiler-forced include, so the omission is invisible inside their build and immediate outside
+// it. And a plain `<types.h>` finds *HivelyTracker's*, because that library ships a file of the
+// same name and its include directory is on the path too. Two vendored libraries with a generically
+// named header is not a problem until it is: the error arrives sixty lines later, in a third
+// library's header, saying a type does not exist.
+#include <include/types.h>
+
+#include <binary/container_factories.h>
+#include <formats/chiptune/aym/ascsoundmaster.h>
+#include <formats/chiptune/aym/protracker2.h>
+#include <formats/chiptune/aym/protracker3.h>
+#include <formats/chiptune/aym/soundtracker.h>
+#include <formats/chiptune/aym/soundtrackerpro.h>
+#include <formats/chiptune/aym/sqtracker.h>
+#include <module/holder.h>
+#include <module/information.h>
+#include <module/players/aym/ascsoundmaster.h>
+#include <module/players/aym/fasttracker.h>
+#include <module/players/aym/globaltracker.h>
+#include <module/players/aym/prosoundmaker.h>
+#include <module/players/aym/aym_base.h>
+#include <module/players/aym/protracker1.h>
+#include <module/players/aym/protracker2.h>
+#include <module/players/aym/protracker3.h>
+#include <module/players/aym/soundtracker.h>
+#include <module/players/aym/soundtrackerpro.h>
+#include <module/players/aym/sqtracker.h>
+#include <module/renderer.h>
+#include <parameters/container.h>
+#include <sound/chunk.h>
+
 #include <sidplayfp/sidplayfp.h>
 #include <sidplayfp/SidTune.h>
 #include <sidplayfp/SidTuneInfo.h>
@@ -1186,6 +1221,197 @@ private:
     int subsong_ = 0;
 };
 
+/**
+ * The ZX Spectrum AY trackers, through ZXTune: PT3, PT2, STC, ASC, SQT, STP and their relatives.
+ *
+ * The largest platform in Modland this app could not play -- 23,891 files, of which 58 opened,
+ * because `.ay` happens to be a name game-music-emu also uses. These are trackers driving an
+ * AY-3-8912, which is why they belong here and the 95,000 `*SF` files do not: those are console
+ * emulators (`docs/PLAN_FORMATS.md` §7).
+ *
+ * Measured on the host before integration: **72 of 72 sampled files loaded from a buffer and were
+ * audible, and every one stated its own length** -- median 149s. So these arrive with a duration
+ * and a working seek bar without `SongLengths` knowing anything about them.
+ *
+ * Three things make it unlike the other backends:
+ *
+ * **Two shapes of factory.** ProTracker3 hands back a `Module::Factory`, which produces a holder
+ * directly; every other AY plugin hands back an `AYM::Factory`, which produces a *chiptune* that
+ * `AYM::CreateHolder` then wraps. ZXTune's own plugin layer papers over this and drags in its whole
+ * plugin registry to do it, so this does it by hand.
+ *
+ * **The renderer needs the module's own properties, not fresh ones.** The AY renderer reads its
+ * frequency table from parameters -- ZXTune's source says "frequency table is mandatory!!!" and
+ * throws without it -- and the table is something the *file* chose, put there while loading. Handing
+ * it an empty container throws at the first render rather than at construction, which reads as a
+ * decoder that cannot decode.
+ *
+ * **Render returns chunks of its own size**, like HivelyTracker and unlike everything else, so this
+ * carries a ring buffer.
+ */
+class ZxTuneBackend : public Backend {
+public:
+    /**
+     * Whether any of ZXTune's AY decoders will take these bytes.
+     *
+     * There is no cheap magic to test: `.stc` and `.pt2` have no signature worth the name, and
+     * ZXTune's decoders check structure instead. So recognition *is* loading, and the answer is
+     * whether the constructor throws -- which is why this backend is asked late, after everything
+     * that can identify a file by a header.
+     */
+    static bool worthTrying(const std::vector<char> &bytes, const std::string &name) {
+        if (bytes.size() < 64) return false;
+        const auto dot = name.find_last_of('.');
+        if (dot == std::string::npos) return false;
+        std::string extension = name.substr(dot + 1);
+        for (auto &c : extension) c = static_cast<char>(std::tolower(c));
+        return extension == "pt3" || extension == "pt2" || extension == "pt1" ||
+               extension == "stc" || extension == "st1" || extension == "st3" ||
+               extension == "asc" || extension == "as0" || extension == "sqt" ||
+               extension == "stp" || extension == "psm" || extension == "ftc" ||
+               extension == "gtr";
+    }
+
+    explicit ZxTuneBackend(const std::vector<char> &bytes) {
+        const auto data = Binary::CreateContainer(
+            Binary::View(bytes.data(), bytes.size()));
+
+        namespace FC = Formats::Chiptune;
+        // Ordered by how much of Modland each is worth, so the common case is decided first.
+        tryFull("PT3", Module::ProTracker3::CreateFactory(FC::ProTracker3::CreateDecoder()), data);
+        tryFull("PT3", Module::ProTracker3::CreateFactory(FC::ProTracker3::VortexTracker2::CreateDecoder()), data);
+        tryAym("PT2", Module::ProTracker2::CreateFactory(), data);
+        tryAym("STC", Module::SoundTracker::CreateFactory(FC::SoundTracker::Ver1::CreateCompiledDecoder()), data);
+        tryAym("ST1", Module::SoundTracker::CreateFactory(FC::SoundTracker::Ver1::CreateUncompiledDecoder()), data);
+        tryAym("ST3", Module::SoundTracker::CreateFactory(FC::SoundTracker::Ver3::CreateDecoder()), data);
+        tryAym("ASC", Module::ASCSoundMaster::CreateFactory(FC::ASCSoundMaster::Ver1::CreateDecoder()), data);
+        tryAym("AS0", Module::ASCSoundMaster::CreateFactory(FC::ASCSoundMaster::Ver0::CreateDecoder()), data);
+        tryAym("STP", Module::SoundTrackerPro::CreateFactory(FC::SoundTrackerPro::CreateCompiledModulesDecoder()), data);
+        tryAym("SQT", Module::SQTracker::CreateFactory(), data);
+        // These three were claimed by `worthTrying` and by `SupportedFormats` before they were
+        // implemented here, so `.psm`, `.ftc` and `.gtr` opened a file, refused it, and the app
+        // said "is a format Protracktor cannot play yet" -- which is the message for a decoder that
+        // does not exist, and was true only because this list was three lines short.
+        tryAym("PT1", Module::ProTracker1::CreateFactory(), data);
+        tryAym("PSM", Module::ProSoundMaker::CreateFactory(), data);
+        tryAym("FTC", Module::FastTracker::CreateFactory(), data);
+        tryAym("GTR", Module::GlobalTracker::CreateFactory(), data);
+
+        if (!holder_) throw std::runtime_error("ZXTune did not recognise this file");
+
+        durationSeconds_ = holder_->GetModuleInformation().Duration.CastTo<Time::Second>().Get();
+        start();
+    }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        std::size_t written = 0;
+        while (written < frames) {
+            if (chunkPos_ == chunk_.size()) {
+                if (ended_) break;
+                chunk_ = renderer_->Render();
+                chunkPos_ = 0;
+                if (chunk_.empty()) { ended_ = true; break; }
+            }
+            const std::size_t take = std::min(frames - written, chunk_.size() - chunkPos_);
+            for (std::size_t i = 0; i < take; ++i) {
+                const auto &sample = chunk_[chunkPos_ + i];
+                out[(written + i) * 2] = sample.Left() / 32768.0f;
+                out[(written + i) * 2 + 1] = sample.Right() / 32768.0f;
+            }
+            chunkPos_ += take;
+            written += take;
+        }
+        rendered_ += written;
+        return written;
+    }
+
+    bool canSeek() const override { return durationSeconds_ > 0; }
+
+    void seek(double seconds) override {
+        renderer_->SetPosition(
+            Time::AtMillisecond() + Time::Milliseconds(static_cast<uint_t>(seconds * 1000.0)));
+        rendered_ = static_cast<std::size_t>(std::max(0.0, seconds) * kSampleRate);
+        chunk_ = Sound::Chunk();
+        chunkPos_ = 0;
+        ended_ = false;
+    }
+
+    void rewind() override { start(); }
+
+    double positionSeconds() const override {
+        return static_cast<double>(rendered_) / kSampleRate;
+    }
+
+    double durationSeconds() const override { return durationSeconds_; }
+
+    std::string describe() const override {
+        std::ostringstream o;
+        o << "title\t" << property("Title") << '\n'
+          << "format\t" << "ZX Spectrum " << format_ << " (ZXTune)" << '\n'
+          << "artist\t" << property("Author") << '\n'
+          << "tracker\t" << property("Program") << '\n'
+          << "channels\t3" << '\n'
+          << "seekable\t" << (canSeek() ? 1 : 0) << '\n'
+          << "message\t" << property("Comment");
+        return o.str();
+    }
+
+    int preferredSampleRate() const override { return kSampleRate; }
+
+private:
+    static constexpr int kSampleRate = 44100;
+
+    /** A plugin that produces a holder itself. ProTracker3 is the only one of these. */
+    void tryFull(const char *name, Module::Factory::Ptr factory, const Binary::Container::Ptr &data) {
+        if (holder_ || !factory) return;
+        try {
+            auto props = Parameters::Container::Create();
+            if (auto found = factory->CreateModule(*props, *data, props)) {
+                holder_ = std::move(found);
+                format_ = name;
+            }
+        } catch (...) {
+            // A decoder that half-recognises a truncated file throws. That means "not this one".
+        }
+    }
+
+    /** A plugin that produces a chiptune, which `AYM::CreateHolder` turns into a holder. */
+    void tryAym(const char *name, Module::AYM::Factory::Ptr factory, const Binary::Container::Ptr &data) {
+        if (holder_ || !factory) return;
+        try {
+            auto props = Parameters::Container::Create();
+            if (auto chiptune = factory->CreateChiptune(*data, props)) {
+                holder_ = Module::AYM::CreateHolder(std::move(chiptune));
+                format_ = name;
+            }
+        } catch (...) {
+        }
+    }
+
+    void start() {
+        renderer_ = holder_->CreateRenderer(kSampleRate, holder_->GetModuleProperties());
+        chunk_ = Sound::Chunk();
+        chunkPos_ = 0;
+        rendered_ = 0;
+        ended_ = false;
+    }
+
+    /** One of the module's own string properties, or empty. */
+    std::string property(const char *key) const {
+        const auto value = holder_->GetModuleProperties()->FindString(key);
+        return value ? std::string(*value) : std::string();
+    }
+
+    Module::Holder::Ptr holder_;
+    Module::Renderer::Ptr renderer_;
+    Sound::Chunk chunk_;
+    std::size_t chunkPos_ = 0;
+    std::size_t rendered_ = 0;
+    double durationSeconds_ = 0.0;
+    bool ended_ = false;
+    std::string format_ = "AY";
+};
+
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name,
                                      std::string &error) {
     error.clear();
@@ -1230,6 +1456,19 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<GmeBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("gme recognised the header but refused: %s", e.what());
+            error = e.what();
+        }
+    }
+
+    // ZXTune next, and by name rather than by content: `.stc` and `.pt2` carry no signature worth
+    // testing, so ZXTune's decoders check structure and recognition *is* loading. That makes it a
+    // backend to ask late -- after everything that can identify a file from a header -- and only
+    // about names no other backend claims.
+    if (ZxTuneBackend::worthTrying(bytes, name)) {
+        try {
+            return std::make_unique<ZxTuneBackend>(bytes);
+        } catch (const std::exception &e) {
+            LOGE("ZXTune refused it: %s", e.what());
             error = e.what();
         }
     }
