@@ -46,6 +46,10 @@
     <string name="browse_select_all">Zaznacz wszystko</string>
     <string name="browse_select_none">Odznacz wszystko</string>
     <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
+    <string name="open_failed_not_fetched">Nie udało się pobrać %1$s. To może być połączenie — spróbuj ponownie.</string>
+    <string name="open_failed_format">%1$s to format, którego Protracktor jeszcze nie odtwarza.</string>
+    <string name="open_failed_file">Nie udało się otworzyć %1$s. Inne pliki tego formatu grają, więc chodzi o ten jeden.</string>
+    <string name="open_failed_file_because">Nie udało się otworzyć %1$s: %2$s</string>
     <string name="search_nothing_found">Nie znaleziono żadnego wyniku.</string>
     <string name="search_live_needs_query">The Mod Archive przeszukiwany jest na żywo i potrzebuje frazy.</string>
     <string name="search_not_yet">Wyszukaj albo zostaw puste pole, żeby znaleźć wszystko w zakresie.</string>
