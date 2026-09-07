@@ -74,17 +74,13 @@ class TrackMetadataStore(context: Context) {
     /**
      * What is known about the tune in [bytes], or null if the database has never heard of it.
      *
-     * Takes the bytes for the same reason [SongLengthStore.secondsFor] does: it is what the player
-     * is holding when it needs the answer, and a track fetched over the network has no path worth
-     * hashing.
+     * Takes the hash rather than the bytes because the caller has one already: two databases key
+     * on the same digest and hashing several megabytes twice per track is work nobody asked for.
      *
      * **The key is [SongDbMetadata.KEY_LENGTH] characters**, not the whole hash. Looking up the
      * full MD5 would run, return nothing, and look exactly like a database that had not been
      * downloaded.
      */
-    suspend fun forBytes(bytes: ByteArray): SongDbMetadata.Entry? = forMd5(Md5.of(bytes))
-
-    /** The same, when the caller has already hashed the file. */
     suspend fun forMd5(md5: String): SongDbMetadata.Entry? = withContext(Dispatchers.IO) {
         val key = SongDbMetadata.keyOf(md5)
         helper.readableDatabase.rawQuery(

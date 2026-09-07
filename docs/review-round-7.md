@@ -9,7 +9,7 @@ a retry path, and an SPDX pass over 92 files. Rounds 5 and 6 each found five def
 in code written that same day; the rule that earned its place is **suspect this session's own work
 first**, and it earned it again.
 
-Five findings, all fixed. Four are in code written today.
+Eight findings, all fixed. Seven are in code written today.
 
 ## R1 — the metadata import peaks near 150 MB, and only on a phone
 
@@ -62,6 +62,33 @@ playlist, deleting one, returning from a detour, removing the playing track, and
 Two databases key on the MD5 of the file, and each store computed its own. Neither was wrong;
 together they hashed several megabytes twice per track. `Md5.of` computes it once and both lookups
 take it.
+
+## R6 — a fresh checkout could not build the ZX Spectrum backend
+
+`fetch-zxtune.py` was never wired into `fetch-native-deps.sh`. Anybody following the documented
+setup — including this project on another machine — would fetch five libraries, miss the sixth, and
+meet `Run ./scripts/fetch-zxtune.py first` from CMake. It works here only because the script had
+been run by hand while the backend was being written.
+
+sc68 has the same shape, being an SVN checkout rather than a tarball, and *is* wired in. This is
+that line, for the same reason.
+
+## R7 — two wrappers nobody calls
+
+`SongLengthStore.secondsFor` and `TrackMetadataStore.forBytes` hashed the file themselves. R5 moved
+the hashing to the caller, which left both as convenience methods with no callers. Removed rather
+than kept for a caller that no longer exists — the same reasoning already recorded in this
+controller about `addToPlaylistAndSay`.
+
+## R8 — a source list that stops matching the sources
+
+`file(GLOB)` is read once, at configure time. Moving the pin in `fetch-zxtune.py` and re-fetching
+would leave the build compiling yesterday's list of files, with no error to say so.
+`CONFIGURE_DEPENDS` makes the glob a build-time dependency.
+
+**And the fix had a bug of its own**, caught by building rather than by reading: `CONFIGURE_DEPENDS`
+goes *after* the variable name, and putting it first makes CMake take it as the variable and
+`ZX_SOURCES` as a glob pattern. The Kotlin tests are green either way; only a native build knows.
 
 ## Not a finding, and recorded so it does not become one
 

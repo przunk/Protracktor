@@ -66,9 +66,6 @@ class SongLengthStore(context: Context) {
      * the answer, and because the key is a hash of the file's contents -- a SID reached over the
      * network has no path to speak of.
      */
-    suspend fun secondsFor(bytes: ByteArray): List<Double>? = forMd5(Md5.of(bytes))
-
-    /** The same, when the caller has already hashed the file. */
     suspend fun forMd5(md5: String): List<Double>? = withContext(Dispatchers.IO) {
         helper.readableDatabase
             .rawQuery("SELECT seconds FROM song_lengths WHERE md5 = ?", arrayOf(md5))

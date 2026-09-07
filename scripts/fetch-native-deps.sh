@@ -136,5 +136,14 @@ if ! "$PROJECT_DIR/scripts/fetch-sc68-svn.py"; then
     exit 1
 fi
 
+# ZXTune has no release tarball either, and its repository is 182 MB of which almost nothing is
+# wanted -- so it is a sparse, blobless clone rather than a `fetch` line, for the same reason sc68
+# is a script. Its own header explains the exclusions.
+echo
+if ! "$PROJECT_DIR/scripts/fetch-zxtune.py"; then
+    echo "  ❌ ZXTune could not be fetched. The ZX Spectrum backend will not build."
+    exit 1
+fi
+
 echo
 echo "✅ done — sources in native/vendor/ (gitignored)"
