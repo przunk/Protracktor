@@ -807,8 +807,42 @@ every one of these formats and many more. It is a 182 MB C++ project with its ow
 which is why it was not tried first; the measurement above is the argument for paying that cost,
 because it says the formats themselves are worth 21,639 files at 99.6%.
 
-Its licence has **not** been verified against its sources, which is the first thing to do and the
-whole lesson of this section.
+### ZXTune checked, 2026-09-07: the licence is clean and the size is not the problem
+
+**Licence.** `LICENSE.md` in the root is the LGPL-3 text, and the sources we would build carry no
+per-file notice contradicting it — a doxygen `@file`/`@author` block and nothing else. LGPL-3
+combines with our GPL-3 without argument.
+
+**`3rdparty/` is where the danger was, and it is avoidable.** It bundles 34 components, `z80ex`
+among them — the same GPL-2-only Z80 emulator that blocked ayfly. In ZXTune it is reached from
+exactly two files: `src/devices/z80/z80.cpp`, which wraps it, and `src/module/players/aym/ayemul.cpp`,
+which is the plugin for `.ay` — Z80 machine code rather than tracker data. **Leave that one file out
+and z80ex never enters the build.** It costs Modland's "AY Emul" directory, 1,202 files of 23,891,
+and none of the tracker formats. That is not working around a licence; it is not using the
+component.
+
+Compiling the whole AY path with everything else missing, and collecting what it asked for, the
+answer is **one** third-party dependency: **`fmt`**, MIT. (`src/sound/impl/resampler.cpp` reaches
+for `lazyusf2`, an N64 emulator, and is not needed — Oboe does our rate conversion.)
+
+**Size, which is the owner's question.** The repository is 182 MB and almost none of it would ship:
+
+| | |
+| --- | --- |
+| `3rdparty/` | 280 MB — **none of it built** except `fmt` |
+| checked-in HVSC song-length databases under `src/core` | ~60 MB of `.md5` files, not code |
+| **the AY source set we would compile** | **1.9 MB of C++ in ~235 files** |
+
+For scale, the libopenmpt and game-music-emu sources this project already compiles are **36 MB**,
+and the release APK is 14 MB. ZXTune's AY support is about 5% of the source already going through
+the compiler. It is not a 100 MB proposition.
+
+**And it compiles.** `-I src -I include -I .` under **C++20**, which is already this project's
+standard — `-std=c++17` fails on `std::to_address` and a `concept` declaration, which is the sort of
+thing that would otherwise be discovered halfway through a build.
+
+**Still to do:** a host probe that loads a `.pt3` from a buffer and renders it, and the same
+measurement ayfly got.
 
 ### Two things the probe found that were not about the formats
 
