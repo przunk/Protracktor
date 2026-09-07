@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* The Amiga types the replayer wants, given the widths the Amiga actually had.
  *
  * Upstream `hvl2wav/types.h` says `typedef unsigned long uint32`. On the Amiga that is 32 bits; on

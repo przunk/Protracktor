@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Does ayfly play the ZX Spectrum tracker formats we claim nothing for?
  *
  * `./scripts/probe-platforms.py` says ZX Spectrum holds **23,891 Modland files and this build plays

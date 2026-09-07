@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /*
  * A `std::char_traits<uint16_t>`, force-included into ZXTune's `encoding.cpp` and nowhere else.
  *

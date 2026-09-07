@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Does one render call fill the buffer?
  *
  * This mirrors Sc68Backend::render's *contract* rather than its purpose, which is the difference

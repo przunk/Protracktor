@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Does HivelyTracker's replayer play the AHX and HVL files we removed from the app?
  *
  * `SupportedFormats.kt` claimed `ahx` and `hvl` until 2026-09-04, when they were removed because

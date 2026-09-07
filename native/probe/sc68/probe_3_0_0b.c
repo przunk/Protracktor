@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* The same question asked of sc68 3.0.0b, whose API is not the old one.
  *
  * api68_* is gone entirely in 3.x -- sc68_create/sc68_load_mem/sc68_play/sc68_process replace it,

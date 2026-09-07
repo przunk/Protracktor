@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Does ZXTune play the ZX Spectrum tracker formats this build cannot?
  *
  * `docs/PLAN_FORMATS.md` §7: ayfly plays them -- 46 of 48, 99.6% weighted -- and cannot be shipped,

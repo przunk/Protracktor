@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /* Would libopenmpt play this, if the app ever handed it over?
  *
  * A side question that came out of measuring UADE (`GOAL.md` round 6 item 1) and turned out to

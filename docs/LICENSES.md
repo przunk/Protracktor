@@ -8,6 +8,27 @@ from prior knowledge; each row is confirmed against the actual `COPYING`/`LICENS
 source we vendor, at the moment we vendor it, and this table is corrected then. A row still marked
 *unverified* must not be treated as fact.
 
+## Our own files
+
+Every source file this project writes carries two lines and no more:
+
+```
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+```
+
+They replaced a fourteen-line GPL notice repeated in 79 files. The short form does not stand alone —
+the full licence text is in `LICENSE` at the root, which is what GPL-3 §4 asks for — and the
+copyright line stays, because an identifier says which terms apply and not who holds them.
+
+**Machine-readable is the point.** This project has twice had to answer "what is this actually
+licensed under" about somebody else's code, and twice the answer was not in the file the repository
+advertised. Our own files should not need a human to read a paragraph to find out.
+
+**Not applied to `generated/` or `public/` directories** under `native/backends/`. Those stand in
+for third-party build output — autoconf headers and installed public headers — and carry those
+projects' terms rather than ours.
+
 ## Planned native components
 
 | Component | Covers | Licence expected | Verified |
