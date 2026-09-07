@@ -85,6 +85,7 @@ fun BrowseScreen(
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
+    onDownloadTrackMetadata: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
@@ -149,6 +150,7 @@ fun BrowseScreen(
                 onShareLink = onShareLink,
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
+                onDownloadTrackMetadata = onDownloadTrackMetadata,
                 onDownloadReplays = onDownloadReplays,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
@@ -392,6 +394,7 @@ private fun OnlineDomain(
     onShareLink: (TrackRef) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
+    onDownloadTrackMetadata: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
@@ -549,6 +552,36 @@ private fun OnlineDomain(
                             Icon(
                                 PlayerIcons.Download,
                                 stringResource(R.string.a11y_download_song_lengths),
+                            )
+                        }
+                    },
+                )
+            }
+            // Beside the song lengths and for the same reason: nothing in it plays, it answers a
+            // question the *file* cannot. A plain `.mod` has nowhere to record a year.
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.track_metadata_title)) },
+                    supportingContent = {
+                        Text(
+                            if (browse.trackMetadataCount > 0) {
+                                pluralStringResource(
+                                    R.plurals.track_metadata_count,
+                                    browse.trackMetadataCount,
+                                    browse.trackMetadataCount,
+                                )
+                            } else {
+                                stringResource(R.string.track_metadata_none)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = { Icon(PlayerIcons.History, contentDescription = null) },
+                    trailingContent = {
+                        IconButton(onClick = onDownloadTrackMetadata) {
+                            Icon(
+                                PlayerIcons.Download,
+                                stringResource(R.string.a11y_download_track_metadata),
                             )
                         }
                     },

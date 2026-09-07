@@ -24,7 +24,9 @@ import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.SongLengthStore
+import com.przunk.protracktor.data.SongDbMetadata
 import com.przunk.protracktor.data.SongLengths
+import com.przunk.protracktor.data.TrackMetadataStore
 import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.CacheBudget
@@ -216,6 +218,8 @@ data class BrowseState(
     val arrivedByJump: Boolean = false,
     /** How many SID tunes HVSC has given us a length for. Zero until the database is downloaded. */
     val songLengthCount: Int = 0,
+    /** How many tunes the songdb metadata table describes. Zero until it is downloaded. */
+    val trackMetadataCount: Int = 0,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -323,6 +327,17 @@ class PlaybackController private constructor(private val context: Context) {
          */
         private const val SONG_LENGTHS_URL =
             "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5"
+
+        /**
+         * The songdb metadata table: author, publisher, album and year for 380,282 hashes.
+         *
+         * Fetched from GitHub's raw host rather than from any of the ~400 archives the database was
+         * built from -- it is one file, versioned, and the project that assembles it is the one
+         * asking to be credited. GPL-2.0-or-later (`docs/LICENSES.md`).
+         */
+        private const val TRACK_METADATA_LABEL = "Track metadata"
+        private const val TRACK_METADATA_URL =
+            "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/master/tsv/pretty/md5/metadata.tsv"
 
         private const val SONG_LENGTHS_LABEL = "SID song lengths"
         private const val REPLAYS_LABEL = "Atari ST replay routines"
@@ -453,6 +468,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val catalogues = CatalogueStore(context)
     private val remoteFiles = RemoteFiles(context)
     private val songLengths = SongLengthStore(context)
+    private val trackMetadata = TrackMetadataStore(context)
     private val history = HistoryStore(context)
     private val libraryIndex = LibraryIndexStore(context)
 
@@ -1338,6 +1354,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val summaries = catalogues.summaries()
             val lengths = songLengths.count()
+            val metadataRows = trackMetadata.count()
             val storage = withContext(Dispatchers.IO) {
                 remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
             }
@@ -1359,6 +1376,7 @@ class PlaybackController private constructor(private val context: Context) {
                 current.copy(
                     catalogues = summaries,
                     songLengthCount = lengths,
+                    trackMetadataCount = metadataRows,
                     storageBytes = storage,
                     archiveBytes = archives,
                     databaseBytes = database,
@@ -1445,6 +1463,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun clearSongLengths() {
         scope.launch {
             songLengths.clear()
+            trackMetadata.clear()
             _state.update { it.copy(message = Message("Song lengths deleted.")) }
             refreshCatalogues()
         }
@@ -1527,6 +1546,43 @@ class PlaybackController private constructor(private val context: Context) {
             songLengths.replaceAll(entries)
             _browse.update { it.copy(indexing = null, songLengthCount = entries.size) }
             _state.update { it.copy(message = Message("Song lengths for ${entries.size} SID tunes.")) }
+        }
+    }
+
+    /**
+     * Fetches the songdb metadata table.
+     *
+     * Its own action for the same reason the song lengths are: **15 MB, and the moment somebody
+     * presses play is the wrong moment to spend it.** Nothing in it can be played -- it only
+     * answers "who wrote this and when" about files that came from somewhere else -- so it sits
+     * beside the song lengths rather than among the catalogues.
+     *
+     * What it buys, measured rather than hoped: **67,601 of the Modland files this app claims would
+     * gain a release year**, and the formats that gain most are the ones with nowhere in the file
+     * to put one -- 40,161 ProTracker, 11,733 Fasttracker 2 (`docs/reference/songdb.md`).
+     */
+    fun downloadTrackMetadata() {
+        scope.launch {
+            _browse.update { it.copy(indexing = TRACK_METADATA_LABEL) }
+            val bytes = remoteFiles.fetchIndex(TRACK_METADATA_URL)
+            if (bytes == null) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("Could not download the track metadata.")) }
+                return@launch
+            }
+            val entries = withContext(Dispatchers.Default) {
+                SongDbMetadata.parse(bytes.toString(Charsets.UTF_8))
+            }
+            if (entries.isEmpty()) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("The track metadata was empty.")) }
+                return@launch
+            }
+            trackMetadata.replaceAll(entries)
+            _browse.update { it.copy(indexing = null, trackMetadataCount = entries.size) }
+            _state.update {
+                it.copy(message = Message("Metadata for ${entries.size} tunes."))
+            }
         }
     }
 
@@ -2614,13 +2670,24 @@ class PlaybackController private constructor(private val context: Context) {
             // instead. Only when the backend has nothing: a format that knows its own length knows
             // it better than a lookup on a hash could.
             openSongLengths = songLengths.secondsFor(bytes).orEmpty()
+
+            // What the file cannot say about itself, from the database keyed on its hash. A plain
+            // `.mod` has nowhere to record a year and no room for an author beyond the sample names
+            // people traditionally abuse for it, so for the largest part of this library the fields
+            // the app shows are simply empty (`docs/reference/songdb.md`).
+            //
+            // **The file wins every field it fills.** A lookup on a hash is a good guess about a
+            // tune; what the tune says about itself is not a guess at all. So this fills gaps and
+            // never overwrites — which also makes a stale or wrong row harmless rather than
+            // authoritative.
+            val fromDatabase = trackMetadata.forBytes(bytes)
             val duration = opened.durationSeconds().takeIf { it > 0.0 }
                 ?: openSongLengths.firstOrNull()
                 ?: 0.0
             _state.update {
                 it.copy(
                     playing = started,
-                    metadata = described,
+                    metadata = merged(described, fromDatabase),
                     // Where the backend actually opened, which is not always the beginning. A HES
                     // or KSS file often has nothing at track 0, so `GmeBackend` starts at the first
                     // track with sound in it and says so here; assuming zero would leave the
@@ -2638,6 +2705,28 @@ class PlaybackController private constructor(private val context: Context) {
 
             prefetchUpcoming()
         }
+    }
+
+    /**
+     * The decoder's own metadata, with the database's filling only what it left blank.
+     *
+     * Kept separate from the read and the write so the rule is one function and one test rather
+     * than a condition buried in a state update: **the file wins every field it fills.**
+     */
+    private fun merged(
+        described: Map<String, String>,
+        found: com.przunk.protracktor.data.SongDbMetadata.Entry?,
+    ): Map<String, String> {
+        if (found == null) return described
+        val out = described.toMutableMap()
+        fun fill(key: String, value: String) {
+            if (value.isNotBlank() && out[key].isNullOrBlank()) out[key] = value
+        }
+        fill("artist", found.author)
+        fill("year", found.year)
+        fill("album", found.album)
+        fill("publisher", found.publisher)
+        return out
     }
 
     /**

@@ -373,8 +373,24 @@ and IT/S3M's save date. So the field is worth showing and worth leaving blank.
 which is the same shape as HVSC's song lengths and would be its own piece of work, not an extension
 of this one.
 
-**Still not stored, deliberately**, so the expensive half of this item stands unchanged: a year in a
-list or a search still means a column in two tables, a migration and a re-index. Using it in Now
+### The other half, 2026-09-07 — a year for the formats that cannot carry one
+
+The owner pointed at `mvtiaine/audacious-uade-tools`, which publishes author, publisher, album and
+year for 380,282 hashes. **67,601 of the Modland files this app claims gain a release year** — and
+the formats that gain most are exactly the ones with nowhere in the file to record it: 40,161
+ProTracker, 11,733 Fasttracker 2, 5,920 Impulsetracker.
+
+It is the shape this item predicted: *"an external database keyed by something like the file's hash
+— the same shape as HVSC's song lengths"*. So it is built the same way: `SongDbMetadata` parses,
+`TrackMetadataStore` keeps and asks, one download beside the song lengths, and the storage screen
+can throw it away.
+
+**The file wins every field it fills.** A lookup on a hash is a good guess about a tune; what the
+tune says about itself is not a guess. The database fills gaps and never overwrites, which also
+makes a wrong row harmless rather than authoritative.
+
+**Still not in lists or search**, so the genuinely expensive half stands: the hash is known only
+after the bytes arrive, and a list is drawn from an index that has none. Using it in Now
 Playing is what will say whether that is worth it.
 
 ## B19. Server-hosted periodically updated catalogue indexes (Cloudflare / Google Cloud)

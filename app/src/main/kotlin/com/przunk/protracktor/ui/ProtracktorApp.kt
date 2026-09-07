@@ -360,6 +360,7 @@ fun ProtracktorApp(
                 onScanFolder = viewModel::scanFolder,
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
+                onDownloadTrackMetadata = viewModel::downloadTrackMetadata,
                 onDownloadReplays = viewModel::downloadReplays,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
