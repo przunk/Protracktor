@@ -18,6 +18,7 @@ source we vendor, at the moment we vendor it, and this table is corrected then. 
 | game-music-emu 0.6.5 | NSF, NSFE, GBS, SPC, VGM, VGZ, GYM, HES, AY, KSS | LGPL-2.1-**or-later** | **yes, 2026-09-01** |
 | ASAP 8.0.0 | Atari 8-bit: SAP + 13 tracker formats | GPL-2.0-**or-later** | **yes, 2026-09-01** |
 | HivelyTracker V1_9 | Amiga AHX and HVL | BSD-3-Clause | **yes, 2026-09-05** |
+| ZXTune (c93e81d) | ZX Spectrum AY trackers | LGPL-3.0 | **yes, 2026-09-07** |
 | UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
 | Oboe 1.10.0 | audio output | Apache-2.0 | no |
 
@@ -97,6 +98,27 @@ we build — carries no other notice, and no file in it claims different terms.
 argument; and unlike sc68 and UADE there are no replay binaries, because AHX and HVL are note data
 played by code we compile ourselves. Its one obligation is attribution, which this file and
 `app/src/main/res/` discharge.
+
+**ZXTune**, revision `c93e81d`, read on 2026-09-07. `LICENSE.md` in the root is the LGPL-3 text, and
+the sources we compile carry no per-file notice contradicting it — a doxygen `@file`/`@author` block
+and nothing else. LGPL-3 combines with our GPL-3 without argument.
+
+**The danger was `3rdparty/`, and this is the first time in the project that a bundled component had
+to be actively avoided.** ZXTune vendors 34 third-party libraries, `z80ex` among them — *"Released
+under GNU GPL v2"*, with no "or later", which cannot be combined with GPL-3. In ZXTune it is reached
+from exactly two files: `src/devices/z80/z80.cpp`, which wraps it, and `src/module/players/aym/
+ayemul.cpp`, the plugin for `.ay` — Z80 machine code rather than tracker data. **Neither is built.**
+That is not a workaround; the component is not used, and `native/backends/zxtune/CMakeLists.txt`
+says so where the exclusion lives.
+
+Compiling the whole AY path with everything else absent and collecting what it asked for leaves one
+third-party dependency: **`fmt`**, MIT.
+
+**How this was found is the point.** The library measured first for these formats was **ayfly**, and
+it plays them — 46 of 48 (`docs/PLAN_FORMATS.md` §7). It has no `LICENSE` or `COPYING` file at all,
+its twelve player headers carry an author credit and no terms, and the same GPL-2-only `z80ex` sits
+inside it referenced by five of its eight sources. Reading a repository's licence file, or trusting
+GitHub's summary of it, would have got both libraries wrong in opposite directions.
 
 ## sc68's replay binaries — a question for the owner
 

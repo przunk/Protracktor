@@ -166,7 +166,16 @@ object Platforms {
         id = "spectrum",
         name = "ZX Spectrum",
         catalogueFormats = setOf("spectrum", "ay emul", "zx spectrum"),
-        names = setOf("ay"),
+        names = setOf(
+            "ay",
+            // Through ZXTune, 2026-09-07. Before that this platform had a decoder for one name and
+            // 58 playable files out of 23,891, which is what a greyed-out chip was telling the user.
+            "pt3", "pt2", "pt1", "stc", "st1", "st3", "asc", "as0", "sqt", "stp", "ftc", "gtr",
+            // `psm` is **not** here, and it is the same awkward case as `ftm`: Modland has 90 under
+            // "Epic Megagames MASI" and 51 under "Spectrum", where it means Pro Sound Maker. The
+            // directories are certain and mapped separately; the extension goes with the majority,
+            // which is PC. ZXTune is still offered the file first, so the Spectrum ones open.
+        ),
     )
 
     val SHARP = Platform(
