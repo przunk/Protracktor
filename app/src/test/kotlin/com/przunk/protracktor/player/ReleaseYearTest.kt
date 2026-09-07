@@ -93,4 +93,23 @@ class ReleaseYearTest {
             ReleaseYear.from(mapOf("year" to "0", "date" to "1999", "copyright" to "2019 Label")),
         )
     }
+
+    /**
+     * What counts as "the file said nothing about the year".
+     *
+     * `PlaybackController.merged` fills a blank field from the songdb table, and a blank check is
+     * the wrong test for this one: sc68 emits `year` for every tune and writes `0` or `unknown`
+     * when it does not know. Those are not blank, so they blocked a year the database had — for
+     * exactly the Atari ST files where a lookup was most likely to help.
+     *
+     * The rule both sides use is this one: a value that yields no year is a value that said
+     * nothing.
+     */
+    @Test
+    fun `values that say nothing yield no year`() {
+        for (said in listOf("", "   ", "0", "unknown", "n/a", "-")) {
+            assertEquals("\"$said\" should count as nothing", "", ReleaseYear.of(said))
+        }
+        assertEquals("1992", ReleaseYear.of("1992"))
+    }
 }

@@ -61,28 +61,37 @@ object SongDbMetadata {
     }
 
     /**
-     * Every row that says something, in file order.
+     * Every row that says something, **lazily**.
+     *
+     * A sequence rather than a list, and that is not a style choice. Materialising this file makes
+     * 380,282 `Entry` objects holding 1.9 million strings; counted against the JVM's per-object
+     * overhead that is about 90 MB of headers alone, and with the source text and the downloaded
+     * bytes still alive the import peaks near 150 MB. On a phone that is an out-of-memory crash,
+     * and one that would only ever happen on the owner's device — every test here runs on the JVM
+     * against a handful of rows. HVSC's database, which this was modelled on, is a sixth the size
+     * and got away with it.
      *
      * Rows with an implausible key are dropped rather than repaired: a hash is either the shape the
      * publisher uses or it is a line we do not understand, and guessing at the difference is how a
      * lookup table quietly acquires entries nothing will ever match.
      */
-    fun parse(text: String): List<Entry> = buildList {
-        for (line in text.lineSequence()) {
-            if (line.isBlank()) continue
-            val fields = line.split('\t')
-            val md5 = fields[0].trim().lowercase()
-            if (md5.length != KEY_LENGTH || !md5.all { it in "0123456789abcdef" }) continue
-            val entry = Entry(
-                md5 = md5,
-                author = fields.getOrElse(1) { "" }.trim(),
-                publisher = fields.getOrElse(2) { "" }.trim(),
-                album = fields.getOrElse(3) { "" }.trim(),
-                year = fields.getOrElse(4) { "" }.trim(),
-            )
-            if (!entry.isEmpty) add(entry)
-        }
+    fun parse(lines: Sequence<String>): Sequence<Entry> = lines.mapNotNull { line ->
+        if (line.isBlank()) return@mapNotNull null
+        val fields = line.split('\t')
+        val md5 = fields[0].trim().lowercase()
+        if (md5.length != KEY_LENGTH || !md5.all { it in "0123456789abcdef" }) return@mapNotNull null
+        val entry = Entry(
+            md5 = md5,
+            author = fields.getOrElse(1) { "" }.trim(),
+            publisher = fields.getOrElse(2) { "" }.trim(),
+            album = fields.getOrElse(3) { "" }.trim(),
+            year = fields.getOrElse(4) { "" }.trim(),
+        )
+        entry.takeIf { !it.isEmpty }
     }
+
+    /** The same, for a string that is already in memory. Used by the tests, not by the import. */
+    fun parse(text: String): List<Entry> = parse(text.lineSequence()).toList()
 
     /** The key for a file's bytes: the publisher's twelve characters, not the whole hash. */
     fun keyOf(fullMd5: String): String = fullMd5.lowercase().take(KEY_LENGTH)

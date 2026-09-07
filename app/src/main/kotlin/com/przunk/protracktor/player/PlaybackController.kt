@@ -24,6 +24,7 @@ import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.SongLengthStore
+import com.przunk.protracktor.data.Md5
 import com.przunk.protracktor.data.SongDbMetadata
 import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.data.TrackMetadataStore
@@ -1570,19 +1571,17 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update { it.copy(message = Message("Could not download the track metadata.")) }
                 return@launch
             }
-            val entries = withContext(Dispatchers.Default) {
-                SongDbMetadata.parse(bytes.toString(Charsets.UTF_8))
-            }
-            if (entries.isEmpty()) {
+            // Parsed straight into the table rather than into a list first. Fifteen megabytes of
+            // this becomes 1.9 million strings, and holding them alongside the download peaks near
+            // 150 MB -- fine on the JVM these tests run on, an out-of-memory crash on a phone.
+            val written = trackMetadata.replaceAllFrom(bytes)
+            if (written == 0) {
                 _browse.update { it.copy(indexing = null) }
                 _state.update { it.copy(message = Message("The track metadata was empty.")) }
                 return@launch
             }
-            trackMetadata.replaceAll(entries)
-            _browse.update { it.copy(indexing = null, trackMetadataCount = entries.size) }
-            _state.update {
-                it.copy(message = Message("Metadata for ${entries.size} tunes."))
-            }
+            _browse.update { it.copy(indexing = null, trackMetadataCount = written) }
+            _state.update { it.copy(message = Message("Metadata for $written tunes.")) }
         }
     }
 
@@ -2669,7 +2668,11 @@ class PlaybackController private constructor(private val context: Context) {
             // A SID has no length in it, so the backend reports none and HVSC's database is asked
             // instead. Only when the backend has nothing: a format that knows its own length knows
             // it better than a lookup on a hash could.
-            openSongLengths = songLengths.secondsFor(bytes).orEmpty()
+            // Hashed once for both databases. They key on the same digest -- HVSC on all of it,
+            // songdb on its first twelve characters -- and hashing a few megabytes twice per track
+            // is work nobody asked for.
+            val md5 = Md5.of(bytes)
+            openSongLengths = songLengths.forMd5(md5).orEmpty()
 
             // What the file cannot say about itself, from the database keyed on its hash. A plain
             // `.mod` has nowhere to record a year and no room for an author beyond the sample names
@@ -2680,7 +2683,7 @@ class PlaybackController private constructor(private val context: Context) {
             // tune; what the tune says about itself is not a guess at all. So this fills gaps and
             // never overwrites — which also makes a stale or wrong row harmless rather than
             // authoritative.
-            val fromDatabase = trackMetadata.forBytes(bytes)
+            val fromDatabase = trackMetadata.forMd5(md5)
             val duration = opened.durationSeconds().takeIf { it > 0.0 }
                 ?: openSongLengths.firstOrNull()
                 ?: 0.0
@@ -2723,9 +2726,15 @@ class PlaybackController private constructor(private val context: Context) {
             if (value.isNotBlank() && out[key].isNullOrBlank()) out[key] = value
         }
         fill("artist", found.author)
-        fill("year", found.year)
         fill("album", found.album)
         fill("publisher", found.publisher)
+        // The year needs a different test for "the file said nothing". sc68 emits `year` for every
+        // tune and writes `0` or `unknown` when it does not know, which is not blank -- so a blank
+        // check let those files block a year the database had. `ReleaseYear` already knows what
+        // counts as a year; asking it is the only way the two stay in step.
+        if (found.year.isNotBlank() && ReleaseYear.of(out["year"].orEmpty()).isBlank()) {
+            out["year"] = found.year
+        }
         return out
     }
 
@@ -2899,6 +2908,12 @@ class PlaybackController private constructor(private val context: Context) {
         prefetched.clear()
         track?.close()
         track = null
+        // The retry goes with it. Everything that calls this is the user moving on -- switching
+        // playlist, closing the player -- and a retry that outlived the move would fire the next
+        // time they pressed play, substituting a track they had abandoned for the one they were
+        // asking for. That is the surprise `pendingRetry` was written to remove, arriving from the
+        // other side.
+        pendingRetry = null
         audioFocus.release()
     }
 

@@ -1251,7 +1251,11 @@ public:
         const auto dot = name.find_last_of('.');
         if (dot == std::string::npos) return false;
         std::string extension = name.substr(dot + 1);
-        for (auto &c : extension) c = static_cast<char>(std::tolower(c));
+        // Through `unsigned char`: `std::tolower` on a negative value is undefined, and a filename
+        // can hold one. Every other byte-classifying call in this file goes the same way.
+        for (auto &c : extension) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
         return extension == "pt3" || extension == "pt2" || extension == "pt1" ||
                extension == "stc" || extension == "st1" || extension == "st3" ||
                extension == "asc" || extension == "as0" || extension == "sqt" ||

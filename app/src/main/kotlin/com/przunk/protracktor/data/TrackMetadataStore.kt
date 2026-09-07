@@ -8,7 +8,6 @@ import android.content.Context
 import androidx.core.database.sqlite.transaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.security.MessageDigest
 
 /**
  * The stored songdb metadata, and the lookup that uses it.
@@ -35,30 +34,41 @@ class TrackMetadataStore(context: Context) {
     }
 
     /**
-     * Replaces the whole table.
+     * Replaces the whole table from the downloaded bytes, and returns how many rows it wrote.
      *
      * Wholesale rather than merged, like the song lengths: the source publishes corrections as well
      * as additions, so a row that vanished upstream should vanish here. One transaction, because
      * 380,000 autocommits take minutes and a half-written table hands out wrong authors.
+     *
+     * **It parses as it writes, and takes bytes rather than a list.** Reading the file into a list
+     * first costs about 150 MB — 1.9 million strings, plus a 30 MB copy of the text, plus the
+     * download still in hand — which is an out-of-memory crash on a phone and invisible in every
+     * test here, because those run on the JVM against a handful of rows. Streaming keeps one row
+     * alive at a time.
      */
-    suspend fun replaceAll(entries: List<SongDbMetadata.Entry>) = withContext(Dispatchers.IO) {
+    suspend fun replaceAllFrom(bytes: ByteArray): Int = withContext(Dispatchers.IO) {
+        var written = 0
         helper.writableDatabase.transaction {
             delete("track_metadata", null, null)
             compileStatement(
                 "INSERT OR REPLACE INTO track_metadata (md5, author, publisher, album, year) " +
                     "VALUES (?, ?, ?, ?, ?)"
             ).use { statement ->
-                entries.forEach { entry ->
-                    statement.clearBindings()
-                    statement.bindString(1, entry.md5)
-                    statement.bindString(2, entry.author)
-                    statement.bindString(3, entry.publisher)
-                    statement.bindString(4, entry.album)
-                    statement.bindString(5, entry.year)
-                    statement.executeInsert()
+                bytes.inputStream().bufferedReader(Charsets.UTF_8).useLines { lines ->
+                    SongDbMetadata.parse(lines).forEach { entry ->
+                        statement.clearBindings()
+                        statement.bindString(1, entry.md5)
+                        statement.bindString(2, entry.author)
+                        statement.bindString(3, entry.publisher)
+                        statement.bindString(4, entry.album)
+                        statement.bindString(5, entry.year)
+                        statement.executeInsert()
+                        written++
+                    }
                 }
             }
         }
+        written
     }
 
     /**
@@ -72,9 +82,11 @@ class TrackMetadataStore(context: Context) {
      * full MD5 would run, return nothing, and look exactly like a database that had not been
      * downloaded.
      */
-    suspend fun forBytes(bytes: ByteArray): SongDbMetadata.Entry? = withContext(Dispatchers.IO) {
-        val digest = MessageDigest.getInstance("MD5").digest(bytes)
-        val key = SongDbMetadata.keyOf(digest.joinToString("") { "%02x".format(it) })
+    suspend fun forBytes(bytes: ByteArray): SongDbMetadata.Entry? = forMd5(Md5.of(bytes))
+
+    /** The same, when the caller has already hashed the file. */
+    suspend fun forMd5(md5: String): SongDbMetadata.Entry? = withContext(Dispatchers.IO) {
+        val key = SongDbMetadata.keyOf(md5)
         helper.readableDatabase.rawQuery(
             "SELECT author, publisher, album, year FROM track_metadata WHERE md5 = ?",
             arrayOf(key),
