@@ -73,6 +73,29 @@ was believed.
 Android version. Several manufacturers ignore it. The design does not depend on it — the square is
 coloured either way — but the "grey" half of the complaint does.
 
+## B26. The cache belongs in Settings, not in Browse
+
+*owner, 2026-09-07: show the app's cache in Settings and let it be cleared — "may we already have
+this?"*
+
+**We do, and that is the finding.** Browse has a **Storage on this phone** screen: it reports the
+fetched-music cache against its 512 MB ceiling, each catalogue's index, any downloaded archive, the
+sc68 replay routines and the database, and it can throw away everything that can be fetched again.
+`CacheBudget` and `Q5` settled the policy behind it — oldest deleted first.
+
+**So this is not a missing feature, it is a misplaced one.** He went to Settings, which is where a
+person looks for "how much room is this app taking", and found nothing. Storage is filed under
+Browse because that is where downloading happens, which is our reasoning rather than his.
+
+Three ways out, and the third is probably right:
+
+- **Move it.** Settings gains a real second section; Browse loses a screen that arguably never
+  belonged in a *browser*.
+- **Duplicate the entry point.** Two doors to one screen. Cheap and slightly confusing.
+- **A one-line summary in Settings that opens the existing screen.** "Storage — 210 MB" leading to
+  what already exists. Settings answers the question, Browse keeps the tool, and nothing is built
+  twice.
+
 ## B25. A swipe on a track row — to discuss
 
 *owner, 2026-09-07, relaying a colleague's suggestion: swipe a row to "add to the play queue", the
