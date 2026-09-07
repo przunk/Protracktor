@@ -42,6 +42,7 @@ file(GLOB ZX_SOURCES
     "${ZX}/src/strings/src/*.cpp"
     "${ZX}/src/math/*.cpp"
     "${ZX}/src/tools/*.cpp"
+    "${ZX}/src/tools/src/*.cpp"
     "${ZX}/src/debug/src/*.cpp"
     "${ZX}/src/time/*.cpp"
 )
@@ -56,12 +57,15 @@ list(APPEND ZX_SOURCES
     "${ZX}/src/core/plugins/players/ay/freq_tables.cpp"
     "${ZX}/3rdparty/fmt/src/format.cc"
 )
-# `encoding.cpp` is excluded for a reason the host build could not have shown. It defines
-# `Utf16ToUtf8(std::basic_string_view<uint16_t>)`, and libc++ -- which the NDK uses -- has no
-# `std::char_traits<unsigned short>`, so it does not compile there. libstdc++ on the host does, which
-# is why the probe built cleanly and the first Android build did not. Nothing on the AY path calls
-# it; if that ever changes the link will say so rather than the audio going quiet.
-list(FILTER ZX_SOURCES EXCLUDE REGEX "/(ayemul|ym_vtx|resampler|encoding)\\.cpp$")
+list(FILTER ZX_SOURCES EXCLUDE REGEX "/(ayemul|ym_vtx|resampler)\\.cpp$")
+
+# `encoding.cpp` needs a `std::char_traits<uint16_t>` that libc++ does not provide and libstdc++
+# does, so the host probe compiled it and the first Android build did not. It was excluded for one
+# round and the link said no: `strings/src/sanitize.cpp` calls `ToAutoUtf8`, and sanitising is what
+# cleans a module's title before the app shows it. The shim is force-included into that one file and
+# reaches nothing else -- see the header for what it costs.
+set_source_files_properties("${ZX}/src/strings/src/encoding.cpp" PROPERTIES
+    COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/uint16_char_traits.h")
 
 add_library(zxtune STATIC ${ZX_SOURCES})
 target_include_directories(zxtune PUBLIC
@@ -73,3 +77,15 @@ set_target_properties(zxtune PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON
 
 # Somebody else's warnings, and there are a great many. Silenced so they do not bury one of ours.
 target_compile_options(zxtune PRIVATE -w)
+
+# `fmt` 9's compile-time format checking does not survive this clang. `format-inl.h` calls a
+# `consteval` constructor from a context clang does not accept as constant, and the NDK's clang is
+# stricter about that than the host's GCC -- so the host probe built it and the first Android build
+# did not.
+#
+# **`FMT_CONSTEVAL`, not `FMT_USE_CONSTEVAL`.** The first is what `core.h` guards with `#ifndef` and
+# what actually decides; the second is only consulted when the first is undefined, so setting it had
+# no effect at all and produced the identical error a second time. Defining `FMT_CONSTEVAL` empty
+# makes the constructor an ordinary one and moves the check to run time, which costs nothing here:
+# the only format strings are `fmt`'s own, inside a library whose messages this app never shows.
+target_compile_definitions(zxtune PUBLIC FMT_CONSTEVAL=)

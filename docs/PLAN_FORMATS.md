@@ -884,11 +884,43 @@ build and read the linker. The answer is **90 sources**, listed in the build scr
 every time an include path turns out to be wrong, which on a library this size is most of an
 afternoon. The script compiles one object per source, in parallel, and keeps them.
 
-### Still to do
+### Integrated 2026-09-07 — and the phone found four things the host could not
 
-Integration: a `Backend` subclass, ZXTune's sources into the CMake build for three ABIs,
-`SupportedFormats`, and a re-index. The measurement says it is worth doing; nothing about it has run
-on a phone.
+`ZxTuneBackend`, ZXTune's 91 sources building for all three ABIs, and thirteen names back in
+`SupportedFormats`: `pt3`, `pt2`, `pt1`, `stc`, `st1`, `st3`, `asc`, `as0`, `sqt`, `stp`, `psm`,
+`ftc`, `gtr`.
+
+**The release APK goes from 14.2 MB to 17 MB.** That is the answer to the question that opened this
+section: ZXTune costs **2.8 MB across three ABIs**, not the 100 MB its 182 MB repository suggests.
+
+**Every remaining obstacle was clang against GCC**, which is exactly what a host probe cannot show:
+
+- **`std::char_traits<uint16_t>` does not exist in libc++.** ZXTune's `encoding.cpp` uses
+  `basic_string_view<uint16_t>`; libstdc++ still has a generic primary template and libc++ has only
+  the character types the standard names. The file was dropped for one round and the link refused —
+  `sanitize.cpp` calls `ToAutoUtf8`, and sanitising is what cleans a title before it is shown. A
+  `char_traits` shim is force-included into that one translation unit, and
+  `native/backends/zxtune/uint16_char_traits.h` says plainly what that costs.
+- **`fmt`'s compile-time format checking does not survive this clang.** The fix is
+  `-DFMT_CONSTEVAL=`, and the *first* attempt used `FMT_USE_CONSTEVAL=0`, which `core.h` consults
+  only when `FMT_CONSTEVAL` is undefined — so it changed nothing and produced the identical error a
+  second time.
+- **Two vendored libraries ship a `types.h`.** ZXTune's defines `uint_t` and `int_t`, which its
+  other headers use and none of them includes; HivelyTracker's is on the include path too and won.
+  The error surfaced sixty lines away, inside a third library's header, saying a type did not exist.
+  `#include <include/types.h>` is the disambiguation and the path is load-bearing.
+- **`RangeChecker` lives in `src/tools/src`, not `src/tools`**, which holds only headers. One glob
+  short, four undefined symbols.
+
+**What the app does with them**, beyond playing: ZXTune states a duration for every one of these
+files, so they arrive with a working seek bar; `Platforms` claims the names, so the ZX Spectrum chip
+in the search filter stops being greyed out; and changing `SupportedFormats` changes
+`backendsFingerprint`, so every index built before today is stale and will be rebuilt.
+
+`.ay` stays with game-music-emu. ZXTune's own reader for it is `ayemul`, the one plugin whose
+licence cannot be taken.
+
+**Nothing has been heard on a phone.**
 
 ### Two things the probe found that were not about the formats
 

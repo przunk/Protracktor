@@ -44,6 +44,16 @@ void hvl_play_irq(struct hvl_tune *ht);
 }
 
 // ZXTune. C++ with its own namespaces, so outside the `extern "C"` block above.
+//
+// `include/types.h` first, and **the path is not decoration**. It defines `uint_t` and `int_t`,
+// which every other ZXTune header uses and none of them includes -- their own sources get it from a
+// compiler-forced include, so the omission is invisible inside their build and immediate outside
+// it. And a plain `<types.h>` finds *HivelyTracker's*, because that library ships a file of the
+// same name and its include directory is on the path too. Two vendored libraries with a generically
+// named header is not a problem until it is: the error arrives sixty lines later, in a third
+// library's header, saying a type does not exist.
+#include <include/types.h>
+
 #include <binary/container_factories.h>
 #include <formats/chiptune/aym/ascsoundmaster.h>
 #include <formats/chiptune/aym/protracker2.h>
