@@ -97,6 +97,13 @@
     <string name="browse_select_all">Select all</string>
     <string name="browse_select_none">Select none</string>
     <string name="browse_nothing_found">Nothing playable in this folder.</string>
+    <!-- Four different reasons a track will not open. They used to be one message, which sent
+         the owner looking in the wrong place twice in a day: a download failure read as an
+         unsupported format, and one bad file read as a whole platform being unsupported. -->
+    <string name="open_failed_not_fetched">Could not download %1$s. It may be the connection — try again.</string>
+    <string name="open_failed_format">%1$s is a format Protracktor cannot play yet.</string>
+    <string name="open_failed_file">%1$s would not open. Other files of this format do play, so it is this one.</string>
+    <string name="open_failed_file_because">%1$s would not open: %2$s</string>
     <string name="search_nothing_found">Nothing found for this search.</string>
     <string name="search_live_needs_query">The Mod Archive is searched live and needs something to search for.</string>
     <string name="search_not_yet">Search, or leave the field empty to find everything in scope.</string>

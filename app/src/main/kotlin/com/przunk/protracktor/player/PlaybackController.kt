@@ -1943,6 +1943,37 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * What to tell the user when a track will not open.
+     *
+     * **The four cases are genuinely different and were one message until 2026-09-07**, which cost
+     * an hour twice in a day: a file that failed to *download* read as a format we cannot play, and
+     * one `.stc` among 3,639 read as "Spectrum is a format Protracktor cannot play yet" — a whole
+     * platform, of which this build plays 95%.
+     *
+     * The choice is made by [OpenFailure], where it can be tested; this supplies what only the
+     * controller knows. The decoder's own reason is kept where there is one — it is true, and
+     * occasionally it is the only thing that says *which* backend gave up — but it is now attached
+     * to the file rather than offered as a verdict on the format.
+     */
+    private suspend fun describeFailure(ref: TrackRef, fetched: Boolean, reason: String = ""): String {
+        val name = ref.fileNameOrTitle
+        val claimed = SupportedFormats.looksPlayable(name)
+        return when (OpenFailure.kindOf(fetched, claimed, reason)) {
+            OpenFailure.Kind.NOT_FETCHED ->
+                context.getString(R.string.open_failed_not_fetched, ref.title)
+            OpenFailure.Kind.FORMAT_UNSUPPORTED ->
+                context.getString(
+                    R.string.open_failed_format,
+                    OpenFailure.formatName(catalogueFormatOf(ref), name),
+                )
+            OpenFailure.Kind.FILE_REFUSED_WITH_REASON ->
+                context.getString(R.string.open_failed_file_because, ref.title, reason)
+            OpenFailure.Kind.FILE_REFUSED ->
+                context.getString(R.string.open_failed_file, ref.title)
+        }
+    }
+
     private fun toTrackRef(track: CatalogueTrack): TrackRef {
         val catalogue = Catalogue.byId(track.catalogueId)
         return TrackRef(
@@ -2518,34 +2549,15 @@ class PlaybackController private constructor(private val context: Context) {
             ensureActive()
 
             if (bytes == null) {
-                _state.update { it.copy(message = Message("Could not read ${ref.title}")) }
+                _state.update { it.copy(message = Message(describeFailure(ref, fetched = false))) }
                 return@launch
             }
 
             val result = withContext(Dispatchers.IO) { NativeEngine.open(bytes, ref.fileNameOrTitle) }
             val opened = result.track
             if (opened == null) {
-                // The reason, not just the verdict. "Not a format we can play" is wrong when a
-                // backend claimed the file and then choked on it, which is exactly what sc68 does
-                // with some SNDH files -- and the two are indistinguishable from outside.
-                // The decoder's reason is true and often useless on its own. When the track came
-                // from a catalogue we know something better: the archive files it under a format
-                // name. Modland's `SidMon 1` directory holds 61 files with a `.sid` extension that
-                // are Amiga executables, not C64 tunes -- so "no backend recognised it" was
-                // accurate and told the owner nothing (`docs/STATUS.md` C9).
-                val reason = result.error
-                val format = catalogueFormatOf(ref)
                 _state.update {
-                    it.copy(
-                        message = Message(
-                            when {
-                                format != null ->
-                                    "$format is a format Protracktor cannot play yet."
-                                reason.isBlank() -> "${ref.title}: no backend could open it"
-                                else -> "${ref.title}: $reason"
-                            }
-                        )
-                    )
+                    it.copy(message = Message(describeFailure(ref, fetched = true, reason = result.error)))
                 }
                 return@launch
             }

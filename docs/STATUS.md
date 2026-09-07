@@ -396,6 +396,30 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C16. ~~One message for four different failures~~ — FIXED 2026-09-07
+
+*Found twice in one day, by the owner and by me, and it cost an hour each time.*
+
+`ice.pt2` failed to **download** and the screen said nothing about the network; it played on the
+second attempt. `&SFTDEMO.stc` is one file among Modland's 3,639, of which this build plays 95%, and
+the screen said *"Spectrum is a format Protracktor cannot play yet"* — naming a whole platform.
+Both readings sent the search somewhere useless, and in the second case the message was simply
+false: the app claims the format and plays nearly all of it.
+
+**The rule is short: never blame the format for a file we claim.** If `SupportedFormats` says the
+name is playable, a failure is about that file. Four messages now, chosen by `OpenFailure` where the
+choice can be tested and worded in string resources where it can be translated:
+
+- the bytes never arrived — *"Could not download X. It may be the connection — try again."*
+- no backend claims the name — *"X is a format Protracktor cannot play yet."*, which is the only
+  case where naming the format is honest
+- we claim it and a decoder gave a reason — the reason, attached to the file
+- we claim it and nothing said why — *"X would not open. Other files of this format do play, so it
+  is this one."*
+
+The decoder's own reason is kept where there is one: it is true, and occasionally it is the only
+thing that says which backend gave up. It is no longer offered as a verdict on the format.
+
 ### C15. ~~The Mod Archive returns nothing~~ — FIXED 2026-09-06
 
 *Owner, 2026-09-06, while testing the platform filter. Deferred by him to after that work.*
