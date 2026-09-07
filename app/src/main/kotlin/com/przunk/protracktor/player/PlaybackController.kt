@@ -2356,9 +2356,33 @@ class PlaybackController private constructor(private val context: Context) {
         scheduleSave()
     }
 
+    /**
+     * How to try the last thing the user asked for again, kept until something opens.
+     *
+     * Play after a failure used to start the playlist, because a failed open leaves nothing loaded
+     * and "nothing loaded" is also what a fresh restart looks like. From the sofa that reads as the
+     * app ignoring you and playing something of its own choosing -- the owner found it and was
+     * right to call it unintuitive.
+     *
+     * **A closure rather than a `TrackRef`**, because there are two ways to be playing a track and
+     * they are not interchangeable: a playlist track goes through `openAndPlay` and a search result
+     * or random pick through `playTransient`, which marks the detour. Retrying the first as though
+     * it were the second would quietly move the user off their playlist -- the exact class of
+     * surprise this is fixing.
+     *
+     * **Retried whatever the failure was**, including a format nothing here plays. Pressing play
+     * then gives the same message a second time, which is honest; the alternative is an app that
+     * sometimes obeys and sometimes substitutes, and unpredictable is worse than useless.
+     */
+    private var pendingRetry: (() -> Unit)? = null
+
     fun togglePlayPause() {
         val open = track
         if (open == null) {
+            pendingRetry?.let { retry ->
+                retry()
+                return
+            }
             // Nothing loaded -- which is the normal state after a restart, where the queue already
             // knows which track it was on. Resume that one, not the top of the list.
             val queue = _state.value.queue
@@ -2498,6 +2522,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Plays something that is not in the playlist. */
     private fun playTransient(ref: TrackRef) {
+        pendingRetry = { playTransient(ref) }
         _state.update {
             it.copy(
                 transient = ref,
@@ -2511,6 +2536,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     private fun openAndPlay(queue: PlayQueue) {
         val ref = queue.current ?: return
+        pendingRetry = { openAndPlay(queue) }
 
         // The queue advances NOW, not inside the coroutine. Two quick presses of next both read the
         // old queue otherwise, and both advance to the same track.
@@ -2561,6 +2587,8 @@ class PlaybackController private constructor(private val context: Context) {
                 }
                 return@launch
             }
+            // Something opened, so there is nothing left to try again.
+            pendingRetry = null
 
             // Cancelled while the file was being read: throw away what was opened instead of
             // starting a stream nobody asked for and nobody will stop.
