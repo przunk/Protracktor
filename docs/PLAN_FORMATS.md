@@ -754,6 +754,72 @@ Not measured, because Modland has none: **subsongs**. The path is written and th
 upstream's (`ht_SubsongNr` is the count of *extras*, so a plain file reports one tune), but nothing
 in 80 files exercised it.
 
+## 7. ZX Spectrum — measured 2026-09-07, **blocked on a licence**
+
+`./scripts/probe-platforms.py` says ZX Spectrum holds **23,891 Modland files and this build plays
+58**. It is the largest dark platform in the archive and the only large one that is a chiptune in
+the same sense as the rest of the app: `.pt3`, `.pt2`, `.stc`, `.asc` and `.sqt` are trackers
+driving an AY-3-8912, not console emulators. The `*SF` family is bigger — about 95,000 files across
+PlayStation, DS, GBA and N64 — and is emulator cores, which is a different kind of program to put
+inside this one.
+
+### The formats work, and the number is not close
+
+`./scripts/build-ayfly-probe.sh` then `./scripts/probe-ayfly.py`, against **ayfly** — a ~900 KB AY
+replay library whose `players/` covers every name Modland files under Spectrum:
+
+**46 of 48 sampled files loaded from a buffer and were audible — 99.6% weighted by what Modland
+actually holds, of 21,639 files.** The two failures are both `.psc`, a format worth 239 files.
+
+Every one of them **states its own length**, median 130s. So these files would arrive with a
+duration and a working seek bar, the way AHX did, with nothing stored and no song-length database.
+
+It also renders into a buffer of whatever size it is asked for — `ay_rendersongbuffer`, interleaved
+16-bit stereo — so unlike HivelyTracker it needs no ring buffer. Technically this is the easiest
+integration since ASAP.
+
+### And it cannot be shipped
+
+**`docs/LICENSES.md` says to stop here and raise it rather than work around it, so that is what this
+is.** Three findings, in increasing order of seriousness:
+
+- **The repository carries no `LICENSE` or `COPYING` file at all.** Not in the root, not in `src`,
+  and no licence statement in `README`, `configure.ac` or `ChangeLog`. GitHub's API reports no
+  licence for it.
+- **The twelve player headers carry no notice** — and they are precisely the files we need. Of the
+  27 sources in `libayfly`, 15 carry GPL-2.0-**or-later**, which would be fine; the other 12 are
+  `players/PT3Play.h`, `PT2Play.h`, `STCPlay.h`, `ASCPlay.h`, `SQTPlay.h` and their siblings, and
+  they carry an author credit and nothing else. `PT3Play.h` opens with *"Pro tracker 3.x player was
+  written by S.V. Bulba"* and no terms.
+- **`z80ex` says "Released under GNU GPL v2"** with no "or later". **GPL-2-only is incompatible with
+  our GPL-3**, and it is not separable: five of the eight library sources reference it, including
+  `ay.cpp` and `formats.cpp`, not only the `.ay` path one might hope to drop.
+
+This is the case `docs/LICENSES.md` warns about in as many words — "a dependency that turns out to be
+GPL-2-**only** cannot be combined with our Apache-2.0 UI stack under GPL-3, and invalidates the
+licence decision". It is the fourth time in this project that reading `COPYING` alone would have
+given the wrong answer, and the first time the answer is no.
+
+### What to do instead
+
+**ZXTune** — named in `docs/reference/modizer-libraries.md`, LGPL-3.0 by GitHub's reading, covering
+every one of these formats and many more. It is a 182 MB C++ project with its own build system,
+which is why it was not tried first; the measurement above is the argument for paying that cost,
+because it says the formats themselves are worth 21,639 files at 99.6%.
+
+Its licence has **not** been verified against its sources, which is the first thing to do and the
+whole lesson of this section.
+
+### Two things the probe found that were not about the formats
+
+- **`ay_startsong` dereferences the song's audio player without checking it for null**, while
+  `ay_songstarted` three lines away does check. Rendering into a buffer needs no player, so the
+  first run segfaulted on all 32 files. It is not needed at all: `ay_rendersongbuffer` drives the
+  chip directly.
+- **`ay_getsonglength` returns fiftieths of a second**, which `ayfly.h` says on the field and
+  nothing repeats. Read as milliseconds it made every tune about six seconds long — plausible
+  enough to be believed, and wrong. The median is 130 seconds.
+
 ## Not planned
 
 `.sc68` container files reference external replay binaries we do not ship, so they will not play even
