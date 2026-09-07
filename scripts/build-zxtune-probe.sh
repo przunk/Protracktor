@@ -73,8 +73,14 @@ mapfile -t SOURCES < <(
 )
 echo "→ compiling ${#SOURCES[@]} ZXTune sources plus the probe"
 
-FLAGS=(-O2 -w -std=c++20 -I"$W/src" -I"$W/include" -I"$W" -I"$W/3rdparty/fmt/include")
-OBJ="$OUT/obj"
+# `PROBE_CHAR_FLAGS` exists to reproduce Android on this machine. Plain `char` is **signed** on
+# x86-64 and **unsigned** on ARM, which is the difference most likely to make a decoder work here and
+# fail on a phone. Set it to `-funsigned-char` to build the ARM behaviour:
+#
+#     PROBE_CHAR_FLAGS=-funsigned-char ZXTUNE_PROBE_OUT=unsigned ./scripts/build-zxtune-probe.sh
+FLAGS=(-O2 -w -std=c++20 ${PROBE_CHAR_FLAGS:+"$PROBE_CHAR_FLAGS"}
+       -I"$W/src" -I"$W/include" -I"$W" -I"$W/3rdparty/fmt/include")
+OBJ="$OUT/obj${ZXTUNE_PROBE_OUT:+-$ZXTUNE_PROBE_OUT}"
 mkdir -p "$OBJ"
 
 # One object per source, in parallel, kept between runs. A single `g++` over 89 files took minutes
@@ -96,7 +102,7 @@ for obj in "${OBJECTS[@]}"; do
     [ -f "$obj" ] || { echo "❌ missing object: $obj"; exit 1; }
 done
 
-g++ "${FLAGS[@]}" -o "$OUT/probe-zxtune" \
+g++ "${FLAGS[@]}" -o "$OUT/probe-zxtune${ZXTUNE_PROBE_OUT:+-$ZXTUNE_PROBE_OUT}" \
     "$ROOT/native/probe/zxtune/probe_zxtune.cpp" "${OBJECTS[@]}" -lm
 
 echo "✅ built. Now: ./scripts/probe-zxtune.py"

@@ -947,6 +947,28 @@ is the network; "cannot play yet" is a missing decoder. Both of us spent a few m
 the wrong one. It is the same shape as C15, where a swallowed failure and an honest absence were
 reported identically — worth a defect of its own rather than a note here.
 
+### `.stc` plays here and not on his phone — open
+
+The owner: everything else works, `.stc` does not. On this machine 39 of 40 sampled `.stc` files
+play, so it is not the decoder refusing the format.
+
+Three causes ruled out, each cheaply and each worth writing down so nobody pays for them twice:
+
+- **Not the buffer's lifetime.** `Binary::CreateContainer(View)` copies into a `Dump` rather than
+  referencing the caller's bytes, so the vector `openBackend` owns being destroyed afterwards is
+  harmless. Worth checking because the probe keeps its bytes alive to the end of `main` and the app
+  does not.
+- **Not `char` signedness.** Plain `char` is signed on x86-64 and unsigned on ARM, which is the
+  classic reason a decoder works on a desktop and fails on a phone.
+  `./scripts/build-zxtune-probe.sh` now takes `PROBE_CHAR_FLAGS=-funsigned-char` and builds a second
+  binary beside the first so the two can be run against the same files: **0 of 25 differ.**
+- **Not another backend claiming the name first.** ASAP's own extension list has no `stc`, and
+  game-music-emu identifies by header.
+
+What is left needs one thing only he has: **which message appeared.** "Could not read X" is the
+network, before any decoder; "X is a format Protracktor cannot play yet" is the decoder refusing;
+silence is a third thing again. That distinction already cost an hour once today.
+
 **Nothing else has been heard on a phone.**
 
 ### Two things the probe found that were not about the formats
