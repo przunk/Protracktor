@@ -841,8 +841,54 @@ the compiler. It is not a 100 MB proposition.
 standard — `-std=c++17` fails on `std::to_address` and a `concept` declaration, which is the sort of
 thing that would otherwise be discovered halfway through a build.
 
-**Still to do:** a host probe that loads a `.pt3` from a buffer and renders it, and the same
-measurement ayfly got.
+### Measured 2026-09-07: 72 of 72
+
+`./scripts/build-zxtune-probe.sh` then `./scripts/probe-zxtune.py`, twelve files of each format
+sampled from Modland:
+
+**72 of 72 loaded from a buffer and were audible — 100% weighted by what Modland holds, of 20,521
+files.** ayfly, which cannot be shipped, scored 46 of 48 on the same corpus.
+
+**Every one states its own length**, median 149s. So `.pt3`, `.pt2`, `.stc`, `.asc`, `.sqt` and
+`.stp` would arrive with a duration and a working seek bar, with nothing stored — the third backend
+to manage that, after AHX and the trackers.
+
+### What it cost, and what the next person should know
+
+The formats were never the difficulty. Three days of this page were spent on libraries that play
+things; this one was spent on a build.
+
+**The dependency closure has to be discovered by compiling.** A sweep of `src/module` pulls in the
+PlayStation, DS, GBA and N64 players, each wanting a different part of `3rdparty`; `src/sound`
+pulls in ALSA and OSS; `src/binary` pulls in zlib and lhasa; `src/l10n` wants Boost. None of that is
+on the path from the bytes of a `.pt3` to samples, and the only way to learn which files are is to
+build and read the linker. The answer is **90 sources**, listed in the build script.
+
+**Three things were wrong in the probe and each looked like the library failing:**
+
+- **Two shapes of factory.** ProTracker3 hands back a full `Module::Factory` that produces a holder;
+  every other AY plugin hands back an `AYM::Factory` that produces a *chiptune*, and
+  `AYM::CreateHolder` is the step between. The plugin layer that normally does this drags in the
+  whole plugin registry, so the probe does it by hand — and the backend will have to as well.
+- **`binary/format/full` versus `lite`.** Both define `Binary::CreateFormat`; `lite` drops the
+  pattern syntax the chiptune decoders' format strings use. Building neither is one undefined symbol
+  at the end of a ninety-file link.
+- **The renderer needs the module's own properties.** `CreateRenderer` was given a fresh empty
+  parameter container, and the AY renderer reads its frequency table from parameters —
+  `aym_parameters.cpp` says *"frequency table is mandatory!!!"* and throws. It throws at the first
+  `Render`, not at construction, so all 48 files aborted with `exit-6` and it looked like a decoder
+  that could not decode. The table is something the *file* chose and the chiptune had already put
+  there; `holder->GetModuleProperties()` is what carries it.
+
+**And one thing about the build itself:** a single `g++` over ninety sources recompiles all of them
+every time an include path turns out to be wrong, which on a library this size is most of an
+afternoon. The script compiles one object per source, in parallel, and keeps them.
+
+### Still to do
+
+Integration: a `Backend` subclass, ZXTune's sources into the CMake build for three ABIs,
+`SupportedFormats`, and a re-index. The measurement says it is worth doing; nothing about it has run
+on a phone.
 
 ### Two things the probe found that were not about the formats
 
