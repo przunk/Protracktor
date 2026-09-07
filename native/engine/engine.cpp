@@ -251,17 +251,17 @@ public:
         create.sampling_rate = kSampleRate;
 
         sc68_ = sc68_create(&create);
-        if (!sc68_) throw std::runtime_error("sc68 refused to create a player");
+        if (!sc68_) throw std::runtime_error("the Atari ST decoder (sc68) would not start");
 
         if (sc68_load_mem(sc68_, bytes.data(), static_cast<int>(bytes.size())) < 0) {
             sc68_destroy(sc68_);
             sc68_ = nullptr;
-            throw std::runtime_error("sc68 could not load this file");
+            throw std::runtime_error("the Atari ST decoder (sc68) could not load it");
         }
         if (sc68_play(sc68_, current_.load(std::memory_order_relaxed), SC68_DEF_LOOP) < 0) {
             sc68_destroy(sc68_);
             sc68_ = nullptr;
-            throw std::runtime_error("sc68 loaded the file but refused to play it");
+            throw std::runtime_error("the Atari ST decoder (sc68) loaded it but would not play it");
         }
         sc68_music_info(sc68_, &info_, SC68_CUR_TRACK, nullptr);
     }
@@ -424,7 +424,7 @@ private:
             if (!share.empty()) rsc68_set_share(share.c_str());
             return true;
         }();
-        if (!ready) throw std::runtime_error("sc68 refused to initialise");
+        if (!ready) throw std::runtime_error("the Atari ST decoder (sc68) would not initialise");
     }
 
     static constexpr int kSampleRate = 44100;
@@ -517,7 +517,7 @@ public:
 
     AsapBackend(const std::vector<char> &bytes, const std::string &name)
         : asap_(ASAP_New()) {
-        if (!asap_) throw std::runtime_error("ASAP would not initialise");
+        if (!asap_) throw std::runtime_error("the Atari 8-bit decoder (ASAP) would not initialise");
 
         ASAP_SetSampleRate(asap_, kSampleRate);
         if (!ASAP_Load(asap_, name.c_str(),
@@ -525,7 +525,7 @@ public:
                        static_cast<int>(bytes.size()))) {
             ASAP_Delete(asap_);
             asap_ = nullptr;
-            throw std::runtime_error("ASAP could not load this file");
+            throw std::runtime_error("the Atari 8-bit decoder (ASAP) could not load it");
         }
 
         info_ = ASAP_GetInfo(asap_);
@@ -535,7 +535,7 @@ public:
         if (!ASAP_PlaySong(asap_, song_, durationMs_)) {
             ASAP_Delete(asap_);
             asap_ = nullptr;
-            throw std::runtime_error("ASAP loaded this file but would not start it");
+            throw std::runtime_error("the Atari 8-bit decoder (ASAP) loaded it but would not start it");
         }
     }
 
@@ -652,13 +652,13 @@ public:
     explicit GmeBackend(const std::vector<char> &bytes) {
         if (const gme_err_t err = gme_open_data(bytes.data(), static_cast<long>(bytes.size()),
                                                 &emu_, kSampleRate)) {
-            throw std::runtime_error(std::string("game-music-emu refused it: ") + err);
+            throw std::runtime_error(std::string("the console decoder (game-music-emu) refused it: ") + err);
         }
-        if (!emu_) throw std::runtime_error("game-music-emu returned nothing");
+        if (!emu_) throw std::runtime_error("the console decoder (game-music-emu) returned nothing");
 
         gme_track_info(emu_, &info_, track_);
         if (const gme_err_t err = gme_start_track(emu_, track_)) {
-            const std::string message = std::string("game-music-emu could not start it: ") + err;
+            const std::string message = std::string("the console decoder (game-music-emu) could not start it: ") + err;
             if (info_) gme_free_info(info_);
             gme_delete(emu_);
             emu_ = nullptr;
@@ -863,7 +863,7 @@ public:
                 static_cast<uint_least32_t>(bytes.size())),
           builder_("sidlite") {
         if (!tune_.getStatus()) {
-            throw std::runtime_error(std::string("not a SID file: ") + tune_.statusString());
+            throw std::runtime_error(std::string("the Commodore 64 decoder (libsidplayfp) does not see a SID here: ") + tune_.statusString());
         }
         tune_.selectSong(0);
         info_ = tune_.getInfo();
@@ -872,10 +872,10 @@ public:
         cfg.frequency = kSampleRate;
         cfg.sidEmulation = &builder_;
         if (!engine_.config(cfg)) {
-            throw std::runtime_error(std::string("libsidplayfp refused the configuration: ") + engine_.error());
+            throw std::runtime_error(std::string("the Commodore 64 decoder (libsidplayfp) refused the configuration: ") + engine_.error());
         }
         if (!engine_.load(&tune_)) {
-            throw std::runtime_error(std::string("libsidplayfp could not load it: ") + engine_.error());
+            throw std::runtime_error(std::string("the Commodore 64 decoder (libsidplayfp) could not load it: ") + engine_.error());
         }
 
         // Without this, mix() dereferences a mixer that does not exist yet. Nothing in the header
@@ -1058,7 +1058,7 @@ public:
         // tune is one allocation of its own by then.
         ht_ = hvl_reset(padded.data(), static_cast<uint32>(bytes.size()), kStereoSeparation,
                         static_cast<uint32>(kSampleRate), 0);
-        if (!ht_) throw std::runtime_error("HivelyTracker could not load this file");
+        if (!ht_) throw std::runtime_error("the Amiga AHX decoder (HivelyTracker) could not load it");
 
         const uint32 multiplier = ht_->ht_SpeedMultiplier ? ht_->ht_SpeedMultiplier : 1;
         framesPerCall_ = static_cast<std::size_t>(kSampleRate / 50 / multiplier) * multiplier;
@@ -1284,7 +1284,7 @@ public:
         tryAym("FTC", Module::FastTracker::CreateFactory(), data);
         tryAym("GTR", Module::GlobalTracker::CreateFactory(), data);
 
-        if (!holder_) throw std::runtime_error("ZXTune did not recognise this file");
+        if (!holder_) throw std::runtime_error("the ZX Spectrum decoder (ZXTune) did not recognise it");
 
         durationSeconds_ = holder_->GetModuleInformation().Duration.CastTo<Time::Second>().Get();
         start();
@@ -1410,7 +1410,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<AsapBackend>(bytes, name);
         } catch (const std::exception &e) {
             LOGE("ASAP claimed the name but refused: %s", e.what());
-            error = std::string("ASAP refused it: ") + e.what();
+            error = e.what();
         }
     }
 
@@ -1468,7 +1468,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<Sc68Backend>(bytes);
         } catch (const std::exception &e) {
             LOGE("sc68 recognised but refused: %s", e.what());
-            error = std::string("sc68 recognised this file but refused it: ") + e.what();
+            error = e.what();
         }
     }
     try {
@@ -1476,7 +1476,15 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
     } catch (const std::exception &e) {
         LOGE("libopenmpt refused: %s", e.what());
         if (error.empty()) {
-            error = std::string("no backend recognised it: ") + e.what();
+            // The last backend's reason, given the same shape as the other five. libopenmpt throws
+            // its own exception, so unlike them the sentence cannot be written at the throw site --
+            // and "libopenmpt: ..." on its own would be the only message here naming a library with
+            // no platform beside it.
+            //
+            // "No backend recognised it" is the caller's conclusion to draw, not this one's:
+            // `OpenFailure` draws it from whether the name was claimed at all, which it knows and
+            // this does not.
+            error = std::string("the tracker decoder (libopenmpt) refused it: ") + e.what();
         }
     }
     return nullptr;

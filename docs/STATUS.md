@@ -420,6 +420,19 @@ choice can be tested and worded in string resources where it can be translated:
 The decoder's own reason is kept where there is one: it is true, and occasionally it is the only
 thing that says which backend gave up. It is no longer offered as a verdict on the format.
 
+**And the reasons are now one sentence in six voices instead of six.** The owner asked whether
+naming ZXTune in the app was right; it is — the Information panel already credits every backend by
+name, five of the six licences ask for attribution, and the library name is the one fact that makes
+a report actionable, as `.stc` proved that morning. But "ZXTune" alone can read as a program the
+user is missing, so every message now names the platform beside it:
+
+> `&SFTDEMO.stc` would not open: the ZX Spectrum decoder (ZXTune) did not recognise it
+
+The platform explains itself, the library stays as a credit. libopenmpt is the awkward one — it
+throws its own exception, so its sentence is written where it is caught rather than where it is
+raised. Two messages that wrapped another message ("ASAP refused it: ASAP could not load...") lost
+their outer layer.
+
 ### C15. ~~The Mod Archive returns nothing~~ — FIXED 2026-09-06
 
 *Owner, 2026-09-06, while testing the platform filter. Deferred by him to after that work.*
