@@ -64,7 +64,11 @@ void hvl_play_irq(struct hvl_tune *ht);
 #include <module/holder.h>
 #include <module/information.h>
 #include <module/players/aym/ascsoundmaster.h>
+#include <module/players/aym/fasttracker.h>
+#include <module/players/aym/globaltracker.h>
+#include <module/players/aym/prosoundmaker.h>
 #include <module/players/aym/aym_base.h>
+#include <module/players/aym/protracker1.h>
 #include <module/players/aym/protracker2.h>
 #include <module/players/aym/protracker3.h>
 #include <module/players/aym/soundtracker.h>
@@ -1284,6 +1288,14 @@ public:
         tryAym("AS0", Module::ASCSoundMaster::CreateFactory(FC::ASCSoundMaster::Ver0::CreateDecoder()), data);
         tryAym("STP", Module::SoundTrackerPro::CreateFactory(FC::SoundTrackerPro::CreateCompiledModulesDecoder()), data);
         tryAym("SQT", Module::SQTracker::CreateFactory(), data);
+        // These three were claimed by `worthTrying` and by `SupportedFormats` before they were
+        // implemented here, so `.psm`, `.ftc` and `.gtr` opened a file, refused it, and the app
+        // said "is a format Protracktor cannot play yet" -- which is the message for a decoder that
+        // does not exist, and was true only because this list was three lines short.
+        tryAym("PT1", Module::ProTracker1::CreateFactory(), data);
+        tryAym("PSM", Module::ProSoundMaker::CreateFactory(), data);
+        tryAym("FTC", Module::FastTracker::CreateFactory(), data);
+        tryAym("GTR", Module::GlobalTracker::CreateFactory(), data);
 
         if (!holder_) throw std::runtime_error("ZXTune did not recognise this file");
 

@@ -920,7 +920,34 @@ in the search filter stops being greyed out; and changing `SupportedFormats` cha
 `.ay` stays with game-music-emu. ZXTune's own reader for it is `ayemul`, the one plugin whose
 licence cannot be taken.
 
-**Nothing has been heard on a phone.**
+### The owner ran it, and found the list promising more than the code delivered
+
+`SupportedFormats` and the backend's `worthTrying` claimed **thirteen** names. `ZxTuneBackend`
+implemented **ten**. So `.psm`, `.ftc` and `.gtr` were offered, taken, refused — and the app said
+*"is a format Protracktor cannot play yet"*, which is the message for a missing decoder and was true
+only because a list of factories was three lines short. `.pt1` was a fourth instance, found a moment
+later by the probe rather than by him.
+
+**The probe now measures what `SupportedFormats` promises**, which is the only guard that crosses
+the language boundary: the format list is Kotlin and the decoders are C++, so no unit test can
+compare them. With all thirteen: **73 of 80, 99.5% weighted by what Modland holds.**
+
+The seven failures are honest and worth reading. Six are `.psm` files from Modland's *Epic Megagames
+MASI* directory, which ZXTune's Pro Sound Maker decoder correctly refuses — in the app those fall
+through to libopenmpt and play, which is a fallback the probe does not have. One `.ftc` did not load.
+
+### And a second thing he found, which was not about ZX Spectrum at all
+
+`Could not read ice.pt2` — then it played on the second attempt. That message comes from the path
+where the file never arrived, `bytes == null`, before any decoder sees it: a transient fetch failure
+from Modland.
+
+**The two messages send you to opposite places and look alike from an armchair.** "Could not read"
+is the network; "cannot play yet" is a missing decoder. Both of us spent a few minutes looking at
+the wrong one. It is the same shape as C15, where a swallowed failure and an honest absence were
+reported identically — worth a defect of its own rather than a note here.
+
+**Nothing else has been heard on a phone.**
 
 ### Two things the probe found that were not about the formats
 

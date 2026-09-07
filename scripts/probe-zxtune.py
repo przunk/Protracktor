@@ -39,7 +39,7 @@ CACHE = pathlib.Path.home() / ".protracktor" / "uade-probe"
 PROBE = ROOT / "native" / "probe" / "zxtune" / "build" / "probe-zxtune"
 
 # What zxtune's `players/` covers, ordered by how much of Modland's Spectrum tree each is worth.
-EXTENSIONS = ["pt3", "pt2", "stc", "asc", "sqt", "stp"]
+EXTENSIONS = ["pt3", "pt2", "stc", "asc", "sqt", "stp", "psm", "ftc", "gtr", "pt1"]
 
 
 def shared():

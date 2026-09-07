@@ -36,6 +36,10 @@
 #include "formats/chiptune/aym/sqtracker.h"
 #include "module/players/aym/aym_base.h"
 #include "module/players/aym/ascsoundmaster.h"
+#include "module/players/aym/fasttracker.h"
+#include "module/players/aym/globaltracker.h"
+#include "module/players/aym/prosoundmaker.h"
+#include "module/players/aym/protracker1.h"
 #include "module/players/aym/protracker2.h"
 #include "module/players/aym/protracker3.h"
 #include "module/players/aym/soundtracker.h"
@@ -157,6 +161,12 @@ int main(int argc, char** argv)
   attempt("ASC", Module::ASCSoundMaster::CreateFactory(FC::ASCSoundMaster::Ver1::CreateDecoder()));
   attempt("STP", Module::SoundTrackerPro::CreateFactory(FC::SoundTrackerPro::CreateCompiledModulesDecoder()));
   attempt("SQT", Module::SQTracker::CreateFactory());
+  // Added after the app claimed these three names and the backend did not implement them. The probe
+  // measures what `SupportedFormats` promises, or it is measuring something else.
+  attempt("PT1", Module::ProTracker1::CreateFactory());
+  attempt("PSM", Module::ProSoundMaker::CreateFactory());
+  attempt("FTC", Module::FastTracker::CreateFactory());
+  attempt("GTR", Module::GlobalTracker::CreateFactory());
 
   if (!holder)
   {
