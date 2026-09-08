@@ -317,6 +317,14 @@ other way round.
 B5 asks for favourites and history shared between the phone and the browser. **Not all of it can be
 shared, and the reason is structural rather than technical.**
 
+> **Corrected 2026-09-08, and the correction narrows this section rather than adding to it.**
+> Everything below is a property of **asynchronous sync** — where the browser reads a row while the
+> phone is absent — and it was written here as a property of *local files*. It is not. Under a live
+> pairing (`docs/PLAN_HANDOFF.md`) the phone is present at the moment of transfer and can simply
+> send those rows as bytes; Modland's median module is 20 KB. So "a playlist that mixes both kinds
+> cannot arrive intact" is true of an account and false of a pairing, which makes the accountless
+> design the *more* capable one here. Read this section as being about W3.
+
 `ARCHITECTURE` §8 says a playlist refers to index rows, and those rows come from two kinds of source:
 a local folder and a remote catalogue. §11 says **a remote track's identity is its URL**. A local
 track's identity is a document URI granted by the storage access framework on one phone.
