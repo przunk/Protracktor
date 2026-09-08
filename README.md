@@ -24,6 +24,7 @@ list — what has actually been confirmed on a device.
 | [`docs/PLAN_FORMATS.md`](docs/PLAN_FORMATS.md) | plan for the decoders we do not have yet |
 | [`docs/PLAN_CATALOGUES.md`](docs/PLAN_CATALOGUES.md) | plan for the online archives we do not have yet |
 | [`docs/PLAN_WEB.md`](docs/PLAN_WEB.md) | what a version in a browser would cost, and what it cannot carry |
+| [`docs/PLAN_HANDOFF.md`](docs/PLAN_HANDOFF.md) | sending a playlist from the phone to that browser, without an account |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md) | agreed work not yet started, numbered **A1…An** |
 | [`docs/WISHLIST.md`](docs/WISHLIST.md) | ideas, numbered **B1…Bn**, with who raised them and when |
 | [`docs/BUILD.md`](docs/BUILD.md) | how to build debug, release and a store bundle |
