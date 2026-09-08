@@ -312,6 +312,40 @@ in `EventSource` being written by hand, which is the only cost.
 
 Not built yet — found at half past midnight, and this is the kind of change to make awake.
 
+## 5d. What the page became, 2026-09-09
+
+`GOAL.md` round 7 and the work that followed it. Recorded here because §5a argued the page should
+*not* be a second front end, and that argument still stands — what changed is that it now **looks**
+like the app without doing what the app does.
+
+**It wears his colours, sampled rather than guessed.** His phone runs dynamic colour, so it does not
+show the Material 3 baseline at all; the palette was read out of his screenshots pixel by pixel
+(`docs/reference/app-colours.json`), and the baseline is kept beside it for a phone with dynamic
+colour off. The type scale came from the Compose sources instead — knowing that a track title is
+`titleMedium` beats measuring a downscaled PNG.
+
+**The shell follows the app screen for screen**: the playlist chip and labelled actions across the
+top, rows that are position-title-source with the playing one tinted, and a dock that is a seek row,
+a now-playing card and the transport. Now Playing is a panel with the same fields in the same order,
+and it carries the subsong strip — one `.kss` holds 256 tunes and a player that only plays the first
+is playing a fraction of the file.
+
+**Shuffle and repeat follow `PlayQueue.kt`'s rules rather than invented ones**, because a control
+that behaves differently on the two screens is worse than one that is missing.
+
+**It answers the operating system's media keys** through `navigator.mediaSession`, which is the
+browser's version of the `MediaSession` the phone publishes — and the difference between a tab you
+must find before you can pause it and one you can pause from the keyboard.
+
+**And the web half has tests for the first time.** `scripts/check-page.mjs` loads the real markup
+and the real script in jsdom and drives them: 34 checks, run by `test-protracktor.sh` whenever jsdom
+is installed. It cannot see, and never claims to. The last two are worth naming — they grep every
+`_pt_*` the page and the worklet call and assert the built engine exports each, which is the failure
+that costs an hour every time: the C changed, the wasm was not rebuilt, and the browser answers with
+silence.
+
+**Weight:** 48 KB of markup and script against 760 KB of engine.
+
 ## 6. Order of work
 
 1. **W1** — `PLAN_WEB.md`'s throwaway: a page you drop a file onto. The byte count is now known
