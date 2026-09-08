@@ -42,7 +42,6 @@
     <string name="a11y_reorder">Przeciągnij, aby przenieść %1$s</string>
     <string name="action_back">Wstecz</string>
     <string name="action_delete">Usuń</string>
-    <string name="action_cancel">Anuluj</string>
     <string name="action_save">Zapisz</string>
 
     <string name="browse_select_all">Zaznacz wszystko</string>
@@ -283,6 +282,11 @@
     <string name="random_scope_title">Losuj z</string>
     <string name="random_scope_everything">Wszystkiego</string>
     <string name="action_send_to_browser">Do przeglądarki</string>
+    <string name="scan_hint">Skieruj na kod na stronie odtwarzacza.</string>
+    <string name="scan_refused">Bez aparatu nie da się odczytać kodu. Playlistę nadal można wysłać linkiem.</string>
+    <string name="action_cancel">Anuluj</string>
+    <string name="paired_with">Sparowano z %1$s</string>
+    <string name="pair_forget">Zapomnij sparowaną przeglądarkę</string>
     <string name="settings_web_player">Adres odtwarzacza webowego</string>
     <string name="settings_web_player_body">Dokąd „Do przeglądarki” wysyła playlistę. Link otwiera się na maszynie z przeglądarką, więc adres lokalny jest poprawny.</string>
     <string name="random_scope_favourites">Ulubionych</string>

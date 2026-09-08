@@ -8,6 +8,32 @@ from prior knowledge; each row is confirmed against the actual `COPYING`/`LICENS
 source we vendor, at the moment we vendor it, and this table is corrected then. A row still marked
 *unverified* must not be treated as fact.
 
+## qrcode-generator 2.0.4 — MIT
+
+*Added 2026-09-08, vendored as `web/lib/qrcode.js` for the page's pairing code.*
+
+Read from the file's own header: "Licensed under the MIT license", Kazuhiko Arase, 2009. Compatible.
+Committed rather than fetched at build time because the page must work with no network beyond the
+archives it plays from, and because a script pulled from a CDN at run time is a third party in the
+audio path's origin.
+
+## ZXing core 3.5.3 — Apache-2.0
+
+*Added 2026-09-08 for the pairing scanner (`docs/PLAN_HANDOFF.md` §3 H2).*
+
+Read from the `LICENSE` file and the per-file headers, which agree: Apache License 2.0, ZXing
+Authors. Compatible with GPL-3.0-or-later in one direction — Apache-2.0 code may be used in a
+GPL-3 work, not the reverse — which is the direction this goes.
+
+**Chosen over ML Kit's barcode scanner deliberately**, and for the same reason the decoders are
+vendored source rather than services: ML Kit is proprietary and arrives through Google Play
+services, so it is a dependency on a *service* and does not exist on a device without them. ZXing is
+pure Java and reads a QR out of a byte array.
+
+*Note on the name:* "QR Code" is a registered trademark of DENSO WAVE, which grants free use of the
+standard. Nothing here needs a licence from them; recorded so the next reader does not have to
+check.
+
 ## Our own files
 
 Every source file this project writes carries two lines and no more:

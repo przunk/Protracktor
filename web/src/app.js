@@ -154,6 +154,9 @@ function render() {
     return li;
   }));
   $('paste').hidden = queue.length > 0;
+  // Shrunk rather than hidden. It is the way a second playlist arrives, so it has to stay on
+  // screen; full size next to a playing queue is a poster for something already done.
+  $('pair').className = queue.length > 0 ? 'small' : '';
 }
 
 function setQueue(urls) {
@@ -216,7 +219,64 @@ async function fromFragment() {
   }
 }
 
+/**
+ * The pairing panel: a code that is always there, and a stream that is always listening.
+ *
+ * **A page cannot expose an endpoint**, which is the fact this design turns on. The phone does not
+ * post a playlist "to the page"; it posts to the server the page is listening to, and the QR
+ * carries that server's address. Today it is the same process that served this file, so pairing
+ * costs no infrastructure; the three routes move to a Worker unchanged when the page is hosted
+ * somewhere a phone can reach from outside a LAN.
+ *
+ * The room id is 128 bits and travels only in the code on screen. Nothing flows back to the phone,
+ * so a stolen code buys a noise in somebody's tab and tells the thief nothing.
+ */
+async function pair() {
+  // **The room outlives a reload**, which is what lets the phone scan once and send many times. It
+  // is this browser's identity, kept here and nowhere else -- the server creates a room the first
+  // time somebody listens on it and forgets it when the process ends.
+  let id = localStorage.getItem('protracktor.room');
+  if (!id || !/^[0-9a-f]{32}$/.test(id)) {
+    id = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0')).join('');
+    localStorage.setItem('protracktor.room', id);
+  }
+
+  let base;
+  try {
+    base = (await fetch('/pair/host').then((r) => r.json())).base;
+  } catch {
+    $('pairnote').textContent = 'Pairing needs the local server; open this page through it.';
+    return;
+  }
+  const post = `${base}/pair/${id}`;
+  $('pairurl').textContent = post;
+
+  const qr = qrcode(0, 'M');
+  qr.addData(post);
+  qr.make();
+  $('qr').innerHTML = qr.createTableTag(5, 0);
+
+  const events = new EventSource(`/pair/${id}/events`);
+  events.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    if (!message.queue?.length) return;
+    setQueue(message.queue.map((row) => ({ ...entryFor(row.url), name: row.title || entryFor(row.url).name })));
+    status(`${message.queue.length} tracks from the phone`);
+    // The phone says which one it was on. Starting anywhere else would be the handoff losing the
+    // one thing a listener actually cares about.
+    if (message.index > 0 && message.index < message.queue.length) playAt(message.index);
+  };
+  // A dropped connection reconnects on its own; saying so beats a code that has quietly stopped
+  // being live.
+  events.onerror = () => { $('pairnote').textContent = 'Reconnecting to the pairing channel…'; };
+  events.onopen = () => {
+    $('pairnote').textContent = 'Scan this with Protracktor on your phone to send it a playlist.';
+  };
+}
+
 status('ready — press Play or load some URLs');
+pair();
 fromFragment();
 
 // **A link opened in a tab that already has this page does not reload it.** Only the fragment

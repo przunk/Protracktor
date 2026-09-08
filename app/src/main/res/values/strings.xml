@@ -99,7 +99,6 @@
     <string name="a11y_reorder">Drag to move %1$s</string>
     <string name="action_back">Back</string>
     <string name="action_delete">Delete</string>
-    <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
 
     <string name="browse_select_all">Select all</string>
@@ -267,6 +266,11 @@
     <string name="random_scope_title">Random picks from</string>
     <string name="random_scope_everything">Everything</string>
     <string name="action_send_to_browser">To browser</string>
+    <string name="scan_hint">Point this at the code on the player page.</string>
+    <string name="scan_refused">Without the camera the code cannot be read. You can still send the playlist as a link.</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="paired_with">Paired with %1$s</string>
+    <string name="pair_forget">Forget the paired browser</string>
     <string name="settings_web_player">Web player address</string>
     <string name="settings_web_player_body">Where “To browser” sends the playlist. The link opens on the machine running the browser, so a local address is right.</string>
     <string name="random_scope_favourites">Favourites</string>

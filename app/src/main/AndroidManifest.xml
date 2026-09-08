@@ -10,6 +10,16 @@
          works and only the controls are missing. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+        The QR scanner, and the only permission in this app that a music player has to justify.
+        It is asked for at the moment the scanner opens and never at startup, it is used for one
+        thing, reading a pairing code off a screen, and nothing is recorded: frames are decoded
+        and dropped (docs/PLAN_HANDOFF.md §3 H2).
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- A phone with no camera can still do everything else, so this must not filter it out. -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <!-- Online catalogues: the index is downloaded once, then browsing works offline. The network
          is next needed when a track that is not cached is played. -->
     <uses-permission android:name="android.permission.INTERNET" />

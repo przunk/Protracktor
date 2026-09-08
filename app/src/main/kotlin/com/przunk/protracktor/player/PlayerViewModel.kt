@@ -63,6 +63,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun downloadTrackMetadata() = controller.downloadTrackMetadata()
     fun downloadFavourites() = controller.downloadFavourites()
     fun sendQueueToBrowser() = controller.sendQueueToBrowser()
+    fun pairWith(endpoint: String) = controller.pairWith(endpoint)
+    fun forgetPairing() = controller.forgetPairing()
+    val scan get() = controller.scan
 
     /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
     fun playExternal(uri: android.net.Uri, name: String? = null) {

@@ -37,6 +37,7 @@ import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.RemoteFiles
+import com.przunk.protracktor.net.WebRemote
 import com.przunk.protracktor.net.Sc68Replays
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
@@ -482,6 +483,10 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private val _share = MutableSharedFlow<Intent>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val share: SharedFlow<Intent> = _share.asSharedFlow()
+
+    /** Asks the UI for a pairing code. Emitted when "to browser" is pressed and none is stored. */
+    private val _scan = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val scan: SharedFlow<Unit> = _scan.asSharedFlow()
 
     private val _browse = MutableStateFlow(BrowseState())
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
@@ -1324,12 +1329,70 @@ class PlaybackController private constructor(private val context: Context) {
      * silently shortens a playlist is the failure mode `docs/PLAN_WEB.md` §8 calls worse than
      * refusing outright.
      */
+    /**
+     * Sends the queue to a paired browser, or asks for a code if there is not one yet.
+     *
+     * **Scanning happens once**, not once per playlist: the address is remembered, and the page
+     * keeps its room across reloads so an ordinary refresh does not break the pairing. When the
+     * address stops answering — a different machine, a server that was stopped — this falls back to
+     * the link, which needs nothing and always works (`docs/PLAN_HANDOFF.md` §3).
+     */
     fun sendQueueToBrowser() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
             _state.update { it.copy(message = Message("There is nothing in the playlist to send.")) }
             return
         }
+        val paired = Appearance.pairedEndpoint(context)
+        if (paired == null) {
+            _scan.tryEmit(Unit)
+            return
+        }
+        postQueue(paired, tracks, fallBackToLink = true)
+    }
+
+    /** Remembers a scanned code and uses it immediately — the scan was a request to send. */
+    fun pairWith(endpoint: String) {
+        Appearance.rememberPairing(context, endpoint)
+        val tracks = _state.value.queue.tracks
+        if (tracks.isNotEmpty()) postQueue(endpoint, tracks, fallBackToLink = false)
+    }
+
+    fun forgetPairing() {
+        Appearance.rememberPairing(context, null)
+        _state.update { it.copy(message = Message("The paired browser is forgotten.")) }
+    }
+
+    private fun postQueue(endpoint: String, tracks: List<TrackRef>, fallBackToLink: Boolean) {
+        scope.launch {
+            val index = _state.value.queue.currentIndex ?: 0
+            when (val outcome = WebRemote.send(endpoint, tracks, index)) {
+                is WebRemote.Outcome.Delivered ->
+                    _state.update { it.copy(message = Message("Sent ${tracks.size} tracks to the browser.")) }
+                is WebRemote.Outcome.NoOneListening ->
+                    // The address answered, so the pairing is not wrong -- the page is closed. Two
+                    // different problems, and telling them apart is the difference between "open
+                    // the page" and "scan again".
+                    _state.update {
+                        it.copy(message = Message("The player page is not open in that browser."))
+                    }
+                is WebRemote.Outcome.Unreachable -> {
+                    if (fallBackToLink) {
+                        _state.update {
+                            it.copy(message = Message("Could not reach the browser (${outcome.reason}). Sending a link instead."))
+                        }
+                        shareQueueAsLink(tracks)
+                    } else {
+                        _state.update {
+                            it.copy(message = Message("Could not reach that browser: ${outcome.reason}"))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun shareQueueAsLink(tracks: List<TrackRef>) {
         val packed = QueueLink.pack(tracks)
         if (packed.sent == 0) {
             _state.update {
@@ -1342,13 +1405,14 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
         val link = QueueLink.linkTo(Appearance.webPlayer(context), packed.fragment)
-        _state.update {
-            it.copy(
-                message = Message(
-                    if (packed.left == 0) "Sending ${packed.sent} tracks."
-                    else "Sending ${packed.sent}; ${packed.left} are files on this phone and stayed here."
+        if (packed.left > 0) {
+            _state.update {
+                it.copy(
+                    message = Message(
+                        "Sending ${packed.sent}; ${packed.left} are files on this phone and stayed here."
+                    )
                 )
-            )
+            }
         }
         _share.tryEmit(
             Intent(Intent.ACTION_SEND).apply {

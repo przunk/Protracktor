@@ -165,6 +165,11 @@ fun ProtracktorApp(
         }
     }
 
+    // The scanner is a full-screen destination like Browse and Settings, and back leaves it -- the
+    // one rule this shell has (`docs/OPEN_QUESTIONS.md` Q1).
+    var scanning by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) { viewModel.scan.collect { scanning = true } }
+
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     var pendingSwitch by remember { mutableStateOf<Long?>(null) }
@@ -352,7 +357,16 @@ fun ProtracktorApp(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
     ) { insets ->
-        if (showSettings) {
+        if (scanning) {
+            ScannerScreen(
+                contentPadding = insets,
+                onScanned = { endpoint ->
+                    scanning = false
+                    viewModel.pairWith(endpoint)
+                },
+                onCancel = { scanning = false },
+            )
+        } else if (showSettings) {
             // The storage figures are read by `refreshCatalogues`, which until now only ran when
             // somebody opened the online catalogues. Settings can be reached without ever going
             // near Browse, and a storage section reporting zero because nobody asked would be
@@ -453,6 +467,10 @@ fun ProtracktorApp(
     // navigation follows.
     if (showSettings) {
         BackHandler { showSettings = false }
+    }
+
+    if (scanning) {
+        BackHandler { scanning = false }
     }
 
     if (showBrowse) {

@@ -33,6 +33,7 @@ object Appearance {
     private const val THEME = "app_theme"
     private const val DYNAMIC = "dynamic_colour"
     private const val WEB_PLAYER = "web_player_base"
+    private const val PAIRED = "paired_endpoint"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -51,6 +52,22 @@ object Appearance {
     fun webPlayer(context: Context): String =
         prefs(context).getString(WEB_PLAYER, null)?.takeIf { it.isNotBlank() }
             ?: com.przunk.protracktor.player.QueueLink.DEFAULT_BASE
+
+    /**
+     * The browser this phone is paired with, or null.
+     *
+     * Remembered so scanning happens once rather than once per playlist. It goes stale when the page
+     * is served somewhere else; the page keeps its room across reloads, so an ordinary refresh does
+     * not break it (`docs/PLAN_HANDOFF.md` §3 H2).
+     */
+    fun pairedEndpoint(context: Context): String? =
+        prefs(context).getString(PAIRED, null)?.takeIf { it.isNotBlank() }
+
+    fun rememberPairing(context: Context, endpoint: String?) {
+        prefs(context).edit().apply {
+            if (endpoint.isNullOrBlank()) remove(PAIRED) else putString(PAIRED, endpoint)
+        }.apply()
+    }
 
     fun selectWebPlayer(context: Context, base: String): Boolean {
         if (webPlayer(context) == base) return false
