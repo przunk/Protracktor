@@ -63,10 +63,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun downloadTrackMetadata() = controller.downloadTrackMetadata()
     fun downloadFavourites() = controller.downloadFavourites()
 
+    /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
+    fun playExternal(uri: android.net.Uri, name: String? = null) {
+        ensureServiceRunning()
+        controller.playExternal(uri, name)
+    }
+
     // Giving disk back, one copy at a time (`docs/ARCHITECTURE.md` §19).
     fun clearFetchedCache() = controller.clearFetchedCache()
     fun deleteCatalogueIndex(catalogueId: String) = controller.deleteCatalogueIndex(catalogueId)
     fun clearSongLengths() = controller.clearSongLengths()
+    fun clearTrackMetadata() = controller.clearTrackMetadata()
+    fun clearFavourites() = controller.clearFavourites()
 
     // The sc68 replay routines the app does not ship (`docs/LICENSES.md`).
     /** Re-reads what is stored. Settings shows those numbers and can be opened without Browse. */

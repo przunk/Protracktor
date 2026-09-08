@@ -54,6 +54,8 @@ fun SettingsScreen(
     replayBytes: Long,
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
+    trackMetadataCount: Int,
+    favouriteCount: Int,
     contentPadding: PaddingValues,
     selectedTheme: AppTheme,
     dynamicColour: Boolean,
@@ -64,6 +66,8 @@ fun SettingsScreen(
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
+    onClearTrackMetadata: () -> Unit,
+    onClearFavourites: () -> Unit,
     onDeleteReplays: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -155,9 +159,13 @@ fun SettingsScreen(
                 replayBytes = replayBytes,
                 catalogues = catalogues,
                 songLengthCount = songLengthCount,
+                trackMetadataCount = trackMetadataCount,
+                favouriteCount = favouriteCount,
                 onClearCache = onClearCache,
                 onDeleteIndex = onDeleteIndex,
                 onClearSongLengths = onClearSongLengths,
+                onClearTrackMetadata = onClearTrackMetadata,
+                onClearFavourites = onClearFavourites,
                 onDeleteReplays = onDeleteReplays,
             )
         }

@@ -50,9 +50,13 @@ fun StorageSection(
     replayBytes: Long,
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
+    trackMetadataCount: Int,
+    favouriteCount: Int,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
     onClearSongLengths: () -> Unit,
+    onClearTrackMetadata: () -> Unit,
+    onClearFavourites: () -> Unit,
     onDeleteReplays: () -> Unit,
 ) {
     var confirming by remember { mutableStateOf<Confirmation?>(null) }
@@ -61,7 +65,7 @@ fun StorageSection(
         !it.isOnlineOnly && (it.trackCount > 0 || (archiveBytes[it.id] ?: 0L) > 0L)
     }
     if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0 && databaseBytes <= 0 &&
-        replayCount <= 0
+        replayCount <= 0 && trackMetadataCount <= 0 && favouriteCount <= 0
     ) return
 
     HorizontalDivider()
@@ -141,6 +145,44 @@ fun StorageSection(
                     title = songLengthsName,
                     body = R.string.storage_confirm_song_lengths,
                     act = onClearSongLengths,
+                )
+            },
+        )
+    }
+
+    // The two downloads that arrived after this screen was written, and had no row until
+    // 2026-09-08. Neither could be deleted; worse, the song-lengths button quietly deleted the
+    // metadata as well while naming only the lengths. A download the app cannot show and cannot
+    // remove is a download the user cannot reason about.
+    if (trackMetadataCount > 0) {
+        val metadataName = stringResource(R.string.track_metadata_title)
+        StorageRow(
+            title = metadataName,
+            detail = pluralStringResource(
+                R.plurals.track_metadata_count, trackMetadataCount, trackMetadataCount
+            ),
+            onDelete = {
+                confirming = Confirmation(
+                    title = metadataName,
+                    body = R.string.storage_confirm_track_metadata,
+                    act = onClearTrackMetadata,
+                )
+            },
+        )
+    }
+
+    if (favouriteCount > 0) {
+        val favouritesName = stringResource(R.string.favourites_title)
+        StorageRow(
+            title = favouritesName,
+            detail = pluralStringResource(
+                R.plurals.favourites_listed, favouriteCount, favouriteCount
+            ),
+            onDelete = {
+                confirming = Confirmation(
+                    title = favouritesName,
+                    body = R.string.storage_confirm_favourites,
+                    act = onClearFavourites,
                 )
             },
         )

@@ -10,6 +10,41 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B28. The Mod Archive gives us no artist
+
+*Found 2026-09-08 while working out why "more from this author" did nothing for one of its tracks
+(`docs/STATUS.md` C19). Not the owner's request — a consequence he should get to decide about.*
+
+**Every tune from The Mod Archive has an empty author, everywhere in the app.** The parser sets
+`author = ""` and it is not being lazy: a search result row carries a title, a format icon and a
+module id, and the artist is simply not in the HTML it returns. So the playlist row, the information
+panel and the Now Playing screen all show nothing for those tracks, and no amount of care elsewhere
+changes that.
+
+**The name is on the module's own page**, at `index.php?request=view_by_moduleid&query=<id>` — which
+means a second request and a second HTML parse **per track**, against a page nobody publishes a
+contract for. That is the whole cost, and it is worth stating plainly before anyone starts:
+
+- **Not during search.** Twenty results would be twenty page fetches before the list could be drawn,
+  on somebody's mobile connection. The list has to appear first.
+- **On demand, then.** Either when a track is opened — the information panel is where an absent
+  author is most visible — or when it is played, filling the field a moment late.
+- **Cached, once fetched**, in the same table as the songdb metadata or beside it. The answer does
+  not change, and asking twice for one module is asking their site to do our bookkeeping.
+
+**The alternative is to leave it blank and say why.** "The Mod Archive does not publish the artist
+in its search results" is a true sentence and costs nothing to show, and there is an argument that a
+player has no business scraping a page per track to fill a field. Worth deciding before building,
+because the scraping version is the kind of thing that works for a year and then breaks silently on
+a redesign.
+
+**A third option exists and is better if it holds:** the songdb metadata table is keyed by MD5 and
+covers around 400 archives. If it names artists for modules The Mod Archive serves, the answer is
+already on the device after one download the app already offers — no scraping, no second request.
+That should be measured before either of the above is built.
+
+---
+
 ## B27. ~~Random, but only tunes considered good~~ — DONE 2026-09-08
 
 *owner, 2026-09-08: "random good" — raised in the same breath as B22, which is why the scope became
@@ -142,7 +177,7 @@ was believed.
 Android version. Several manufacturers ignore it. The design does not depend on it — the square is
 coloured either way — but the "grey" half of the complaint does.
 
-## B26. The cache belongs in Settings, not in Browse
+## B26. ~~The cache belongs in Settings, not in Browse~~ — DONE, and the premise had gone stale
 
 *owner, 2026-09-07: show the app's cache in Settings and let it be cleared — "may we already have
 this?"*
@@ -164,6 +199,20 @@ Three ways out, and the third is probably right:
 - **A one-line summary in Settings that opens the existing screen.** "Storage — 210 MB" leading to
   what already exists. Settings answers the question, Browse keeps the tool, and nothing is built
   twice.
+
+### Checked 2026-09-08 before starting: it had already moved
+
+`StorageSection` is called from `SettingsScreen` and from nowhere else. The screen this entry says
+lives in Browse lives in Settings, which is where the owner looked and where he said it belonged;
+the entry describes a state that no longer existed when it was written down.
+
+**What was actually missing was smaller and worse.** The two newest downloads — the songdb metadata
+(15 MB, 380,282 rows) and Modland's favourites — had no row: no size, no delete, nothing on the one
+screen that answers "what is this app keeping". And the song-lengths delete quietly cleared the
+metadata table as well, while reporting only "Song lengths deleted": the metadata had been hung on
+the nearest existing hook rather than given its own. Three separate clears now, each naming what it
+removed, and deleting the favourites puts Random back to `Everything` — a scope pointing at a list
+that has just gone would draw nothing, and the chip that set it is disabled the moment it goes.
 
 ## B25. A swipe on a track row — to discuss
 
@@ -369,7 +418,7 @@ files this build claims, because `Catalogue.parseIndex` is handed a `keep` predi
 rows is a count of tunes that will open. A hard-coded flag would have been wrong the day after AHX
 landed — and one did land the day before.
 
-## B24. Open a chiptune link with Protracktor
+## B24. ~~Open a chiptune link with Protracktor~~ — DONE 2026-09-08, the file half
 
 *owner, 2026-09-05: somebody sends a link to `Nukes_Chiptune.sndh`, he taps it, and his player opens
 and plays it.*
@@ -409,6 +458,33 @@ belongs in whatever text offers it.
 **Worth checking on a device before committing to either**, because both claims above are about
 platform behaviour that varies with version and manufacturer: whether a `content://` open reaches us
 with a usable name, and what a tapped `.sndh` link actually does on his phone today.
+
+### Built 2026-09-08 — and the entry's own advice was taken
+
+**The file case, as this entry recommended.** `ACTION_VIEW` and `ACTION_SEND` for `content://` and
+`file://`, matched by mime type — `audio/*` and `application/octet-stream`, because a document URI
+usually carries no extension anywhere in it and octet-stream is what a chiptune is nearly always
+labelled. That is as good as the platform allows, and it means Protracktor appears for some files it
+cannot play. It says so plainly when it opens one, which is the honest half of that trade.
+
+The link case is there too, with three `pathPattern`s per extension for the dot-counting trap this
+entry described, and with no illusion attached: on Android 12 and later an unverified web link opens
+the browser with no chooser, so what this buys is *Open by default → Add link*, once, per domain.
+
+**The playing half was free, as predicted; the name was not.** `loadBytes` already reads a
+`content://` through the resolver, so nothing new was needed to get the bytes. But four backends
+choose a loader by the file's *name*, and a document URI often has none — so the app asks the
+provider for `OpenableColumns.DISPLAY_NAME` first. Without that a perfectly good `.sndh` arrives as
+a nameless blob and is declined by everything.
+
+**What was not free: a transient track had meant one thing.** `randomMode` was literally
+`transient != null`, so a file handed to us would have put the app in Random — next rolling the
+dice, and a scrim over the playlist reading "Next picks another" when nothing follows at all. There
+is an `externalOpen` flag beside the transient now, and next, previous, the read-ahead and the
+end-of-track handler each ask it. One file arrived; that is the whole of it.
+
+**Not done, and deliberately:** no `assetlinks.json`, because we own none of these domains, and no
+uppercase `pathPattern`s, which would double the largest block in the manifest to catch `.MOD`.
 
 ## B20. ~~The year a tune was released~~ — DONE 2026-09-06 for Now Playing and the dock
 

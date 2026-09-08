@@ -409,6 +409,30 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C19. ~~"More from this author" offered itself where it could never work~~ — FIXED 2026-09-08
+
+*Owner, 2026-09-08: the action did nothing for a track added from search the day before —
+"…is not in the mod.archive index".*
+
+**The Mod Archive is searched live and has no index at all.** It publishes no file to download, so
+`catalogue_tracks` never holds a row for it; the lookup this action does could not have succeeded
+for one of its tracks on any day. Worse, its search result rows carry a title, a format and a module
+id and **no artist** — so there is not even a name to search by instead.
+
+The action was gated on "did this come from a catalogue", which The Mod Archive answers yes to. It
+is gated on "…from a catalogue with an index" now, and is simply absent for a live-search one, the
+same way it is absent for a local file and for the same reason: there is nowhere to go.
+
+**Two wrong messages were behind it, one of them mine from an hour earlier.** The original said
+"Only tracks from an online catalogue can do that", which was untrue. Splitting that produced "not
+in the ${'$'}{catalogue} index — index it to jump to the author", which is right for a Modland track whose
+index was deleted and **wrong here**, because The Mod Archive cannot be indexed. Both survive, for
+the cases they are actually about, behind a gate that stops either being shown to a live-search
+track.
+
+The owner's report contained the answer: *"a dodałem go wczoraj z wyszukiwania"*. The catalogue was
+in the message the whole time.
+
 ### C18. ~~A downgrade left an app that could not start~~ — FIXED 2026-09-08
 
 *Found while adding schema 12, by reading the method next to the one being changed.*

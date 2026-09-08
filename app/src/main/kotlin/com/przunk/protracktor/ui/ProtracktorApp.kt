@@ -81,10 +81,27 @@ fun ProtracktorApp(
     onThemeSelected: (AppTheme) -> Unit = {},
     dynamicColour: Boolean = true,
     onDynamicColourChanged: (Boolean) -> Unit = {},
+    /**
+     * A file another app asked us to open, or null.
+     *
+     * Passed in rather than read here, because the intent belongs to the activity and arrives twice
+     * over: once in `onCreate` and again in `onNewIntent` when the app is already running.
+     * [onExternalOpened] is what stops the same tune restarting on every recomposition.
+     */
+    externalOpen: android.net.Uri? = null,
+    onExternalOpened: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
+
+    // Keyed on the URI so the same file opened twice in a row still plays, and a recomposition
+    // caused by anything else does not restart it.
+    LaunchedEffect(externalOpen) {
+        val uri = externalOpen ?: return@LaunchedEffect
+        viewModel.playExternal(uri)
+        onExternalOpened()
+    }
 
     // **Saved, not merely remembered.** Which full-screen destination is open is navigation state,
     // and it has to survive the activity being rebuilt. Changing the language or the theme calls
@@ -339,6 +356,8 @@ fun ProtracktorApp(
                 replayBytes = browse.replayBytes,
                 catalogues = browse.catalogues,
                 songLengthCount = browse.songLengthCount,
+                trackMetadataCount = browse.trackMetadataCount,
+                favouriteCount = browse.favouritesListed,
                 contentPadding = insets,
                 selectedTheme = selectedTheme,
                 dynamicColour = dynamicColour,
@@ -349,6 +368,8 @@ fun ProtracktorApp(
                 onClearCache = viewModel::clearFetchedCache,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,
                 onClearSongLengths = viewModel::clearSongLengths,
+                onClearTrackMetadata = viewModel::clearTrackMetadata,
+                onClearFavourites = viewModel::clearFavourites,
                 onDeleteReplays = viewModel::deleteReplays,
             )
         } else if (showBrowse) {
@@ -461,7 +482,7 @@ fun ProtracktorApp(
                 // Random the playlist is behind glass and the row menu cannot be reached at all,
                 // and a tune played at random is exactly the one you want to ask this about.
                 onShowNeighbours = state.current
-                    ?.takeIf { Catalogue.owning(it.id) != null }
+                    ?.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                     ?.let { track ->
                         {
                             showNowPlaying = false
