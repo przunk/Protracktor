@@ -597,9 +597,11 @@ did not survive it. Left standing rather than edited, because the plan explains 
 
 - **sc68 does have a WebAssembly build** — and one based on 3.0.0b, the version we moved to two days
   after this was written.
-- **"`PlayQueue` and `SchemaSql`" was far too modest.** `PlaybackController` is 2,963 lines and
-  touches Android in six imports and eleven expressions; roughly 5,400 lines would carry over, not
-  a few hundred.
+- **"`PlayQueue` and `SchemaSql`" was far too modest.** `PlaybackController` is nearly three
+  thousand lines and imports Android six times; roughly 5,000 lines would carry over, not a few
+  hundred. (The first version of this correction said 5,400 and counted imports alone. Portability
+  turned out to be a property of the *graph*: that file imports 26 project types, ten of them
+  Android-bound, and holds a `Context` it uses 41 times. `PLAN_WEB.md` §3 has the revision.)
 - The third sentence — that an account is a different kind of project — was right, and the plan's
   §8 is about the part of it nobody had looked at: **a playlist that mixes a local file with a
   catalogue track cannot arrive intact in a browser**, and the obvious implementation loses rows
