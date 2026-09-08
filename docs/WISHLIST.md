@@ -780,6 +780,32 @@ different kind of project from an app that reads files off a phone. The parts th
 over unchanged are the ones already kept free of Android: `PlayQueue`, and the schema in
 `SchemaSql`.
 
+**Expanded 2026-09-08 into `docs/PLAN_WEB.md`**, at the owner's word, and two of the sentences above
+did not survive it. Left standing rather than edited, because the plan explains what was wrong:
+
+- **sc68 does have a WebAssembly build** — and one based on 3.0.0b, the version we moved to two days
+  after this was written.
+- **"`PlayQueue` and `SchemaSql`" was far too modest.** `PlaybackController` is nearly three
+  thousand lines and imports Android six times; roughly 5,000 lines would carry over, not a few
+  hundred. (The first version of this correction said 5,400 and counted imports alone. Portability
+  turned out to be a property of the *graph*: that file imports 26 project types, ten of them
+  Android-bound, and holds a `Context` it uses 41 times. `PLAN_WEB.md` §3 has the revision.)
+- The third sentence — that an account is a different kind of project — was right, and the plan's
+  §8 is about the part of it nobody had looked at: **a playlist that mixes a local file with a
+  catalogue track cannot arrive intact in a browser**, and the obvious implementation loses rows
+  without saying so.
+
+The plan also finds that five of the seven hosts we fetch from already permit a browser to read them
+directly, which was expected to be the wall and is not. It remains a wish; nothing is decided.
+
+**And the account may not be needed at all** — `docs/PLAN_HANDOFF.md`, 2026-09-08, written after the
+owner said what the wish was actually for: *play it in a browser at work, and be able to send music
+to it from the phone, ideally with shallow pairing and no accounts.* What has to cross is a
+**pointer, not a sound**: a fifty-track playlist is 1,992 characters compressed into a URL fragment,
+against a megabyte of audio, and the browser may fetch the audio itself. So the first useful step has
+no server in it at all, and the account this entry is named after turns out to be a thing the phone
+already is.
+
 ## B6. Fold hard-panned channels together
 
 *owner, 2026-09-01.*
