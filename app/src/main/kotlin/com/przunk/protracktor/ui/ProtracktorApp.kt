@@ -93,6 +93,8 @@ fun ProtracktorApp(
     // they had just been changing the setting. Rotation lost the same thing, silently, and had
     // done all along.
     var showBrowse by rememberSaveable { mutableStateOf(false) }
+    // Not saveable: a sheet asking a question should not survive a rotation as an unanswered one.
+    var choosingRandomScope by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -367,6 +369,7 @@ fun ProtracktorApp(
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
                 onRandom = { viewModel.playRandom(); showBrowse = false },
+                onChooseRandomScope = { choosingRandomScope = true },
                 onQueryChange = viewModel::setQuery,
                 onScope = viewModel::setSearchScope,
                 onTogglePlatform = viewModel::toggleSearchPlatform,
@@ -418,6 +421,17 @@ fun ProtracktorApp(
 
     if (showBrowse) {
         BackHandler { if (!viewModel.browseBack()) showBrowse = false }
+
+        if (choosingRandomScope) {
+            RandomScopeSheet(
+                browse = browse,
+                onPick = {
+                    viewModel.setRandomScope(it)
+                    choosingRandomScope = false
+                },
+                onDismiss = { choosingRandomScope = false },
+            )
+        }
     }
 
     if (showNowPlaying) {

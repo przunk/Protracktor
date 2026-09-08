@@ -121,7 +121,7 @@ because the lists differ in both respects.
 **Deferred by the owner on the day it was raised.** Recorded so the reasoning survives the
 conversation.
 
-## B22. Random, but within something
+## B22. ~~Random, but within something~~ — DONE 2026-09-08
 
 *owner, 2026-09-05: random for a particular platform, author or other domain.*
 
@@ -143,6 +143,36 @@ needs somewhere to say what *this* is. Three shapes, and they are not equal:
 
 **Worth deciding with B23**, because "platform" as a way of narrowing Random and "platform" as a way
 of narrowing search want the same list of platforms to exist.
+
+### Built 2026-09-08 — the first of the three shapes, and the idiom was already here
+
+**"From where you already are" won**, as this entry guessed it would, but the deciding argument
+arrived later than this was written. By the time it was built the app had two idioms it did not have
+when the question was asked: **press does the plain thing, hold does the qualified one** (the
+transport gained it that morning), and **the control states its own scope in words** (the search
+field's label, which is what made an empty selection safe again).
+
+So: tap the dice to play something, **hold it to choose where from**, and the row says which —
+`Random · Amiga`. Nothing new appears at rest, which matters in a screen the owner has already
+called cluttered once; and the scope cannot become an invisible mode, because the row is where you
+would go to press it anyway.
+
+**The picker is the search filter's chips, whole** — same `Platforms` table, same counts, same rule
+that a platform with nothing indexed is drawn disabled. One vocabulary for "which machine".
+
+`RandomScope` is a type rather than a nullable platform id, because **the owner's other wish that
+day is another case of it**: "random, but only tunes considered good" wants Modland's own
+favourites — 991 tunes of which this build plays 924, measured — and that arrives as a second scope
+rather than a second mechanism. Not built: it needs its own download and table, the same piece as
+the songdb metadata.
+
+**Not persisted, deliberately.** After a restart the dice means anything again. A scope that
+outlives the session is an invisible mode, and the subtitle only defends against that while somebody
+is looking at it.
+
+**One thing that would have looked like a bug.** Random reads three picks ahead so a track can be
+fetched before it is wanted. Choosing "Amiga" without discarding those would play three C64 tunes
+first — a change that looks ignored. `setRandomScope` throws the read-ahead away.
 
 ## B23. ~~Search by platform, not by service~~ — DONE 2026-09-06
 

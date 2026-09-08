@@ -253,4 +253,9 @@
         <item quantity="one">%1$d replay routine</item>
         <item quantity="other">%1$d replay routines</item>
     </plurals>
+    <string name="domain_random_title_scoped">Random · %1$s</string>
+    <string name="domain_random_body_scoped">Hold to change what it picks from</string>
+    <string name="a11y_choose_random_scope">Choose what Random picks from</string>
+    <string name="random_scope_title">Random picks from</string>
+    <string name="random_scope_everything">Everything</string>
 </resources>

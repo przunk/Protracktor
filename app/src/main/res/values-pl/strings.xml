@@ -267,4 +267,9 @@
         <item quantity="other">%1$d opisanych utworów</item>
     </plurals>
     <string name="a11y_download_track_metadata">Pobierz metadane utworów</string>
+    <string name="domain_random_title_scoped">Losowo · %1$s</string>
+    <string name="domain_random_body_scoped">Przytrzymaj, żeby zmienić źródło losowania</string>
+    <string name="a11y_choose_random_scope">Wybierz, z czego losować</string>
+    <string name="random_scope_title">Losuj z</string>
+    <string name="random_scope_everything">Wszystkiego</string>
 </resources>

@@ -304,19 +304,33 @@ class CatalogueStore(context: Context) {
      * batch. `ORDER BY RANDOM()` scans the table, so asking once for three costs what asking once
      * for one does -- and a third of what three separate calls would.
      */
-    suspend fun randomSample(count: Int, catalogueIds: Set<String> = emptySet()): List<CatalogueTrack> =
+    /**
+     * @param formats when non-empty, Modland directory names — the same `format` column the search
+     * filter narrows by, and the same set `Platforms` produces. Narrowing the dice to one machine
+     * is this clause and nothing else.
+     */
+    suspend fun randomSample(
+        count: Int,
+        catalogueIds: Set<String> = emptySet(),
+        formats: Set<String> = emptySet(),
+    ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             if (count <= 0) return@withContext emptyList()
-            val scope = if (catalogueIds.isEmpty()) {
-                "" to emptyArray<String>()
-            } else {
-                val placeholders = catalogueIds.joinToString(",") { "?" }
-                " WHERE catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
+            val clauses = mutableListOf<String>()
+            val arguments = mutableListOf<String>()
+            if (catalogueIds.isNotEmpty()) {
+                clauses += "catalogue_id IN (${catalogueIds.joinToString(",") { "?" }})"
+                arguments += catalogueIds
             }
+            if (formats.isNotEmpty()) {
+                clauses += "format COLLATE NOCASE IN (${formats.joinToString(",") { "?" }})"
+                arguments += formats
+            }
+            val where = if (clauses.isEmpty()) "" else " WHERE " + clauses.joinToString(" AND ")
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks" +
-                    "${scope.first} ORDER BY RANDOM() LIMIT $count",
-                scope.second,
+                    "$where ORDER BY RANDOM() LIMIT $count",
+                arguments.toTypedArray(),
             ).use { it.toTracks() }
         }
 

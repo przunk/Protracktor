@@ -264,6 +264,8 @@ data class BrowseState(
      * than declared: a hard-coded "supported" list would have been wrong the day after AHX landed.
      */
     val platformCounts: Map<String, Int> = emptyMap(),
+    /** What the dice picks from. Not persisted: see [RandomScope]. */
+    val randomScope: RandomScope = RandomScope.Everything,
     /**
      * Whether a search has been run for the scope now shown.
      *
@@ -1744,7 +1746,29 @@ class PlaybackController private constructor(private val context: Context) {
     private suspend fun fillRandomQueue() {
         val short = READ_AHEAD - (randomHistory.lastIndex - randomCursor)
         if (short <= 0) return
-        randomHistory += catalogues.randomSample(short).map(::toTrackRef)
+        // The scope is read here rather than captured when Random started, so changing it takes
+        // effect on the next pick instead of at the next session. Picks already read ahead keep the
+        // scope they were drawn under, which is why the row says what is set rather than what is
+        // playing.
+        val formats = when (val scope = _browse.value.randomScope) {
+            is RandomScope.Everything -> emptySet()
+            is RandomScope.OnPlatform -> Platforms.catalogueFormatsOf(setOf(scope.platformId))
+        }
+        randomHistory += catalogues.randomSample(short, formats = formats).map(::toTrackRef)
+    }
+
+    /**
+     * Narrows what the dice picks from, and throws away the picks read ahead under the old scope.
+     *
+     * Without the discard, choosing "Amiga" would still play three C64 tunes first — the read-ahead
+     * exists so a pick can be fetched before it is needed, and it is exactly what makes a scope
+     * change look ignored.
+     */
+    fun setRandomScope(scope: RandomScope) {
+        _browse.update { it.copy(randomScope = scope) }
+        if (_state.value.randomMode) {
+            randomHistory.subList(randomCursor + 1, randomHistory.size).clear()
+        }
     }
 
     /**
