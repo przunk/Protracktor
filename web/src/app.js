@@ -97,6 +97,7 @@ async function playAt(next) {
 
   let bytes;
   try {
+    $('sub').textContent = 'fetching…';
     const response = await fetch(entry.url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     bytes = await response.arrayBuffer();
@@ -107,6 +108,9 @@ async function playAt(next) {
     $('sub').textContent = '—';
     return;
   }
+  // Handed over, and the page now waits for the worklet to say `opened` or `failed`. It says which
+  // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
+  $('sub').textContent = `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`;
   node.port.postMessage({ type: 'open', bytes, name: entry.name }, [bytes]);
 }
 

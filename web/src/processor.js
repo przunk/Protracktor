@@ -14,6 +14,57 @@
 
 import EngineModule from '../vendor/engine.mjs';
 
+/**
+ * The globals an `AudioWorkletGlobalScope` does not have, and the engine's runtime expects.
+ *
+ * **This scope is deliberately minimal** -- it exists to run one function on the audio thread, so
+ * it has `sampleRate`, `currentTime` and `currentFrame` and almost nothing else. No `fetch`, no
+ * `URL`, no `XMLHttpRequest`, no `TextEncoder`, no `performance`, no `crypto`. Emscripten's runtime
+ * reaches for two of those unconditionally, so they are provided here rather than rebuilt away:
+ * the alternative is patching generated glue after every build.
+ *
+ * Read out of the generated file rather than guessed at: `performance` and `setTimeout` are used
+ * unguarded, `TextDecoder`, `window` and `navigator` are guarded by `typeof`, and `setTimeout` is
+ * only reached through `Module.setStatus`, which nothing here sets.
+ */
+if (typeof performance === 'undefined') {
+  const origin = Date.now();
+  // `_emscripten_get_now`, which is what `std::chrono::steady_clock` becomes -- and `GmeBackend`
+  // budgets its search for an audible track against a 300 ms deadline, so this has to advance
+  // honestly rather than return a constant.
+  globalThis.performance = { now: () => Date.now() - origin };
+}
+if (typeof crypto === 'undefined') {
+  // `getentropy`. Nothing in a music decoder needs unpredictable bytes, and a worklet has no
+  // `crypto` to give them; this is here so a lazy call cannot abort the runtime.
+  globalThis.crypto = {
+    getRandomValues(view) {
+      for (let i = 0; i < view.length; i++) view[i] = (Math.random() * 256) | 0;
+      return view;
+    },
+  };
+}
+
+/**
+ * UTF-8 with a terminating zero, by hand.
+ *
+ * `TextEncoder` does not exist in an `AudioWorkletGlobalScope`. Filenames here are mostly ASCII and
+ * occasionally not -- Modland has plenty of accented author names -- so this is a real encoder
+ * rather than a `charCodeAt` loop that would corrupt them.
+ */
+function utf8(text) {
+  const bytes = [];
+  for (const character of text) {
+    let code = character.codePointAt(0);
+    if (code < 0x80) bytes.push(code);
+    else if (code < 0x800) bytes.push(0xc0 | (code >> 6), 0x80 | (code & 63));
+    else if (code < 0x10000) bytes.push(0xe0 | (code >> 12), 0x80 | ((code >> 6) & 63), 0x80 | (code & 63));
+    else bytes.push(0xf0 | (code >> 18), 0x80 | ((code >> 12) & 63), 0x80 | ((code >> 6) & 63), 0x80 | (code & 63));
+  }
+  bytes.push(0);
+  return Uint8Array.from(bytes);
+}
+
 class ProtracktorProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
@@ -29,12 +80,35 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
     // in an AudioWorkletGlobalScope, so a build that downloads its own `.wasm` cannot start; the
     // alternative -- base64 inside the JavaScript -- costs a third more bytes and loses the
     // browser's ability to cache the binary separately.
-    EngineModule({ wasmBinary: options.processorOptions.wasmBinary }).then((engine) => {
+    // **Messages that arrive before the engine does are kept, not dropped.** Compiling 2.6 MB of
+    // wasm takes a moment, and the first thing the page does is fetch a track and post it -- which
+    // beat the engine every time, was thrown away by the `if (!e) return` below, and left the page
+    // saying "fetching…" for ever with nothing wrong anywhere the eye could reach.
+    this.pending = [];
+
+    // `locateFile` is not an optimisation here, it is what stops the module ever touching `URL`.
+    // Emscripten's `findWasmBinary()` runs whether or not a binary was handed in, and its fallback
+    // is `new URL("engine.wasm", import.meta.url)` -- and **an AudioWorkletGlobalScope has no
+    // `URL`**. It is a deliberately minimal scope: no `fetch`, no `URL`, no `XMLHttpRequest`, and
+    // no `TextEncoder` either, which is why the name below is encoded by hand. Setting `locateFile`
+    // takes the other branch and the constructor is never reached.
+    EngineModule({
+      wasmBinary: options.processorOptions.wasmBinary,
+      locateFile: (path) => path,
+    }).then((engine) => {
       this.engine = engine;
       this.port.postMessage({ type: 'ready', backends: engine.UTF8ToString(engine._pt_backends()) });
+      const waiting = this.pending;
+      this.pending = null;
+      for (const message of waiting) this.onMessage(message);
+    }).catch((error) => {
+      this.port.postMessage({ type: 'failed', reason: `the engine did not load: ${error}` });
     });
 
-    this.port.onmessage = (event) => this.onMessage(event.data);
+    this.port.onmessage = (event) => {
+      if (this.pending) this.pending.push(event.data);
+      else this.onMessage(event.data);
+    };
   }
 
   onMessage(message) {
@@ -46,7 +120,7 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         const bytes = new Uint8Array(message.bytes);
         const buf = e._malloc(bytes.length);
         e.HEAPU8.set(bytes, buf);
-        const nameBytes = new TextEncoder().encode(message.name + '\0');
+        const nameBytes = utf8(message.name);
         const namePtr = e._malloc(nameBytes.length);
         e.HEAPU8.set(nameBytes, namePtr);
         this.handle = e._pt_open(buf, bytes.length, namePtr);
