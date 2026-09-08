@@ -112,6 +112,26 @@ class QueueLinkTest {
         assertEquals(listOf("Protracker/4-Mat/hi there.mod"), unpack(packed.fragment))
     }
 
+    /**
+     * The page and the pairing address are two paths on one machine, which is what lets a scan
+     * settle both. The owner's tunnel is the case that makes it matter: forty random characters
+     * that change whenever it restarts, and nobody is typing those twice.
+     */
+    @Test
+    fun `the page address sits beside the pairing address`() {
+        val pairing = "https://dallas-retreat-hygiene-advances.trycloudflare.com/pair/" +
+            "0123456789abcdef".repeat(2)
+        assertEquals(
+            "https://dallas-retreat-hygiene-advances.trycloudflare.com/src",
+            pairing.substringBefore("/pair/") + "/src",
+        )
+        val link = QueueLink.linkTo(
+            pairing.substringBefore("/pair/") + "/src",
+            QueueLink.pack(listOf(track("https://modland.com/pub/modules/AHX/Pink/frog.ahx", "frog.ahx"))).fragment,
+        )
+        assertTrue(link, link.startsWith("https://dallas-retreat-hygiene-advances.trycloudflare.com/src/#"))
+    }
+
     @Test
     fun `a non-Modland catalogue keeps its whole URL`() {
         val packed = QueueLink.pack(listOf(track("asma://asma/Games/Rob_Hubbard/tune.sap", "tune.sap")))

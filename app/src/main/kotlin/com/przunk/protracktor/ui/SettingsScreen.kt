@@ -133,7 +133,9 @@ fun SettingsScreen(
         // It changes as the page moves -- a local server today, a tunnel next, a host eventually --
         // which is exactly why it is stored rather than compiled in (`docs/PLAN_HANDOFF.md` §3).
         item {
-            var editing by remember { mutableStateOf(webPlayer) }
+            // Keyed on the stored value, so an address that arrives from a pairing shows up here
+            // instead of the field sitting on a stale copy of what it was built with.
+            var editing by remember(webPlayer) { mutableStateOf(webPlayer) }
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_web_player)) },
                 supportingContent = {
@@ -144,14 +146,15 @@ fun SettingsScreen(
                         )
                         OutlinedTextField(
                             value = editing,
-                            onValueChange = { editing = it },
+                            // **Committed on every keystroke**, and the first version was not: it
+                            // saved only on the keyboard's Done, so typing an address and tapping
+                            // away lost it silently — which is exactly what the owner met. A
+                            // half-typed address costs nothing, because it is read when something
+                            // is sent and not before.
+                            onValueChange = { editing = it; onWebPlayerChanged(it) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                            // Committed when the field loses focus rather than on every keystroke:
-                            // half an address is not an address, and storing one would be storing
-                            // rubbish for as long as it took to finish typing.
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { onWebPlayerChanged(editing) }),
                         )
                     }
                 },

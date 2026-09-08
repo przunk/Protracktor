@@ -283,6 +283,35 @@ routes: `/pair/host`, `/pair/<room>` and `/pair/<room>/events`.
 inside WSL's own network. The server detects this and prints the two commands; without them the
 address in the code is right and the connection still fails, which is the worst kind of wrong.
 
+## 5c. Measured 2026-09-09: server-sent events do not survive a Cloudflare quick tunnel
+
+The owner put the server on a Raspberry Pi 25 km away and reached it through
+`cloudflared tunnel --url`. Pairing worked, the phone reported "sent 19 tracks", and **the page never
+saw them**.
+
+*Measured*, from a third machine, so neither end could be blamed:
+
+| | |
+| --- | --- |
+| locally, `http://localhost:8173` | the listener receives `: open` — 8 bytes — immediately |
+| through the tunnel | **0 bytes**, while the server reports `delivered: 1` |
+
+The server is right and the page is right: the POST reaches a room that has a listener, and the
+events are held in the middle. Two rounds of anti-buffering did not move it — `cache-control:
+no-cache, no-transform` arrives intact (verified in the response headers), `x-accel-buffering: no`
+is stripped by Cloudflare, and two kilobytes of padding changed nothing.
+
+**So `text/event-stream` is not a transport we can rely on**, and this was worth learning before the
+second half of S5 was built on it.
+
+**The answer is long polling**, and it is a smaller change than it sounds: the page asks
+`/pair/<room>/next?since=<n>`, the server holds the request until there is something or twenty-odd
+seconds pass, and replies with an ordinary JSON body. Every proxy in the world forwards a complete
+response; that is the one thing they all agree on. It also survives the reconnection logic already
+in `EventSource` being written by hand, which is the only cost.
+
+Not built yet — found at half past midnight, and this is the kind of change to make awake.
+
 ## 6. Order of work
 
 1. **W1** — `PLAN_WEB.md`'s throwaway: a page you drop a file onto. The byte count is now known

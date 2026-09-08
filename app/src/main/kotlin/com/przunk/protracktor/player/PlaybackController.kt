@@ -1413,7 +1413,17 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** The link, on demand. The transport's idiom: press does the plain thing, hold the qualified one. */
+    /**
+     * Opens the camera whatever is paired already.
+     *
+     * The owner's call, and it is the right one: a hold is for "not the usual thing", and the usual
+     * thing here is sending to the browser already known. What is not usual is **a different
+     * browser** — a tunnel that restarted under a new name, a second machine, a page reopened
+     * somewhere else. Without this the only way to re-pair was to make a send fail first.
+     */
+    fun rescan() = _scan.tryEmit(Unit)
+
+    /** The link, for when there is no camera or no reaching the browser. Offered by the scanner. */
     fun sendQueueAsLink() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {

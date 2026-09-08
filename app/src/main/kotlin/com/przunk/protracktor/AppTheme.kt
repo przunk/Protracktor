@@ -51,7 +51,24 @@ object Appearance {
      */
     fun webPlayer(context: Context): String =
         prefs(context).getString(WEB_PLAYER, null)?.takeIf { it.isNotBlank() }
+            ?: pairedEndpoint(context)?.let(::pageBesidePairing)
             ?: com.przunk.protracktor.player.QueueLink.DEFAULT_BASE
+
+    /**
+     * The page that goes with a pairing address.
+     *
+     * **Because they are always the same machine.** A pairing address is
+     * `<origin>/pair/<32 hex>`, and the page it belongs to is `<origin>/src` — the QR came off that
+     * page. So once a browser has been paired, the link on a long press points at it too, with
+     * nothing typed. That matters most where typing is worst: a tunnel's address is forty random
+     * characters and changes when the tunnel restarts.
+     *
+     * An address entered by hand still wins, because somebody who typed one meant it.
+     */
+    private fun pageBesidePairing(endpoint: String): String? {
+        val origin = endpoint.substringBefore("/pair/")
+        return if (origin == endpoint) null else "$origin/src"
+    }
 
     /**
      * The browser this phone is paired with, or null.
