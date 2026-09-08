@@ -154,14 +154,29 @@ data class PlayerUiState(
      * Asked of the mode rather than always of the queue: during Random the buttons walk the random
      * history, and a queue that happens to be empty must not grey them out.
      */
+    /**
+     * Whether **next** would do anything — a tune inside the file, or the next file.
+     *
+     * The subsong half was missing, and it made the transport disagree with itself: on the last
+     * track of a playlist `next()` would step to subsong two and the button that calls it was
+     * disabled, so a file with 256 tunes in it could only be walked from the Now Playing strip.
+     * The notification reads the same value, so it was wrong there too.
+     */
     val canGoNext: Boolean
+        get() = (playAllSubsongs && subsong + 1 < subsongCount) || canGoNextFile
+
+    val canGoPrevious: Boolean
+        get() = (playAllSubsongs && subsong > 0) || canGoPreviousFile
+
+    /** Whether there is another **file** — what a long press on next asks for. */
+    val canGoNextFile: Boolean
         get() = when {
             randomMode -> true
             searchMode -> resultsQueue?.hasNext == true
             else -> queue.hasNext
         }
 
-    val canGoPrevious: Boolean
+    val canGoPreviousFile: Boolean
         get() = when {
             randomMode -> randomHasPrevious
             searchMode -> resultsQueue?.hasPrevious == true
@@ -2344,6 +2359,21 @@ class PlaybackController private constructor(private val context: Context) {
             selectSubsong(now.subsong + 1)
             return
         }
+        nextFile()
+    }
+
+    /**
+     * Straight to the next file, past whatever is left inside this one.
+     *
+     * A long press on the transport, and the owner's reason is exact: `aleste 2.kss` holds 256
+     * tunes, so leaving it with the ordinary next means 256 presses. Pressing is for the tune you
+     * are on; holding is for the file.
+     *
+     * Deliberately **not** on the notification or a headset button. Those have no long press, and
+     * inventing a double-tap for them would be a second vocabulary for one idea.
+     */
+    fun nextFile() {
+        val now = _state.value
         if (now.transient != null) return randomNext()
         now.resultsQueue?.let { results ->
             if (results.hasNext) playFromResultsQueue(results.next())
@@ -2359,6 +2389,12 @@ class PlaybackController private constructor(private val context: Context) {
             selectSubsong(now.subsong - 1)
             return
         }
+        previousFile()
+    }
+
+    /** Straight to the previous file, past whatever is left inside this one. See [nextFile]. */
+    fun previousFile() {
+        val now = _state.value
         if (now.transient != null) return randomPrevious()
         now.resultsQueue?.let { results ->
             if (results.hasPrevious) playFromResultsQueue(results.previous())

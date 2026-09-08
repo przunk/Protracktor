@@ -4,6 +4,13 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,7 +56,9 @@ fun PlayerDock(
     onBrowse: () -> Unit,
     onPlayPause: () -> Unit,
     onPrevious: () -> Unit,
+    onPreviousFile: () -> Unit,
     onNext: () -> Unit,
+    onNextFile: () -> Unit,
     onShuffle: () -> Unit,
     onRepeat: () -> Unit,
     modifier: Modifier = Modifier,
@@ -212,17 +221,14 @@ fun PlayerDock(
                     onClick = onShuffle,
                 )
 
-                IconButton(
-                    onClick = onPrevious,
+                TransportButton(
+                    icon = PlayerIcons.SkipPrevious,
+                    description = stringResource(R.string.a11y_previous),
+                    longDescription = stringResource(R.string.a11y_previous_file),
                     enabled = state.canGoPrevious,
-                    modifier = Modifier.size(TRANSPORT_TARGET),
-                ) {
-                    Icon(
-                        PlayerIcons.SkipPrevious,
-                        stringResource(R.string.a11y_previous),
-                        modifier = Modifier.size(TRANSPORT_GLYPH),
-                    )
-                }
+                    onClick = onPrevious,
+                    onLongClick = onPreviousFile.takeIf { state.canGoPreviousFile },
+                )
 
                 FilledIconButton(
                     onClick = onPlayPause,
@@ -240,17 +246,14 @@ fun PlayerDock(
                     )
                 }
 
-                IconButton(
-                    onClick = onNext,
+                TransportButton(
+                    icon = PlayerIcons.SkipNext,
+                    description = stringResource(R.string.a11y_next),
+                    longDescription = stringResource(R.string.a11y_next_file),
                     enabled = state.canGoNext,
-                    modifier = Modifier.size(TRANSPORT_TARGET),
-                ) {
-                    Icon(
-                        PlayerIcons.SkipNext,
-                        stringResource(R.string.a11y_next),
-                        modifier = Modifier.size(TRANSPORT_GLYPH),
-                    )
-                }
+                    onClick = onNext,
+                    onLongClick = onNextFile.takeIf { state.canGoNextFile },
+                )
 
                 // Shape carries the mode, not just tint: repeat-one is a different glyph from
                 // repeat-all, so the state survives being read without colour (AGENTS.md §8).
@@ -313,4 +316,63 @@ internal fun formatTime(seconds: Double): String {
     if (seconds.isNaN() || seconds < 0) return "--:--"
     val total = seconds.toInt()
     return "%d:%02d".format(total / 60, total % 60)
+}
+
+/**
+ * Skip forward or back: a press moves by tune, a hold moves by file.
+ *
+ * **Why a hold and not another button.** `aleste 2.kss` holds 256 tunes, so leaving it with the
+ * ordinary next is 256 presses; but a fourth transport control would be on screen always, for a
+ * thing wanted rarely, in the row the owner reads while driving. The hold costs nothing when it is
+ * not used.
+ *
+ * `IconButton` has no long press, so this is the same shape built on `combinedClickable`: the
+ * material target size, a circular ripple, and the disabled tint M3 uses. `onLongClickLabel` is not
+ * decoration — it is what makes the second action reachable by TalkBack, which cannot discover a
+ * gesture the screen does not mention.
+ *
+ * **Haptics on the hold**, because nothing else answers it. A press changes the title; a hold that
+ * did nothing visible for a moment would read as a press that missed (`AGENTS.md` §8).
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TransportButton(
+    icon: ImageVector,
+    description: String,
+    longDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+) {
+    val haptics = rememberHaptics()
+    Box(
+        modifier = Modifier
+            .size(TRANSPORT_TARGET)
+            .clip(CircleShape)
+            .combinedClickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClickLabel = description,
+                onLongClickLabel = longDescription.takeIf { onLongClick != null },
+                onLongClick = onLongClick?.let {
+                    {
+                        haptics.gestureEnd()
+                        it()
+                    }
+                },
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(TRANSPORT_GLYPH),
+            tint = if (enabled) {
+                LocalContentColor.current
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            },
+        )
+    }
 }

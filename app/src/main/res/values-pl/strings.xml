@@ -140,6 +140,8 @@
     <string name="a11y_play">Odtwórz</string>
     <string name="a11y_pause">Pauza</string>
     <string name="a11y_previous">Poprzedni utwór</string>
+    <string name="a11y_next_file">Następny plik, z pominięciem pozostałych utworów w tym</string>
+    <string name="a11y_previous_file">Poprzedni plik</string>
     <string name="a11y_next">Następny utwór</string>
     <string name="a11y_shuffle_off">Losowo wyłączone</string>
     <string name="a11y_shuffle_on">Losowo włączone</string>

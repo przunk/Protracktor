@@ -224,6 +224,8 @@
     <string name="a11y_play">Play</string>
     <string name="a11y_pause">Pause</string>
     <string name="a11y_previous">Previous track</string>
+    <string name="a11y_next_file">Next file, past the tunes left in this one</string>
+    <string name="a11y_previous_file">Previous file</string>
     <string name="a11y_next">Next track</string>
     <string name="a11y_shuffle_off">Shuffle off</string>
     <string name="a11y_shuffle_on">Shuffle on</string>

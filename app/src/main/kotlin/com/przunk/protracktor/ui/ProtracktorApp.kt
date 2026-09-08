@@ -312,7 +312,9 @@ fun ProtracktorApp(
                 onBrowse = openBrowse,
                 onPlayPause = viewModel::togglePlayPause,
                 onPrevious = viewModel::previous,
+            onPreviousFile = viewModel::previousFile,
                 onNext = viewModel::next,
+            onNextFile = viewModel::nextFile,
                 onShuffle = viewModel::toggleShuffle,
                 onRepeat = viewModel::cycleRepeat,
             )

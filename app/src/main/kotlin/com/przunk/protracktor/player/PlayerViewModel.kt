@@ -123,6 +123,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         controller.togglePlayPause()
     }
 
+    fun nextFile() {
+        ensureServiceRunning()
+        controller.nextFile()
+    }
+
+    fun previousFile() {
+        ensureServiceRunning()
+        controller.previousFile()
+    }
+
     fun next() {
         ensureServiceRunning()
         controller.next()
