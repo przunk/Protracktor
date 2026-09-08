@@ -150,7 +150,7 @@
     <string name="domain_online_title">Online catalogues</string>
     <string name="domain_online_body">Browse the archives — indexed once, then browsable offline</string>
     <string name="domain_random_title">Random</string>
-    <string name="domain_random_body">Play something from the indexed catalogues</string>
+    <string name="domain_random_body">Play something from the indexed catalogues. Hold to pick a platform.</string>
     <string name="domain_search_title">Search</string>
     <string name="domain_search_body">Across your library and the catalogues</string>
 
@@ -253,4 +253,9 @@
         <item quantity="one">%1$d replay routine</item>
         <item quantity="other">%1$d replay routines</item>
     </plurals>
+    <string name="domain_random_title_scoped">Random · %1$s</string>
+    <string name="domain_random_body_scoped">Hold to change what it picks from</string>
+    <string name="a11y_choose_random_scope">Choose what Random picks from</string>
+    <string name="random_scope_title">Random picks from</string>
+    <string name="random_scope_everything">Everything</string>
 </resources>

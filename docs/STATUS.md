@@ -409,6 +409,34 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C17. ~~Holding next skipped two files, then four~~ — FIXED 2026-09-08
+
+*Owner, 2026-09-08: "skip next (long press na next) przeskakuje czasem 2 pliki", then, after the
+first fix, "teraz przeskoczyło o 4 do przodu".*
+
+**The first diagnosis was wrong and is recorded here because it was believable.** It said the 200 ms
+position poll saw the outgoing decoder finish while its replacement loaded, and called
+`handleTrackEnded` a second time. It cannot: every skip sets `playing = false` before it starts
+loading, and the poll checks that first. The fix that came with it — the poll deciding nothing while
+a load is in flight — is harmless and stays, but it never was the cause.
+
+The cause is Compose. The dock passed `onLongClick = onNextFile.takeIf { state.canGoNextFile }`,
+which builds a **new lambda on every recomposition**. `combinedClickable` keys its gesture detector
+on the handlers it is given, so a new lambda tears the detector down and starts a fresh one — and a
+detector started while the finger is still down begins timing a new long press from that moment.
+Skipping a file changes the title, the title recomposes the dock, the dock restarts the detector,
+and the detector fires again about every 500 ms for as long as the press is held. Two files for a
+short hold, four for a longer one; the count follows the duration, which is what "teraz o 4" said.
+
+`TransportButton` now takes a plain `onLongClick: () -> Unit` with a separate
+`longClickEnabled: Boolean`, and wraps both handlers in `rememberUpdatedState` + `remember` so the
+modifier is handed one stable lambda for the life of the button while the behaviour behind it stays
+current. `DomainRow` in the browse screen had the same shape and got the same treatment.
+
+**What to take from it:** "sometimes two" invited a race, and a race was duly found. The number
+going to four when the hold got longer was the fact that did not fit, and it was in the second
+report, not the first.
+
 ### C16. ~~One message for four different failures~~ — FIXED 2026-09-07
 
 *Found twice in one day, by the owner and by me, and it cost an hour each time.*

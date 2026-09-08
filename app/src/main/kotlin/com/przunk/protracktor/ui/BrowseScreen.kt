@@ -20,6 +20,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import com.przunk.protracktor.player.Platforms
+import com.przunk.protracktor.player.RandomScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -90,6 +97,7 @@ fun BrowseScreen(
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
+    onChooseRandomScope: () -> Unit,
     onQueryChange: (String) -> Unit,
     onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
@@ -122,7 +130,12 @@ fun BrowseScreen(
         }
 
         when (browse.domain) {
-            BrowseDomain.ROOT -> DomainChooser(onOpenDomain = onOpenDomain, onRandom = onRandom)
+            BrowseDomain.ROOT -> DomainChooser(
+                browse = browse,
+                onOpenDomain = onOpenDomain,
+                onRandom = onRandom,
+                onChooseRandomScope = onChooseRandomScope,
+            )
             BrowseDomain.LOCAL -> LocalDomain(
                 browse = browse,
                 scroll = scroll,
@@ -193,7 +206,12 @@ fun BrowseScreen(
 }
 
 @Composable
-private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> Unit) {
+private fun DomainChooser(
+    browse: BrowseState,
+    onOpenDomain: (BrowseDomain) -> Unit,
+    onRandom: () -> Unit,
+    onChooseRandomScope: () -> Unit,
+) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             DomainRow(
@@ -212,11 +230,23 @@ private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> 
             )
         }
         item {
+            // The scope lives in the title and the subtitle, the way the search field's label
+            // carries what a search covers. A dice that quietly remembered a setting would have
+            // stopped being a dice; saying it out loud is what lets it remember one at all.
+            val platform = (browse.randomScope as? RandomScope.OnPlatform)
+                ?.let { Platforms.byId(it.platformId) }
             DomainRow(
                 icon = PlayerIcons.Dice,
-                title = stringResource(R.string.domain_random_title),
-                subtitle = stringResource(R.string.domain_random_body),
+                title = platform?.let {
+                    stringResource(R.string.domain_random_title_scoped, it.name)
+                } ?: stringResource(R.string.domain_random_title),
+                subtitle = stringResource(
+                    if (platform != null) R.string.domain_random_body_scoped
+                    else R.string.domain_random_body
+                ),
                 onClick = onRandom,
+                onLongClick = onChooseRandomScope,
+                longClickLabel = stringResource(R.string.a11y_choose_random_scope),
             )
         }
         item {
@@ -238,21 +268,91 @@ private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> 
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DomainRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    longClickLabel: String? = null,
 ) {
+    val haptics = rememberHaptics()
+    val currentClick by rememberUpdatedState(onClick)
+    val currentLongClick by rememberUpdatedState(onLongClick)
+    val rememberedClick = remember { { currentClick() } }
+    val rememberedLongClick: () -> Unit = remember {
+        {
+            haptics.gestureEnd()
+            currentLongClick?.invoke()
+        }
+    }
     ListItem(
         headlineContent = { Text(title, style = MaterialTheme.typography.titleMedium) },
         supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
         leadingContent = {
             Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
         },
-        modifier = Modifier.clickable(onClick = onClick),
+        // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so a
+        // row with nothing to hold does not advertise a long press to TalkBack that does nothing.
+        modifier = if (onLongClick == null) {
+            Modifier.clickable(onClick = rememberedClick)
+        } else {
+            // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at length:
+            // a fresh lambda restarts the gesture detector, and a detector restarted under a finger
+            // that is still down starts timing another long press. This row has not been held long
+            // enough to show it, which is not a reason to leave it.
+            Modifier.combinedClickable(
+                onClick = rememberedClick,
+                onLongClickLabel = longClickLabel,
+                onLongClick = rememberedLongClick,
+            )
+        },
     )
+}
+
+/**
+ * Where the dice picks from.
+ *
+ * The **same chips as the search filter**, down to the rule that a platform with nothing indexed is
+ * drawn disabled — one vocabulary for "which machine", not two. `Platforms` and the counts were
+ * built for the search and are reused whole.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+internal fun RandomScopeSheet(
+    browse: BrowseState,
+    onPick: (RandomScope) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text(
+            text = stringResource(R.string.random_scope_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = browse.randomScope is RandomScope.Everything,
+                onClick = { onPick(RandomScope.Everything) },
+                label = { Text(stringResource(R.string.random_scope_everything)) },
+            )
+            Platforms.all.forEach { platform ->
+                val held = browse.platformCounts[platform.id] ?: 0
+                FilterChip(
+                    selected = (browse.randomScope as? RandomScope.OnPlatform)?.platformId == platform.id,
+                    enabled = held > 0,
+                    onClick = { onPick(RandomScope.OnPlatform(platform.id)) },
+                    label = { Text(platform.name) },
+                )
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
 }
 
 // --- local ------------------------------------------------------------------------------------

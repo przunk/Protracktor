@@ -264,6 +264,8 @@ data class BrowseState(
      * than declared: a hard-coded "supported" list would have been wrong the day after AHX landed.
      */
     val platformCounts: Map<String, Int> = emptyMap(),
+    /** What the dice picks from. Not persisted: see [RandomScope]. */
+    val randomScope: RandomScope = RandomScope.Everything,
     /**
      * Whether a search has been run for the scope now shown.
      *
@@ -544,6 +546,13 @@ class PlaybackController private constructor(private val context: Context) {
                 val open = track ?: continue
                 if (!_state.value.playing) continue
 
+                // Nothing is decided about a track that is being replaced. Every skip sets
+                // `playing = false` before the load starts, so the check above already covers this
+                // -- **this line was added on a wrong diagnosis of C17 and kept as belt and
+                // braces**, not because it fixed anything. The real cause was in the gesture, not
+                // in the player: see `PlayerDock.TransportButton`.
+                if (openJob?.isActive == true) continue
+
                 if (open.isFinished()) {
                     handleTrackEnded()
                     continue
@@ -809,7 +818,14 @@ class PlaybackController private constructor(private val context: Context) {
                 refreshPlatformCounts()
             }
             BrowseDomain.HISTORY -> openHistory()
-            BrowseDomain.ROOT -> Unit
+            // The root has a consumer too, and it was missed: Random's scope sheet is opened from
+            // here and draws the same chips. Without the counts every platform reads as "nothing
+            // indexed" and the whole sheet is disabled -- which is what the owner saw.
+            //
+            // Only when they are absent. This is a grouped scan of every catalogue row, the root is
+            // returned to on every step back out of a folder, and the answer only changes when an
+            // index does.
+            BrowseDomain.ROOT -> if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
         }
     }
 
@@ -1366,8 +1382,19 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- online catalogues --------------------------------------------------------------------
 
+    /**
+     * Also drops the platform counts, so the next screen that needs them recounts.
+     *
+     * Every path that changes what is indexed ends here — indexing a catalogue, deleting one, and
+     * the storage screen's clearing. The counts are derived from exactly that, so surviving one of
+     * these would leave a chip disabled after the index that would have lit it, for the rest of the
+     * session.
+     */
     fun refreshCatalogues() {
         scope.launch {
+            // Recounted rather than kept: this runs whenever what is indexed has changed, and the
+            // platform counts are derived from exactly that.
+            refreshPlatformCounts()
             val summaries = catalogues.summaries()
             val lengths = songLengths.count()
             val metadataRows = trackMetadata.count()
@@ -1744,7 +1771,29 @@ class PlaybackController private constructor(private val context: Context) {
     private suspend fun fillRandomQueue() {
         val short = READ_AHEAD - (randomHistory.lastIndex - randomCursor)
         if (short <= 0) return
-        randomHistory += catalogues.randomSample(short).map(::toTrackRef)
+        // The scope is read here rather than captured when Random started, so changing it takes
+        // effect on the next pick instead of at the next session. Picks already read ahead keep the
+        // scope they were drawn under, which is why the row says what is set rather than what is
+        // playing.
+        val formats = when (val scope = _browse.value.randomScope) {
+            is RandomScope.Everything -> emptySet()
+            is RandomScope.OnPlatform -> Platforms.catalogueFormatsOf(setOf(scope.platformId))
+        }
+        randomHistory += catalogues.randomSample(short, formats = formats).map(::toTrackRef)
+    }
+
+    /**
+     * Narrows what the dice picks from, and throws away the picks read ahead under the old scope.
+     *
+     * Without the discard, choosing "Amiga" would still play three C64 tunes first — the read-ahead
+     * exists so a pick can be fetched before it is needed, and it is exactly what makes a scope
+     * change look ignored.
+     */
+    fun setRandomScope(scope: RandomScope) {
+        _browse.update { it.copy(randomScope = scope) }
+        if (_state.value.randomMode) {
+            randomHistory.subList(randomCursor + 1, randomHistory.size).clear()
+        }
     }
 
     /**
@@ -2000,7 +2049,7 @@ class PlaybackController private constructor(private val context: Context) {
         _browse.update { it.copy(searchScope = scope).withoutStaleResults() }
     }
 
-    /** Counts the platform chips, once, when the search screen is opened. */
+    /** Counts the platform chips from the catalogue index, which is what makes a dead chip honest. */
     private fun refreshPlatformCounts() {
         scope.launch {
             val counts = catalogues.formatCounts()
