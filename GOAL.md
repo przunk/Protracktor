@@ -616,7 +616,7 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
 
 ## The list
 
-- [ ] **1. Replace the event stream with long polling**
+- [x] **1. Replace the event stream with long polling** *(done 2026-09-09; verified locally, not yet through the tunnel — the Pi runs its own copy)*
       *First, because nothing else in this round can be seen working without it.* Measured
       2026-09-09 (`docs/PLAN_HANDOFF.md` §5c): `text/event-stream` does not survive a Cloudflare
       quick tunnel — the server reports delivering, the page receives nothing, and two rounds of
