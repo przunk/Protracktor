@@ -60,7 +60,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -118,6 +118,27 @@ if (window.__api) {
     'a file with three tunes gets three subsong buttons');
   check($('sub').textContent.includes('Commodore 64'), 'the dock card says what it is playing');
   check($('seek').disabled === true, 'a backend that cannot seek disables the slider');
+
+  // The two modes, whose rules are PlayQueue.kt's rather than invented here.
+  const api = window.__api;
+  check($('next').disabled === false && $('prev').disabled === true,
+    'at the first of two tracks, next works and previous does not');
+
+  $('repeat').click();                       // off -> all
+  check($('prev').disabled === false, 'repeat-all gives the first track a previous');
+  check($('repeat').classList.contains('on'), 'and the button shows it');
+  $('repeat').click();                       // all -> one
+  check($('repeat').title === 'Repeat one', 'a second press means repeat one');
+  check($('repeat').querySelector('path').getAttribute('d').length > 90,
+    'and the glyph changes, so the mode survives being read without colour');
+  $('repeat').click();                       // one -> off
+  check($('prev').disabled === true, 'off puts previous back where it was');
+
+  $('shuffle').click();
+  check($('shuffle').classList.contains('on'), 'shuffle lights up');
+  check(api.orderLength() === 2, 'and a permutation covers the queue');
+  $('shuffle').click();
+  check(!$('shuffle').classList.contains('on'), 'and turns off again');
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

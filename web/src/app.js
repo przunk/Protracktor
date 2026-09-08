@@ -11,6 +11,19 @@ let context = null;
 let node = null;
 let queue = [];
 let index = -1;
+/**
+ * Play order and the two modes that change it, mirroring `player/PlayQueue.kt`.
+ *
+ * **The rules are the app's, not invented here**, because a control that behaves differently on the
+ * two screens is worse than one that is missing. With shuffle on, *back* returns to the track that
+ * was actually played before — there is no other sensible reading of "previous" in a random order.
+ * With shuffle off, back means the row above, every time: the list is on screen and a button that
+ * disagrees with it looks broken however defensible its bookkeeping.
+ */
+let shuffle = false;
+let repeat = 'off';               // off -> all -> one
+let history = [];                 // what was really played, for `previous` under shuffle
+let order = [];                   // the permutation `next` walks when shuffle is on
 let duration = 0;
 let playing = false;
 let seeking = false;
@@ -95,11 +108,15 @@ function onWorklet(message) {
         $('remaining').textContent = clock(duration);
       }
       break;
-    case 'ended':
-      // What a queue is for. The last track stops rather than wrapping, which is what the phone
-      // does with repeat off.
-      if (index + 1 < queue.length) playAt(index + 1); else setPlaying(false);
+    case 'ended': {
+      // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
+      // takes the next of the permutation, repeat-all wraps, and off stops.
+      const next = afterCurrent();
+      if (next == null) setPlaying(false);
+      else if (next === index && repeat === 'one') playAt(index);
+      else playAt(next);
       break;
+    }
   }
 }
 
@@ -172,6 +189,7 @@ function renderNowPlaying(fields, subsongs, current) {
 async function playAt(next) {
   await start();
   index = next;
+  if (history[history.length - 1] !== next) history.push(next);
   const entry = queue[index];
   render();
   $('title').textContent = entry.name;
@@ -227,8 +245,14 @@ function setPlaying(on) {
   $('playglyph').setAttribute('d', on ? PAUSE_GLYPH : PLAY_GLYPH);
   $('playpause').title = on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
-  $('prev').disabled = index <= 0;
-  $('next').disabled = index + 1 >= queue.length;
+  // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
+  // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
+  $('prev').disabled = beforeCurrent() == null;
+  $('next').disabled = afterCurrent() == null;
+  $('shuffle').disabled = queue.length === 0;
+  $('repeat').disabled = queue.length === 0;
+  $('shuffle').classList.toggle('on', shuffle);
+  $('repeat').classList.toggle('on', repeat !== 'off');
 }
 
 /**
@@ -282,11 +306,51 @@ function sourceOf(url) {
   }
 }
 
+/** A fresh permutation. A new lap is a new shuffle; replaying one order forever is not shuffle. */
+function reshuffle(keep) {
+  order = queue.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  if (keep != null) {
+    // What is playing keeps playing: reordering what comes next is not a reason to interrupt now.
+    order = [keep, ...order.filter((i) => i !== keep)];
+  }
+}
+
+/** What `next` should play, or null at the end. */
+function afterCurrent() {
+  if (repeat === 'one' && index >= 0) return index;
+  if (shuffle) {
+    const at = order.indexOf(index);
+    if (at >= 0 && at + 1 < order.length) return order[at + 1];
+    if (repeat === 'all') { reshuffle(null); return order[0] ?? null; }
+    return null;
+  }
+  if (index + 1 < queue.length) return index + 1;
+  return repeat === 'all' ? 0 : null;
+}
+
+/** What `previous` should play, or null. */
+function beforeCurrent() {
+  if (shuffle) {
+    // The history holds what was really played; the cursor is its end because the page only ever
+    // walks backwards from now.
+    const at = history.lastIndexOf(index);
+    return at > 0 ? history[at - 1] : null;
+  }
+  if (index > 0) return index - 1;
+  return repeat === 'all' && queue.length ? queue.length - 1 : null;
+}
+
 function setQueue(urls) {
   // Entries already built keep their names; bare strings become entries here. The paste box gives
   // strings, a link gives entries with the phone's own titles.
   queue = urls.map((u) => (typeof u === 'string' ? entryFor(u) : u));
   index = -1;
+  history = [];
+  if (shuffle) reshuffle(null);
   render();
   setPlaying(false);
   if (queue.length) playAt(0);
@@ -316,8 +380,28 @@ $('playpause').onclick = async () => {
   setPlaying(!playing);
   node.port.postMessage({ type: playing ? 'play' : 'pause' });
 };
-$('prev').onclick = () => index > 0 && playAt(index - 1);
-$('next').onclick = () => index + 1 < queue.length && playAt(index + 1);
+$('prev').onclick = () => { const p = beforeCurrent(); if (p != null) playAt(p); };
+$('next').onclick = () => { const n = afterCurrent(); if (n != null) playAt(n); };
+
+const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
+const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm6 10H7v-3l-4 4 4 4v-3h10v-6h-2v4zm-2-6h-1l-2 1v1h1.5V15H11v-4z';
+
+$('shuffle').onclick = () => {
+  shuffle = !shuffle;
+  if (shuffle) reshuffle(index >= 0 ? index : null);
+  setPlaying(playing);
+  status(shuffle ? 'Shuffle on' : 'Shuffle off');
+};
+
+$('repeat').onclick = () => {
+  repeat = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+  // **The shape carries the mode, not just the tint**, so it survives being read without colour --
+  // the same rule the dock follows on the phone (AGENTS.md §8).
+  $('repeat').querySelector('path').setAttribute('d', repeat === 'one' ? REPEAT_ONE_GLYPH : REPEAT_GLYPH);
+  $('repeat').title = repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off';
+  setPlaying(playing);
+  status(`Repeat ${repeat}`);
+};
 $('seek').oninput = () => { seeking = true; };
 $('seek').onchange = () => {
   seeking = false;
