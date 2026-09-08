@@ -14,6 +14,7 @@ import com.przunk.protracktor.data.CatalogueGroup
 import com.przunk.protracktor.data.CatalogueStore
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.CatalogueTrack
+import com.przunk.protracktor.data.FavouriteStore
 import com.przunk.protracktor.data.GrantedFolder
 import com.przunk.protracktor.data.HistoryStore
 import com.przunk.protracktor.data.IndexedFile
@@ -236,6 +237,22 @@ data class BrowseState(
     val songLengthCount: Int = 0,
     /** How many tunes the songdb metadata table describes. Zero until it is downloaded. */
     val trackMetadataCount: Int = 0,
+    /**
+     * How many of Modland's favourites this device could play — listed **and** indexed.
+     *
+     * The playable count rather than the published 991, because it is what the dice would actually
+     * draw from, and because it is zero in the two states the Favourites chip must be disabled in:
+     * list not downloaded, and Modland not indexed. One number answers both.
+     */
+    val favouriteCount: Int = 0,
+    /**
+     * How many favourites the downloaded list names at all, indexed or not.
+     *
+     * Kept beside [favouriteCount] because zero has two causes and they need different sentences:
+     * the list was never downloaded, or it was and Modland is not indexed. One number cannot tell
+     * a user which of those to fix, and "download" is the wrong advice for the second.
+     */
+    val favouritesListed: Int = 0,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -356,6 +373,19 @@ class PlaybackController private constructor(private val context: Context) {
         private const val TRACK_METADATA_LABEL = "Track metadata"
         private const val TRACK_METADATA_URL =
             "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/master/tsv/pretty/md5/metadata.tsv"
+
+        /**
+         * Modland's favourites, as `audacious-uade-tools` republishes them.
+         *
+         * The same repository and licence as the metadata table above (GPL-2.0-or-later), chosen
+         * over scraping modland.com for the same reason: it is one file, versioned, and already
+         * parsed into a shape somebody maintains. 142 KB, which is why this one download asks for
+         * no warning about its size.
+         */
+        private const val FAVOURITES_LABEL = "Modland favourites"
+        private const val FAVOURITES_URL =
+            "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/master/" +
+                "songdb/sources/site/modland_favourites.tsv"
 
         private const val SONG_LENGTHS_LABEL = "SID song lengths"
         private const val REPLAYS_LABEL = "Atari ST replay routines"
@@ -487,6 +517,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val remoteFiles = RemoteFiles(context)
     private val songLengths = SongLengthStore(context)
     private val trackMetadata = TrackMetadataStore(context)
+    private val favourites = FavouriteStore(context)
     private val history = HistoryStore(context)
     private val libraryIndex = LibraryIndexStore(context)
 
@@ -825,7 +856,17 @@ class PlaybackController private constructor(private val context: Context) {
             // Only when they are absent. This is a grouped scan of every catalogue row, the root is
             // returned to on every step back out of a folder, and the answer only changes when an
             // index does.
-            BrowseDomain.ROOT -> if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
+            BrowseDomain.ROOT -> {
+                if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
+                // And the favourite count, for the same sheet and the same reason -- **the same
+                // mistake made twice**: it was only ever set by `refreshCatalogues`, which the root
+                // does not call, so the Favourites chip read as "not downloaded" for anyone who had
+                // not visited the catalogue list this session. Unguarded, because unlike the
+                // platform counts it is one `COUNT` over a thousand rows rather than a grouped scan
+                // of half a million, and because zero is a real answer here rather than "not asked
+                // yet" -- a guard on emptiness could never tell the two apart.
+                refreshFavouriteCount()
+            }
         }
     }
 
@@ -1398,6 +1439,11 @@ class PlaybackController private constructor(private val context: Context) {
             val summaries = catalogues.summaries()
             val lengths = songLengths.count()
             val metadataRows = trackMetadata.count()
+            // Counted here, with the index, and not where it is downloaded: it is a fact about the
+            // list *and* the Modland index together, so indexing Modland changes it as surely as
+            // downloading the list does.
+            val favouriteRows = favourites.playableCount()
+            val favouriteRowsListed = favourites.count()
             val storage = withContext(Dispatchers.IO) {
                 remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
             }
@@ -1420,6 +1466,8 @@ class PlaybackController private constructor(private val context: Context) {
                     catalogues = summaries,
                     songLengthCount = lengths,
                     trackMetadataCount = metadataRows,
+                    favouriteCount = favouriteRows,
+                    favouritesListed = favouriteRowsListed,
                     storageBytes = storage,
                     archiveBytes = archives,
                     databaseBytes = database,
@@ -1627,6 +1675,63 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /** Recounts the favourites. Cheap: two `COUNT`s over about a thousand rows. */
+    private fun refreshFavouriteCount() {
+        scope.launch {
+            val playable = favourites.playableCount()
+            val listed = favourites.count()
+            _browse.update { it.copy(favouriteCount = playable, favouritesListed = listed) }
+        }
+    }
+
+    /**
+     * Fetches Modland's favourites list.
+     *
+     * Beside the song lengths and the metadata table because it is the same kind of thing: nothing
+     * in it plays, and it answers a question about files that came from somewhere else. 142 KB, so
+     * it is over before a progress bar would have meant anything.
+     *
+     * **The count reported is the playable one**, not the number of rows written. 991 paths go into
+     * the table; how many the dice can reach depends on the Modland index this device holds, and
+     * the sentence that follows a download should describe what the user just gained rather than
+     * what the file contained.
+     */
+    fun downloadFavourites() {
+        scope.launch {
+            _browse.update { it.copy(indexing = FAVOURITES_LABEL) }
+            val bytes = remoteFiles.fetchIndex(FAVOURITES_URL)
+            if (bytes == null) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("Could not download the favourites.")) }
+                return@launch
+            }
+            val written = favourites.replaceAllFrom(bytes)
+            if (written == 0) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("The favourites list was empty.")) }
+                return@launch
+            }
+            val playable = favourites.playableCount()
+            _browse.update {
+                it.copy(indexing = null, favouriteCount = playable, favouritesListed = written)
+            }
+            _state.update {
+                it.copy(
+                    message = Message(
+                        if (playable > 0) {
+                            "$playable of $written favourites are in your Modland index."
+                        } else {
+                            // The list arrived and reaches nothing. Said plainly, because the
+                            // alternative is a Favourites chip that stays disabled after a
+                            // download that reported success.
+                            "$written favourites downloaded. Index Modland to play them."
+                        }
+                    )
+                )
+            }
+        }
+    }
+
     /**
      * Fetches the sc68 replay routines the app deliberately does not ship.
      *
@@ -1753,9 +1858,16 @@ class PlaybackController private constructor(private val context: Context) {
     private suspend fun advanceRandom() {
         fillRandomQueue()
         if (randomCursor >= randomHistory.lastIndex) {
-            _state.update {
-                it.copy(message = Message("Nothing is indexed yet. Index a catalogue first."))
+            // Which sentence depends on the scope, because "nothing is indexed" is only true of
+            // the unnarrowed dice. The chips are disabled when they would draw nothing, so a
+            // narrowed dice that comes back empty means the index went away underneath it -- and
+            // being told to index a catalogue, having just indexed one, teaches nothing.
+            val empty = when (_browse.value.randomScope) {
+                is RandomScope.Everything -> "Nothing is indexed yet. Index a catalogue first."
+                is RandomScope.OnPlatform -> "Nothing indexed for that platform."
+                is RandomScope.Favourites -> "None of the favourites are in your Modland index."
             }
+            _state.update { it.copy(message = Message(empty)) }
             return
         }
 
@@ -1775,11 +1887,16 @@ class PlaybackController private constructor(private val context: Context) {
         // effect on the next pick instead of at the next session. Picks already read ahead keep the
         // scope they were drawn under, which is why the row says what is set rather than what is
         // playing.
-        val formats = when (val scope = _browse.value.randomScope) {
-            is RandomScope.Everything -> emptySet()
+        val scope = _browse.value.randomScope
+        val formats = when (scope) {
+            is RandomScope.Everything, is RandomScope.Favourites -> emptySet()
             is RandomScope.OnPlatform -> Platforms.catalogueFormatsOf(setOf(scope.platformId))
         }
-        randomHistory += catalogues.randomSample(short, formats = formats).map(::toTrackRef)
+        randomHistory += catalogues.randomSample(
+            short,
+            formats = formats,
+            favouritesOnly = scope is RandomScope.Favourites,
+        ).map(::toTrackRef)
     }
 
     /**

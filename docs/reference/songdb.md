@@ -51,6 +51,24 @@ So the unit of download is a game's whole soundtrack, which is closer to ASMA's 
 Modland's — and it needs LHA extraction, which this app does not have. ZXTune vendors `lhasa` and we
 do not build it.
 
+## Modland's favourites, taken 2026-09-08
+
+`songdb/sources/site/modland_favourites.tsv`, 142 KB. **Not keyed by hash like the rest** — its
+eleventh column is Modland's own path, which is the same string our catalogue index holds, so it
+joins directly.
+
+**Two row shapes, and only one names a file.** 1,163 rows: 991 of eleven columns ending in a path,
+172 of four columns saying how long one subsong is and whether it is `player`, `loop`, `silence` or
+`nosound`. Taking the last field of every row yields 172 entries called "loop".
+
+Measured against `allmods.txt` the same day: **891 of the 991 paths still exist** in Modland, and
+**835 survive the extension filter an index is built through**. The rest are formats no backend here
+claims — `.aon`, `.dw`, `.dm2`, `.hip`, `.cus`, six or fewer each.
+
+By directory, of the 835: ProTracker 562, Fasttracker 2 198, AHX 46, Impulsetracker 11,
+Screamtracker 3 7. **It is an Amiga list**, which is why the Random scope does not offer it
+combined with a platform (`docs/WISHLIST.md` B27).
+
 ## What this does not settle
 
 Whether to depend on a third-party dataset that moves. It is the same bargain as HVSC — fetched on

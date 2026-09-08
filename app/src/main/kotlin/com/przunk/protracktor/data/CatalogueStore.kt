@@ -308,11 +308,18 @@ class CatalogueStore(context: Context) {
      * @param formats when non-empty, Modland directory names — the same `format` column the search
      * filter narrows by, and the same set `Platforms` produces. Narrowing the dice to one machine
      * is this clause and nothing else.
+     * @param favouritesOnly draws from Modland's published favourites instead of the whole index —
+     * the owner's "random, but only tunes considered good". A join rather than a fourth kind of
+     * table: the list is 991 paths, everything else about those tunes is already in this one, and
+     * the join is also what silently drops the favourites this build cannot play. It is deliberately
+     * **not** combined with [formats]: the list is Amiga tracker music almost entirely, so narrowing
+     * it by machine would offer a chip that mostly returns nothing.
      */
     suspend fun randomSample(
         count: Int,
         catalogueIds: Set<String> = emptySet(),
         formats: Set<String> = emptySet(),
+        favouritesOnly: Boolean = false,
     ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             if (count <= 0) return@withContext emptyList()
@@ -325,6 +332,11 @@ class CatalogueStore(context: Context) {
             if (formats.isNotEmpty()) {
                 clauses += "format COLLATE NOCASE IN (${formats.joinToString(",") { "?" }})"
                 arguments += formats
+            }
+            if (favouritesOnly) {
+                clauses += "catalogue_id = ?"
+                arguments += FavouriteStore.MODLAND_ID
+                clauses += "path IN (SELECT path FROM modland_favourites)"
             }
             val where = if (clauses.isEmpty()) "" else " WHERE " + clauses.joinToString(" AND ")
             helper.readableDatabase.rawQuery(

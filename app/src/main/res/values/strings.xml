@@ -258,4 +258,16 @@
     <string name="a11y_choose_random_scope">Choose what Random picks from</string>
     <string name="random_scope_title">Random picks from</string>
     <string name="random_scope_everything">Everything</string>
+    <string name="random_scope_favourites">Favourites</string>
+    <string name="random_scope_favourites_missing">Favourites needs Modland\'s own list — 142 KB, downloaded once.</string>
+    <string name="random_scope_favourites_unindexed">None of the favourites are in your Modland index. Index Modland first.</string>
+    <string name="random_scope_favourites_download">Download</string>
+    <string name="random_scope_favourites_downloading">Downloading…</string>
+    <string name="favourites_title">Modland favourites</string>
+    <string name="favourites_none">Not downloaded — Random can be scoped to them once it is</string>
+    <plurals name="favourites_count">
+        <item quantity="one">%1$d favourite in your index</item>
+        <item quantity="other">%1$d favourites in your index</item>
+    </plurals>
+    <string name="a11y_download_favourites">Download the Modland favourites</string>
 </resources>

@@ -365,6 +365,7 @@ fun ProtracktorApp(
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
                 onDownloadTrackMetadata = viewModel::downloadTrackMetadata,
+                onDownloadFavourites = viewModel::downloadFavourites,
                 onDownloadReplays = viewModel::downloadReplays,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
@@ -425,6 +426,7 @@ fun ProtracktorApp(
         if (choosingRandomScope) {
             RandomScopeSheet(
                 browse = browse,
+                onDownloadFavourites = viewModel::downloadFavourites,
                 onPick = {
                     viewModel.setRandomScope(it)
                     choosingRandomScope = false

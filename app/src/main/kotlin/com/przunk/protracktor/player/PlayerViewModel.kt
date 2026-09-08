@@ -61,6 +61,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun downloadSongLengths() = controller.downloadSongLengths()
     fun downloadTrackMetadata() = controller.downloadTrackMetadata()
+    fun downloadFavourites() = controller.downloadFavourites()
 
     // Giving disk back, one copy at a time (`docs/ARCHITECTURE.md` §19).
     fun clearFetchedCache() = controller.clearFetchedCache()
