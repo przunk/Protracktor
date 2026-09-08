@@ -272,4 +272,14 @@
     <string name="a11y_choose_random_scope">Wybierz, z czego losować</string>
     <string name="random_scope_title">Losuj z</string>
     <string name="random_scope_everything">Wszystkiego</string>
+    <string name="random_scope_favourites">Ulubionych</string>
+    <string name="favourites_title">Ulubione Modlandu</string>
+    <string name="favourites_none">Nie pobrano — po pobraniu można losować tylko z nich</string>
+    <plurals name="favourites_count">
+        <item quantity="few">%1$d ulubione w twoim indeksie</item>
+        <item quantity="many">%1$d ulubionych w twoim indeksie</item>
+        <item quantity="one">%1$d ulubiony w twoim indeksie</item>
+        <item quantity="other">%1$d ulubionych w twoim indeksie</item>
+    </plurals>
+    <string name="a11y_download_favourites">Pobierz ulubione Modlandu</string>
 </resources>

@@ -93,6 +93,7 @@ fun BrowseScreen(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
+    onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
@@ -164,6 +165,7 @@ fun BrowseScreen(
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onDownloadTrackMetadata = onDownloadTrackMetadata,
+                onDownloadFavourites = onDownloadFavourites,
                 onDownloadReplays = onDownloadReplays,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
@@ -233,15 +235,18 @@ private fun DomainChooser(
             // The scope lives in the title and the subtitle, the way the search field's label
             // carries what a search covers. A dice that quietly remembered a setting would have
             // stopped being a dice; saying it out loud is what lets it remember one at all.
-            val platform = (browse.randomScope as? RandomScope.OnPlatform)
-                ?.let { Platforms.byId(it.platformId) }
+            val scopeName = when (val scope = browse.randomScope) {
+                is RandomScope.Everything -> null
+                is RandomScope.Favourites -> stringResource(R.string.random_scope_favourites)
+                is RandomScope.OnPlatform -> Platforms.byId(scope.platformId)?.name
+            }
             DomainRow(
                 icon = PlayerIcons.Dice,
-                title = platform?.let {
-                    stringResource(R.string.domain_random_title_scoped, it.name)
+                title = scopeName?.let {
+                    stringResource(R.string.domain_random_title_scoped, it)
                 } ?: stringResource(R.string.domain_random_title),
                 subtitle = stringResource(
-                    if (platform != null) R.string.domain_random_body_scoped
+                    if (scopeName != null) R.string.domain_random_body_scoped
                     else R.string.domain_random_body
                 ),
                 onClick = onRandom,
@@ -340,6 +345,15 @@ internal fun RandomScopeSheet(
                 selected = browse.randomScope is RandomScope.Everything,
                 onClick = { onPick(RandomScope.Everything) },
                 label = { Text(stringResource(R.string.random_scope_everything)) },
+            )
+            // Beside "Everything" rather than among the platforms, because it is not one: it cuts
+            // across every machine in the list. Disabled with a reason the sheet can show, since a
+            // chip that is simply dead is the complaint the platform chips already earned.
+            FilterChip(
+                selected = browse.randomScope is RandomScope.Favourites,
+                enabled = browse.favouriteCount > 0,
+                onClick = { onPick(RandomScope.Favourites) },
+                label = { Text(stringResource(R.string.random_scope_favourites)) },
             )
             Platforms.all.forEach { platform ->
                 val held = browse.platformCounts[platform.id] ?: 0
@@ -495,6 +509,7 @@ private fun OnlineDomain(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
+    onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
@@ -682,6 +697,38 @@ private fun OnlineDomain(
                             Icon(
                                 PlayerIcons.Download,
                                 stringResource(R.string.a11y_download_track_metadata),
+                            )
+                        }
+                    },
+                )
+            }
+            // The third of the same kind, and the one that changes what plays rather than what is
+            // shown: it is what the dice draws from when Random is scoped to the favourites. The
+            // count is the playable one -- listed and indexed -- because that is the number the
+            // dice obeys, and because it is zero in both of the states that leave the chip dead.
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.favourites_title)) },
+                    supportingContent = {
+                        Text(
+                            if (browse.favouriteCount > 0) {
+                                pluralStringResource(
+                                    R.plurals.favourites_count,
+                                    browse.favouriteCount,
+                                    browse.favouriteCount,
+                                )
+                            } else {
+                                stringResource(R.string.favourites_none)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = { Icon(PlayerIcons.Dice, contentDescription = null) },
+                    trailingContent = {
+                        IconButton(onClick = onDownloadFavourites) {
+                            Icon(
+                                PlayerIcons.Download,
+                                stringResource(R.string.a11y_download_favourites),
                             )
                         }
                     },

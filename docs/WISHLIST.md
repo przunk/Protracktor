@@ -10,6 +10,57 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B27. ~~Random, but only tunes considered good~~ — DONE 2026-09-08
+
+*owner, 2026-09-08: "random good" — raised in the same breath as B22, which is why the scope became
+a type rather than a nullable platform id.*
+
+**The app has no opinion, and inventing one would be worse than having none.** It records no plays
+that mean anything yet, no ratings, no skips-as-signal; a "good" score derived from what happens to
+be indexed would be a number with nothing behind it, and it would look authoritative on screen. The
+honest reading of the wish is *somebody else's judgement, published* — and Modland keeps a
+favourites list, republished by `audacious-uade-tools` as one 142 KB tab-separated file, the same
+repository and licence as the metadata table B20 already brought in.
+
+### The numbers, measured rather than estimated
+
+**991 favourites. 891 still at the path Modland publishes today. 835 that an index built by this
+build keeps.**
+
+The first figure written here on the morning of the 8th was "991 of which this build plays 924",
+and it was an estimate from format names. Checking it properly against `allmods.txt` moved it twice:
+a hundred of the paths have been renamed or removed since the list was compiled, and the extension
+filter drops another fifty-six — `.aon`, `.dw`, `.dm2`, `.hip`, `.cus`, formats no backend here
+claims. The difference is not large and it is the whole difference between a number and a guess.
+
+### It is a join, not a table of tunes
+
+The list is paths, and `catalogue_tracks.path` holds the identical string, so `modland_favourites`
+is one column and the query is one `IN`. That is also what makes it self-correcting: **the join
+silently drops the hundred that moved**, so the dice never hands out a download that 404s, and the
+count the app shows is the playable one rather than the published one. Showing 991 beside a dice
+that draws from 835 is the kind of small lie that costs somebody an evening.
+
+**Keyed by path, unlike its two neighbours.** `song_lengths` and `track_metadata` answer questions
+about a file the user already holds, so they key on its digest. This one answers "what should I
+play", which is a question about the catalogue — and keying it by hash would mean downloading a
+tune to find out whether it was worth downloading.
+
+### One scope, not two filters
+
+`Favourites` sits beside `Everything` rather than among the platform chips, because it is not a
+platform: it cuts across all of them. It is deliberately not combinable with one either — the list
+is Amiga tracker music almost entirely (562 ProTracker, 198 Fasttracker 2, 46 AHX of the 835), so
+`Favourites ∩ C64` would be a chip that returns nothing.
+
+### What the download says
+
+The message after fetching reports the **playable** count, and says something different when it is
+zero: "$n favourites downloaded. Index Modland to play them." A list that arrives and reaches
+nothing otherwise reads as a download that worked and a chip that stayed dead.
+
+---
+
 ## B21. ~~The player notification is grey, tall and belongs to nothing~~ — DONE 2026-09-06
 
 *owner, 2026-09-05: the controls themselves are fine; the bar around them is the problem.*
@@ -162,9 +213,8 @@ that a platform with nothing indexed is drawn disabled. One vocabulary for "whic
 
 `RandomScope` is a type rather than a nullable platform id, because **the owner's other wish that
 day is another case of it**: "random, but only tunes considered good" wants Modland's own
-favourites — 991 tunes of which this build plays 924, measured — and that arrives as a second scope
-rather than a second mechanism. Not built: it needs its own download and table, the same piece as
-the songdb metadata.
+favourites, and that arrives as a second scope rather than a second mechanism. Built the same day —
+B27 above, which also corrects the figure this paragraph first carried: 835 playable, not 924.
 
 **Not persisted, deliberately.** After a restart the dice means anything again. A scope that
 outlives the session is an invisible mode, and the subtitle only defends against that while somebody

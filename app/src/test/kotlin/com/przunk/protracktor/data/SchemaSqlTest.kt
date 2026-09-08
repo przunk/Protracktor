@@ -43,7 +43,7 @@ class SchemaSqlTest {
                 setOf(
                     "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
                     "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
-                    "track_metadata",
+                    "track_metadata", "modland_favourites",
                 ),
                 connection.tableNames(),
             )
@@ -257,6 +257,40 @@ class SchemaSqlTest {
                     val paths = buildList { while (rows.next()) add(rows.getString(1)) }
                     assertEquals(3, paths.size)
                     assertEquals(3, paths.toSet().size)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the favourites clause draws only from tunes that are both listed and indexed`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf("INSERT INTO catalogues (id, display_name) VALUES ('modland', 'Modland')") +
+                    // Three indexed tunes, two of them favourites.
+                    (1..3).map {
+                        "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                            "VALUES ('modland', 'p$it', 'Protracker', 'a', 't$it', 1)"
+                    } +
+                    // A favourite Modland has moved since the list was compiled. A hundred of the
+                    // real 991 are in this state, and the join is what silently drops them -- if it
+                    // did not, the dice would hand out a download that 404s.
+                    listOf(
+                        "INSERT INTO modland_favourites (path) VALUES ('p1')",
+                        "INSERT INTO modland_favourites (path) VALUES ('p2')",
+                        "INSERT INTO modland_favourites (path) VALUES ('gone')",
+                    )
+            )
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT path FROM catalogue_tracks WHERE catalogue_id = 'modland' " +
+                        "AND path IN (SELECT path FROM modland_favourites) ORDER BY path"
+                ).use { rows ->
+                    assertEquals(
+                        listOf("p1", "p2"),
+                        buildList { while (rows.next()) add(rows.getString(1)) },
+                    )
                 }
             }
         }

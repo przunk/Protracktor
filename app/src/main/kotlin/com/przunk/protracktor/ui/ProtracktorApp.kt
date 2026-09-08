@@ -365,6 +365,7 @@ fun ProtracktorApp(
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
                 onDownloadTrackMetadata = viewModel::downloadTrackMetadata,
+                onDownloadFavourites = viewModel::downloadFavourites,
                 onDownloadReplays = viewModel::downloadReplays,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,

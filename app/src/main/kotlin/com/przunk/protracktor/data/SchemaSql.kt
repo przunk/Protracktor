@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 11
+    const val VERSION = 12
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -244,6 +244,29 @@ object SchemaSql {
         """.trimIndent(),
     )
 
+    /**
+     * Modland's own favourites, added at version 12.
+     *
+     * **Paths, not hashes** -- the odd one out among the tables of facts about other people's
+     * files, and deliberately. `track_metadata` and `song_lengths` answer questions about a file
+     * the user already has, so they key on its digest; this one answers "what should I play", which
+     * is a question about the *catalogue*, and the catalogue's identity is the path. Keying on the
+     * hash would mean downloading a tune before knowing whether it was worth downloading.
+     *
+     * One column and nothing else. Everything else about the tune -- format, author, title, size --
+     * is in `catalogue_tracks` already, and a second copy would be a second thing to keep current.
+     * The join is what turns the list into music, and it is also what quietly drops the favourites
+     * this build cannot play: measured 2026-09-08, 991 favourites, of which 891 are still at the
+     * path Modland publishes today and 835 survive the index filter.
+     */
+    private val MODLAND_FAVOURITES_V12: List<String> = listOf(
+        """
+        CREATE TABLE modland_favourites (
+            path TEXT PRIMARY KEY NOT NULL
+        )
+        """.trimIndent(),
+    )
+
     private val PLAY_ALL_SUBSONGS_V10: List<String> = listOf(
         "ALTER TABLE player_state ADD COLUMN play_all_subsongs INTEGER NOT NULL DEFAULT 0",
     )
@@ -304,7 +327,8 @@ object SchemaSql {
         "INSERT INTO player_state (id) VALUES (0)",
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
-        CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11
+        CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
+        MODLAND_FAVOURITES_V12
 
 
 
@@ -326,6 +350,7 @@ object SchemaSql {
         9 to CATALOGUE_BACKENDS_V9,
         10 to PLAY_ALL_SUBSONGS_V10,
         11 to TRACK_METADATA_V11,
+        12 to MODLAND_FAVOURITES_V12,
     )
 
     /**
