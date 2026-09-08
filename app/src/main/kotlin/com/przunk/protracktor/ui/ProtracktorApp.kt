@@ -426,6 +426,7 @@ fun ProtracktorApp(
         if (choosingRandomScope) {
             RandomScopeSheet(
                 browse = browse,
+                onDownloadFavourites = viewModel::downloadFavourites,
                 onPick = {
                     viewModel.setRandomScope(it)
                     choosingRandomScope = false

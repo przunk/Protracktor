@@ -245,6 +245,14 @@ data class BrowseState(
      * list not downloaded, and Modland not indexed. One number answers both.
      */
     val favouriteCount: Int = 0,
+    /**
+     * How many favourites the downloaded list names at all, indexed or not.
+     *
+     * Kept beside [favouriteCount] because zero has two causes and they need different sentences:
+     * the list was never downloaded, or it was and Modland is not indexed. One number cannot tell
+     * a user which of those to fix, and "download" is the wrong advice for the second.
+     */
+    val favouritesListed: Int = 0,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -848,7 +856,17 @@ class PlaybackController private constructor(private val context: Context) {
             // Only when they are absent. This is a grouped scan of every catalogue row, the root is
             // returned to on every step back out of a folder, and the answer only changes when an
             // index does.
-            BrowseDomain.ROOT -> if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
+            BrowseDomain.ROOT -> {
+                if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
+                // And the favourite count, for the same sheet and the same reason -- **the same
+                // mistake made twice**: it was only ever set by `refreshCatalogues`, which the root
+                // does not call, so the Favourites chip read as "not downloaded" for anyone who had
+                // not visited the catalogue list this session. Unguarded, because unlike the
+                // platform counts it is one `COUNT` over a thousand rows rather than a grouped scan
+                // of half a million, and because zero is a real answer here rather than "not asked
+                // yet" -- a guard on emptiness could never tell the two apart.
+                refreshFavouriteCount()
+            }
         }
     }
 
@@ -1425,6 +1443,7 @@ class PlaybackController private constructor(private val context: Context) {
             // list *and* the Modland index together, so indexing Modland changes it as surely as
             // downloading the list does.
             val favouriteRows = favourites.playableCount()
+            val favouriteRowsListed = favourites.count()
             val storage = withContext(Dispatchers.IO) {
                 remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
             }
@@ -1448,6 +1467,7 @@ class PlaybackController private constructor(private val context: Context) {
                     songLengthCount = lengths,
                     trackMetadataCount = metadataRows,
                     favouriteCount = favouriteRows,
+                    favouritesListed = favouriteRowsListed,
                     storageBytes = storage,
                     archiveBytes = archives,
                     databaseBytes = database,
@@ -1655,6 +1675,15 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /** Recounts the favourites. Cheap: two `COUNT`s over about a thousand rows. */
+    private fun refreshFavouriteCount() {
+        scope.launch {
+            val playable = favourites.playableCount()
+            val listed = favourites.count()
+            _browse.update { it.copy(favouriteCount = playable, favouritesListed = listed) }
+        }
+    }
+
     /**
      * Fetches Modland's favourites list.
      *
@@ -1683,7 +1712,9 @@ class PlaybackController private constructor(private val context: Context) {
                 return@launch
             }
             val playable = favourites.playableCount()
-            _browse.update { it.copy(indexing = null, favouriteCount = playable) }
+            _browse.update {
+                it.copy(indexing = null, favouriteCount = playable, favouritesListed = written)
+            }
             _state.update {
                 it.copy(
                     message = Message(

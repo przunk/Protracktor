@@ -329,6 +329,7 @@ private fun DomainRow(
 internal fun RandomScopeSheet(
     browse: BrowseState,
     onPick: (RandomScope) -> Unit,
+    onDownloadFavourites: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -363,6 +364,40 @@ internal fun RandomScopeSheet(
                     onClick = { onPick(RandomScope.OnPlatform(platform.id)) },
                     label = { Text(platform.name) },
                 )
+            }
+        }
+
+        // **A disabled chip has to say why, and here it can also fix it.** The owner met a dead
+        // platform chip once already and asked for the reason to be shown; a dead Favourites chip
+        // is worse, because the thing it needs is a 142 KB download the app can start from this
+        // sheet. Zero has two causes, and they take different advice -- the list was never
+        // downloaded, or it was and Modland is not indexed, in which case offering a download
+        // again would send somebody round a loop.
+        if (browse.favouriteCount == 0) {
+            val downloading = browse.indexing != null
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(
+                        if (browse.favouritesListed > 0) R.string.random_scope_favourites_unindexed
+                        else R.string.random_scope_favourites_missing
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                if (browse.favouritesListed == 0) {
+                    TextButton(onClick = onDownloadFavourites, enabled = !downloading) {
+                        Text(
+                            stringResource(
+                                if (downloading) R.string.random_scope_favourites_downloading
+                                else R.string.random_scope_favourites_download
+                            )
+                        )
+                    }
+                }
             }
         }
         Spacer(Modifier.height(24.dp))

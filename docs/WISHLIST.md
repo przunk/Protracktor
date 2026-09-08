@@ -53,6 +53,24 @@ platform: it cuts across all of them. It is deliberately not combinable with one
 is Amiga tracker music almost entirely (562 ProTracker, 198 Fasttracker 2, 46 AHX of the 835), so
 `Favourites ∩ C64` would be a chip that returns nothing.
 
+### Found on the owner's first run: the chip was dead
+
+*owner, 2026-09-08: "favourites random jest nieaktywny".*
+
+**The same mistake as the platform chips, two commits later.** `favouriteCount` was set by
+`refreshCatalogues`, which the Browse *root* does not call — and the scope sheet opens from the
+root. Anyone who had not visited the catalogue list in that session saw a chip that read "not
+downloaded" whatever was on the device. The root now recounts it, unguarded: it is one `COUNT` over
+a thousand rows rather than the grouped scan of half a million the platform counts need, and zero is
+a real answer here, so a guard on emptiness could never tell "no favourites" from "not asked yet".
+
+**And a disabled chip has to say why** — the owner asked for that once already, about the search
+filter. Here it can do better than explain, because what it needs is a 142 KB download the sheet can
+start: the line under the chips offers it, turns to "Downloading…", and disappears when the chip
+comes alive. Zero has two causes, so there are two sentences — list not downloaded, or downloaded
+and Modland not indexed, which is why `favouritesListed` is tracked beside the playable count.
+Offering "Download" to somebody who has already downloaded it would send them round a loop.
+
 ### What the download says
 
 The message after fetching reports the **playable** count, and says something different when it is
