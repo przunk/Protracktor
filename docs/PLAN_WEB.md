@@ -727,6 +727,29 @@ machine can produce: does it open, is it above silence, how many times realtime.
 that set, and an ear that knew the tune found in one listen what a hundred and eighty files could
 not.
 
+### S4, done the same evening: the queue crosses
+
+The phone packs the playlist into a URL fragment, appends the page's address and hands it to the
+share sheet. **No server is involved in the handoff at all**, and a fragment never reaches one, so
+the page's own host does not learn what is on the list.
+
+Three defects came out of the owner's first two attempts, and each is worth keeping:
+
+1. **A link opened in a tab that already had the page did nothing.** Only the fragment changed, so
+   the browser fired `hashchange` rather than reloading, and the page read the fragment once at
+   start-up. It appeared to work only after a manual reload.
+2. **Every Mod Archive row was called `downloads.php`.** That archive addresses a file as
+   `downloads.php?moduleid=123#tune.mod` — the path is a script, the query is a number, and the
+   filename is only in the fragment. **Not cosmetic:** four backends identify a format by its
+   extension and were being handed a name with none.
+3. **And the phone's title did not travel.** The owner saw `lotus3_4.mod` where his phone said
+   `L3_CD4-SpaceNinja`, because only the address was sent. The link carries `address<tab>title` now,
+   and only when the title adds something — a Modland row whose title is its filename sends nothing
+   extra, which is most of a real queue, so the 2,000-character measurement still holds.
+
+**All three were found by using it, none by the tests.** The suite proves the packing round-trips;
+it cannot know that a queue is something a person reads before pressing anything.
+
 ### ZXTune is out, and it is a build-time choice now
 
 `lexic_analysis.cpp` initialises a `const auto*` from a `std::string::const_iterator`. The NDK's
