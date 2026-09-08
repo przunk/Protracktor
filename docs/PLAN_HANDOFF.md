@@ -154,6 +154,93 @@ that is W3 and it should be chosen deliberately (`PLAN_WEB.md` §11.5), not arri
 
 ---
 
+## 5a. Three answers the owner asked for, 2026-09-08
+
+### Pairing: a typed code first, the QR later and for free
+
+The obvious design is a QR the phone's camera reads (§3, H2). It is right eventually and wrong to
+start with, for a reason that is about Android rather than about taste:
+
+- A scanner in our app means the **`CAMERA` permission** — a visible escalation in the store listing
+  and in the user's head, for a music player, plus a scanning UI to build and debug.
+- We would not need it. The app now declares `VIEW` intent filters, so **the phone's own camera app
+  can scan the code and hand the link to us** — no permission, no scanner, no library. But on
+  Android 12 and later an `https://` link only opens the app if the domain is verified with
+  **App Links** (`assetlinks.json`), and during localhost and tunnel testing there is no stable
+  domain to verify. The clean version of the QR is unavailable exactly while it would be developed.
+
+So: **the browser shows an eight-digit code and the phone takes it.** No dependency, no permission,
+one typing per session. When there is a stable domain the QR becomes an addition rather than a
+rewrite, because what it carries is the same room id.
+
+**Trust:** the room id is the secret, 128 bits, and the **browser shows it while the phone consumes
+it** — the thing being controlled offers, the controller takes. The channel is **one-directional by
+design**: the phone sends, the browser receives. Someone who steals a code can make a noise in a tab
+and learns nothing about the phone, because the phone exposes nothing. "Bring it back to the phone"
+is a later and separate decision, not a side effect of the transport.
+
+### The browser is not a second front end
+
+`ui/` is **5,672 lines across 23 files**, and nearly all of it is browsing, search, settings,
+storage, playlists-as-files, folder grants, the notification and `MediaSession`. **The browser does
+none of that.** What it needs is a title, transport, a position bar, a queue and perhaps the subsong
+strip — a few percent of it.
+
+**So the phone stays the browser and the search; the page at work is a speaker with a screen.** Then
+there is no second front end to keep in step: the page is not a duplicate of anything, and the drift
+risk `AGENTS.md` §8 names applies to *domain logic*, which the page barely has.
+
+**Compose Multiplatform would give literally the same screens**, and is the wrong trade here: it
+renders to a canvas (text that is not text, weaker accessibility, scrolling that is not the
+browser's), it adds a runtime and Skia *on top of* the decoders, its web target is Beta, and it must
+talk to Emscripten across JavaScript glue **at the audio boundary** — the one place §5 says must not
+have glue in it. It buys "the same look" for screens we do not want there. If a full catalogue
+browser in the browser is ever wanted, the question becomes real and the first step is measuring what
+that runtime weighs.
+
+### Where it lives: `web/` in this repository
+
+**The decisive argument is that this is a second build target, not a second product.**
+`native/engine/engine.cpp` is shared, and under it are seven vendored decoders pinned by
+`.protracktor-version` files and fetched by our scripts. A separate repository would duplicate those
+pins, and a version drifting between two repositories is the same failure as logic drifting, in data
+where it is harder to see. One repository also makes GPL-3's written offer of source trivial: one
+licence, one place to point.
+
+*Measured*, because it was a real risk: `npm install` **works on this 9p mount** — the install
+completed, `node_modules/.bin` symlinks resolved, the installed binary ran. Gradle's output cannot
+live here (`PROTRACKTOR_BUILD_DIR_ROOT` exists for that reason), so this was worth checking rather
+than assuming.
+
+*Measured*, on the seam the port needs: `engine.cpp` is **1,868 lines**, and the Android-bound part
+is **one class and one block** — `class Player : public oboe::AudioStreamDataCallback` at 1497, and
+the `extern "C"` JNI functions from 1737. About 370 lines. Everything above is portable C++, and
+`onAudioReady` has the same shape as an `AudioWorkletProcessor`'s `process()`: here is a buffer,
+fill it, say whether to continue.
+
+```
+native/engine/engine.cpp        shared: backends, registry, dispatch
+native/engine/player_oboe.cpp   extracted: the Oboe Player and the JNI block
+native/engine/player_wasm.cpp   new: the worklet-side equivalent and its bindings
+web/package.json
+web/src/                        the page: title, transport, position, queue
+web/vendor/                     generated engine.js + .wasm (gitignored)
+web/relay/                      later: the pairing relay
+scripts/fetch-emsdk.sh
+scripts/build-web-engine.sh
+scripts/probe-web.mjs           the host probe, in node
+```
+
+`web/relay/` is the one piece that **never links the decoders**, so it is the one piece GPL-3 does
+not reach (`PLAN_WEB.md` §9). Its licence stays a decision rather than becoming a consequence.
+
+**Sequencing, and this one is not negotiable.** Splitting `Player` and the JNI block out of
+`engine.cpp` is a refactor of the heart of playback on the phone. It happens **on its own**, built
+and tested on a device, before any web code exists — otherwise a browser experiment breaks the
+player and the cause is three commits back.
+
+---
+
 ## 6. Order of work
 
 1. **W1** — `PLAN_WEB.md`'s throwaway: a page you drop a file onto. The byte count is now known

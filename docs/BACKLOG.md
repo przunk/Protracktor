@@ -673,6 +673,25 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
+## A26. Two rough edges on the JNI boundary
+
+*Found 2026-09-08, while answering an experienced C++ engineer's objection to JNI (`docs/OPEN_QUESTIONS.md`
+Q9). Neither misbehaves, so neither is a defect — they are the two places where the criticism lands
+on our code specifically rather than on the API in general.*
+
+**A full copy of every file across the boundary.** `engine.cpp:1745` reads the module with
+`GetByteArrayRegion` into a `std::vector`. At Modland's median of 20 KB that is nothing; the largest
+file in the archive is **71.6 MB**, and there the copy is real and avoidable — a direct `ByteBuffer`
+and `GetDirectBufferAddress` would hand the decoder the bytes where they already are. Worth doing
+when something makes large files common; not before, because the change moves ownership of the
+buffer's lifetime to the Kotlin side and that is a new thing to get wrong.
+
+**Errors come back through a one-element array.** `nativeOpen` takes a `jobjectArray errorOut` and
+writes the failure message into slot zero. It is the classic JNI idiom for "return two things" and it
+is as ugly as it sounds. The alternatives are a small result object or throwing across the boundary,
+and both are more code than this earns today — recorded so that the next person to touch the
+signature knows it was seen rather than missed.
+
 ## A25. ~~Import and export a playlist~~ — DONE 2026-09-03
 
 Raised 2026-09-03 by the owner.

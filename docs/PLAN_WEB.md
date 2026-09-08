@@ -187,6 +187,34 @@ The measurement's caveats: it is one backend, not seven; wasm and arm64 do not c
 `chiptune3` may build libopenmpt with fewer formats enabled than we do. It bounds the answer well
 enough to stop worrying, not well enough to quote as a total.
 
+### And it decodes — measured the same day, in node, with no browser
+
+*Measured.* The size answer says nothing about cost, so the same build was **run**. Loaded in plain
+node with three globals stubbed (`sampleRate`, `currentFrame`, `currentTime`) and handed a real
+Modland ProTracker module:
+
+| | |
+| --- | --- |
+| opened | yes; title `ennio morricone`, duration 59.7 s, both read through the C API |
+| decoded | 30 s of audio, peak amplitude 0.607 — **sound, not silence** |
+| cost | 58 ms wall, **518× realtime** |
+
+Even at a fiftieth of this machine's speed there is no dropout in that. CPU is not the risk for the
+backend that covers 98% of Modland; reSIDfp and ZXTune are the expensive ones and neither is
+measured yet.
+
+**The more important finding is about method.** `AGENTS.md` §7's rule — build for the host, run real
+files through it, count something — is how every backend in this project was decided, and it
+**survives the move to the web**: a wasm decoder can be probed in node exactly as a native one is
+probed on the host. What still needs a browser is glitching in a real audio thread, the page itself,
+and whether a network permits any of it. That is a much smaller list than "everything", and it is
+the difference between porting this project and starting a different one.
+
+**Shape confirmed while measuring:** `chiptune3.worklet.js` is 13 KB and is the
+`AudioWorkletProcessor`; it imports the 1.54 MB module and decodes inside `process()`. §5 reasoned
+its way to that arrangement from `ARCHITECTURE` §4. Somebody's shipping build agreeing is worth more
+than the argument.
+
 **A separate question, and one this project has been careful about before:** sc68's replay binaries
 (`docs/LICENSES.md`) and the SNDH/`.sc68` split apply unchanged in a browser. The app ships one of 99
 and fetches the rest on request. In a browser the "fetch the rest" path lands in IndexedDB rather
@@ -228,6 +256,22 @@ the same reason and produce the same class of glitch.
 
 So: **cross-origin isolation is not a detail, it is a precondition.** If the hosting cannot provide
 those headers, W1 is a toy and W2 should not be attempted.
+
+> **Corrected 2026-09-08: this was too strong, and the premise under it was never checked.**
+> *Measured*: the published libopenmpt worklet build contains **zero** references to
+> `SharedArrayBuffer`, `pthread`, `Atomics`, `Worker` or `crossOriginIsolated`, in either file. The
+> decoder is instantiated single-threaded *inside* the worklet and writes straight into
+> `process()`'s output buffers — there is no memory to share, so there is nothing to isolate for.
+> `COOP`/`COEP` become necessary only if decoding moves to a worker and its buffers are shared with
+> the audio thread, which is a design choice rather than a requirement.
+>
+> What survives: `AudioWorklet` needs a **secure context**. `http://localhost` is one, so
+> development needs no certificate and no headers at all; reaching the page from another machine
+> needs HTTPS, which is a tunnel or a host — not a header, and not a precondition on the hosting's
+> configurability.
+>
+> The reasoning above was sound and the conclusion was wrong, which is the more useful kind of
+> mistake to leave standing.
 
 ---
 
