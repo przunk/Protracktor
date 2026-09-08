@@ -2,3 +2,7 @@
 # APK links; committing it would be committing a build, and a stale one within a day.
 vendor/
 node_modules/
+
+# A copy of the deployment archive, put here so another machine on the LAN can fetch it from the
+# running server. Build output, not source.
+protracktor-web.tar.gz

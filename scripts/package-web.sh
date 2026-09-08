@@ -23,6 +23,18 @@ cp -r web "$STAGE/protracktor-web/"
 cp scripts/serve-web.mjs "$STAGE/protracktor-web/scripts/"
 cp docs/WEB_SERVER.md "$STAGE/protracktor-web/README.md"
 
+# A `.mjs` is a module, not a program: running it needs `node` in front, and the owner met that as
+# "Permission denied" followed by "command not found" under sudo. One line of shell removes the
+# question.
+cat > "$STAGE/protracktor-web/run.sh" <<'RUN'
+#!/usr/bin/env sh
+# SPDX-FileCopyrightText: 2026 Przunk
+# SPDX-License-Identifier: GPL-3.0-or-later
+cd "$(dirname "$0")"
+exec node scripts/serve-web.mjs "$@"
+RUN
+chmod +x "$STAGE/protracktor-web/run.sh"
+
 # The engine and the page carry the licence of the decoders linked into them: GPL-3.0-or-later.
 # Serving them is conveying them, so the offer of source travels in the archive (docs/LICENSES.md).
 cp LICENSE "$STAGE/protracktor-web/"

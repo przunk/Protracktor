@@ -29,6 +29,11 @@ const root = path.resolve('web');
  * `host` is the address the QR code carries — the one the *phone* must be able to reach. Left null
  * it is worked out from the network interfaces, which is right on an ordinary machine and wrong
  * inside WSL, where the interface belongs to a private network the phone cannot see.
+ *
+ * **It may be a whole base URL**, and behind a reverse proxy it has to be: `https://player.example`
+ * rather than a bare name. The page needs a secure context to run an `AudioWorklet` at all, so
+ * anything but `localhost` is served over TLS by something in front of this — and that something
+ * listens on 443, not on this port. A bare name keeps the old meaning, `http://<name>:<port>`.
  */
 const CONFIG = path.resolve('server.json');
 const DEFAULTS = {
@@ -82,6 +87,17 @@ function advertisedHost() {
   return (lan ?? candidates[0])?.ip ?? 'localhost';
 }
 
+/**
+ * The base the QR code carries, scheme and all.
+ *
+ * A `host` with a scheme in it is taken whole — that is the reverse-proxy case, where the name
+ * answers on 443 and this port is not part of the address anybody outside can use.
+ */
+function advertisedBase() {
+  const host = advertisedHost();
+  return host.includes('://') ? host.replace(/\/+$/, '') : `http://${host}:${port}`;
+}
+
 const rooms = new Map();
 
 function room(id) {
@@ -101,7 +117,7 @@ http.createServer((request, response) => {
   // The page asks where the *phone* should send things. It cannot work this out itself: it knows
   // its own origin, and that is usually `localhost`, which from a phone means the phone.
   if (url.pathname === '/pair/host') {
-    send(response, 200, { base: `http://${advertisedHost()}:${port}` });
+    send(response, 200, { base: advertisedBase() });
     return;
   }
 
@@ -111,7 +127,7 @@ http.createServer((request, response) => {
     // about the phone (docs/PLAN_HANDOFF.md §3 H2).
     const id = crypto.randomBytes(16).toString('hex');
     room(id);
-    send(response, 200, { room: id, post: `http://${advertisedHost()}:${port}/pair/${id}` });
+    send(response, 200, { room: id, post: `${advertisedBase()}/pair/${id}` });
     return;
   }
 
@@ -192,11 +208,11 @@ http.createServer((request, response) => {
 }).listen(port, config.bind, () => {
   const host = advertisedHost();
   console.log(`🌐 page:  http://localhost:${port}/src/   (settings: ${CONFIG})`);
-  console.log(`📱 phone: http://${host}:${port}/`);
+  console.log(`📱 phone: ${advertisedBase()}/`);
   // WSL has its own network. A phone on the same Wi-Fi reaches the *Windows* address, and nothing
   // arrives here until Windows forwards the port -- so the address in the QR would be right and the
   // connection would still fail, which is the worst kind of wrong.
-  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)) {
+  if (!host.includes('://') && /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)) {
     const wsl = host;
     console.log('');
     console.log('⚠ that is this WSL machine\'s own address; a phone cannot reach it.');
