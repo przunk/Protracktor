@@ -150,7 +150,7 @@
     <string name="domain_online_title">Online catalogues</string>
     <string name="domain_online_body">Browse the archives — indexed once, then browsable offline</string>
     <string name="domain_random_title">Random</string>
-    <string name="domain_random_body">Play something from the indexed catalogues</string>
+    <string name="domain_random_body">Play something from the indexed catalogues. Hold to pick a platform.</string>
     <string name="domain_search_title">Search</string>
     <string name="domain_search_body">Across your library and the catalogues</string>
 

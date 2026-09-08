@@ -170,6 +170,20 @@ the songdb metadata.
 outlives the session is an invisible mode, and the subtitle only defends against that while somebody
 is looking at it.
 
+### Two things the owner found on the first run
+
+**The chips were all disabled**, because the counts they read are fetched when the *search* screen
+opens and this sheet opens from the Browse root. Every platform read as "nothing indexed" and the
+whole picker was dead. Fetched on the root too now, but only when they are absent — this is a
+grouped scan of every catalogue row and the root is returned to on every step back out of a folder
+— and dropped whenever `refreshCatalogues` runs, which is what every path that changes an index
+already ends in. Without that last part a chip would stay dead for the rest of a session after the
+index that would have lit it.
+
+**Nothing said the hold existed.** The subtitle only mentioned it once a scope was already set,
+which is exactly backwards: the state you need telling about is the one you have not discovered.
+The default row now says so.
+
 **One thing that would have looked like a bug.** Random reads three picks ahead so a track can be
 fetched before it is wanted. Choosing "Amiga" without discarding those would play three C64 tunes
 first — a change that looks ignored. `setRandomScope` throws the read-ahead away.

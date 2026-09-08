@@ -94,7 +94,7 @@
     <string name="domain_online_title">Katalogi online</string>
     <string name="domain_online_body">Przeglądaj archiwa — indeks pobierany raz, potem działa offline</string>
     <string name="domain_random_title">Losowo</string>
-    <string name="domain_random_body">Zagraj coś z zaindeksowanych katalogów</string>
+    <string name="domain_random_body">Zagraj coś z zaindeksowanych katalogów. Przytrzymaj, żeby wybrać platformę.</string>
     <string name="domain_search_title">Szukaj</string>
     <string name="domain_search_body">W bibliotece i w katalogach</string>
 

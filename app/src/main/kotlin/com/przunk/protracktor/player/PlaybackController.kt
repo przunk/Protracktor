@@ -811,7 +811,14 @@ class PlaybackController private constructor(private val context: Context) {
                 refreshPlatformCounts()
             }
             BrowseDomain.HISTORY -> openHistory()
-            BrowseDomain.ROOT -> Unit
+            // The root has a consumer too, and it was missed: Random's scope sheet is opened from
+            // here and draws the same chips. Without the counts every platform reads as "nothing
+            // indexed" and the whole sheet is disabled -- which is what the owner saw.
+            //
+            // Only when they are absent. This is a grouped scan of every catalogue row, the root is
+            // returned to on every step back out of a folder, and the answer only changes when an
+            // index does.
+            BrowseDomain.ROOT -> if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
         }
     }
 
@@ -1368,8 +1375,19 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- online catalogues --------------------------------------------------------------------
 
+    /**
+     * Also drops the platform counts, so the next screen that needs them recounts.
+     *
+     * Every path that changes what is indexed ends here — indexing a catalogue, deleting one, and
+     * the storage screen's clearing. The counts are derived from exactly that, so surviving one of
+     * these would leave a chip disabled after the index that would have lit it, for the rest of the
+     * session.
+     */
     fun refreshCatalogues() {
         scope.launch {
+            // Recounted rather than kept: this runs whenever what is indexed has changed, and the
+            // platform counts are derived from exactly that.
+            refreshPlatformCounts()
             val summaries = catalogues.summaries()
             val lengths = songLengths.count()
             val metadataRows = trackMetadata.count()
@@ -2024,7 +2042,7 @@ class PlaybackController private constructor(private val context: Context) {
         _browse.update { it.copy(searchScope = scope).withoutStaleResults() }
     }
 
-    /** Counts the platform chips, once, when the search screen is opened. */
+    /** Counts the platform chips from the catalogue index, which is what makes a dead chip honest. */
     private fun refreshPlatformCounts() {
         scope.launch {
             val counts = catalogues.formatCounts()
