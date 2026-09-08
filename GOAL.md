@@ -630,7 +630,7 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
       What `EventSource` did for free and now has to be written: reconnection with a backoff, and
       not hammering the server when it is unreachable.
 
-- [ ] **2. The dock**
+- [x] **2. The dock** *(done 2026-09-09)*
       The one component the owner sees more than any other, and the one that decides whether the
       page reads as Protracktor. Source: `ui/PlayerDock.kt`. Reproduce, in order of visible
       importance: the surface and its elevation, the title and subtitle block with the format label,
@@ -641,13 +641,13 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
       button. Long press on next and previous skips a whole file on the phone; the page has no
       equivalent yet and does not need one this round.
 
-- [ ] **3. The playlist**
+- [x] **3. The playlist** *(done 2026-09-09)*
       Source: `ui/PlaylistScreen.kt`. A row is a leading position or playing indicator, a title, a
       subtitle that is the source path, and a trailing overflow. The playing row is tinted with
       `primary`. Reproduce the row, the spacing and the tint; the drag handle, the selection mode
       and the swipe actions are phone-only and out of scope.
 
-- [ ] **4. The top bar and the shell**
+- [x] **4. The top bar and the shell** *(done 2026-09-09)*
       Source: `ui/ProtracktorApp.kt`. A title, and actions drawn as an icon with its name
       underneath — the owner asked for that shape twice (`docs/BACKLOG.md` A16, A17, A23) and it is
       one of the app's few departures from stock Material. `ui/LabelledAction.kt` is the component.
@@ -656,7 +656,7 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
       pairing code and the paste box, and both should live in this vocabulary rather than in the
       improvised one they use now.
 
-- [ ] **5. Now Playing**
+- [x] **5. Now Playing** *(done 2026-09-09, with the subsong strip)*
       Source: `ui/NowPlaying.kt`. On the phone it expands upward from the dock over the playlist.
       In the browser the same content can simply be a panel; what matters is that it carries the
       same fields — title, author, format, year, duration, subsong strip — laid out the same way.

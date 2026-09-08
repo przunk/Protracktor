@@ -225,6 +225,19 @@
     overflow-wrap: anywhere;
   }
   .error { color: var(--error); }
+
+  /* Now Playing: a label above its value, the way the phone's information panel reads. */
+  dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
+  dt { color: var(--on-surface-variant); font-size: 13px; }
+  dd { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+  .subsongs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .subsong {
+    background: var(--surface-container); color: var(--on-surface);
+    border: 1px solid var(--surface-variant); border-radius: var(--shape-s);
+    min-width: 40px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .subsong[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
 </style>
 </head>
 <body>
@@ -253,6 +266,16 @@
       <p class="note" id="pairnote">Scan this with Protracktor on your phone to send it a playlist.</p>
       <div id="qr" class="qr"></div>
       <p class="note mono" id="pairurl"></p>
+    </section>
+
+    <!--
+      Now Playing, which on the phone expands upward from the dock over the playlist
+      (`ui/NowPlaying.kt`). Here it is a panel under the queue with the same fields in the same
+      order, because the point is the information rather than the animation.
+    -->
+    <section class="panel" id="nowplaying" hidden>
+      <dl id="fields"></dl>
+      <div id="subsongs" class="subsongs"></div>
     </section>
 
     <section class="panel" id="paste" hidden>

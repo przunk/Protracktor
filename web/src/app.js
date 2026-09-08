@@ -67,19 +67,23 @@ function onWorklet(message) {
     case 'ready':
       status(`engine ready — ${message.backends}`);
       break;
-    case 'opened':
+    case 'opened': {
       duration = message.duration;
+      const fields = describeFields(message.describe);
+      if (fields.title) $('title').textContent = fields.title;
+      renderNowPlaying(fields, message.subsongs ?? 1, 0);
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
         status(`⚠ this decoder wants ${message.preferredRate} Hz and the page is running at ` +
                `${message.rate} Hz — it will play ${(message.rate / message.preferredRate).toFixed(3)}× fast`);
       }
-      $('sub').textContent = describeLine(message.describe);
+      $('sub').textContent = describeLine(fields);
       $('seek').disabled = !message.canSeek;
       $('error').textContent = '';
       setPlaying(true);
       break;
+    }
     case 'failed':
       $('error').textContent = message.reason;
       setPlaying(false);
@@ -99,12 +103,70 @@ function onWorklet(message) {
   }
 }
 
-/** The engine's describe block is tab-separated key/value lines; the row wants one line. */
-function describeLine(describe) {
-  const fields = Object.fromEntries(
-    describe.split('\n').filter(Boolean).map((line) => line.split('\t'))
+/**
+ * The engine's `describe` block, which is tab-separated key/value lines.
+ *
+ * The dock's card wants one line of it; Now Playing wants all of it. Parsed once, used twice.
+ */
+function describeFields(describe) {
+  return Object.fromEntries(
+    describe.split('\n').filter(Boolean).map((line) => {
+      const tab = line.indexOf('\t');
+      return tab < 0 ? [line, ''] : [line.slice(0, tab), line.slice(tab + 1)];
+    })
   );
+}
+
+function describeLine(fields) {
   return [fields.format, fields.artist, fields.tracker].filter(Boolean).join(' · ') || '—';
+}
+
+/**
+ * Now Playing: the same fields the phone shows, in the same order.
+ *
+ * The order is not alphabetical and is not the engine's; it is `ui/NowPlaying.kt`'s — what a
+ * listener asks first comes first, and the machine's own vocabulary comes last.
+ */
+const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher', 'album', 'comment'];
+
+function renderNowPlaying(fields, subsongs, current) {
+  const list = $('fields');
+  list.replaceChildren();
+  const shown = FIELD_ORDER.filter((key) => fields[key]);
+  for (const key of shown) {
+    const dt = document.createElement('dt');
+    dt.textContent = key;
+    const dd = document.createElement('dd');
+    dd.textContent = fields[key];
+    list.append(dt, dd);
+  }
+  if (!shown.length) {
+    const dt = document.createElement('dt');
+    dt.textContent = '—';
+    const dd = document.createElement('dd');
+    dd.textContent = 'the file says nothing about itself';
+    list.append(dt, dd);
+  }
+
+  // **Subsongs are not decoration.** One `.kss` holds 256 tunes and one `.sndh` holds three; a
+  // player that only ever plays the first is playing a fraction of the file (`docs/PLAN_FORMATS.md`).
+  const strip = $('subsongs');
+  strip.replaceChildren();
+  if (subsongs > 1) {
+    for (let i = 0; i < subsongs; i++) {
+      const button = document.createElement('button');
+      button.className = 'subsong';
+      button.textContent = String(i + 1);
+      button.setAttribute('aria-pressed', String(i === current));
+      button.onclick = () => {
+        node?.port.postMessage({ type: 'subsong', index: i });
+        for (const other of strip.children) other.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-pressed', 'true');
+        setPlaying(true);
+      };
+      strip.append(button);
+    }
+  }
 }
 
 async function playAt(next) {
@@ -235,9 +297,12 @@ function setQueue(urls) {
 function showPanel(which) {
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
+  $('nowplaying').hidden = which !== 'nowplaying';
+  $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
 }
+$('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 
