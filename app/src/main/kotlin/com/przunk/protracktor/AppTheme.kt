@@ -32,11 +32,33 @@ object Appearance {
     private const val PREFERENCES = "protracktor_preferences"
     private const val THEME = "app_theme"
     private const val DYNAMIC = "dynamic_colour"
+    private const val WEB_PLAYER = "web_player_base"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
     fun theme(context: Context): AppTheme = AppTheme.fromStored(prefs(context).getString(THEME, null))
+
+    /**
+     * Where the web player is served from, for "send this queue to the browser".
+     *
+     * Kept here with the other answers to "what does this person want the app to be", and stored
+     * rather than hard-coded because the address is the one part of the handoff that moves: today it
+     * is a local server, later a tunnel, eventually a host. The default is `localhost`, which reads
+     * as wrong from a phone and is exactly right — **the link is opened on the machine running the
+     * browser**, and that machine is where the page is served.
+     */
+    fun webPlayer(context: Context): String =
+        prefs(context).getString(WEB_PLAYER, null)?.takeIf { it.isNotBlank() }
+            ?: com.przunk.protracktor.player.QueueLink.DEFAULT_BASE
+
+    fun selectWebPlayer(context: Context, base: String): Boolean {
+        if (webPlayer(context) == base) return false
+        prefs(context).edit().apply {
+            if (base.isBlank()) remove(WEB_PLAYER) else putString(WEB_PLAYER, base.trim())
+        }.apply()
+        return true
+    }
 
     /** @return whether anything changed, so the caller knows whether to redraw. */
     fun selectTheme(context: Context, theme: AppTheme): Boolean {

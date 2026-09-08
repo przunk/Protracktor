@@ -86,6 +86,8 @@ class MainActivity : ComponentActivity() {
                     onDynamicColourChanged = { enabled ->
                         if (Appearance.selectDynamicColour(this, enabled)) recreate()
                     },
+                    webPlayer = Appearance.webPlayer(this),
+                    onWebPlayerChanged = { Appearance.selectWebPlayer(this, it) },
                     externalOpen = pendingOpen,
                     onExternalOpened = { pendingOpen = null },
                 )
