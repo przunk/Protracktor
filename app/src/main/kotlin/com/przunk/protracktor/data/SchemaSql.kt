@@ -384,6 +384,41 @@ object SchemaSql {
         "DELETE FROM play_history WHERE track_id NOT IN " +
             "(SELECT track_id FROM play_history ORDER BY played_at DESC LIMIT $PLAY_HISTORY_LIMIT)"
 
+    /**
+     * Every table in the file, asked of the file rather than listed.
+     *
+     * `onDowngrade` recreates the database, and to do that it must first remove what is there. The
+     * list it used to carry was written at version 1 and named five tables; [CREATE] makes twelve.
+     * Seven migrations added tables that nothing removed, so the recreate ran `CREATE TABLE
+     * catalogues` against a `catalogues` that still existed and threw -- **on every start**, which
+     * is the state the whole method exists to prevent. Verified against a real SQLite on
+     * 2026-09-08: `[SQLITE_ERROR] table catalogues already exists`.
+     *
+     * Asking the file is the fix, and it is the fix rather than a longer list because a longer list
+     * would go stale the same way, quietly, and only on somebody's phone.
+     *
+     * `android_metadata` is left alone: Android creates it when it opens the file, and it holds the
+     * locale rather than anything of ours.
+     */
+    const val TABLE_NAMES: String =
+        "SELECT name FROM sqlite_master WHERE type = 'table' " +
+            "AND name NOT LIKE 'sqlite_%' AND name <> 'android_metadata'"
+
+    /**
+     * Removes the named tables, and with them their indexes.
+     *
+     * **In reverse, and that is load-bearing.** `DROP TABLE` runs an implicit delete of the table's
+     * rows, and that delete resolves foreign keys -- so dropping `playlists` before
+     * `playlist_tracks`, which references it, fails with `no such table: main.playlists`. The app
+     * turns foreign keys on, so this is not theoretical; the test found it on the first run.
+     *
+     * `sqlite_master` lists tables in creation order and a child is always created after the parent
+     * it references, so walking it backwards is dependency order. Quoted names, because a table
+     * name is whatever somebody wrote in a migration.
+     */
+    fun dropStatements(tables: List<String>): List<String> =
+        tables.reversed().map { "DROP TABLE IF EXISTS \"$it\"" }
+
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */
     fun migrationsBetween(from: Int, to: Int): List<String> =
         ((from + 1)..to).flatMap { version ->
