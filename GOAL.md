@@ -521,6 +521,146 @@ else.
 
 ---
 
+# Round 7 — set 2026-09-09, the web player's face
+
+*The owner, at half past midnight: "przerobienie GUI webowego. Musi wyglądać prawie tak, jak
+aplikacja androidowa." He asked whether it can be done and said there is no hurry.*
+
+## The answer, before the list
+
+**Yes, and the reason it is achievable is that it is a smaller job than it sounds.** "Look almost
+like the app" is a question about *appearance*, and appearance is the half of the Android UI that
+can be read out of source and reproduced exactly. The expensive half — browsing 516,107 Modland
+rows, the search filters, the storage screen, the folder grants — is **not** being asked for and
+must not be built (see out of scope).
+
+**One risk, stated first because it shapes everything.** I cannot see either screen. There is no
+emulator here and no browser; the Android UI exists to me as Compose source, and the page exists as
+markup. So fidelity comes from reading the source carefully, and the only judge is the owner. That
+argues for small steps with a build at the end of each, not one long stretch ending in a reveal.
+
+**The most useful thing the owner could add:** three or four screenshots of the app — the playlist
+with the dock, Now Playing expanded, and Browse. Not required; the source is authoritative for
+colour and dimension. But a screenshot settles proportion and spacing in a way that reading
+`Modifier.padding` values does not.
+
+## What "almost like the app" means, concretely
+
+The app's theme is **stock Material 3** — `darkColorScheme()` and `lightColorScheme()` with no
+overrides, plus wallpaper colours on Android 12+ (`ui/theme/Theme.kt`). So looking like the app means
+looking like Material 3, and the exact tokens are already extracted:
+**`docs/reference/material3-dark.json`**, disassembled from the material3 artifact this build links.
+Do not retype them from memory or sample them from a screenshot.
+
+The anchors, so the shape is visible without opening the file:
+
+| role | dark |
+| --- | --- |
+| background / surface | `#141218` |
+| surface container | `#211F26` |
+| surface container high | `#2B2930` |
+| on surface | `#E6E0E9` |
+| on surface variant | `#CAC4D0` |
+| primary | `#D0BCFF` |
+| on primary | `#381E72` |
+| secondary container | `#4A4458` |
+| on secondary container | `#E8DEF8` |
+| outline variant | `#49454F` |
+
+Dynamic colour cannot be reproduced in a browser and is not part of this. The page targets the
+baseline scheme, which is what the owner sees whenever dynamic colour is off.
+
+## The rules
+
+Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
+
+1. **One item, one branch, one merge**, off `develop`. Never `master`.
+2. **Every item ends with `./scripts/test-protracktor.sh` green and the page loading.** The web work
+   has no unit tests worth the name yet; "the page loads and the console is clean" is the bar, and
+   the server is the way to check it (`scripts/serve-web.sh`).
+3. **Do not claim anything was seen.** Nothing in this round can be confirmed by the agent doing it.
+   Say what was changed and what remains unjudged.
+4. **A decision the owner has not made is not yours.** Write it into `docs/BACKLOG.md` and move on.
+   Implementation choices are yours and always were.
+5. Tick items off here as they land.
+
+## Explicitly out of scope
+
+- **Browsing the catalogues in the browser.** 5,672 lines of `ui/` exist on the phone and the phone
+  keeps them (`docs/PLAN_HANDOFF.md` §5a). The page plays what it is handed.
+- **Search, settings, storage, folder grants, the notification.** Same reason, and several of them
+  have no meaning in a browser at all.
+- **Compose Multiplatform.** It was considered and rejected with reasons in `PLAN_HANDOFF.md` §5a;
+  this round is the cheaper half of what it would have bought.
+- **The remote-control mode** — phone as pilot, browser as player. That is the owner's wishlist item
+  from 2026-09-08 and it waits on the transport being fixed (see round 7 item 1).
+- **Light theme**, unless it falls out for free. The app follows the system; the page may start dark.
+
+## The list
+
+- [ ] **1. Replace the event stream with long polling**
+      *First, because nothing else in this round can be seen working without it.* Measured
+      2026-09-09 (`docs/PLAN_HANDOFF.md` §5c): `text/event-stream` does not survive a Cloudflare
+      quick tunnel — the server reports delivering, the page receives nothing, and two rounds of
+      anti-buffering headers and two kilobytes of padding did not move it.
+
+      Replace `/pair/<room>/events` with `/pair/<room>/next?since=<n>`: the server holds the request
+      until there is a message or about twenty-five seconds pass, then answers with an ordinary JSON
+      body. The page loops. Keep the sequence number so a reconnect cannot miss a message, and keep
+      the "last message" behaviour that lets a reloaded page pick the queue back up.
+
+      What `EventSource` did for free and now has to be written: reconnection with a backoff, and
+      not hammering the server when it is unreachable.
+
+- [ ] **2. The dock**
+      The one component the owner sees more than any other, and the one that decides whether the
+      page reads as Protracktor. Source: `ui/PlayerDock.kt`. Reproduce, in order of visible
+      importance: the surface and its elevation, the title and subtitle block with the format label,
+      the transport row — shuffle, previous, the 64dp filled play button, next, repeat — the seek
+      bar, and the subsong strip when a file has more than one tune.
+
+      The transport buttons are 48dp targets with a circular ripple and a 34dp glyph on the play
+      button. Long press on next and previous skips a whole file on the phone; the page has no
+      equivalent yet and does not need one this round.
+
+- [ ] **3. The playlist**
+      Source: `ui/PlaylistScreen.kt`. A row is a leading position or playing indicator, a title, a
+      subtitle that is the source path, and a trailing overflow. The playing row is tinted with
+      `primary`. Reproduce the row, the spacing and the tint; the drag handle, the selection mode
+      and the swipe actions are phone-only and out of scope.
+
+- [ ] **4. The top bar and the shell**
+      Source: `ui/ProtracktorApp.kt`. A title, and actions drawn as an icon with its name
+      underneath — the owner asked for that shape twice (`docs/BACKLOG.md` A16, A17, A23) and it is
+      one of the app's few departures from stock Material. `ui/LabelledAction.kt` is the component.
+
+      The page's actions are not the phone's: it has no Browse and no Settings. What it has is the
+      pairing code and the paste box, and both should live in this vocabulary rather than in the
+      improvised one they use now.
+
+- [ ] **5. Now Playing**
+      Source: `ui/NowPlaying.kt`. On the phone it expands upward from the dock over the playlist.
+      In the browser the same content can simply be a panel; what matters is that it carries the
+      same fields — title, author, format, year, duration, subsong strip — laid out the same way.
+
+- [ ] **6. Type and spacing**
+      Last on purpose: it is the pass that turns "the same components" into "the same app". The app
+      uses Material 3 typography unmodified, which maps onto a browser as a scale, not as a font —
+      Roboto is not on every desktop and Google Fonts is a network dependency the page does not
+      otherwise have. Use the system stack and match the *scale* and the weights; record the choice
+      and why in the page's own comments.
+
+## What this round is not allowed to lose
+
+The page today is small, fast and has one job. Every item above adds markup, and the failure mode is
+a page that looks like Protracktor and takes three seconds to become useful. **Measure the page
+weight before and after** — it is a `wc -c` on three files, and the engine that dwarfs them is
+already 0.76 MB over the wire. If the front end approaches a tenth of that, something has gone
+wrong.
+
+
+---
+
 # Round 6 — set 2026-09-04, Amiga, the archives it unlocks, and disk
 
 ## What belongs in a goal round, and why this one may be large
