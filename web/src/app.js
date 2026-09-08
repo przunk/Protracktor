@@ -24,8 +24,16 @@ let seeking = false;
  */
 function entryFor(url) {
   let name = url;
-  try { name = decodeURIComponent(new URL(url, location.href).pathname.split('/').pop()) || url; }
-  catch { /* a malformed URL is still worth showing; it will fail loudly when played */ }
+  try {
+    const parsed = new URL(url, location.href);
+    // **The fragment first, and that is not a nicety.** The Mod Archive addresses a file as
+    // `downloads.php?moduleid=123#tune.mod`: the path is a script, the query is a number, and the
+    // *fragment* is the only place the filename appears. Reading the path gives "downloads.php" for
+    // every one of them -- which is not merely an ugly row, because four backends identify a format
+    // by its extension and would be handed a name that has none.
+    const fromHash = parsed.hash ? decodeURIComponent(parsed.hash.slice(1)) : '';
+    name = fromHash || decodeURIComponent(parsed.pathname.split('/').pop()) || url;
+  } catch { /* a malformed URL is still worth showing; it will fail loudly when played */ }
   return { url, name };
 }
 
@@ -199,3 +207,8 @@ async function fromFragment() {
 
 status('ready — press Play or load some URLs');
 fromFragment();
+
+// **A link opened in a tab that already has this page does not reload it.** Only the fragment
+// changes, and the browser fires `hashchange` instead -- so without this, sending a second queue
+// from the phone to an open tab appeared to do nothing at all until the owner pressed reload.
+addEventListener('hashchange', fromFragment);
