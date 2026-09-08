@@ -85,6 +85,7 @@ function onWorklet(message) {
       const fields = describeFields(message.describe);
       if (fields.title) $('title').textContent = fields.title;
       renderNowPlaying(fields, message.subsongs ?? 1, 0);
+      publishToSystem(queue[index], fields);
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
@@ -186,12 +187,44 @@ function renderNowPlaying(fields, subsongs, current) {
   }
 }
 
+/**
+ * The operating system's own media controls.
+ *
+ * **The phone has this and the browser can too.** `PlaybackService` publishes a `MediaSession` so
+ * the notification, the lock screen and a headset button work; `navigator.mediaSession` is the same
+ * idea, and it is what makes a keyboard's play key reach a tab buried among twenty others. Without
+ * it the page is a thing you must find before you can pause it.
+ *
+ * Guarded, because it is absent in older browsers and the page must not care.
+ */
+function publishToSystem(entry, fields) {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.metadata = new window.MediaMetadata({
+      title: fields?.title || entry?.name || 'Protracktor',
+      artist: fields?.artist || '',
+      album: [fields?.format, fields?.year].filter(Boolean).join(' · '),
+    });
+    navigator.mediaSession.setActionHandler('play', () => $('playpause').click());
+    navigator.mediaSession.setActionHandler('pause', () => $('playpause').click());
+    navigator.mediaSession.setActionHandler('nexttrack', () => $('next').click());
+    navigator.mediaSession.setActionHandler('previoustrack', () => $('prev').click());
+  } catch { /* an older browser; the page works without it */ }
+}
+
+/** The tab's name, so a page among twenty says what it is playing. */
+function nameTheTab(entry) {
+  document.title = entry ? `${entry.name} — Protracktor` : 'Protracktor';
+}
+
 async function playAt(next) {
   await start();
   index = next;
   if (history[history.length - 1] !== next) history.push(next);
   const entry = queue[index];
   render();
+  followPlaying();
+  nameTheTab(entry);
   $('title').textContent = entry.name;
   $('sub').textContent = 'fetching…';
   $('error').textContent = '';
@@ -240,8 +273,21 @@ async function announceGesture() {
 const PLAY_GLYPH = 'M8 5v14l11-7z';
 const PAUSE_GLYPH = 'M6 5h4v14H6zm8 0h4v14h-4z';
 
+/**
+ * Keeps the playing row on screen.
+ *
+ * The phone has a button for this and the owner asked twice for it to be *subtle* (`GOAL.md`
+ * round 2, item 1). A page has room to simply do it: a queue of fifty is a scrollbar, and a
+ * playing row three screens up is the same complaint in a different medium.
+ */
+function followPlaying() {
+  const row = $('queue').children[index];
+  if (row?.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+}
+
 function setPlaying(on) {
   playing = on;
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   $('playglyph').setAttribute('d', on ? PAUSE_GLYPH : PLAY_GLYPH);
   $('playpause').title = on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
@@ -523,6 +569,27 @@ function receive(message) {
   if (message.index > 0 && message.index < message.queue.length) playAt(message.index);
   announceGesture();
 }
+
+/**
+ * The keys somebody at a desk will try.
+ *
+ * Space for play, arrows for the transport — and nothing clever. They are ignored while a field has
+ * focus, because a space typed into the paste box must be a space; that is the bug every page with
+ * shortcuts ships once.
+ */
+addEventListener('keydown', (event) => {
+  const target = event.target;
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return;
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  const act = {
+    ' ': () => $('playpause').click(),
+    ArrowRight: () => $('next').click(),
+    ArrowLeft: () => $('prev').click(),
+  }[event.key];
+  if (!act) return;
+  event.preventDefault();
+  act();
+});
 
 status('ready — press Play or load some URLs');
 pair();
