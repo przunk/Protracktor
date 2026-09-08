@@ -18,7 +18,7 @@ import org.junit.Test
  */
 class QueueLinkTest {
 
-    private fun track(id: String) = TrackRef(id = id, title = id, subtitle = "")
+    private fun track(id: String, title: String = id) = TrackRef(id = id, title = title, subtitle = "")
 
     private fun unpack(fragment: String): List<String> {
         val bytes = Base64.getUrlDecoder().decode(fragment)
@@ -34,8 +34,8 @@ class QueueLinkTest {
     fun `modland tracks travel as paths and come back whole`() {
         val packed = QueueLink.pack(
             listOf(
-                track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod"),
-                track("https://modland.com/pub/modules/AHX/Pink/frog.ahx"),
+                track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod", "hi there.mod"),
+                track("https://modland.com/pub/modules/AHX/Pink/frog.ahx", "frog.ahx"),
             )
         )
         assertEquals(2, packed.sent)
@@ -57,8 +57,8 @@ class QueueLinkTest {
     fun `local files are counted, not quietly dropped`() {
         val packed = QueueLink.pack(
             listOf(
-                track("content://com.android.providers.media.documents/document/audio%3A42"),
-                track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod"),
+                track("content://com.android.providers.media.documents/document/audio%3A42", "a local file.mod"),
+                track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod", "hi there.mod"),
             )
         )
         assertEquals(1, packed.sent)
@@ -78,7 +78,10 @@ class QueueLinkTest {
     @Test
     fun `fifty tracks fit in a link that is safe everywhere`() {
         val tracks = (1..50).map {
-            track("https://modland.com/pub/modules/Protracker/Some%20Artist/a%20tune%20number%20$it.mod")
+            track(
+                "https://modland.com/pub/modules/Protracker/Some%20Artist/a%20tune%20number%20$it.mod",
+                "a tune number $it.mod",
+            )
         }
         val packed = QueueLink.pack(tracks)
         assertEquals(50, packed.sent)
@@ -86,9 +89,32 @@ class QueueLinkTest {
         assertTrue("$link is ${link.length} characters", link.length < 2000)
     }
 
+    /**
+     * The owner's report: a Mod Archive row read `lotus3_4.mod` in the browser and
+     * `L3_CD4-SpaceNinja` on the phone, because the URL is the only thing that travelled.
+     */
+    @Test
+    fun `a title the address does not carry travels with it`() {
+        val packed = QueueLink.pack(
+            listOf(track("https://api.modarchive.org/downloads.php?moduleid=42#lotus3_4.mod", "L3_CD4-SpaceNinja"))
+        )
+        assertEquals(
+            listOf("https://api.modarchive.org/downloads.php?moduleid=42#lotus3_4.mod\tL3_CD4-SpaceNinja"),
+            unpack(packed.fragment),
+        )
+    }
+
+    @Test
+    fun `a title that only repeats the filename is not sent`() {
+        val packed = QueueLink.pack(
+            listOf(track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod", "hi there.mod"))
+        )
+        assertEquals(listOf("Protracker/4-Mat/hi there.mod"), unpack(packed.fragment))
+    }
+
     @Test
     fun `a non-Modland catalogue keeps its whole URL`() {
-        val packed = QueueLink.pack(listOf(track("asma://asma/Games/Rob_Hubbard/tune.sap")))
+        val packed = QueueLink.pack(listOf(track("asma://asma/Games/Rob_Hubbard/tune.sap", "tune.sap")))
         assertEquals(listOf("asma://asma/Games/Rob_Hubbard/tune.sap"), unpack(packed.fragment))
     }
 }

@@ -48,8 +48,8 @@ object QueueLink {
                 // Modland is most of any real queue, so its rows lose the 38-byte prefix. Compression
                 // would have removed most of that anyway; this makes the untruncated link shorter for
                 // the small queues where the limit actually bites.
-                catalogue.id == "modland" -> lines += path
-                else -> lines += track.id
+                catalogue.id == "modland" -> lines += withTitle(path, track)
+                else -> lines += withTitle(track.id, track)
             }
         }
         if (lines.isEmpty()) return Packed("", 0, left)
@@ -68,6 +68,26 @@ object QueueLink {
         val encoded = Base64.getUrlEncoder().withoutPadding()
             .encodeToString(buffer.copyOf(total))
         return Packed(encoded, lines.size, left)
+    }
+
+    /**
+     * The address, and the title after a tab when the address does not already say it.
+     *
+     * **The Mod Archive is why this exists.** It addresses a file as
+     * `downloads.php?moduleid=123#tune.mod`, so the best a page can read out of the URL is the
+     * filename — while the phone knows the module's own title, `L3_CD4-SpaceNinja` rather than
+     * `lotus3_4.mod`. The queue is a list somebody reads before pressing anything, so it should say
+     * what the phone said.
+     *
+     * Only when it adds something: a Modland row whose title is already its filename sends nothing
+     * extra, which is most of a real queue. Compression would have shrunk the repetition anyway;
+     * this keeps the untruncated link short, which is what the 2,000-character limit measures.
+     */
+    private fun withTitle(address: String, track: TrackRef): String {
+        val fileName = address.substringAfterLast('/').substringBefore('#').substringBefore('?')
+        val title = track.title.trim()
+        return if (title.isBlank() || title.equals(fileName, ignoreCase = true)) address
+        else "$address\t$title"
     }
 
     /** The whole address, given where the page is served from. */

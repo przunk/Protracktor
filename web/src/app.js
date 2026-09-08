@@ -157,7 +157,9 @@ function render() {
 }
 
 function setQueue(urls) {
-  queue = urls.map(entryFor);
+  // Entries already built keep their names; bare strings become entries here. The paste box gives
+  // strings, a link gives entries with the phone's own titles.
+  queue = urls.map((u) => (typeof u === 'string' ? entryFor(u) : u));
   index = -1;
   render();
   setPlaying(false);
@@ -198,7 +200,16 @@ async function fromFragment() {
     const text = await new Response(stream).text();
     const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
     const base = 'https://modland.com/pub/modules/';
-    setQueue(lines.map((line) => (line.includes('://') ? line : base + line.split('/').map(encodeURIComponent).join('/'))));
+    // `address` or `address<tab>title`. The title is sent only when the address does not already
+    // carry it -- which is most of Modland and none of The Mod Archive, whose URLs are a script and
+    // a number (`QueueLink.withTitle`).
+    setQueue(lines.map((line) => {
+      const [address, title] = line.split('\t');
+      const url = address.includes('://') ? address
+        : base + address.split('/').map(encodeURIComponent).join('/');
+      const entry = entryFor(url);
+      return title ? { ...entry, name: title } : entry;
+    }));
     status(`${lines.length} tracks from the link`);
   } catch (e) {
     status(`the link could not be read: ${e.message}`);
