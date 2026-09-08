@@ -437,6 +437,12 @@ current. `DomainRow` in the browse screen had the same shape and got the same tr
 going to four when the hold got longer was the fact that did not fit, and it was in the second
 report, not the first.
 
+**And a third report that was not a defect.** With the fix installed the owner saw the hold "jump
+somewhere random, six forward, sometimes backwards" — shuffle was on, and he had not noticed. Under
+shuffle the next *file* is the next one in the shuffled order, which is a jump; the short press does
+exactly the same thing, which is the check that settles it in one press. Worth keeping because two
+of the three reports about this button were about the play order rather than the button.
+
 ### C16. ~~One message for four different failures~~ — FIXED 2026-09-07
 
 *Found twice in one day, by the owner and by me, and it cost an hour each time.*
