@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +64,7 @@ import com.przunk.protracktor.net.WebRemote
 fun ScannerScreen(
     contentPadding: PaddingValues,
     onScanned: (String) -> Unit,
+    onSendLink: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -97,6 +99,9 @@ fun ScannerScreen(
                 color = if (granted) Color.White else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
+            TextButton(onClick = onSendLink) {
+                Text(stringResource(R.string.action_send_as_link))
+            }
             Button(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
         }
     }

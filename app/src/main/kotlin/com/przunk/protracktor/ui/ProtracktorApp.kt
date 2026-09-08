@@ -327,8 +327,8 @@ fun ProtracktorApp(
                                 icon = PlayerIcons.Link,
                                 label = stringResource(R.string.action_send_to_browser),
                                 onClick = viewModel::sendQueueToBrowser,
-                                onLongClick = viewModel::sendQueueAsLink,
-                                longClickLabel = stringResource(R.string.action_send_as_link),
+                                onLongClick = viewModel::rescan,
+                                longClickLabel = stringResource(R.string.action_pair_again),
                             )
                         }
                         LabelledAction(
@@ -365,6 +365,12 @@ fun ProtracktorApp(
                 onScanned = { endpoint ->
                     scanning = false
                     viewModel.pairWith(endpoint)
+                },
+                // The link keeps a home, and this is the right one: somebody who cannot scan is
+                // looking at the scanner (`docs/PLAN_HANDOFF.md` §3).
+                onSendLink = {
+                    scanning = false
+                    viewModel.sendQueueAsLink()
                 },
                 onCancel = { scanning = false },
             )

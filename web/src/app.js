@@ -132,6 +132,29 @@ async function playAt(next) {
   // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
   $('sub').textContent = `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`;
   node.port.postMessage({ type: 'open', bytes, name: entry.name }, [bytes]);
+  announceGesture();
+}
+
+/**
+ * Says out loud that a browser will not start audio by itself.
+ *
+ * **This is the failure that looks like a broken feature.** A queue arrives from the phone, the page
+ * fills in, the decoder opens the file — and nothing is heard, because an `AudioContext` created
+ * without a click starts suspended and `process()` is never called. `docs/PLAN_HANDOFF.md` §4 listed
+ * this as one of four things that would look like bugs, and then the page did not mention it.
+ *
+ * The resume is attempted anyway: if the tab has ever been clicked, it succeeds and there is
+ * nothing to say.
+ */
+async function announceGesture() {
+  if (!context) return;
+  if (context.state === 'suspended') {
+    try { await context.resume(); } catch { /* needs a gesture; the message below is the answer */ }
+  }
+  if (context.state === 'suspended') {
+    status('▶ press Play — a browser will not start audio until this page is clicked');
+    $('playpause').textContent = 'Play ▶';
+  }
 }
 
 function setPlaying(on) {
@@ -263,6 +286,7 @@ async function pair() {
     if (!message.queue?.length) return;
     setQueue(message.queue.map((row) => ({ ...entryFor(row.url), name: row.title || entryFor(row.url).name })));
     status(`${message.queue.length} tracks from the phone`);
+    announceGesture();
     // The phone says which one it was on. Starting anywhere else would be the handoff losing the
     // one thing a listener actually cares about.
     if (message.index > 0 && message.index < message.queue.length) playAt(message.index);
