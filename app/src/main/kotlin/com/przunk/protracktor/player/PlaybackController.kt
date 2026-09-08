@@ -10,6 +10,7 @@ import android.os.Process
 import android.os.SystemClock
 import android.provider.OpenableColumns
 import android.text.format.DateUtils
+import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueGroup
 import com.przunk.protracktor.data.CatalogueStore
@@ -1305,6 +1306,55 @@ class PlaybackController private constructor(private val context: Context) {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, text)
                 putExtra(Intent.EXTRA_SUBJECT, ref.title)
+            }
+        )
+    }
+
+    /**
+     * Hands the whole queue to a browser, as a link.
+     *
+     * **No server is involved in this at all**, which is the point of it (`docs/PLAN_HANDOFF.md` §3
+     * H1). The queue becomes a few hundred characters in a URL fragment, the owner sends that to
+     * himself by whatever channel he already uses, and the page at the other end fetches the music
+     * from Modland directly. A fragment never reaches a server, so even the page's own host does not
+     * learn what is on the list.
+     *
+     * **It says what it could not send.** A local file's identity is a grant to one app on one
+     * phone and means nothing in a browser, so those rows cannot travel — and a handoff that
+     * silently shortens a playlist is the failure mode `docs/PLAN_WEB.md` §8 calls worse than
+     * refusing outright.
+     */
+    fun sendQueueToBrowser() {
+        val tracks = _state.value.queue.tracks
+        if (tracks.isEmpty()) {
+            _state.update { it.copy(message = Message("There is nothing in the playlist to send.")) }
+            return
+        }
+        val packed = QueueLink.pack(tracks)
+        if (packed.sent == 0) {
+            _state.update {
+                it.copy(
+                    message = Message(
+                        "None of these can be sent: a file on this phone has no address a browser could open."
+                    )
+                )
+            }
+            return
+        }
+        val link = QueueLink.linkTo(Appearance.webPlayer(context), packed.fragment)
+        _state.update {
+            it.copy(
+                message = Message(
+                    if (packed.left == 0) "Sending ${packed.sent} tracks."
+                    else "Sending ${packed.sent}; ${packed.left} are files on this phone and stayed here."
+                )
+            )
+        }
+        _share.tryEmit(
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, link)
+                putExtra(Intent.EXTRA_SUBJECT, "Protracktor queue")
             }
         )
     }

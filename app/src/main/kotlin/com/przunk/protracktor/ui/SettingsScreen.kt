@@ -4,22 +4,30 @@
 package com.przunk.protracktor.ui
 
 import android.os.Build
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.AppTheme
@@ -53,6 +61,8 @@ fun SettingsScreen(
     replayCount: Int,
     replayBytes: Long,
     catalogues: List<CatalogueSummary>,
+    webPlayer: String,
+    onWebPlayerChanged: (String) -> Unit,
     songLengthCount: Int,
     trackMetadataCount: Int,
     favouriteCount: Int,
@@ -116,6 +126,35 @@ fun SettingsScreen(
                 selected = selectedLanguage,
                 labelOf = { it.label() },
                 onSelect = onLanguageSelected,
+            )
+        }
+
+        // Text rather than a choice, because the answer is an address and there is no list of them.
+        // It changes as the page moves -- a local server today, a tunnel next, a host eventually --
+        // which is exactly why it is stored rather than compiled in (`docs/PLAN_HANDOFF.md` §3).
+        item {
+            var editing by remember { mutableStateOf(webPlayer) }
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_web_player)) },
+                supportingContent = {
+                    Column {
+                        Text(
+                            stringResource(R.string.settings_web_player_body),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        OutlinedTextField(
+                            value = editing,
+                            onValueChange = { editing = it },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            // Committed when the field loses focus rather than on every keystroke:
+                            // half an address is not an address, and storing one would be storing
+                            // rubbish for as long as it took to finish typing.
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { onWebPlayerChanged(editing) }),
+                        )
+                    }
+                },
             )
         }
 

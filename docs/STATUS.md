@@ -409,6 +409,38 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C20. The index promises files no backend can open
+
+*Found 2026-09-08 by the wasm probe (`docs/PLAN_WEB.md` §14), and it is an **Android** defect — the
+same files are refused on the phone. The web build only made it easy to run hundreds of files at
+once, which is what the probe is for.*
+
+`SupportedFormats.extensions` is what a folder scan and a catalogue index are filtered through, and
+it has the same rule written into it twice already: `.gym` and `.snd` were removed because listing
+them "only indexed files that cannot open". Two more are in that state and were not noticed.
+
+**`.ym` — 4,961 files in Modland.** `Sc68Backend::worthTrying` claims a file only on `ICE!`, `SC68`
+or an `SNDH` tag in the first 256 bytes; a YM file has none, so it never reaches sc68 at all. Nor
+would it help: the vendored `file68` has no YM loader and no LHA support, and **Modland's YM files
+are LHA-packed** (`-lh5-` at offset two). So nothing here can open one, packed or not.
+
+**`.med` — 132 of Modland's 140.** They begin `MED\x04`, the older Amiga *Music Editor* format.
+libopenmpt's loader requires `MMD` at offset zero (`Load_med.cpp:865`) and handles MMD0–MMD3 only.
+The other 8 are genuine OctaMED and do play.
+
+**Two ways out, and they are not the same size:**
+
+1. **Drop both extensions**, as `.gym` and `.snd` were dropped. Costs nothing to build, removes
+   5,093 dead rows from a Modland index — and changes `SupportedFormats.fingerprint`, which marks
+   every stored index stale, so the owner re-downloads a 40 MB index to gain nothing he can hear.
+2. **Add LHA unpacking** and keep `.ym`. `lhasa` is ISC-licensed and was already read and accepted
+   during the UnExoticA work, where it is needed for the same reason — every UnExoticA tune lives
+   inside a `.lha`. That makes one dependency answer two wishes. It does nothing for `.med`, which
+   needs a decoder nobody here has.
+
+**Not decided.** The second is the interesting one and it is not urgent; the first is cheap and its
+only real cost is the re-index it forces.
+
 ### C19. ~~"More from this author" offered itself where it could never work~~ — FIXED 2026-09-08
 
 *Owner, 2026-09-08: the action did nothing for a track added from search the day before —

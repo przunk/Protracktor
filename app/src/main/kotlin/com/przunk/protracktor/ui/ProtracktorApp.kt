@@ -88,6 +88,8 @@ fun ProtracktorApp(
      * over: once in `onCreate` and again in `onNewIntent` when the app is already running.
      * [onExternalOpened] is what stops the same tune restarting on every recomposition.
      */
+    webPlayer: String = com.przunk.protracktor.player.QueueLink.DEFAULT_BASE,
+    onWebPlayerChanged: (String) -> Unit = {},
     externalOpen: android.net.Uri? = null,
     onExternalOpened: () -> Unit = {},
 ) {
@@ -312,6 +314,16 @@ fun ProtracktorApp(
                                 onClick = viewModel::savePlaylist,
                             )
                         }
+                        // Beside Save rather than in a row menu: it acts on the whole playlist, and
+                        // the row menu's actions all act on one track. Only while there is a list to
+                        // send (`docs/PLAN_HANDOFF.md` §3 H1).
+                        if (state.queue.tracks.isNotEmpty()) {
+                            LabelledAction(
+                                icon = PlayerIcons.Link,
+                                label = stringResource(R.string.action_send_to_browser),
+                                onClick = viewModel::sendQueueToBrowser,
+                            )
+                        }
                         LabelledAction(
                             icon = PlayerIcons.Settings,
                             label = stringResource(R.string.settings_title),
@@ -355,6 +367,8 @@ fun ProtracktorApp(
                 replayCount = browse.replayCount,
                 replayBytes = browse.replayBytes,
                 catalogues = browse.catalogues,
+                webPlayer = webPlayer,
+                onWebPlayerChanged = onWebPlayerChanged,
                 songLengthCount = browse.songLengthCount,
                 trackMetadataCount = browse.trackMetadataCount,
                 favouriteCount = browse.favouritesListed,

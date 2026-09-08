@@ -53,4 +53,15 @@ set_target_properties(openmpt PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED O
 target_include_directories(openmpt PUBLIC "${LOMPT_SRC}" "${LOMPT_SRC}/src" "${LOMPT_SRC}/common")
 
 # zlib comes with the NDK; MPT_WITH_ZLIB above is what asks for it.
-target_link_libraries(openmpt PUBLIC z)
+#
+# Emscripten has no NDK to take it from, but it ships zlib as a *port* -- source it fetches and
+# builds on demand. The flag has to be on the compile line as well as the link line: it is what puts
+# the port's headers on the include path, and without it `load_j2b.cpp` cannot find `zlib.h` while
+# every other file in the library compiles happily, which reads as one broken file rather than a
+# missing dependency.
+if(EMSCRIPTEN)
+    target_compile_options(openmpt PUBLIC -sUSE_ZLIB=1)
+    target_link_options(openmpt PUBLIC -sUSE_ZLIB=1)
+else()
+    target_link_libraries(openmpt PUBLIC z)
+endif()

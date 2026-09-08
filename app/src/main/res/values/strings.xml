@@ -266,6 +266,9 @@
     <string name="a11y_choose_random_scope">Choose what Random picks from</string>
     <string name="random_scope_title">Random picks from</string>
     <string name="random_scope_everything">Everything</string>
+    <string name="action_send_to_browser">To browser</string>
+    <string name="settings_web_player">Web player address</string>
+    <string name="settings_web_player_body">Where “To browser” sends the playlist. The link opens on the machine running the browser, so a local address is right.</string>
     <string name="random_scope_favourites">Favourites</string>
     <string name="random_scope_favourites_missing">Favourites needs Modland\'s own list — 142 KB, downloaded once.</string>
     <string name="random_scope_favourites_unindexed">None of the favourites are in your Modland index. Index Modland first.</string>

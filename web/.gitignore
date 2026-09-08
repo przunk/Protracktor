@@ -1,0 +1,4 @@
+# Build output. The wasm engine is produced by scripts/build-web-engine.sh from the same sources the
+# APK links; committing it would be committing a build, and a stale one within a day.
+vendor/
+node_modules/

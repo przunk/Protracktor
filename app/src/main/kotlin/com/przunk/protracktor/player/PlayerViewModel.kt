@@ -62,6 +62,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun downloadSongLengths() = controller.downloadSongLengths()
     fun downloadTrackMetadata() = controller.downloadTrackMetadata()
     fun downloadFavourites() = controller.downloadFavourites()
+    fun sendQueueToBrowser() = controller.sendQueueToBrowser()
 
     /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
     fun playExternal(uri: android.net.Uri, name: String? = null) {

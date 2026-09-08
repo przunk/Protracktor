@@ -282,6 +282,9 @@
     <string name="a11y_choose_random_scope">Wybierz, z czego losować</string>
     <string name="random_scope_title">Losuj z</string>
     <string name="random_scope_everything">Wszystkiego</string>
+    <string name="action_send_to_browser">Do przeglądarki</string>
+    <string name="settings_web_player">Adres odtwarzacza webowego</string>
+    <string name="settings_web_player_body">Dokąd „Do przeglądarki” wysyła playlistę. Link otwiera się na maszynie z przeglądarką, więc adres lokalny jest poprawny.</string>
     <string name="random_scope_favourites">Ulubionych</string>
     <string name="random_scope_favourites_missing">Ulubione wymagają listy Modlandu — 142 KB, pobierane raz.</string>
     <string name="random_scope_favourites_unindexed">Żadnego z ulubionych nie ma w twoim indeksie Modlandu. Najpierw zaindeksuj Modland.</string>
