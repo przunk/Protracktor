@@ -409,6 +409,23 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C17. ~~A skip taken near the end of a tune advanced twice~~ — FIXED 2026-09-08
+
+*Owner, 2026-09-08: "skip next (long press na next) przeskakuje czasem 2 pliki".*
+
+**The long press did not cause it; it made it easy to hit.** `track` still points at the outgoing
+decoder while the next one loads — it is closed inside that coroutine, not before it — so a skip
+taken as a tune runs out leaves the 200 ms position poll looking at a finished decoder whose
+replacement is already on its way. The poll then called `handleTrackEnded` and advanced the queue a
+second time.
+
+"Sometimes" is the tell: it needs the outgoing tune to be at its end. **Ordinary next had the same
+race**, and pressing next as a tune runs out is not a rare thing to do — the long press only made a
+skip cheap at any moment, so the window got sampled more often.
+
+The poll now decides nothing while a load is in flight. That is one line, and finding it took
+reading what "sometimes" could mean rather than looking at the gesture the owner was holding.
+
 ### C16. ~~One message for four different failures~~ — FIXED 2026-09-07
 
 *Found twice in one day, by the owner and by me, and it cost an hour each time.*
