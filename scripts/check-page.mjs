@@ -44,6 +44,17 @@ window.AudioWorkletNode = class {
   constructor() { this.port = { onmessage: null, postMessage() {} }; }
   connect() {}
 };
+// The operating system's media controls, recorded rather than performed.
+const handlers = {};
+let metadata = null;
+window.MediaMetadata = class { constructor(fields) { Object.assign(this, fields); } };
+window.navigator.mediaSession = {
+  playbackState: 'none',
+  set metadata(value) { metadata = value; },
+  get metadata() { return metadata; },
+  setActionHandler(name, fn) { handlers[name] = fn; },
+};
+
 const posted = [];
 window.fetch = async (url) => {
   const u = String(url);
@@ -139,6 +150,15 @@ if (window.__api) {
   check(api.orderLength() === 2, 'and a permutation covers the queue');
   $('shuffle').click();
   check(!$('shuffle').classList.contains('on'), 'and turns off again');
+
+  // What the operating system is told, which is how a media key reaches a buried tab.
+  check(metadata?.title === 'Crazy Comets', 'the system media controls learn the title');
+  check(metadata?.artist === 'Rob Hubbard', 'and the artist');
+  check(metadata?.album.includes('Commodore 64'), 'and what it is');
+  check(typeof handlers.play === 'function' && typeof handlers.nexttrack === 'function',
+    'and the media keys are wired to the transport');
+  check(window.document.title.startsWith('hi there'),
+    'the tab says what is playing, for a page among twenty');
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
