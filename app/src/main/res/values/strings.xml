@@ -274,7 +274,7 @@
     <string name="paired_with">Paired with %1$s</string>
     <string name="pair_forget">Forget the paired browser</string>
     <string name="settings_web_player">Web player address</string>
-    <string name="settings_web_player_body">Where “To browser” sends the playlist. The link opens on the machine running the browser, so a local address is right.</string>
+    <string name="settings_web_player_body">Where the link from the scanner screen points. Left empty it follows the browser you paired with, which is usually what you want.</string>
     <string name="random_scope_favourites">Favourites</string>
     <string name="random_scope_favourites_missing">Favourites needs Modland\'s own list — 142 KB, downloaded once.</string>
     <string name="random_scope_favourites_unindexed">None of the favourites are in your Modland index. Index Modland first.</string>

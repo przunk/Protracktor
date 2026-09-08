@@ -290,7 +290,7 @@
     <string name="paired_with">Sparowano z %1$s</string>
     <string name="pair_forget">Zapomnij sparowaną przeglądarkę</string>
     <string name="settings_web_player">Adres odtwarzacza webowego</string>
-    <string name="settings_web_player_body">Dokąd „Do przeglądarki” wysyła playlistę. Link otwiera się na maszynie z przeglądarką, więc adres lokalny jest poprawny.</string>
+    <string name="settings_web_player_body">Dokąd prowadzi link z ekranu skanera. Puste pole oznacza „ta przeglądarka, z którą jesteś sparowany” — i zwykle o to chodzi.</string>
     <string name="random_scope_favourites">Ulubionych</string>
     <string name="random_scope_favourites_missing">Ulubione wymagają listy Modlandu — 142 KB, pobierane raz.</string>
     <string name="random_scope_favourites_unindexed">Żadnego z ulubionych nie ma w twoim indeksie Modlandu. Najpierw zaindeksuj Modland.</string>
