@@ -137,6 +137,8 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           describe: e.UTF8ToString(e._pt_describe(this.handle)),
           duration: e._pt_duration(this.handle),
           subsongs: e._pt_subsong_count(this.handle),
+          preferredRate: e._pt_preferred_rate(this.handle),
+          rate: sampleRate,
           canSeek: e._pt_can_seek(this.handle) === 1,
         });
         break;

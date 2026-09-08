@@ -77,6 +77,11 @@ for (const file of files.sort()) {
   // `describe` is a tab-separated block of key/value lines, which is right for the app and
   // wrong for one line of a report.
   const describe = M.UTF8ToString(M._pt_describe(h)).replace(/[\t\n]+/g, ' ').trim();
+  // **Ask at the rate the decoder actually produces.** Six of the backends emulate a fixed clock
+  // and hand back 44,100 samples a second whatever they are told; measuring those against 48,000
+  // reports a speed 9% wrong and, worse, hides the mismatch that made the page play sharp. The
+  // owner's ear found that before this probe did, which is why it is asked here now.
+  const rate = M._pt_preferred_rate(h) || SAMPLE_RATE;
   const duration = M._pt_duration(h);
   const subsongs = M._pt_subsong_count(h);
 
@@ -84,7 +89,7 @@ for (const file of files.sort()) {
   let frames = 0, peak = 0;
   const t0 = process.hrtime.bigint();
   for (;;) {
-    const n = M._pt_render(h, SAMPLE_RATE, BLOCK, out);
+    const n = M._pt_render(h, rate, BLOCK, out);
     if (n <= 0) break;
     frames += n;
     const view = new Float32Array(M.HEAPF32.buffer, out, n * 2);
@@ -92,12 +97,12 @@ for (const file of files.sort()) {
       const v = Math.abs(view[i]);
       if (v > peak) peak = v;
     }
-    if (frames >= SAMPLE_RATE * MAX_SECONDS) break;
+    if (frames >= rate * MAX_SECONDS) break;
   }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6;
   M._free(out);
 
-  const seconds = frames / SAMPLE_RATE;
+  const seconds = frames / rate;
   const speed = ms > 0 ? seconds / (ms / 1000) : Infinity;
   slowest.push([speed, name]);
   // Silence is the failure this catches that "it opened" does not: a decoder that loads a file and
@@ -116,7 +121,7 @@ for (const file of files.sort()) {
       if (!M._pt_select_subsong(h, s)) continue;
       let p2 = 0;
       for (let block = 0; block < 12; block++) {
-        const n = M._pt_render(h, SAMPLE_RATE, BLOCK, probe);
+        const n = M._pt_render(h, rate, BLOCK, probe);
         if (n <= 0) break;
         const v2 = new Float32Array(M.HEAPF32.buffer, probe, n * 2);
         for (let i = 0; i < v2.length; i += 53) { const v = Math.abs(v2[i]); if (v > p2) p2 = v; }

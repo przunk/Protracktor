@@ -34,7 +34,13 @@ async function start() {
   // Created on a click, because a browser will not let audio start without one. The *first* tune
   // pushed to a fresh tab therefore cannot play by itself, and saying so beats looking broken
   // (`docs/PLAN_HANDOFF.md` §4).
-  context = new AudioContext();
+  // **44,100, and not because it is traditional.** Six of the seven backends emulate a machine with
+  // a fixed clock and produce 44.1 kHz whatever they are asked for. A browser's default context is
+  // usually 48 kHz and there is no resampler between a worklet and the speakers, so those samples
+  // would play 8.8% fast and about a semitone and a half sharp -- audible as "it sounds quicker
+  // than I remember", which is exactly how this was found. Android has always asked the backend and
+  // told Oboe, which resamples; this is the same answer by the only route a page has.
+  context = new AudioContext({ sampleRate: 44100 });
   status('loading the engine…');
 
   const wasm = await fetch('../vendor/engine.wasm').then((r) => r.arrayBuffer());
@@ -55,6 +61,12 @@ function onWorklet(message) {
       break;
     case 'opened':
       duration = message.duration;
+      // A backend that wants a rate this context cannot give would play sharp and say nothing.
+      // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
+      if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
+        status(`⚠ this decoder wants ${message.preferredRate} Hz and the page is running at ` +
+               `${message.rate} Hz — it will play ${(message.rate / message.preferredRate).toFixed(3)}× fast`);
+      }
       $('sub').textContent = describeLine(message.describe);
       $('seek').disabled = !message.canSeek;
       $('error').textContent = '';

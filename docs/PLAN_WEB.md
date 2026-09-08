@@ -699,6 +699,34 @@ a slow laptop is safe. Everything else has at least 86×.
   `EXCLUDE_FROM_ALL`; on Android the engine target pulls it in by linking `gme::gme`, and here there
   was no engine target to pull it. Nothing had failed — nobody had asked for it.
 
+### S3, and the defect a measurement could not have found
+
+The page played on the owner's machine at the first attempt that got past the worklet's missing
+globals, and the answer to the question S3 exists for — *does it glitch* — was no, including the
+SID. Then he said something that mattered more:
+
+> *"Mam wrażenie, że gra nieco szybciej niż pamiętam."* — of `Crazy_Comets.sid`, a tune he knows.
+
+He was right, and the cause is exact. **Six of the seven backends emulate a machine with a fixed
+clock and produce 44,100 samples a second whatever rate they are asked for.** A browser's default
+`AudioContext` runs at 48,000, and there is no resampler between an `AudioWorkletProcessor` and the
+output — so those samples played **8.84% fast**, about a semitone and a half sharp.
+
+**Android never had this**, because `player_oboe.cpp` asks `preferredSampleRate()` and hands it to
+Oboe, which resamples. The page was written as though that path did not exist. The context is opened
+at 44,100 now, which is the same answer by the only route a page has.
+
+**No measurement here would have caught it.** The probe reports how *fast* a decoder runs, never at
+what pitch, and it was asking for 48,000 itself — so its own SID figures were 9% out and it had no
+way to notice. It asks each file for its preferred rate now (SID: 29× realtime, not 23×), and the
+page compares the two and says so in words if they ever differ again, rather than transposing the
+music silently.
+
+**The general lesson is worth more than the fix.** Every check in this project is a number the
+machine can produce: does it open, is it above silence, how many times realtime. *Pitch* is not in
+that set, and an ear that knew the tune found in one listen what a hundred and eighty files could
+not.
+
 ### ZXTune is out, and it is a build-time choice now
 
 `lexic_analysis.cpp` initialises a `const auto*` from a `std::string::const_iterator`. The NDK's

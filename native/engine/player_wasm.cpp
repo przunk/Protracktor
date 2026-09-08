@@ -77,6 +77,18 @@ int pt_render(Handle *handle, int sampleRate, int frames, float *out) {
     return static_cast<int>(handle->backend->render(sampleRate, static_cast<std::size_t>(frames), out));
 }
 
+/**
+ * The rate this decoder wants to be asked for, or 0 for "whatever you like".
+ *
+ * **Not advice.** Six of the backends emulate a machine with a fixed clock and produce 44,100
+ * samples a second whatever they are asked for; handing those to a 48 kHz output as though they
+ * were 48 kHz plays everything 8.8% fast and about a semitone and a half sharp. Android has always
+ * asked this and told Oboe (`player_oboe.cpp`), which resamples; a browser has no resampler in that
+ * path, so the page must open its AudioContext at this rate instead.
+ */
+EMSCRIPTEN_KEEPALIVE
+int pt_preferred_rate(Handle *h) { return h ? h->backend->preferredSampleRate() : 0; }
+
 EMSCRIPTEN_KEEPALIVE int pt_can_seek(Handle *h) { return h && h->backend->canSeek() ? 1 : 0; }
 EMSCRIPTEN_KEEPALIVE void pt_seek(Handle *h, double seconds) { if (h) h->backend->seek(seconds); }
 EMSCRIPTEN_KEEPALIVE void pt_rewind(Handle *h) { if (h) h->backend->rewind(); }
