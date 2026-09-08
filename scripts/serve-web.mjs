@@ -17,8 +17,44 @@ import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
 
-const port = Number(process.argv[2] ?? 8173);
 const root = path.resolve('web');
+
+/**
+ * Settings, from a file beside the page rather than from flags.
+ *
+ * **Written on first run if it is not there**, so the thing to edit exists before anybody needs to
+ * ask what it is called. Deliberately **outside `web/`**: everything under that directory is served
+ * to whoever asks, and a configuration file is not a page.
+ *
+ * `host` is the address the QR code carries — the one the *phone* must be able to reach. Left null
+ * it is worked out from the network interfaces, which is right on an ordinary machine and wrong
+ * inside WSL, where the interface belongs to a private network the phone cannot see.
+ */
+const CONFIG = path.resolve('server.json');
+const DEFAULTS = {
+  port: 8173,
+  host: null,
+  bind: '0.0.0.0',
+};
+
+function settings() {
+  let stored = {};
+  if (fs.existsSync(CONFIG)) {
+    try {
+      stored = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
+    } catch (error) {
+      console.error(`⚠ ${CONFIG} is not valid JSON (${error.message}); using defaults.`);
+    }
+  } else {
+    fs.writeFileSync(CONFIG, JSON.stringify(DEFAULTS, null, 2) + '\n');
+    console.log(`📝 wrote ${CONFIG} — edit it to change the port or the advertised address.`);
+  }
+  return { ...DEFAULTS, ...stored };
+}
+
+const config = settings();
+// A port on the command line still wins, because that is how somebody tries a second one.
+const port = Number(process.argv[2] ?? process.env.PROTRACKTOR_PORT ?? config.port);
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm',
@@ -35,6 +71,7 @@ const types = {
  */
 function advertisedHost() {
   if (process.env.PROTRACKTOR_PAIR_HOST) return process.env.PROTRACKTOR_PAIR_HOST;
+  if (config.host) return config.host;
   const candidates = [];
   for (const [name, addresses] of Object.entries(os.networkInterfaces())) {
     for (const address of addresses ?? []) {
@@ -152,9 +189,9 @@ http.createServer((request, response) => {
     });
     response.end(data);
   });
-}).listen(port, () => {
+}).listen(port, config.bind, () => {
   const host = advertisedHost();
-  console.log(`🌐 page:  http://localhost:${port}/src/`);
+  console.log(`🌐 page:  http://localhost:${port}/src/   (settings: ${CONFIG})`);
   console.log(`📱 phone: http://${host}:${port}/`);
   // WSL has its own network. A phone on the same Wi-Fi reaches the *Windows* address, and nothing
   // arrives here until Windows forwards the port -- so the address in the QR would be right and the

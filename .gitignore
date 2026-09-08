@@ -39,3 +39,7 @@ Thumbs.db
 # The five that were once committed were taken out of the history on 2026-09-05 and the
 # correspondence in the commit messages paraphrased; this line is what stops the next one going in.
 docs/letters/
+
+# Written by scripts/serve-web.mjs on first run. Machine-specific: a port and the address the QR
+# code advertises, which is different on every machine that runs it.
+/server.json
