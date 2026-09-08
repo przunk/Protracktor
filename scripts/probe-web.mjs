@@ -96,15 +96,40 @@ for (const file of files.sort()) {
   }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6;
   M._free(out);
-  M._pt_close(h);
 
   const seconds = frames / SAMPLE_RATE;
   const speed = ms > 0 ? seconds / (ms / 1000) : Infinity;
   slowest.push([speed, name]);
   // Silence is the failure this catches that "it opened" does not: a decoder that loads a file and
   // renders zeros looks like success from every direction except the only one that matters.
-  if (peak < 0.001) { silent++; console.log(`🔇 ${name}  opened, decoded ${seconds.toFixed(1)}s, SILENT`); }
+  if (peak < 0.001) {
+    silent++;
+    // **Silence has two causes and they need different answers.** `GmeBackend` opens KSS and HES at
+    // the first *audible* track because track 0 is routinely an empty slot, and it gives up after
+    // 300 ms of searching -- a budget set against a phone emulating at fifty times realtime. If a
+    // later subsong has sound, the file is fine and the budget ran out; if none does, the file is
+    // silent and nothing here is wrong. Walking them says which, and only for files that failed.
+    let audibleAt = -1;
+    const count = M._pt_subsong_count(h);
+    const probe = M._malloc(BLOCK * 2 * 4);
+    for (let s = 1; s < Math.min(count, 256) && audibleAt < 0; s++) {
+      if (!M._pt_select_subsong(h, s)) continue;
+      let p2 = 0;
+      for (let block = 0; block < 12; block++) {
+        const n = M._pt_render(h, SAMPLE_RATE, BLOCK, probe);
+        if (n <= 0) break;
+        const v2 = new Float32Array(M.HEAPF32.buffer, probe, n * 2);
+        for (let i = 0; i < v2.length; i += 53) { const v = Math.abs(v2[i]); if (v > p2) p2 = v; }
+        if (p2 > 0.001) break;
+      }
+      if (p2 > 0.001) audibleAt = s;
+    }
+    M._free(probe);
+    console.log(`🔇 ${name}  opened, decoded ${seconds.toFixed(1)}s, SILENT` +
+      (audibleAt >= 0 ? `  — but subsong ${audibleAt} of ${count} has sound` : `  — and all ${count} subsongs are silent`));
+  }
   else { played++; console.log(`✅ ${name}  ${describe.slice(0, 44)}  ${duration.toFixed(0)}s${subsongs > 1 ? ` ×${subsongs}` : ''}  peak ${peak.toFixed(2)}  ${speed.toFixed(0)}× realtime`); }
+  M._pt_close(h);
 }
 
 slowest.sort((a, b) => a[0] - b[0]);

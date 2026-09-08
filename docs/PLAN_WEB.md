@@ -656,6 +656,38 @@ the same file is tried on Android**:
 The probe caught both on its first run, which is the argument for having written it before writing
 the page.
 
+### S2, the same day: 184 files, 20 formats
+
+*Measured.* Sampled at random from Modland's index, sizes between 2 KB and 400 KB, run through the
+wasm engine in node.
+
+```
+166 played, 8 silent, 10 refused, of 184
+```
+
+**And both failure groups have a known cause that is not the web build.**
+
+| | |
+| --- | --- |
+| **8 silent** | every one a `.sc68`, and this is the documented behaviour: those files need the replay routines the app deliberately does not ship and fetches on request (`docs/LICENSES.md`). Nothing fetched them here. **`.sndh` played 15 of 15**, because SNDH carries its own code — which is the SNDH/`.sc68` split, confirmed rather than assumed |
+| **10 refused** | every one a `.med`, all with `MED\x04` at offset zero. libopenmpt's loader requires `MMD` (`Load_med.cpp:865`): these are the older Amiga *Music Editor* format, which it does not load at all. Not a wasm difference — the same files are refused on the phone |
+
+So of the files a backend here can actually play, **166 of 166 played**, across six decoders.
+
+| format | files | slowest |
+| --- | --- | --- |
+| `.sid` | 20 | **23× realtime** |
+| `.spc` | 8 | 86× |
+| `.sndh` | 15 | 94× |
+| `.sap` | 8 | 140× |
+| `.it` | 10 | 178× |
+| `.xm` / `.mod` / `.s3m` | 50 | 286× / 323× / 449× |
+| `.ahx` / `.hvl` | 21 | 1533× / 594× |
+| `.nsf` / `.gbs` / `.kss` | 20 | 1105× / 921× / 517× |
+
+**23× realtime for a SID is the floor of the whole set**, and it is the number that decides whether
+a slow laptop is safe. Everything else has at least 86×.
+
 ### Three obstacles, and each lied about its cause
 
 - **`zlib.h` not found** in exactly one of libopenmpt's 353 files. Emscripten has zlib as a *port*,
