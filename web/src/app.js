@@ -87,7 +87,8 @@ function onWorklet(message) {
     case 'position':
       if (!seeking) {
         $('seek').value = duration > 0 ? Math.round((message.seconds / duration) * 1000) : 0;
-        $('time').textContent = `${clock(message.seconds)} / ${clock(duration)}`;
+        $('elapsed').textContent = clock(message.seconds);
+        $('remaining').textContent = clock(duration);
       }
       break;
     case 'ended':
@@ -152,34 +153,71 @@ async function announceGesture() {
     try { await context.resume(); } catch { /* needs a gesture; the message below is the answer */ }
   }
   if (context.state === 'suspended') {
-    status('▶ press Play — a browser will not start audio until this page is clicked');
-    $('playpause').textContent = 'Play ▶';
+    status('Press play — a browser will not start audio until this page is clicked.');
   }
 }
 
+const PLAY_GLYPH = 'M8 5v14l11-7z';
+const PAUSE_GLYPH = 'M6 5h4v14H6zm8 0h4v14h-4z';
+
 function setPlaying(on) {
   playing = on;
-  $('playpause').textContent = on ? 'Pause' : 'Play';
+  $('playglyph').setAttribute('d', on ? PAUSE_GLYPH : PLAY_GLYPH);
+  $('playpause').title = on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
   $('prev').disabled = index <= 0;
   $('next').disabled = index + 1 >= queue.length;
 }
 
+/**
+ * The list, in the app's shape: a position, a title, and a subtitle that says where it came from.
+ *
+ * `ui/PlaylistScreen.kt` puts the source path in the subtitle and tints the playing row with
+ * `primary`; both are reproduced here. The drag handle, the selection mode and the overflow menu
+ * are phone-only and deliberately absent (`GOAL.md` round 7, item 3).
+ */
 function render() {
   const list = $('queue');
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
-    if (i === index) li.className = 'playing';
-    const n = document.createElement('span'); n.className = 'n'; n.textContent = String(i + 1);
-    const name = document.createElement('span'); name.className = 'name'; name.textContent = entry.name;
-    li.append(n, name);
+    li.className = i === index ? 'track playing' : 'track';
+
+    const n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = String(i + 1);
+
+    const text = document.createElement('div');
+    text.className = 'text';
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = entry.name;
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = entry.meta ?? sourceOf(entry.url);
+    text.append(title, meta);
+
+    li.append(n, text);
     li.onclick = () => playAt(i);
     return li;
   }));
-  $('paste').hidden = queue.length > 0;
-  // Shrunk rather than hidden. It is the way a second playlist arrives, so it has to stay on
-  // screen; full size next to a playing queue is a poster for something already done.
-  $('pair').className = queue.length > 0 ? 'small' : '';
+  $('count').textContent = queue.length
+    ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
+    : 'nothing yet';
+}
+
+/** "Modland/Protracker/4-Mat", the way the phone's subtitle reads. */
+function sourceOf(url) {
+  try {
+    const parsed = new URL(url, location.href);
+    if (parsed.hostname.endsWith('modland.com')) {
+      const path = decodeURIComponent(parsed.pathname.replace('/pub/modules/', ''));
+      return `Modland/${path.split('/').slice(0, -1).join('/')}`;
+    }
+    if (parsed.hostname.endsWith('modarchive.org')) return 'The Mod Archive';
+    return parsed.hostname;
+  } catch {
+    return '';
+  }
 }
 
 function setQueue(urls) {
@@ -191,6 +229,17 @@ function setQueue(urls) {
   setPlaying(false);
   if (queue.length) playAt(0);
 }
+
+// The panels are the page's two "actions", in the app's vocabulary rather than two stacked
+// sections. Pair is the one that matters, so it is the one that starts open.
+function showPanel(which) {
+  $('pair').hidden = which !== 'pair';
+  $('paste').hidden = which !== 'paste';
+  $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
+  $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
+}
+$('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
+$('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 
 $('load').onclick = () => {
   const urls = $('urls').value.split('\n').map((s) => s.trim()).filter(Boolean);
