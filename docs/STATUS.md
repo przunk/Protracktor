@@ -409,6 +409,35 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C18. ~~A downgrade left an app that could not start~~ — FIXED 2026-09-08
+
+*Found while adding schema 12, by reading the method next to the one being changed.*
+
+`onDowngrade` exists so that installing an older build over a newer one recreates the database
+instead of throwing on every launch — which is what SQLite's default does, and it leaves an app that
+cannot be opened at all until its data is cleared by hand. **It had been doing exactly that itself
+for seven versions.** It dropped a list of five tables, written when there were five, and then ran a
+`CREATE` that had grown to twelve; the recreate met a `catalogues` that was still there and stopped.
+Verified against a real SQLite: `[SQLITE_ERROR] table catalogues already exists`.
+
+Nothing caught it because **a downgrade needs a device**. The tests here run migrations, and
+migrations never take this path; there is no emulator in this environment (AGENTS.md §3).
+
+**Why it had not been seen on a phone either:** Android refuses to install a lower `versionCode`
+over a higher one, and `versionCode` is the commit count, so every older schema also has a smaller
+number. The combination that bites is a **higher number carrying an older schema** — which is
+precisely what a schema bump sitting on a branch produces while `develop` keeps moving. Schema 12
+was on such a branch when this was found.
+
+The tables are asked of `sqlite_master` now, because a hard-coded list is a claim about the schema
+kept somewhere other than the schema, and it went stale the first time one was added.
+
+**And the test earned its place immediately.** The first version dropped tables in the order
+`sqlite_master` lists them and failed with `no such table: main.playlists`: `DROP TABLE` runs an
+implicit delete of the table's rows, that delete resolves foreign keys, and the app turns foreign
+keys on. Dropping in reverse is dependency order, because a child is always created after its
+parent. That would have shipped as a second version of the same bug.
+
 ### C17. ~~Holding next skipped two files, then four~~ — FIXED 2026-09-08
 
 *Owner, 2026-09-08: "skip next (long press na next) przeskakuje czasem 2 pliki", then, after the

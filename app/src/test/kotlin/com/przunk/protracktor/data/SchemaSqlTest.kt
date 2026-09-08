@@ -35,18 +35,18 @@ class SchemaSqlTest {
             }
         }
 
+    /** Every table a fresh install has. Named once, because two tests check against it. */
+    private fun freshTableNames(): Set<String> = setOf(
+        "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
+        "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
+        "track_metadata", "modland_favourites",
+    )
+
     @Test
     fun `the create statements execute`() {
         memoryDatabase().use { connection ->
             connection.run(SchemaSql.CREATE)
-            assertEquals(
-                setOf(
-                    "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
-                    "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
-                    "track_metadata", "modland_favourites",
-                ),
-                connection.tableNames(),
-            )
+            assertEquals(freshTableNames(), connection.tableNames())
         }
     }
 
@@ -257,6 +257,41 @@ class SchemaSqlTest {
                     val paths = buildList { while (rows.next()) add(rows.getString(1)) }
                     assertEquals(3, paths.size)
                     assertEquals(3, paths.toSet().size)
+                }
+            }
+        }
+    }
+
+    /**
+     * What `ProtracktorDatabase.onDowngrade` runs, against a real engine.
+     *
+     * The one path in this file that had no test and needed one most: it meets a phone holding
+     * somebody's data exactly once, and until 2026-09-08 it threw every time. The list of tables to
+     * drop was written at version 1 and never grew, so the recreate hit `catalogues` and stopped --
+     * leaving an app that could not start at all.
+     */
+    @Test
+    fun `a downgrade recreates the database instead of tripping over what is already there`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf("INSERT INTO catalogues (id, display_name) VALUES ('m', 'Modland')")
+            )
+
+            val existing = connection.createStatement().use { statement ->
+                statement.executeQuery(SchemaSql.TABLE_NAMES).use { rows ->
+                    buildList { while (rows.next()) add(rows.getString(1)) }
+                }
+            }
+            connection.run(SchemaSql.dropStatements(existing))
+            connection.run(SchemaSql.CREATE)
+
+            // The shape a fresh install has, and nothing left of what was there.
+            assertEquals(freshTableNames(), connection.tableNames())
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT COUNT(*) FROM catalogues").use { rows ->
+                    rows.next()
+                    assertEquals(0, rows.getInt(1))
                 }
             }
         }
