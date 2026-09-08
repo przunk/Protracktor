@@ -506,6 +506,104 @@ than invent an answer.
 
 ---
 
+## 13. The implementation plan
+
+Written 2026-09-08 after the owner asked for one. Seven stages, each with a **deliverable**, a
+**way it is checked**, **what it needs from him**, and **what would make us stop**. The order is not
+decoration: every stage is useful if the next never happens, and the two that could kill the idea
+come before the two that cost the most.
+
+Stated once so it is not rediscovered as a surprise: **no accounts anywhere in this plan**, ZXTune
+is out of the first set, Compose Multiplatform is not used (`PLAN_HANDOFF.md` §5a), and `assetlinks.json`
+waits for a domain that does not exist yet.
+
+### S0 — Split the engine. Android only, no web code at all
+
+`engine.cpp` is 1,868 lines of which the Android-bound part is one class and one block: the Oboe
+`Player` at 1497 and the `extern "C"` JNI functions from 1737. They move to `player_oboe.cpp`; the
+shared file keeps the backends, the registry and the dispatch.
+
+- **Deliverable:** identical APK behaviour, one file fewer concern.
+- **Checked by:** the 184 unit tests, a release build, and **the owner on his device** — this is the
+  heart of playback and nothing else in this plan touches the phone.
+- **Needs him:** one test round.
+- **Stop if:** the split cannot be made without changing behaviour. Then the web port is a fork of
+  the engine rather than a second target, and that is a different and worse project.
+
+### S1 — Emscripten, and one decoder end to end
+
+`scripts/fetch-emsdk.sh` and `scripts/build-web-engine.sh` producing `web/vendor/engine.js` + `.wasm`
+from **our** `engine.cpp` with libopenmpt only, plus `player_wasm.cpp` — the worklet-side counterpart
+of the Oboe class.
+
+- **Deliverable:** our own engine, in wasm, with a byte count.
+- **Checked by:** `scripts/probe-web.mjs` in node — the host-probe rule (`AGENTS.md` §7) applied to
+  wasm. Real Modland files in, per-file open/decode/peak/realtime out. Proven possible today against
+  somebody else's build: 518× realtime, peak 0.607.
+- **Needs him:** nothing.
+- **Stop if:** our `engine.cpp` needs forking to compile under `emcc`. Report and stop; do not fork.
+
+### S2 — The rest of the backends, one at a time, each with a number
+
+game-music-emu, libsidplayfp, ASAP, HivelyTracker, sc68. Each added, probed in node against real
+files from the archives, and recorded the way `PLAN_FORMATS.md` records a native backend.
+
+- **Deliverable:** a coverage table and a total byte count.
+- **Checked by:** the same probe. reSIDfp and sc68 are the ones whose realtime factor is worth
+  watching; libopenmpt's 518× says nothing about them.
+- **Needs him:** nothing.
+- **Stop if:** the total goes past a few megabytes compressed, or a backend cannot reach realtime with
+  margin. Either is a reason to ship without it, not to abandon the stage.
+- **ZXTune is not in this list.** No precedent exists, it is the largest C++ here and it fought the
+  native build. It is 3,639 Modland files of 516,107; the web version can say so.
+
+### S3 — The page, on localhost
+
+A static page: title, transport, position, queue. An `AudioWorkletProcessor` importing the engine.
+Plays a list of Modland URLs it is given. No browsing, no search, no settings — `PLAN_HANDOFF.md`
+§5a says why.
+
+- **Deliverable:** `web/src`, `scripts/serve-web.sh`, and a URL he opens.
+- **Checked by:** **him, and only him.** Does it play, does it glitch, does seeking work. `http://localhost`
+  is a secure context, so no certificate and no headers are needed.
+- **Needs him:** the first real test round of the whole idea.
+- **Stop if:** it glitches and the cause is the worklet rather than a bug. That is the one failure
+  no measurement here can predict.
+
+### S4 — H1, the link. The first time the wish actually works
+
+Phone: "send this queue to the browser" builds a URL with the queue compressed into the fragment and
+hands it to the share sheet. Page: reads the fragment, builds the queue, plays.
+
+- **Deliverable:** his playlist, playing at his desk.
+- **Checked by:** him, end to end, from phone to browser.
+- **Needs him:** one round, and the answer to whether copy-paste per handoff is tolerable.
+- **Measured already:** 50 tracks compress to 1,992 characters — inside the limit that is safe
+  everywhere. No server is involved in the handoff at all.
+
+### S5 — H2, the relay and the typed code
+
+Only if S4's copy-paste grates. `web/relay/`: rooms, one-directional, holding nothing. The browser
+shows an eight-digit code, the phone takes it. Requires HTTPS from outside, so it arrives with the
+hosting conversation rather than before it.
+
+- **Stop if:** his work network blocks the relay. H1 survives that; H2 does not, which is the third
+  reason H1 comes first.
+
+### S6 — Everything else, deliberately not planned
+
+Browsing catalogues in the browser, the local library through the File System Access API, favourites
+and history syncing, WebRTC. Each is a decision (`PLAN_WEB.md` §12), not a next step.
+
+### What the owner is on the hook for
+
+Four things, and nothing else: **the S0 device test**, **whether S3 glitches**, **whether S4 works
+end to end**, and eventually **whether his work network permits any of it** — the last being the one
+question that can invalidate the whole thing and the one nobody else can answer.
+
+Everything before S3 needs no browser, no host, no network and no account, because the host-probe
+rule survives the move to the web (§4).
+
 ## Sources for the *read* claims
 
 Listed so the next person can re-check them rather than trust this file, per `AGENTS.md` §7.
