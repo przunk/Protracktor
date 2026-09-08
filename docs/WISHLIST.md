@@ -10,6 +10,41 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B28. The Mod Archive gives us no artist
+
+*Found 2026-09-08 while working out why "more from this author" did nothing for one of its tracks
+(`docs/STATUS.md` C19). Not the owner's request — a consequence he should get to decide about.*
+
+**Every tune from The Mod Archive has an empty author, everywhere in the app.** The parser sets
+`author = ""` and it is not being lazy: a search result row carries a title, a format icon and a
+module id, and the artist is simply not in the HTML it returns. So the playlist row, the information
+panel and the Now Playing screen all show nothing for those tracks, and no amount of care elsewhere
+changes that.
+
+**The name is on the module's own page**, at `index.php?request=view_by_moduleid&query=<id>` — which
+means a second request and a second HTML parse **per track**, against a page nobody publishes a
+contract for. That is the whole cost, and it is worth stating plainly before anyone starts:
+
+- **Not during search.** Twenty results would be twenty page fetches before the list could be drawn,
+  on somebody's mobile connection. The list has to appear first.
+- **On demand, then.** Either when a track is opened — the information panel is where an absent
+  author is most visible — or when it is played, filling the field a moment late.
+- **Cached, once fetched**, in the same table as the songdb metadata or beside it. The answer does
+  not change, and asking twice for one module is asking their site to do our bookkeeping.
+
+**The alternative is to leave it blank and say why.** "The Mod Archive does not publish the artist
+in its search results" is a true sentence and costs nothing to show, and there is an argument that a
+player has no business scraping a page per track to fill a field. Worth deciding before building,
+because the scraping version is the kind of thing that works for a year and then breaks silently on
+a redesign.
+
+**A third option exists and is better if it holds:** the songdb metadata table is keyed by MD5 and
+covers around 400 archives. If it names artists for modules The Mod Archive serves, the answer is
+already on the device after one download the app already offers — no scraping, no second request.
+That should be measured before either of the above is built.
+
+---
+
 ## B27. ~~Random, but only tunes considered good~~ — DONE 2026-09-08
 
 *owner, 2026-09-08: "random good" — raised in the same breath as B22, which is why the scope became
