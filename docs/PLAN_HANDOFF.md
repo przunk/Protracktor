@@ -241,6 +241,48 @@ player and the cause is three commits back.
 
 ---
 
+## 5b. Built 2026-09-08: scan a code, and the browser has the playlist
+
+The owner rejected the link as *"pain in the ass"* the moment he had used it twice, which is the
+right verdict and arrived faster than this document expected. H2 was built the same evening.
+
+**One correction to the shape he proposed, and it made it cheaper.** He pictured the page exposing
+an endpoint the phone posts to. A browser page cannot: it may open a connection and never accept
+one. So the code carries the address of **the server the page is listening to** — and today that is
+the same process already serving the page, so pairing needed no new infrastructure at all. Three
+routes: `/pair/host`, `/pair/<room>` and `/pair/<room>/events`.
+
+**What was decided along the way, and why:**
+
+- **The room lives in the browser's `localStorage`**, not in the server's answer. A page reload
+  would otherwise mint a new room and silently invalidate the pairing, sending somebody back to the
+  camera for no reason. The phone scans once and sends many times.
+- **The code stays on screen**, shrunk once something is playing rather than hidden: it is how the
+  next playlist arrives.
+- **A pairing is stored only after it has worked.** The first version stored the address before
+  trying it; the owner scanned with his firewall still closed, the send failed, the address was kept
+  anyway, and every later press used a pairing that had never once succeeded — with no way back to
+  the scanner. A stored pairing is a claim that a browser is reachable and the only evidence is
+  having reached one. "Reached it, no page listening" still stores, because that is a different
+  instruction: open the page, do not scan again.
+- **The link did not disappear; it moved to a hold.** It had been arriving as a silent fallback,
+  which turned a failed send into an unasked-for wall of text. Press does the plain thing, hold does
+  the qualified one — the transport's idiom, now on `LabelledAction` too.
+- **Cleartext is permitted app-wide and narrowed in code.** A browser on the LAN has no certificate
+  and no name one could be issued for; Android's network config takes host names, not ranges, so
+  "private addresses only" cannot be written there. `WebRemote.looksLikePairing` accepts a cleartext
+  address only for loopback, RFC 1918, link-local and `.local`. A code pointing at a public host over
+  `http` is refused: a playlist posted there would cross the internet in the clear.
+- **ZXing, not ML Kit**, for the reason the decoders are vendored source: ML Kit is a dependency on
+  Play services rather than on a library. The `CAMERA` permission is asked when the scanner opens,
+  never at start-up, and frames are decoded and dropped.
+
+**What it cost:** one megabyte of APK (18 → 19 MB) and one permission.
+
+**On WSL it needs a port proxy**, because the phone reaches the Windows address and the server is
+inside WSL's own network. The server detects this and prints the two commands; without them the
+address in the code is right and the connection still fails, which is the worst kind of wrong.
+
 ## 6. Order of work
 
 1. **W1** — `PLAN_WEB.md`'s throwaway: a page you drop a file onto. The byte count is now known
