@@ -137,17 +137,32 @@ http.createServer((request, response) => {
     const here = room(id);
 
     if (events) {
+      // **Three of these four headers exist to stop a proxy holding the stream.** Measured through a
+      // Cloudflare quick tunnel on 2026-09-09: the phone was told "delivered: 1" and the listener
+      // received nothing, because the events were buffered somewhere in the middle. Locally the
+      // same code delivers instantly, which is exactly how a bug like this hides.
       response.writeHead(200, {
         'content-type': 'text/event-stream',
-        'cache-control': 'no-store',
+        'cache-control': 'no-cache, no-transform',
         connection: 'keep-alive',
+        'x-accel-buffering': 'no',
       });
+      // And two kilobytes of padding, because a proxy that buffers by size will not forward
+      // anything until its buffer fills. A comment line costs nothing to a client and is the
+      // conventional way to push past that threshold.
+      response.write(`:${' '.repeat(2048)}\n\n`);
       response.write(': open\n\n');
       here.listeners.add(response);
       // The page may have been reloaded after the phone sent something; the last message is kept so
       // a reconnect does not lose the queue.
       if (here.last) response.write(`data: ${here.last}\n\n`);
-      request.on('close', () => here.listeners.delete(response));
+      // A heartbeat, which also keeps an idle connection from being closed by whatever sits in
+      // front -- a tunnel usually gives up on a silent stream after a minute or two.
+      const beat = setInterval(() => response.write(': ping\n\n'), 15_000);
+      request.on('close', () => {
+        clearInterval(beat);
+        here.listeners.delete(response);
+      });
       return;
     }
 
