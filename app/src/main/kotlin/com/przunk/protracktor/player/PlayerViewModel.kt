@@ -63,6 +63,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun downloadTrackMetadata() = controller.downloadTrackMetadata()
     fun downloadFavourites() = controller.downloadFavourites()
 
+    /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
+    fun playExternal(uri: android.net.Uri, name: String? = null) {
+        ensureServiceRunning()
+        controller.playExternal(uri, name)
+    }
+
     // Giving disk back, one copy at a time (`docs/ARCHITECTURE.md` §19).
     fun clearFetchedCache() = controller.clearFetchedCache()
     fun deleteCatalogueIndex(catalogueId: String) = controller.deleteCatalogueIndex(catalogueId)

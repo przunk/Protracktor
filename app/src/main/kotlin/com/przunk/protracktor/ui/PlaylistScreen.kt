@@ -94,6 +94,7 @@ fun PlaylistScreen(
             PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
                 randomMode = state.randomMode,
+                externalMode = state.externalMode,
                 onReturnToPlaylist = onReturnToPlaylist,
                 contentPadding = contentPadding,
             )
@@ -571,6 +572,7 @@ private fun EmptyPlaylist(
 @Composable
 private fun AwayScrim(
     randomMode: Boolean,
+    externalMode: Boolean,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
 ) {
@@ -587,21 +589,36 @@ private fun AwayScrim(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // Three ways to be away from the playlist now, and the third does not behave like the
+            // other two: a file handed to us by another app has no next and no previous, so the
+            // scrim must not promise one.
             Icon(
-                imageVector = if (randomMode) PlayerIcons.Dice else PlayerIcons.Search,
+                imageVector = when {
+                    externalMode -> PlayerIcons.Folder
+                    randomMode -> PlayerIcons.Dice
+                    else -> PlayerIcons.Search
+                },
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
                 text = stringResource(
-                    if (randomMode) R.string.random_playing_title else R.string.search_playing_title
+                    when {
+                        externalMode -> R.string.external_playing_title
+                        randomMode -> R.string.random_playing_title
+                        else -> R.string.search_playing_title
+                    }
                 ),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
                 text = stringResource(
-                    if (randomMode) R.string.random_playing_body else R.string.search_playing_body
+                    when {
+                        externalMode -> R.string.external_playing_body
+                        randomMode -> R.string.random_playing_body
+                        else -> R.string.search_playing_body
+                    }
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

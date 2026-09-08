@@ -4,6 +4,8 @@
 
     <string name="search_playing_title">Odtwarzanie z wyszukiwania</string>
     <string name="search_playing_body">Nic z tej playlisty nie gra.\nNastępny i poprzedni chodzą po wynikach.</string>
+    <string name="external_playing_title">Odtwarzanie pliku z zewnątrz</string>
+    <string name="external_playing_body">Inna aplikacja podała ten plik Protracktorowi. Nic po nim nie następuje.\nPlus go zachowuje.</string>
     <string name="random_playing_title">Odtwarzanie losowe</string>
     <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny.\nPlus zachowuje ten.</string>
     <string name="random_back_to_playlist">Wróć do playlisty</string>

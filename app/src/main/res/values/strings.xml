@@ -4,6 +4,8 @@
 
     <string name="search_playing_title">Playing from search</string>
     <string name="search_playing_body">Nothing from this playlist is playing.\nNext and previous walk the results.</string>
+    <string name="external_playing_title">Playing a file from outside</string>
+    <string name="external_playing_body">Another app handed this to Protracktor. Nothing follows it.\nThe plus keeps it.</string>
     <string name="random_playing_title">Playing at random</string>
     <string name="random_playing_body">Nothing from this playlist is playing. Next picks another.\nThe plus keeps this one.</string>
     <string name="random_back_to_playlist">Back to the playlist</string>

@@ -81,10 +81,27 @@ fun ProtracktorApp(
     onThemeSelected: (AppTheme) -> Unit = {},
     dynamicColour: Boolean = true,
     onDynamicColourChanged: (Boolean) -> Unit = {},
+    /**
+     * A file another app asked us to open, or null.
+     *
+     * Passed in rather than read here, because the intent belongs to the activity and arrives twice
+     * over: once in `onCreate` and again in `onNewIntent` when the app is already running.
+     * [onExternalOpened] is what stops the same tune restarting on every recomposition.
+     */
+    externalOpen: android.net.Uri? = null,
+    onExternalOpened: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
     var showNowPlaying by remember { mutableStateOf(false) }
+
+    // Keyed on the URI so the same file opened twice in a row still plays, and a recomposition
+    // caused by anything else does not restart it.
+    LaunchedEffect(externalOpen) {
+        val uri = externalOpen ?: return@LaunchedEffect
+        viewModel.playExternal(uri)
+        onExternalOpened()
+    }
 
     // **Saved, not merely remembered.** Which full-screen destination is open is navigation state,
     // and it has to survive the activity being rebuilt. Changing the language or the theme calls

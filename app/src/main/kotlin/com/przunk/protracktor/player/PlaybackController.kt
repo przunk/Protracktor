@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Process
 import android.os.SystemClock
+import android.provider.OpenableColumns
 import android.text.format.DateUtils
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueGroup
@@ -104,6 +105,16 @@ data class PlayerUiState(
      */
     val transient: TrackRef? = null,
     /**
+     * Whether [transient] came from outside the app — a file another app handed us.
+     *
+     * A transient track used to mean one thing, Random, so `randomMode` was written as
+     * "transient != null". A tune opened from a file manager is also playing outside the playlist
+     * and is not Random at all: next must not roll the dice, and the scrim over the playlist must
+     * not say "Next picks another", because next picks nothing. One file arrived, and that is all
+     * there is.
+     */
+    val externalOpen: Boolean = false,
+    /**
      * Playing from search results rather than from the playlist.
      *
      * The results become the queue while you are in them: next and previous walk what you found,
@@ -172,6 +183,7 @@ data class PlayerUiState(
     /** Whether there is another **file** — what a long press on next asks for. */
     val canGoNextFile: Boolean
         get() = when {
+            externalMode -> false
             randomMode -> true
             searchMode -> resultsQueue?.hasNext == true
             else -> queue.hasNext
@@ -179,6 +191,7 @@ data class PlayerUiState(
 
     val canGoPreviousFile: Boolean
         get() = when {
+            externalMode -> false
             randomMode -> randomHasPrevious
             searchMode -> resultsQueue?.hasPrevious == true
             else -> queue.hasPrevious
@@ -188,13 +201,16 @@ data class PlayerUiState(
         get() = playlists.firstOrNull { it.id == activePlaylistId }?.name
 
     /** True while Random is driving playback rather than the playlist. */
-    val randomMode: Boolean get() = transient != null
+    val randomMode: Boolean get() = transient != null && !externalOpen
+
+    /** True while a file handed to us by another app is playing. */
+    val externalMode: Boolean get() = transient != null && externalOpen
 
     /** True while search results are driving playback rather than the playlist. */
     val searchMode: Boolean get() = resultsQueue != null
 
     /** True whenever what is playing did not come from the active playlist. */
-    val awayFromPlaylist: Boolean get() = randomMode || searchMode
+    val awayFromPlaylist: Boolean get() = transient != null || searchMode
 }
 
 /** Which part of Browse is on screen. Back moves one step towards [ROOT]. */
@@ -1310,10 +1326,26 @@ class PlaybackController private constructor(private val context: Context) {
             // Which catalogue it is from is asked of the catalogues, each of which recognises its
             // own references and no others.
             val from = Catalogue.owning(ref.id)
-            val located = from?.pathFrom(ref.id)?.let { path -> catalogues.locate(from.id, path) }
-            if (from == null || located == null) {
+            if (from == null) {
                 _state.update {
                     it.copy(message = Message("Only tracks from an online catalogue can do that."))
+                }
+                return@launch
+            }
+
+            // **Two failures, and they used to share a sentence.** A track that came from a
+            // catalogue but is not in the index today -- deleted to save room, or added to a
+            // playlist before an index was rebuilt -- was told it was not from a catalogue, which
+            // is both untrue and no help: the fix is to index, and the message did not say so.
+            // Where the jump goes is read from the index, so there is nothing to do without one.
+            val located = from.pathFrom(ref.id)?.let { path -> catalogues.locate(from.id, path) }
+            if (located == null) {
+                _state.update {
+                    it.copy(
+                        message = Message(
+                            "That track is not in the ${from.displayName} index. Index it to jump to the author."
+                        )
+                    )
                 }
                 return@launch
             }
@@ -1715,6 +1747,57 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
+     * Plays a file another app handed us — a tap in a file manager, a share, a link.
+     *
+     * **The playing half was already here**: `loadBytes` reads a `content://` through the resolver
+     * and an `http(s)` through the network, and `playTransient` plays something that is in no
+     * playlist. All this adds is a name and a flag (`docs/WISHLIST.md` B24).
+     *
+     * The name matters more than it looks. Every backend that identifies a file by extension is
+     * handed [TrackRef.fileNameOrTitle], and a `content://` URI usually has no extension anywhere
+     * in it — so without asking the provider for `DISPLAY_NAME` a perfectly good `.sndh` arrives as
+     * a nameless blob and the four backends that need the name to choose a loader all decline it.
+     *
+     * **The read grant lives as long as this intent.** The bytes are read immediately, which is
+     * fine, but "try again" on a failure later may find the grant gone -- one of the few places in
+     * this app where retrying is genuinely not the same operation.
+     */
+    fun playExternal(uri: Uri, suppliedName: String? = null) {
+        scope.launch {
+            val name = suppliedName?.takeIf { it.isNotBlank() }
+                ?: withContext(Dispatchers.IO) { displayNameOf(uri) }
+            playTransient(
+                TrackRef(
+                    id = uri.toString(),
+                    title = name,
+                    subtitle = "",
+                    fileName = name,
+                ),
+                external = true,
+            )
+        }
+    }
+
+    /**
+     * What to call a file somebody handed us.
+     *
+     * `OpenableColumns.DISPLAY_NAME` first, because a document provider knows the real name and the
+     * URI often does not carry it. Falling back to the last path segment covers `file://` and every
+     * `http(s)` link, which is the case the owner described.
+     */
+    private fun displayNameOf(uri: Uri): String {
+        if (uri.scheme == "content") {
+            runCatching {
+                context.contentResolver.query(uri, null, null, null, null)?.use { row ->
+                    val column = row.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (column >= 0 && row.moveToFirst()) return row.getString(column).orEmpty()
+                }
+            }
+        }
+        return uri.lastPathSegment?.substringAfterLast('/').orEmpty()
+    }
+
+    /**
      * Fetches Modland's favourites list.
      *
      * Beside the song lengths and the metadata table because it is the same kind of thing: nothing
@@ -1961,6 +2044,7 @@ class PlaybackController private constructor(private val context: Context) {
             it.copy(
                 resultsQueue = results,
                 transient = null,
+                externalOpen = false,
                 randomHasPrevious = false,
                 playing = false,
                 positionSeconds = 0.0,
@@ -2011,6 +2095,7 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update {
             it.copy(
                 transient = null,
+                externalOpen = false,
                 resultsQueue = null,
                 randomHasPrevious = false,
                 playing = false,
@@ -2570,6 +2655,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun nextFile() {
         val now = _state.value
+        if (now.externalMode) return
         if (now.transient != null) return randomNext()
         now.resultsQueue?.let { results ->
             if (results.hasNext) playFromResultsQueue(results.next())
@@ -2591,6 +2677,7 @@ class PlaybackController private constructor(private val context: Context) {
     /** Straight to the previous file, past whatever is left inside this one. See [nextFile]. */
     fun previousFile() {
         val now = _state.value
+        if (now.externalMode) return
         if (now.transient != null) return randomPrevious()
         now.resultsQueue?.let { results ->
             if (results.hasPrevious) playFromResultsQueue(results.previous())
@@ -2765,8 +2852,9 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
 
-        // A transient track is a Random pick -- `playTransient` is called from nowhere else, and a
-        // search result sets `transient` to null on its way through `playFromResultsQueue` above.
+        // A transient track is a Random pick or a file another app handed us; a search result sets
+        // `transient` to null on its way through `playFromResultsQueue` above. The external one
+        // stops when it ends -- there is no next, because one file arrived and that was all of it.
         //
         // Random used to stop here, guarding against rolling on into the playlist: that would
         // answer a question nobody asked by pressing Random. **That guard still holds** and this is
@@ -2779,8 +2867,10 @@ class PlaybackController private constructor(private val context: Context) {
             if (_state.value.queue.repeat == RepeatMode.ONE) {
                 val playing = track?.restart() ?: false
                 _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
-            } else {
+            } else if (!_state.value.externalOpen) {
                 randomNext()
+            } else {
+                _state.update { it.copy(playing = false) }
             }
             return
         }
@@ -2808,12 +2898,13 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /** Plays something that is not in the playlist. */
-    private fun playTransient(ref: TrackRef) {
-        pendingRetry = { playTransient(ref) }
+    private fun playTransient(ref: TrackRef, external: Boolean = false) {
+        pendingRetry = { playTransient(ref, external) }
         _state.update {
             it.copy(
                 transient = ref,
-                randomHasPrevious = randomCursor > 0,
+                externalOpen = external,
+                randomHasPrevious = if (external) false else randomCursor > 0,
                 playing = false,
                 positionSeconds = 0.0,
             )
@@ -2832,6 +2923,7 @@ class PlaybackController private constructor(private val context: Context) {
             it.copy(
                 queue = queue,
                 transient = null,
+                externalOpen = false,
                 resultsQueue = null,
                 randomHasPrevious = false,
                 playing = false,
@@ -3099,7 +3191,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private fun prefetchUpcoming() {
         val wanted = if (_state.value.transient != null) {
-            randomHistory.drop(randomCursor + 1).take(READ_AHEAD)
+            // Nothing is coming after a file handed to us, so nothing is read ahead.
+            if (_state.value.externalOpen) emptyList()
+            else randomHistory.drop(randomCursor + 1).take(READ_AHEAD)
         } else {
             listOfNotNull(_state.value.queue.upcoming)
         }
