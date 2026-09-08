@@ -1,11 +1,15 @@
-# The engine: JNI facade plus audio output. One shared library, loaded by NativeEngine.
+# The engine: decoders, plus the audio output and JNI facade above them. One shared library.
 #
 # Oboe arrives as a prefab package from the com.google.oboe:oboe AAR, so this only resolves inside
 # the Gradle build -- see app/build.gradle.kts. The backend libraries are plain static archives
 # built from vendored sources.
 find_package(oboe REQUIRED CONFIG)
 
-add_library(protracktor_engine SHARED engine.cpp)
+# Two sources, and the split is deliberate: engine.cpp decodes and knows nothing about Android,
+# player_oboe.cpp is the audio callback and the JNI surface. docs/PLAN_WEB.md §13 S0 has the
+# measurement that chose the line between them; a second host links engine.cpp and replaces the
+# other file rather than forking either.
+add_library(protracktor_engine SHARED engine.cpp player_oboe.cpp)
 
 target_compile_options(protracktor_engine PRIVATE -Wall -Wextra -fexceptions -frtti)
 set_target_properties(protracktor_engine PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
