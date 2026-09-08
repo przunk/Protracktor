@@ -26,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import com.przunk.protracktor.player.Platforms
 import com.przunk.protracktor.player.RandomScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -278,6 +279,15 @@ private fun DomainRow(
     longClickLabel: String? = null,
 ) {
     val haptics = rememberHaptics()
+    val currentClick by rememberUpdatedState(onClick)
+    val currentLongClick by rememberUpdatedState(onLongClick)
+    val rememberedClick = remember { { currentClick() } }
+    val rememberedLongClick: () -> Unit = remember {
+        {
+            haptics.gestureEnd()
+            currentLongClick?.invoke()
+        }
+    }
     ListItem(
         headlineContent = { Text(title, style = MaterialTheme.typography.titleMedium) },
         supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
@@ -287,15 +297,16 @@ private fun DomainRow(
         // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so a
         // row with nothing to hold does not advertise a long press to TalkBack that does nothing.
         modifier = if (onLongClick == null) {
-            Modifier.clickable(onClick = onClick)
+            Modifier.clickable(onClick = rememberedClick)
         } else {
+            // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at length:
+            // a fresh lambda restarts the gesture detector, and a detector restarted under a finger
+            // that is still down starts timing another long press. This row has not been held long
+            // enough to show it, which is not a reason to leave it.
             Modifier.combinedClickable(
-                onClick = onClick,
+                onClick = rememberedClick,
                 onLongClickLabel = longClickLabel,
-                onLongClick = {
-                    haptics.gestureEnd()
-                    onLongClick()
-                },
+                onLongClick = rememberedLongClick,
             )
         },
     )

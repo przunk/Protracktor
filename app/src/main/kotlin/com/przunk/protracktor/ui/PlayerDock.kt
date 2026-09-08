@@ -11,6 +11,9 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -227,7 +230,8 @@ fun PlayerDock(
                     longDescription = stringResource(R.string.a11y_previous_file),
                     enabled = state.canGoPrevious,
                     onClick = onPrevious,
-                    onLongClick = onPreviousFile.takeIf { state.canGoPreviousFile },
+                    onLongClick = onPreviousFile,
+                    longClickEnabled = state.canGoPreviousFile,
                 )
 
                 FilledIconButton(
@@ -252,7 +256,8 @@ fun PlayerDock(
                     longDescription = stringResource(R.string.a11y_next_file),
                     enabled = state.canGoNext,
                     onClick = onNext,
-                    onLongClick = onNextFile.takeIf { state.canGoNextFile },
+                    onLongClick = onNextFile,
+                    longClickEnabled = state.canGoNextFile,
                 )
 
                 // Shape carries the mode, not just tint: repeat-one is a different glyph from
@@ -341,10 +346,36 @@ private fun TransportButton(
     description: String,
     longDescription: String,
     enabled: Boolean,
+    longClickEnabled: Boolean,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)?,
+    onLongClick: () -> Unit,
 ) {
     val haptics = rememberHaptics()
+
+    // **The handlers are remembered, and that is the whole of the fix.**
+    //
+    // `combinedClickable` installs a gesture detector keyed on the lambdas it is given. Hand it a
+    // fresh lambda on every recomposition and the detector is torn down and started again -- and a
+    // detector that starts while a finger is already down begins timing a *new* long press. Skipping
+    // a file recomposes this row, because the title above it changes, so one continuous hold fired
+    // once every half second: two files, or four if you held a little longer. That is what the owner
+    // saw, and it is not a race in the player at all.
+    //
+    // `rememberUpdatedState` keeps the identity fixed while letting the body see the current
+    // callbacks.
+    val currentClick by rememberUpdatedState(onClick)
+    val currentLongClick by rememberUpdatedState(onLongClick)
+    val currentLongEnabled by rememberUpdatedState(longClickEnabled)
+    val click = remember { { currentClick() } }
+    val longClick = remember {
+        {
+            if (currentLongEnabled) {
+                haptics.gestureEnd()
+                currentLongClick()
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .size(TRANSPORT_TARGET)
@@ -353,14 +384,9 @@ private fun TransportButton(
                 enabled = enabled,
                 role = Role.Button,
                 onClickLabel = description,
-                onLongClickLabel = longDescription.takeIf { onLongClick != null },
-                onLongClick = onLongClick?.let {
-                    {
-                        haptics.gestureEnd()
-                        it()
-                    }
-                },
-                onClick = onClick,
+                onLongClickLabel = longDescription,
+                onLongClick = longClick,
+                onClick = click,
             ),
         contentAlignment = Alignment.Center,
     ) {

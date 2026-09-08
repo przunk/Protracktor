@@ -546,17 +546,11 @@ class PlaybackController private constructor(private val context: Context) {
                 val open = track ?: continue
                 if (!_state.value.playing) continue
 
-                // **Nothing is decided about a track that is being replaced.** `track` still points
-                // at the outgoing one while the next is loading -- it is closed inside that
-                // coroutine, not before it -- so a skip taken near the end of a tune leaves this
-                // poll looking at a finished decoder whose replacement is already on its way. It
-                // would then call `handleTrackEnded` and advance the queue a *second* time, which
-                // is the owner's "skip sometimes jumps two files".
-                //
-                // Sometimes, because it needs the outgoing tune to be at its end; and the long
-                // press made it easy to hit only by making a skip cheap at any moment. Ordinary
-                // next had the same race, and pressing next as a tune runs out is not a rare thing
-                // to do.
+                // Nothing is decided about a track that is being replaced. Every skip sets
+                // `playing = false` before the load starts, so the check above already covers this
+                // -- **this line was added on a wrong diagnosis of C17 and kept as belt and
+                // braces**, not because it fixed anything. The real cause was in the gesture, not
+                // in the player: see `PlayerDock.TransportButton`.
                 if (openJob?.isActive == true) continue
 
                 if (open.isFinished()) {
