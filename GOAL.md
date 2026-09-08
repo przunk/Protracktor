@@ -539,10 +539,10 @@ emulator here and no browser; the Android UI exists to me as Compose source, and
 markup. So fidelity comes from reading the source carefully, and the only judge is the owner. That
 argues for small steps with a build at the end of each, not one long stretch ending in a reveal.
 
-**The most useful thing the owner could add:** three or four screenshots of the app — the playlist
-with the dock, Now Playing expanded, and Browse. Not required; the source is authoritative for
-colour and dimension. But a screenshot settles proportion and spacing in a way that reading
-`Modifier.padding` values does not.
+**The most useful thing the owner could add** was three or four screenshots — and he sent two within
+the hour, of the playlist with the dock and of Browse. They earned their place immediately: they
+corrected the palette (below), and they settle proportion in a way that reading `Modifier.padding`
+values does not. Still missing, and worth having when convenient: **Now Playing expanded**.
 
 ## What "almost like the app" means, concretely
 
@@ -567,8 +567,26 @@ The anchors, so the shape is visible without opening the file:
 | on secondary container | `#E8DEF8` |
 | outline variant | `#49454F` |
 
-Dynamic colour cannot be reproduced in a browser and is not part of this. The page targets the
-baseline scheme, which is what the owner sees whenever dynamic colour is off.
+### Corrected the same night, from the owner's screenshots
+
+He sent two screenshots, and they overturn the paragraph above: **his phone is not showing the
+baseline palette.** It runs dynamic colour from his wallpaper, so the app is magenta and violet where
+the baseline is lavender on near-black. Sampled from the PNGs rather than eyeballed —
+`docs/reference/app-colours.json`:
+
+| role | his phone | baseline |
+| --- | --- | --- |
+| background | `#180523` | `#141218` |
+| surface container | `#2D133C` | `#211F26` |
+| secondary container (the labelled actions) | `#622B80` | `#4A4458` |
+| primary (the play button) | `#EE83ED` | `#D0BCFF` |
+| on surface | `#F5DDFD` | `#E6E0E9` |
+| on surface variant | `#BCA0C7` | `#CAC4D0` |
+
+**So "looks like my app" means his scheme, not the baseline.** The page ships his colours as its
+default tokens, because that is what was asked for; a browser cannot read a wallpaper, so anyone
+else sees his scheme rather than their own. Keep both files: the baseline is still what a phone with
+dynamic colour off shows, and the page should be built on tokens so swapping is one block of CSS.
 
 ## The rules
 
@@ -598,7 +616,7 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
 
 ## The list
 
-- [ ] **1. Replace the event stream with long polling**
+- [x] **1. Replace the event stream with long polling** *(done 2026-09-09; verified locally, not yet through the tunnel — the Pi runs its own copy)*
       *First, because nothing else in this round can be seen working without it.* Measured
       2026-09-09 (`docs/PLAN_HANDOFF.md` §5c): `text/event-stream` does not survive a Cloudflare
       quick tunnel — the server reports delivering, the page receives nothing, and two rounds of
@@ -612,7 +630,7 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
       What `EventSource` did for free and now has to be written: reconnection with a backoff, and
       not hammering the server when it is unreachable.
 
-- [ ] **2. The dock**
+- [x] **2. The dock** *(done 2026-09-09)*
       The one component the owner sees more than any other, and the one that decides whether the
       page reads as Protracktor. Source: `ui/PlayerDock.kt`. Reproduce, in order of visible
       importance: the surface and its elevation, the title and subtitle block with the format label,
@@ -623,13 +641,13 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
       button. Long press on next and previous skips a whole file on the phone; the page has no
       equivalent yet and does not need one this round.
 
-- [ ] **3. The playlist**
+- [x] **3. The playlist** *(done 2026-09-09)*
       Source: `ui/PlaylistScreen.kt`. A row is a leading position or playing indicator, a title, a
       subtitle that is the source path, and a trailing overflow. The playing row is tinted with
       `primary`. Reproduce the row, the spacing and the tint; the drag handle, the selection mode
       and the swipe actions are phone-only and out of scope.
 
-- [ ] **4. The top bar and the shell**
+- [x] **4. The top bar and the shell** *(done 2026-09-09)*
       Source: `ui/ProtracktorApp.kt`. A title, and actions drawn as an icon with its name
       underneath — the owner asked for that shape twice (`docs/BACKLOG.md` A16, A17, A23) and it is
       one of the app's few departures from stock Material. `ui/LabelledAction.kt` is the component.
@@ -638,17 +656,47 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
       pairing code and the paste box, and both should live in this vocabulary rather than in the
       improvised one they use now.
 
-- [ ] **5. Now Playing**
+- [x] **5. Now Playing** *(done 2026-09-09, with the subsong strip)*
       Source: `ui/NowPlaying.kt`. On the phone it expands upward from the dock over the playlist.
       In the browser the same content can simply be a panel; what matters is that it carries the
       same fields — title, author, format, year, duration, subsong strip — laid out the same way.
 
-- [ ] **6. Type and spacing**
+- [x] **6. Type and spacing** *(done 2026-09-09)*
       Last on purpose: it is the pass that turns "the same components" into "the same app". The app
       uses Material 3 typography unmodified, which maps onto a browser as a scale, not as a font —
       Roboto is not on every desktop and Google Fonts is a network dependency the page does not
       otherwise have. Use the system stack and match the *scale* and the weights; record the choice
       and why in the page's own comments.
+
+## Round 7 — closed 2026-09-09
+
+All six items landed the same night the round was set. What the owner has not done is **look at
+it**, which is the only judgement that counts here and the reason the round was written the way it
+was.
+
+**Two things changed the plan while it ran.**
+
+His screenshots arrived within the hour and **overturned the palette**. The round said to use the
+Material 3 baseline because the app calls `darkColorScheme()` with no overrides; the screenshots show
+dynamic colour, which the baseline argument had not accounted for. Everything visible is his
+sampled scheme now, and both palettes are recorded — the baseline is still right for a phone with
+dynamic colour off.
+
+And the type scale came out of the Compose sources rather than out of the screenshots: a track title
+is `titleMedium`, its subtitle `bodyMedium`, a row's position and the labels under the actions
+`labelSmall`. Reading which role the app asks for beats measuring pixels in a downscaled PNG.
+
+**The page can now be checked without a browser**, which it never could before —
+`scripts/check-page.mjs` loads the real markup and the real script in jsdom, drives a queue through
+it, and asserts sixteen specific things. It is in `test-protracktor.sh`, guarded on jsdom being
+present. It still cannot see, and the commit says so.
+
+**Weight:** 41.3 KB of markup and script, against 760 KB of engine over the wire. The round's own
+limit was "a tenth of the engine"; this is a twentieth.
+
+**What is not done:** the tunnel test of item 1. The Pi runs its own copy of the server and only the
+owner can update it, so long polling is verified locally and unverified where it actually failed.
+The new bundle is built and waiting in `dist/`.
 
 ## What this round is not allowed to lose
 

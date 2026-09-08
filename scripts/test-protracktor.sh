@@ -113,4 +113,17 @@ if [ -n "$untranslated" ]; then
     exit 1
 fi
 
+# The web page, if its DOM is installed. Not required -- somebody checking out this repository to
+# build an APK should not have to run npm -- but when it is there it is part of the suite, because
+# the page is the one half of this project nobody can see while writing it.
+if [ -d web/node_modules/jsdom ]; then
+    if ! page_output=$(node scripts/check-page.mjs 2>&1); then
+        echo "❌ Page checks failed:"
+        echo "$page_output" | sed 's/^/   /'
+        exit 1
+    fi
+    page_checks=$(echo "$page_output" | grep -c '✓' || true)
+    echo "🖥  $page_checks page checks passed"
+fi
+
 echo "✅ $total tests passed in $(($(date +%s) - started_at))s$cached"

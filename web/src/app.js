@@ -67,19 +67,23 @@ function onWorklet(message) {
     case 'ready':
       status(`engine ready — ${message.backends}`);
       break;
-    case 'opened':
+    case 'opened': {
       duration = message.duration;
+      const fields = describeFields(message.describe);
+      if (fields.title) $('title').textContent = fields.title;
+      renderNowPlaying(fields, message.subsongs ?? 1, 0);
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
         status(`⚠ this decoder wants ${message.preferredRate} Hz and the page is running at ` +
                `${message.rate} Hz — it will play ${(message.rate / message.preferredRate).toFixed(3)}× fast`);
       }
-      $('sub').textContent = describeLine(message.describe);
+      $('sub').textContent = describeLine(fields);
       $('seek').disabled = !message.canSeek;
       $('error').textContent = '';
       setPlaying(true);
       break;
+    }
     case 'failed':
       $('error').textContent = message.reason;
       setPlaying(false);
@@ -87,7 +91,8 @@ function onWorklet(message) {
     case 'position':
       if (!seeking) {
         $('seek').value = duration > 0 ? Math.round((message.seconds / duration) * 1000) : 0;
-        $('time').textContent = `${clock(message.seconds)} / ${clock(duration)}`;
+        $('elapsed').textContent = clock(message.seconds);
+        $('remaining').textContent = clock(duration);
       }
       break;
     case 'ended':
@@ -98,12 +103,70 @@ function onWorklet(message) {
   }
 }
 
-/** The engine's describe block is tab-separated key/value lines; the row wants one line. */
-function describeLine(describe) {
-  const fields = Object.fromEntries(
-    describe.split('\n').filter(Boolean).map((line) => line.split('\t'))
+/**
+ * The engine's `describe` block, which is tab-separated key/value lines.
+ *
+ * The dock's card wants one line of it; Now Playing wants all of it. Parsed once, used twice.
+ */
+function describeFields(describe) {
+  return Object.fromEntries(
+    describe.split('\n').filter(Boolean).map((line) => {
+      const tab = line.indexOf('\t');
+      return tab < 0 ? [line, ''] : [line.slice(0, tab), line.slice(tab + 1)];
+    })
   );
+}
+
+function describeLine(fields) {
   return [fields.format, fields.artist, fields.tracker].filter(Boolean).join(' · ') || '—';
+}
+
+/**
+ * Now Playing: the same fields the phone shows, in the same order.
+ *
+ * The order is not alphabetical and is not the engine's; it is `ui/NowPlaying.kt`'s — what a
+ * listener asks first comes first, and the machine's own vocabulary comes last.
+ */
+const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher', 'album', 'comment'];
+
+function renderNowPlaying(fields, subsongs, current) {
+  const list = $('fields');
+  list.replaceChildren();
+  const shown = FIELD_ORDER.filter((key) => fields[key]);
+  for (const key of shown) {
+    const dt = document.createElement('dt');
+    dt.textContent = key;
+    const dd = document.createElement('dd');
+    dd.textContent = fields[key];
+    list.append(dt, dd);
+  }
+  if (!shown.length) {
+    const dt = document.createElement('dt');
+    dt.textContent = '—';
+    const dd = document.createElement('dd');
+    dd.textContent = 'the file says nothing about itself';
+    list.append(dt, dd);
+  }
+
+  // **Subsongs are not decoration.** One `.kss` holds 256 tunes and one `.sndh` holds three; a
+  // player that only ever plays the first is playing a fraction of the file (`docs/PLAN_FORMATS.md`).
+  const strip = $('subsongs');
+  strip.replaceChildren();
+  if (subsongs > 1) {
+    for (let i = 0; i < subsongs; i++) {
+      const button = document.createElement('button');
+      button.className = 'subsong';
+      button.textContent = String(i + 1);
+      button.setAttribute('aria-pressed', String(i === current));
+      button.onclick = () => {
+        node?.port.postMessage({ type: 'subsong', index: i });
+        for (const other of strip.children) other.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-pressed', 'true');
+        setPlaying(true);
+      };
+      strip.append(button);
+    }
+  }
 }
 
 async function playAt(next) {
@@ -152,34 +215,71 @@ async function announceGesture() {
     try { await context.resume(); } catch { /* needs a gesture; the message below is the answer */ }
   }
   if (context.state === 'suspended') {
-    status('▶ press Play — a browser will not start audio until this page is clicked');
-    $('playpause').textContent = 'Play ▶';
+    status('Press play — a browser will not start audio until this page is clicked.');
   }
 }
 
+const PLAY_GLYPH = 'M8 5v14l11-7z';
+const PAUSE_GLYPH = 'M6 5h4v14H6zm8 0h4v14h-4z';
+
 function setPlaying(on) {
   playing = on;
-  $('playpause').textContent = on ? 'Pause' : 'Play';
+  $('playglyph').setAttribute('d', on ? PAUSE_GLYPH : PLAY_GLYPH);
+  $('playpause').title = on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
   $('prev').disabled = index <= 0;
   $('next').disabled = index + 1 >= queue.length;
 }
 
+/**
+ * The list, in the app's shape: a position, a title, and a subtitle that says where it came from.
+ *
+ * `ui/PlaylistScreen.kt` puts the source path in the subtitle and tints the playing row with
+ * `primary`; both are reproduced here. The drag handle, the selection mode and the overflow menu
+ * are phone-only and deliberately absent (`GOAL.md` round 7, item 3).
+ */
 function render() {
   const list = $('queue');
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
-    if (i === index) li.className = 'playing';
-    const n = document.createElement('span'); n.className = 'n'; n.textContent = String(i + 1);
-    const name = document.createElement('span'); name.className = 'name'; name.textContent = entry.name;
-    li.append(n, name);
+    li.className = i === index ? 'track playing' : 'track';
+
+    const n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = String(i + 1);
+
+    const text = document.createElement('div');
+    text.className = 'text';
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = entry.name;
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = entry.meta ?? sourceOf(entry.url);
+    text.append(title, meta);
+
+    li.append(n, text);
     li.onclick = () => playAt(i);
     return li;
   }));
-  $('paste').hidden = queue.length > 0;
-  // Shrunk rather than hidden. It is the way a second playlist arrives, so it has to stay on
-  // screen; full size next to a playing queue is a poster for something already done.
-  $('pair').className = queue.length > 0 ? 'small' : '';
+  $('count').textContent = queue.length
+    ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
+    : 'nothing yet';
+}
+
+/** "Modland/Protracker/4-Mat", the way the phone's subtitle reads. */
+function sourceOf(url) {
+  try {
+    const parsed = new URL(url, location.href);
+    if (parsed.hostname.endsWith('modland.com')) {
+      const path = decodeURIComponent(parsed.pathname.replace('/pub/modules/', ''));
+      return `Modland/${path.split('/').slice(0, -1).join('/')}`;
+    }
+    if (parsed.hostname.endsWith('modarchive.org')) return 'The Mod Archive';
+    return parsed.hostname;
+  } catch {
+    return '';
+  }
 }
 
 function setQueue(urls) {
@@ -191,6 +291,20 @@ function setQueue(urls) {
   setPlaying(false);
   if (queue.length) playAt(0);
 }
+
+// The panels are the page's two "actions", in the app's vocabulary rather than two stacked
+// sections. Pair is the one that matters, so it is the one that starts open.
+function showPanel(which) {
+  $('pair').hidden = which !== 'pair';
+  $('paste').hidden = which !== 'paste';
+  $('nowplaying').hidden = which !== 'nowplaying';
+  $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
+  $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
+  $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
+}
+$('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
+$('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
+$('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 
 $('load').onclick = () => {
   const urls = $('urls').value.split('\n').map((s) => s.trim()).filter(Boolean);
@@ -243,21 +357,21 @@ async function fromFragment() {
 }
 
 /**
- * The pairing panel: a code that is always there, and a stream that is always listening.
+ * The pairing panel: a code that is always there, and a loop that is always asking.
  *
  * **A page cannot expose an endpoint**, which is the fact this design turns on. The phone does not
  * post a playlist "to the page"; it posts to the server the page is listening to, and the QR
- * carries that server's address. Today it is the same process that served this file, so pairing
- * costs no infrastructure; the three routes move to a Worker unchanged when the page is hosted
- * somewhere a phone can reach from outside a LAN.
+ * carries that server's address. The room id is 128 bits and travels only in the code on screen;
+ * nothing flows back to the phone, so a stolen code buys a noise in somebody's tab.
  *
- * The room id is 128 bits and travels only in the code on screen. Nothing flows back to the phone,
- * so a stolen code buys a noise in somebody's tab and tells the thief nothing.
+ * **Long polling, not an event stream, and that was measured rather than chosen.** A Cloudflare
+ * quick tunnel buffers `text/event-stream`: the server reported delivering and this page received
+ * nothing, through anti-buffering headers and two kilobytes of padding
+ * (`docs/PLAN_HANDOFF.md` §5c). A complete HTTP response is the one thing every proxy forwards.
  */
 async function pair() {
   // **The room outlives a reload**, which is what lets the phone scan once and send many times. It
-  // is this browser's identity, kept here and nowhere else -- the server creates a room the first
-  // time somebody listens on it and forgets it when the process ends.
+  // is this browser's identity, kept here and nowhere else.
   let id = localStorage.getItem('protracktor.room');
   if (!id || !/^[0-9a-f]{32}$/.test(id)) {
     id = Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -280,23 +394,50 @@ async function pair() {
   qr.make();
   $('qr').innerHTML = qr.createTableTag(5, 0);
 
-  const events = new EventSource(`/pair/${id}/events`);
-  events.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    if (!message.queue?.length) return;
-    setQueue(message.queue.map((row) => ({ ...entryFor(row.url), name: row.title || entryFor(row.url).name })));
-    status(`${message.queue.length} tracks from the phone`);
-    announceGesture();
-    // The phone says which one it was on. Starting anywhere else would be the handoff losing the
-    // one thing a listener actually cares about.
-    if (message.index > 0 && message.index < message.queue.length) playAt(message.index);
-  };
-  // A dropped connection reconnects on its own; saying so beats a code that has quietly stopped
-  // being live.
-  events.onerror = () => { $('pairnote').textContent = 'Reconnecting to the pairing channel…'; };
-  events.onopen = () => {
-    $('pairnote').textContent = 'Scan this with Protracktor on your phone to send it a playlist.';
-  };
+  const ready = 'Scan this with Protracktor on your phone to send it a playlist.';
+  $('pairnote').textContent = ready;
+
+  let since = 0;
+  let failures = 0;
+  for (;;) {
+    try {
+      // A little above the server's own hold, so a request that is answered normally is never the
+      // one that times out here -- and one that vanishes into a dead connection still ends.
+      const abort = new AbortController();
+      const bell = setTimeout(() => abort.abort(), 35_000);
+      const answer = await fetch(`/pair/${id}/next?since=${since}`, { signal: abort.signal });
+      clearTimeout(bell);
+      if (!answer.ok) throw new Error(`HTTP ${answer.status}`);
+      const body = await answer.json();
+      failures = 0;
+      $('pairnote').textContent = ready;
+      if (typeof body.seq === 'number') since = body.seq;
+      if (body.message) receive(JSON.parse(body.message));
+    } catch (error) {
+      // **Backing off matters more here than it looks.** A page left open on a laptop that has lost
+      // the server would otherwise ask several times a second for as long as the tab is open --
+      // which is how a small convenience becomes somebody's battery.
+      failures += 1;
+      const wait = Math.min(1000 * 2 ** Math.min(failures, 4), 15_000);
+      $('pairnote').textContent =
+        `Not reaching the pairing service — trying again in ${Math.round(wait / 1000)}s.`;
+      await new Promise((resume) => setTimeout(resume, wait));
+    }
+  }
+}
+
+/** A queue from the phone. */
+function receive(message) {
+  if (!message.queue?.length) return;
+  setQueue(message.queue.map((row) => ({
+    ...entryFor(row.url),
+    name: row.title || entryFor(row.url).name,
+  })));
+  status(`${message.queue.length} tracks from the phone`);
+  // The phone says which one it was on. Starting anywhere else would be the handoff losing the one
+  // thing a listener actually cares about.
+  if (message.index > 0 && message.index < message.queue.length) playAt(message.index);
+  announceGesture();
 }
 
 status('ready — press Play or load some URLs');

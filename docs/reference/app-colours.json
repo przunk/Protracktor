@@ -1,0 +1,24 @@
+{
+  "_": "The colours of the owner's phone, sampled 2026-09-09 from two screenshots he supplied (user/Screenshot_20260909-0039*.png) by decoding the PNGs and reading pixels. Not eyeballed.",
+  "_finding": "His app does NOT show the Material 3 baseline palette. It runs dynamic colour, taken from his wallpaper on Android 12+, so the scheme is magenta and violet where the baseline is lavender on near-black. docs/reference/material3-dark.json is still correct for a phone with dynamic colour off; this file is what 'looks like my app' actually means.",
+  "_limit": "A browser cannot reproduce dynamic colour. The page ships these as its default tokens; anyone whose wallpaper differs will see the owner's scheme rather than their own, which is the honest trade for looking like his app.",
+  "background": "#180523",
+  "surfaceContainer": "#2D133C",
+  "secondaryContainer": "#622B80",
+  "primary": "#EE83ED",
+  "primaryContainer": "#E9C1FB",
+  "onSurface": "#F5DDFD",
+  "onSurfaceVariant": "#BCA0C7",
+  "surfaceVariant": "#3F274C",
+  "scrollbar": "#8E4B92",
+  "_where": {
+    "background": "empty list area",
+    "surfaceContainer": "the dock's now-playing card, and the row of top-bar chips",
+    "secondaryContainer": "the labelled actions: Browse, To browser, Settings, Playlist",
+    "primary": "the round play button",
+    "primaryContainer": "the follow-track button",
+    "onSurface": "a track title",
+    "onSurfaceVariant": "a track subtitle, 'MOD \u00b7 Amiga'",
+    "surfaceVariant": "the seek bar's track"
+  }
+}

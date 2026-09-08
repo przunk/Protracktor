@@ -9,8 +9,8 @@
 // new infrastructure at all. The same three routes move to a Worker unchanged when the page is
 // hosted somewhere the phone can reach from outside a LAN (docs/PLAN_HANDOFF.md §3 H2).
 //
-// Nothing is stored. A room is a queue of listeners and its last message, and it dies with the
-// process.
+// Nothing is stored. A room is the last thing said in it plus whoever is waiting to hear
+// something, and it dies with the process.
 import http from 'http';
 import fs from 'fs';
 import os from 'os';
@@ -100,10 +100,28 @@ function advertisedBase() {
 
 const rooms = new Map();
 
+/**
+ * A room: the last thing said in it, and whoever is currently waiting to hear something.
+ *
+ * **`seq` is what makes long polling safe.** A page asks "anything after 4?" and either gets it at
+ * once or waits; either way it cannot miss a message that arrived between two of its requests,
+ * which is the failure mode that makes naive polling drop things under exactly the conditions
+ * nobody tests.
+ *
+ * `lastPoll` exists so the phone can still be told something true. With a stream, "somebody is
+ * listening" was the socket being open; with polling there is no socket, so it is "somebody asked
+ * within the last [LISTENING_WINDOW]".
+ */
 function room(id) {
-  if (!rooms.has(id)) rooms.set(id, { listeners: new Set(), last: null });
+  if (!rooms.has(id)) rooms.set(id, { seq: 0, last: null, waiters: new Set(), lastPoll: 0 });
   return rooms.get(id);
 }
+
+/** How long a poll is held before answering with nothing. Under every proxy's idle timeout. */
+const HOLD_MS = 25_000;
+
+/** How recently a page must have asked for the phone to be told it is listening. */
+const LISTENING_WINDOW_MS = 90_000;
 
 function send(response, status, body, type = 'application/json') {
   response.writeHead(status, { 'content-type': type, 'access-control-allow-origin': '*' });
@@ -131,37 +149,37 @@ http.createServer((request, response) => {
     return;
   }
 
-  const match = url.pathname.match(/^\/pair\/([0-9a-f]{32})(\/events)?$/);
+  const match = url.pathname.match(/^\/pair\/([0-9a-f]{32})(\/next)?$/);
   if (match) {
-    const [, id, events] = match;
+    const [, id, next] = match;
     const here = room(id);
 
-    if (events) {
-      // **Three of these four headers exist to stop a proxy holding the stream.** Measured through a
-      // Cloudflare quick tunnel on 2026-09-09: the phone was told "delivered: 1" and the listener
-      // received nothing, because the events were buffered somewhere in the middle. Locally the
-      // same code delivers instantly, which is exactly how a bug like this hides.
-      response.writeHead(200, {
-        'content-type': 'text/event-stream',
-        'cache-control': 'no-cache, no-transform',
-        connection: 'keep-alive',
-        'x-accel-buffering': 'no',
-      });
-      // And two kilobytes of padding, because a proxy that buffers by size will not forward
-      // anything until its buffer fills. A comment line costs nothing to a client and is the
-      // conventional way to push past that threshold.
-      response.write(`:${' '.repeat(2048)}\n\n`);
-      response.write(': open\n\n');
-      here.listeners.add(response);
-      // The page may have been reloaded after the phone sent something; the last message is kept so
-      // a reconnect does not lose the queue.
-      if (here.last) response.write(`data: ${here.last}\n\n`);
-      // A heartbeat, which also keeps an idle connection from being closed by whatever sits in
-      // front -- a tunnel usually gives up on a silent stream after a minute or two.
-      const beat = setInterval(() => response.write(': ping\n\n'), 15_000);
+    if (next) {
+      // **Long polling, and it replaced server-sent events for a measured reason.** A Cloudflare
+      // quick tunnel buffers `text/event-stream`: the server reported delivering and the page
+      // received nothing, through two rounds of anti-buffering headers and two kilobytes of padding
+      // (`docs/PLAN_HANDOFF.md` §5c). A complete HTTP response is the one thing every proxy on
+      // earth forwards, so that is what this sends.
+      here.lastPoll = Date.now();
+      const since = Number(url.searchParams.get('since') ?? 0) || 0;
+
+      if (here.last && here.last.seq > since) {
+        send(response, 200, { seq: here.last.seq, message: here.last.body });
+        return;
+      }
+
+      // Nothing yet: hold the request rather than answering empty straight away, so a phone that
+      // sends a second later is heard a second later rather than at the next poll.
+      const waiter = { response, since };
+      here.waiters.add(waiter);
+      const giveUp = setTimeout(() => {
+        here.waiters.delete(waiter);
+        send(response, 200, { seq: since });
+      }, HOLD_MS);
+      waiter.giveUp = giveUp;
       request.on('close', () => {
-        clearInterval(beat);
-        here.listeners.delete(response);
+        clearTimeout(giveUp);
+        here.waiters.delete(waiter);
       });
       return;
     }
@@ -183,9 +201,19 @@ http.createServer((request, response) => {
         if (body.length > 1_000_000) request.destroy();
       });
       request.on('end', () => {
-        here.last = body;
-        for (const listener of here.listeners) listener.write(`data: ${body}\n\n`);
-        send(response, 200, { delivered: here.listeners.size });
+        here.seq += 1;
+        here.last = { seq: here.seq, body };
+        for (const waiter of here.waiters) {
+          clearTimeout(waiter.giveUp);
+          send(waiter.response, 200, { seq: here.seq, message: body });
+        }
+        here.waiters.clear();
+        // **"Listening" is now a claim about the recent past**, because there is no socket to look
+        // at. A page polls every few seconds at worst, so a room nobody has asked about for a
+        // minute and a half has no page behind it -- and the phone says "the player page is not
+        // open there" rather than pretending.
+        const listening = Date.now() - here.lastPoll < LISTENING_WINDOW_MS;
+        send(response, 200, { delivered: listening ? 1 : 0 });
       });
       return;
     }
