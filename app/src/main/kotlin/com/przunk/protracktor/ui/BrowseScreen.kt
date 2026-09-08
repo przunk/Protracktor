@@ -1146,7 +1146,9 @@ private fun Selectable(
                         onStartSelecting = { selected = selected + track.id },
                         onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
                         onInfo = { showingInfo = track },
-                        onShowNeighbours = track.takeIf { Catalogue.owning(it.id) != null }
+                        // Not for a live-search catalogue: it publishes no index, and its result
+                        // rows carry no author, so there is nowhere for this to go.
+                        onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                             ?.let { { onShowNeighbours(it) } },
                         onShareFile = { onShareFile(track) },
                         onShareLink = track.takeIf { Catalogue.owning(it.id) != null }

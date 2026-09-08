@@ -482,7 +482,7 @@ fun ProtracktorApp(
                 // Random the playlist is behind glass and the row menu cannot be reached at all,
                 // and a tune played at random is exactly the one you want to ask this about.
                 onShowNeighbours = state.current
-                    ?.takeIf { Catalogue.owning(it.id) != null }
+                    ?.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                     ?.let { track ->
                         {
                             showNowPlaying = false

@@ -1333,6 +1333,21 @@ class PlaybackController private constructor(private val context: Context) {
                 return@launch
             }
 
+            // **A live-search catalogue has no author to go to.** The Mod Archive publishes no
+            // index -- searching it is a request to their site, and the result rows carry a title,
+            // a format and a module id and no artist at all. So there is nothing to look up and
+            // nothing to search by. The action is hidden for these, and this is the backstop.
+            if (from.isOnlineOnly) {
+                _state.update {
+                    it.copy(
+                        message = Message(
+                            "${from.displayName} is searched live and lists no author, so there is nowhere to jump to."
+                        )
+                    )
+                }
+                return@launch
+            }
+
             // **Two failures, and they used to share a sentence.** A track that came from a
             // catalogue but is not in the index today -- deleted to save room, or added to a
             // playlist before an index was rebuilt -- was told it was not from a catalogue, which

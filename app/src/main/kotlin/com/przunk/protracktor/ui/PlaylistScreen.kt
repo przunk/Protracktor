@@ -198,8 +198,9 @@ private fun PlaylistBody(
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
                 onAddToOtherPlaylist = { onAddToOtherPlaylist(track) },
-                // Absent for a local file, which has no catalogue folder to open.
-                onShowNeighbours = track.takeIf { Catalogue.owning(it.id) != null }
+                // Absent for a local file, which has no catalogue folder to open, and for a
+                // live-search catalogue, which publishes no index and no author to open one by.
+                onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                     ?.let { { onShowNeighbours(it) } },
                 onShareFile = { onShareFile(track) },
                 // Absent for a local file, which has no address anyone else could open.
