@@ -1550,12 +1550,42 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** Throws away the HVSC song lengths. SID durations go unknown until they are fetched again. */
+    /**
+     * Throws away the HVSC song lengths. SID durations go unknown until they are fetched again.
+     *
+     * **It used to delete the songdb metadata as well**, silently, and say only "Song lengths
+     * deleted" -- 380,282 rows of author, album and year thrown out by a button that named
+     * something else, because the metadata arrived after this and was hung on the nearest hook
+     * rather than given its own. It has its own now.
+     */
     fun clearSongLengths() {
         scope.launch {
             songLengths.clear()
-            trackMetadata.clear()
             _state.update { it.copy(message = Message("Song lengths deleted.")) }
+            refreshCatalogues()
+        }
+    }
+
+    /** Throws away the songdb metadata. Years and authors go blank until it is fetched again. */
+    fun clearTrackMetadata() {
+        scope.launch {
+            trackMetadata.clear()
+            _state.update { it.copy(message = Message("Track metadata deleted.")) }
+            refreshCatalogues()
+        }
+    }
+
+    /** Throws away Modland's favourites. Random loses that scope until the list is fetched again. */
+    fun clearFavourites() {
+        scope.launch {
+            favourites.clear()
+            // Back to Everything, because a scope whose contents have just been deleted would draw
+            // nothing and report an empty index -- and the chip that set it is now disabled, so
+            // there would be no way back to Everything but a restart.
+            if (_browse.value.randomScope is RandomScope.Favourites) {
+                setRandomScope(RandomScope.Everything)
+            }
+            _state.update { it.copy(message = Message("Favourites deleted.")) }
             refreshCatalogues()
         }
     }

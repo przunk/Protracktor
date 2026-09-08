@@ -339,6 +339,8 @@ fun ProtracktorApp(
                 replayBytes = browse.replayBytes,
                 catalogues = browse.catalogues,
                 songLengthCount = browse.songLengthCount,
+                trackMetadataCount = browse.trackMetadataCount,
+                favouriteCount = browse.favouritesListed,
                 contentPadding = insets,
                 selectedTheme = selectedTheme,
                 dynamicColour = dynamicColour,
@@ -349,6 +351,8 @@ fun ProtracktorApp(
                 onClearCache = viewModel::clearFetchedCache,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,
                 onClearSongLengths = viewModel::clearSongLengths,
+                onClearTrackMetadata = viewModel::clearTrackMetadata,
+                onClearFavourites = viewModel::clearFavourites,
                 onDeleteReplays = viewModel::deleteReplays,
             )
         } else if (showBrowse) {

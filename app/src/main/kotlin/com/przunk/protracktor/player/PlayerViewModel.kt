@@ -67,6 +67,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun clearFetchedCache() = controller.clearFetchedCache()
     fun deleteCatalogueIndex(catalogueId: String) = controller.deleteCatalogueIndex(catalogueId)
     fun clearSongLengths() = controller.clearSongLengths()
+    fun clearTrackMetadata() = controller.clearTrackMetadata()
+    fun clearFavourites() = controller.clearFavourites()
 
     // The sc68 replay routines the app does not ship (`docs/LICENSES.md`).
     /** Re-reads what is stored. Settings shows those numbers and can be opened without Browse. */

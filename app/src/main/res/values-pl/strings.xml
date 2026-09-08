@@ -203,6 +203,14 @@
     <string name="storage_megabytes">%1$d MB</string>
     <string name="storage_confirm_title">Usunąć: %1$s?</string>
     <string name="storage_confirm_index">Można go pobrać ponownie z tego ekranu. Do tego czasu tego katalogu nie da się przeglądać ani przeszukiwać, a jego utwory nie zagrają.</string>
+    <string name="storage_confirm_track_metadata">Można je pobrać ponownie z Browse. Do tego czasu większość utworów nie pokaże roku ani autora.</string>
+    <string name="storage_confirm_favourites">Można je pobrać ponownie z Browse. Do tego czasu nie da się zawęzić losowania do ulubionych.</string>
+    <plurals name="favourites_listed">
+        <item quantity="few">%1$d utwory</item>
+        <item quantity="many">%1$d utworów</item>
+        <item quantity="one">%1$d utwór</item>
+        <item quantity="other">%1$d utworów</item>
+    </plurals>
     <string name="storage_confirm_song_lengths">Można je pobrać ponownie z tego ekranu. Do tego czasu utwory SID nie pokażą czasu trwania.</string>
     <string name="a11y_delete_storage">Usuń: %1$s</string>
     <plurals name="subsongs_count">
