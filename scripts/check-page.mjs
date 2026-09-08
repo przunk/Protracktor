@@ -159,6 +159,34 @@ if (window.__api) {
     'and the media keys are wired to the transport');
   check(window.document.title.startsWith('hi there'),
     'the tab says what is playing, for a page among twenty');
+
+  // The keys somebody at a desk will try, and the one place they must not fire.
+  let played = 0;
+  $('playpause').addEventListener('click', () => { played += 1; });
+  window.document.body.dispatchEvent(
+    new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+  check(played === 1, 'space plays');
+  $('urls').dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+  check(played === 1, 'and a space typed into the paste box stays a space');
+}
+
+// --- the engine's shape, if it has been built -------------------------------------------------
+//
+// **This catches the failure that costs an hour every time**: the page or the worklet calls a
+// function the engine does not export, because the engine was not rebuilt after the C changed. It
+// is a grep, and it is the difference between "silence in the browser" and a line of output here.
+if (fs.existsSync('web/vendor/engine.mjs')) {
+  console.log('\nengine:');
+  const glue = fs.readFileSync('web/vendor/engine.mjs', 'utf8');
+  const callers = ['web/src/processor.js', 'web/src/app.js', 'scripts/probe-web.mjs'];
+  const wanted = new Set();
+  for (const file of callers) {
+    for (const m of fs.readFileSync(file, 'utf8').matchAll(/\b_(pt_\w+)\b/g)) wanted.add(m[1]);
+  }
+  const missing = [...wanted].filter((name) => !glue.includes(`_${name}`));
+  check(wanted.size > 0, `${wanted.size} engine functions are called`);
+  check(missing.length === 0,
+    missing.length ? `the built engine is missing: ${missing.join(', ')}` : 'and the built engine exports all of them');
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

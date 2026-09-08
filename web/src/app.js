@@ -570,6 +570,27 @@ function receive(message) {
   announceGesture();
 }
 
+/**
+ * The keys somebody at a desk will try.
+ *
+ * Space for play, arrows for the transport — and nothing clever. They are ignored while a field has
+ * focus, because a space typed into the paste box must be a space; that is the bug every page with
+ * shortcuts ships once.
+ */
+addEventListener('keydown', (event) => {
+  const target = event.target;
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return;
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  const act = {
+    ' ': () => $('playpause').click(),
+    ArrowRight: () => $('next').click(),
+    ArrowLeft: () => $('prev').click(),
+  }[event.key];
+  if (!act) return;
+  event.preventDefault();
+  act();
+});
+
 status('ready — press Play or load some URLs');
 pair();
 fromFragment();
