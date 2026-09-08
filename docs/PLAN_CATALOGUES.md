@@ -110,6 +110,37 @@ parser.
 
 ---
 
+## UnExoticA — the gap Modland does not cover
+
+*Raised by the owner, 2026-09-07: he went looking for an Amiga game soundtrack, found only the SNES
+rip under Nintendo SPC, and asked where the Amiga one lives.*
+
+**Modland is organised by musician and is mostly demoscene**, not game rips. That is the shape of
+the archive rather than an omission, and it leaves out a whole category of what people actually
+remember — the music from games they played. UnExoticA is the archive for that, indexed by game.
+
+**Measured from the songdb index rather than by touching their server**
+(`docs/reference/songdb.md`): 8,713 tunes with paths, of which **our format list covers 4,479 —
+51.4%**. The half we do not cover is almost exactly UADE's territory: Sierra AGI (745), Sonix (301),
+the P40A/P50A/P60A packers (451), TFMX (314), CustomPlay (204), David Whittaker (119), Sonic
+Arranger (116), Richard Joseph (105). So a low number here is not an argument against the catalogue;
+it is a second argument for revisiting UADE, and then the two stop being separate decisions.
+
+**Every file lives inside a `.lha` archive**, addressed as `Game/Author/Title.lha/Title/mod.name`.
+The unit of download is therefore a game's whole soundtrack — closer to ASMA's model than Modland's
+— and it needs LHA extraction the app does not have. Two things are settled and will not need
+redoing: the URL rule is `https://files.exotica.org.uk/pub/exotica/media/audio/UnExoticA/` plus the
+index path up to and including the `.lha`, with the remainder naming the file inside; and **lhasa is
+ISC**, so the extractor raises no licence question.
+
+**Asked, 2026-09-08, and nothing is being built until they answer.**
+`files.exotica.org.uk/robots.txt` is `User-agent: * / Disallow: /` — a blanket disallow, not the
+AI-crawler list `www.exotica.org.uk` carries. The reading we agree on is that robots.txt governs
+crawlers rather than a user's own client fetching a file they asked for, and the app would be doing
+the latter. But it is a volunteer archive's bandwidth and every user would be pointed at it, so the
+answer is theirs to give rather than ours to infer — the same move that worked with UADE. The only
+consumer of LHA support is this catalogue, so building it first would be betting a day on the reply.
+
 ## Work that is shared, and should come first
 
 Three things every additional catalogue needs, none of which exists yet:

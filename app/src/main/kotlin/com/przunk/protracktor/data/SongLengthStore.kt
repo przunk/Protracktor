@@ -7,7 +7,6 @@ import android.content.Context
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.security.MessageDigest
 
 /**
  * The stored HVSC song lengths, and the lookup that uses them.
@@ -67,9 +66,7 @@ class SongLengthStore(context: Context) {
      * the answer, and because the key is a hash of the file's contents -- a SID reached over the
      * network has no path to speak of.
      */
-    suspend fun secondsFor(bytes: ByteArray): List<Double>? = withContext(Dispatchers.IO) {
-        val digest = MessageDigest.getInstance("MD5").digest(bytes)
-        val md5 = digest.joinToString("") { "%02x".format(it) }
+    suspend fun forMd5(md5: String): List<Double>? = withContext(Dispatchers.IO) {
         helper.readableDatabase
             .rawQuery("SELECT seconds FROM song_lengths WHERE md5 = ?", arrayOf(md5))
             .use { row -> if (row.moveToFirst()) SongLengths.unpack(row.getString(0)) else null }

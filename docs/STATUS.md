@@ -123,6 +123,19 @@ supplying since round 4 (`docs/ARCHITECTURE.md` §14). All three merged after he
 
 ## Finished
 
+- **2026-09-08** — **Hold next to leave the file.** A press moves by tune, a hold moves by file.
+  `aleste 2.kss` holds 256 of them, so leaving it with the ordinary next was 256 presses. Not a
+  fourth transport button: that would be on screen always for something wanted rarely, in the row
+  the owner reads while driving. Deliberately not on the notification or a headset button either —
+  neither has a long press, and inventing a double-tap for them would be a second vocabulary for one
+  idea.
+
+  It uncovered an older defect next door. **`canGoNext` counted only files**, so on the last track
+  of a playlist the button was disabled while `next()` would happily have stepped to subsong two —
+  a file with 256 tunes could only be walked from the Now Playing strip. The notification reads the
+  same value, so it was wrong there too. It now asks whether *anything* would happen; the long press
+  has its own file-level test.
+
 - **2026-09-05** — **AHX and HVL** (`docs/PLAN_FORMATS.md` §6). The two names this app claimed on an
   assumption, removed on 2026-09-04 when the assumption was measured, and back a day later with
   something behind them: HivelyTracker's standalone replayer, BSD-3-Clause, three source files —

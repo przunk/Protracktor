@@ -24,7 +24,10 @@ import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.SongLengthStore
+import com.przunk.protracktor.data.Md5
+import com.przunk.protracktor.data.SongDbMetadata
 import com.przunk.protracktor.data.SongLengths
+import com.przunk.protracktor.data.TrackMetadataStore
 import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.CacheBudget
@@ -151,14 +154,29 @@ data class PlayerUiState(
      * Asked of the mode rather than always of the queue: during Random the buttons walk the random
      * history, and a queue that happens to be empty must not grey them out.
      */
+    /**
+     * Whether **next** would do anything — a tune inside the file, or the next file.
+     *
+     * The subsong half was missing, and it made the transport disagree with itself: on the last
+     * track of a playlist `next()` would step to subsong two and the button that calls it was
+     * disabled, so a file with 256 tunes in it could only be walked from the Now Playing strip.
+     * The notification reads the same value, so it was wrong there too.
+     */
     val canGoNext: Boolean
+        get() = (playAllSubsongs && subsong + 1 < subsongCount) || canGoNextFile
+
+    val canGoPrevious: Boolean
+        get() = (playAllSubsongs && subsong > 0) || canGoPreviousFile
+
+    /** Whether there is another **file** — what a long press on next asks for. */
+    val canGoNextFile: Boolean
         get() = when {
             randomMode -> true
             searchMode -> resultsQueue?.hasNext == true
             else -> queue.hasNext
         }
 
-    val canGoPrevious: Boolean
+    val canGoPreviousFile: Boolean
         get() = when {
             randomMode -> randomHasPrevious
             searchMode -> resultsQueue?.hasPrevious == true
@@ -216,6 +234,8 @@ data class BrowseState(
     val arrivedByJump: Boolean = false,
     /** How many SID tunes HVSC has given us a length for. Zero until the database is downloaded. */
     val songLengthCount: Int = 0,
+    /** How many tunes the songdb metadata table describes. Zero until it is downloaded. */
+    val trackMetadataCount: Int = 0,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -323,6 +343,17 @@ class PlaybackController private constructor(private val context: Context) {
          */
         private const val SONG_LENGTHS_URL =
             "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5"
+
+        /**
+         * The songdb metadata table: author, publisher, album and year for 380,282 hashes.
+         *
+         * Fetched from GitHub's raw host rather than from any of the ~400 archives the database was
+         * built from -- it is one file, versioned, and the project that assembles it is the one
+         * asking to be credited. GPL-2.0-or-later (`docs/LICENSES.md`).
+         */
+        private const val TRACK_METADATA_LABEL = "Track metadata"
+        private const val TRACK_METADATA_URL =
+            "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/master/tsv/pretty/md5/metadata.tsv"
 
         private const val SONG_LENGTHS_LABEL = "SID song lengths"
         private const val REPLAYS_LABEL = "Atari ST replay routines"
@@ -453,6 +484,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val catalogues = CatalogueStore(context)
     private val remoteFiles = RemoteFiles(context)
     private val songLengths = SongLengthStore(context)
+    private val trackMetadata = TrackMetadataStore(context)
     private val history = HistoryStore(context)
     private val libraryIndex = LibraryIndexStore(context)
 
@@ -1338,6 +1370,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val summaries = catalogues.summaries()
             val lengths = songLengths.count()
+            val metadataRows = trackMetadata.count()
             val storage = withContext(Dispatchers.IO) {
                 remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
             }
@@ -1359,6 +1392,7 @@ class PlaybackController private constructor(private val context: Context) {
                 current.copy(
                     catalogues = summaries,
                     songLengthCount = lengths,
+                    trackMetadataCount = metadataRows,
                     storageBytes = storage,
                     archiveBytes = archives,
                     databaseBytes = database,
@@ -1445,6 +1479,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun clearSongLengths() {
         scope.launch {
             songLengths.clear()
+            trackMetadata.clear()
             _state.update { it.copy(message = Message("Song lengths deleted.")) }
             refreshCatalogues()
         }
@@ -1527,6 +1562,41 @@ class PlaybackController private constructor(private val context: Context) {
             songLengths.replaceAll(entries)
             _browse.update { it.copy(indexing = null, songLengthCount = entries.size) }
             _state.update { it.copy(message = Message("Song lengths for ${entries.size} SID tunes.")) }
+        }
+    }
+
+    /**
+     * Fetches the songdb metadata table.
+     *
+     * Its own action for the same reason the song lengths are: **15 MB, and the moment somebody
+     * presses play is the wrong moment to spend it.** Nothing in it can be played -- it only
+     * answers "who wrote this and when" about files that came from somewhere else -- so it sits
+     * beside the song lengths rather than among the catalogues.
+     *
+     * What it buys, measured rather than hoped: **67,601 of the Modland files this app claims would
+     * gain a release year**, and the formats that gain most are the ones with nowhere in the file
+     * to put one -- 40,161 ProTracker, 11,733 Fasttracker 2 (`docs/reference/songdb.md`).
+     */
+    fun downloadTrackMetadata() {
+        scope.launch {
+            _browse.update { it.copy(indexing = TRACK_METADATA_LABEL) }
+            val bytes = remoteFiles.fetchIndex(TRACK_METADATA_URL)
+            if (bytes == null) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("Could not download the track metadata.")) }
+                return@launch
+            }
+            // Parsed straight into the table rather than into a list first. Fifteen megabytes of
+            // this becomes 1.9 million strings, and holding them alongside the download peaks near
+            // 150 MB -- fine on the JVM these tests run on, an out-of-memory crash on a phone.
+            val written = trackMetadata.replaceAllFrom(bytes)
+            if (written == 0) {
+                _browse.update { it.copy(indexing = null) }
+                _state.update { it.copy(message = Message("The track metadata was empty.")) }
+                return@launch
+            }
+            _browse.update { it.copy(indexing = null, trackMetadataCount = written) }
+            _state.update { it.copy(message = Message("Metadata for $written tunes.")) }
         }
     }
 
@@ -2289,6 +2359,21 @@ class PlaybackController private constructor(private val context: Context) {
             selectSubsong(now.subsong + 1)
             return
         }
+        nextFile()
+    }
+
+    /**
+     * Straight to the next file, past whatever is left inside this one.
+     *
+     * A long press on the transport, and the owner's reason is exact: `aleste 2.kss` holds 256
+     * tunes, so leaving it with the ordinary next means 256 presses. Pressing is for the tune you
+     * are on; holding is for the file.
+     *
+     * Deliberately **not** on the notification or a headset button. Those have no long press, and
+     * inventing a double-tap for them would be a second vocabulary for one idea.
+     */
+    fun nextFile() {
+        val now = _state.value
         if (now.transient != null) return randomNext()
         now.resultsQueue?.let { results ->
             if (results.hasNext) playFromResultsQueue(results.next())
@@ -2304,6 +2389,12 @@ class PlaybackController private constructor(private val context: Context) {
             selectSubsong(now.subsong - 1)
             return
         }
+        previousFile()
+    }
+
+    /** Straight to the previous file, past whatever is left inside this one. See [nextFile]. */
+    fun previousFile() {
+        val now = _state.value
         if (now.transient != null) return randomPrevious()
         now.resultsQueue?.let { results ->
             if (results.hasPrevious) playFromResultsQueue(results.previous())
@@ -2613,14 +2704,29 @@ class PlaybackController private constructor(private val context: Context) {
             // A SID has no length in it, so the backend reports none and HVSC's database is asked
             // instead. Only when the backend has nothing: a format that knows its own length knows
             // it better than a lookup on a hash could.
-            openSongLengths = songLengths.secondsFor(bytes).orEmpty()
+            // Hashed once for both databases. They key on the same digest -- HVSC on all of it,
+            // songdb on its first twelve characters -- and hashing a few megabytes twice per track
+            // is work nobody asked for.
+            val md5 = Md5.of(bytes)
+            openSongLengths = songLengths.forMd5(md5).orEmpty()
+
+            // What the file cannot say about itself, from the database keyed on its hash. A plain
+            // `.mod` has nowhere to record a year and no room for an author beyond the sample names
+            // people traditionally abuse for it, so for the largest part of this library the fields
+            // the app shows are simply empty (`docs/reference/songdb.md`).
+            //
+            // **The file wins every field it fills.** A lookup on a hash is a good guess about a
+            // tune; what the tune says about itself is not a guess at all. So this fills gaps and
+            // never overwrites — which also makes a stale or wrong row harmless rather than
+            // authoritative.
+            val fromDatabase = trackMetadata.forMd5(md5)
             val duration = opened.durationSeconds().takeIf { it > 0.0 }
                 ?: openSongLengths.firstOrNull()
                 ?: 0.0
             _state.update {
                 it.copy(
                     playing = started,
-                    metadata = described,
+                    metadata = merged(described, fromDatabase),
                     // Where the backend actually opened, which is not always the beginning. A HES
                     // or KSS file often has nothing at track 0, so `GmeBackend` starts at the first
                     // track with sound in it and says so here; assuming zero would leave the
@@ -2638,6 +2744,34 @@ class PlaybackController private constructor(private val context: Context) {
 
             prefetchUpcoming()
         }
+    }
+
+    /**
+     * The decoder's own metadata, with the database's filling only what it left blank.
+     *
+     * Kept separate from the read and the write so the rule is one function and one test rather
+     * than a condition buried in a state update: **the file wins every field it fills.**
+     */
+    private fun merged(
+        described: Map<String, String>,
+        found: com.przunk.protracktor.data.SongDbMetadata.Entry?,
+    ): Map<String, String> {
+        if (found == null) return described
+        val out = described.toMutableMap()
+        fun fill(key: String, value: String) {
+            if (value.isNotBlank() && out[key].isNullOrBlank()) out[key] = value
+        }
+        fill("artist", found.author)
+        fill("album", found.album)
+        fill("publisher", found.publisher)
+        // The year needs a different test for "the file said nothing". sc68 emits `year` for every
+        // tune and writes `0` or `unknown` when it does not know, which is not blank -- so a blank
+        // check let those files block a year the database had. `ReleaseYear` already knows what
+        // counts as a year; asking it is the only way the two stay in step.
+        if (found.year.isNotBlank() && ReleaseYear.of(out["year"].orEmpty()).isBlank()) {
+            out["year"] = found.year
+        }
+        return out
     }
 
     /**
@@ -2810,6 +2944,12 @@ class PlaybackController private constructor(private val context: Context) {
         prefetched.clear()
         track?.close()
         track = null
+        // The retry goes with it. Everything that calls this is the user moving on -- switching
+        // playlist, closing the player -- and a retry that outlived the move would fire the next
+        // time they pressed play, substituting a track they had abandoned for the one they were
+        // asking for. That is the surprise `pendingRetry` was written to remove, arriving from the
+        // other side.
+        pendingRetry = null
         audioFocus.release()
     }
 

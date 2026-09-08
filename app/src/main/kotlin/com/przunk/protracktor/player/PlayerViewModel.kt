@@ -60,6 +60,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun indexCatalogue(id: String) = controller.indexCatalogue(id)
 
     fun downloadSongLengths() = controller.downloadSongLengths()
+    fun downloadTrackMetadata() = controller.downloadTrackMetadata()
 
     // Giving disk back, one copy at a time (`docs/ARCHITECTURE.md` §19).
     fun clearFetchedCache() = controller.clearFetchedCache()
@@ -120,6 +121,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun togglePlayPause() {
         ensureServiceRunning()
         controller.togglePlayPause()
+    }
+
+    fun nextFile() {
+        ensureServiceRunning()
+        controller.nextFile()
+    }
+
+    fun previousFile() {
+        ensureServiceRunning()
+        controller.previousFile()
     }
 
     fun next() {

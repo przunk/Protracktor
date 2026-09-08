@@ -40,6 +40,7 @@ projects' terms rather than ours.
 | ASAP 8.0.0 | Atari 8-bit: SAP + 13 tracker formats | GPL-2.0-**or-later** | **yes, 2026-09-01** |
 | HivelyTracker V1_9 | Amiga AHX and HVL | BSD-3-Clause | **yes, 2026-09-05** |
 | ZXTune (c93e81d) | ZX Spectrum AY trackers | LGPL-3.0 | **yes, 2026-09-07** |
+| audacious-uade-tools | metadata, downloaded not shipped | GPL-2.0-**or-later** | **yes, 2026-09-07** |
 | UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
 | Oboe 1.10.0 | audio output | Apache-2.0 | no |
 
@@ -140,6 +141,16 @@ it plays them — 46 of 48 (`docs/PLAN_FORMATS.md` §7). It has no `LICENSE` or 
 its twelve player headers carry an author credit and no terms, and the same GPL-2-only `z80ex` sits
 inside it referenced by five of its eight sources. Reading a repository's licence file, or trusting
 GitHub's summary of it, would have got both libraries wrong in opposite directions.
+
+**audacious-uade-tools**, checked 2026-09-07. `COPYING` is the GPL **version 2** text alone — the
+fourth time in this project that reading it would have given the wrong answer — and the generator
+scripts carry `SPDX-License-Identifier: GPL-2.0-or-later`. Compatible with GPL-3, and the check took
+five seconds because the identifiers are there, which is the argument for the pass we made over our
+own files the same day.
+
+**Downloaded, not shipped.** The metadata table is fetched on request and stored in the user's
+database, the same bargain as HVSC's song lengths: nothing of theirs is in the APK, the user chooses
+to have it, and the storage screen can throw it away again.
 
 ## sc68's replay binaries — a question for the owner
 

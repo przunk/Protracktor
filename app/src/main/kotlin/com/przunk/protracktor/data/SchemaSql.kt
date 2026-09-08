@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 10
+    const val VERSION = 11
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -218,6 +218,32 @@ object SchemaSql {
      * default, which the owner chose — a file reporting 256 subsongs would otherwise take over a
      * listening session the first time one appeared.
      */
+    /**
+     * Author, publisher, album and year by file hash, added at version 11.
+     *
+     * The second database of facts about files we did not write, after HVSC's song lengths, and it
+     * exists for the same reason: **the formats cannot carry what people want to know.** A plain
+     * `.mod` or `.xm` has nowhere to put a release year, which is why `docs/WISHLIST.md` B20 could
+     * show one for a SNDH and nothing for the 80,000 ProTracker files in Modland.
+     *
+     * **Keyed by the first twelve hex characters of the MD5, not the whole of it.** That is what
+     * the published database uses -- a deliberate 48-bit prefix -- and storing the full hash here
+     * would mean every lookup missed. `song_lengths` next door is keyed by the whole thing, because
+     * HVSC publishes the whole thing; two tables, two conventions, and the difference is the
+     * publisher's rather than ours.
+     */
+    private val TRACK_METADATA_V11: List<String> = listOf(
+        """
+        CREATE TABLE track_metadata (
+            md5 TEXT PRIMARY KEY NOT NULL,
+            author TEXT NOT NULL,
+            publisher TEXT NOT NULL,
+            album TEXT NOT NULL,
+            year TEXT NOT NULL
+        )
+        """.trimIndent(),
+    )
+
     private val PLAY_ALL_SUBSONGS_V10: List<String> = listOf(
         "ALTER TABLE player_state ADD COLUMN play_all_subsongs INTEGER NOT NULL DEFAULT 0",
     )
@@ -278,7 +304,7 @@ object SchemaSql {
         "INSERT INTO player_state (id) VALUES (0)",
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
-        CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10
+        CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11
 
 
 
@@ -299,6 +325,7 @@ object SchemaSql {
         8 to LIBRARY_INDEX_V8,
         9 to CATALOGUE_BACKENDS_V9,
         10 to PLAY_ALL_SUBSONGS_V10,
+        11 to TRACK_METADATA_V11,
     )
 
     /**

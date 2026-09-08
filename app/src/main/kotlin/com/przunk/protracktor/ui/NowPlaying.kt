@@ -187,6 +187,10 @@ private val FIELDS = listOf(
     "format" to R.string.field_format,
     "tracker" to R.string.field_tracker,
     "artist" to R.string.field_artist,
+    // Filled by the songdb lookup where the file itself is silent, which for a plain `.mod` is
+    // always: the format has nowhere to record either.
+    "album" to R.string.field_album,
+    "publisher" to R.string.field_publisher,
     "composer" to R.string.field_composer,
     "hardware" to R.string.field_hardware,
     "channels" to R.string.field_channels,

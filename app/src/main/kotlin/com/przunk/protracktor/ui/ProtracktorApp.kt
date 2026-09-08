@@ -312,7 +312,9 @@ fun ProtracktorApp(
                 onBrowse = openBrowse,
                 onPlayPause = viewModel::togglePlayPause,
                 onPrevious = viewModel::previous,
+            onPreviousFile = viewModel::previousFile,
                 onNext = viewModel::next,
+            onNextFile = viewModel::nextFile,
                 onShuffle = viewModel::toggleShuffle,
                 onRepeat = viewModel::cycleRepeat,
             )
@@ -360,6 +362,7 @@ fun ProtracktorApp(
                 onScanFolder = viewModel::scanFolder,
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
+                onDownloadTrackMetadata = viewModel::downloadTrackMetadata,
                 onDownloadReplays = viewModel::downloadReplays,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,

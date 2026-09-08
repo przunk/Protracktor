@@ -115,6 +115,8 @@
     <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
 
     <string name="field_year">Rok</string>
+    <string name="field_album">Album</string>
+    <string name="field_publisher">Wydawca</string>
     <string name="field_format">Format</string>
     <string name="field_tracker">Tracker</string>
     <string name="field_artist">Autor</string>
@@ -138,6 +140,8 @@
     <string name="a11y_play">Odtwórz</string>
     <string name="a11y_pause">Pauza</string>
     <string name="a11y_previous">Poprzedni utwór</string>
+    <string name="a11y_next_file">Następny plik, z pominięciem pozostałych utworów w tym</string>
+    <string name="a11y_previous_file">Poprzedni plik</string>
     <string name="a11y_next">Następny utwór</string>
     <string name="a11y_shuffle_off">Losowo wyłączone</string>
     <string name="a11y_shuffle_on">Losowo włączone</string>
@@ -254,4 +258,13 @@
         <item quantity="many">%1$d procedur odtwarzających</item>
         <item quantity="other">%1$d procedury odtwarzającej</item>
     </plurals>
+    <string name="track_metadata_title">Metadane utworów (songdb)</string>
+    <string name="track_metadata_none">Nie pobrano — większość utworów nie pokaże roku ani autora</string>
+    <plurals name="track_metadata_count">
+        <item quantity="few">%1$d opisane utwory</item>
+        <item quantity="many">%1$d opisanych utworów</item>
+        <item quantity="one">%1$d opisany utwór</item>
+        <item quantity="other">%1$d opisanych utworów</item>
+    </plurals>
+    <string name="a11y_download_track_metadata">Pobierz metadane utworów</string>
 </resources>

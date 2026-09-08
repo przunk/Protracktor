@@ -174,6 +174,13 @@
     <string name="action_clear_history">Clear history</string>
         <string name="song_lengths_title">SID song lengths (HVSC)</string>
     <string name="song_lengths_none">Not downloaded — SID tunes will show no length</string>
+    <string name="track_metadata_title">Track metadata (songdb)</string>
+    <string name="track_metadata_none">Not downloaded — most tunes will show no year or author</string>
+    <plurals name="track_metadata_count">
+        <item quantity="one">%1$d tune described</item>
+        <item quantity="other">%1$d tunes described</item>
+    </plurals>
+    <string name="a11y_download_track_metadata">Download the track metadata</string>
     <plurals name="song_lengths_count">
         <item quantity="one">%1$d tune</item>
         <item quantity="other">%1$,d tunes</item>
@@ -192,6 +199,8 @@
     <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>
 
     <string name="field_year">Year</string>
+    <string name="field_album">Album</string>
+    <string name="field_publisher">Publisher</string>
     <string name="field_format">Format</string>
     <string name="field_tracker">Tracker</string>
     <string name="field_artist">Artist</string>
@@ -215,6 +224,8 @@
     <string name="a11y_play">Play</string>
     <string name="a11y_pause">Pause</string>
     <string name="a11y_previous">Previous track</string>
+    <string name="a11y_next_file">Next file, past the tunes left in this one</string>
+    <string name="a11y_previous_file">Previous file</string>
     <string name="a11y_next">Next track</string>
     <string name="a11y_shuffle_off">Shuffle off</string>
     <string name="a11y_shuffle_on">Shuffle on</string>

@@ -186,6 +186,13 @@ and the `.mmd0`/`.mmd1` added that morning.
 | `.imf` | 3/12 | 210 | libopenmpt's IMF is **Imago Orpheus**; Modland's are **id Software AdLib** |
 | `.psm` | 6/12 | 141 | libopenmpt's PSM is **Epic MegaGames MASI**; half of Modland's are **Spectrum Pro Sound Maker** |
 | `.med` | 1/12 | 140 | magic `MED\x04` — **Music Editor**, the older Amiga format, not MMD |
+| `.dmf` | 4/16 | 2,186 | **1,807 are DefleMask**, 366 X-Tracker; libopenmpt implements the second |
+
+`.dmf` joined this table on 2026-09-07, after the owner found a DefleMask file that would not open.
+Measured the same way: **1,807 of Modland's 2,186 are DefleMask and 366 are X-Tracker**, and
+libopenmpt implements the second. The extension stays claimed for the reason `.ftm` and `.psm` do —
+dropping it would throw away the 366 that work — and DefleMask would need a decoder of its own,
+which is a format question rather than a defect.
 
 **Five of those six are one extension standing for two unrelated formats**, which is precisely what
 `docs/ARCHITECTURE.md` §5 says extensions do in this world. It is now measured rather than asserted:

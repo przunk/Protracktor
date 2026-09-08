@@ -28,7 +28,10 @@ endif()
 # Globbed by directory rather than listed file by file: ninety names would be ninety chances to
 # forget one when the pin moves, and the directories are the real unit -- "everything that turns AY
 # tracker bytes into samples".
-file(GLOB ZX_SOURCES
+# `CONFIGURE_DEPENDS`, so moving the pin in `fetch-zxtune.py` and re-fetching does not leave the
+# build compiling yesterday's list of files. A glob read once at configure time is a source list
+# that silently stops matching the sources.
+file(GLOB ZX_SOURCES CONFIGURE_DEPENDS
     "${ZX}/src/formats/chiptune/aym/*.cpp"
     "${ZX}/src/formats/chiptune/*.cpp"
     "${ZX}/src/module/players/aym/*.cpp"
