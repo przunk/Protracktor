@@ -266,6 +266,7 @@
     <string name="random_scope_title">Random picks from</string>
     <string name="random_scope_everything">Everything</string>
     <string name="action_send_to_browser">To browser</string>
+    <string name="action_send_as_link">Send as a link instead</string>
     <string name="scan_hint">Point this at the code on the player page.</string>
     <string name="scan_refused">Without the camera the code cannot be read. You can still send the playlist as a link.</string>
     <string name="action_cancel">Cancel</string>

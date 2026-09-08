@@ -10,7 +10,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,22 +41,49 @@ import androidx.compose.ui.unit.dp
  * last two wrapped to a second line — which reads as actions having gone missing rather than as a
  * grid. In a top bar, where there is no row to share, no width is right.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun LabelledAction(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * The qualified version of the same action, if there is one.
+     *
+     * The idiom the transport established and the owner kept: **press does the plain thing, hold
+     * does the qualified one**. Both handlers are held stable, because a lambda rebuilt on every
+     * recomposition restarts the gesture detector and a hold then fires repeatedly — the defect in
+     * `docs/STATUS.md` C17, which cost an evening and is not worth meeting twice.
+     */
+    onLongClick: (() -> Unit)? = null,
+    longClickLabel: String? = null,
 ) {
+    val currentClick by rememberUpdatedState(onClick)
+    val currentLongClick by rememberUpdatedState(onLongClick)
+    val click = remember { { currentClick() } }
+    val hasLongClick = onLongClick != null
+    val longClick = remember { { currentLongClick?.invoke(); Unit } }
+
+    // **`combinedClickable` on a plain Surface**, rather than the clickable Surface overload, which
+    // takes an `onClick` and nothing else. The shape has to be clipped explicitly then, or the
+    // ripple is a rectangle behind a rounded button.
     Surface(
-        onClick = onClick,
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = 3.dp)
-            .defaultMinSize(minWidth = 48.dp, minHeight = 52.dp),
+            .defaultMinSize(minWidth = 48.dp, minHeight = 52.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .combinedClickable(
+                role = Role.Button,
+                onClickLabel = label,
+                onLongClickLabel = longClickLabel,
+                onLongClick = if (hasLongClick) longClick else null,
+                onClick = click,
+            ),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

@@ -1348,14 +1348,26 @@ class PlaybackController private constructor(private val context: Context) {
             _scan.tryEmit(Unit)
             return
         }
-        postQueue(paired, tracks, fallBackToLink = true)
+        postQueue(paired, tracks, remember = false)
     }
 
-    /** Remembers a scanned code and uses it immediately — the scan was a request to send. */
+    /**
+     * Uses a scanned code, and remembers it **only if it worked**.
+     *
+     * The first version stored it before trying. The owner scanned with the firewall still closed,
+     * the send failed, and the address was kept anyway — so every later press used a pairing that
+     * had never once succeeded, fell back to the link, and there was no way back to the scanner.
+     * A remembered pairing is a claim that a browser is reachable, and the only evidence for it is
+     * having reached one.
+     */
     fun pairWith(endpoint: String) {
-        Appearance.rememberPairing(context, endpoint)
         val tracks = _state.value.queue.tracks
-        if (tracks.isNotEmpty()) postQueue(endpoint, tracks, fallBackToLink = false)
+        if (tracks.isEmpty()) {
+            Appearance.rememberPairing(context, endpoint)
+            _state.update { it.copy(message = Message("Paired. The playlist is empty, so nothing was sent.")) }
+            return
+        }
+        postQueue(endpoint, tracks, remember = true)
     }
 
     fun forgetPairing() {
@@ -1363,33 +1375,52 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(message = Message("The paired browser is forgotten.")) }
     }
 
-    private fun postQueue(endpoint: String, tracks: List<TrackRef>, fallBackToLink: Boolean) {
+    /**
+     * @param remember whether a success should store this address. A scan asks for that; a send to
+     * an address already stored does not need to re-store it.
+     */
+    private fun postQueue(endpoint: String, tracks: List<TrackRef>, remember: Boolean) {
         scope.launch {
             val index = _state.value.queue.currentIndex ?: 0
             when (val outcome = WebRemote.send(endpoint, tracks, index)) {
-                is WebRemote.Outcome.Delivered ->
+                is WebRemote.Outcome.Delivered -> {
+                    if (remember) Appearance.rememberPairing(context, endpoint)
                     _state.update { it.copy(message = Message("Sent ${tracks.size} tracks to the browser.")) }
-                is WebRemote.Outcome.NoOneListening ->
-                    // The address answered, so the pairing is not wrong -- the page is closed. Two
-                    // different problems, and telling them apart is the difference between "open
-                    // the page" and "scan again".
+                }
+                // The address answered, so the pairing is sound and the page is simply closed. Kept
+                // for the same reason: "open the page" and "scan again" are different instructions,
+                // and forgetting here would send somebody back to the camera for nothing.
+                is WebRemote.Outcome.NoOneListening -> {
+                    if (remember) Appearance.rememberPairing(context, endpoint)
                     _state.update {
-                        it.copy(message = Message("The player page is not open in that browser."))
+                        it.copy(message = Message("Reached it, but the player page is not open there."))
                     }
+                }
                 is WebRemote.Outcome.Unreachable -> {
-                    if (fallBackToLink) {
-                        _state.update {
-                            it.copy(message = Message("Could not reach the browser (${outcome.reason}). Sending a link instead."))
-                        }
-                        shareQueueAsLink(tracks)
-                    } else {
-                        _state.update {
-                            it.copy(message = Message("Could not reach that browser: ${outcome.reason}"))
-                        }
+                    // **Forgotten, so the next press opens the camera instead of failing again.**
+                    // An address that cannot be reached is not a pairing, and a stored one with no
+                    // way back to the scanner is a dead end -- which is what the owner met.
+                    Appearance.rememberPairing(context, null)
+                    _state.update {
+                        it.copy(
+                            message = Message(
+                                "Could not reach the browser (${outcome.reason}). Press again to scan a code; hold to send a link."
+                            )
+                        )
                     }
                 }
             }
         }
+    }
+
+    /** The link, on demand. The transport's idiom: press does the plain thing, hold the qualified one. */
+    fun sendQueueAsLink() {
+        val tracks = _state.value.queue.tracks
+        if (tracks.isEmpty()) {
+            _state.update { it.copy(message = Message("There is nothing in the playlist to send.")) }
+            return
+        }
+        shareQueueAsLink(tracks)
     }
 
     private fun shareQueueAsLink(tracks: List<TrackRef>) {

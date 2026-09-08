@@ -65,6 +65,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun sendQueueToBrowser() = controller.sendQueueToBrowser()
     fun pairWith(endpoint: String) = controller.pairWith(endpoint)
     fun forgetPairing() = controller.forgetPairing()
+    fun sendQueueAsLink() = controller.sendQueueAsLink()
     val scan get() = controller.scan
 
     /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */

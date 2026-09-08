@@ -327,6 +327,8 @@ fun ProtracktorApp(
                                 icon = PlayerIcons.Link,
                                 label = stringResource(R.string.action_send_to_browser),
                                 onClick = viewModel::sendQueueToBrowser,
+                                onLongClick = viewModel::sendQueueAsLink,
+                                longClickLabel = stringResource(R.string.action_send_as_link),
                             )
                         }
                         LabelledAction(
