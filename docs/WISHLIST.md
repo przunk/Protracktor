@@ -592,6 +592,22 @@ different kind of project from an app that reads files off a phone. The parts th
 over unchanged are the ones already kept free of Android: `PlayQueue`, and the schema in
 `SchemaSql`.
 
+**Expanded 2026-09-08 into `docs/PLAN_WEB.md`**, at the owner's word, and two of the sentences above
+did not survive it. Left standing rather than edited, because the plan explains what was wrong:
+
+- **sc68 does have a WebAssembly build** — and one based on 3.0.0b, the version we moved to two days
+  after this was written.
+- **"`PlayQueue` and `SchemaSql`" was far too modest.** `PlaybackController` is 2,963 lines and
+  touches Android in six imports and eleven expressions; roughly 5,400 lines would carry over, not
+  a few hundred.
+- The third sentence — that an account is a different kind of project — was right, and the plan's
+  §8 is about the part of it nobody had looked at: **a playlist that mixes a local file with a
+  catalogue track cannot arrive intact in a browser**, and the obvious implementation loses rows
+  without saying so.
+
+The plan also finds that five of the seven hosts we fetch from already permit a browser to read them
+directly, which was expected to be the wall and is not. It remains a wish; nothing is decided.
+
 ## B6. Fold hard-panned channels together
 
 *owner, 2026-09-01.*
