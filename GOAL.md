@@ -661,12 +661,42 @@ Unchanged from every round: `AGENTS.md`, and `/mnt/workspace/AGENTS.md`.
       In the browser the same content can simply be a panel; what matters is that it carries the
       same fields — title, author, format, year, duration, subsong strip — laid out the same way.
 
-- [ ] **6. Type and spacing**
+- [x] **6. Type and spacing** *(done 2026-09-09)*
       Last on purpose: it is the pass that turns "the same components" into "the same app". The app
       uses Material 3 typography unmodified, which maps onto a browser as a scale, not as a font —
       Roboto is not on every desktop and Google Fonts is a network dependency the page does not
       otherwise have. Use the system stack and match the *scale* and the weights; record the choice
       and why in the page's own comments.
+
+## Round 7 — closed 2026-09-09
+
+All six items landed the same night the round was set. What the owner has not done is **look at
+it**, which is the only judgement that counts here and the reason the round was written the way it
+was.
+
+**Two things changed the plan while it ran.**
+
+His screenshots arrived within the hour and **overturned the palette**. The round said to use the
+Material 3 baseline because the app calls `darkColorScheme()` with no overrides; the screenshots show
+dynamic colour, which the baseline argument had not accounted for. Everything visible is his
+sampled scheme now, and both palettes are recorded — the baseline is still right for a phone with
+dynamic colour off.
+
+And the type scale came out of the Compose sources rather than out of the screenshots: a track title
+is `titleMedium`, its subtitle `bodyMedium`, a row's position and the labels under the actions
+`labelSmall`. Reading which role the app asks for beats measuring pixels in a downscaled PNG.
+
+**The page can now be checked without a browser**, which it never could before —
+`scripts/check-page.mjs` loads the real markup and the real script in jsdom, drives a queue through
+it, and asserts sixteen specific things. It is in `test-protracktor.sh`, guarded on jsdom being
+present. It still cannot see, and the commit says so.
+
+**Weight:** 41.3 KB of markup and script, against 760 KB of engine over the wire. The round's own
+limit was "a tenth of the engine"; this is a twentieth.
+
+**What is not done:** the tunnel test of item 1. The Pi runs its own copy of the server and only the
+owner can update it, so long polling is verified locally and unverified where it actually failed.
+The new bundle is built and waiting in `dist/`.
 
 ## What this round is not allowed to lose
 

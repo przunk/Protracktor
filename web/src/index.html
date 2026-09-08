@@ -42,6 +42,24 @@
     --shape-l: 16px;
     --shape-xl: 28px;
   }
+  /*
+   * The Material 3 type scale, at the roles the app actually asks for.
+   *
+   * Read out of the Compose sources rather than eyeballed: a track's title and the dock's title are
+   * `titleMedium`, their subtitles are `bodyMedium`, a row's position and the labels under the
+   * actions are `labelSmall`. Sizes are Material's own; the *font* is not, because Roboto is not on
+   * every desktop and pulling it from Google would be the page's only network dependency besides
+   * the music.
+   */
+  :root {
+    --title-medium: 16px;      /* weight 500, tracking .15px */
+    --body-large: 16px;
+    --body-medium: 14px;
+    --body-small: 12px;
+    --label-large: 14px;       /* weight 500 */
+    --label-small: 11px;       /* weight 500, tracking .5px */
+    --headline-small: 24px;
+  }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -80,8 +98,8 @@
     justify-content: center;
     min-width: 0;
   }
-  .playlist .name { font-size: 20px; font-weight: 500; letter-spacing: .1px; }
-  .playlist .count { font-size: 13px; color: var(--on-surface-variant); margin-top: 1px; }
+  .playlist .name { font-size: var(--headline-small); font-weight: 400; letter-spacing: 0; }
+  .playlist .count { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 1px; }
   .spacer { flex: 1; }
 
   /* The owner asked for this shape twice (BACKLOG A16, A17, A23): an icon with its name underneath,
@@ -98,7 +116,9 @@
     align-items: center;
     gap: 2px;
     font: inherit;
-    font-size: 12px;
+    font-size: var(--label-small);
+    font-weight: 500;
+    letter-spacing: .5px;
     cursor: pointer;
   }
   .action:hover { filter: brightness(1.12); }
@@ -119,18 +139,20 @@
   li.track:hover { background: color-mix(in srgb, var(--surface-container) 55%, transparent); }
   li.track .n {
     color: var(--on-surface-variant);
-    font-size: 14px;
+    font-size: var(--label-small);
     font-variant-numeric: tabular-nums;
     min-width: 22px;
     text-align: right;
   }
   li.track .text { min-width: 0; flex: 1; }
   li.track .title {
-    font-size: 17px;
+    font-size: var(--title-medium);
+    font-weight: 500;
+    letter-spacing: .15px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   li.track .meta {
-    font-size: 14px;
+    font-size: var(--body-medium);
     color: var(--on-surface-variant);
     margin-top: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -142,7 +164,7 @@
 
   .panel { padding: 10px 18px 18px; }
   .panel[hidden] { display: none; }
-  .note { color: var(--on-surface-variant); font-size: 13px; margin: 0 0 10px; }
+  .note { color: var(--on-surface-variant); font-size: var(--body-medium); margin: 0 0 10px; }
   .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
   /* A code drawn dark on dark is not a code; the quiet zone is part of the specification. */
   .qr { display: inline-block; background: #fff; padding: 12px; border-radius: var(--shape-m); line-height: 0; }
@@ -170,7 +192,7 @@
   .seekrow {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 18px 2px;
-    font-size: 13px; color: var(--on-surface-variant);
+    font-size: var(--label-small); color: var(--on-surface-variant);
     font-variant-numeric: tabular-nums;
   }
   input[type=range] {
@@ -194,8 +216,8 @@
     cursor: pointer;
   }
   .nowcard .text { min-width: 0; flex: 1; }
-  .nowcard .title { font-size: 18px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .nowcard .meta { font-size: 14px; color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard .title { font-size: var(--title-medium); font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nowcard svg { width: 22px; height: 22px; fill: var(--on-surface-variant); flex: none; }
 
   .transport {
@@ -221,15 +243,15 @@
 
   .statusline {
     padding: 6px 18px 0;
-    color: var(--on-surface-variant); font-size: 12px;
+    color: var(--on-surface-variant); font-size: var(--body-small);
     overflow-wrap: anywhere;
   }
   .error { color: var(--error); }
 
   /* Now Playing: a label above its value, the way the phone's information panel reads. */
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
-  dt { color: var(--on-surface-variant); font-size: 13px; }
-  dd { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+  dt { color: var(--on-surface-variant); font-size: var(--body-small); }
+  dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
   .subsongs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
   .subsong {
     background: var(--surface-container); color: var(--on-surface);
