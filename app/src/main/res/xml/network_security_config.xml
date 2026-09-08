@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cleartext, for one thing: pairing with a browser on the same network.
+
+    Android has forbidden plain HTTP by default since API 28, and rightly. Everything this app
+    fetches on its own is https: Modland, ASMA, HVSC, The Mod Archive, GitHub. The exception is the
+    pairing address, which is a machine on the local network with no certificate and no name a
+    certificate could be issued for, and there is no way to say "private addresses only" here: a
+    domain-config takes host names, not ranges.
+
+    So the permission is granted broadly and the *choice* is narrowed in code instead:
+    `WebRemote.looksLikePairing` refuses a cleartext address unless the host is loopback, a private
+    range, or link-local. That is the check that actually protects a playlist from being posted in
+    the clear to somewhere public, and it lives where the decision is made rather than in a file
+    that can only say yes or no to the whole app.
+
+    When the page is served over https, this can go.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

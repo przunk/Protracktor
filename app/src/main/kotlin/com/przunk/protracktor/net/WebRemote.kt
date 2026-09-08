@@ -88,11 +88,40 @@ object WebRemote {
     }
 
     /**
-     * Whether a scanned code is one of ours.
+     * Whether a scanned code is one of ours, **and safe to send a playlist to**.
      *
-     * A camera sees whatever is on the screen, and most QR codes in the world are not this. Checked
-     * by shape rather than by host: the host is whatever machine is running the page.
+     * A camera sees whatever is on the screen, and most QR codes in the world are not this, so the
+     * shape is checked first: `/pair/` and thirty-two hex characters.
+     *
+     * **Then the address.** Android forbids cleartext by default and this app turns that off for
+     * one reason — a browser on the same network has no certificate and no name one could be issued
+     * for. The platform can only say yes or no to the whole app, so the narrowing happens here:
+     * plain `http` is accepted only for loopback, the private ranges and link-local. A code
+     * pointing at `http://example.com/pair/…` is refused, because a playlist posted there would
+     * cross the internet in the clear to somebody else's machine.
      */
-    fun looksLikePairing(text: String): Boolean =
-        Regex("^https?://[^/]+/pair/[0-9a-f]{32}$").matches(text.trim())
+    fun looksLikePairing(text: String): Boolean {
+        val trimmed = text.trim()
+        if (!Regex("^https?://[^/]+/pair/[0-9a-f]{32}$").matches(trimmed)) return false
+        if (trimmed.startsWith("https://")) return true
+        val host = trimmed.removePrefix("http://").substringBefore('/').substringBefore(':')
+        return isLocal(host)
+    }
+
+    /** Loopback, RFC 1918, link-local, or a `.local` name. Nothing that leaves the building. */
+    internal fun isLocal(host: String): Boolean {
+        if (host == "localhost" || host.endsWith(".local")) return true
+        val parts = host.split('.')
+        if (parts.size != 4) return false
+        val octets = parts.map { it.toIntOrNull() ?: return false }
+        if (octets.any { it !in 0..255 }) return false
+        return when {
+            octets[0] == 127 -> true
+            octets[0] == 10 -> true
+            octets[0] == 192 && octets[1] == 168 -> true
+            octets[0] == 172 && octets[1] in 16..31 -> true
+            octets[0] == 169 && octets[1] == 254 -> true
+            else -> false
+        }
+    }
 }

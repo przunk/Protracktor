@@ -37,6 +37,28 @@ class WebRemoteTest {
         assertTrue(json, json.contains("""he said \"no\" \\ then left"""))
     }
 
+    /**
+     * The check that stands in for a platform setting that cannot express it.
+     *
+     * Cleartext is permitted app-wide because a browser on the LAN has no certificate; the
+     * narrowing to addresses that do not leave the building happens here.
+     */
+    @Test
+    fun `a cleartext code is only accepted for an address on this network`() {
+        val room = "/pair/" + "0123456789abcdef".repeat(2)
+        assertTrue(WebRemote.looksLikePairing("http://192.168.50.206:8173$room"))
+        assertTrue(WebRemote.looksLikePairing("http://10.0.0.5:8173$room"))
+        assertTrue(WebRemote.looksLikePairing("http://172.20.1.1:8173$room"))
+        assertTrue(WebRemote.looksLikePairing("http://localhost:8173$room"))
+        assertTrue(WebRemote.looksLikePairing("http://desktop.local:8173$room"))
+        // Reachable, ours in shape, and a playlist posted there crosses the internet in the clear.
+        assertFalse(WebRemote.looksLikePairing("http://example.com:8173$room"))
+        assertFalse(WebRemote.looksLikePairing("http://172.32.0.1:8173$room"))
+        assertFalse(WebRemote.looksLikePairing("http://8.8.8.8$room"))
+        // Over TLS the host does not matter.
+        assertTrue(WebRemote.looksLikePairing("https://player.example$room"))
+    }
+
     @Test
     fun `only our own codes are accepted`() {
         assertTrue(WebRemote.looksLikePairing("http://192.168.50.206:8173/pair/" + "a".repeat(32)))
