@@ -19,7 +19,10 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
 mkdir -p "$STAGE/protracktor-web/scripts"
-cp -r web "$STAGE/protracktor-web/"
+# `--exclude` because a copy of the previous archive is often left in web/ so another machine can
+# fetch it over the LAN, and packaging that would put the bundle inside the bundle. It doubled the
+# size the first time it happened, which is exactly how it was noticed.
+tar -cf - --exclude='*.tar.gz' --exclude='node_modules' web | tar -xf - -C "$STAGE/protracktor-web/"
 cp scripts/serve-web.mjs "$STAGE/protracktor-web/scripts/"
 cp docs/WEB_SERVER.md "$STAGE/protracktor-web/README.md"
 
