@@ -604,6 +604,82 @@ question that can invalidate the whole thing and the one nobody else can answer.
 Everything before S3 needs no browser, no host, no network and no account, because the host-probe
 rule survives the move to the web (§4).
 
+## 14. S1, done 2026-09-08: our engine runs in a browser's runtime
+
+*Measured*, on this machine, from **our** sources — not somebody else's build.
+
+### It links, and the stop condition never came near
+
+§13 S1 said to stop if `engine.cpp` needed forking to compile under Emscripten. It did not need a
+line. Six of the seven backends link, and `scripts/probe-web.mjs` decodes real Modland files through
+them in node.
+
+| | |
+| --- | --- |
+| `engine.wasm` | 2.60 MB raw, **0.74 MB brotli**, 0.97 MB gzip |
+| `engine.mjs` | 0.12 MB raw, 0.02 MB brotli |
+| **over the wire** | **0.76 MB** |
+| for comparison | our arm64 `.so`, all seven backends: 3.87 MB |
+
+**0.76 MB for six decoders.** §4's estimate of 1.5–2 MB was pessimistic by half, and the "30 MB is
+not a web player" fear is now twice-buried.
+
+### What it plays, first run, 16 real files from Modland
+
+```
+12 played, 2 silent, 2 refused
+```
+
+| backend | result |
+| --- | --- |
+| libopenmpt | `.mod` 489–639×, `.it` 791–1287× realtime |
+| HivelyTracker | `.ahx` 1280–1599×, `.hvl` 495–556× |
+| sc68 | `.sndh` 201–221×, subsongs counted |
+| libsidplayfp | `.sid` **27–38×** — the slowest by an order of magnitude, as expected: reSIDfp |
+| game-music-emu | `.kss` opened and **silent** |
+| ASAP | not in this set |
+
+**27× realtime for a SID is the number to keep.** It is comfortable and it is 50 times closer to the
+edge than libopenmpt, so it is the one that decides whether a slow laptop under a worklet is fine.
+
+### Two things to check on the phone before believing either
+
+Both are behaviour differences, not build failures, and **neither is claimed as a web problem until
+the same file is tried on Android**:
+
+1. **`.ym` is refused**, and the message says libopenmpt refused it — meaning sc68 did not claim it,
+   though `SupportedFormats` lists `ym` for sc68.
+2. **`.kss` opens and renders silence.** `GmeBackend` deliberately opens at the first track with
+   sound in it, so either that logic is not doing its job here or these two files are silent on the
+   phone too.
+
+The probe caught both on its first run, which is the argument for having written it before writing
+the page.
+
+### Three obstacles, and each lied about its cause
+
+- **`zlib.h` not found** in exactly one of libopenmpt's 353 files. Emscripten has zlib as a *port*,
+  and the flag has to be on the compile line, not only the link line — otherwise one file fails and
+  it reads as a broken source rather than a missing dependency.
+- **`FileNotFoundError: cache.lock`** from inside the compiler. Emscripten builds a port on first
+  use and 353 parallel compilations all ask at once. `embuilder build zlib` first, serially.
+- **`undefined symbol: gme_play`** at the link. `native/backends/gme` adds the vendored tree with
+  `EXCLUDE_FROM_ALL`; on Android the engine target pulls it in by linking `gme::gme`, and here there
+  was no engine target to pull it. Nothing had failed — nobody had asked for it.
+
+### ZXTune is out, and it is a build-time choice now
+
+`lexic_analysis.cpp` initialises a `const auto*` from a `std::string::const_iterator`. The NDK's
+libc++ hands that over as a raw pointer; Emscripten's does not. Patching means forking a library
+`ARCHITECTURE` §3 says we do not fork, and it was the *first* file, so probably not the last.
+
+`PROTRACKTOR_WITH_ZXTUNE` defaults to on, so **the Android build is unchanged**. One asymmetry is
+deliberate: `backendsFingerprint()` appends `;zxtune:none` only when the decoder is *absent*. That
+string is what tells a stored index it was built by a different set, so adding anything to the
+Android build's version would invalidate every index on every device at once.
+
+Cost of the omission: **3,639 Modland files of 516,107**.
+
 ## Sources for the *read* claims
 
 Listed so the next person can re-check them rather than trust this file, per `AGENTS.md` §7.

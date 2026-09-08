@@ -31,6 +31,23 @@ extern "C" {
 void hvl_play_irq(struct hvl_tune *ht);
 }
 
+/*
+ * Which decoders this build carries, decided at build time.
+ *
+ * **Only ZXTune is optional, and only because it is the one that will not compile everywhere.**
+ * It fails under Emscripten's libc++ on the first file: `lexic_analysis.cpp` initialises a
+ * `const auto*` from a `std::string::const_iterator`, which the NDK's libc++ hands over as a raw
+ * pointer and Emscripten's does not. Patching it means forking a library `docs/ARCHITECTURE.md` §3
+ * says we deliberately do not fork, so the web build goes without and says so -- 3,639 Modland
+ * files of 516,107 (`docs/PLAN_WEB.md` §13 S2).
+ *
+ * Defaulted on, so the Android build is byte-identical and needs no flag.
+ */
+#ifndef PROTRACKTOR_WITH_ZXTUNE
+#define PROTRACKTOR_WITH_ZXTUNE 1
+#endif
+
+#if PROTRACKTOR_WITH_ZXTUNE
 // ZXTune. C++ with its own namespaces, so outside the `extern "C"` block above.
 //
 // `include/types.h` first, and **the path is not decoration**. It defines `uint_t` and `int_t`,
@@ -65,6 +82,7 @@ void hvl_play_irq(struct hvl_tune *ht);
 #include <module/renderer.h>
 #include <parameters/container.h>
 #include <sound/chunk.h>
+#endif  // PROTRACKTOR_WITH_ZXTUNE
 
 #include <sidplayfp/sidplayfp.h>
 #include <sidplayfp/SidTune.h>
@@ -83,7 +101,6 @@ void hvl_play_irq(struct hvl_tune *ht);
 #include <cstdlib>
 #include <string>
 #include <vector>
-
 
 namespace {
 
@@ -1189,6 +1206,8 @@ private:
  * **Render returns chunks of its own size**, like HivelyTracker and unlike everything else, so this
  * carries a ring buffer.
  */
+#if PROTRACKTOR_WITH_ZXTUNE
+
 class ZxTuneBackend : public Backend {
 public:
     /**
@@ -1356,6 +1375,8 @@ private:
     std::string format_ = "AY";
 };
 
+#endif  // PROTRACKTOR_WITH_ZXTUNE
+
 }  // namespace
 
 namespace protracktor {
@@ -1372,6 +1393,12 @@ std::string backendsFingerprint() {
       << ";sidplayfp:" << LIBSIDPLAYFP_VERSION_MAJ << '.'
                        << LIBSIDPLAYFP_VERSION_MIN << '.'
                        << LIBSIDPLAYFP_VERSION_LEV;
+#if !PROTRACKTOR_WITH_ZXTUNE
+    // Appended only when the decoder is absent, and that asymmetry is deliberate: this string is
+    // what tells a stored index it was built by a different set, so adding anything to the Android
+    // build's version would invalidate every index on every device at once.
+    o << ";zxtune:none";
+#endif
     return o.str();
 }
 
@@ -1429,6 +1456,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
     // testing, so ZXTune's decoders check structure and recognition *is* loading. That makes it a
     // backend to ask late -- after everything that can identify a file from a header -- and only
     // about names no other backend claims.
+#if PROTRACKTOR_WITH_ZXTUNE
     if (ZxTuneBackend::worthTrying(bytes, name)) {
         try {
             return std::make_unique<ZxTuneBackend>(bytes);
@@ -1437,6 +1465,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             error = e.what();
         }
     }
+#endif
 
     // sc68 asked first. Its answer is the load succeeding, not a verify -- see worthTrying. If it
     // refuses, we fall through to libopenmpt, whose format net is wide enough that letting it go
