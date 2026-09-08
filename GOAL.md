@@ -539,10 +539,10 @@ emulator here and no browser; the Android UI exists to me as Compose source, and
 markup. So fidelity comes from reading the source carefully, and the only judge is the owner. That
 argues for small steps with a build at the end of each, not one long stretch ending in a reveal.
 
-**The most useful thing the owner could add:** three or four screenshots of the app — the playlist
-with the dock, Now Playing expanded, and Browse. Not required; the source is authoritative for
-colour and dimension. But a screenshot settles proportion and spacing in a way that reading
-`Modifier.padding` values does not.
+**The most useful thing the owner could add** was three or four screenshots — and he sent two within
+the hour, of the playlist with the dock and of Browse. They earned their place immediately: they
+corrected the palette (below), and they settle proportion in a way that reading `Modifier.padding`
+values does not. Still missing, and worth having when convenient: **Now Playing expanded**.
 
 ## What "almost like the app" means, concretely
 
@@ -567,8 +567,26 @@ The anchors, so the shape is visible without opening the file:
 | on secondary container | `#E8DEF8` |
 | outline variant | `#49454F` |
 
-Dynamic colour cannot be reproduced in a browser and is not part of this. The page targets the
-baseline scheme, which is what the owner sees whenever dynamic colour is off.
+### Corrected the same night, from the owner's screenshots
+
+He sent two screenshots, and they overturn the paragraph above: **his phone is not showing the
+baseline palette.** It runs dynamic colour from his wallpaper, so the app is magenta and violet where
+the baseline is lavender on near-black. Sampled from the PNGs rather than eyeballed —
+`docs/reference/app-colours.json`:
+
+| role | his phone | baseline |
+| --- | --- | --- |
+| background | `#180523` | `#141218` |
+| surface container | `#2D133C` | `#211F26` |
+| secondary container (the labelled actions) | `#622B80` | `#4A4458` |
+| primary (the play button) | `#EE83ED` | `#D0BCFF` |
+| on surface | `#F5DDFD` | `#E6E0E9` |
+| on surface variant | `#BCA0C7` | `#CAC4D0` |
+
+**So "looks like my app" means his scheme, not the baseline.** The page ships his colours as its
+default tokens, because that is what was asked for; a browser cannot read a wallpaper, so anyone
+else sees his scheme rather than their own. Keep both files: the baseline is still what a phone with
+dynamic colour off shows, and the page should be built on tokens so swapping is one block of CSS.
 
 ## The rules
 
