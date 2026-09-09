@@ -324,7 +324,11 @@ fun ProtracktorApp(
                         // send (`docs/PLAN_HANDOFF.md` §3 H1).
                         if (state.queue.tracks.isNotEmpty()) {
                             LabelledAction(
-                                icon = PlayerIcons.Link,
+                                // **The icon says which of the two things a press will do.** With
+                                // nobody paired it opens the camera, so it is a code; paired, it
+                                // sends, so it is a link. Same button, and the difference is
+                                // visible before it is pressed rather than after.
+                                icon = if (browse.pairedBrowser) PlayerIcons.Link else PlayerIcons.QrCode,
                                 label = stringResource(R.string.action_send_to_browser),
                                 onClick = viewModel::sendQueueToBrowser,
                                 onLongClick = viewModel::rescan,

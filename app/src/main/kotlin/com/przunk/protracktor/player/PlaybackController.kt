@@ -271,6 +271,14 @@ data class BrowseState(
      * a user which of those to fix, and "download" is the wrong advice for the second.
      */
     val favouritesListed: Int = 0,
+    /**
+     * Whether a browser is paired.
+     *
+     * In state rather than read from preferences at the call site, because it decides an **icon**:
+     * the owner's rule for "to browser" is that the icon says which of the two things a press will
+     * do — a code when it will open the camera, a link when it will send.
+     */
+    val pairedBrowser: Boolean = false,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -1364,6 +1372,7 @@ class PlaybackController private constructor(private val context: Context) {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
             Appearance.rememberPairing(context, endpoint)
+            _browse.update { it.copy(pairedBrowser = true) }
             _state.update { it.copy(message = Message("Paired. The playlist is empty, so nothing was sent.")) }
             return
         }
@@ -1372,6 +1381,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun forgetPairing() {
         Appearance.rememberPairing(context, null)
+        _browse.update { it.copy(pairedBrowser = false) }
         _state.update { it.copy(message = Message("The paired browser is forgotten.")) }
     }
 
@@ -1385,6 +1395,7 @@ class PlaybackController private constructor(private val context: Context) {
             when (val outcome = WebRemote.send(endpoint, tracks, index)) {
                 is WebRemote.Outcome.Delivered -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
+                    _browse.update { it.copy(pairedBrowser = true) }
                     _state.update { it.copy(message = Message("Sent ${tracks.size} tracks to the browser.")) }
                 }
                 // The address answered, so the pairing is sound and the page is simply closed. Kept
@@ -1392,6 +1403,7 @@ class PlaybackController private constructor(private val context: Context) {
                 // and forgetting here would send somebody back to the camera for nothing.
                 is WebRemote.Outcome.NoOneListening -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
+                    _browse.update { it.copy(pairedBrowser = true) }
                     _state.update {
                         it.copy(message = Message("Reached it, but the player page is not open there."))
                     }
@@ -1401,6 +1413,7 @@ class PlaybackController private constructor(private val context: Context) {
                     // An address that cannot be reached is not a pairing, and a stored one with no
                     // way back to the scanner is a dead end -- which is what the owner met.
                     Appearance.rememberPairing(context, null)
+                    _browse.update { it.copy(pairedBrowser = false) }
                     _state.update {
                         it.copy(
                             message = Message(
@@ -1646,6 +1659,7 @@ class PlaybackController private constructor(private val context: Context) {
             // downloading the list does.
             val favouriteRows = favourites.playableCount()
             val favouriteRowsListed = favourites.count()
+            val paired = Appearance.pairedEndpoint(context) != null
             val storage = withContext(Dispatchers.IO) {
                 remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
             }
@@ -1670,6 +1684,7 @@ class PlaybackController private constructor(private val context: Context) {
                     trackMetadataCount = metadataRows,
                     favouriteCount = favouriteRows,
                     favouritesListed = favouriteRowsListed,
+                    pairedBrowser = paired,
                     storageBytes = storage,
                     archiveBytes = archives,
                     databaseBytes = database,

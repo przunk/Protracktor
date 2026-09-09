@@ -184,6 +184,21 @@ object PlayerIcons {
         )
     }
     /** For sharing a **link**. Deliberately a different shape from [Share], which sends the file. */
+    /**
+     * A QR code, for "there is nobody to send to yet — point me at a screen".
+     *
+     * The owner's rule for that button: **the icon says which of the two things pressing it will
+     * do.** Unpaired it opens a camera, so it is a code; paired it sends, so it is a link.
+     */
+    val QrCode: ImageVector by lazy {
+        icon(
+            "QrCode",
+            "M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 16h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4z" +
+                "M19 19h2v2h-2v-2zm-6-6h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm2 2h2v2h-2v-2z" +
+                "M17 15h2v2h-2v-2zm0-4h2v2h-2v-2zm2 2h2v2h-2v-2z",
+        )
+    }
+
     val Link: ImageVector by lazy {
         icon(
             "Link",
