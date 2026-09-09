@@ -198,6 +198,19 @@ if (window.__api) {
   check($('sub').textContent === 'stopped', 'and the dock says the load was stopped');
   holdTrackFetch = false;
 
+  // **The load is not over when the fetch is.** The owner met the gap: "opening…" on the dock and a
+  // play arrow on the button, which then did something other than what it showed.
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 80));
+  check($('sub').textContent.includes('opening'), 'the bytes reach the worklet');
+  check($('playglyph').getAttribute('d') === 'M6 6h12v12H6z',
+    'and the button still offers to stop while it opens them');
+  window.__api.onWorklet({ type: 'failed', reason: 'nothing claimed it' });
+  await new Promise((r) => setTimeout(r, 30));
+  check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z',
+    'a refusal ends the load rather than leaving the button stuck');
+  check($('error').textContent === 'nothing claimed it', 'and says what the decoder said');
+
   // The keys somebody at a desk will try, and the one place they must not fire.
   let played = 0;
   $('playpause').addEventListener('click', () => { played += 1; });

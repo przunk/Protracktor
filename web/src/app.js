@@ -35,6 +35,8 @@ let seeking = false;
  * download again. A press while loading means "not now", and the only honest answer is to abort.
  */
 let loading = null;
+/** Set when the bytes go to the worklet, cleared when it answers. See the watchdog in `playAt`. */
+let openWatchdog = null;
 
 /**
  * Everything a queue entry needs, from a URL alone.
@@ -89,6 +91,8 @@ function onWorklet(message) {
       status(`engine ready — ${message.backends}`);
       break;
     case 'opened': {
+      loading = null;
+      clearTimeout(openWatchdog);
       duration = message.duration;
       const fields = describeFields(message.describe);
       if (fields.title) $('title').textContent = fields.title;
@@ -107,7 +111,10 @@ function onWorklet(message) {
       break;
     }
     case 'failed':
+      loading = null;
+      clearTimeout(openWatchdog);
       $('error').textContent = message.reason;
+      $('sub').textContent = '—';
       setPlaying(false);
       break;
     case 'position':
@@ -260,12 +267,30 @@ async function playAt(next) {
     $('sub').textContent = '—';
     return;
   }
-  if (loading === abort) loading = null;
+  // **The load is not over when the fetch is.** The bytes still have to reach the worklet and be
+  // opened, and the owner met exactly the gap that leaves: the dock said "opening…", the button had
+  // gone back to a play arrow, and pressing it did something else entirely. The controller stays
+  // until the worklet answers, so "stop" means the whole operation and the glyph agrees with it.
+  //
   // Handed over, and the page now waits for the worklet to say `opened` or `failed`. It says which
   // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
   $('sub').textContent = `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`;
   node.port.postMessage({ type: 'open', bytes, name: entry.name }, [bytes]);
+  setPlaying(false);
   announceGesture();
+
+  // **A worklet that never answers is the failure with no symptom.** It has happened twice on this
+  // page -- once when a message was dropped before the engine had compiled, once when the engine
+  // did not load at all -- and both times the screen simply sat there. Ten seconds is far past any
+  // honest open; after that the page says so rather than waiting for ever.
+  clearTimeout(openWatchdog);
+  openWatchdog = setTimeout(() => {
+    if (loading !== abort) return;
+    loading = null;
+    setPlaying(false);
+    $('error').textContent = 'the engine did not answer — check the browser console';
+    $('sub').textContent = '—';
+  }, 10_000);
 }
 
 /**
@@ -464,7 +489,11 @@ $('playpause').onclick = async () => {
   if (loading) {
     loading.abort();
     loading = null;
+    clearTimeout(openWatchdog);
+    // It may already have the bytes and be opening them; tell it to drop what it has.
+    node?.port.postMessage({ type: 'close' });
     setPlaying(false);
+    $('sub').textContent = 'stopped';
     status('Stopped loading.');
     return;
   }
