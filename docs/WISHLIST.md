@@ -752,9 +752,11 @@ Worth weighing when it is:
 - **Import would need to unpack somewhere**, which means the app owns a copy of music the user
   already had. That is a storage question on top of a licensing one (`docs/BACKLOG.md` A13).
 
-## B4. Play MP3 too
+## B4. ~~Play MP3 too~~ — MOVED to `docs/BACKLOG.md` A29 on 2026-09-09
 
-*owner, 2026-09-01.*
+*Raised by the owner 2026-09-01 as a wish; promoted by him on 2026-09-09 — **"ma być w todo (to nie
+życzenie)"**. The reasoning below moved with it and is kept here only so the number is not a dead
+link.*
 
 Likely simple, and there is a neat route: `minimp3` is a
 single public-domain header, which is a fourth backend of about fifty lines rather than a whole

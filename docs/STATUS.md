@@ -415,6 +415,284 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C27. ~~game-music-emu's fade is set and then thrown away~~ — FIXED 2026-09-09
+
+*Found 2026-09-09 while measuring C26 — by comparing our engine against the library directly, which
+is the only reason it was noticed at all.*
+
+`GmeBackend`'s constructor sets the fade and then calls `openAtSomethingAudible()`, which calls
+`gme_start_track` again — in **both** its branches, including the early return taken by every file
+that has music at track 0. And `Music_Emu::clear_track_vars()`, which `start_track` runs first,
+does this:
+
+```cpp
+fade_start = INT_MAX / 2 + 1;
+fade_step  = 1;
+```
+
+So the fade is discarded on every console file this app opens. The comment above the `gme_set_fade`
+call says exactly why it is there — *"Without a fade the last buffer stops dead"* — and that is what
+happens instead.
+
+**Measured:** the same SPC rendered until the library says the track ended runs **128.0 s** with the
+fade set last and **120.1 s** through our engine. The missing eight seconds are the fade.
+
+**Fixed** by making it one function, `applyFade()`, called after every start that begins real
+playback — the two ends of `openAtSomethingAudible`, the silent-file fallback, and `rewind`, which
+lost it too on every replay. `selectSubsong` already had the order right and now says so through the
+same call.
+
+Measured after, on the same corpus and the same file:
+
+| | before | after |
+|---|---|---|
+| `top gear 2 - title.spc` | 120.09 s | **128.08 s** — the library's own answer to the digit |
+| 145 console files through the engine | 120 played, 4 silent, 21 refused | **unchanged** |
+
+The second row is the one that matters: a fade that ends a track could have cut short every file
+that states a length, and it did not.
+
+### C26. SPC plays at a different tempo from every other player — OPEN, not being worked on
+
+*Owner, 2026-09-09, on `top gear 2 - title.spc` and `top gear 2 - ending theme.spc`. He said the
+same of a YM earlier the same day. **Not confirmed as a defect**; recorded because the obvious
+cause has now been eliminated and nobody should pay for that again.*
+
+**Ruled out: the audio path.** This is the defect the web build shipped with until 2026-09-08 —
+44,100 samples playing on a 48,000 context, 8.8% fast, about a semitone and a half sharp — and it
+was found by the owner saying a SID "sounded quicker than I remember". The Android side has the
+same shape and the assumption behind it, *"Oboe resamples if need be"*, had never been measured.
+
+It has now. His logcat, 2026-09-09:
+
+```
+AAudioStreamBuilder_openStream() called
+rate   =  44100, channels  = 2, ... sharing = SH, dir = OUTPUT
+AAudioStreamBuilder_openStream() got Legacy, devIds = [3], perf = NO, burst = 2215
+AAudioStreamBuilder_openStream() returns 0 = AAUDIO_OK
+```
+
+**Asked for 44,100 and given 44,100.** The stream is opened at the rate `GmeBackend` synthesises at,
+so nothing is resampled and nothing plays sharp. `Player::start()` keeps the check anyway (it costs
+one comparison per track and says so on screen when it fires), and on this device it says nothing.
+
+**Measured 2026-09-09, and it is probably not tempo either.** He timed the tune against several
+YouTube rips that agree with each other: **Protracktor ends at 1:49, they end at 2:02** — 11.9%
+short, which is not 8.8% and not any ratio the audio path can produce.
+
+**An SPC has no end.** It is a memory dump of a running SNES and loops for ever; where it stops is a
+number in its ID666 tag, not a musical fact. `GmeBackend` reads `info_->play_length` and hands it to
+`gme_set_fade`, so **our ending is the file's own metadata** and a YouTube uploader's ending is
+whatever they chose. Two different end policies, compared as if they were two tempos.
+
+**He ran the landmark test, and the "it is only the ending" answer was wrong.** The same passage
+plays at **0:51.5 here and 0:58.0 there** — 12.6% fast, which agrees with the 11.9% the endings gave.
+So it *is* tempo: the music genuinely runs quick, and the early ending is a consequence rather than
+the cause.
+
+**And 12.6% is not a ratio this audio path can make.** The only one available is 48,000/44,100 =
+8.8%, and his own log shows the stream opened at 44,100 anyway. So the error is below Oboe: either
+game-music-emu, or the file is not the tune the videos are playing.
+
+**Where it splits, and neither half has been measured yet:**
+
+- **The same `.spc` in the web player.** Same `engine.cpp`, same gme, a different host and a context
+  also forced to 44,100. Fast there too, and Android is out of it entirely.
+- **The same `.spc` rendered on the host at 32,000 and at 44,100.** 32,000 is gme's native SPC rate
+  and needs no resampling; 44,100 goes through `Fir_Resampler`. If the two disagree musically, the
+  resampler ratio is wrong. If they agree, the emulation speed is, and gme is a much less likely
+  culprit than the rip.
+- **The rip.** Several videos agreeing with each other is weaker evidence than it looks — they may
+  share one source. Top Gear 2 also exists on Mega Drive, Amiga and PC with different music, and a
+  PAL SNES capture runs 5/6 the speed of an NTSC one, which is the same size of error in the same
+  direction.
+
+### Measured on the host, 2026-09-09, with his own file
+
+He supplied `top gear 2 - title.spc`. Its ID666 tag: **length 120,000 ms, fade 7,000 ms**, dumped by
+Grass-eatin'me, artist *Patrick Phelan, Ashley Bennett*.
+
+Rendered through the vendored game-music-emu on this machine, once at its native rate and once at
+the rate the app asks for:
+
+| opened at | tag | rendered until `gme_track_ended` |
+|---|---|---|
+| 32,000 (no resampling) | 120,000 ms | 4,099,200 frames = **128.1 s** |
+| 44,100 (through `Fir_Resampler`) | 120,000 ms | 5,644,800 frames = **128.0 s** |
+
+Repeated with `-funsigned-char`, which is ARM's default and the difference most likely to make a
+decoder behave differently on a phone: **identical to the digit**.
+
+**So the decoder is not the problem.** 128 s against the videos' 2:02 is the right answer plus the
+fade; the two rates agree with each other; the emulation does not care about char signedness. What
+is left is the difference between this machine and the phone, and the only thing in that gap is
+Oboe.
+
+**And the arithmetic now fits the classic fault exactly.** 120 s played 8.8% fast is **110.3 s**, and
+he measured **1:49**. The landmark pair (0:51.5 against 0:58.0) is cruder and gave 12.6%, but he
+called it *"mniej więcej"* and 8.8% would put it at 53.3 s. **8.8% is 48,000/44,100** — the one ratio
+this path can produce, and the same defect the web build had.
+
+`Player::start()` says nothing, so `getSampleRate()` returns the 44,100 that was asked for. That
+does not settle it: on the Legacy AAudio path the stream reports the requested rate while
+`AudioTrack` below it is supposed to do the conversion. If it is not doing it, every number here
+lines up.
+
+### Settled 2026-09-09: nothing in this app plays it fast
+
+**The owner's test first, and it is the better one.** He played the file in the web player and on the
+phone at the same time, one in each ear: *"były w 100% zsynchronizowane"*. Two decoders, two hosts,
+two audio stacks, no drift over two minutes. Whatever they are doing, they are doing it identically —
+so Oboe was never the difference, and the 8.8% story above is wrong.
+
+**Then, byte for byte.** Thirty seconds of `top gear 2 - title.spc` rendered at 44,100 twice — once
+through game-music-emu directly, once through `pt_render` in the wasm engine, which is the same
+`GmeBackend` the phone runs:
+
+```
+5,292,032 bytes each, cmp -l → 0 differing bytes
+```
+
+**Identical.** Not "close": the same file. Our engine reproduces the library exactly, the library
+plays the tune for its tagged 120 seconds, and the videos end at 2:02.
+
+**The offset theory was mine and the owner has rejected it**, 2026-09-10: *"tempo jest na 100%
+różne od tego co mam na yt"*. He has listened to both; that is worth more than an inference about
+title cards, and this entry stays open on his word rather than being closed on mine.
+
+**What the measurements above actually prove is narrower than I claimed.** They prove our engine
+reproduces game-music-emu exactly, and that the phone and the browser agree with each other. **They
+say nothing about whether game-music-emu itself plays SPC at the speed a Super Nintendo does.**
+Every number in this entry is downstream of that library, so a fault in it would be invisible to all
+of them — and a self-consistent wrong answer is exactly what this evidence would look like.
+
+**Not being worked on** (owner, 2026-09-10: *"nie robimy teraz"*). When it is picked up, the missing
+measurement is the one nobody has made: the same `.spc` through a **second, independent** SPC
+implementation — snes9x, bsnes, or `snes_spc` used directly rather than through gme's wrapper — and
+the two waveforms lined up. That is the only test left that can tell "gme is wrong" from "the video
+is not this rip", and neither the tag, the fade nor the audio path can stand in for it.
+
+**Two tests, of which the owner has now run both:**
+
+- **A tracker module against the same tune elsewhere** — right, he says (MOD certain, XM almost).
+  libopenmpt returns 0 from `preferredSampleRate()`, so its stream opens at the device's own rate
+  and nothing is converted. Had the fixed-rate path been broken, this is the comparison that would
+  have shown it.
+- **The same file in the web player** — identical to the phone, sample for sample by ear.
+
+**Not needed, on the evidence above, but recorded because it is still the better design.** `gme_open_data` takes the rate, so
+`GmeBackend` could be opened at whatever the stream turns out to be and return 0 from
+`preferredSampleRate()` — no conversion by anybody. That is not available to sc68 or ZXTune, which
+synthesise at a rate they do not choose, but it removes the whole question for the console formats.
+
+What is left, in the order worth trying:
+
+- **A different rip.** SPC files circulate in many dumps of the same tune, and Top Gear 2 exists on
+  SNES, Mega Drive, Amiga and PC with **different music per platform**. The thing remembered may not
+  be the thing playing.
+- **gme's SPC timing.** It resamples 32,000 to whatever it is opened at, and a fault there would be
+  a fixed ratio on every SPC rather than on two. Cheap to test: the same file in the web player,
+  which links the same `engine.cpp` through a context also forced to 44,100. If both sound the same,
+  the decoder is consistent and the phone is exonerated twice over.
+- **A stopwatch.** An 8% error is ten seconds in two minutes — audible against any independent
+  recording of the same rip, and not a matter of opinion once timed.
+
+### C25. Changing the theme restarts playback
+
+*Owner, 2026-09-09.*
+
+Picking a theme — or the system palette switch, or a language — calls `recreate()` on
+`MainActivity`, deliberately, so the window is rebuilt with the new one. The music restarts from
+the beginning instead of carrying on.
+
+**The obvious explanation is already ruled out**, and saying so is the point of writing this down
+rather than a one-line note: `PlaybackController` is an application-scoped singleton
+(`PlaybackController.get(applicationContext)`), and `PlayerViewModel` only asks for it. An activity
+being destroyed and rebuilt does not take the controller, the backend or the Oboe stream with it.
+So this is **not** "the player is owned by the Activity", which is what it looks like and what
+someone will try to fix first. C17 is the standing reminder of what that costs.
+
+What has not been looked at, in the order worth looking:
+
+- **The restore path.** The app brings back the track last played. If that runs on every Activity
+  creation rather than only on a cold start, it re-opens the current track — which is exactly this
+  symptom, and would also explain why it starts from zero rather than glitching.
+- **Audio focus.** A rebuilt window requesting focus again, and the duck-or-stop handling reading
+  its own request as somebody else's.
+- **The foreground service** being stopped and restarted with the activity.
+
+Worth a `Log` at the top of whatever re-opens a track before changing anything: the first question
+is whether `openBackend` runs at all during a recreate, and that is one line to find out.
+
+### C24. ~~Play does nothing on a track that has reached its end~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-09. Both the phone and the page.*
+
+**"Finished" had two meanings and only one was being asked about.** `Track.isFinished()` is set by
+the engine when a backend renders a short buffer, and some never do — libsidplayfp is running a 6502
+in a loop and has no idea the music is over. For those the *app* ends the track, on the length HVSC
+or the file supplied, and the engine still says it is running. So play called `start()`, the decoder
+resumed from a position already past that length, and the poll ended it again within two hundred
+milliseconds. From outside: a button that does nothing.
+
+The rule is now `PlayFromEnd.shouldRestart`, in its own file and pure, for the reason
+`SubsongAdvance` is — the alternative is reasoning about it inside a method that needs a phone to
+run. Its awkward case has a test: a duration of zero means *nobody knows the length*, not *zero
+seconds long*, and without that guard every paused tune with no stated duration would restart
+instead of resuming.
+
+In the browser the same press now sends `rewind` to the worklet rather than re-fetching bytes it is
+already holding.
+
+### C23. ~~The web player's `next` skips the file, never the tune inside it~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-09.*
+
+A `.sid` or a `.sndh` holds several tunes; the phone knew and the page did not, so on a file with
+twelve subsongs eleven were reachable only by tapping a chip.
+
+Built as the phone's, because the phone's behaviour is the specification: a switch in Now Playing
+(*"Play every tune in this file"*, kept per browser and shown only where it decides something) and a
+**long press on next** that skips within the file whatever the switch says. The end of a tune now
+walks the file before it walks the queue — and repeat-one is checked first, deliberately, because it
+means "this tune again" and a file's other tunes are not it.
+
+Two things fell out of doing it properly. The worklet **answers** a subsong request now, with that
+tune's own duration and title: a GBS gives each track its own length, and the page had been showing
+the first one's against the third one's audio — the same defect `selectSubsong` fixed on the phone.
+And `opened` carries `pt_current_subsong`, which is not always zero: `GmeBackend` opens a HES or KSS
+at the first track with sound in it, so assuming zero pointed the chips at a tune that was not
+playing.
+
+### C22. ~~The volume control sits under the repeat button~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-09, on the build handed over the same day. Mine, from that morning.*
+
+The cause was the thing that made it work: `.volume` was positioned absolutely so it could not
+decentre the transport, and `.transport` is `justify-content: space-evenly`, so `repeat` was placed
+knowing nothing was there.
+
+**The space is reserved now rather than taken.** A spacer of the same width on the left, the five
+buttons spread between them, and one `--volume-width` variable that both read — so the narrow-screen
+rule that hides the slider cannot leave the buttons off-centre by the width of something invisible.
+Absolute positioning could keep play centred or keep the two apart, never both.
+
+### C21. ~~The seek bar does not fill in behind the handle~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-09.*
+
+The only thing saying where you were was the handle. Every player fills the part already played, and
+the phone does.
+
+`::-moz-range-progress` exists in one engine and has no webkit counterpart, so the portable answer is
+to paint the **track itself** with a gradient and move its stop from script — a custom property on
+the input, which inherits into the pseudo-element. The volume slider gets it too, and a disabled seek
+bar deliberately does not: a slider that says "you cannot move this" must not also say "you are
+here".
+
+The one trap: assigning to `.value` fires no event, so every place that sets a slider from state
+paints it as well.
+
 ### C20. ~~The index promises files no backend can open~~ — HALF FIXED 2026-09-09
 
 *Found 2026-09-08 by the wasm probe (`docs/PLAN_WEB.md` §14), and it was an **Android** defect — the

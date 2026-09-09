@@ -83,7 +83,13 @@ class CatalogueStore(context: Context) {
 
         // Driven by the catalogues the app knows about, not by what happens to be in the table.
         // A catalogue nobody has indexed yet still has to appear, or there is no way to index it.
-        Catalogue.all.map { catalogue ->
+        //
+        // **Search-only ones last**, on the owner's note (2026-09-09): they are the only rows with
+        // no download arrow, and a gap in the middle of a column of buttons reads as something
+        // missing rather than as something different. Sorted by the property rather than by naming
+        // The Mod Archive, so the next one lands in the right place without anybody remembering to
+        // move it. `sortedBy` is stable, so the rest keep the order `Catalogue.all` declares.
+        Catalogue.all.sortedBy { it.isOnlineOnly }.map { catalogue ->
             val (count, at, backends) = stored[catalogue.id] ?: Triple(0, null, "")
             CatalogueSummary(
                 id = catalogue.id,

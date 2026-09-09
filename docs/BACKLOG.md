@@ -673,6 +673,122 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
+## A30. The button to the browser should say "WEB"
+
+*Owner, 2026-09-09: **"zmieniłbym 'to browser'/'do przeglądarki' na 'WEB' (pl/eng tak samo)"**.*
+
+The top-bar action reads *To browser* in English and *Do przeglądarki* in Polish. Both become
+**WEB**, and deliberately the same word in both languages — it is the name of the other half of this
+project, not a sentence about where something is going.
+
+Two strings and nothing else (`app/src/main/res/values/strings.xml` and `values-pl/`), but worth
+looking at what else in that corner still says "browser" while it is open: the label under the icon
+is only one of the places the handoff describes itself.
+
+## A29. Play MP3 too
+
+*Owner, 2026-09-01 as `docs/WISHLIST.md` B4, and moved here by him on 2026-09-09: **"ma być w todo
+(to nie życzenie)"**. Agreed work, not an idea.*
+
+**The decoder is the small part.** `minimp3` is a single public-domain header, so this is a
+backend of about fifty lines rather than a vendored library — the smallest one here would still be
+HivelyTracker's three files, and this is smaller. Android's own `MediaCodec` is *not* the easy
+answer: the engine is native from the file to the speaker, and routing one format through the
+platform would mean two playback paths to keep in step, two places for a seek to behave
+differently, and nothing at all for the browser.
+
+**It goes to the browser for free**, which was not true when this was written. The wasm build links
+the same `engine.cpp`, so a backend added there arrives in both.
+
+### The two decisions it actually needs
+
+**1. Does `.mp3` go in `SupportedFormats.extensions`?** That list is what a folder scan *and* a
+catalogue index are filtered through, and it feeds `fingerprint` — so adding a name marks every
+stored index stale and re-downloads Modland's 40 MB. No archive here holds an MP3, so that
+re-index would buy nothing. The honest shape is probably **two sets**: what a local folder scan
+picks up, and what a catalogue index keeps. They have been the same list until now because there
+was never a format that belonged to one and not the other.
+
+**2. Does it appear in Browse at all?** B4's own reservation still stands and is worth keeping in
+front: *this app is a retro chiptune player, and MP3 is the format its whole point is not.* Handy
+for a rip of something, out of place in a browse tree. "Open this file" and a folder the user
+pointed at, yes; a first-class citizen of the library, ask first.
+
+### What is not a decision
+
+Duration and seeking. A tracker module states its length and MP3 does not, so a VBR file needs
+either a full scan or the Xing header — `minimp3` gives neither for free. Whatever is chosen must
+answer `canSeek()` honestly, because `docs/ARCHITECTURE.md` §5 is that a UI offering a control the
+backend cannot honour is a UI that lies.
+
+## A28. The web player carries the local files it cannot play
+
+*Owner, 2026-09-09, after an external listener opened a shared link: **"nasze listy nie są zgodne"**.*
+
+`QueueLink` packs catalogue paths into the URL fragment; a local file has no portable identity — its
+id is a storage-access grant valid on one phone — so it is counted and left behind. The app says so
+to the sender (*"Sending N; M are files on this phone and stayed here"*) and the page says nothing
+at all to the receiver.
+
+**The defect is not the missing music, it is the missing rows.** Track seven on the phone is track
+five in the browser, and two people cannot talk about a list that numbers itself differently. The
+owner's shape: the local files appear **in their own positions**, greyed, marked *local file — not
+transferred*. A summary line at the top is cheaper and does not fix the thing that hurt.
+
+Three things it drags in:
+
+1. **The link has to carry titles.** Modland rows travel as bare paths today and the page derives
+   the title; a local file has no path, so its title travels literally. Fifty tracks compress to
+   1,992 characters now, and a mostly-local playlist could pass the length a URL is safe at. That
+   needs a rule — what does not fit is dropped, and the page says how many.
+2. **`next` and shuffle must step over them**, or the button lands on a row that can never play.
+   That is `order` and `afterCurrent` in `web/src/app.js`, not a CSS class.
+3. **Grey, not red.** The page already has `.failed` for "a decoder refused this", and this is not
+   that: nothing broke, the bytes simply did not travel. A separate state, and the row does not
+   respond to a click.
+
+**One idea covers both paths.** Pairing *does* send local files, as base64 up to
+`WebRemote.LOCAL_BYTES_BUDGET` — and whatever exceeds that budget disappears today just as silently.
+The same greyed row describes both.
+
+**A decision for the owner, not for us:** the link would then carry filenames off his phone. He is
+already sending a whole playlist, so it is a small difference, and it is a difference.
+
+## A27. The web player has no actions — not in Now Playing, and not on a row
+
+*Owner, 2026-09-09, with a screenshot of the phone's panel (`user/Screenshot_20260909-215818.png`).*
+
+The phone's Now Playing is a sheet: title, seek bar with elapsed and remaining, the file's path, then
+**a row of four labelled square buttons** — *Show in playlist*, *Add to playlist…*, *Share the file*,
+*Share a link* — a divider, and then the field list (Format, Tracker, Artist, Channels, Patterns,
+Instruments, Samples, Subsongs). The page has the title, the fields and the subsong chips, and
+nothing between them.
+
+**Not all four transfer, and pretending they do is how a mirror becomes a lie.**
+
+- *Show in playlist* — yes, and it is the one worth most: scroll the queue to the playing row.
+- *Share a link* — yes: the page's own URL already carries the queue in its fragment.
+- *Share the file* — possible, as a download of the bytes the worklet already holds. Worth asking
+  whether he wants it before building it.
+- *Add to playlist…* — no. The page has no playlists to add to, and it is `PLAN_HANDOFF.md` §5a's
+  line about what the browser deliberately is not.
+
+The layout is the part to copy exactly: labelled squares in a row under the file line, above the
+divider, sized as the phone sizes them.
+
+**And every row wants a menu of its own** (owner, the same evening): *send file*, *send link*,
+*information*. The phone has that already — the three dots on each track row — so this is the same
+mirror, one level down.
+
+The three do not cost the same. *Send link* is a string the page can build for any row it holds.
+*Information* is the Now Playing panel pointed at a row that is not playing, which means the fields
+have to come from somewhere other than "the track in the worklet" — the engine can describe a file
+without playing it, but nothing in `web/src/app.js` asks it to today. *Send file* needs the bytes,
+so it is free for a row already fetched and a download for one that is not.
+
+**A row that cannot be played cannot be sent either** (see A28): the greyed local-file rows must
+either hide this menu or grey the two entries that need bytes.
+
 ## A26. Two rough edges on the JNI boundary
 
 *Found 2026-09-08, while answering an experienced C++ engineer's objection to JNI (`docs/OPEN_QUESTIONS.md`

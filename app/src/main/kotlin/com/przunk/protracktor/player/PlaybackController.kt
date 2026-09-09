@@ -226,6 +226,19 @@ enum class BrowseDomain { ROOT, LOCAL, ONLINE, SEARCH, HISTORY }
  * Separate from [PlayerUiState] because it is a different lifetime: browsing comes and goes while
  * playback does not, and folding it in would mean every scan tick recomposing the player.
  */
+/**
+ * Keys for the downloads that are not a catalogue.
+ *
+ * A catalogue's key is its own id. These four have none, and a display label is the wrong thing to
+ * key on: it is translated, and `BrowseState.indexing` would then hold different keys in Polish.
+ */
+object DownloadKeys {
+    const val SONG_LENGTHS = "songlengths"
+    const val TRACK_METADATA = "trackmetadata"
+    const val FAVOURITES = "favourites"
+    const val REPLAYS = "replays"
+}
+
 data class BrowseState(
     val domain: BrowseDomain = BrowseDomain.ROOT,
     val loading: Boolean = false,
@@ -240,8 +253,19 @@ data class BrowseState(
     val openFormat: String? = null,
     val openAuthor: String? = null,
     val groups: List<CatalogueGroup> = emptyList(),
-    /** Non-null while an index is downloading; carries something to show the user. */
-    val indexing: String? = null,
+    /**
+     * What is downloading right now: a key per download, and a line to show for each.
+     *
+     * **A map rather than one string, since 2026-09-09.** It was one string, and starting a second
+     * download while the first ran overwrote it — then whichever finished *first* cleared it, so
+     * the banner vanished while a download was still going. The owner read that as the second tap
+     * cancelling the first: *"jak klikam po kolei od razu je, to przerywa poprzednie"*. Nothing was
+     * ever cancelled; the coroutines ran on happily and only the UI had lost track of them.
+     *
+     * Keyed by [DownloadKeys] or a catalogue id, so a row can ask whether **it** is the one
+     * downloading and show a spinner where its arrow was.
+     */
+    val indexing: Map<String, String> = emptyMap(),
     /** Non-null while a folder is being scanned: files probed so far, and how many there are. */
     val scanProgress: Pair<Int, Int>? = null,
     /** True when the open folder has never been scanned. */
@@ -531,6 +555,14 @@ class PlaybackController private constructor(private val context: Context) {
      * own open, and the second overwrote `track` without closing the first, which went on playing
      * with nobody holding it.
      */
+    /**
+     * Whether the audio path has already been complained about this session.
+     *
+     * Once is a diagnosis; once per track is a nuisance, and the answer cannot change while the app
+     * runs — it is a property of the device's audio stack, not of the tune.
+     */
+    private var reportedSampleRate = false
+
     private var openJob: Job? = null
 
     /**
@@ -1872,6 +1904,25 @@ class PlaybackController private constructor(private val context: Context) {
         }
 
     /**
+     * Marks [key] as downloading, or answers false if it already was.
+     *
+     * **The guard is the point.** Every download here is an independent coroutine and always was;
+     * what a second tap on the same row used to do was start a second identical download, and what
+     * a tap on a *different* row used to do was blank the first one's label. Neither was a
+     * cancellation, which is what it looked like from outside (owner, 2026-09-09). One map, one
+     * entry per download, and a row that can ask about itself.
+     */
+    private fun beginDownload(key: String, label: String): Boolean {
+        if (_browse.value.indexing.containsKey(key)) return false
+        _browse.update { it.copy(indexing = it.indexing + (key to label)) }
+        return true
+    }
+
+    private fun endDownload(key: String) {
+        _browse.update { it.copy(indexing = it.indexing - key) }
+    }
+
+    /**
      * Downloads a catalogue's index and stores it.
      *
      * Only entries whose filename a backend might handle are kept. Modland lists about half a
@@ -1881,18 +1932,18 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun indexCatalogue(id: String) {
         val catalogue = Catalogue.byId(id) ?: return
+        if (!beginDownload(catalogue.id, catalogue.displayName)) return
         scope.launch {
-            _browse.update { it.copy(indexing = catalogue.displayName) }
             val bytes = remoteFiles.fetchIndex(catalogue.indexUrl)
             if (bytes == null) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(catalogue.id)
                 _state.update { it.copy(message = Message("Could not download the ${catalogue.displayName} index.")) }
                 return@launch
             }
             // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
             // discarded -- afterwards both browsing and playing work with no network at all.
             if (catalogue.isArchive && !remoteFiles.storeArchive(catalogue.id, bytes)) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(catalogue.id)
                 _state.update {
                     it.copy(message = Message("Could not store the ${catalogue.displayName} archive."))
                 }
@@ -1907,7 +1958,8 @@ class PlaybackController private constructor(private val context: Context) {
                 catalogue.parseIndex(bytes) { name -> SupportedFormats.looksPlayable(name) }
             }
             catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
-            _browse.update { it.copy(indexing = null, catalogues = catalogues.summaries()) }
+            endDownload(catalogue.id)
+            _browse.update { it.copy(catalogues = catalogues.summaries()) }
             _state.update { it.copy(message = Message("Indexed ${entries.size} tracks from ${catalogue.displayName}.")) }
         }
     }
@@ -1921,11 +1973,11 @@ class PlaybackController private constructor(private val context: Context) {
      * came from somewhere else, so it sits below the catalogues rather than among them.
      */
     fun downloadSongLengths() {
+        if (!beginDownload(DownloadKeys.SONG_LENGTHS, SONG_LENGTHS_LABEL)) return
         scope.launch {
-            _browse.update { it.copy(indexing = SONG_LENGTHS_LABEL) }
             val bytes = remoteFiles.fetchIndex(SONG_LENGTHS_URL)
             if (bytes == null) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(DownloadKeys.SONG_LENGTHS)
                 _state.update { it.copy(message = Message("Could not download the song lengths.")) }
                 return@launch
             }
@@ -1933,12 +1985,13 @@ class PlaybackController private constructor(private val context: Context) {
                 SongLengths.parse(bytes.toString(Charsets.ISO_8859_1))
             }
             if (entries.isEmpty()) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(DownloadKeys.SONG_LENGTHS)
                 _state.update { it.copy(message = Message("The song length database was empty.")) }
                 return@launch
             }
             songLengths.replaceAll(entries)
-            _browse.update { it.copy(indexing = null, songLengthCount = entries.size) }
+            endDownload(DownloadKeys.SONG_LENGTHS)
+            _browse.update { it.copy(songLengthCount = entries.size) }
             _state.update { it.copy(message = Message("Song lengths for ${entries.size} SID tunes.")) }
         }
     }
@@ -1956,11 +2009,11 @@ class PlaybackController private constructor(private val context: Context) {
      * to put one -- 40,161 ProTracker, 11,733 Fasttracker 2 (`docs/reference/songdb.md`).
      */
     fun downloadTrackMetadata() {
+        if (!beginDownload(DownloadKeys.TRACK_METADATA, TRACK_METADATA_LABEL)) return
         scope.launch {
-            _browse.update { it.copy(indexing = TRACK_METADATA_LABEL) }
             val bytes = remoteFiles.fetchIndex(TRACK_METADATA_URL)
             if (bytes == null) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(DownloadKeys.TRACK_METADATA)
                 _state.update { it.copy(message = Message("Could not download the track metadata.")) }
                 return@launch
             }
@@ -1969,11 +2022,12 @@ class PlaybackController private constructor(private val context: Context) {
             // 150 MB -- fine on the JVM these tests run on, an out-of-memory crash on a phone.
             val written = trackMetadata.replaceAllFrom(bytes)
             if (written == 0) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(DownloadKeys.TRACK_METADATA)
                 _state.update { it.copy(message = Message("The track metadata was empty.")) }
                 return@launch
             }
-            _browse.update { it.copy(indexing = null, trackMetadataCount = written) }
+            endDownload(DownloadKeys.TRACK_METADATA)
+            _browse.update { it.copy(trackMetadataCount = written) }
             _state.update { it.copy(message = Message("Metadata for $written tunes.")) }
         }
     }
@@ -2051,23 +2105,24 @@ class PlaybackController private constructor(private val context: Context) {
      * what the file contained.
      */
     fun downloadFavourites() {
+        if (!beginDownload(DownloadKeys.FAVOURITES, FAVOURITES_LABEL)) return
         scope.launch {
-            _browse.update { it.copy(indexing = FAVOURITES_LABEL) }
             val bytes = remoteFiles.fetchIndex(FAVOURITES_URL)
             if (bytes == null) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(DownloadKeys.FAVOURITES)
                 _state.update { it.copy(message = Message("Could not download the favourites.")) }
                 return@launch
             }
             val written = favourites.replaceAllFrom(bytes)
             if (written == 0) {
-                _browse.update { it.copy(indexing = null) }
+                endDownload(DownloadKeys.FAVOURITES)
                 _state.update { it.copy(message = Message("The favourites list was empty.")) }
                 return@launch
             }
             val playable = favourites.playableCount()
+            endDownload(DownloadKeys.FAVOURITES)
             _browse.update {
-                it.copy(indexing = null, favouriteCount = playable, favouritesListed = written)
+                it.copy(favouriteCount = playable, favouritesListed = written)
             }
             _state.update {
                 it.copy(
@@ -2097,12 +2152,16 @@ class PlaybackController private constructor(private val context: Context) {
      * downloads says nothing, and this is the one download in the app that is not a single file.
      */
     fun downloadReplays() {
+        if (!beginDownload(DownloadKeys.REPLAYS, REPLAYS_LABEL)) return
         scope.launch {
-            _browse.update { it.copy(indexing = REPLAYS_LABEL) }
             val fetched = Sc68Replays.download(context) { done, total ->
-                _browse.update { it.copy(indexing = "$REPLAYS_LABEL $done/$total") }
+                // The one download that can say how far it is. It replaces its own entry rather
+                // than adding one, so the banner counts up in place while other rows carry on.
+                _browse.update {
+                    it.copy(indexing = it.indexing + (DownloadKeys.REPLAYS to "$REPLAYS_LABEL $done/$total"))
+                }
             }
-            _browse.update { it.copy(indexing = null) }
+            endDownload(DownloadKeys.REPLAYS)
             if (fetched == null || fetched == 0) {
                 _state.update {
                     it.copy(message = Message("Could not download the replay routines."))
@@ -3051,8 +3110,18 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update { it.copy(message = Message("Something else is using the audio.")) }
                 return
             }
-            val restarted = if (open.isFinished()) open.restart() else open.start()
-            _state.update { it.copy(playing = restarted) }
+            // **Asked of both meanings of "finished".** The engine knows when a backend stopped
+            // producing audio; it does not know when the app stopped a tune at the length HVSC
+            // supplied, which is how most SIDs end. `PlayFromEnd` has the case that was missed.
+            val atEnd = PlayFromEnd.shouldRestart(
+                engineSaysFinished = open.isFinished(),
+                positionSeconds = _state.value.positionSeconds,
+                durationSeconds = _state.value.durationSeconds,
+            )
+            val restarted = if (atEnd) open.restart() else open.start()
+            _state.update {
+                it.copy(playing = restarted, positionSeconds = if (atEnd) 0.0 else it.positionSeconds)
+            }
         }
     }
 
@@ -3278,6 +3347,19 @@ class PlaybackController private constructor(private val context: Context) {
             // `start()` there is no other thread to race with.
             val described = opened.describe()
             val started = opened.start()
+
+            // **Said out loud, once, because the owner cannot read logcat.** Backends that
+            // synthesise at a fixed rate ask Oboe for it and Oboe is meant to resample; nobody has
+            // ever checked that it does, and if it declines, every one of those tunes plays sharp
+            // with nothing to say so. He reported two SPCs sounding fast on 2026-09-09 — this is
+            // how that becomes a fact instead of a suspicion. Empty is the normal answer.
+            if (started && !reportedSampleRate) {
+                val note = runCatching { opened.sampleRateNote() }.getOrDefault("")
+                if (note.isNotEmpty()) {
+                    reportedSampleRate = true
+                    _state.update { it.copy(message = Message(note)) }
+                }
+            }
             // A SID has no length in it, so the backend reports none and HVSC's database is asked
             // instead. Only when the backend has nothing: a format that knows its own length knows
             // it better than a lookup on a hash could.

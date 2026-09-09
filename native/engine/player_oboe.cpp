@@ -18,6 +18,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <cstdio>
 #include <string>
 #include <utility>
 #include <vector>
@@ -189,7 +190,8 @@ public:
         // Backends that synthesise at a fixed rate say so, and Oboe resamples if the device runs at
         // something else. Asking a 68000 emulator to run at 48000 because the phone prefers it would
         // change the music, not the format it arrives in.
-        if (const int preferred = backend_->preferredSampleRate(); preferred > 0) {
+        const int preferred = backend_->preferredSampleRate();
+        if (preferred > 0) {
             builder.setSampleRate(preferred)
                 ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium);
         }
@@ -200,6 +202,32 @@ public:
             stream_.reset();
             return false;
         }
+        // **The one assumption in this chain nobody has ever measured.** The comment above says
+        // "Oboe resamples if need be", and if it ever does not, `getSampleRate()` comes back as the
+        // device's rate, the callback hands that number to a backend that ignores it, and 44,100
+        // samples play at 48,000 -- 8.8% fast, about a semitone and a half sharp. That is not a
+        // hypothetical: it is exactly the defect the web build shipped with until 2026-09-08,
+        // found by the owner saying a SID "sounded quicker than I remember".
+        //
+        // He said the same thing about two SPCs on 2026-09-09. A log line is what turns "I think
+        // it sounds fast" into a fact, and it costs nothing on a path that runs once per track.
+        // **Kept as a string as well as logged, because logcat is not a channel the owner can
+        // reach.** The tag here is `protracktor` and the Kotlin side's is `Protracktor`, so
+        // filtering on the obvious one shows everything except this — which is what happened when
+        // he went looking. The app asks for this note straight after starting and says it out loud
+        // once, which is a diagnosis a person can read on the device that has the problem.
+        rateNote_.clear();
+        if (preferred > 0 && stream_->getSampleRate() != preferred) {
+            const double fast =
+                (static_cast<double>(stream_->getSampleRate()) / preferred - 1.0) * 100.0;
+            char text[160];
+            std::snprintf(text, sizeof(text),
+                          "Audio: asked for %d Hz, got %d — playing %.1f%% fast",
+                          preferred, stream_->getSampleRate(), fast);
+            rateNote_ = text;
+            LOGE("%s", text);
+        }
+
         if (const oboe::Result r = stream_->requestStart(); r != oboe::Result::OK) {
             LOGE("requestStart failed: %s", oboe::convertToText(r));
             stream_->close();
@@ -246,8 +274,17 @@ public:
     double durationSeconds() const { return duration_.load(std::memory_order_acquire); }
     std::string describe() const { return backend_->describe(); }
 
+    /**
+     * Empty unless Oboe opened the stream at a rate the backend did not ask for.
+     *
+     * Written once by `start()` and read by the app immediately afterwards, both on the caller's
+     * thread — the audio callback never touches it, so it needs no atomic.
+     */
+    const std::string &rateNote() const { return rateNote_; }
+
 private:
     std::unique_ptr<Backend> backend_;
+    std::string rateNote_;
     std::shared_ptr<oboe::AudioStream> stream_;
     std::atomic<bool> finished_{false};
     std::atomic<float> gain_{1.0f};
@@ -300,6 +337,18 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
 
     if (!backend) return 0;
     return reinterpret_cast<jlong>(new Player(std::move(backend)));
+}
+
+/**
+ * What Oboe actually gave us, when it is not what was asked for.
+ *
+ * A string rather than two numbers, because the caller does nothing with it but show it. Empty is
+ * the normal answer and means the audio path is what it claims to be.
+ */
+JNIEXPORT jstring JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSampleRateNote(JNIEnv *env, jclass,
+                                                                    jlong handle) {
+    return env->NewStringUTF(asPlayer(handle)->rateNote().c_str());
 }
 
 JNIEXPORT void JNICALL
