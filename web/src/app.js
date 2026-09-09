@@ -402,8 +402,12 @@ function setQueue(urls) {
   if (queue.length) playAt(0);
 }
 
-// The panels are the page's two "actions", in the app's vocabulary rather than two stacked
-// sections. Pair is the one that matters, so it is the one that starts open.
+/**
+ * The two interruptions and the one panel.
+ *
+ * Pair and Paste are dialogs over the page; Now Playing is a panel under the queue, because it is
+ * something you read alongside the list rather than instead of it.
+ */
 function showPanel(which) {
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
@@ -411,14 +415,27 @@ function showPanel(which) {
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
+  if (which === 'paste') $('urls').focus();
 }
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 
+// A dialog closes on its own button, on the scrim behind it, and on Escape. All three, because
+// people reach for all three and a dialog that only answers one of them feels stuck.
+for (const overlay of document.querySelectorAll('.overlay')) {
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay || event.target.hasAttribute('data-close')) showPanel(null);
+  });
+}
+addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') showPanel(null);
+});
+
 $('load').onclick = () => {
   const urls = $('urls').value.split('\n').map((s) => s.trim()).filter(Boolean);
   if (urls.length) setQueue(urls);
+  showPanel(null);
 };
 $('playpause').onclick = async () => {
   await start();
@@ -559,6 +576,8 @@ async function pair() {
 /** A queue from the phone. */
 function receive(message) {
   if (!message.queue?.length) return;
+  // The code did its job, so it stops standing in front of the music.
+  if (!$('pair').hidden) showPanel(null);
   setQueue(message.queue.map((row) => ({
     ...entryFor(row.url),
     name: row.title || entryFor(row.url).name,
@@ -590,6 +609,10 @@ addEventListener('keydown', (event) => {
   event.preventDefault();
   act();
 });
+
+// Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
+// itself the moment a queue arrives.
+showPanel('pair');
 
 status('ready — press Play or load some URLs');
 pair();

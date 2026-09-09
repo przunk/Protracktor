@@ -164,6 +164,32 @@
 
   .panel { padding: 10px 18px 18px; }
   .panel[hidden] { display: none; }
+
+  /* Material's own scrim value, so a dialog dims the page by the amount every other dialog does. */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    background: rgba(0, 0, 0, .55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .overlay[hidden] { display: none; }
+  .sheet {
+    background: var(--surface-container);
+    border-radius: var(--shape-xl);
+    padding: 22px 24px 16px;
+    max-width: 420px; width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
+    text-align: center;
+  }
+  .sheet.wide { max-width: 560px; text-align: left; }
+  .sheet .note { margin-bottom: 14px; }
+  .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+  .text-button {
+    background: none; border: 0; color: var(--primary);
+    font: inherit; font-weight: 500; padding: 10px 14px;
+    border-radius: var(--shape-xl); cursor: pointer; margin-top: 8px;
+  }
+  .text-button:hover { background: color-mix(in srgb, var(--primary) 14%, transparent); }
   .note { color: var(--on-surface-variant); font-size: var(--body-medium); margin: 0 0 10px; }
   .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
   /* A code drawn dark on dark is not a code; the quiet zone is part of the specification. */
@@ -267,7 +293,7 @@
 
   <header>
     <div class="playlist">
-      <div class="name">Queue</div>
+      <div class="name">From the phone</div>
       <div class="count" id="count">nothing yet</div>
     </div>
     <div class="spacer"></div>
@@ -284,11 +310,7 @@
   <main>
     <ol id="queue"></ol>
 
-    <section class="panel" id="pair">
-      <p class="note" id="pairnote">Scan this with Protracktor on your phone to send it a playlist.</p>
-      <div id="qr" class="qr"></div>
-      <p class="note mono" id="pairurl"></p>
-    </section>
+
 
     <!--
       Now Playing, which on the phone expands upward from the dock over the playlist
@@ -300,11 +322,7 @@
       <div id="subsongs" class="subsongs"></div>
     </section>
 
-    <section class="panel" id="paste" hidden>
-      <p class="note">One URL per line. Modland, ASMA and HVSC all allow a browser to read them directly.</p>
-      <textarea id="urls" spellcheck="false"></textarea>
-      <p><button class="filled" id="load">Load these</button></p>
-    </section>
+
   </main>
 
   <footer>
@@ -343,6 +361,35 @@
       </button>
     </div>
   </footer>
+
+  <!--
+    Two things that interrupt: a code to scan and a box to paste into. **Over the page rather than
+    under the list**, which is where the owner found them and correctly did not like it: a code you
+    have to scroll to is a code you have to look for, and the whole point of it is that it is the
+    first thing a phone's camera should meet.
+
+    Each closes the moment its job is done -- the code when a queue arrives, the box when it is
+    loaded -- because a dialog that outlives its reason is a dialog somebody has to dismiss.
+  -->
+  <div class="overlay" id="pair" hidden>
+    <div class="sheet">
+      <p class="note" id="pairnote">Scan this with Protracktor on your phone to send it a playlist.</p>
+      <div id="qr" class="qr"></div>
+      <p class="note mono" id="pairurl"></p>
+      <button class="text-button" data-close>Close</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="paste" hidden>
+    <div class="sheet wide">
+      <p class="note">One URL per line. Modland, ASMA and HVSC all allow a browser to read them directly.</p>
+      <textarea id="urls" spellcheck="false"></textarea>
+      <div class="sheet-actions">
+        <button class="text-button" data-close>Cancel</button>
+        <button class="filled" id="load">Load these</button>
+      </div>
+    </div>
+  </div>
 
 </div>
 <script src="../lib/qrcode.js"></script>

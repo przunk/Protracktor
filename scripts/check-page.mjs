@@ -85,6 +85,8 @@ check(!!window.__api, 'the script finished loading');
 
 if (window.__api) {
   // A queue arriving from the phone, in the shape WebRemote sends.
+  window.__api.showPanel('pair');
+  check($('pair').hidden === false, 'the code is up before anything arrives');
   window.__api.receive({
     queue: [
       { url: 'https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod', title: 'hi there' },
@@ -95,6 +97,7 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 100));
 
   const rows = window.document.querySelectorAll('#queue li.track');
+  check($('pair').hidden === true, 'and the code steps aside once a queue arrives');
   check(rows.length === 2, 'two tracks arrive as two rows');
   check(rows[0]?.querySelector('.title')?.textContent === 'hi there', 'the phone\'s title is used, not the filename');
   check(rows[0]?.querySelector('.meta')?.textContent === 'Modland/Protracker/4-Mat',
@@ -108,6 +111,7 @@ if (window.__api) {
 
   window.__api.showPanel('paste');
   check($('paste').hidden === false && $('pair').hidden === true, 'the panels switch');
+  check($('paste').classList.contains('overlay'), 'and they are dialogs over the page, not sections under it');
 
   // Now Playing, driven the way the worklet drives it.
   window.__api.onWorklet({
@@ -159,6 +163,13 @@ if (window.__api) {
     'and the media keys are wired to the transport');
   check(window.document.title.startsWith('hi there'),
     'the tab says what is playing, for a page among twenty');
+
+  // Last, because it replaces the queue everything above was reading.
+  window.__api.showPanel('paste');
+  $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';
+  $('load').click();
+  check($('paste').hidden === true, 'loading closes the paste dialog');
+  check(window.document.querySelectorAll('#queue li.track').length === 1, 'and loads what was in it');
 
   // The keys somebody at a desk will try, and the one place they must not fire.
   let played = 0;
