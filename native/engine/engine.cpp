@@ -637,10 +637,8 @@ public:
             throw std::runtime_error(message);
         }
 
-        // Without a fade the last buffer stops dead. GME applies one relative to the track length
-        // it reports, which for files that do not state a length is its own two-and-a-half minutes.
-        if (info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
-
+        // The fade is applied by `openAtSomethingAudible`, at the end, after the last
+        // `gme_start_track` — because that call throws it away. See `applyFade`.
         openAtSomethingAudible();
     }
 
@@ -670,6 +668,7 @@ public:
     void openAtSomethingAudible() {
         if (!emu_ || audible(kProbeFrames)) {
             gme_start_track(emu_, track_);
+            applyFade();
             return;
         }
 
@@ -683,14 +682,36 @@ public:
             track_ = candidate;
             if (info_) { gme_free_info(info_); info_ = nullptr; }
             gme_track_info(emu_, &info_, track_);
-            if (info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
             gme_start_track(emu_, track_);
+            applyFade();
             return;
         }
 
         // Nothing audible anywhere we looked. Back to the beginning: a silent file is still that
         // file, and starting it somewhere arbitrary would be worse than starting it where it says.
         gme_start_track(emu_, track_);
+        applyFade();
+    }
+
+    /**
+     * Sets the fade for whatever `info_` currently describes.
+     *
+     * **After every `gme_start_track`, and that is the whole point of this being a function.**
+     * Without a fade the last buffer stops dead — the reason the call exists at all — and in this
+     * library the fade is also what *ends* a track: "Once fade ends track_ended() returns true".
+     *
+     * `gme_start_track` discards it. `Music_Emu::clear_track_vars()` runs first and sets
+     * `fade_start = INT_MAX / 2 + 1`, so a fade set before a start is a fade that never happens.
+     * It was set once in the constructor and then thrown away by `openAtSomethingAudible`, on
+     * every console file this app has ever opened, and by `rewind` on every replay
+     * (`docs/STATUS.md` C27). Measured on one SPC: 128.0 s with the fade against 120.1 s without.
+     *
+     * Found by rendering thirty seconds through the library directly and thirty through ours and
+     * comparing the bytes — which is the only reason anybody noticed, because what it sounds like
+     * is a tune that ends.
+     */
+    void applyFade() {
+        if (emu_ && info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
     }
 
     /** Renders a moment and says whether any of it was above silence. Consumes what it renders. */
@@ -731,7 +752,7 @@ public:
 
     bool canSeek() const override { return true; }
     void seek(double seconds) override { gme_seek(emu_, static_cast<int>(seconds * 1000.0)); }
-    void rewind() override { gme_start_track(emu_, track_); }
+    void rewind() override { gme_start_track(emu_, track_); applyFade(); }
 
     int subsongCount() const override { return emu_ ? gme_track_count(emu_) : 1; }
 
@@ -759,7 +780,8 @@ public:
         // track: "Once fade ends track_ended() returns true". It was set once in the constructor
         // from track 0's length, so every later tune in a GBS faded at the first tune's time --
         // early for the long ones, and for a file whose first track states no length, not at all.
-        if (info_ && info_->play_length > 0) gme_set_fade(emu_, info_->play_length);
+        // This path had the order right when the other three did not; it is the same call now.
+        applyFade();
         return true;
     }
     double positionSeconds() const override { return gme_tell(emu_) / 1000.0; }

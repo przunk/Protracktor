@@ -415,7 +415,7 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C27. game-music-emu's fade is set and then thrown away
+### C27. ~~game-music-emu's fade is set and then thrown away~~ — FIXED 2026-09-09
 
 *Found 2026-09-09 while measuring C26 — by comparing our engine against the library directly, which
 is the only reason it was noticed at all.*
@@ -437,9 +437,20 @@ happens instead.
 **Measured:** the same SPC rendered until the library says the track ended runs **128.0 s** with the
 fade set last and **120.1 s** through our engine. The missing eight seconds are the fade.
 
-The fix is one line moved: set the fade **after** the last `gme_start_track`, not before. The
-subsong-switch path at `selectSubsong` already gets this right and is worth reading first — it sets
-the fade after its restart, and its comment says why.
+**Fixed** by making it one function, `applyFade()`, called after every start that begins real
+playback — the two ends of `openAtSomethingAudible`, the silent-file fallback, and `rewind`, which
+lost it too on every replay. `selectSubsong` already had the order right and now says so through the
+same call.
+
+Measured after, on the same corpus and the same file:
+
+| | before | after |
+|---|---|---|
+| `top gear 2 - title.spc` | 120.09 s | **128.08 s** — the library's own answer to the digit |
+| 145 console files through the engine | 120 played, 4 silent, 21 refused | **unchanged** |
+
+The second row is the one that matters: a fade that ends a track could have cut short every file
+that states a length, and it did not.
 
 ### C26. Two tunes "sound faster than I remember" — and it is not the sample rate
 
