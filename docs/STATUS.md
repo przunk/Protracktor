@@ -415,6 +415,33 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C25. Changing the theme restarts playback
+
+*Owner, 2026-09-09.*
+
+Picking a theme — or the system palette switch, or a language — calls `recreate()` on
+`MainActivity`, deliberately, so the window is rebuilt with the new one. The music restarts from
+the beginning instead of carrying on.
+
+**The obvious explanation is already ruled out**, and saying so is the point of writing this down
+rather than a one-line note: `PlaybackController` is an application-scoped singleton
+(`PlaybackController.get(applicationContext)`), and `PlayerViewModel` only asks for it. An activity
+being destroyed and rebuilt does not take the controller, the backend or the Oboe stream with it.
+So this is **not** "the player is owned by the Activity", which is what it looks like and what
+someone will try to fix first. C17 is the standing reminder of what that costs.
+
+What has not been looked at, in the order worth looking:
+
+- **The restore path.** The app brings back the track last played. If that runs on every Activity
+  creation rather than only on a cold start, it re-opens the current track — which is exactly this
+  symptom, and would also explain why it starts from zero rather than glitching.
+- **Audio focus.** A rebuilt window requesting focus again, and the duck-or-stop handling reading
+  its own request as somebody else's.
+- **The foreground service** being stopped and restarted with the activity.
+
+Worth a `Log` at the top of whatever re-opens a track before changing anything: the first question
+is whether `openBackend` runs at all during a recreate, and that is one line to find out.
+
 ### C24. Play does nothing on a track that has reached its end
 
 *Owner, 2026-09-09. **Both the phone and the page**, so it is one defect with two homes.*
