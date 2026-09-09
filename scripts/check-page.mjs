@@ -92,7 +92,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -299,6 +299,81 @@ if (window.__api) {
   // Muting something already silent would do nothing visible, which is a control that looks broken.
   $('mute').click();
   check($('volume').value === '100', 'and the speaker winds it back up rather than doing nothing');
+
+  // --- what a row and the panel can do with a track (A27) -----------------------------------------
+  console.log('\nactions:');
+  window.__api.receive({
+    queue: [
+      { url: 'https://modland.com/pub/modules/Protracker/4-Mat/one.mod', title: 'One', file: 'one.mod' },
+      { url: 'content://x/2', title: 'A Local Tune', file: 'local.mod', local: true },
+    ],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  const menus = [...window.document.querySelectorAll('#queue .rowmenu')];
+  check(menus.length === 2, 'every row carries its own menu, including one that cannot play');
+
+  menus[0].click();
+  const open = [...window.document.querySelectorAll('#menu button')];
+  check($('menu').hidden === false, 'the three dots open it');
+  check(open.map((b) => b.textContent).join(',') === 'Save the file,Copy a link,Information',
+    'with the three the owner asked for');
+  check(open.every((b) => !b.disabled), 'all live for a track with an address');
+
+  menus[1].click();
+  const ghostMenu = [...window.document.querySelectorAll('#menu button')];
+  check(ghostMenu.every((b) => b.disabled),
+    'and all dead for one that stayed on the phone -- no file, no address, nothing to read');
+
+  window.document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  check($('menu').hidden === true, 'escape closes it');
+
+  // The panel acts on what it is describing, so it follows the selection.
+  check($('np-save').disabled === false && $('np-link').disabled === false,
+    'the panel offers the same three for the track it describes');
+  window.__api.receive({ queue: [{ url: 'content://x/1', title: 'Only Local', local: true }], index: 0 });
+  await new Promise((r) => setTimeout(r, 20));
+  check($('np-save').disabled === true && $('np-link').disabled === true,
+    'and goes dead when there is nothing behind them');
+
+  // --- the files that stayed on the phone (A28) ---------------------------------------------------
+  //
+  // The defect this answers is not the missing music, it is the missing rows: an outside listener's
+  // list numbered itself differently from the owner's, and two people cannot talk about that.
+  console.log('\nfiles that stayed on the phone:');
+  window.__api.receive({
+    queue: [
+      { url: 'https://modland.com/pub/modules/Protracker/4-Mat/one.mod', title: 'One', file: 'one.mod' },
+      { url: 'content://x/2', title: 'A Local Tune', file: 'local.mod', local: true },
+      { url: 'https://modland.com/pub/modules/Protracker/4-Mat/three.mod', title: 'Three', file: 'three.mod' },
+    ],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  const ghostRows = [...window.document.querySelectorAll('#queue li.track')];
+  check(ghostRows.length === 3, 'a file that could not travel still takes a place in the list');
+  check(ghostRows[1]?.classList.contains('local'), 'and is marked as one that stayed behind');
+  check(!ghostRows[1]?.classList.contains('failed'),
+    'grey rather than red, because nothing refused it -- it never arrived');
+  check(ghostRows[2]?.querySelector('.n')?.textContent === '3',
+    'so the numbering matches the phone, which is the whole point');
+  check(ghostRows[1]?.onclick === null, 'it does not answer a click');
+
+  // The transport steps over it rather than stopping on a row that can never play.
+  check(window.__api.afterOf(0) === 2, 'next skips it');
+  check(window.__api.beforeOf(2) === 0, 'and so does previous');
+
+  // A phone paused on one of its own files would otherwise select a row the page cannot start.
+  window.__api.receive({
+    queue: [
+      { url: 'content://x/1', title: 'Local', file: 'a.mod', local: true },
+      { url: 'https://modland.com/pub/modules/Protracker/4-Mat/two.mod', title: 'Two', file: 'two.mod' },
+    ],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  check($('title').textContent === 'Two',
+    'and the mark moves off a row the page could never start');
 
   // --- the tunes inside one file (C23) ------------------------------------------------------------
   //

@@ -179,6 +179,36 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
         }
         break;
       case 'close': this.close(); break;
+      /**
+       * Describe a file **without playing it**, for a row that is not the current one.
+       *
+       * A second handle, opened and closed inside this message: `this.handle` is what the audio
+       * callback reads and must not be touched. The cost is opening a decoder on the audio thread,
+       * which is real -- the median Modland module is 20 KB and opens in well under a buffer, but a
+       * 70 MB one would not, and that is the case to watch if this ever glitches.
+       */
+      case 'describe': {
+        const bytes = new Uint8Array(message.bytes);
+        const buf = e._malloc(bytes.length);
+        e.HEAPU8.set(bytes, buf);
+        const nameBytes = utf8(message.name || '');
+        const namePtr = e._malloc(nameBytes.length);
+        e.HEAPU8.set(nameBytes, namePtr);
+        const handle = e._pt_open(buf, bytes.length, namePtr);
+        this.port.postMessage({
+          type: 'described',
+          id: message.id,
+          ok: !!handle,
+          describe: handle ? e.UTF8ToString(e._pt_describe(handle)) : '',
+          duration: handle ? e._pt_duration(handle) : 0,
+          subsongs: handle ? e._pt_subsong_count(handle) : 0,
+          reason: handle ? '' : e.UTF8ToString(e._pt_last_error()),
+        });
+        if (handle) e._pt_close(handle);
+        e._free(buf);
+        e._free(namePtr);
+        break;
+      }
     }
   }
 

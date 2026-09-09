@@ -721,74 +721,47 @@ either a full scan or the Xing header — `minimp3` gives neither for free. What
 answer `canSeek()` honestly, because `docs/ARCHITECTURE.md` §5 is that a UI offering a control the
 backend cannot honour is a UI that lies.
 
-## A28. The web player carries the local files it cannot play
+## A28. ~~The web player carries the local files it cannot play~~ — DONE 2026-09-10
 
 *Owner, 2026-09-09, after an external listener opened a shared link: **"nasze listy nie są zgodne"**.*
 
-`QueueLink` packs catalogue paths into the URL fragment; a local file has no portable identity — its
-id is a storage-access grant valid on one phone — so it is counted and left behind. The app says so
-to the sender (*"Sending N; M are files on this phone and stayed here"*) and the page says nothing
-at all to the receiver.
+A local file's id is a storage grant valid on one phone, so its music was never going to travel. Its
+**place in the list** was, and that was the defect: track seven here was track five there.
 
-**The defect is not the missing music, it is the missing rows.** Track seven on the phone is track
-five in the browser, and two people cannot talk about a list that numbers itself differently. The
-owner's shape: the local files appear **in their own positions**, greyed, marked *local file — not
-transferred*. A summary line at the top is cheaper and does not fix the thing that hurt.
+**Built as he shaped it.** The file travels as a name under a `phone:` scheme in the link — and as
+`"local":true` in the paired message, which covers the second case nobody had named: a file that
+*could* have travelled as bytes and did not fit `WebRemote.LOCAL_BYTES_BUDGET` used to arrive as a
+row that failed on the first touch. The page draws both greyed, in their own positions, unclickable,
+and `next`, `previous` and shuffle step over them rather than stopping on a row that can never play.
 
-Three things it drags in:
+**Grey, not red**: `.failed` means a decoder refused the music, and these never had any to refuse.
 
-1. **The link has to carry titles.** Modland rows travel as bare paths today and the page derives
-   the title; a local file has no path, so its title travels literally. Fifty tracks compress to
-   1,992 characters now, and a mostly-local playlist could pass the length a URL is safe at. That
-   needs a rule — what does not fit is dropped, and the page says how many.
-2. **`next` and shuffle must step over them**, or the button lands on a row that can never play.
-   That is `order` and `afterCurrent` in `web/src/app.js`, not a CSS class.
-3. **Grey, not red.** The page already has `.failed` for "a decoder refused this", and this is not
-   that: nothing broke, the bytes simply did not travel. A separate state, and the row does not
-   respond to a click.
+**What the measurement changed.** Deflate makes the names nearly free — a hundred tracks of ordinary
+filenames pack well under the two-thousand-character limit whether their ghosts travel or not. So
+the guard that drops them fires only for a long queue of *unlike* names, and the real tracks are
+never what goes. `left` now means "the link was too long even for their names", which is a much
+rarer and much more honest thing for that number to say.
+## A27. ~~The web player has no actions~~ — DONE 2026-09-10
 
-**One idea covers both paths.** Pairing *does* send local files, as base64 up to
-`WebRemote.LOCAL_BYTES_BUDGET` — and whatever exceeds that budget disappears today just as silently.
-The same greyed row describes both.
+*Owner, 2026-09-09, with a screenshot of the phone's panel (`user/Screenshot_20260909-215818.png`),
+and the same evening: every row should have a menu too — send file, send link, information.*
 
-**A decision for the owner, not for us:** the link would then carry filenames off his phone. He is
-already sending a whole playlist, so it is a small difference, and it is a difference.
+**The panel** has the phone's row of labelled squares, in the same place: *Show in playlist*, *Save
+the file*, *Copy a link*. `Add to playlist…` is deliberately absent — the page has no playlists, and
+`docs/PLAN_HANDOFF.md` §5a is why.
 
-## A27. The web player has no actions — not in Now Playing, and not on a row
+**Every row** has the phone's three dots, and the same three actions. They are **disabled together**
+for a row that stayed on the phone: no file to save, no address to copy, nothing to read. A menu
+offering three things and doing none of them is worse than one with three greyed.
 
-*Owner, 2026-09-09, with a screenshot of the phone's panel (`user/Screenshot_20260909-215818.png`).*
+**Information was the expensive one, as predicted.** It opens a **second** decoder handle in the
+worklet, describes the file and closes it, leaving the one making sound untouched. The cost is
+opening a decoder on the audio thread: the median module here is 20 KB and that is nothing, but a
+very large file is what to blame if this ever glitches, and that is written where the code is.
 
-The phone's Now Playing is a sheet: title, seek bar with elapsed and remaining, the file's path, then
-**a row of four labelled square buttons** — *Show in playlist*, *Add to playlist…*, *Share the file*,
-*Share a link* — a divider, and then the field list (Format, Tracker, Artist, Channels, Patterns,
-Instruments, Samples, Subsongs). The page has the title, the fields and the subsong chips, and
-nothing between them.
-
-**Not all four transfer, and pretending they do is how a mirror becomes a lie.**
-
-- *Show in playlist* — yes, and it is the one worth most: scroll the queue to the playing row.
-- *Share a link* — yes: the page's own URL already carries the queue in its fragment.
-- *Share the file* — possible, as a download of the bytes the worklet already holds. Worth asking
-  whether he wants it before building it.
-- *Add to playlist…* — no. The page has no playlists to add to, and it is `PLAN_HANDOFF.md` §5a's
-  line about what the browser deliberately is not.
-
-The layout is the part to copy exactly: labelled squares in a row under the file line, above the
-divider, sized as the phone sizes them.
-
-**And every row wants a menu of its own** (owner, the same evening): *send file*, *send link*,
-*information*. The phone has that already — the three dots on each track row — so this is the same
-mirror, one level down.
-
-The three do not cost the same. *Send link* is a string the page can build for any row it holds.
-*Information* is the Now Playing panel pointed at a row that is not playing, which means the fields
-have to come from somewhere other than "the track in the worklet" — the engine can describe a file
-without playing it, but nothing in `web/src/app.js` asks it to today. *Send file* needs the bytes,
-so it is free for a row already fetched and a download for one that is not.
-
-**A row that cannot be played cannot be sent either** (see A28): the greyed local-file rows must
-either hide this menu or grey the two entries that need bytes.
-
+*Copy a link* copies the **track's own address**, not the page's. A link to the page carries the
+whole queue and the phone already sends that; what is useful from a row is the one file, at an
+address anybody can open.
 ## A26. Two rough edges on the JNI boundary
 
 *Found 2026-09-08, while answering an experienced C++ engineer's objection to JNI (`docs/OPEN_QUESTIONS.md`

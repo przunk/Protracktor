@@ -102,8 +102,14 @@ object WebRemote {
             // claim it, and it fell through to game-music-emu which answered "wrong file type".
             // `TrackRef` has kept these apart since the beginning; the message did not.
             val file = track.fileNameOrTitle
+            // **A row that could not bring its bytes says so.** Anything whose id is not an address
+            // a browser could open -- a storage grant, an `asma://` or `unexotica://` reference --
+            // and which did not fit the byte budget would otherwise arrive as a row that fails the
+            // moment it is touched. Marked instead, and the page draws it greyed in its own place,
+            // exactly as a link's `phone:` line arrives (`docs/BACKLOG.md` A28).
+            val stranded = if (bytes == null && !track.id.startsWith("http")) ""","local":true""" else ""
             """{"url":"${escape(track.id)}","title":"${escape(track.title)}",""" +
-                """"file":"${escape(file)}"$data}"""
+                """"file":"${escape(file)}"$stranded$data}"""
         }
         return """{"queue":[$rows],"index":$index}"""
     }
