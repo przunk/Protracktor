@@ -21,8 +21,18 @@ far behind. Everything in them is findable and nothing in them is **scannable**:
 open you read every heading, and the strikethrough that marks a finished entry only shows once you
 are level with it.
 
-**What he asked for is a checklist at the top of each file** — one line per item, `- [ ]` or `- [x]`,
-number and title, so the state of the project is the first screen rather than a walk through it.
+**What he asked for, clarified 2026-09-10: only what is open.** *"Nie muszę szukać po pliku, który
+ma 2000 wierszy, jakie bugi zostały. Chcę mieć 10 bugów w 10 wierszach krótko."* Not a checklist with
+`[x]` beside the finished ones — those should not be on the list at all. A done entry keeps its
+struck-through heading where it is, because the reasoning in it is the point of keeping it; it simply
+stops appearing at the top.
+
+**The numbers say the idea works.** Counted 2026-09-10: **2 open defects, 7 open backlog items, 12
+wishes** — twenty-one lines for the whole project, against three files totalling some three thousand.
+
+**One list or three?** He said "wishlist/status", but the same argument makes one list at the top of
+`docs/STATUS.md` covering C, A and B better than three: the state of the project on one screen rather
+than on three. Worth deciding before it is written.
 
 Two things to decide, and neither is hard:
 
