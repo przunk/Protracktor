@@ -35,6 +35,14 @@ let seeking = false;
  * download again. A press while loading means "not now", and the only honest answer is to abort.
  */
 let loading = null;
+/**
+ * Which row is doing what: `null`, `'loading'`, `'playing'` or `'failed'`.
+ *
+ * **Separate from `index`**, because they answer different questions. `index` is which track the
+ * page is *on*; this is whether that track has actually started. The owner met them conflated: he
+ * pressed play, the row lit up as though it were playing, and a fetch was still running.
+ */
+let rowState = null;
 /** Set when the bytes go to the worklet, cleared when it answers. See the watchdog in `playAt`. */
 let openWatchdog = null;
 
@@ -125,10 +133,13 @@ function onWorklet(message) {
   switch (message.type) {
     case 'ready':
       engineReady = true;
+      engineHasZxTune = !message.backends.includes('zxtune:none');
       status(`engine ready — ${message.backends}`);
       break;
     case 'opened': {
       loading = null;
+      rowState = 'playing';
+      render();
       $('seek').dataset.opened = '1';
       clearTimeout(openWatchdog);
       duration = message.duration;
@@ -151,10 +162,15 @@ function onWorklet(message) {
     case 'failed':
       loading = null;
       clearTimeout(openWatchdog);
+      rowState = 'failed';
+      render();
       // Errors stay above the transport. The status line moved into Now Playing because it is the
       // machine talking to itself; a decoder refusing a file is the machine talking to the listener.
-      $('error').textContent = message.reason;
+      $('error').textContent = explainFailure(message.reason, queue[index]);
       $('sub').textContent = '—';
+      // **And Now Playing stops describing the last file that worked.** The owner saw a refusal
+      // leave the panel showing another track's fields, which reads as the wrong tune playing.
+      renderNothingPlaying();
       setPlaying(false);
       break;
     case 'position':
@@ -201,6 +217,27 @@ function describeLine(fields) {
  * listener asks first comes first, and the machine's own vocabulary comes last.
  */
 const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher', 'album', 'comment'];
+
+/**
+ * The ZX Spectrum formats, which the browser build does not carry.
+ *
+ * **ZXTune is compiled out of the web engine and that is deliberate**: it does not build under
+ * Emscripten, and patching it means forking a library `ARCHITECTURE` §3 says we do not fork
+ * (`docs/PLAN_WEB.md` §14). The cost is 3,639 Modland files of 516,107 — and a refusal that says
+ * "no decoder claimed the file", which is true and useless when the phone plays it perfectly.
+ */
+const ZX_FORMATS = new Set(['pt3', 'pt2', 'pt1', 'stc', 'st1', 'st3', 'asc', 'as0', 'sqt', 'stp', 'psm', 'ftc', 'gtr']);
+
+function explainFailure(reason, entry) {
+  const extension = (entry?.name ?? '').toLowerCase().split('.').pop();
+  if (ZX_FORMATS.has(extension) && !engineHasZxTune) {
+    return `${entry.name}: the ZX Spectrum decoder is not in the browser build — this one plays on the phone`;
+  }
+  return reason;
+}
+
+/** Read from the engine's own fingerprint rather than assumed, so a future build that has it is believed. */
+let engineHasZxTune = false;
 
 /**
  * Now Playing, before anything has played.
@@ -314,6 +351,8 @@ async function playAt(next) {
   loading?.abort();
   const abort = new AbortController();
   loading = abort;
+  rowState = 'loading';
+  render();
   setPlaying(false);
   try {
     $('sub').textContent = 'fetching…';
@@ -429,7 +468,7 @@ function render() {
   const list = $('queue');
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
-    li.className = i === index ? 'track playing' : 'track';
+    li.className = i === index && rowState ? `track ${rowState}` : 'track';
 
     const n = document.createElement('span');
     n.className = 'n';
@@ -518,6 +557,9 @@ function beforeCurrent() {
  */
 function setQueue(urls, at = 0) {
   delete $('seek').dataset.opened;
+  // Selected, not playing: the queue points here and nothing has started. A list with no mark at
+  // all leaves the dock naming a track the list does not admit to.
+  rowState = 'selected';
   // Entries already built keep their names; bare strings become entries here. The paste box gives
   // strings, a link gives entries with the phone's own titles.
   queue = urls.map((u) => (typeof u === 'string' ? entryFor(u) : u));

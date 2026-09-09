@@ -124,7 +124,10 @@ if (window.__api) {
   check(rows[1]?.querySelector('.title')?.textContent === 'L3_CD6',
     'a Mod Archive row is named by its title rather than downloads.php');
   check($('count').textContent === '2 tracks', 'the header counts them');
-  check(rows[0]?.classList.contains('playing'), 'the first row is marked playing');
+  // Four row states, and the owner met three of them looking alike. A queue that has arrived is
+  // *selected*: pointed at, not started, because a browser will not make a sound unasked.
+  check(rows[0]?.classList.contains('selected'), 'the row the phone was on is marked selected');
+  check(!rows[0]?.classList.contains('playing'), 'and not as playing, because nothing has started');
   check($('playpause').disabled === false, 'play becomes available');
   check($('next').disabled === false, 'next becomes available');
 
@@ -226,6 +229,10 @@ if (window.__api) {
     'and the button still offers to stop while it opens them');
   window.__api.onWorklet({ type: 'failed', reason: 'nothing claimed it' });
   await new Promise((r) => setTimeout(r, 30));
+  check(window.document.querySelector('#queue li.track')?.classList.contains('failed'),
+    'a refused track is marked in the list');
+  check(window.document.querySelector('#fields dd')?.textContent.includes('nothing has played'),
+    'and Now Playing stops describing whatever worked last');
   check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z',
     'a refusal ends the load rather than leaving the button stuck');
   check($('error').textContent === 'nothing claimed it', 'and says what the decoder said');

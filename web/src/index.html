@@ -136,7 +136,18 @@
     padding: 13px 18px;
     cursor: pointer;
   }
-  li.track:hover { background: color-mix(in srgb, var(--surface-container) 55%, transparent); }
+  /* **Three states, and they must not look alike.** Hover is a hint that a row is clickable;
+     "selected and loading" is a promise the page has taken on; "playing" is the answer. The owner
+     met all three wearing the same clothes. */
+  li.track:hover { background: color-mix(in srgb, var(--on-surface) 7%, transparent); }
+  li.track.playing { background: color-mix(in srgb, var(--primary) 16%, transparent); }
+  li.track.playing:hover { background: color-mix(in srgb, var(--primary) 22%, transparent); }
+  li.track.loading { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+  li.track.loading .n { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+  li.track.failed .title { color: var(--error); }
+  /* Selected is the quietest of the four: the queue points here, nothing has started. */
+  li.track.selected .n { color: var(--primary); }
   li.track .n {
     color: var(--on-surface-variant);
     font-size: var(--label-small);
