@@ -415,6 +415,32 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C27. game-music-emu's fade is set and then thrown away
+
+*Found 2026-09-09 while measuring C26 — by comparing our engine against the library directly, which
+is the only reason it was noticed at all.*
+
+`GmeBackend`'s constructor sets the fade and then calls `openAtSomethingAudible()`, which calls
+`gme_start_track` again — in **both** its branches, including the early return taken by every file
+that has music at track 0. And `Music_Emu::clear_track_vars()`, which `start_track` runs first,
+does this:
+
+```cpp
+fade_start = INT_MAX / 2 + 1;
+fade_step  = 1;
+```
+
+So the fade is discarded on every console file this app opens. The comment above the `gme_set_fade`
+call says exactly why it is there — *"Without a fade the last buffer stops dead"* — and that is what
+happens instead.
+
+**Measured:** the same SPC rendered until the library says the track ended runs **128.0 s** with the
+fade set last and **120.1 s** through our engine. The missing eight seconds are the fade.
+
+The fix is one line moved: set the fade **after** the last `gme_start_track`, not before. The
+subsong-switch path at `selectSubsong` already gets this right and is worth reading first — it sets
+the fade after its restart, and its comment says why.
+
 ### C26. Two tunes "sound faster than I remember" — and it is not the sample rate
 
 *Owner, 2026-09-09, on `top gear 2 - title.spc` and `top gear 2 - ending theme.spc`. He said the
@@ -501,15 +527,38 @@ does not settle it: on the Legacy AAudio path the stream reports the requested r
 `AudioTrack` below it is supposed to do the conversion. If it is not doing it, every number here
 lines up.
 
-**Two tests split it, neither run yet:**
+### Settled 2026-09-09: nothing in this app plays it fast
 
-- **A tracker module against the same tune elsewhere.** libopenmpt returns 0 from
-  `preferredSampleRate()`, so its stream opens at the device's own rate and nothing is converted. If
-  MODs are right and everything with a fixed rate — SPC, SID, YM, SNDH — is 8.8% fast, the fixed-rate
-  path is the fault and there is nothing left to argue about.
-- **The same file in the web player.** Same `engine.cpp`, same gme, a 44,100 context and no Oboe.
+**The owner's test first, and it is the better one.** He played the file in the web player and on the
+phone at the same time, one in each ear: *"były w 100% zsynchronizowane"*. Two decoders, two hosts,
+two audio stacks, no drift over two minutes. Whatever they are doing, they are doing it identically —
+so Oboe was never the difference, and the 8.8% story above is wrong.
 
-**If it is Oboe, there is a better fix than trusting it.** `gme_open_data` takes the rate, so
+**Then, byte for byte.** Thirty seconds of `top gear 2 - title.spc` rendered at 44,100 twice — once
+through game-music-emu directly, once through `pt_render` in the wasm engine, which is the same
+`GmeBackend` the phone runs:
+
+```
+5,292,032 bytes each, cmp -l → 0 differing bytes
+```
+
+**Identical.** Not "close": the same file. Our engine reproduces the library exactly, the library
+plays the tune for its tagged 120 seconds, and the videos end at 2:02.
+
+**So the 0:51.5 against 0:58.0 is an offset, not a ratio.** 6.5 seconds, and the obvious place for
+6.5 seconds to come from is the start of a YouTube video — a title card, a fade-in, silence before
+the music. That is the one thing not yet checked, and it is checked by looking at the video's first
+ten seconds.
+
+**Two tests, of which the owner has now run both:**
+
+- **A tracker module against the same tune elsewhere** — right, he says (MOD certain, XM almost).
+  libopenmpt returns 0 from `preferredSampleRate()`, so its stream opens at the device's own rate
+  and nothing is converted. Had the fixed-rate path been broken, this is the comparison that would
+  have shown it.
+- **The same file in the web player** — identical to the phone, sample for sample by ear.
+
+**Not needed, on the evidence above, but recorded because it is still the better design.** `gme_open_data` takes the rate, so
 `GmeBackend` could be opened at whatever the stream turns out to be and return 0 from
 `preferredSampleRate()` — no conversion by anybody. That is not available to sc68 or ZXTune, which
 synthesise at a rate they do not choose, but it removes the whole question for the console formats.
