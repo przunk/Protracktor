@@ -44,6 +44,13 @@ and the second transfers it.
 they fetched themselves, and copy when the bytes belong to an entry. A `.slice(0)` of a 20 KB module
 is not a cost worth reasoning about; a detached queue is.
 
+**And the harness could not have seen it.** The first regression check passed with the fix *and*
+without it, because `check-page.mjs` stubbed the worklet's port as a function that pushes the message
+and ignores the transfer list — so nothing was ever detached. The stub now goes through
+`structuredClone(message, { transfer })`, which detaches exactly as a real `MessagePort` does, and
+the check then fails without the fix. This is the play-glyph lesson a second time: **a check that
+reads the wrong thing is worse than no check**, because it is evidence of the wrong conclusion.
+
 ## R2. `subsongCount()` reads the backend from the wrong thread — **FIXED**
 
 **Severity: medium. Live, and it is `docs/review.md` R6 with one case missed.**

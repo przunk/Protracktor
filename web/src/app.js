@@ -456,8 +456,14 @@ async function playAt(next) {
       // **Handed over rather than fetched.** A file on the phone has no address a browser could
       // open, so the phone sends the bytes with the queue -- which it can do because it is there at
       // the moment of transfer, and because a tracker module is kilobytes (`docs/PLAN_WEB.md` §8).
+      //
+      // **A copy, and that is not tidiness** (`docs/review-round-8.md` R1). The message below
+      // *transfers* the buffer, which detaches it here -- so handing over `entry.data` itself made
+      // the queue's own copy zero bytes long, and the second play of that row sent nothing and
+      // threw. Measured: one transfer, `byteLength` 0. A `.slice` of twenty kilobytes is not worth
+      // reasoning about; a queue that empties itself as it plays is.
       $('sub').textContent = 'from the phone…';
-      bytes = entry.data;
+      bytes = entry.data.slice(0);
     } else {
       $('sub').textContent = 'fetching…';
       const response = await fetch(entry.url, { signal: abort.signal });
@@ -624,7 +630,9 @@ function render() {
  * on the phone: there is nothing to go and get.
  */
 async function bytesOf(entry) {
-  if (entry.data) return entry.data;
+  // A copy for the same reason `playAt` takes one: the callers hand these to the worklet, which
+  // transfers them, and a transfer detaches whatever it was given (`docs/review-round-8.md` R1).
+  if (entry.data) return entry.data.slice(0);
   if (!entry.url) return null;
   const response = await fetch(entry.url);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -703,9 +711,16 @@ async function informAbout(entry) {
     if (!bytes) { status('that one stayed on the phone — there is nothing to read'); return; }
     await start();
     const id = ++describeAsk;
-    const answer = new Promise((resolve) => describePending.set(id, resolve));
+    // **With the watchdog `playAt` has.** A worklet that takes a message and never answers is a
+    // failure this page has met twice, and without a deadline this promise is simply never settled:
+    // the panel sits on "reading it…" for ever (`docs/review-round-8.md` R5).
+    const answer = new Promise((resolve) => {
+      const timer = setTimeout(() => { describePending.delete(id); resolve(null); }, 10_000);
+      describePending.set(id, (message) => { clearTimeout(timer); resolve(message); });
+    });
     node.port.postMessage({ type: 'describe', id, name: entry.file || entry.name, bytes }, [bytes]);
     const described = await answer;
+    if (!described) { status('the decoder took the file and never answered'); return; }
     if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
     renderNowPlaying(describeFields(described.describe), described.subsongs, -1);
     $('np-title').textContent = describeFields(described.describe).title || entry.name;

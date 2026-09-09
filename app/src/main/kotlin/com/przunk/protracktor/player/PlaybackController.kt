@@ -549,6 +549,14 @@ class PlaybackController private constructor(private val context: Context) {
     private var openSongLengths: List<Double> = emptyList()
 
     /**
+     * What the metadata database said about the open **file**, kept for a subsong switch.
+     *
+     * Its fields are keyed on the file's hash, so they go on applying when the tune inside changes;
+     * the tune's own description is re-read and wins wherever it has something to say.
+     */
+    private var openMetadata: com.przunk.protracktor.data.SongDbMetadata.Entry? = null
+
+    /**
      * The in-flight open. Cancelled before a new one starts.
      *
      * Two quick presses of next used to start two audio streams at once: each press launched its
@@ -562,6 +570,9 @@ class PlaybackController private constructor(private val context: Context) {
      * runs — it is a property of the device's audio stack, not of the tune.
      */
     private var reportedSampleRate = false
+
+    /** Set by a subsong switch, cleared by the poll that re-reads the new tune's description. */
+    private var describeAgain = false
 
     private var openJob: Job? = null
 
@@ -667,6 +678,17 @@ class PlaybackController private constructor(private val context: Context) {
                 if (open.isFinished()) {
                     handleTrackEnded()
                     continue
+                }
+
+                // A subsong switch is applied on the audio thread, so the new tune's name -- like
+                // its length -- does not exist until it has been. One re-read, on the first tick
+                // after the switch, and never in the steady state.
+                if (describeAgain) {
+                    describeAgain = false
+                    // The database's fields are keyed on the *file*, not the tune, so they still
+                    // apply -- and the file's own new fields win over them, which `merged` already
+                    // arranges by filling only what the description left blank.
+                    _state.update { it.copy(metadata = merged(open.describe(), openMetadata)) }
                 }
 
                 val position = open.positionSeconds()
@@ -3036,6 +3058,11 @@ class PlaybackController private constructor(private val context: Context) {
         val now = _state.value
         if (index < 0 || index >= now.subsongCount || index == now.subsong) return
         open.selectSubsong(index)
+        // **Re-read once the switch has landed**, which is the audio thread's business and takes a
+        // buffer. A GBS names each of its tunes and a SNDH often does; the phone went on showing the
+        // first one's name whatever was playing (`docs/review-round-8.md` R4). The web player was
+        // forced to get this right by having to answer a message; nothing forced it here.
+        describeAgain = true
         _state.update {
             it.copy(
                 subsong = index,
@@ -3385,6 +3412,7 @@ class PlaybackController private constructor(private val context: Context) {
             // never overwrites — which also makes a stale or wrong row harmless rather than
             // authoritative.
             val fromDatabase = trackMetadata.forMd5(md5)
+            openMetadata = fromDatabase
             val duration = opened.durationSeconds().takeIf { it > 0.0 }
                 ?: openSongLengths.firstOrNull()
                 ?: 0.0
