@@ -44,6 +44,9 @@ window.AudioWorkletNode = class {
   constructor() { this.port = { onmessage: null, postMessage() {} }; }
   connect() {}
 };
+// jsdom serves this page from http://localhost, which the real page treats as secure; the flag is
+// not set in jsdom, so it is set here rather than weakening the check the page makes.
+Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true });
 // The operating system's media controls, recorded rather than performed.
 const handlers = {};
 let metadata = null;
@@ -177,6 +180,13 @@ if (window.__api) {
   check(metadata?.album.includes('Commodore 64'), 'and what it is');
   check(typeof handlers.play === 'function' && typeof handlers.nexttrack === 'function',
     'and the media keys are wired to the transport');
+  // **Two playAt calls a millisecond apart**, which is what a queue arriving from the phone does.
+  // The old `start()` returned early on the second and left `node` null; the next line posted to it.
+  window.__api.playAt(0);
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 80));
+  check($('error').textContent === '', 'two tracks started at once do not race the engine up');
+
   check(window.document.title.startsWith('hi there'),
     'the tab says what is playing, for a page among twenty');
 

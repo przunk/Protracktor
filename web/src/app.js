@@ -60,8 +60,34 @@ function entryFor(url) {
   return { url, name };
 }
 
-async function start() {
-  if (context) return;
+let starting = null;
+
+/**
+ * Brings the engine up, once.
+ *
+ * **`if (context) return` was a race and the owner found it.** `context` is assigned before the
+ * awaits that follow, so a second call while the first was still loading the wasm returned
+ * immediately with `node` still null — and the next line posted to it. `TypeError: node is null`,
+ * from two `playAt` calls a millisecond apart, which is exactly what a queue arriving from the
+ * phone produces. Holding the promise makes the second caller wait for the first rather than
+ * overtake it.
+ */
+function start() {
+  starting ??= begin();
+  return starting;
+}
+
+async function begin() {
+  // **A worklet needs a secure context**, and that is not a detail on this page: `localhost` counts,
+  // `https://` counts, and a plain `http://192.168.x.x` does not. Without this the failure is
+  // `audioWorklet` being undefined three lines down, which reads as a broken engine rather than as
+  // the wrong address (`docs/PLAN_HANDOFF.md` §4).
+  if (!isSecureContext) {
+    $('error').textContent =
+      'audio needs https or localhost — this address cannot start a decoder';
+    status('open this page on localhost, or through a tunnel with https');
+    throw new Error('insecure context');
+  }
   // Created on a click, because a browser will not let audio start without one. The *first* tune
   // pushed to a fresh tab therefore cannot play by itself, and saying so beats looking broken
   // (`docs/PLAN_HANDOFF.md` §4).
@@ -261,7 +287,14 @@ function nameTheTab(entry) {
 }
 
 async function playAt(next) {
-  await start();
+  try {
+    await start();
+  } catch (error) {
+    // `start` has already said what went wrong; this stops the queue walking on regardless.
+    setPlaying(false);
+    $('sub').textContent = '—';
+    return;
+  }
   index = next;
   if (history[history.length - 1] !== next) history.push(next);
   const entry = queue[index];
