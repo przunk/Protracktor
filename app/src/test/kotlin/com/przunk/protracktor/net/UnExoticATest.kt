@@ -41,10 +41,29 @@ class UnExoticATest {
     }
 
     @Test
-    fun `browsing is by game, because that is what the archive is organised around`() {
+    fun `the group names the game and then the composer`() {
         val entries = parse(row)
         assertEquals("Game", entries[0].format)
-        assertEquals("Total Recall", entries[0].author)
+        // The game leads because the archive is organised around games. The composer follows
+        // because this column is what search matches -- without it, "Phelan" found nothing.
+        assertEquals("Total Recall · David Whittaker", entries[0].author)
+    }
+
+    @Test
+    fun `a composer folder is reversed only when the convention is certain`() {
+        fun groupOf(folder: String) = parse(
+            row.replaceFirst("Whittaker_David", folder),
+        )[0].author
+
+        // 524 of 571 folders are Surname_Firstname, which reads backwards until it is turned round.
+        assertEquals("Total Recall · Patrick Phelan", groupOf("Phelan_Patrick"))
+        // A one-word handle has nothing to reverse.
+        assertEquals("Total Recall · Rooster", groupOf("Rooster"))
+        // Three words or more is where a rule would start guessing -- a Dutch surname or a group
+        // name, and no reordering is right for both. Left alone, which reads oddly and is not wrong.
+        assertEquals("Total Recall · van der Valk Paul", groupOf("van_der_Valk_Paul"))
+        // 340 tunes say "Unknown", which is longer than saying nothing and means the same.
+        assertEquals("Total Recall", groupOf("Unknown"))
     }
 
     @Test

@@ -39,6 +39,10 @@ window.AudioContext = class {
   constructor() { this.state = 'suspended'; this.audioWorklet = { addModule: async () => {} }; }
   async resume() { this.state = 'running'; }
   get destination() { return {}; }
+  get currentTime() { return 0; }
+  // The page routes the worklet through a gain for its volume slider. Stubbed far enough to be
+  // set and connected, which is all the page does with it.
+  createGain() { return { gain: { value: 1, setTargetAtTime() {} }, connect() {} }; }
 };
 window.AudioWorkletNode = class {
   constructor() { this.port = { onmessage: null, postMessage() {} }; }
@@ -264,6 +268,34 @@ if (window.__api) {
   check(played === 1, 'space plays');
   $('urls').dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
   check(played === 1, 'and a space typed into the paste box stays a space');
+
+  // --- volume ---------------------------------------------------------------------------------
+  //
+  // The page's own level, because a browser tab has none of its own and the phone this mirrors has
+  // hardware keys instead. Checked for the same reason the play glyph is: the icon is the only
+  // thing that says whether it worked, and the play button already taught what happens when a
+  // check reads the wrapper instead of the shape.
+  console.log('\nvolume:');
+  const LOUD = 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z';
+  check($('volume').value === '100' && $('volglyph').getAttribute('d') === LOUD,
+    'it starts at full and looks it');
+  $('mute').click();
+  check($('volglyph').getAttribute('d') !== LOUD, 'muting changes the icon, not only the sound');
+  $('mute').click();
+  check($('volglyph').getAttribute('d') === LOUD, 'and unmuting puts it back');
+
+  window.document.body.dispatchEvent(
+    new window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  check($('volume').value === '95', 'down turns it down');
+  $('urls').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  check($('volume').value === '95', 'and an arrow typed into the paste box does not');
+
+  $('volume').value = '0';
+  $('volume').dispatchEvent(new window.Event('input'));
+  check($('volglyph').getAttribute('d') !== LOUD, 'dragging to zero shows silence without a mute');
+  // Muting something already silent would do nothing visible, which is a control that looks broken.
+  $('mute').click();
+  check($('volume').value === '100', 'and the speaker winds it back up rather than doing nothing');
 }
 
 // --- the engine's shape, if it has been built -------------------------------------------------

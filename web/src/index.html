@@ -260,7 +260,29 @@
   .transport {
     display: flex; align-items: center; justify-content: space-evenly;
     padding: 10px 12px 2px;
+    /* So the volume can sit at the right end without the five transport buttons sliding left to
+       make room for it. Play stays under the middle of the screen, which is where a thumb and an
+       eye both look for it. */
+    position: relative;
   }
+  /*
+    Volume, at the right end of the transport — where every desktop player puts it, and the only
+    control here the phone does not have: Android has hardware volume keys and a page has nothing.
+    Absolutely positioned rather than a sixth flex child, so it cannot decentre the transport.
+  */
+  .volume {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    display: flex; align-items: center; gap: 2px;
+  }
+  .volume .tbutton { width: 36px; height: 36px; }
+  .volume .tbutton svg { width: 20px; height: 20px; }
+  .volume input[type=range] { flex: none; width: 84px; }
+  /*
+    Narrow screens keep the button and lose the slider. A 84px slider beside five transport buttons
+    on a 360px screen either overlaps `repeat` or shrinks it, and the phone this would be on has
+    volume keys of its own — so the icon stays as a mute toggle and the fine control goes.
+  */
+  @media (max-width: 560px) { .volume input[type=range] { display: none; } }
   .tbutton {
     background: none; border: 0; padding: 0; cursor: pointer;
     width: 48px; height: 48px; border-radius: 50%;
@@ -397,6 +419,19 @@
       <button class="tbutton" id="repeat" title="Repeat" disabled>
         <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
       </button>
+      <!--
+        Not disabled with the rest: the level is a setting, not a transport control, and it is
+        worth being able to turn the volume down before the first tune rather than after it.
+      -->
+      <div class="volume">
+        <button class="tbutton" id="mute" title="Mute">
+          <!-- The id is on the `path`, not on the `svg`. The play button taught that lesson: the
+               id sat on the wrapper, the shape never changed, and a page check read the same wrong
+               attribute and passed. -->
+          <svg viewBox="0 0 24 24"><path id="volglyph" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        </button>
+        <input type="range" id="volume" min="0" max="100" value="100" aria-label="Volume">
+      </div>
     </div>
   </footer>
 

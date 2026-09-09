@@ -129,6 +129,43 @@ fun SettingsScreen(
             )
         }
 
+        item { HorizontalDivider(); Section(R.string.settings_appearance) }
+
+        item {
+            SettingChoice(
+                label = stringResource(R.string.settings_theme),
+                options = AppTheme.entries,
+                selected = selectedTheme,
+                labelOf = { it.label() },
+                onSelect = onThemeSelected,
+            )
+        }
+
+        // Absent below Android 12 rather than present and dead: there is no wallpaper palette to
+        // take, so a switch would be a promise the platform cannot keep.
+        if (Appearance.supportsDynamicColour) {
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_dynamic_colour)) },
+                    supportingContent = {
+                        Text(
+                            stringResource(R.string.settings_dynamic_colour_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    trailingContent = {
+                        Switch(checked = dynamicColour, onCheckedChange = onDynamicColourChanged)
+                    },
+                )
+            }
+        }
+
+        // **Its own group, below the palette**, on the owner's instruction (2026-09-09). It had
+        // been sitting under Playback between the language picker and the appearance heading,
+        // which is where it least belongs: it is not a preference about how music sounds, it is
+        // the address of a second copy of the app.
+        item { HorizontalDivider(); Section(R.string.settings_web_player_section) }
+
         // Text rather than a choice, because the answer is an address and there is no list of them.
         // It changes as the page moves -- a local server today, a tunnel next, a host eventually --
         // which is exactly why it is stored rather than compiled in (`docs/PLAN_HANDOFF.md` §3).
@@ -159,37 +196,6 @@ fun SettingsScreen(
                     }
                 },
             )
-        }
-
-        item { HorizontalDivider(); Section(R.string.settings_appearance) }
-
-        item {
-            SettingChoice(
-                label = stringResource(R.string.settings_theme),
-                options = AppTheme.entries,
-                selected = selectedTheme,
-                labelOf = { it.label() },
-                onSelect = onThemeSelected,
-            )
-        }
-
-        // Absent below Android 12 rather than present and dead: there is no wallpaper palette to
-        // take, so a switch would be a promise the platform cannot keep.
-        if (Appearance.supportsDynamicColour) {
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_dynamic_colour)) },
-                    supportingContent = {
-                        Text(
-                            stringResource(R.string.settings_dynamic_colour_detail),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    },
-                    trailingContent = {
-                        Switch(checked = dynamicColour, onCheckedChange = onDynamicColourChanged)
-                    },
-                )
-            }
         }
 
         item {

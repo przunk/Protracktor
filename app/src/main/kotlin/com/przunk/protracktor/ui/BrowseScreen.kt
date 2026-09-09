@@ -67,6 +67,7 @@ import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
+import com.przunk.protracktor.player.DownloadKeys
 import com.przunk.protracktor.player.BrowseState
 import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
@@ -118,14 +119,21 @@ fun BrowseScreen(
     val scroll = rememberBrowseScroll()
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-        if (browse.indexing != null) {
+        if (browse.indexing.isNotEmpty()) {
             // An index download is minutes of work on a slow connection. Saying which catalogue and
             // showing movement is the difference between "working" and "hung".
+            //
+            // **One line each, since 2026-09-09.** Several can run at once, and a banner that named
+            // only the most recent was how the owner came to believe a second tap cancelled the
+            // first. The row itself now carries its own spinner too; this stays because it is the
+            // only thing that says *how far* the replay download has got.
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.browse_indexing, browse.indexing),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                browse.indexing.values.sorted().forEach { label ->
+                    Text(
+                        text = stringResource(R.string.browse_indexing, label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         }
@@ -374,7 +382,7 @@ internal fun RandomScopeSheet(
         // downloaded, or it was and Modland is not indexed, in which case offering a download
         // again would send somebody round a loop.
         if (browse.favouriteCount == 0) {
-            val downloading = browse.indexing != null
+            val downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -657,14 +665,13 @@ private fun OnlineDomain(
                     trailingContent = if (catalogue.isOnlineOnly) {
                         null
                     } else {
-                        {
-                            IconButton(onClick = { onIndexCatalogue(catalogue.id) }) {
-                                Icon(
-                                    PlayerIcons.Download,
-                                    stringResource(R.string.a11y_index_catalogue, catalogue.displayName),
-                                )
-                            }
-                        }
+                        { DownloadAction(
+                            downloading = browse.indexing.containsKey(catalogue.id),
+                            description = stringResource(
+                                R.string.a11y_index_catalogue, catalogue.displayName,
+                            ),
+                            onClick = { onIndexCatalogue(catalogue.id) },
+                        ) }
                     },
                     // Only openable once there is an index. Tapping an empty catalogue and landing
                     // on an empty list would teach nothing about why.
@@ -698,12 +705,11 @@ private fun OnlineDomain(
                     },
                     leadingContent = { Icon(PlayerIcons.Info, contentDescription = null) },
                     trailingContent = {
-                        IconButton(onClick = onDownloadSongLengths) {
-                            Icon(
-                                PlayerIcons.Download,
-                                stringResource(R.string.a11y_download_song_lengths),
-                            )
-                        }
+                        DownloadAction(
+                            downloading = browse.indexing.containsKey(DownloadKeys.SONG_LENGTHS),
+                            description = stringResource(R.string.a11y_download_song_lengths),
+                            onClick = onDownloadSongLengths,
+                        )
                     },
                 )
             }
@@ -728,12 +734,11 @@ private fun OnlineDomain(
                     },
                     leadingContent = { Icon(PlayerIcons.History, contentDescription = null) },
                     trailingContent = {
-                        IconButton(onClick = onDownloadTrackMetadata) {
-                            Icon(
-                                PlayerIcons.Download,
-                                stringResource(R.string.a11y_download_track_metadata),
-                            )
-                        }
+                        DownloadAction(
+                            downloading = browse.indexing.containsKey(DownloadKeys.TRACK_METADATA),
+                            description = stringResource(R.string.a11y_download_track_metadata),
+                            onClick = onDownloadTrackMetadata,
+                        )
                     },
                 )
             }
@@ -760,12 +765,11 @@ private fun OnlineDomain(
                     },
                     leadingContent = { Icon(PlayerIcons.Dice, contentDescription = null) },
                     trailingContent = {
-                        IconButton(onClick = onDownloadFavourites) {
-                            Icon(
-                                PlayerIcons.Download,
-                                stringResource(R.string.a11y_download_favourites),
-                            )
-                        }
+                        DownloadAction(
+                            downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES),
+                            description = stringResource(R.string.a11y_download_favourites),
+                            onClick = onDownloadFavourites,
+                        )
                     },
                 )
             }
@@ -785,7 +789,18 @@ private fun OnlineDomain(
                             )
                         },
                         leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
-                        modifier = Modifier.clickable { onDownloadReplays() },
+                        // Ninety-eight small files, so this one is worth a spinner more than any of
+                        // them. The whole row is the button here rather than an arrow at the end.
+                        trailingContent = if (browse.indexing.containsKey(DownloadKeys.REPLAYS)) {
+                            { CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp) }
+                        } else {
+                            null
+                        },
+                        modifier = if (browse.indexing.containsKey(DownloadKeys.REPLAYS)) {
+                            Modifier
+                        } else {
+                            Modifier.clickable { onDownloadReplays() }
+                        },
                     )
                 }
             }
@@ -1336,4 +1351,28 @@ private fun BrowseTrackRow(
                 onLongClick = { if (!selecting) onStartSelecting() },
             ),
     )
+}
+
+/**
+ * The arrow that starts a download, and the spinner it becomes while one is running.
+ *
+ * **In the row rather than only in the banner.** Several of these can run at once — they always
+ * could, being independent coroutines — but the screen only ever showed the most recent one, so
+ * tapping a second arrow looked like it had cancelled the first (owner, 2026-09-09). A row that
+ * shows its own state cannot lie about it, and the same spinner is what says "this one is already
+ * going" when a second tap would otherwise do nothing visible.
+ *
+ * The same size as the icon it replaces, so nothing in the list moves when it appears.
+ */
+@Composable
+private fun DownloadAction(downloading: Boolean, description: String, onClick: () -> Unit) {
+    if (downloading) {
+        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+        }
+    } else {
+        IconButton(onClick = onClick) {
+            Icon(PlayerIcons.Download, description)
+        }
+    }
 }
