@@ -56,12 +56,23 @@ window.navigator.mediaSession = {
 };
 
 const posted = [];
-window.fetch = async (url) => {
+let holdTrackFetch = false;
+window.fetch = async (url, options) => {
   const u = String(url);
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
   posted.push(u);
+  if (holdTrackFetch) {
+    // A download that never finishes, so the press that calls one off can be tested at all.
+    return new Promise((_, reject) => {
+      options?.signal?.addEventListener('abort', () => {
+        const error = new Error('aborted');
+        error.name = 'AbortError';
+        reject(error);
+      });
+    });
+  }
   return { ok: true, arrayBuffer: async () => new ArrayBuffer(64) };
 };
 
@@ -71,7 +82,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -170,6 +181,22 @@ if (window.__api) {
   $('load').click();
   check($('paste').hidden === true, 'loading closes the paste dialog');
   check(window.document.querySelectorAll('#queue li.track').length === 1, 'and loads what was in it');
+  await new Promise((r) => setTimeout(r, 60));   // let that load finish before starting another
+
+  // **A download that will not finish, and the press that calls it off.** The owner's report: press
+  // play on something not cached, then ten seconds of a button that still says "play" and cannot be
+  // taken back.
+  holdTrackFetch = true;
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 80));
+  check($('playglyph').getAttribute('d') === 'M6 6h12v12H6z',
+    'while a track is fetching, the button offers to stop');
+  check($('playpause').title === 'Stop loading', 'and says so');
+  $('playpause').click();
+  await new Promise((r) => setTimeout(r, 80));
+  check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z', 'pressing it puts the button back');
+  check($('sub').textContent === 'stopped', 'and the dock says the load was stopped');
+  holdTrackFetch = false;
 
   // The keys somebody at a desk will try, and the one place they must not fire.
   let played = 0;

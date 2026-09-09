@@ -273,6 +273,15 @@ object PlayerIcons {
                 "19 19 17.59 13.41 12z",
         )
     }
+    /**
+     * A square, for "stop waiting for this".
+     *
+     * Shown on the play button **while a track is being fetched**, because that is what pressing it
+     * then does. Without it the button says "play" for up to ten seconds on a slow connection and
+     * a second press restarts the same download, which is the opposite of what anybody means by it.
+     */
+    val Stop: ImageVector by lazy { icon("Stop", "M6 6h12v12H6z") }
+
     val Pause: ImageVector by lazy {
         icon("Pause", "M6 19h4V5H6v14zm8-14v14h4V5h-4z")
     }

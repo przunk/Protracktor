@@ -496,7 +496,17 @@ class PlaybackController private constructor(private val context: Context) {
     private val _scan = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val scan: SharedFlow<Unit> = _scan.asSharedFlow()
 
-    private val _browse = MutableStateFlow(BrowseState())
+    /**
+     * Whether a browser is paired, read once at start-up.
+     *
+     * It decides an icon, and the icon was wrong for the whole first minute of every session: the
+     * flag only became true after something had been sent, so an app that *was* paired opened
+     * showing a QR code and changed to a link once the owner pressed it. Reading the stored
+     * pairing here costs one preference lookup at construction.
+     */
+    private val pairedAtStart = Appearance.pairedEndpoint(context) != null
+
+    private val _browse = MutableStateFlow(BrowseState(pairedBrowser = pairedAtStart))
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
 
     /** The open module. Owned here because native memory is invisible to the garbage collector. */
@@ -548,6 +558,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val songLengths = SongLengthStore(context)
     private val trackMetadata = TrackMetadataStore(context)
     private val favourites = FavouriteStore(context)
+
     private val history = HistoryStore(context)
     private val libraryIndex = LibraryIndexStore(context)
 
@@ -2140,6 +2151,30 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch { advanceRandom() }
     }
 
+    /** How many picks in a row have refused to open. Reset by the first that plays. */
+    private var failedRandomPicks = 0
+
+    /** How many the dice may walk past before it gives up and says why. */
+    private val maxFailedRandomPicks = 8
+
+    /**
+     * Moves the dice past a pick that would not open.
+     *
+     * Only in Random, and only for a *pick* — a track the listener chose stops where it is, because
+     * being told which file is broken is the useful answer there.
+     */
+    private fun skipFailedRandomPick() {
+        failedRandomPicks += 1
+        if (failedRandomPicks > maxFailedRandomPicks) {
+            failedRandomPicks = 0
+            _state.update {
+                it.copy(message = Message("Several picks in a row would not open. Stopping here."))
+            }
+            return
+        }
+        randomNext()
+    }
+
     private fun randomPrevious() {
         if (randomCursor <= 0) return
         randomCursor--
@@ -2936,6 +2971,18 @@ class PlaybackController private constructor(private val context: Context) {
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {
+        // **A track being fetched can be called off.** Pressing play on something not cached starts
+        // a download that took up to ten seconds on the owner's connection, and until now the only
+        // way out was to wait for it: the button showed "play" the whole time, and pressing it
+        // again fell into the branch below and started the *same* track over. Cancelling the open
+        // job is the honest answer to a second press -- it is the press that means "not now".
+        if (_state.value.loadingTrack) {
+            openJob?.cancel()
+            openJob = null
+            pendingRetry = null
+            _state.update { it.copy(loadingTrack = false, playing = false) }
+            return
+        }
         val open = track
         if (open == null) {
             pendingRetry?.let { retry ->
@@ -3140,6 +3187,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             if (bytes == null) {
                 _state.update { it.copy(message = Message(describeFailure(ref, fetched = false))) }
+                if (_state.value.randomMode && !_state.value.externalOpen) skipFailedRandomPick()
                 return@launch
             }
 
@@ -3149,8 +3197,19 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update {
                     it.copy(message = Message(describeFailure(ref, fetched = true, reason = result.error)))
                 }
+                // **Random walks past a file it cannot open.** The owner met this on Atari ST: a
+                // dice roll landed on a `.ym`, nothing here can open one (`docs/STATUS.md` C20),
+                // and Random stopped dead on it -- which turns "surprise me" into "surprise me and
+                // then come back to the phone". A playlist stops on purpose, because that file is
+                // one the listener chose; a random pick is one nobody chose.
+                //
+                // Bounded, and the bound is the point: an index full of unplayable rows would
+                // otherwise spin through them all. After a few in a row it stops and says so.
+                if (_state.value.randomMode && !_state.value.externalOpen) skipFailedRandomPick()
                 return@launch
             }
+            // A pick that played resets the run of failures.
+            failedRandomPicks = 0
             // Something opened, so there is nothing left to try again.
             pendingRetry = null
 

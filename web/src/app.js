@@ -27,6 +27,14 @@ let order = [];                   // the permutation `next` walks when shuffle i
 let duration = 0;
 let playing = false;
 let seeking = false;
+/**
+ * The fetch of the track being loaded, so it can be called off.
+ *
+ * **Pressing play on something not cached starts a download**, and on a slow connection that is ten
+ * seconds during which the button said "play" and a second press would have started the same
+ * download again. A press while loading means "not now", and the only honest answer is to abort.
+ */
+let loading = null;
 
 /**
  * Everything a queue entry needs, from a URL alone.
@@ -230,18 +238,29 @@ async function playAt(next) {
   $('error').textContent = '';
 
   let bytes;
+  loading?.abort();
+  const abort = new AbortController();
+  loading = abort;
+  setPlaying(false);
   try {
     $('sub').textContent = 'fetching…';
-    const response = await fetch(entry.url);
+    const response = await fetch(entry.url, { signal: abort.signal });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     bytes = await response.arrayBuffer();
   } catch (e) {
+    // **Only the load that is still current clears the flag.** Two quick track changes overlap:
+    // the older fetch finishes after the newer one has started, and clearing unconditionally would
+    // wipe the newer controller -- leaving a download nobody can call off and a button that lies
+    // about what it will do.
+    if (loading === abort) { loading = null; setPlaying(false); }
+    if (e.name === 'AbortError') { $('sub').textContent = 'stopped'; return; }
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
     // different problems from a file the decoders refuse. Say which.
     $('error').textContent = `could not fetch it: ${e.message}`;
     $('sub').textContent = '—';
     return;
   }
+  if (loading === abort) loading = null;
   // Handed over, and the page now waits for the worklet to say `opened` or `failed`. It says which
   // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
   $('sub').textContent = `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`;
@@ -272,6 +291,7 @@ async function announceGesture() {
 
 const PLAY_GLYPH = 'M8 5v14l11-7z';
 const PAUSE_GLYPH = 'M6 5h4v14H6zm8 0h4v14h-4z';
+const STOP_GLYPH = 'M6 6h12v12H6z';
 
 /**
  * Keeps the playing row on screen.
@@ -288,8 +308,10 @@ function followPlaying() {
 function setPlaying(on) {
   playing = on;
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
-  $('playglyph').setAttribute('d', on ? PAUSE_GLYPH : PLAY_GLYPH);
-  $('playpause').title = on ? 'Pause' : 'Play';
+  // Three states, not two: a track being fetched is not "paused", and a button that would restart
+  // the same download is the one press nobody wants twice.
+  $('playglyph').setAttribute('d', loading ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
+  $('playpause').title = loading ? 'Stop loading' : on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
@@ -438,6 +460,14 @@ $('load').onclick = () => {
   showPanel(null);
 };
 $('playpause').onclick = async () => {
+  // While something is being fetched, this button means "stop waiting".
+  if (loading) {
+    loading.abort();
+    loading = null;
+    setPlaying(false);
+    status('Stopped loading.');
+    return;
+  }
   await start();
   if (context.state === 'suspended') await context.resume();
   setPlaying(!playing);

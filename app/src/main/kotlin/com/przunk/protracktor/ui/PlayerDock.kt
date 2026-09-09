@@ -238,14 +238,24 @@ fun PlayerDock(
                     onClick = onPlayPause,
                     // A transient track counts: pressing Random with an empty playlist must still
                     // give you something you can pause.
-                    enabled = state.current != null || state.queue.tracks.isNotEmpty(),
+                    enabled = state.loadingTrack || state.current != null || state.queue.tracks.isNotEmpty(),
                     modifier = Modifier.size(64.dp),
                 ) {
+                    // Three states, not two. A track being fetched is not "paused", and the button
+                    // that would restart the same download is the one press nobody wants twice.
                     Icon(
-                        imageVector = if (state.playing) PlayerIcons.Pause else PlayerIcons.Play,
+                        imageVector = when {
+                            state.loadingTrack -> PlayerIcons.Stop
+                            state.playing -> PlayerIcons.Pause
+                            else -> PlayerIcons.Play
+                        },
                         modifier = Modifier.size(34.dp),
                         contentDescription = stringResource(
-                            if (state.playing) R.string.a11y_pause else R.string.a11y_play
+                            when {
+                                state.loadingTrack -> R.string.a11y_stop_loading
+                                state.playing -> R.string.a11y_pause
+                                else -> R.string.a11y_play
+                            }
                         ),
                     )
                 }
