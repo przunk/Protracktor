@@ -415,6 +415,48 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C23. The web player's `next` skips the file, never the tune inside it
+
+*Owner, 2026-09-09, testing the browser build. Recorded, not yet acted on.*
+
+A `.sid` or a `.sndh` holds several tunes; the phone knows this and offers them. The page does not:
+`next` always advances the queue, so on a file with twelve subsongs eleven of them are unreachable.
+The engine already answers `pt_subsong_count` and the page already draws the chips in Now Playing —
+what is missing is the rule that says which of the two `next` means.
+
+**What he asked for is the phone's behaviour, and the phone's behaviour is the specification**: a
+switch in Now Playing, and a long press on `next` to skip within the file rather than past it. That
+is `player/PlaybackController.kt`'s "play all subsongs" setting plus the dock's long press, and
+copying it is right for the reason every other web control was copied — a transport that behaves
+differently on the two screens is worse than one that is missing.
+
+### C22. The volume control sits under the repeat button
+
+*Owner, 2026-09-09, on the build handed over the same day. Recorded, not yet acted on.*
+
+`.volume` is absolutely positioned at the right end of `.transport` so the five buttons stay
+centred, and `.transport` is `justify-content: space-evenly` — so `repeat` is placed with no
+knowledge that anything is there, and at ordinary window widths the two overlap.
+
+The absolute positioning is the cause and it was the point: it was chosen so the volume could not
+decentre the transport. Both are wanted, so the fix is a layout that reserves the space rather than
+one that takes it — a symmetric spacer opposite the volume, or a three-column grid with the
+transport in the middle. **A media query is not the fix**: the overlap is not about small screens,
+it happens wherever `space-evenly` puts `repeat` far enough right.
+
+### C21. The seek bar does not fill in behind the handle
+
+*Owner, 2026-09-09. Recorded, not yet acted on.*
+
+The position slider draws its track in one colour for its whole length, so the only thing saying
+where you are is the handle. Every player fills the part already played, and the phone does — it is
+how far in you are, read without looking at a number.
+
+`input[type=range]` has no cross-browser way to colour one side of the track, which is why it was
+not done: `::-moz-range-progress` exists, `::-webkit-slider-runnable-track` has no counterpart, and
+the usual answer is a `linear-gradient` background recomputed on every update. That is the shape to
+take, and the same rule applies to the volume slider added the same day.
+
 ### C20. ~~The index promises files no backend can open~~ — HALF FIXED 2026-09-09
 
 *Found 2026-09-08 by the wasm probe (`docs/PLAN_WEB.md` §14), and it was an **Android** defect — the
