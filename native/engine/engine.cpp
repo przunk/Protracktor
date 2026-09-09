@@ -66,6 +66,7 @@ void hvl_play_irq(struct hvl_tune *ht);
 #include <formats/chiptune/aym/soundtracker.h>
 #include <formats/chiptune/aym/soundtrackerpro.h>
 #include <formats/chiptune/aym/sqtracker.h>
+#include <formats/chiptune/aym/ym.h>
 #include <module/holder.h>
 #include <module/information.h>
 #include <module/players/aym/ascsoundmaster.h>
@@ -79,6 +80,7 @@ void hvl_play_irq(struct hvl_tune *ht);
 #include <module/players/aym/soundtracker.h>
 #include <module/players/aym/soundtrackerpro.h>
 #include <module/players/aym/sqtracker.h>
+#include <module/players/aym/ymvtx.h>
 #include <module/renderer.h>
 #include <parameters/container.h>
 #include <sound/chunk.h>
@@ -1232,7 +1234,11 @@ public:
                extension == "stc" || extension == "st1" || extension == "st3" ||
                extension == "asc" || extension == "as0" || extension == "sqt" ||
                extension == "stp" || extension == "psm" || extension == "ftc" ||
-               extension == "gtr";
+               extension == "gtr" ||
+               // Not ZX Spectrum trackers at all: `.ym` and `.vtx` are register dumps off an
+               // Atari ST or a Spectrum, and the same AY chip plays them back. They arrive here
+               // because ZXTune is the only decoder in this build that reads one.
+               extension == "ym" || extension == "vtx";
     }
 
     explicit ZxTuneBackend(const std::vector<char> &bytes) {
@@ -1259,6 +1265,12 @@ public:
         tryAym("PSM", Module::ProSoundMaker::CreateFactory(), data);
         tryAym("FTC", Module::FastTracker::CreateFactory(), data);
         tryAym("GTR", Module::GlobalTracker::CreateFactory(), data);
+        // Register dumps rather than trackers, and three decoders for what looks like one format:
+        // a `.ym` is either LHA-packed (all 4,961 of Modland's are) or bare, and the packed
+        // decoder is the one that reads the container. Asked in that order for that reason.
+        tryYm("YM", FC::YM::CreatePackedYMDecoder(), data);
+        tryYm("YM", FC::YM::CreateYMDecoder(), data);
+        tryYm("VTX", FC::YM::CreateVTXDecoder(), data);
 
         if (!holder_) throw std::runtime_error("the ZX Spectrum decoder (ZXTune) did not recognise it");
 
@@ -1310,7 +1322,12 @@ public:
     std::string describe() const override {
         std::ostringstream o;
         o << "title\t" << property("Title") << '\n'
-          << "format\t" << "ZX Spectrum " << format_ << " (ZXTune)" << '\n'
+          // Every tracker on this list is a Spectrum one, but a `.ym` register dump is usually an
+          // Atari ST recording -- the AY chip is what the two machines share, not the platform.
+          // Saying "ZX Spectrum YM" of a Mad Max tune would be wrong in the one place the app
+          // states what a file *is*.
+          << "format\t" << (format_ == "YM" ? "AY/YM " : "ZX Spectrum ")
+                         << format_ << " (ZXTune)" << '\n'
           << "artist\t" << property("Author") << '\n'
           << "tracker\t" << property("Program") << '\n'
           << "channels\t3" << '\n'
@@ -1336,6 +1353,19 @@ private:
         } catch (...) {
             // A decoder that half-recognises a truncated file throws. That means "not this one".
         }
+    }
+
+    /**
+     * A YM or VTX register dump, whose factory is built from a decoder rather than standing alone.
+     *
+     * The decoder is what tells the three apart -- packed YM, bare YM, VTX -- and the factory is
+     * the same one for all three, so this cannot be folded into [tryAym] without the caller
+     * constructing the factory itself three times.
+     */
+    void tryYm(const char *name, Formats::Chiptune::YM::Decoder::Ptr decoder,
+               const Binary::Container::Ptr &data) {
+        if (holder_ || !decoder) return;
+        tryAym(name, Module::YMVTX::CreateFactory(std::move(decoder)), data);
     }
 
     /** A plugin that produces a chiptune, which `AYM::CreateHolder` turns into a holder. */

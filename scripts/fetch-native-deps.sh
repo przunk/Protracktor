@@ -127,6 +127,25 @@ fetch hively \
       "a3c6d8a041fe9952f0a72a31953461254b497d3bfbf3d07301d1bf4e9e8fb65d" \
       1
 
+# lhasa -- ISC (verified 2026-09-09: COPYING.md is the ISC text, Copyright (c) 2011-2025 Simon
+# Howard, and all 35 sources and headers under lib/ repeat the grant per file). An LHA/LZH
+# decompressor, and the only one here that decodes no music at all.
+#
+# It is vendored for two things that turn out to be the same thing. ZXTune's `.ym` and `.vtx`
+# decoders read an LHA-compressed stream and were excluded from our build for want of it
+# (`native/backends/zxtune/CMakeLists.txt`), which left 4,961 Modland `.ym` files indexed and
+# unopenable -- `docs/STATUS.md` C20. And every UnExoticA tune lives inside a `.lha` archive
+# (`docs/PLAN_CATALOGUES.md`), which needs the other half of this library, the archive reader.
+#
+# ZXTune bundles its own patched copy of an older lhasa. We fetch upstream instead and adapt to it
+# in `native/backends/zxtune/lha_zxtune.cpp`: one lhasa in the tree, pinned and checksummed like
+# everything else here, rather than two of which one arrives inside a 182 MB sparse clone.
+fetch lhasa \
+      "0.6.0" \
+      "https://github.com/fragglet/lhasa/releases/download/v0.6.0/lhasa-0.6.0.tar.gz" \
+      "9840154367f73e9d9c3196f944a121ab4d398d84e921c8fe8fca8a931274aed7" \
+      1
+
 # sc68 3.0.0b is not a release and has no tarball: it lives only in SourceForge SVN. Its fetch
 # pins a revision and verifies a checksum manifest, which the tarball fetch above gets for free
 # from a published sha256 -- so it is a separate script rather than another `fetch` line.

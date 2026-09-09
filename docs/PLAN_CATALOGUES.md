@@ -127,19 +127,33 @@ Arranger (116), Richard Joseph (105). So a low number here is not an argument ag
 it is a second argument for revisiting UADE, and then the two stop being separate decisions.
 
 **Every file lives inside a `.lha` archive**, addressed as `Game/Author/Title.lha/Title/mod.name`.
-The unit of download is therefore a game's whole soundtrack — closer to ASMA's model than Modland's
-— and it needs LHA extraction the app does not have. Two things are settled and will not need
-redoing: the URL rule is `https://files.exotica.org.uk/pub/exotica/media/audio/UnExoticA/` plus the
-index path up to and including the `.lha`, with the remainder naming the file inside; and **lhasa is
-ISC**, so the extractor raises no licence question.
+The unit of download is therefore a game's whole soundtrack — closer to ASMA's model than Modland's.
+Two things are settled and will not need redoing: the URL rule is
+`https://files.exotica.org.uk/pub/exotica/media/audio/UnExoticA/` plus the index path up to and
+including the `.lha`, with the remainder naming the file inside; and **lhasa is ISC**, so the
+extractor raises no licence question.
 
-**Asked, 2026-09-08, and nothing is being built until they answer.**
+**The extractor is no longer missing.** lhasa 0.6.0 was vendored on 2026-09-09 for an unrelated
+reason — ZXTune's `.ym` decoder reads an LHA-compressed stream, and 4,961 Modland files were
+unopenable without it (`docs/PLAN_FORMATS.md` §8). That work used the *decoder* half of the library;
+this catalogue needs the *reader* half, which walks an archive's headers and names its members. Both
+are built into `native/lhasa`.
+
+**Asked, 2026-09-08.**
 `files.exotica.org.uk/robots.txt` is `User-agent: * / Disallow: /` — a blanket disallow, not the
 AI-crawler list `www.exotica.org.uk` carries. The reading we agree on is that robots.txt governs
 crawlers rather than a user's own client fetching a file they asked for, and the app would be doing
 the latter. But it is a volunteer archive's bandwidth and every user would be pointed at it, so the
-answer is theirs to give rather than ours to infer — the same move that worked with UADE. The only
-consumer of LHA support is this catalogue, so building it first would be betting a day on the reply.
+answer is theirs to give rather than ours to infer — the same move that worked with UADE.
+
+**The owner decided on 2026-09-09 to build it before the reply**, for his own use and behind a
+switch: *"czekam na maila ale możemy przed publikacją używać już wersji, która spełni moje osobiste
+marzenia… W razie czego wyłączymy funkcję lub ją usuniemy. Proponuję dodać jako
+zależność/funkcję łatwousuwalną."* That is a different bargain from the one this section was written
+under — nothing is published, no user but him is pointed at the archive, and if the answer is no the
+feature comes out. What it requires of the implementation is that "comes out" be cheap and honest:
+one flag, one source file per layer, no rows of theirs left in anybody's database. That constraint
+is the design, and it is written down in §UnExoticA of `docs/PLAN_UNEXOTICA.md`.
 
 ## Work that is shared, and should come first
 

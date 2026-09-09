@@ -409,37 +409,43 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C20. The index promises files no backend can open
+### C20. ~~The index promises files no backend can open~~ — HALF FIXED 2026-09-09
 
-*Found 2026-09-08 by the wasm probe (`docs/PLAN_WEB.md` §14), and it is an **Android** defect — the
-same files are refused on the phone. The web build only made it easy to run hundreds of files at
+*Found 2026-09-08 by the wasm probe (`docs/PLAN_WEB.md` §14), and it was an **Android** defect — the
+same files were refused on the phone. The web build only made it easy to run hundreds of files at
 once, which is what the probe is for.*
 
 `SupportedFormats.extensions` is what a folder scan and a catalogue index are filtered through, and
-it has the same rule written into it twice already: `.gym` and `.snd` were removed because listing
-them "only indexed files that cannot open". Two more are in that state and were not noticed.
+it had the same rule written into it twice already: `.gym` and `.snd` were removed because listing
+them "only indexed files that cannot open". Two more were in that state and had not been noticed.
 
-**`.ym` — 4,961 files in Modland.** `Sc68Backend::worthTrying` claims a file only on `ICE!`, `SC68`
-or an `SNDH` tag in the first 256 bytes; a YM file has none, so it never reaches sc68 at all. Nor
-would it help: the vendored `file68` has no YM loader and no LHA support, and **Modland's YM files
-are LHA-packed** (`-lh5-` at offset two). So nothing here can open one, packed or not.
+**`.ym` — 4,961 files in Modland. Fixed.** They play, 20 of 20 sampled
+(`docs/PLAN_FORMATS.md` §8). The entry below is left standing because the reasoning in it was
+**wrong in one clause** and that is worth keeping visible:
 
-**`.med` — 132 of Modland's 140.** They begin `MED\x04`, the older Amiga *Music Editor* format.
-libopenmpt's loader requires `MMD` at offset zero (`Load_med.cpp:865`) and handles MMD0–MMD3 only.
-The other 8 are genuine OctaMED and do play.
+> `Sc68Backend::worthTrying` claims a file only on `ICE!`, `SC68` or an `SNDH` tag in the first 256
+> bytes; a YM file has none, so it never reaches sc68 at all. Nor would it help: the vendored
+> `file68` has no YM loader and no LHA support, and **Modland's YM files are LHA-packed** (`-lh5-`
+> at offset two). So nothing here can open one, packed or not.
 
-**Two ways out, and they are not the same size:**
+Everything up to the last sentence holds. The last sentence surveyed the backends we *build* and
+concluded about the ones we *have*: ZXTune ships a YM/VTX decoder and `native/backends/zxtune/
+CMakeLists.txt` had been excluding it, in a comment on the exclusion, for want of lhasa. The lesson
+is narrow and repeats one from `docs/PLAN_FORMATS.md` §7 — **check the library's source tree, not
+the list of what the build compiles**, because the second is a decision somebody made and can be
+unmade.
 
-1. **Drop both extensions**, as `.gym` and `.snd` were dropped. Costs nothing to build, removes
-   5,093 dead rows from a Modland index — and changes `SupportedFormats.fingerprint`, which marks
-   every stored index stale, so the owner re-downloads a 40 MB index to gain nothing he can hear.
-2. **Add LHA unpacking** and keep `.ym`. `lhasa` is ISC-licensed and was already read and accepted
-   during the UnExoticA work, where it is needed for the same reason — every UnExoticA tune lives
-   inside a `.lha`. That makes one dependency answer two wishes. It does nothing for `.med`, which
-   needs a decoder nobody here has.
+`.vtx` came with it: 879 files, the format the original exclusion was weighed against.
 
-**Not decided.** The second is the interesting one and it is not urgent; the first is cheap and its
-only real cost is the re-index it forces.
+**`.med` — 132 of Modland's 140. Still open.** They begin `MED\x04`, the older Amiga *Music Editor*
+format. libopenmpt's loader requires `MMD` at offset zero (`Load_med.cpp:865`) and handles MMD0–MMD3
+only. The other 8 are genuine OctaMED and do play. lhasa does nothing for this; it needs a decoder
+nobody here has, which puts it with UADE's territory rather than with anything cheap.
+
+**The re-index this cost.** Adding `.vtx` changed `SupportedFormats.fingerprint`, so every stored
+index went stale and Modland's 40 MB is downloaded again. That price was the argument *against*
+option 1 in the original entry — paying it to remove 5,093 dead rows. Paying it to gain 5,840
+playable ones is the same transaction with the sign flipped.
 
 ### C19. ~~"More from this author" offered itself where it could never work~~ — FIXED 2026-09-08
 

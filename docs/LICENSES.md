@@ -168,6 +168,31 @@ its twelve player headers carry an author credit and no terms, and the same GPL-
 inside it referenced by five of its eight sources. Reading a repository's licence file, or trusting
 GitHub's summary of it, would have got both libraries wrong in opposite directions.
 
+**lhasa 0.6.0**, checked 2026-09-09 — fetched by `scripts/fetch-native-deps.sh` against a
+SHA-256, like every other tarball here. `COPYING.md` is the ISC text:
+
+> Copyright (c) 2011-2025, Simon Howard
+> Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+> fee is hereby granted, provided that the above copyright notice and this permission notice appear
+> in all copies.
+
+**All 35 sources and headers under `lib/` repeat that grant per file**, so for once `COPYING` and
+the sources agree — the first time in this project that checking both was uneventful. ISC is
+permissive and combines with GPL-3 without argument; its one obligation is to reproduce the notice,
+which is the same undischarged obligation libopenmpt's BSD leaves and which one licences screen will
+settle for both.
+
+**Why we fetch it rather than use the copy already on disk.** ZXTune vendors its own `3rdparty/lhasa`
+— an older release plus a `zxtune.patch` that changes a header include and adds `extern "C"`. Taking
+that copy would mean a second, forked lhasa arriving inside a sparse clone, with no pin of its own
+and no checksum. Upstream is pinned and verified like everything else, and the forty lines of
+difference live in one file of ours, `native/backends/zxtune/lha_zxtune.cpp`, which says so at its
+head.
+
+**It decodes no music.** It is here because two separate wishes need the same mechanism: ZXTune's
+`.ym`/`.vtx` decoder reads an LHA-compressed stream, and every UnExoticA tune lives inside a `.lha`
+archive.
+
 **audacious-uade-tools**, checked 2026-09-07. `COPYING` is the GPL **version 2** text alone — the
 fourth time in this project that reading it would have given the wrong answer — and the generator
 scripts carry `SPDX-License-Identifier: GPL-2.0-or-later`. Compatible with GPL-3, and the check took

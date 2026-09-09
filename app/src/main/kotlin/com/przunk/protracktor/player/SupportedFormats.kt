@@ -47,7 +47,7 @@ object SupportedFormats {
         // needs an emulator and why nothing else in this list resembles it.
         // "snd" is deliberately absent: in Modland it means Westwood SND, a DOS format nothing here
         // plays, and listing it only indexes files that cannot open.
-        "sndh", "sc68", "ym",
+        "sndh", "sc68",
         // Atari 8-bit, through ASAP. "fc" is already above and means the Amiga Future Composer to
         // libopenmpt and the Atari one to ASAP -- whichever loads it wins, which is the only way to
         // settle that without probing content.
@@ -66,6 +66,17 @@ object SupportedFormats {
         // support is the ZX Spectrum *snapshot* format rather than a tracker, and ZXTune's own
         // reader for it is the one plugin whose licence we cannot take.
         "pt3", "pt2", "pt1", "stc", "st1", "st3", "asc", "as0", "sqt", "stp", "psm", "ftc", "gtr",
+        // Register dumps rather than trackers, and the same AY chip plays them back. "ym" was
+        // listed with the Atari ST group from the start on the assumption that sc68 handled it; it
+        // never did, and 4,961 Modland files sat in every index unopenable (`docs/STATUS.md` C20).
+        // Vendoring lhasa made ZXTune's `ym_vtx` decoder buildable -- Modland's YM files are
+        // LHA-packed -- and the measurement is 20 of 20 and 20 of 20 (`docs/PLAN_FORMATS.md` §8).
+        //
+        // **"vtx" is new here, and it costs a re-index.** Adding a name changes `fingerprint`, so
+        // every stored index goes stale and the owner downloads Modland's 40 MB again. It buys 879
+        // files that play, which is the version of that bargain worth taking -- the one C20 argued
+        // against was paying the same price to *remove* rows.
+        "ym", "vtx",
         // Commodore 64, through libsidplayfp. Identified by a four-byte magic, so these extensions
         // only decide what a folder scan picks up.
         "sid", "psid", "rsid",
