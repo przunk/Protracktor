@@ -9,6 +9,14 @@ const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
 
 let context = null;
 let node = null;
+/**
+ * The one node between the decoder and the speakers.
+ *
+ * A page has no volume of its own the way a phone does — Android has hardware keys and every app
+ * rides the system level, and a browser tab has neither. So the level lives here, and it is the
+ * only thing in this file that touches audio without going through the worklet.
+ */
+let gain = null;
 let queue = [];
 let index = -1;
 /**
@@ -115,7 +123,12 @@ async function begin() {
     outputChannelCount: [2],
     processorOptions: { wasmBinary: wasm },
   });
-  node.connect(context.destination);
+  // Through the gain, not straight to the speakers. Created here rather than at load, because
+  // there is no AudioContext to create it in until the first click.
+  gain = context.createGain();
+  gain.gain.value = amplitude();
+  node.connect(gain);
+  gain.connect(context.destination);
   node.port.onmessage = (event) => onWorklet(event.data);
 }
 
@@ -667,6 +680,60 @@ $('repeat').onclick = () => {
   setPlaying(playing);
   status(`Repeat ${repeat}`);
 };
+/*
+  Volume. The slider is a **percentage of loudness, not of amplitude** -- halving the amplitude of
+  a signal does not sound half as loud, so a linear slider spends its top half doing almost nothing
+  and its bottom quarter doing everything. Squaring is the cheap approximation everyone uses and it
+  is close enough that the middle of the slider sounds like the middle.
+*/
+const VOLUME_ON = 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z';
+const VOLUME_OFF = 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.9 8.9 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z';
+
+/** 0…100, kept per browser. Not a preference anybody else needs to know about. */
+let level = 100;
+let muted = false;
+try {
+  // **The raw string first.** `Number(null)` is 0, not NaN, so reading the value straight into a
+  // number made a first-time visitor arrive muted -- which the page checks caught before anybody
+  // opened it. Nothing stored means nothing stored, and that is full volume.
+  const stored = localStorage.getItem('protracktor.volume');
+  const value = stored === null ? NaN : Number(stored);
+  if (Number.isFinite(value) && value >= 0 && value <= 100) level = value;
+} catch { /* a private window, or site data turned off. The default is a fine answer. */ }
+
+/** What the gain node should be set to, given the slider and the mute. */
+const amplitude = () => (muted ? 0 : (level / 100) ** 2);
+
+function applyVolume() {
+  $('volume').value = String(level);
+  const silent = muted || level === 0;
+  $('volglyph').setAttribute('d', silent ? VOLUME_OFF : VOLUME_ON);
+  $('mute').title = silent ? 'Unmute' : 'Mute';
+  // `setTargetAtTime` rather than an assignment: a gain that jumps clicks, and a slider dragged
+  // across produces a hundred jumps. 15 ms is under a frame and above the click.
+  if (gain) gain.gain.setTargetAtTime(amplitude(), context.currentTime, 0.015);
+  try { localStorage.setItem('protracktor.volume', String(level)); } catch { /* see above */ }
+}
+
+function setVolume(value) {
+  level = Math.max(0, Math.min(100, Math.round(value)));
+  // Moving the slider away from zero is the same gesture as unmuting, and leaving it silent would
+  // look like the control had stopped working.
+  if (level > 0) muted = false;
+  applyVolume();
+  status(`Volume ${level}%`);
+}
+
+$('volume').oninput = () => setVolume(Number($('volume').value));
+$('mute').onclick = () => {
+  // Muting at zero would do nothing visible, so it winds back up instead -- which is what a
+  // speaker icon means when the sound is already off.
+  if (level === 0) { level = 100; muted = false; } else { muted = !muted; }
+  applyVolume();
+  status(muted || level === 0 ? 'Muted' : `Volume ${level}%`);
+};
+applyVolume();
+
 $('seek').oninput = () => { seeking = true; };
 $('seek').onchange = () => {
   seeking = false;
@@ -811,6 +878,12 @@ addEventListener('keydown', (event) => {
     ' ': () => $('playpause').click(),
     ArrowRight: () => $('next').click(),
     ArrowLeft: () => $('prev').click(),
+    // Up and down for volume, because that is what they do everywhere else and because the slider
+    // is the one control that disappears on a narrow screen. Five per press: twenty presses from
+    // silence to full is a fair trade against having to aim at an 84-pixel slider.
+    ArrowUp: () => setVolume(level + 5),
+    ArrowDown: () => setVolume(level - 5),
+    m: () => $('mute').click(),
   }[event.key];
   if (!act) return;
   event.preventDefault();

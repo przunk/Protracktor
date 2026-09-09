@@ -274,6 +274,9 @@
     <string name="action_cancel">Cancel</string>
     <string name="paired_with">Paired with %1$s</string>
     <string name="pair_forget">Forget the paired browser</string>
+    <!-- Its own group in Settings, below the appearance one. The web player is a second copy of
+         the app rather than a preference about this one. -->
+    <string name="settings_web_player_section">Web player</string>
     <string name="settings_web_player">Web player address</string>
     <string name="settings_web_player_body">Where the link from the scanner screen points. Left empty it follows the browser you paired with, which is usually what you want.</string>
     <string name="random_scope_favourites">Favourites</string>

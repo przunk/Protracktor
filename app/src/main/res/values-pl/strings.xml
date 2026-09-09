@@ -290,6 +290,7 @@
     <string name="action_cancel">Anuluj</string>
     <string name="paired_with">Sparowano z %1$s</string>
     <string name="pair_forget">Zapomnij sparowaną przeglądarkę</string>
+    <string name="settings_web_player_section">Odtwarzacz webowy</string>
     <string name="settings_web_player">Adres odtwarzacza webowego</string>
     <string name="settings_web_player_body">Dokąd prowadzi link z ekranu skanera. Puste pole oznacza „ta przeglądarka, z którą jesteś sparowany” — i zwykle o to chodzi.</string>
     <string name="random_scope_favourites">Ulubionych</string>
