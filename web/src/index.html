@@ -234,9 +234,25 @@
   }
   input[type=range] {
     flex: 1; appearance: none; background: transparent; height: 20px; margin: 0;
+    /*
+      How much of the track is behind the handle, set from script. A gradient rather than
+      `::-moz-range-progress`, because that pseudo-element exists in one engine and has no webkit
+      counterpart -- so the portable answer is to paint the track itself and move the stop.
+      Custom properties inherit into pseudo-elements, which is what makes this reachable at all.
+    */
+    --fill: 0%;
   }
-  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--surface-variant); }
-  input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--surface-variant); }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--primary) var(--fill), var(--surface-variant) var(--fill));
+  }
+  input[type=range]::-moz-range-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--primary) var(--fill), var(--surface-variant) var(--fill));
+  }
+  /* A disabled seek bar says "you cannot move this", so it must not also say "you are here". */
+  input[type=range]:disabled::-webkit-slider-runnable-track { background: var(--surface-variant); }
+  input[type=range]:disabled::-moz-range-track { background: var(--surface-variant); }
   input[type=range]::-webkit-slider-thumb {
     appearance: none; width: 14px; height: 14px; border-radius: 50%;
     background: var(--primary); margin-top: -5px;
@@ -257,22 +273,29 @@
   .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nowcard svg { width: 22px; height: 22px; fill: var(--on-surface-variant); flex: none; }
 
+  /*
+    Three parts: a spacer, the five buttons, the volume. **The spacer is the whole point.**
+    The volume used to be positioned absolutely so it could not decentre the transport, and at
+    ordinary widths `space-evenly` then put `repeat` underneath it (`docs/STATUS.md` C22).
+    Reserving a matching width on the left keeps play in the middle *and* keeps the two apart,
+    which absolute positioning could only ever do one of.
+  */
   .transport {
-    display: flex; align-items: center; justify-content: space-evenly;
+    display: flex; align-items: center;
     padding: 10px 12px 2px;
-    /* So the volume can sit at the right end without the five transport buttons sliding left to
-       make room for it. Play stays under the middle of the screen, which is where a thumb and an
-       eye both look for it. */
-    position: relative;
+    --volume-width: 124px;
   }
+  .transport .buttons {
+    flex: 1; display: flex; align-items: center; justify-content: space-evenly;
+  }
+  .tspacer { flex: none; width: var(--volume-width); }
   /*
     Volume, at the right end of the transport — where every desktop player puts it, and the only
     control here the phone does not have: Android has hardware volume keys and a page has nothing.
-    Absolutely positioned rather than a sixth flex child, so it cannot decentre the transport.
   */
   .volume {
-    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-    display: flex; align-items: center; gap: 2px;
+    flex: none; width: var(--volume-width);
+    display: flex; align-items: center; justify-content: flex-end; gap: 2px;
   }
   .volume .tbutton { width: 36px; height: 36px; }
   .volume .tbutton svg { width: 20px; height: 20px; }
@@ -282,7 +305,12 @@
     on a 360px screen either overlaps `repeat` or shrinks it, and the phone this would be on has
     volume keys of its own — so the icon stays as a mute toggle and the fine control goes.
   */
-  @media (max-width: 560px) { .volume input[type=range] { display: none; } }
+  @media (max-width: 560px) {
+    .volume input[type=range] { display: none; }
+    /* The spacer shrinks with it, or the buttons sit off-centre by the width of a slider nobody
+       can see. One variable, so the two cannot drift apart. */
+    .transport { --volume-width: 40px; }
+  }
   .tbutton {
     background: none; border: 0; padding: 0; cursor: pointer;
     width: 48px; height: 48px; border-radius: 50%;
@@ -330,7 +358,17 @@
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
-  .subsongs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .subsongbar { margin-top: 14px; }
+  .subsongbar[hidden] { display: none; }
+  .toggle {
+    background: var(--surface-container); color: var(--on-surface-variant);
+    border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
+    padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .toggle[aria-checked="true"] {
+    background: var(--secondary-container); color: var(--on-surface); border-color: var(--secondary-container);
+  }
+  .subsongs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .subsong {
     background: var(--surface-container); color: var(--on-surface);
     border: 1px solid var(--surface-variant); border-radius: var(--shape-s);
@@ -378,6 +416,14 @@
         <div class="np-title" id="np-title">Nothing playing</div>
       </div>
       <dl id="fields"></dl>
+      <!--
+        The phone's "play all subsongs" setting, in the one place it means something here. Hidden
+        for a file that holds one tune, because a switch that governs nothing is a question the
+        listener has to answer for no reason.
+      -->
+      <div id="subsongbar" class="subsongbar" hidden>
+        <button id="allsubsongs" class="toggle" role="switch" aria-checked="false">Play every tune in this file</button>
+      </div>
       <div id="subsongs" class="subsongs"></div>
       <!--
         The machine's own talk, at the bottom of the one panel somebody opens on purpose. It is
@@ -404,6 +450,8 @@
     </div>
 
     <div class="transport">
+      <div class="tspacer"></div>
+      <div class="buttons">
       <button class="tbutton" id="shuffle" title="Shuffle" disabled>
         <svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       </button>
@@ -419,6 +467,7 @@
       <button class="tbutton" id="repeat" title="Repeat" disabled>
         <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
       </button>
+      </div>
       <!--
         Not disabled with the rest: the level is a setting, not a transport control, and it is
         worth being able to turn the volume down before the first tune rather than after it.

@@ -624,61 +624,74 @@ What has not been looked at, in the order worth looking:
 Worth a `Log` at the top of whatever re-opens a track before changing anything: the first question
 is whether `openBackend` runs at all during a recreate, and that is one line to find out.
 
-### C24. Play does nothing on a track that has reached its end
+### C24. ~~Play does nothing on a track that has reached its end~~ — FIXED 2026-09-10
 
-*Owner, 2026-09-09. **Both the phone and the page**, so it is one defect with two homes.*
+*Owner, 2026-09-09. Both the phone and the page.*
 
-With repeat off, the last track ends and playback stops — which is right, and he says so. Pressing
-play afterwards does nothing at all: the transport has a track selected, the button offers to play,
-and the press is swallowed.
+**"Finished" had two meanings and only one was being asked about.** `Track.isFinished()` is set by
+the engine when a backend renders a short buffer, and some never do — libsidplayfp is running a 6502
+in a loop and has no idea the music is over. For those the *app* ends the track, on the length HVSC
+or the file supplied, and the engine still says it is running. So play called `start()`, the decoder
+resumed from a position already past that length, and the poll ended it again within two hundred
+milliseconds. From outside: a button that does nothing.
 
-**Play on a finished track should start it again from the beginning.** That is what the button says
-it will do, and a control that does nothing is worse than one that is disabled — at least a disabled
-one is honest about it. The backend already has `rewind()`, and the page already restarts a track
-when a queue re-selects it; what is missing is the case where position is at the end and the answer
-is "start over" rather than "resume".
+The rule is now `PlayFromEnd.shouldRestart`, in its own file and pure, for the reason
+`SubsongAdvance` is — the alternative is reasoning about it inside a method that needs a phone to
+run. Its awkward case has a test: a duration of zero means *nobody knows the length*, not *zero
+seconds long*, and without that guard every paused tune with no stated duration would restart
+instead of resuming.
 
-### C23. The web player's `next` skips the file, never the tune inside it
+In the browser the same press now sends `rewind` to the worklet rather than re-fetching bytes it is
+already holding.
 
-*Owner, 2026-09-09, testing the browser build. Recorded, not yet acted on.*
+### C23. ~~The web player's `next` skips the file, never the tune inside it~~ — FIXED 2026-09-10
 
-A `.sid` or a `.sndh` holds several tunes; the phone knows this and offers them. The page does not:
-`next` always advances the queue, so on a file with twelve subsongs eleven of them are unreachable.
-The engine already answers `pt_subsong_count` and the page already draws the chips in Now Playing —
-what is missing is the rule that says which of the two `next` means.
+*Owner, 2026-09-09.*
 
-**What he asked for is the phone's behaviour, and the phone's behaviour is the specification**: a
-switch in Now Playing, and a long press on `next` to skip within the file rather than past it. That
-is `player/PlaybackController.kt`'s "play all subsongs" setting plus the dock's long press, and
-copying it is right for the reason every other web control was copied — a transport that behaves
-differently on the two screens is worse than one that is missing.
+A `.sid` or a `.sndh` holds several tunes; the phone knew and the page did not, so on a file with
+twelve subsongs eleven were reachable only by tapping a chip.
 
-### C22. The volume control sits under the repeat button
+Built as the phone's, because the phone's behaviour is the specification: a switch in Now Playing
+(*"Play every tune in this file"*, kept per browser and shown only where it decides something) and a
+**long press on next** that skips within the file whatever the switch says. The end of a tune now
+walks the file before it walks the queue — and repeat-one is checked first, deliberately, because it
+means "this tune again" and a file's other tunes are not it.
 
-*Owner, 2026-09-09, on the build handed over the same day. Recorded, not yet acted on.*
+Two things fell out of doing it properly. The worklet **answers** a subsong request now, with that
+tune's own duration and title: a GBS gives each track its own length, and the page had been showing
+the first one's against the third one's audio — the same defect `selectSubsong` fixed on the phone.
+And `opened` carries `pt_current_subsong`, which is not always zero: `GmeBackend` opens a HES or KSS
+at the first track with sound in it, so assuming zero pointed the chips at a tune that was not
+playing.
 
-`.volume` is absolutely positioned at the right end of `.transport` so the five buttons stay
-centred, and `.transport` is `justify-content: space-evenly` — so `repeat` is placed with no
-knowledge that anything is there, and at ordinary window widths the two overlap.
+### C22. ~~The volume control sits under the repeat button~~ — FIXED 2026-09-10
 
-The absolute positioning is the cause and it was the point: it was chosen so the volume could not
-decentre the transport. Both are wanted, so the fix is a layout that reserves the space rather than
-one that takes it — a symmetric spacer opposite the volume, or a three-column grid with the
-transport in the middle. **A media query is not the fix**: the overlap is not about small screens,
-it happens wherever `space-evenly` puts `repeat` far enough right.
+*Owner, 2026-09-09, on the build handed over the same day. Mine, from that morning.*
 
-### C21. The seek bar does not fill in behind the handle
+The cause was the thing that made it work: `.volume` was positioned absolutely so it could not
+decentre the transport, and `.transport` is `justify-content: space-evenly`, so `repeat` was placed
+knowing nothing was there.
 
-*Owner, 2026-09-09. Recorded, not yet acted on.*
+**The space is reserved now rather than taken.** A spacer of the same width on the left, the five
+buttons spread between them, and one `--volume-width` variable that both read — so the narrow-screen
+rule that hides the slider cannot leave the buttons off-centre by the width of something invisible.
+Absolute positioning could keep play centred or keep the two apart, never both.
 
-The position slider draws its track in one colour for its whole length, so the only thing saying
-where you are is the handle. Every player fills the part already played, and the phone does — it is
-how far in you are, read without looking at a number.
+### C21. ~~The seek bar does not fill in behind the handle~~ — FIXED 2026-09-10
 
-`input[type=range]` has no cross-browser way to colour one side of the track, which is why it was
-not done: `::-moz-range-progress` exists, `::-webkit-slider-runnable-track` has no counterpart, and
-the usual answer is a `linear-gradient` background recomputed on every update. That is the shape to
-take, and the same rule applies to the volume slider added the same day.
+*Owner, 2026-09-09.*
+
+The only thing saying where you were was the handle. Every player fills the part already played, and
+the phone does.
+
+`::-moz-range-progress` exists in one engine and has no webkit counterpart, so the portable answer is
+to paint the **track itself** with a gradient and move its stop from script — a custom property on
+the input, which inherits into the pseudo-element. The volume slider gets it too, and a disabled seek
+bar deliberately does not: a slider that says "you cannot move this" must not also say "you are
+here".
+
+The one trap: assigning to `.value` fires no event, so every place that sets a slider from state
+paints it as well.
 
 ### C20. ~~The index promises files no backend can open~~ — HALF FIXED 2026-09-09
 

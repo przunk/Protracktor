@@ -44,8 +44,11 @@ window.AudioContext = class {
   // set and connected, which is all the page does with it.
   createGain() { return { gain: { value: 1, setTargetAtTime() {} }, connect() {} }; }
 };
+// Recorded rather than dropped: several checks below are about *what the page tells the worklet*,
+// which is the only observable a page has for a decision it made.
+window.__toWorklet = [];
 window.AudioWorkletNode = class {
-  constructor() { this.port = { onmessage: null, postMessage() {} }; }
+  constructor() { this.port = { onmessage: null, postMessage: (m) => window.__toWorklet.push(m) }; }
   connect() {}
 };
 // jsdom serves this page from http://localhost, which the real page treats as secure; the flag is
@@ -296,6 +299,86 @@ if (window.__api) {
   // Muting something already silent would do nothing visible, which is a control that looks broken.
   $('mute').click();
   check($('volume').value === '100', 'and the speaker winds it back up rather than doing nothing');
+
+  // --- the tunes inside one file (C23) ------------------------------------------------------------
+  //
+  // **At the end, and with its own queue.** These press transport buttons and post messages to the
+  // worklet, which moves the index and the queue; running them in the middle of the sequence above
+  // made four unrelated checks fail, which is a fixture problem rather than a defect and cost ten
+  // minutes to see.
+  console.log('\nsubsongs:');
+  window.__api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/a.mod',
+                         'https://modland.com/pub/modules/Protracker/4-Mat/b.mod']);
+  window.__api.onWorklet({
+    type: 'opened', describe: 'title\tThree Tunes', duration: 60, subsongs: 3, current: 0,
+    canSeek: true, preferredRate: 44100, rate: 44100,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  check($('subsongbar').hidden === false, 'a file with several tunes offers the switch');
+  check($('allsubsongs').getAttribute('aria-checked') === 'false', 'and it starts off');
+
+  window.__toWorklet.length = 0;
+  $('next').click();
+  check(!window.__toWorklet.some((m) => m.type === 'subsong'),
+    'with it off, next is the queue\'s business and the file is not walked');
+
+  window.__api.onWorklet({
+    type: 'opened', describe: 'title\tThree Tunes', duration: 60, subsongs: 3, current: 0,
+    canSeek: true, preferredRate: 44100, rate: 44100,
+  });
+  $('allsubsongs').click();
+  check($('allsubsongs').getAttribute('aria-checked') === 'true', 'the switch turns on');
+  window.__toWorklet.length = 0;
+  $('next').click();
+  check(window.__toWorklet.some((m) => m.type === 'subsong' && m.index === 1),
+    'and now next asks for the second tune instead of the second file');
+
+  // The worklet answers with the tune's own length and title -- one file, three durations.
+  window.__api.onWorklet({
+    type: 'subsong', index: 1, duration: 42, describe: 'title\tSecond Tune',
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  check($('np-title').textContent === 'Second Tune', 'and the panel follows it');
+  check(window.document.querySelectorAll('.subsong')[1]?.getAttribute('aria-pressed') === 'true',
+    'with the right chip marked, from the answer rather than from the click');
+
+  window.__toWorklet.length = 0;
+  window.__api.onWorklet({ type: 'ended' });
+  await new Promise((r) => setTimeout(r, 20));
+  check(window.__toWorklet.some((m) => m.type === 'subsong' && m.index === 2),
+    'and the end of a tune moves to the next one inside the file');
+  $('allsubsongs').click();
+
+  // --- the sliders fill in behind the handle (C21) ------------------------------------------------
+  console.log('\nsliders:');
+  // A known duration, because the subsong answer above changed it to that tune's own length.
+  window.__api.onWorklet({
+    type: 'opened', describe: 'title\tOnly', duration: 60, subsongs: 1, current: 0,
+    canSeek: true, preferredRate: 44100, rate: 44100,
+  });
+  window.__api.onWorklet({ type: 'position', seconds: 15 });
+  await new Promise((r) => setTimeout(r, 20));
+  check($('seek').style.getPropertyValue('--fill') === '25%',
+    'a quarter through the tune is a quarter of the track coloured');
+  check($('volume').style.getPropertyValue('--fill') === '100%',
+    'and the volume slider is painted the same way');
+
+  // --- play, on a track that has reached its end (C24) ---------------------------------------------
+  console.log('\nreplay:');
+  window.__api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/only.mod']);
+  window.__api.onWorklet({
+    type: 'opened', describe: 'title\tOnly', duration: 10, subsongs: 1, current: 0,
+    canSeek: true, preferredRate: 44100, rate: 44100,
+  });
+  window.__api.onWorklet({ type: 'ended' });
+  await new Promise((r) => setTimeout(r, 20));
+  check($('playglyph').getAttribute('d') !== 'M6 5h4v14H6zm8 0h4v14h-4z',
+    'one track, no repeat: reaching the end stops it');
+  window.__toWorklet.length = 0;
+  $('playpause').click();
+  await new Promise((r) => setTimeout(r, 40));
+  check(window.__toWorklet.some((m) => m.type === 'rewind'),
+    'and pressing play then starts it again instead of doing nothing');
 }
 
 // --- the engine's shape, if it has been built -------------------------------------------------

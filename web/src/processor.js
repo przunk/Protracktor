@@ -137,6 +137,10 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
           describe: e.UTF8ToString(e._pt_describe(this.handle)),
           duration: e._pt_duration(this.handle),
           subsongs: e._pt_subsong_count(this.handle),
+          // **Not always zero.** A HES or KSS file often has nothing at track 0, so `GmeBackend`
+          // opens at the first track with sound in it and says so here. Assuming zero would leave
+          // the chips pointing at a tune that is not the one playing.
+          current: e._pt_current_subsong(this.handle),
           preferredRate: e._pt_preferred_rate(this.handle),
           rate: sampleRate,
           canSeek: e._pt_can_seek(this.handle) === 1,
@@ -146,7 +150,34 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
       case 'play': this.playing = true; break;
       case 'pause': this.playing = false; break;
       case 'seek': if (this.handle) e._pt_seek(this.handle, message.seconds); break;
-      case 'subsong': if (this.handle) { e._pt_select_subsong(this.handle, message.index); this.ended = false; } break;
+      case 'subsong':
+        if (this.handle) {
+          e._pt_select_subsong(this.handle, message.index);
+          this.ended = false;
+          this.playing = true;
+          // **Answered, because a subsong is a different tune.** Its length is its own -- a GBS
+          // gives each track one -- and so is its title. Without this the page kept showing the
+          // first tune's duration against the third one's audio, which is the same defect
+          // `selectSubsong` fixed on the phone.
+          this.port.postMessage({
+            type: 'subsong',
+            index: e._pt_current_subsong(this.handle),
+            duration: e._pt_duration(this.handle),
+            describe: e.UTF8ToString(e._pt_describe(this.handle)),
+          });
+        }
+        break;
+      // Play, on a track that has already ended. `pt_rewind` is what the phone's transport does
+      // too; re-opening the file would work and would spend a fetch on bytes we are holding.
+      case 'rewind':
+        if (this.handle) {
+          e._pt_rewind(this.handle);
+          this.ended = false;
+          this.playing = true;
+          this.reported = -1;
+          this.port.postMessage({ type: 'position', seconds: 0 });
+        }
+        break;
       case 'close': this.close(); break;
     }
   }

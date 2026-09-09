@@ -3110,8 +3110,18 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update { it.copy(message = Message("Something else is using the audio.")) }
                 return
             }
-            val restarted = if (open.isFinished()) open.restart() else open.start()
-            _state.update { it.copy(playing = restarted) }
+            // **Asked of both meanings of "finished".** The engine knows when a backend stopped
+            // producing audio; it does not know when the app stopped a tune at the length HVSC
+            // supplied, which is how most SIDs end. `PlayFromEnd` has the case that was missed.
+            val atEnd = PlayFromEnd.shouldRestart(
+                engineSaysFinished = open.isFinished(),
+                positionSeconds = _state.value.positionSeconds,
+                durationSeconds = _state.value.durationSeconds,
+            )
+            val restarted = if (atEnd) open.restart() else open.start()
+            _state.update {
+                it.copy(playing = restarted, positionSeconds = if (atEnd) 0.0 else it.positionSeconds)
+            }
         }
     }
 

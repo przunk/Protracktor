@@ -7,6 +7,20 @@ const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+/**
+ * Colours the part of a slider's track that is behind its handle.
+ *
+ * A range input has no portable way to say this in CSS alone, so the track is a gradient and this
+ * moves its stop. Called wherever a value changes — including the places that set `.value`
+ * directly, since assigning to it fires no event.
+ */
+function paint(el) {
+  const min = Number(el.min || 0);
+  const max = Number(el.max || 100);
+  const span = max - min;
+  el.style.setProperty('--fill', span > 0 ? `${((Number(el.value) - min) / span) * 100}%` : '0%');
+}
+
 let context = null;
 let node = null;
 /**
@@ -35,6 +49,27 @@ let order = [];                   // the permutation `next` walks when shuffle i
 let duration = 0;
 let playing = false;
 let seeking = false;
+/** How many tunes are inside the open file, and which one is sounding. */
+let subsongCount = 1;
+let currentSubsong = 0;
+/**
+ * Whether the file's other tunes are part of the queue, mirroring the phone's setting.
+ *
+ * **One `.kss` holds 256 tunes and one `.sndh` holds three.** With this off, `next` means the next
+ * file and the rest of this one is reachable only by tapping a chip; with it on, `next` walks the
+ * file first and moves on when it runs out. Kept per browser, like the volume.
+ */
+let playAllSubsongs = false;
+try {
+  playAllSubsongs = localStorage.getItem('protracktor.allsubsongs') === '1';
+} catch { /* a private window. Off is the safer default: it is what the transport looks like. */ }
+/**
+ * Whether the current track has played to its end with nothing after it.
+ *
+ * **Play then means "again", not "resume".** A transport whose button offers to play and does
+ * nothing is worse than one that is disabled (`docs/STATUS.md` C24).
+ */
+let finished = false;
 /**
  * The fetch of the track being loaded, so it can be called off.
  *
@@ -156,9 +191,12 @@ function onWorklet(message) {
       $('seek').dataset.opened = '1';
       clearTimeout(openWatchdog);
       duration = message.duration;
+      finished = false;
+      subsongCount = message.subsongs ?? 1;
+      currentSubsong = message.current ?? 0;
       const fields = describeFields(message.describe);
       if (fields.title) $('title').textContent = fields.title;
-      renderNowPlaying(fields, message.subsongs ?? 1, 0);
+      renderNowPlaying(fields, subsongCount, currentSubsong);
       publishToSystem(queue[index], fields);
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
@@ -189,16 +227,38 @@ function onWorklet(message) {
     case 'position':
       if (!seeking) {
         $('seek').value = duration > 0 ? Math.round((message.seconds / duration) * 1000) : 0;
+        paint($('seek'));
         $('elapsed').textContent = clock(message.seconds);
         $('remaining').textContent = clock(duration);
       }
       break;
+    // A subsong is a different tune: its own length, often its own title.
+    case 'subsong': {
+      finished = false;
+      currentSubsong = message.index;
+      duration = message.duration;
+      const fields = describeFields(message.describe);
+      if (fields.title) $('title').textContent = fields.title;
+      $('sub').textContent = describeLine(fields);
+      renderNowPlaying(fields, subsongCount, currentSubsong);
+      setPlaying(true);
+      break;
+    }
     case 'ended': {
+      // **The file before the queue**, when the listener asked for that. Repeat-one is checked
+      // first and deliberately: it means "this tune again", and a file's other tunes are not it.
+      if (repeat !== 'one' && playAllSubsongs && currentSubsong + 1 < subsongCount) {
+        node?.port.postMessage({ type: 'subsong', index: currentSubsong + 1 });
+        break;
+      }
       // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
       // takes the next of the permutation, repeat-all wraps, and off stops.
       const next = afterCurrent();
-      if (next == null) setPlaying(false);
-      else if (next === index && repeat === 'one') playAt(index);
+      if (next == null) {
+        // Nothing follows, so the button now means "again" rather than "resume".
+        finished = true;
+        setPlaying(false);
+      } else if (next === index && repeat === 'one') playAt(index);
       else playAt(next);
       break;
     }
@@ -268,6 +328,7 @@ function renderNothingPlaying() {
   dd.textContent = 'nothing has played yet';
   list.append(dt, dd);
   $('subsongs').replaceChildren();
+  $('subsongbar').hidden = true;
 }
 
 function renderNowPlaying(fields, subsongs, current) {
@@ -292,6 +353,10 @@ function renderNowPlaying(fields, subsongs, current) {
 
   // **Subsongs are not decoration.** One `.kss` holds 256 tunes and one `.sndh` holds three; a
   // player that only ever plays the first is playing a fraction of the file (`docs/PLAN_FORMATS.md`).
+  // The switch that decides what `next` means, shown only where it decides anything.
+  $('subsongbar').hidden = subsongs <= 1;
+  $('allsubsongs').setAttribute('aria-checked', String(playAllSubsongs));
+
   const strip = $('subsongs');
   strip.replaceChildren();
   if (subsongs > 1) {
@@ -300,12 +365,10 @@ function renderNowPlaying(fields, subsongs, current) {
       button.className = 'subsong';
       button.textContent = String(i + 1);
       button.setAttribute('aria-pressed', String(i === current));
-      button.onclick = () => {
-        node?.port.postMessage({ type: 'subsong', index: i });
-        for (const other of strip.children) other.setAttribute('aria-pressed', 'false');
-        button.setAttribute('aria-pressed', 'true');
-        setPlaying(true);
-      };
+      // The worklet answers with the tune's own length and title, and that answer redraws these
+      // chips — so this only asks. Marking the pressed one here as well would be a second opinion
+      // about which tune is playing.
+      button.onclick = () => node?.port.postMessage({ type: 'subsong', index: i });
       strip.append(button);
     }
   }
@@ -471,7 +534,9 @@ function setPlaying(on) {
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
   $('prev').disabled = beforeCurrent() == null;
-  $('next').disabled = afterCurrent() == null;
+  // Available while the *file* has more in it too, not only the queue: with the switch on, that is
+  // what the button will do.
+  $('next').disabled = afterCurrent() == null && !(playAllSubsongs && hasNextSubsong());
   $('shuffle').disabled = queue.length === 0;
   $('repeat').disabled = queue.length === 0;
   $('shuffle').classList.toggle('on', shuffle);
@@ -641,6 +706,15 @@ $('playpause').onclick = async () => {
     playAt(index);
     return;
   }
+  // **It reached the end and nothing followed, so this press means "again".** The bytes are still
+  // in the worklet, so it rewinds rather than fetching them a second time.
+  if (finished) {
+    finished = false;
+    if (context?.state === 'suspended') await context.resume();
+    node?.port.postMessage({ type: 'rewind' });
+    setPlaying(true);
+    return;
+  }
   // While something is being fetched, this button means "stop waiting".
   if (loading) {
     loading.abort();
@@ -659,7 +733,57 @@ $('playpause').onclick = async () => {
   node.port.postMessage({ type: playing ? 'play' : 'pause' });
 };
 $('prev').onclick = () => { const p = beforeCurrent(); if (p != null) playAt(p); };
-$('next').onclick = () => { const n = afterCurrent(); if (n != null) playAt(n); };
+
+/** Whether there is another tune inside the open file. */
+const hasNextSubsong = () => currentSubsong + 1 < subsongCount;
+
+function skipSubsong() {
+  if (!hasNextSubsong()) return false;
+  node?.port.postMessage({ type: 'subsong', index: currentSubsong + 1 });
+  status(`Tune ${currentSubsong + 2} of ${subsongCount}`);
+  return true;
+}
+
+/**
+ * Next, and what it means depends on the switch — exactly as it does on the phone.
+ *
+ * With "play every tune in this file" on, the file is walked before the queue moves; with it off,
+ * `next` is always the next file and the tunes inside are reached by their chips or by holding.
+ */
+$('next').onclick = () => {
+  if (playAllSubsongs && skipSubsong()) return;
+  const n = afterCurrent();
+  if (n != null) playAt(n);
+};
+
+/**
+ * Holding next skips *within* the file, whatever the switch says.
+ *
+ * The phone's dock does this and the reason carries over: the chips are behind a panel, and
+ * wanting the next tune of a `.sndh` is not a reason to open one. `pointerdown` rather than
+ * `mousedown`, so a finger works; the click that follows is swallowed, or the press would count
+ * twice.
+ */
+let holdTimer = null;
+let held = false;
+$('next').addEventListener('pointerdown', () => {
+  held = false;
+  holdTimer = setTimeout(() => { held = skipSubsong(); }, 500);
+});
+for (const event of ['pointerup', 'pointercancel', 'pointerleave']) {
+  $('next').addEventListener(event, () => clearTimeout(holdTimer));
+}
+$('next').addEventListener('click', (event) => {
+  if (held) { event.stopImmediatePropagation(); event.preventDefault(); held = false; }
+}, true);
+
+$('allsubsongs').onclick = () => {
+  playAllSubsongs = !playAllSubsongs;
+  $('allsubsongs').setAttribute('aria-checked', String(playAllSubsongs));
+  try { localStorage.setItem('protracktor.allsubsongs', playAllSubsongs ? '1' : '0'); } catch { /* private window */ }
+  setPlaying(playing);
+  status(playAllSubsongs ? 'Next walks this file first' : 'Next moves to the next file');
+};
 
 const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
 const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z';
@@ -706,6 +830,7 @@ const amplitude = () => (muted ? 0 : (level / 100) ** 2);
 
 function applyVolume() {
   $('volume').value = String(level);
+  paint($('volume'));
   const silent = muted || level === 0;
   $('volglyph').setAttribute('d', silent ? VOLUME_OFF : VOLUME_ON);
   $('mute').title = silent ? 'Unmute' : 'Mute';
@@ -734,7 +859,7 @@ $('mute').onclick = () => {
 };
 applyVolume();
 
-$('seek').oninput = () => { seeking = true; };
+$('seek').oninput = () => { seeking = true; paint($('seek')); };
 $('seek').onchange = () => {
   seeking = false;
   node?.port.postMessage({ type: 'seek', seconds: (Number($('seek').value) / 1000) * duration });
