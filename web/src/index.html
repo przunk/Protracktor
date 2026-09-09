@@ -267,6 +267,11 @@
   .tbutton.play svg { width: 34px; height: 34px; }
   .tbutton.on { color: var(--primary); }
 
+  #nowplaying .statusline {
+    padding: 14px 0 0;
+    margin-top: 14px;
+    border-top: 1px solid var(--surface-variant);
+  }
   .statusline {
     padding: 6px 18px 0;
     color: var(--on-surface-variant); font-size: var(--body-small);
@@ -341,9 +346,14 @@
       </div>
       <dl id="fields"></dl>
       <div id="subsongs" class="subsongs"></div>
+      <!--
+        The machine's own talk, at the bottom of the one panel somebody opens on purpose. It is
+        useful when something is wrong and noise when nothing is, and the dock is where the music
+        is named -- so it lives here rather than over the transport.
+      -->
+      <div class="statusline" id="status">starting…</div>
     </section>
 
-    <div class="statusline" id="status">starting…</div>
     <div class="statusline error" id="error"></div>
 
     <div class="seekrow">

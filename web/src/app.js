@@ -151,6 +151,8 @@ function onWorklet(message) {
     case 'failed':
       loading = null;
       clearTimeout(openWatchdog);
+      // Errors stay above the transport. The status line moved into Now Playing because it is the
+      // machine talking to itself; a decoder refusing a file is the machine talking to the listener.
       $('error').textContent = message.reason;
       $('sub').textContent = '—';
       setPlaying(false);
