@@ -189,7 +189,8 @@ public:
         // Backends that synthesise at a fixed rate say so, and Oboe resamples if the device runs at
         // something else. Asking a 68000 emulator to run at 48000 because the phone prefers it would
         // change the music, not the format it arrives in.
-        if (const int preferred = backend_->preferredSampleRate(); preferred > 0) {
+        const int preferred = backend_->preferredSampleRate();
+        if (preferred > 0) {
             builder.setSampleRate(preferred)
                 ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium);
         }
@@ -200,6 +201,21 @@ public:
             stream_.reset();
             return false;
         }
+        // **The one assumption in this chain nobody has ever measured.** The comment above says
+        // "Oboe resamples if need be", and if it ever does not, `getSampleRate()` comes back as the
+        // device's rate, the callback hands that number to a backend that ignores it, and 44,100
+        // samples play at 48,000 -- 8.8% fast, about a semitone and a half sharp. That is not a
+        // hypothetical: it is exactly the defect the web build shipped with until 2026-09-08,
+        // found by the owner saying a SID "sounded quicker than I remember".
+        //
+        // He said the same thing about two SPCs on 2026-09-09. A log line is what turns "I think
+        // it sounds fast" into a fact, and it costs nothing on a path that runs once per track.
+        if (preferred > 0 && stream_->getSampleRate() != preferred) {
+            LOGE("sample rate: asked Oboe for %d, got %d -- the tune will play %.1f%% fast",
+                 preferred, stream_->getSampleRate(),
+                 (static_cast<double>(stream_->getSampleRate()) / preferred - 1.0) * 100.0);
+        }
+
         if (const oboe::Result r = stream_->requestStart(); r != oboe::Result::OK) {
             LOGE("requestStart failed: %s", oboe::convertToText(r));
             stream_->close();
