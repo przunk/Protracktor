@@ -452,7 +452,7 @@ Measured after, on the same corpus and the same file:
 The second row is the one that matters: a fade that ends a track could have cut short every file
 that states a length, and it did not.
 
-### C26. Two tunes "sound faster than I remember" — and it is not the sample rate
+### C26. SPC plays at a different tempo from every other player — OPEN, not being worked on
 
 *Owner, 2026-09-09, on `top gear 2 - title.spc` and `top gear 2 - ending theme.spc`. He said the
 same of a YM earlier the same day. **Not confirmed as a defect**; recorded because the obvious
@@ -556,10 +556,21 @@ through game-music-emu directly, once through `pt_render` in the wasm engine, wh
 **Identical.** Not "close": the same file. Our engine reproduces the library exactly, the library
 plays the tune for its tagged 120 seconds, and the videos end at 2:02.
 
-**So the 0:51.5 against 0:58.0 is an offset, not a ratio.** 6.5 seconds, and the obvious place for
-6.5 seconds to come from is the start of a YouTube video — a title card, a fade-in, silence before
-the music. That is the one thing not yet checked, and it is checked by looking at the video's first
-ten seconds.
+**The offset theory was mine and the owner has rejected it**, 2026-09-10: *"tempo jest na 100%
+różne od tego co mam na yt"*. He has listened to both; that is worth more than an inference about
+title cards, and this entry stays open on his word rather than being closed on mine.
+
+**What the measurements above actually prove is narrower than I claimed.** They prove our engine
+reproduces game-music-emu exactly, and that the phone and the browser agree with each other. **They
+say nothing about whether game-music-emu itself plays SPC at the speed a Super Nintendo does.**
+Every number in this entry is downstream of that library, so a fault in it would be invisible to all
+of them — and a self-consistent wrong answer is exactly what this evidence would look like.
+
+**Not being worked on** (owner, 2026-09-10: *"nie robimy teraz"*). When it is picked up, the missing
+measurement is the one nobody has made: the same `.spc` through a **second, independent** SPC
+implementation — snes9x, bsnes, or `snes_spc` used directly rather than through gme's wrapper — and
+the two waveforms lined up. That is the only test left that can tell "gme is wrong" from "the video
+is not this rip", and neither the tag, the fade nor the audio path can stand in for it.
 
 **Two tests, of which the owner has now run both:**
 
