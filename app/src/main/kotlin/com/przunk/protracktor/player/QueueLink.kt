@@ -37,23 +37,63 @@ object QueueLink {
     /** Paths are relative to Modland's file base, which the page expands; anything else goes whole. */
     private const val MODLAND_BASE = "https://modland.com/pub/modules/"
 
+    /**
+     * How a local file travels: as a name and nothing else.
+     *
+     * **It cannot travel as music and it still has to travel.** A local file's id is a
+     * storage-access grant valid on one phone, so the bytes stay here — but leaving the row out
+     * renumbers the list, and two people cannot talk about a playlist that counts itself
+     * differently at each end. The owner met that with an outside listener on 2026-09-09
+     * (`docs/BACKLOG.md` A28): *"nasze listy nie są zgodne"*.
+     *
+     * A scheme rather than a flag, because the page already reads each line as an address.
+     */
+    private const val PHONE_PREFIX = "phone:"
+
+    /**
+     * The length past which the names of files that are not coming stop being worth their bytes.
+     *
+     * A link is a URL and about two thousand characters is what is safe everywhere; fifty real
+     * tracks measure 1,992 (`docs/PLAN_HANDOFF.md` §3). **The real tracks always travel** — that is
+     * not negotiable and this limit never touches them. The placeholders are the luxury, so they
+     * are what goes when the link would otherwise get long, and they are counted as left behind
+     * exactly as if they had never been offered.
+     */
+    private const val MAX_CHARS_WITH_PLACEHOLDERS = 2_000
+
     fun pack(tracks: List<TrackRef>): Packed {
+        // Two lists in one pass: what the page can play, and where in the order the phone's own
+        // files sat. The second is the whole of A28 -- a row that cannot play still has a position,
+        // and the position is what the two people were disagreeing about.
         val lines = mutableListOf<String>()
-        var left = 0
+        var playable = 0
         for (track in tracks) {
             val catalogue = Catalogue.owning(track.id)
             val path = catalogue?.pathFrom(track.id)
             when {
-                catalogue == null || path == null -> left++
+                catalogue == null || path == null ->
+                    lines += PHONE_PREFIX + (track.title.trim().ifBlank { track.fileNameOrTitle })
                 // Modland is most of any real queue, so its rows lose the 38-byte prefix. Compression
                 // would have removed most of that anyway; this makes the untruncated link shorter for
                 // the small queues where the limit actually bites.
-                catalogue.id == "modland" -> lines += withTitle(path, track)
-                else -> lines += withTitle(track.id, track)
+                catalogue.id == "modland" -> { lines += withTitle(path, track); playable++ }
+                else -> { lines += withTitle(track.id, track); playable++ }
             }
         }
-        if (lines.isEmpty()) return Packed("", 0, left)
+        if (playable == 0) return Packed("", 0, lines.size)
 
+        val withGhosts = encode(lines)
+        if (withGhosts.length <= MAX_CHARS_WITH_PLACEHOLDERS) {
+            return Packed(withGhosts, playable, 0)
+        }
+        // Too long with them. The real tracks go and the names do not, which is the same answer the
+        // app gave before A28 -- and it is still reported rather than done quietly.
+        val onlyReal = lines.filterNot { it.startsWith(PHONE_PREFIX) }
+        return Packed(encode(onlyReal), playable, lines.size - onlyReal.size)
+    }
+
+    /** Deflate, then URL-safe base64. A fragment is not sent to a server, but it is still a URL. */
+    private fun encode(lines: List<String>): String {
         val raw = lines.joinToString("\n").toByteArray(Charsets.UTF_8)
         val deflater = Deflater(Deflater.BEST_COMPRESSION)
         deflater.setInput(raw)
@@ -64,10 +104,7 @@ object QueueLink {
             total += deflater.deflate(buffer, total, buffer.size - total)
         }
         deflater.end()
-
-        val encoded = Base64.getUrlEncoder().withoutPadding()
-            .encodeToString(buffer.copyOf(total))
-        return Packed(encoded, lines.size, left)
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(buffer.copyOf(total))
     }
 
     /**

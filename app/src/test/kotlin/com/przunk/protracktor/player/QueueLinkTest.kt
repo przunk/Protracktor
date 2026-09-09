@@ -47,31 +47,78 @@ class QueueLinkTest {
     }
 
     /**
-     * The one that matters, and the reason `left` exists.
+     * The one that matters, and it changed on 2026-09-10.
      *
-     * A local file's identity is a storage grant to one app on one phone, so it cannot mean anything
-     * in a browser. Dropping it silently would shorten the playlist and look like success --
-     * `docs/PLAN_WEB.md` §8 calls that worse than refusing.
+     * A local file's identity is a storage grant to one app on one phone, so its *music* cannot
+     * travel. Its **place in the list** can, and must: an outside listener opened a shared link and
+     * his list numbered itself differently from the owner's, which is the defect `docs/BACKLOG.md`
+     * A28 records. So the row goes as a name under a `phone:` scheme and the page draws it greyed,
+     * in its own position, unplayable.
      */
     @Test
-    fun `local files are counted, not quietly dropped`() {
+    fun `local files travel as names in their own places`() {
         val packed = QueueLink.pack(
             listOf(
                 track("content://com.android.providers.media.documents/document/audio%3A42", "a local file.mod"),
                 track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod", "hi there.mod"),
             )
         )
+        // `sent` counts what will play; the ghost is not one of them and is not "left" either,
+        // because it did travel.
         assertEquals(1, packed.sent)
-        assertEquals(1, packed.left)
-        assertEquals(listOf("Protracker/4-Mat/hi there.mod"), unpack(packed.fragment))
+        assertEquals(0, packed.left)
+        assertEquals(
+            listOf("phone:a local file.mod", "Protracker/4-Mat/hi there.mod"),
+            unpack(packed.fragment),
+        )
     }
 
     @Test
     fun `a queue with nothing portable packs nothing`() {
+        // Every row a ghost is a list with no music in it. There is no link worth sending, and the
+        // count says so rather than handing over two greyed rows and calling it a handoff.
         val packed = QueueLink.pack(listOf(track("content://x/1"), track("content://x/2")))
         assertEquals(0, packed.sent)
         assertEquals(2, packed.left)
         assertEquals("", packed.fragment)
+    }
+
+    /**
+     * The names are the luxury, and they are what goes when the link would get long.
+     *
+     * The real tracks always travel. A link is a URL, about two thousand characters is safe
+     * everywhere, and a playlist of local files could otherwise push a working link past it — so
+     * over that length the placeholders drop out and are reported, which is what the app did for
+     * all of them before A28.
+     */
+    @Test
+    fun `a long queue drops the names before it drops the music`() {
+        // **Deflate makes the ghosts nearly free**, and finding that out is most of what this test
+        // is worth. A hundred tracks of ordinary English filenames pack to well under the limit
+        // whether their names travel or not -- so the limit is reached only by a long queue of
+        // *unlike* names, which is what the cryptic ones below are. It fires rarely, which is the
+        // right shape for it: most handoffs keep their ghosts and only an unusual one pays.
+        //
+        // A small LCG rather than `Random`, so the queue is the same on every run.
+        fun name(i: Int): String {
+            var x = (i * 1103515245L + 12345L) and 0x7fffffff
+            return buildString {
+                repeat(8) { append("0123456789abcdefghijklmnopqrstuvwxyz"[(x % 36).toInt()]); x /= 36 }
+            }
+        }
+
+        val real = (1..100).map {
+            track("https://modland.com/pub/modules/Protracker/${name(it)}/${name(it + 500)}.mod",
+                  "${name(it + 500)}.mod")
+        }
+        val ghosts = (1..100).map { track("content://x/$it", "${name(it + 9000)}.mod") }
+        val packed = QueueLink.pack(real + ghosts)
+
+        assertEquals(100, packed.sent)
+        assertEquals(100, packed.left)
+        val lines = unpack(packed.fragment)
+        assertTrue("no ghost should survive", lines.none { it.startsWith("phone:") })
+        assertEquals(100, lines.size)
     }
 
     /** The measurement the whole design rests on, as a test rather than as a claim in a document. */

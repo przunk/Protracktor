@@ -22,7 +22,12 @@ class WebRemoteTest {
         )
         assertEquals(
             """{"queue":[{"url":"https://modland.com/x.mod","title":"hi","file":"hi"},""" +
-                """{"url":"asma://y.sap","title":"there","file":"there"}],"index":1}""",
+                // **`asma://` means something on this phone and nothing anywhere else**, and no
+                // bytes came with it — so it is marked, and the page draws it greyed in its own
+                // place rather than as a row that fails the moment it is touched
+                // (`docs/BACKLOG.md` A28). Modland's own URL needs no such mark: a browser can
+                // fetch it itself.
+                """{"url":"asma://y.sap","title":"there","file":"there","local":true}],"index":1}""",
             json,
         )
     }

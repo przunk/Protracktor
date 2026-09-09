@@ -96,6 +96,16 @@ let openWatchdog = null;
  * so a URL whose last segment is lost would arrive as a nameless blob and be declined by all of
  * them (`docs/PLAN_HANDOFF.md` §5a).
  */
+/**
+ * A row for a file that could not travel.
+ *
+ * It holds a place and a name and nothing else: no address, so nothing can try to fetch it, and
+ * `local` so the transport steps over it rather than stopping on a row that can never play.
+ */
+function ghost(name) {
+  return { url: null, name: name || 'a file on the phone', local: true, meta: 'on the phone — not sent' };
+}
+
 function entryFor(url) {
   let name = url;
   try {
@@ -203,6 +213,12 @@ function onWorklet(message) {
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
         status(`⚠ this decoder wants ${message.preferredRate} Hz and the page is running at ` +
                `${message.rate} Hz — it will play ${(message.rate / message.preferredRate).toFixed(3)}× fast`);
+      } else {
+        // **Overwritten, not left standing.** This line is the machine talking about the track in
+        // front of it, and nothing used to replace it when the track changed — so "Tune 2 of 2"
+        // from a `.sndh` two files ago sat under a tune that has one (`docs/STATUS.md` C28). A
+        // sentence about the wrong file is worse than no sentence.
+        status(`${message.rate} Hz` + (subsongCount > 1 ? ` · ${subsongCount} tunes in this file` : ''));
       }
       $('sub').textContent = describeLine(fields);
       $('seek').disabled = !message.canSeek;
@@ -242,6 +258,11 @@ function onWorklet(message) {
       $('sub').textContent = describeLine(fields);
       renderNowPlaying(fields, subsongCount, currentSubsong);
       setPlaying(true);
+      break;
+    }
+    case 'described': {
+      const resolve = describePending.get(message.id);
+      if (resolve) { describePending.delete(message.id); resolve(message); }
       break;
     }
     case 'ended': {
@@ -541,6 +562,11 @@ function setPlaying(on) {
   $('repeat').disabled = queue.length === 0;
   $('shuffle').classList.toggle('on', shuffle);
   $('repeat').classList.toggle('on', repeat !== 'off');
+  // The panel's actions are about the track it is describing, so they go dead with it.
+  const entry = queue[index];
+  $('np-show').disabled = !entry;
+  $('np-save').disabled = !entry || !!entry.local;
+  $('np-link').disabled = !entry || !entry.url;
 }
 
 /**
@@ -555,6 +581,9 @@ function render() {
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
     li.className = i === index && rowState ? `track ${rowState}` : 'track';
+    // Grey rather than red: `.failed` means a decoder refused this, and nothing here broke -- the
+    // bytes simply never left the phone. A different state, and one that does not answer a click.
+    if (entry.local) li.classList.add('local');
 
     const n = document.createElement('span');
     n.className = 'n';
@@ -570,13 +599,120 @@ function render() {
     meta.textContent = entry.meta ?? sourceOf(entry.url);
     text.append(title, meta);
 
-    li.append(n, text);
-    li.onclick = () => playAt(i);
+    const menu = document.createElement('button');
+    menu.className = 'rowmenu';
+    menu.title = 'More';
+    menu.setAttribute('aria-label', `More for ${entry.name}`);
+    menu.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>';
+    // Stopped here, or opening the menu would also start the track underneath it.
+    menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu); };
+
+    li.append(n, text, menu);
+    if (!entry.local) li.onclick = () => playAt(i);
     return li;
   }));
   $('count').textContent = queue.length
     ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
     : 'nothing yet';
+}
+
+/**
+ * The bytes of a row, from wherever they are.
+ *
+ * A paired queue carries them; a link does not, so they are fetched. Either way this is what the
+ * two actions that need bytes are built on, and it is why they are disabled for a row that stayed
+ * on the phone: there is nothing to go and get.
+ */
+async function bytesOf(entry) {
+  if (entry.data) return entry.data;
+  if (!entry.url) return null;
+  const response = await fetch(entry.url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.arrayBuffer();
+}
+
+/**
+ * Hands the file to the browser to save.
+ *
+ * A blob and a click, which is the only way a page can offer a file. The name matters more than it
+ * looks: it is what the person ends up with on disk, and `entry.file` is the decoder's name for it
+ * where there is one.
+ */
+async function saveFile(entry) {
+  try {
+    const bytes = await bytesOf(entry);
+    if (!bytes) { status('that one stayed on the phone — there is nothing here to save'); return; }
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = entry.file || entry.name || 'tune';
+    a.click();
+    // Revoked on a timer rather than immediately: the click is asynchronous inside the browser and
+    // revoking in the same tick has been known to hand the user a zero-byte file.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    status(`Saved ${a.download}`);
+  } catch (e) {
+    status(`could not save it: ${e.message}`);
+  }
+}
+
+/**
+ * Copies the track's own address.
+ *
+ * **The track's, not the page's.** A link to this page carries the whole queue and is what the
+ * phone already sends; what is useful from a row is the one file, at an address anybody can open —
+ * which for Modland and The Mod Archive is a real URL and for a row that stayed on the phone is
+ * nothing at all.
+ */
+async function copyLink(entry) {
+  if (!entry.url) { status('that one stayed on the phone — it has no address'); return; }
+  try {
+    await navigator.clipboard.writeText(entry.url);
+    status('Link copied');
+  } catch {
+    // A browser that refuses the clipboard without a gesture it recognises, or an insecure context.
+    // Showing the address is worse than copying it and much better than silence.
+    status(entry.url);
+  }
+}
+
+/** Scrolls the list to a row and marks it, which is what the phone's "Show in playlist" does. */
+function showInPlaylist(i) {
+  const row = $('queue').children[i];
+  if (!row) return;
+  row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  showPanel(null);
+}
+
+/**
+ * Describes a file that is not playing, through the worklet.
+ *
+ * Opens a **second** decoder handle beside the one making sound, describes it and closes it. The
+ * cost is opening a decoder on the audio thread; the median module here is 20 KB and that is
+ * nothing, but a very large file would be the thing to blame if this ever glitches.
+ */
+let describeAsk = 0;
+const describePending = new Map();
+async function informAbout(entry) {
+  showPanel('nowplaying');
+  $('np-title').textContent = entry.name;
+  $('fields').replaceChildren();
+  status('reading it…');
+  try {
+    const bytes = await bytesOf(entry);
+    if (!bytes) { status('that one stayed on the phone — there is nothing to read'); return; }
+    await start();
+    const id = ++describeAsk;
+    const answer = new Promise((resolve) => describePending.set(id, resolve));
+    node.port.postMessage({ type: 'describe', id, name: entry.file || entry.name, bytes }, [bytes]);
+    const described = await answer;
+    if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
+    renderNowPlaying(describeFields(described.describe), described.subsongs, -1);
+    $('np-title').textContent = describeFields(described.describe).title || entry.name;
+    status(`${entry.name} — not playing, just described`);
+  } catch (e) {
+    status(`could not read it: ${e.message}`);
+  }
 }
 
 /** "Modland/Protracker/4-Mat", the way the phone's subtitle reads. */
@@ -596,9 +732,52 @@ function sourceOf(url) {
   }
 }
 
+/** Whether row [i] holds music this page can actually play. */
+const playable = (i) => i >= 0 && i < queue.length && !queue[i].local;
+
+/**
+ * The row's own menu, anchored under its three dots.
+ *
+ * **The two that need bytes are disabled for a row that stayed on the phone**, and the third with
+ * them: there is no file to save, no address to copy and nothing to read. A menu that offers three
+ * things and does none of them is worse than one with three things greyed.
+ */
+function openRowMenu(entry, anchor) {
+  const menu = $('menu');
+  menu.replaceChildren();
+  const items = [
+    ['Save the file', () => saveFile(entry), !entry.local],
+    ['Copy a link', () => copyLink(entry), !!entry.url],
+    ['Information', () => informAbout(entry), !entry.local],
+  ];
+  for (const [label, act, enabled] of items) {
+    const button = document.createElement('button');
+    button.textContent = label;
+    button.disabled = !enabled;
+    button.onclick = () => { closeRowMenu(); act(); };
+    menu.append(button);
+  }
+  const box = anchor.getBoundingClientRect();
+  menu.hidden = false;
+  // Placed after it is shown, because a hidden element measures zero and would be pinned to the
+  // top left on the first open of every session.
+  const height = menu.offsetHeight;
+  menu.style.left = `${Math.max(8, box.right - menu.offsetWidth)}px`;
+  menu.style.top = `${box.bottom + height > innerHeight ? Math.max(8, box.top - height) : box.bottom}px`;
+}
+
+function closeRowMenu() { $('menu').hidden = true; }
+addEventListener('click', (event) => {
+  if (!$('menu').hidden && !$('menu').contains(event.target)) closeRowMenu();
+});
+addEventListener('keydown', (event) => { if (event.key === 'Escape') closeRowMenu(); });
+addEventListener('scroll', closeRowMenu, true);
+
 /** A fresh permutation. A new lap is a new shuffle; replaying one order forever is not shuffle. */
 function reshuffle(keep) {
-  order = queue.map((_, i) => i);
+  // Rows that cannot play are not in the permutation at all, which is simpler and stricter than
+  // dealing them out and skipping them later.
+  order = queue.map((_, i) => i).filter(playable);
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [order[i], order[j]] = [order[j], order[i]];
@@ -607,6 +786,12 @@ function reshuffle(keep) {
     // What is playing keeps playing: reordering what comes next is not a reason to interrupt now.
     order = [keep, ...order.filter((i) => i !== keep)];
   }
+}
+
+/** The next row from [from] in [step] that can play, or null. Never wraps; the callers decide that. */
+function seek(from, step) {
+  for (let i = from; i >= 0 && i < queue.length; i += step) if (playable(i)) return i;
+  return null;
 }
 
 /** What `next` should play, or null at the end. */
@@ -618,8 +803,9 @@ function afterCurrent() {
     if (repeat === 'all') { reshuffle(null); return order[0] ?? null; }
     return null;
   }
-  if (index + 1 < queue.length) return index + 1;
-  return repeat === 'all' ? 0 : null;
+  const ahead = seek(index + 1, 1);
+  if (ahead != null) return ahead;
+  return repeat === 'all' ? seek(0, 1) : null;
 }
 
 /** What `previous` should play, or null. */
@@ -630,8 +816,9 @@ function beforeCurrent() {
     const at = history.lastIndexOf(index);
     return at > 0 ? history[at - 1] : null;
   }
-  if (index > 0) return index - 1;
-  return repeat === 'all' && queue.length ? queue.length - 1 : null;
+  const back = seek(index - 1, -1);
+  if (back != null) return back;
+  return repeat === 'all' && queue.length ? seek(queue.length - 1, -1) : null;
 }
 
 /**
@@ -652,6 +839,9 @@ function setQueue(urls, at = 0) {
   // strings, a link gives entries with the phone's own titles.
   queue = urls.map((u) => (typeof u === 'string' ? entryFor(u) : u));
   index = queue.length ? Math.min(Math.max(at, 0), queue.length - 1) : -1;
+  // The phone's place in the list may be one of its own files. Selecting it would leave the dock
+  // naming something the page can never start, so the mark moves to the first row that can play.
+  if (index >= 0 && !playable(index)) index = seek(index, 1) ?? seek(0, 1) ?? -1;
   history = index >= 0 ? [index] : [];
   if (shuffle) reshuffle(index >= 0 ? index : null);
   render();
@@ -859,6 +1049,11 @@ $('mute').onclick = () => {
 };
 applyVolume();
 
+// The panel's actions act on whatever is playing, which is the one thing the panel is about.
+$('np-show').onclick = () => { if (index >= 0) showInPlaylist(index); };
+$('np-save').onclick = () => { const e = queue[index]; if (e) saveFile(e); };
+$('np-link').onclick = () => { const e = queue[index]; if (e) copyLink(e); };
+
 $('seek').oninput = () => { seeking = true; paint($('seek')); };
 $('seek').onchange = () => {
   seeking = false;
@@ -885,13 +1080,20 @@ async function fromFragment() {
     // carry it -- which is most of Modland and none of The Mod Archive, whose URLs are a script and
     // a number (`QueueLink.withTitle`).
     setQueue(lines.map((line) => {
+      // **A file that stayed on the phone**, sent as a name so its place in the list survives.
+      // Its bytes are a storage grant to one app on one device and could never have come; the
+      // *position* could, and two people cannot talk about a list that numbers itself differently
+      // at each end (`docs/BACKLOG.md` A28).
+      if (line.startsWith('phone:')) return ghost(line.slice('phone:'.length));
       const [address, title] = line.split('\t');
       const url = address.includes('://') ? address
         : base + address.split('/').map(encodeURIComponent).join('/');
       const entry = entryFor(url);
       return title ? { ...entry, name: title } : entry;
     }));
-    status(`${lines.length} tracks from the link`);
+    const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
+    status(`${lines.length - ghosts} tracks from the link` +
+           (ghosts ? `, and ${ghosts} that stayed on the phone` : ''));
   } catch (e) {
     status(`the link could not be read: ${e.message}`);
   }
@@ -975,17 +1177,25 @@ function receive(message) {
   // The phone says which one it was on, and that is where the list opens -- selected rather than
   // started, so nothing makes a noise until somebody asks.
   setQueue(
-    message.queue.map((row) => ({
-      ...entryFor(row.url),
-      name: row.title || entryFor(row.url).name,
-      // The decoder is handed this, not the title: four backends choose a loader by extension.
-      file: row.file || undefined,
-      // Base64 in, bytes out, once -- decoding at play time would do it again on every replay.
-      data: row.data ? Uint8Array.from(atob(row.data), (c) => c.charCodeAt(0)).buffer : undefined,
-    })),
+    message.queue.map((row) => {
+      // The phone marks what it could not send: a file whose bytes stayed there, or one too big
+      // for the message. Drawn greyed in its own place rather than as a row that fails on the
+      // first touch — the same answer a link's `phone:` line gets (`docs/BACKLOG.md` A28).
+      if (row.local) return ghost(row.title || row.file);
+      return {
+        ...entryFor(row.url),
+        name: row.title || entryFor(row.url).name,
+        // The decoder is handed this, not the title: four backends choose a loader by extension.
+        file: row.file || undefined,
+        // Base64 in, bytes out, once -- decoding at play time would do it again on every replay.
+        data: row.data ? Uint8Array.from(atob(row.data), (c) => c.charCodeAt(0)).buffer : undefined,
+      };
+    }),
     message.index ?? 0,
   );
-  status(`${message.queue.length} tracks from the phone — press play`);
+  const stranded = message.queue.filter((row) => row.local).length;
+  status(`${message.queue.length - stranded} tracks from the phone — press play` +
+         (stranded ? `, and ${stranded} that stayed on it` : ''));
 }
 
 /**

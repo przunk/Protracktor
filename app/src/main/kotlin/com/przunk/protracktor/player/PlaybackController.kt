@@ -1547,11 +1547,17 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
         val link = QueueLink.linkTo(Appearance.webPlayer(context), packed.fragment)
+        // **Said only when a name was dropped too.** Since A28 the files on this phone travel as
+        // greyed rows in their own places, so the list at the other end matches this one and there
+        // is nothing to warn about; `left` now means the link was long enough that even their names
+        // had to go, and then the numbering really does differ.
         if (packed.left > 0) {
             _state.update {
                 it.copy(
                     message = Message(
-                        "Sending ${packed.sent}; ${packed.left} are files on this phone and stayed here."
+                        "Sending ${packed.sent}. The link was too long to carry the names of " +
+                            "${packed.left} files that stayed on this phone, so they are missing " +
+                            "from the list at the other end."
                     )
                 )
             }
