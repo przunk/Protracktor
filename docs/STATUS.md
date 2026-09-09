@@ -415,6 +415,42 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C26. Two tunes "sound faster than I remember" — and it is not the sample rate
+
+*Owner, 2026-09-09, on `top gear 2 - title.spc` and `top gear 2 - ending theme.spc`. He said the
+same of a YM earlier the same day. **Not confirmed as a defect**; recorded because the obvious
+cause has now been eliminated and nobody should pay for that again.*
+
+**Ruled out: the audio path.** This is the defect the web build shipped with until 2026-09-08 —
+44,100 samples playing on a 48,000 context, 8.8% fast, about a semitone and a half sharp — and it
+was found by the owner saying a SID "sounded quicker than I remember". The Android side has the
+same shape and the assumption behind it, *"Oboe resamples if need be"*, had never been measured.
+
+It has now. His logcat, 2026-09-09:
+
+```
+AAudioStreamBuilder_openStream() called
+rate   =  44100, channels  = 2, ... sharing = SH, dir = OUTPUT
+AAudioStreamBuilder_openStream() got Legacy, devIds = [3], perf = NO, burst = 2215
+AAudioStreamBuilder_openStream() returns 0 = AAUDIO_OK
+```
+
+**Asked for 44,100 and given 44,100.** The stream is opened at the rate `GmeBackend` synthesises at,
+so nothing is resampled and nothing plays sharp. `Player::start()` keeps the check anyway (it costs
+one comparison per track and says so on screen when it fires), and on this device it says nothing.
+
+What is left, in the order worth trying:
+
+- **A different rip.** SPC files circulate in many dumps of the same tune, and Top Gear 2 exists on
+  SNES, Mega Drive, Amiga and PC with **different music per platform**. The thing remembered may not
+  be the thing playing.
+- **gme's SPC timing.** It resamples 32,000 to whatever it is opened at, and a fault there would be
+  a fixed ratio on every SPC rather than on two. Cheap to test: the same file in the web player,
+  which links the same `engine.cpp` through a context also forced to 44,100. If both sound the same,
+  the decoder is consistent and the phone is exonerated twice over.
+- **A stopwatch.** An 8% error is ten seconds in two minutes — audible against any independent
+  recording of the same rip, and not a matter of opinion once timed.
+
 ### C25. Changing the theme restarts playback
 
 *Owner, 2026-09-09.*
