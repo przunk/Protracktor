@@ -448,14 +448,29 @@ number in its ID666 tag, not a musical fact. `GmeBackend` reads `info_->play_len
 `gme_set_fade`, so **our ending is the file's own metadata** and a YouTube uploader's ending is
 whatever they chose. Two different end policies, compared as if they were two tempos.
 
-**The test that settles it takes thirty seconds:** pick a landmark in the middle — a drum fill, the
-start of the second section — and compare its timestamp. Same time in both, and the tempo is
-identical and only the ending differs. 12% apart (1:00 against 0:53), and the tempo really is wrong
-and gme is the place to look.
+**He ran the landmark test, and the "it is only the ending" answer was wrong.** The same passage
+plays at **0:51.5 here and 0:58.0 there** — 12.6% fast, which agrees with the 11.9% the endings gave.
+So it *is* tempo: the music genuinely runs quick, and the early ending is a consequence rather than
+the cause.
 
-If it turns out to be the ending, the question stops being a defect and becomes a choice: an SPC
-could be played past its tag, looping the way the hardware would. Nothing here does that today for
-any format.
+**And 12.6% is not a ratio this audio path can make.** The only one available is 48,000/44,100 =
+8.8%, and his own log shows the stream opened at 44,100 anyway. So the error is below Oboe: either
+game-music-emu, or the file is not the tune the videos are playing.
+
+**Where it splits, and neither half has been measured yet:**
+
+- **The same `.spc` in the web player.** Same `engine.cpp`, same gme, a different host and a context
+  also forced to 44,100. Fast there too, and Android is out of it entirely.
+- **The same `.spc` rendered on the host at 32,000 and at 44,100.** 32,000 is gme's native SPC rate
+  and needs no resampling; 44,100 goes through `Fir_Resampler`. If the two disagree musically, the
+  resampler ratio is wrong. If they agree, the emulation speed is, and gme is a much less likely
+  culprit than the rip.
+- **The rip.** Several videos agreeing with each other is weaker evidence than it looks — they may
+  share one source. Top Gear 2 also exists on Mega Drive, Amiga and PC with different music, and a
+  PAL SNES capture runs 5/6 the speed of an NTSC one, which is the same size of error in the same
+  direction.
+
+**Blocked on the file.** None of this can be measured without the `.spc` he is actually playing.
 
 What is left, in the order worth trying:
 
