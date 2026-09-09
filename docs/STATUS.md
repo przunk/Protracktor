@@ -439,6 +439,24 @@ AAudioStreamBuilder_openStream() returns 0 = AAUDIO_OK
 so nothing is resampled and nothing plays sharp. `Player::start()` keeps the check anyway (it costs
 one comparison per track and says so on screen when it fires), and on this device it says nothing.
 
+**Measured 2026-09-09, and it is probably not tempo either.** He timed the tune against several
+YouTube rips that agree with each other: **Protracktor ends at 1:49, they end at 2:02** — 11.9%
+short, which is not 8.8% and not any ratio the audio path can produce.
+
+**An SPC has no end.** It is a memory dump of a running SNES and loops for ever; where it stops is a
+number in its ID666 tag, not a musical fact. `GmeBackend` reads `info_->play_length` and hands it to
+`gme_set_fade`, so **our ending is the file's own metadata** and a YouTube uploader's ending is
+whatever they chose. Two different end policies, compared as if they were two tempos.
+
+**The test that settles it takes thirty seconds:** pick a landmark in the middle — a drum fill, the
+start of the second section — and compare its timestamp. Same time in both, and the tempo is
+identical and only the ending differs. 12% apart (1:00 against 0:53), and the tempo really is wrong
+and gme is the place to look.
+
+If it turns out to be the ending, the question stops being a defect and becomes a choice: an SPC
+could be played past its tag, looping the way the hardware would. Nothing here does that today for
+any format.
+
 What is left, in the order worth trying:
 
 - **A different rip.** SPC files circulate in many dumps of the same tune, and Top Gear 2 exists on
