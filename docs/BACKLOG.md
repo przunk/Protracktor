@@ -673,6 +673,61 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
+## A28. The web player carries the local files it cannot play
+
+*Owner, 2026-09-09, after an external listener opened a shared link: **"nasze listy nie są zgodne"**.*
+
+`QueueLink` packs catalogue paths into the URL fragment; a local file has no portable identity — its
+id is a storage-access grant valid on one phone — so it is counted and left behind. The app says so
+to the sender (*"Sending N; M are files on this phone and stayed here"*) and the page says nothing
+at all to the receiver.
+
+**The defect is not the missing music, it is the missing rows.** Track seven on the phone is track
+five in the browser, and two people cannot talk about a list that numbers itself differently. The
+owner's shape: the local files appear **in their own positions**, greyed, marked *local file — not
+transferred*. A summary line at the top is cheaper and does not fix the thing that hurt.
+
+Three things it drags in:
+
+1. **The link has to carry titles.** Modland rows travel as bare paths today and the page derives
+   the title; a local file has no path, so its title travels literally. Fifty tracks compress to
+   1,992 characters now, and a mostly-local playlist could pass the length a URL is safe at. That
+   needs a rule — what does not fit is dropped, and the page says how many.
+2. **`next` and shuffle must step over them**, or the button lands on a row that can never play.
+   That is `order` and `afterCurrent` in `web/src/app.js`, not a CSS class.
+3. **Grey, not red.** The page already has `.failed` for "a decoder refused this", and this is not
+   that: nothing broke, the bytes simply did not travel. A separate state, and the row does not
+   respond to a click.
+
+**One idea covers both paths.** Pairing *does* send local files, as base64 up to
+`WebRemote.LOCAL_BYTES_BUDGET` — and whatever exceeds that budget disappears today just as silently.
+The same greyed row describes both.
+
+**A decision for the owner, not for us:** the link would then carry filenames off his phone. He is
+already sending a whole playlist, so it is a small difference, and it is a difference.
+
+## A27. The web player's Now Playing has no actions
+
+*Owner, 2026-09-09, with a screenshot of the phone's panel (`user/Screenshot_20260909-215818.png`).*
+
+The phone's Now Playing is a sheet: title, seek bar with elapsed and remaining, the file's path, then
+**a row of four labelled square buttons** — *Show in playlist*, *Add to playlist…*, *Share the file*,
+*Share a link* — a divider, and then the field list (Format, Tracker, Artist, Channels, Patterns,
+Instruments, Samples, Subsongs). The page has the title, the fields and the subsong chips, and
+nothing between them.
+
+**Not all four transfer, and pretending they do is how a mirror becomes a lie.**
+
+- *Show in playlist* — yes, and it is the one worth most: scroll the queue to the playing row.
+- *Share a link* — yes: the page's own URL already carries the queue in its fragment.
+- *Share the file* — possible, as a download of the bytes the worklet already holds. Worth asking
+  whether he wants it before building it.
+- *Add to playlist…* — no. The page has no playlists to add to, and it is `PLAN_HANDOFF.md` §5a's
+  line about what the browser deliberately is not.
+
+The layout is the part to copy exactly: labelled squares in a row under the file line, above the
+divider, sized as the phone sizes them.
+
 ## A26. Two rough edges on the JNI boundary
 
 *Found 2026-09-08, while answering an experienced C++ engineer's objection to JNI (`docs/OPEN_QUESTIONS.md`

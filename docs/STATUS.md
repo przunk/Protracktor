@@ -415,6 +415,20 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C24. Play does nothing on a track that has reached its end
+
+*Owner, 2026-09-09. **Both the phone and the page**, so it is one defect with two homes.*
+
+With repeat off, the last track ends and playback stops — which is right, and he says so. Pressing
+play afterwards does nothing at all: the transport has a track selected, the button offers to play,
+and the press is swallowed.
+
+**Play on a finished track should start it again from the beginning.** That is what the button says
+it will do, and a control that does nothing is worse than one that is disabled — at least a disabled
+one is honest about it. The backend already has `rewind()`, and the page already restarts a track
+when a queue re-selects it; what is missing is the case where position is at the end and the answer
+is "start over" rather than "resume".
+
 ### C23. The web player's `next` skips the file, never the tune inside it
 
 *Owner, 2026-09-09, testing the browser build. Recorded, not yet acted on.*
