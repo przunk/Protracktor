@@ -44,6 +44,9 @@ window.AudioWorkletNode = class {
   constructor() { this.port = { onmessage: null, postMessage() {} }; }
   connect() {}
 };
+// jsdom serves this page from http://localhost, which the real page treats as secure; the flag is
+// not set in jsdom, so it is set here rather than weakening the check the page makes.
+Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true });
 // The operating system's media controls, recorded rather than performed.
 const handlers = {};
 let metadata = null;
@@ -56,12 +59,23 @@ window.navigator.mediaSession = {
 };
 
 const posted = [];
-window.fetch = async (url) => {
+let holdTrackFetch = false;
+window.fetch = async (url, options) => {
   const u = String(url);
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
   posted.push(u);
+  if (holdTrackFetch) {
+    // A download that never finishes, so the press that calls one off can be tested at all.
+    return new Promise((_, reject) => {
+      options?.signal?.addEventListener('abort', () => {
+        const error = new Error('aborted');
+        error.name = 'AbortError';
+        reject(error);
+      });
+    });
+  }
   return { ok: true, arrayBuffer: async () => new ArrayBuffer(64) };
 };
 
@@ -71,7 +85,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -85,6 +99,13 @@ check(!!window.__api, 'the script finished loading');
 
 if (window.__api) {
   // A queue arriving from the phone, in the shape WebRemote sends.
+  window.__api.showPanel('nowplaying');
+  check(window.document.querySelectorAll('#fields dd').length === 1
+    && window.document.querySelector('#fields dd').textContent.includes('nothing has played'),
+    'Now Playing says so before anything has played, rather than opening onto nothing');
+
+  window.__api.showPanel('pair');
+  check($('pair').hidden === false, 'the code is up before anything arrives');
   window.__api.receive({
     queue: [
       { url: 'https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod', title: 'hi there' },
@@ -95,6 +116,7 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 100));
 
   const rows = window.document.querySelectorAll('#queue li.track');
+  check($('pair').hidden === true, 'and the code steps aside once a queue arrives');
   check(rows.length === 2, 'two tracks arrive as two rows');
   check(rows[0]?.querySelector('.title')?.textContent === 'hi there', 'the phone\'s title is used, not the filename');
   check(rows[0]?.querySelector('.meta')?.textContent === 'Modland/Protracker/4-Mat',
@@ -102,12 +124,16 @@ if (window.__api) {
   check(rows[1]?.querySelector('.title')?.textContent === 'L3_CD6',
     'a Mod Archive row is named by its title rather than downloads.php');
   check($('count').textContent === '2 tracks', 'the header counts them');
-  check(rows[0]?.classList.contains('playing'), 'the first row is marked playing');
+  // Four row states, and the owner met three of them looking alike. A queue that has arrived is
+  // *selected*: pointed at, not started, because a browser will not make a sound unasked.
+  check(rows[0]?.classList.contains('selected'), 'the row the phone was on is marked selected');
+  check(!rows[0]?.classList.contains('playing'), 'and not as playing, because nothing has started');
   check($('playpause').disabled === false, 'play becomes available');
   check($('next').disabled === false, 'next becomes available');
 
   window.__api.showPanel('paste');
   check($('paste').hidden === false && $('pair').hidden === true, 'the panels switch');
+  check($('paste').classList.contains('overlay'), 'and they are dialogs over the page, not sections under it');
 
   // Now Playing, driven the way the worklet drives it.
   window.__api.onWorklet({
@@ -135,12 +161,13 @@ if (window.__api) {
   check($('next').disabled === false && $('prev').disabled === true,
     'at the first of two tracks, next works and previous does not');
 
+  const plainRepeatGlyph = $('repeat').querySelector('path').getAttribute('d');
   $('repeat').click();                       // off -> all
   check($('prev').disabled === false, 'repeat-all gives the first track a previous');
   check($('repeat').classList.contains('on'), 'and the button shows it');
   $('repeat').click();                       // all -> one
   check($('repeat').title === 'Repeat one', 'a second press means repeat one');
-  check($('repeat').querySelector('path').getAttribute('d').length > 90,
+  check($('repeat').querySelector('path').getAttribute('d') !== plainRepeatGlyph,
     'and the glyph changes, so the mode survives being read without colour');
   $('repeat').click();                       // one -> off
   check($('prev').disabled === true, 'off puts previous back where it was');
@@ -157,8 +184,77 @@ if (window.__api) {
   check(metadata?.album.includes('Commodore 64'), 'and what it is');
   check(typeof handlers.play === 'function' && typeof handlers.nexttrack === 'function',
     'and the media keys are wired to the transport');
+  // **Two playAt calls a millisecond apart**, which is what a queue arriving from the phone does.
+  // The old `start()` returned early on the second and left `node` null; the next line posted to it.
+  window.__api.playAt(0);
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 80));
+  check($('error').textContent === '', 'two tracks started at once do not race the engine up');
+
   check(window.document.title.startsWith('hi there'),
     'the tab says what is playing, for a page among twenty');
+
+  // **A local file, handed over rather than fetched.** Its identity is a grant to one app on one
+  // phone, so no URL can carry it -- the bytes come with the queue instead.
+  const before = posted.length;
+  window.__api.receive({
+    queue: [{
+      url: 'content://com.android.externalstorage.documents/document/primary%3AMusic%2Ftune.mod',
+      title: 'a local tune',
+      data: 'AAAA',
+    }],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 40));
+  check(window.document.querySelector('#queue .meta')?.textContent === 'from the phone',
+    'a file from the phone says so rather than showing a document URI');
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 60));
+  check(posted.length === before, 'and nothing is fetched for it');
+  check($('error').textContent === '', 'and it does not fail');
+
+  // Last, because it replaces the queue everything above was reading.
+  window.__api.showPanel('paste');
+  $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';
+  $('load').click();
+  check($('paste').hidden === true, 'loading closes the paste dialog');
+  check(window.document.querySelectorAll('#queue li.track').length === 1, 'and loads what was in it');
+  await new Promise((r) => setTimeout(r, 60));   // let that load finish before starting another
+
+  // **A download that will not finish, and the press that calls it off.** The owner's report: press
+  // play on something not cached, then ten seconds of a button that still says "play" and cannot be
+  // taken back.
+  holdTrackFetch = true;
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 80));
+  check($('playglyph').getAttribute('d') === 'M6 6h12v12H6z',
+    'while a track is fetching, the button offers to stop');
+  check($('playpause').title === 'Stop loading', 'and says so');
+  $('playpause').click();
+  await new Promise((r) => setTimeout(r, 80));
+  check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z', 'pressing it puts the button back');
+  check($('sub').textContent === 'stopped', 'and the dock says the load was stopped');
+  holdTrackFetch = false;
+
+  // **The load is not over when the fetch is.** The owner met the gap: "opening…" on the dock and a
+  // play arrow on the button, which then did something other than what it showed.
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 80));
+  // The engine says "ready" in the real page; the harness never runs one, so the wording is the
+  // one for an engine that has not answered yet. Either way the bytes have left.
+  check($('sub').textContent.includes('opening') || $('sub').textContent.includes('waiting for the engine'),
+    'the bytes reach the worklet');
+  check($('playglyph').getAttribute('d') === 'M6 6h12v12H6z',
+    'and the button still offers to stop while it opens them');
+  window.__api.onWorklet({ type: 'failed', reason: 'nothing claimed it' });
+  await new Promise((r) => setTimeout(r, 30));
+  check(window.document.querySelector('#queue li.track')?.classList.contains('failed'),
+    'a refused track is marked in the list');
+  check(window.document.querySelector('#fields dd')?.textContent.includes('nothing has played'),
+    'and Now Playing stops describing whatever worked last');
+  check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z',
+    'a refusal ends the load rather than leaving the button stuck');
+  check($('error').textContent === 'nothing claimed it', 'and says what the decoder said');
 
   // The keys somebody at a desk will try, and the one place they must not fire.
   let played = 0;

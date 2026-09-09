@@ -27,6 +27,24 @@ let order = [];                   // the permutation `next` walks when shuffle i
 let duration = 0;
 let playing = false;
 let seeking = false;
+/**
+ * The fetch of the track being loaded, so it can be called off.
+ *
+ * **Pressing play on something not cached starts a download**, and on a slow connection that is ten
+ * seconds during which the button said "play" and a second press would have started the same
+ * download again. A press while loading means "not now", and the only honest answer is to abort.
+ */
+let loading = null;
+/**
+ * Which row is doing what: `null`, `'loading'`, `'playing'` or `'failed'`.
+ *
+ * **Separate from `index`**, because they answer different questions. `index` is which track the
+ * page is *on*; this is whether that track has actually started. The owner met them conflated: he
+ * pressed play, the row lit up as though it were playing, and a fetch was still running.
+ */
+let rowState = null;
+/** Set when the bytes go to the worklet, cleared when it answers. See the watchdog in `playAt`. */
+let openWatchdog = null;
 
 /**
  * Everything a queue entry needs, from a URL alone.
@@ -50,8 +68,34 @@ function entryFor(url) {
   return { url, name };
 }
 
-async function start() {
-  if (context) return;
+let starting = null;
+
+/**
+ * Brings the engine up, once.
+ *
+ * **`if (context) return` was a race and the owner found it.** `context` is assigned before the
+ * awaits that follow, so a second call while the first was still loading the wasm returned
+ * immediately with `node` still null — and the next line posted to it. `TypeError: node is null`,
+ * from two `playAt` calls a millisecond apart, which is exactly what a queue arriving from the
+ * phone produces. Holding the promise makes the second caller wait for the first rather than
+ * overtake it.
+ */
+function start() {
+  starting ??= begin();
+  return starting;
+}
+
+async function begin() {
+  // **A worklet needs a secure context**, and that is not a detail on this page: `localhost` counts,
+  // `https://` counts, and a plain `http://192.168.x.x` does not. Without this the failure is
+  // `audioWorklet` being undefined three lines down, which reads as a broken engine rather than as
+  // the wrong address (`docs/PLAN_HANDOFF.md` §4).
+  if (!isSecureContext) {
+    $('error').textContent =
+      'audio needs https or localhost — this address cannot start a decoder';
+    status('open this page on localhost, or through a tunnel with https');
+    throw new Error('insecure context');
+  }
   // Created on a click, because a browser will not let audio start without one. The *first* tune
   // pushed to a fresh tab therefore cannot play by itself, and saying so beats looking broken
   // (`docs/PLAN_HANDOFF.md` §4).
@@ -75,12 +119,29 @@ async function start() {
   node.port.onmessage = (event) => onWorklet(event.data);
 }
 
+/**
+ * Whether the engine has said hello.
+ *
+ * **The one fact the page needed and did not have.** A track posted to a worklet whose engine is
+ * still compiling is queued there and answered later; a track posted to one that never compiled is
+ * queued for ever, and the screen sits on "opening…" with nothing to say. Knowing which of those is
+ * happening is the difference between a bug report and a shrug.
+ */
+let engineReady = false;
+
 function onWorklet(message) {
   switch (message.type) {
     case 'ready':
+      engineReady = true;
+      engineHasZxTune = !message.backends.includes('zxtune:none');
       status(`engine ready — ${message.backends}`);
       break;
     case 'opened': {
+      loading = null;
+      rowState = 'playing';
+      render();
+      $('seek').dataset.opened = '1';
+      clearTimeout(openWatchdog);
       duration = message.duration;
       const fields = describeFields(message.describe);
       if (fields.title) $('title').textContent = fields.title;
@@ -99,7 +160,17 @@ function onWorklet(message) {
       break;
     }
     case 'failed':
-      $('error').textContent = message.reason;
+      loading = null;
+      clearTimeout(openWatchdog);
+      rowState = 'failed';
+      render();
+      // Errors stay above the transport. The status line moved into Now Playing because it is the
+      // machine talking to itself; a decoder refusing a file is the machine talking to the listener.
+      $('error').textContent = explainFailure(message.reason, queue[index]);
+      $('sub').textContent = '—';
+      // **And Now Playing stops describing the last file that worked.** The owner saw a refusal
+      // leave the panel showing another track's fields, which reads as the wrong tune playing.
+      renderNothingPlaying();
       setPlaying(false);
       break;
     case 'position':
@@ -147,7 +218,47 @@ function describeLine(fields) {
  */
 const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher', 'album', 'comment'];
 
+/**
+ * The ZX Spectrum formats, which the browser build does not carry.
+ *
+ * **ZXTune is compiled out of the web engine and that is deliberate**: it does not build under
+ * Emscripten, and patching it means forking a library `ARCHITECTURE` §3 says we do not fork
+ * (`docs/PLAN_WEB.md` §14). The cost is 3,639 Modland files of 516,107 — and a refusal that says
+ * "no decoder claimed the file", which is true and useless when the phone plays it perfectly.
+ */
+const ZX_FORMATS = new Set(['pt3', 'pt2', 'pt1', 'stc', 'st1', 'st3', 'asc', 'as0', 'sqt', 'stp', 'psm', 'ftc', 'gtr']);
+
+function explainFailure(reason, entry) {
+  const extension = (entry?.name ?? '').toLowerCase().split('.').pop();
+  if (ZX_FORMATS.has(extension) && !engineHasZxTune) {
+    return `${entry.name}: the ZX Spectrum decoder is not in the browser build — this one plays on the phone`;
+  }
+  return reason;
+}
+
+/** Read from the engine's own fingerprint rather than assumed, so a future build that has it is believed. */
+let engineHasZxTune = false;
+
+/**
+ * Now Playing, before anything has played.
+ *
+ * The owner said he could not expand it. It expanded — onto an empty list, which looks identical to
+ * a panel that did not open. A screen with nothing to say has to say that.
+ */
+function renderNothingPlaying() {
+  $('np-title').textContent = queue[index]?.name || 'Nothing playing';
+  const list = $('fields');
+  list.replaceChildren();
+  const dt = document.createElement('dt');
+  dt.textContent = '—';
+  const dd = document.createElement('dd');
+  dd.textContent = 'nothing has played yet';
+  list.append(dt, dd);
+  $('subsongs').replaceChildren();
+}
+
 function renderNowPlaying(fields, subsongs, current) {
+  $('np-title').textContent = fields.title || queue[index]?.name || 'Nothing playing';
   const list = $('fields');
   list.replaceChildren();
   const shown = FIELD_ORDER.filter((key) => fields[key]);
@@ -218,7 +329,14 @@ function nameTheTab(entry) {
 }
 
 async function playAt(next) {
-  await start();
+  try {
+    await start();
+  } catch (error) {
+    // `start` has already said what went wrong; this stops the queue walking on regardless.
+    setPlaying(false);
+    $('sub').textContent = '—';
+    return;
+  }
   index = next;
   if (history[history.length - 1] !== next) history.push(next);
   const entry = queue[index];
@@ -230,23 +348,66 @@ async function playAt(next) {
   $('error').textContent = '';
 
   let bytes;
+  loading?.abort();
+  const abort = new AbortController();
+  loading = abort;
+  rowState = 'loading';
+  render();
+  setPlaying(false);
   try {
-    $('sub').textContent = 'fetching…';
-    const response = await fetch(entry.url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    bytes = await response.arrayBuffer();
+    if (entry.data) {
+      // **Handed over rather than fetched.** A file on the phone has no address a browser could
+      // open, so the phone sends the bytes with the queue -- which it can do because it is there at
+      // the moment of transfer, and because a tracker module is kilobytes (`docs/PLAN_WEB.md` §8).
+      $('sub').textContent = 'from the phone…';
+      bytes = entry.data;
+    } else {
+      $('sub').textContent = 'fetching…';
+      const response = await fetch(entry.url, { signal: abort.signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      bytes = await response.arrayBuffer();
+    }
   } catch (e) {
+    // **Only the load that is still current clears the flag.** Two quick track changes overlap:
+    // the older fetch finishes after the newer one has started, and clearing unconditionally would
+    // wipe the newer controller -- leaving a download nobody can call off and a button that lies
+    // about what it will do.
+    if (loading === abort) { loading = null; setPlaying(false); }
+    if (e.name === 'AbortError') { $('sub').textContent = 'stopped'; return; }
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
     // different problems from a file the decoders refuse. Say which.
     $('error').textContent = `could not fetch it: ${e.message}`;
     $('sub').textContent = '—';
     return;
   }
+  // **The load is not over when the fetch is.** The bytes still have to reach the worklet and be
+  // opened, and the owner met exactly the gap that leaves: the dock said "opening…", the button had
+  // gone back to a play arrow, and pressing it did something else entirely. The controller stays
+  // until the worklet answers, so "stop" means the whole operation and the glyph agrees with it.
+  //
   // Handed over, and the page now waits for the worklet to say `opened` or `failed`. It says which
   // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
-  $('sub').textContent = `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`;
-  node.port.postMessage({ type: 'open', bytes, name: entry.name }, [bytes]);
+  $('sub').textContent = engineReady
+    ? `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`
+    : `${(bytes.byteLength / 1024).toFixed(0)} KB — waiting for the engine…`;
+  node.port.postMessage({ type: 'open', bytes, name: entry.file ?? entry.name }, [bytes]);
+  setPlaying(false);
   announceGesture();
+
+  // **A worklet that never answers is the failure with no symptom.** It has happened twice on this
+  // page -- once when a message was dropped before the engine had compiled, once when the engine
+  // did not load at all -- and both times the screen simply sat there. Ten seconds is far past any
+  // honest open; after that the page says so rather than waiting for ever.
+  clearTimeout(openWatchdog);
+  openWatchdog = setTimeout(() => {
+    if (loading !== abort) return;
+    loading = null;
+    setPlaying(false);
+    $('error').textContent = engineReady
+      ? 'the decoder took the file and never answered — check the browser console'
+      : 'the engine never finished loading, so nothing can be opened — check the browser console';
+    $('sub').textContent = '—';
+  }, 10_000);
 }
 
 /**
@@ -272,6 +433,7 @@ async function announceGesture() {
 
 const PLAY_GLYPH = 'M8 5v14l11-7z';
 const PAUSE_GLYPH = 'M6 5h4v14H6zm8 0h4v14h-4z';
+const STOP_GLYPH = 'M6 6h12v12H6z';
 
 /**
  * Keeps the playing row on screen.
@@ -288,8 +450,10 @@ function followPlaying() {
 function setPlaying(on) {
   playing = on;
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
-  $('playglyph').setAttribute('d', on ? PAUSE_GLYPH : PLAY_GLYPH);
-  $('playpause').title = on ? 'Pause' : 'Play';
+  // Three states, not two: a track being fetched is not "paused", and a button that would restart
+  // the same download is the one press nobody wants twice.
+  $('playglyph').setAttribute('d', loading ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
+  $('playpause').title = loading ? 'Stop loading' : on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
@@ -312,7 +476,7 @@ function render() {
   const list = $('queue');
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
-    li.className = i === index ? 'track playing' : 'track';
+    li.className = i === index && rowState ? `track ${rowState}` : 'track';
 
     const n = document.createElement('span');
     n.className = 'n';
@@ -339,6 +503,8 @@ function render() {
 
 /** "Modland/Protracker/4-Mat", the way the phone's subtitle reads. */
 function sourceOf(url) {
+  // A document URI is a grant to one app on one phone; showing it would be showing plumbing.
+  if (url.startsWith('content://')) return 'from the phone';
   try {
     const parsed = new URL(url, location.href);
     if (parsed.hostname.endsWith('modland.com')) {
@@ -390,20 +556,42 @@ function beforeCurrent() {
   return repeat === 'all' && queue.length ? queue.length - 1 : null;
 }
 
-function setQueue(urls) {
+/**
+ * A queue arrives.
+ *
+ * **It does not start playing.** The owner scanned a code and music began, which is startling on a
+ * page nobody has touched: on the phone he pressed something, in the browser he did not. The list
+ * appears, the dock names what is first, and the next press is his.
+ *
+ * @param at which track to select, if the sender knows. Selected, not played.
+ */
+function setQueue(urls, at = 0) {
+  delete $('seek').dataset.opened;
+  // Selected, not playing: the queue points here and nothing has started. A list with no mark at
+  // all leaves the dock naming a track the list does not admit to.
+  rowState = 'selected';
   // Entries already built keep their names; bare strings become entries here. The paste box gives
   // strings, a link gives entries with the phone's own titles.
   queue = urls.map((u) => (typeof u === 'string' ? entryFor(u) : u));
-  index = -1;
-  history = [];
-  if (shuffle) reshuffle(null);
+  index = queue.length ? Math.min(Math.max(at, 0), queue.length - 1) : -1;
+  history = index >= 0 ? [index] : [];
+  if (shuffle) reshuffle(index >= 0 ? index : null);
   render();
   setPlaying(false);
-  if (queue.length) playAt(0);
+  const entry = queue[index];
+  if (entry) {
+    $('title').textContent = entry.name;
+    $('sub').textContent = 'press play';
+    nameTheTab(entry);
+  }
 }
 
-// The panels are the page's two "actions", in the app's vocabulary rather than two stacked
-// sections. Pair is the one that matters, so it is the one that starts open.
+/**
+ * The two interruptions and the one panel.
+ *
+ * Pair and Paste are dialogs over the page; Now Playing is a panel under the queue, because it is
+ * something you read alongside the list rather than instead of it.
+ */
 function showPanel(which) {
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
@@ -411,16 +599,47 @@ function showPanel(which) {
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
+  if (which === 'paste') $('urls').focus();
 }
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 
+// A dialog closes on its own button, on the scrim behind it, and on Escape. All three, because
+// people reach for all three and a dialog that only answers one of them feels stuck.
+for (const overlay of document.querySelectorAll('.overlay')) {
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay || event.target.hasAttribute('data-close')) showPanel(null);
+  });
+}
+addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') showPanel(null);
+});
+
 $('load').onclick = () => {
   const urls = $('urls').value.split('\n').map((s) => s.trim()).filter(Boolean);
   if (urls.length) setQueue(urls);
+  showPanel(null);
 };
 $('playpause').onclick = async () => {
+  // Nothing loaded yet, but a track is selected: this press is the one that starts it. That is the
+  // gesture a browser insists on, and it is why a queue arriving does not play by itself.
+  if (!loading && !$('seek').dataset.opened && index >= 0 && !playing) {
+    playAt(index);
+    return;
+  }
+  // While something is being fetched, this button means "stop waiting".
+  if (loading) {
+    loading.abort();
+    loading = null;
+    clearTimeout(openWatchdog);
+    // It may already have the bytes and be opening them; tell it to drop what it has.
+    node?.port.postMessage({ type: 'close' });
+    setPlaying(false);
+    $('sub').textContent = 'stopped';
+    status('Stopped loading.');
+    return;
+  }
   await start();
   if (context.state === 'suspended') await context.resume();
   setPlaying(!playing);
@@ -430,7 +649,7 @@ $('prev').onclick = () => { const p = beforeCurrent(); if (p != null) playAt(p);
 $('next').onclick = () => { const n = afterCurrent(); if (n != null) playAt(n); };
 
 const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
-const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm6 10H7v-3l-4 4 4 4v-3h10v-6h-2v4zm-2-6h-1l-2 1v1h1.5V15H11v-4z';
+const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z';
 
 $('shuffle').onclick = () => {
   shuffle = !shuffle;
@@ -559,15 +778,22 @@ async function pair() {
 /** A queue from the phone. */
 function receive(message) {
   if (!message.queue?.length) return;
-  setQueue(message.queue.map((row) => ({
-    ...entryFor(row.url),
-    name: row.title || entryFor(row.url).name,
-  })));
-  status(`${message.queue.length} tracks from the phone`);
-  // The phone says which one it was on. Starting anywhere else would be the handoff losing the one
-  // thing a listener actually cares about.
-  if (message.index > 0 && message.index < message.queue.length) playAt(message.index);
-  announceGesture();
+  // The code did its job, so it stops standing in front of the music.
+  if (!$('pair').hidden) showPanel(null);
+  // The phone says which one it was on, and that is where the list opens -- selected rather than
+  // started, so nothing makes a noise until somebody asks.
+  setQueue(
+    message.queue.map((row) => ({
+      ...entryFor(row.url),
+      name: row.title || entryFor(row.url).name,
+      // The decoder is handed this, not the title: four backends choose a loader by extension.
+      file: row.file || undefined,
+      // Base64 in, bytes out, once -- decoding at play time would do it again on every replay.
+      data: row.data ? Uint8Array.from(atob(row.data), (c) => c.charCodeAt(0)).buffer : undefined,
+    })),
+    message.index ?? 0,
+  );
+  status(`${message.queue.length} tracks from the phone — press play`);
 }
 
 /**
@@ -590,6 +816,11 @@ addEventListener('keydown', (event) => {
   event.preventDefault();
   act();
 });
+
+// Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
+// itself the moment a queue arrives.
+renderNothingPlaying();
+showPanel('pair');
 
 status('ready — press Play or load some URLs');
 pair();

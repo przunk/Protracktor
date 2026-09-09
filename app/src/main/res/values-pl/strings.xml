@@ -139,6 +139,7 @@
     <string name="a11y_keep_track">Dodaj ten utwór do playlisty</string>
     <string name="a11y_preview">Odtwórz %1$s</string>
     <string name="a11y_play">Odtwórz</string>
+    <string name="a11y_stop_loading">Przerwij wczytywanie</string>
     <string name="a11y_pause">Pauza</string>
     <string name="a11y_previous">Poprzedni utwór</string>
     <string name="a11y_next_file">Następny plik, z pominięciem pozostałych utworów w tym</string>

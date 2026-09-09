@@ -198,7 +198,9 @@ http.createServer((request, response) => {
       let body = '';
       request.on('data', (chunk) => {
         body += chunk;
-        if (body.length > 1_000_000) request.destroy();
+        // Local files travel inline: a queue of tracker modules is kilobytes, but the phone's
+        // budget is eight megabytes and base64 adds a third, so the cap is well above it.
+        if (body.length > 16_000_000) request.destroy();
       });
       request.on('end', () => {
         here.seq += 1;
