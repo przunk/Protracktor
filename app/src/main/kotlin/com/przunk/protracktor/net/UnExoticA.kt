@@ -124,11 +124,13 @@ object UnExoticA : Catalogue(
                 path = path,
                 // "Game" or "Demo" -- the archive's own top-level split, and the only two values.
                 format = path.substringBefore('/'),
-                // **The game, not the composer.** Browsing is catalogue → format → author → tracks,
-                // and what the owner went looking for was a game's soundtrack; putting the composer
-                // in that slot would bury the thing the archive is organised around. The composer
-                // is still in the path, and most of these modules carry their author internally.
-                author = gameOf(path),
+                // **The game first, then the composer.** Browsing is catalogue → format → author
+                // → tracks, and search matches this column and the title — so this one string has
+                // to answer both "which game" and "who wrote it". The game leads because the
+                // archive is organised around games and that is what the owner went looking for;
+                // the composer follows because without it he searched for "Phelan", who is right
+                // there in the path, and found nothing (2026-09-09).
+                author = groupOf(path),
                 title = title,
                 size = columns[7].toLongOrNull() ?: 0L,
             )
@@ -136,9 +138,31 @@ object UnExoticA : Catalogue(
         return entries
     }
 
-    /** `Game/Whittaker_David/Total_Recall.lha/...` → `Total Recall`. */
-    private fun gameOf(path: String): String =
-        path.substringBefore(".lha/").substringAfterLast('/').replace('_', ' ')
+    /** `Game/Whittaker_David/Total_Recall.lha/...` → `Total Recall · David Whittaker`. */
+    private fun groupOf(path: String): String {
+        val game = path.substringBefore(".lha/").substringAfterLast('/').replace('_', ' ')
+        val composer = composerOf(path.substringAfter('/').substringBefore('/'))
+        // "Unknown" is 340 tunes and says nothing. A row reading "Titus the Fox · Unknown" is
+        // longer than one reading "Titus the Fox" and carries exactly as much.
+        return if (composer.isEmpty() || composer == "Unknown") game else "$game · $composer"
+    }
+
+    /**
+     * `Whittaker_David` → `David Whittaker`, and `Pipe_Smokers_Cough` → `Pipe Smokers Cough`.
+     *
+     * **Reversed only for two words**, because that is where the archive's convention is certain:
+     * measured 2026-09-09, 524 of 571 composer folders are exactly `Surname_Firstname`, 30 are
+     * one-word handles, and the remaining 17 are Dutch surnames (`van_der_Valk_Paul`) or group
+     * names (`Pipe_Smokers_Cough`) where any reordering rule guesses. Those keep their own order,
+     * which reads slightly oddly and is never *wrong*.
+     *
+     * The search does not care either way — "Phelan" matches "Phelan Patrick" as happily as
+     * "Patrick Phelan". This is for reading.
+     */
+    private fun composerOf(folder: String): String {
+        val words = folder.split('_').filter { it.isNotEmpty() }
+        return if (words.size == 2) "${words[1]} ${words[0]}" else words.joinToString(" ")
+    }
 }
 
 /**
