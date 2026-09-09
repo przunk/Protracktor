@@ -673,6 +673,42 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
+## A29. Play MP3 too
+
+*Owner, 2026-09-01 as `docs/WISHLIST.md` B4, and moved here by him on 2026-09-09: **"ma być w todo
+(to nie życzenie)"**. Agreed work, not an idea.*
+
+**The decoder is the small part.** `minimp3` is a single public-domain header, so this is a
+backend of about fifty lines rather than a vendored library — the smallest one here would still be
+HivelyTracker's three files, and this is smaller. Android's own `MediaCodec` is *not* the easy
+answer: the engine is native from the file to the speaker, and routing one format through the
+platform would mean two playback paths to keep in step, two places for a seek to behave
+differently, and nothing at all for the browser.
+
+**It goes to the browser for free**, which was not true when this was written. The wasm build links
+the same `engine.cpp`, so a backend added there arrives in both.
+
+### The two decisions it actually needs
+
+**1. Does `.mp3` go in `SupportedFormats.extensions`?** That list is what a folder scan *and* a
+catalogue index are filtered through, and it feeds `fingerprint` — so adding a name marks every
+stored index stale and re-downloads Modland's 40 MB. No archive here holds an MP3, so that
+re-index would buy nothing. The honest shape is probably **two sets**: what a local folder scan
+picks up, and what a catalogue index keeps. They have been the same list until now because there
+was never a format that belonged to one and not the other.
+
+**2. Does it appear in Browse at all?** B4's own reservation still stands and is worth keeping in
+front: *this app is a retro chiptune player, and MP3 is the format its whole point is not.* Handy
+for a rip of something, out of place in a browse tree. "Open this file" and a folder the user
+pointed at, yes; a first-class citizen of the library, ask first.
+
+### What is not a decision
+
+Duration and seeking. A tracker module states its length and MP3 does not, so a VBR file needs
+either a full scan or the Xing header — `minimp3` gives neither for free. Whatever is chosen must
+answer `canSeek()` honestly, because `docs/ARCHITECTURE.md` §5 is that a UI offering a control the
+backend cannot honour is a UI that lies.
+
 ## A28. The web player carries the local files it cannot play
 
 *Owner, 2026-09-09, after an external listener opened a shared link: **"nasze listy nie są zgodne"**.*
