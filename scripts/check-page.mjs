@@ -158,12 +158,13 @@ if (window.__api) {
   check($('next').disabled === false && $('prev').disabled === true,
     'at the first of two tracks, next works and previous does not');
 
+  const plainRepeatGlyph = $('repeat').querySelector('path').getAttribute('d');
   $('repeat').click();                       // off -> all
   check($('prev').disabled === false, 'repeat-all gives the first track a previous');
   check($('repeat').classList.contains('on'), 'and the button shows it');
   $('repeat').click();                       // all -> one
   check($('repeat').title === 'Repeat one', 'a second press means repeat one');
-  check($('repeat').querySelector('path').getAttribute('d').length > 90,
+  check($('repeat').querySelector('path').getAttribute('d') !== plainRepeatGlyph,
     'and the glyph changes, so the mode survives being read without colour');
   $('repeat').click();                       // one -> off
   check($('prev').disabled === true, 'off puts previous back where it was');

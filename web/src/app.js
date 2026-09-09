@@ -129,6 +129,7 @@ function onWorklet(message) {
       break;
     case 'opened': {
       loading = null;
+      $('seek').dataset.opened = '1';
       clearTimeout(openWatchdog);
       duration = message.duration;
       const fields = describeFields(message.describe);
@@ -206,6 +207,7 @@ const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher'
  * a panel that did not open. A screen with nothing to say has to say that.
  */
 function renderNothingPlaying() {
+  $('np-title').textContent = queue[index]?.name || 'Nothing playing';
   const list = $('fields');
   list.replaceChildren();
   const dt = document.createElement('dt');
@@ -217,6 +219,7 @@ function renderNothingPlaying() {
 }
 
 function renderNowPlaying(fields, subsongs, current) {
+  $('np-title').textContent = fields.title || queue[index]?.name || 'Nothing playing';
   const list = $('fields');
   list.replaceChildren();
   const shown = FIELD_ORDER.filter((key) => fields[key]);
@@ -502,16 +505,31 @@ function beforeCurrent() {
   return repeat === 'all' && queue.length ? queue.length - 1 : null;
 }
 
-function setQueue(urls) {
+/**
+ * A queue arrives.
+ *
+ * **It does not start playing.** The owner scanned a code and music began, which is startling on a
+ * page nobody has touched: on the phone he pressed something, in the browser he did not. The list
+ * appears, the dock names what is first, and the next press is his.
+ *
+ * @param at which track to select, if the sender knows. Selected, not played.
+ */
+function setQueue(urls, at = 0) {
+  delete $('seek').dataset.opened;
   // Entries already built keep their names; bare strings become entries here. The paste box gives
   // strings, a link gives entries with the phone's own titles.
   queue = urls.map((u) => (typeof u === 'string' ? entryFor(u) : u));
-  index = -1;
-  history = [];
-  if (shuffle) reshuffle(null);
+  index = queue.length ? Math.min(Math.max(at, 0), queue.length - 1) : -1;
+  history = index >= 0 ? [index] : [];
+  if (shuffle) reshuffle(index >= 0 ? index : null);
   render();
   setPlaying(false);
-  if (queue.length) playAt(0);
+  const entry = queue[index];
+  if (entry) {
+    $('title').textContent = entry.name;
+    $('sub').textContent = 'press play';
+    nameTheTab(entry);
+  }
 }
 
 /**
@@ -550,6 +568,12 @@ $('load').onclick = () => {
   showPanel(null);
 };
 $('playpause').onclick = async () => {
+  // Nothing loaded yet, but a track is selected: this press is the one that starts it. That is the
+  // gesture a browser insists on, and it is why a queue arriving does not play by itself.
+  if (!loading && !$('seek').dataset.opened && index >= 0 && !playing) {
+    playAt(index);
+    return;
+  }
   // While something is being fetched, this button means "stop waiting".
   if (loading) {
     loading.abort();
@@ -571,7 +595,7 @@ $('prev').onclick = () => { const p = beforeCurrent(); if (p != null) playAt(p);
 $('next').onclick = () => { const n = afterCurrent(); if (n != null) playAt(n); };
 
 const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
-const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm6 10H7v-3l-4 4 4 4v-3h10v-6h-2v4zm-2-6h-1l-2 1v1h1.5V15H11v-4z';
+const REPEAT_ONE_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z';
 
 $('shuffle').onclick = () => {
   shuffle = !shuffle;
@@ -702,15 +726,13 @@ function receive(message) {
   if (!message.queue?.length) return;
   // The code did its job, so it stops standing in front of the music.
   if (!$('pair').hidden) showPanel(null);
-  setQueue(message.queue.map((row) => ({
-    ...entryFor(row.url),
-    name: row.title || entryFor(row.url).name,
-  })));
-  status(`${message.queue.length} tracks from the phone`);
-  // The phone says which one it was on. Starting anywhere else would be the handoff losing the one
-  // thing a listener actually cares about.
-  if (message.index > 0 && message.index < message.queue.length) playAt(message.index);
-  announceGesture();
+  // The phone says which one it was on, and that is where the list opens -- selected rather than
+  // started, so nothing makes a noise until somebody asks.
+  setQueue(
+    message.queue.map((row) => ({ ...entryFor(row.url), name: row.title || entryFor(row.url).name })),
+    message.index ?? 0,
+  );
+  status(`${message.queue.length} tracks from the phone — press play`);
 }
 
 /**

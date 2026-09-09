@@ -274,7 +274,21 @@
   }
   .error { color: var(--error); }
 
-  /* Now Playing: a label above its value, the way the phone's information panel reads. */
+  /* Now Playing, sitting on top of the dock the way it does on the phone. */
+  #nowplaying {
+    margin: 0 12px 8px;
+    background: var(--surface-container);
+    border-radius: var(--shape-l);
+    padding: 18px 20px 16px;
+    max-height: 46vh;
+    overflow-y: auto;
+  }
+  #nowplaying[hidden] { display: none; }
+  .np-head { margin-bottom: 12px; }
+  .np-title {
+    font-size: var(--headline-small); line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
@@ -312,20 +326,23 @@
 
 
 
-    <!--
-      Now Playing, which on the phone expands upward from the dock over the playlist
-      (`ui/NowPlaying.kt`). Here it is a panel under the queue with the same fields in the same
-      order, because the point is the information rather than the animation.
-    -->
-    <section class="panel" id="nowplaying" hidden>
-      <dl id="fields"></dl>
-      <div id="subsongs" class="subsongs"></div>
-    </section>
-
 
   </main>
 
   <footer>
+    <!--
+      Now Playing, and **it belongs to the dock**. On the phone it expands upward from the dock over
+      the playlist (`ui/NowPlaying.kt`); under the list it was somewhere you had to scroll to find,
+      which is the opposite of "what is playing right now".
+    -->
+    <section id="nowplaying" hidden>
+      <div class="np-head">
+        <div class="np-title" id="np-title">Nothing playing</div>
+      </div>
+      <dl id="fields"></dl>
+      <div id="subsongs" class="subsongs"></div>
+    </section>
+
     <div class="statusline" id="status">starting…</div>
     <div class="statusline error" id="error"></div>
 
@@ -345,13 +362,13 @@
 
     <div class="transport">
       <button class="tbutton" id="shuffle" title="Shuffle" disabled>
-        <svg viewBox="0 0 24 24"><path d="M10.6 8.6 7 5H3v2h3.2l3 3 1.4-1.4zM14 5v2h2.6l-9 9H3v2h5.4l9.6-9.6V13h2V5h-6zm2.6 12H14v2h6v-6h-2v2.6l-3-3-1.4 1.4 3 3z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       </button>
       <button class="tbutton" id="prev" title="Previous" disabled>
         <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
       </button>
       <button class="tbutton play" id="playpause" title="Play" disabled>
-        <svg viewBox="0 0 24 24" id="playglyph"><path d="M8 5v14l11-7z"/></svg>
+        <svg viewBox="0 0 24 24"><path id="playglyph" d="M8 5v14l11-7z"/></svg>
       </button>
       <button class="tbutton" id="next" title="Next" disabled>
         <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zm-2.5 6L5 6v12z"/></svg>
