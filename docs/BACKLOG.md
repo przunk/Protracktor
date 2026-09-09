@@ -673,6 +673,18 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
+## A30. The button to the browser should say "WEB"
+
+*Owner, 2026-09-09: **"zmieniłbym 'to browser'/'do przeglądarki' na 'WEB' (pl/eng tak samo)"**.*
+
+The top-bar action reads *To browser* in English and *Do przeglądarki* in Polish. Both become
+**WEB**, and deliberately the same word in both languages — it is the name of the other half of this
+project, not a sentence about where something is going.
+
+Two strings and nothing else (`app/src/main/res/values/strings.xml` and `values-pl/`), but worth
+looking at what else in that corner still says "browser" while it is open: the label under the icon
+is only one of the places the handoff describes itself.
+
 ## A29. Play MP3 too
 
 *Owner, 2026-09-01 as `docs/WISHLIST.md` B4, and moved here by him on 2026-09-09: **"ma być w todo
