@@ -706,7 +706,7 @@ The same greyed row describes both.
 **A decision for the owner, not for us:** the link would then carry filenames off his phone. He is
 already sending a whole playlist, so it is a small difference, and it is a difference.
 
-## A27. The web player's Now Playing has no actions
+## A27. The web player has no actions — not in Now Playing, and not on a row
 
 *Owner, 2026-09-09, with a screenshot of the phone's panel (`user/Screenshot_20260909-215818.png`).*
 
@@ -727,6 +727,19 @@ nothing between them.
 
 The layout is the part to copy exactly: labelled squares in a row under the file line, above the
 divider, sized as the phone sizes them.
+
+**And every row wants a menu of its own** (owner, the same evening): *send file*, *send link*,
+*information*. The phone has that already — the three dots on each track row — so this is the same
+mirror, one level down.
+
+The three do not cost the same. *Send link* is a string the page can build for any row it holds.
+*Information* is the Now Playing panel pointed at a row that is not playing, which means the fields
+have to come from somewhere other than "the track in the worklet" — the engine can describe a file
+without playing it, but nothing in `web/src/app.js` asks it to today. *Send file* needs the bytes,
+so it is free for a row already fetched and a download for one that is not.
+
+**A row that cannot be played cannot be sent either** (see A28): the greyed local-file rows must
+either hide this menu or grey the two entries that need bytes.
 
 ## A26. Two rough edges on the JNI boundary
 
