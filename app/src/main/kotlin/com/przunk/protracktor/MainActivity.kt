@@ -62,7 +62,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        pendingOpen = openableUri(intent)
+        // **Only on a fresh launch, and that is `docs/STATUS.md` C25.** A theme, palette or language
+        // change calls `recreate()`, which builds the activity again with the **same intent** -- so
+        // an app opened by tapping a `.mod` in a file manager read that URI a second time, handed it
+        // to `playExternal`, and the music started over. The owner saw it as "changing the theme
+        // restarts playback" and the player was innocent: `PlaybackController` is an
+        // application-scoped singleton and never went anywhere.
+        //
+        // A non-null `savedInstanceState` is exactly "this activity has been here before" -- a
+        // configuration change or a restore after the process was killed. Neither is somebody asking
+        // to open a file, and in the second the controller restores what was playing by itself.
+        if (savedInstanceState == null) pendingOpen = openableUri(intent)
         enableEdgeToEdge()
         setContent {
             // Read here rather than remembered in Compose: a theme change recreates the activity,

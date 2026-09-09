@@ -300,6 +300,20 @@ if (window.__api) {
   $('mute').click();
   check($('volume').value === '100', 'and the speaker winds it back up rather than doing nothing');
 
+  // --- a line about one track must not stay under the next (C28) ----------------------------------
+  console.log('\nstatus line:');
+  $('shuffle').click();                                 // any control writes the line
+  check($('status').textContent.startsWith('Shuffle'), 'a control writes the machine\'s line');
+  window.__api.onWorklet({
+    type: 'opened', describe: 'title\tNext One', duration: 30, subsongs: 1, current: 0,
+    canSeek: true, preferredRate: 44100, rate: 44100,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  check(!$('status').textContent.startsWith('Shuffle'),
+    'and opening a track replaces it rather than leaving it standing');
+  check($('status').textContent.includes('44100'), 'with what the engine said about this file');
+  $('shuffle').click();
+
   // --- what a row and the panel can do with a track (A27) -----------------------------------------
   console.log('\nactions:');
   window.__api.receive({

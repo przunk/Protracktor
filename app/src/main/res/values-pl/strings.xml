@@ -282,7 +282,7 @@
     <string name="a11y_choose_random_scope">Wybierz, z czego losować</string>
     <string name="random_scope_title">Losuj z</string>
     <string name="random_scope_everything">Wszystkiego</string>
-    <string name="action_send_to_browser">Do przeglądarki</string>
+    <string name="action_send_to_browser">WEB</string>
     <string name="action_send_as_link">Wyślij zamiast tego linkiem</string>
     <string name="action_pair_again">Zeskanuj inną przeglądarkę</string>
     <string name="scan_hint">Skieruj na kod na stronie odtwarzacza.</string>

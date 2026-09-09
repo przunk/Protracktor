@@ -10,6 +10,34 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B29. The documents need a list a person can read at a glance
+
+*Owner, 2026-09-10: **"muszę mieć czytelne dla człowieka checkboxy na początku pliku wishlist/status
+żeby wiedzieć co jest do zrobienia i co jest zrobione"**. A change to `AGENTS.md` as much as to the
+files, because the rule has to hold for whoever writes the next entry.*
+
+`docs/STATUS.md` is now past a thousand lines and `docs/WISHLIST.md` and `docs/BACKLOG.md` are not
+far behind. Everything in them is findable and nothing in them is **scannable**: to learn what is
+open you read every heading, and the strikethrough that marks a finished entry only shows once you
+are level with it.
+
+**What he asked for is a checklist at the top of each file** — one line per item, `- [ ]` or `- [x]`,
+number and title, so the state of the project is the first screen rather than a walk through it.
+
+Two things to decide, and neither is hard:
+
+- **It has to be maintained by whoever adds an entry**, or it becomes the stalest thing in the repo
+  — which is worse than not having it. That is an `AGENTS.md` rule, and `AGENTS.md` already carries
+  rules of exactly this kind about how these files are written.
+- **Generated or written?** A script that rebuilds the list from the headings cannot fall out of step
+  and needs somewhere to run; a hand-written list is one more line per entry and no machinery. The
+  headings already carry everything needed — the number, the title, and `~~struck through~~` for
+  done — so generating is a dozen lines of Python and the honest answer is probably to generate it
+  and check the result in.
+
+**Not just a table of contents.** The point is the state, not the navigation: what is open, what is
+done, and how many of each.
+
 ## B28. The Mod Archive gives us no artist
 
 *Found 2026-09-08 while working out why "more from this author" did nothing for one of its tracks

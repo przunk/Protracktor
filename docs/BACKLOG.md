@@ -673,17 +673,16 @@ nothing here to fix and this stays as a note rather than as work.
 **Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
 is genuinely for. Not before.
 
-## A30. The button to the browser should say "WEB"
+## A30. ~~The button to the browser should say "WEB"~~ — DONE 2026-09-10
 
 *Owner, 2026-09-09: **"zmieniłbym 'to browser'/'do przeglądarki' na 'WEB' (pl/eng tak samo)"**.*
 
-The top-bar action reads *To browser* in English and *Do przeglądarki* in Polish. Both become
-**WEB**, and deliberately the same word in both languages — it is the name of the other half of this
-project, not a sentence about where something is going.
+Done, and the same word in both languages: it is the name of the other half of this project, not a
+sentence about where something is going.
 
-Two strings and nothing else (`app/src/main/res/values/strings.xml` and `values-pl/`), but worth
-looking at what else in that corner still says "browser" while it is open: the label under the icon
-is only one of the places the handoff describes itself.
+**The prose around it still says "browser", and that is deliberate.** *Scan a different browser*,
+*Forget the paired browser*, and the sentence under the web player address all describe the machine
+at the other end, which is a browser and is the right word for it. Only the button is a name.
 
 ## A29. Play MP3 too
 

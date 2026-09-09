@@ -213,6 +213,12 @@ function onWorklet(message) {
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
         status(`⚠ this decoder wants ${message.preferredRate} Hz and the page is running at ` +
                `${message.rate} Hz — it will play ${(message.rate / message.preferredRate).toFixed(3)}× fast`);
+      } else {
+        // **Overwritten, not left standing.** This line is the machine talking about the track in
+        // front of it, and nothing used to replace it when the track changed — so "Tune 2 of 2"
+        // from a `.sndh` two files ago sat under a tune that has one (`docs/STATUS.md` C28). A
+        // sentence about the wrong file is worse than no sentence.
+        status(`${message.rate} Hz` + (subsongCount > 1 ? ` · ${subsongCount} tunes in this file` : ''));
       }
       $('sub').textContent = describeLine(fields);
       $('seek').disabled = !message.canSeek;

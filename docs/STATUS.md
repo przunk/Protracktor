@@ -415,6 +415,22 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C28. ~~A line about one track stayed under the next~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10: **"podpis 'Tune 2 of 2' zostaje podczas odtwarzania kolejnych tracków"**.*
+
+The status line at the foot of Now Playing is the machine talking about the track in front of it —
+what the engine answered, what a control just did. **Nothing replaced it when the track changed.**
+So "Tune 2 of 2", written while walking a `.sndh`, sat there under a file that holds one tune, two
+tracks later.
+
+It is written on `opened` now, with what the engine said about *this* file: the rate, and how many
+tunes are inside when that is more than one. The rate warning still wins where it fires, because a
+decoder playing sharp is the more important thing to say.
+
+A sentence about the wrong file is worse than no sentence — the same rule that made a refusal stop
+Now Playing describing whatever worked last (C16).
+
 ### C27. ~~game-music-emu's fade is set and then thrown away~~ — FIXED 2026-09-09
 
 *Found 2026-09-09 while measuring C26 — by comparing our engine against the library directly, which
@@ -597,32 +613,27 @@ What is left, in the order worth trying:
 - **A stopwatch.** An 8% error is ten seconds in two minutes — audible against any independent
   recording of the same rip, and not a matter of opinion once timed.
 
-### C25. Changing the theme restarts playback
+### C25. ~~Changing the theme restarts playback~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-09.*
 
-Picking a theme — or the system palette switch, or a language — calls `recreate()` on
-`MainActivity`, deliberately, so the window is rebuilt with the new one. The music restarts from
-the beginning instead of carrying on.
+**The player was innocent, and the entry said so before the cause was found.** `PlaybackController`
+is an application-scoped singleton; an activity being destroyed and rebuilt does not take it, the
+backend or the Oboe stream with it. The note above this one warned that somebody would try to fix
+that first, and it was right to.
 
-**The obvious explanation is already ruled out**, and saying so is the point of writing this down
-rather than a one-line note: `PlaybackController` is an application-scoped singleton
-(`PlaybackController.get(applicationContext)`), and `PlayerViewModel` only asks for it. An activity
-being destroyed and rebuilt does not take the controller, the backend or the Oboe stream with it.
-So this is **not** "the player is owned by the Activity", which is what it looks like and what
-someone will try to fix first. C17 is the standing reminder of what that costs.
+**It was the intent.** `recreate()` — which a theme, palette or language change calls deliberately,
+so the window is rebuilt with the new one — hands the activity back **the same intent**. `onCreate`
+read `openableUri(intent)` every time, so an app opened by tapping a file in a file manager found
+that URI again, handed it to `playExternal`, and started the music over.
 
-What has not been looked at, in the order worth looking:
+Which also explains the shape of the report: it happens after opening a file from another app and
+not after launching from the icon, and nobody would think to mention the difference.
 
-- **The restore path.** The app brings back the track last played. If that runs on every Activity
-  creation rather than only on a cold start, it re-opens the current track — which is exactly this
-  symptom, and would also explain why it starts from zero rather than glitching.
-- **Audio focus.** A rebuilt window requesting focus again, and the duck-or-stop handling reading
-  its own request as somebody else's.
-- **The foreground service** being stopped and restarted with the activity.
-
-Worth a `Log` at the top of whatever re-opens a track before changing anything: the first question
-is whether `openBackend` runs at all during a recreate, and that is one line to find out.
+The fix is the idiomatic one: read the intent only when `savedInstanceState` is null. That is exactly
+"this activity has not been here before" — a configuration change and a restore after process death
+both hand back a bundle, and neither is somebody asking to open a file. In the second the controller
+restores what was playing by itself.
 
 ### C24. ~~Play does nothing on a track that has reached its end~~ — FIXED 2026-09-10
 
