@@ -38,3 +38,11 @@ target_include_directories(lhasa PRIVATE "${LHASA}/lib")
 # Upstream's own warnings, not ours. This is vendored C from 2011 and we do not patch it; a wall of
 # warnings on every build is a wall nobody reads, which is worse than none.
 target_compile_options(lhasa PRIVATE -w)
+
+# The archive reader, wrapped for the app. Ours, not lhasa's -- see `lha_extract.h` for why it lives
+# beside the library rather than in `native/engine`. C++ in an otherwise-C target, which is why it
+# is added separately rather than swept up by the glob above.
+target_sources(lhasa PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/lha_extract.cpp")
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/lha_extract.cpp" PROPERTIES
+    COMPILE_OPTIONS "-Wall;-Wextra")
+target_include_directories(lhasa PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

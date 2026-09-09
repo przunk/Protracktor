@@ -88,7 +88,13 @@ sealed class Catalogue(
          * test for `owning` did, immediately. Deferring to first access is the fix, because by then
          * every object in the list has finished initialising.
          */
-        val all: List<Catalogue> by lazy { listOf(Modland, Asma, ModArchive) }
+        val all: List<Catalogue> by lazy {
+            // UnExoticA is conditional and nothing else is: ExoticA have not answered the question
+            // in `docs/PLAN_UNEXOTICA.md`, so the owner can take it out again by flipping one
+            // constant. Absent from this list means absent everywhere -- `byId`, `owning`, the
+            // browse screen and the stored index all read it from here.
+            listOf(Modland, Asma, ModArchive) + if (UnExoticA.ENABLED) listOf(UnExoticA) else emptyList()
+        }
 
         fun byId(id: String): Catalogue? = all.firstOrNull { it.id == id }
 

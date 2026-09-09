@@ -1,13 +1,15 @@
 # Status
 
-Updated: 2026-09-04 — version 0.3.0, versionCode from the commit count, schema version 10
+Updated: 2026-09-09 — version 0.3.0, versionCode from the commit count, schema version 10
 
 ## What works
 
 A usable player, as far as anything can be called that without a device saying so.
 
 - **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more), Atari ST
-  through sc68 3.0.0b (SNDH, YM, `.sc68`), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
+  through sc68 3.0.0b (SNDH, `.sc68`), the AY register dumps `.ym` and `.vtx` through ZXTune and
+  lhasa (`docs/PLAN_FORMATS.md` §8 — they are LHA-packed, which is why they did not play until
+  2026-09-09), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
   through libsidplayfp (PSID, RSID), seven console families through game-music-emu (NSF, GBS,
   SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
   and KSS routinely hold nothing at track 0), and the Amiga synth trackers through HivelyTracker
@@ -19,8 +21,12 @@ A usable player, as far as anything can be called that without a device saying s
   `.sc68` waits for the download.
 - **Online archives**: Modland, browsed offline from a downloaded index and fetched per track; ASMA,
   which arrives as one 20 MB archive and then needs no network at all; The Mod Archive, searched
-  live. HVSC's song lengths give SID tunes the duration the format cannot carry. Fetched music is
-  capped at 512 MB, least recently used first (`docs/ARCHITECTURE.md` §19).
+  live; and **UnExoticA**, Amiga game soundtracks — 4,338 playable tunes across 924 games, indexed
+  from `songdb` and fetched a game's `.lha` at a time. That one is behind a switch and can be taken
+  out again, because its archive's maintainers were asked a question on 2026-09-08 and have not
+  answered it yet (`docs/PLAN_UNEXOTICA.md`). HVSC's song lengths give SID tunes the duration the
+  format cannot carry. Fetched music is capped at 512 MB, least recently used first
+  (`docs/ARCHITECTURE.md` §19).
 - **Library**: folders granted through the storage access framework, remembered between sessions.
   A folder is **scanned by opening every file with a real decoder**, not by reading its name, and
   the result is stored so later launches read an index instead of walking the tree
