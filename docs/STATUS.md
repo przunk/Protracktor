@@ -470,7 +470,49 @@ game-music-emu, or the file is not the tune the videos are playing.
   PAL SNES capture runs 5/6 the speed of an NTSC one, which is the same size of error in the same
   direction.
 
-**Blocked on the file.** None of this can be measured without the `.spc` he is actually playing.
+### Measured on the host, 2026-09-09, with his own file
+
+He supplied `top gear 2 - title.spc`. Its ID666 tag: **length 120,000 ms, fade 7,000 ms**, dumped by
+Grass-eatin'me, artist *Patrick Phelan, Ashley Bennett*.
+
+Rendered through the vendored game-music-emu on this machine, once at its native rate and once at
+the rate the app asks for:
+
+| opened at | tag | rendered until `gme_track_ended` |
+|---|---|---|
+| 32,000 (no resampling) | 120,000 ms | 4,099,200 frames = **128.1 s** |
+| 44,100 (through `Fir_Resampler`) | 120,000 ms | 5,644,800 frames = **128.0 s** |
+
+Repeated with `-funsigned-char`, which is ARM's default and the difference most likely to make a
+decoder behave differently on a phone: **identical to the digit**.
+
+**So the decoder is not the problem.** 128 s against the videos' 2:02 is the right answer plus the
+fade; the two rates agree with each other; the emulation does not care about char signedness. What
+is left is the difference between this machine and the phone, and the only thing in that gap is
+Oboe.
+
+**And the arithmetic now fits the classic fault exactly.** 120 s played 8.8% fast is **110.3 s**, and
+he measured **1:49**. The landmark pair (0:51.5 against 0:58.0) is cruder and gave 12.6%, but he
+called it *"mniej więcej"* and 8.8% would put it at 53.3 s. **8.8% is 48,000/44,100** — the one ratio
+this path can produce, and the same defect the web build had.
+
+`Player::start()` says nothing, so `getSampleRate()` returns the 44,100 that was asked for. That
+does not settle it: on the Legacy AAudio path the stream reports the requested rate while
+`AudioTrack` below it is supposed to do the conversion. If it is not doing it, every number here
+lines up.
+
+**Two tests split it, neither run yet:**
+
+- **A tracker module against the same tune elsewhere.** libopenmpt returns 0 from
+  `preferredSampleRate()`, so its stream opens at the device's own rate and nothing is converted. If
+  MODs are right and everything with a fixed rate — SPC, SID, YM, SNDH — is 8.8% fast, the fixed-rate
+  path is the fault and there is nothing left to argue about.
+- **The same file in the web player.** Same `engine.cpp`, same gme, a 44,100 context and no Oboe.
+
+**If it is Oboe, there is a better fix than trusting it.** `gme_open_data` takes the rate, so
+`GmeBackend` could be opened at whatever the stream turns out to be and return 0 from
+`preferredSampleRate()` — no conversion by anybody. That is not available to sc68 or ZXTune, which
+synthesise at a rate they do not choose, but it removes the whole question for the console formats.
 
 What is left, in the order worth trying:
 
