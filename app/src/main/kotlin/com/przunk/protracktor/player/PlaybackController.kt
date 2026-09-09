@@ -1400,14 +1400,48 @@ class PlaybackController private constructor(private val context: Context) {
      * @param remember whether a success should store this address. A scan asks for that; a send to
      * an address already stored does not need to re-store it.
      */
+    /**
+     * The bytes of the tracks a browser cannot fetch for itself.
+     *
+     * **This is the half `docs/PLAN_WEB.md` §8 said could not travel, travelling.** A local file's
+     * identity is a grant to one app on one phone, so no URL can carry it — but the phone is
+     * *present* at the moment of transfer and can simply hand over the file. That is the difference
+     * between a live pairing and an account sync, and it is why the accountless design turned out to
+     * be the more capable one.
+     *
+     * Budgeted, and what does not fit is reported rather than dropped.
+     */
+    private suspend fun localBytesFor(tracks: List<TrackRef>): Pair<Map<String, ByteArray>, Int> {
+        val packed = mutableMapOf<String, ByteArray>()
+        var left = 0
+        var used = 0
+        for (track in tracks) {
+            if (Catalogue.owning(track.id) != null) continue
+            if (used >= WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
+            val bytes = loadBytes(track)
+            if (bytes == null || used + bytes.size > WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
+            packed[track.id] = bytes
+            used += bytes.size
+        }
+        return packed to left
+    }
+
     private fun postQueue(endpoint: String, tracks: List<TrackRef>, remember: Boolean) {
         scope.launch {
             val index = _state.value.queue.currentIndex ?: 0
-            when (val outcome = WebRemote.send(endpoint, tracks, index)) {
+            val (localFiles, leftBehind) = localBytesFor(tracks)
+            when (val outcome = WebRemote.send(endpoint, tracks, index, localFiles)) {
                 is WebRemote.Outcome.Delivered -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
                     _browse.update { it.copy(pairedBrowser = true) }
-                    _state.update { it.copy(message = Message("Sent ${tracks.size} tracks to the browser.")) }
+                    _state.update {
+                        it.copy(
+                            message = Message(
+                                if (leftBehind == 0) "Sent ${tracks.size} tracks to the browser."
+                                else "Sent ${tracks.size - leftBehind} tracks; $leftBehind local files were too big to send."
+                            )
+                        )
+                    }
                 }
                 // The address answered, so the pairing is sound and the page is simply closed. Kept
                 // for the same reason: "open the page" and "scan again" are different instructions,

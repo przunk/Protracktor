@@ -194,6 +194,25 @@ if (window.__api) {
   check(window.document.title.startsWith('hi there'),
     'the tab says what is playing, for a page among twenty');
 
+  // **A local file, handed over rather than fetched.** Its identity is a grant to one app on one
+  // phone, so no URL can carry it -- the bytes come with the queue instead.
+  const before = posted.length;
+  window.__api.receive({
+    queue: [{
+      url: 'content://com.android.externalstorage.documents/document/primary%3AMusic%2Ftune.mod',
+      title: 'a local tune',
+      data: 'AAAA',
+    }],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 40));
+  check(window.document.querySelector('#queue .meta')?.textContent === 'from the phone',
+    'a file from the phone says so rather than showing a document URI');
+  window.__api.playAt(0);
+  await new Promise((r) => setTimeout(r, 60));
+  check(posted.length === before, 'and nothing is fetched for it');
+  check($('error').textContent === '', 'and it does not fail');
+
   // Last, because it replaces the queue everything above was reading.
   window.__api.showPanel('paste');
   $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';

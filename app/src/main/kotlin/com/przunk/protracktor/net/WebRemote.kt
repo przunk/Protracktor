@@ -35,9 +35,25 @@ object WebRemote {
         data class Unreachable(val reason: String) : Outcome
     }
 
-    suspend fun send(endpoint: String, tracks: List<TrackRef>, index: Int): Outcome =
+    /**
+     * How many bytes of local files one message may carry.
+     *
+     * **Chiptunes are why this is possible at all.** Modland's median module is 20 KB and its mean
+     * is 188 KB; a queue of local tracker files is kilobytes, not megabytes, so the phone can simply
+     * hand them over. The budget exists for the file that is not typical -- the archive's largest is
+     * 71 MB -- and what does not fit is reported rather than dropped.
+     */
+    const val LOCAL_BYTES_BUDGET = 8 * 1024 * 1024
+
+    suspend fun send(
+        endpoint: String,
+        tracks: List<TrackRef>,
+        index: Int,
+        /** Bytes for tracks a browser cannot fetch, by track id. Absent ones are simply not sent. */
+        localFiles: Map<String, ByteArray> = emptyMap(),
+    ): Outcome =
         withContext(Dispatchers.IO) {
-            val body = buildJson(tracks, index)
+            val body = buildJson(tracks, index, localFiles)
             try {
                 val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
@@ -68,9 +84,19 @@ object WebRemote {
      * one object would be the tail wagging the dog. The escaping is the part worth getting right —
      * Modland is full of quotes and backslashes in titles.
      */
-    internal fun buildJson(tracks: List<TrackRef>, index: Int): String {
+    internal fun buildJson(
+        tracks: List<TrackRef>,
+        index: Int,
+        localFiles: Map<String, ByteArray> = emptyMap(),
+    ): String {
         val rows = tracks.joinToString(",") { track ->
-            """{"url":"${escape(track.id)}","title":"${escape(track.title)}"}"""
+            val bytes = localFiles[track.id]
+            val data = if (bytes == null) "" else {
+                // Base64 costs a third more than the bytes, which for a 20 KB module is seven
+                // kilobytes and not worth a second channel to avoid.
+                ""","data":"${android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)}""""
+            }
+            """{"url":"${escape(track.id)}","title":"${escape(track.title)}"$data}"""
         }
         return """{"queue":[$rows],"index":$index}"""
     }

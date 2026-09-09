@@ -355,10 +355,18 @@ async function playAt(next) {
   render();
   setPlaying(false);
   try {
-    $('sub').textContent = 'fetching…';
-    const response = await fetch(entry.url, { signal: abort.signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    bytes = await response.arrayBuffer();
+    if (entry.data) {
+      // **Handed over rather than fetched.** A file on the phone has no address a browser could
+      // open, so the phone sends the bytes with the queue -- which it can do because it is there at
+      // the moment of transfer, and because a tracker module is kilobytes (`docs/PLAN_WEB.md` §8).
+      $('sub').textContent = 'from the phone…';
+      bytes = entry.data;
+    } else {
+      $('sub').textContent = 'fetching…';
+      const response = await fetch(entry.url, { signal: abort.signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      bytes = await response.arrayBuffer();
+    }
   } catch (e) {
     // **Only the load that is still current clears the flag.** Two quick track changes overlap:
     // the older fetch finishes after the newer one has started, and clearing unconditionally would
@@ -495,6 +503,8 @@ function render() {
 
 /** "Modland/Protracker/4-Mat", the way the phone's subtitle reads. */
 function sourceOf(url) {
+  // A document URI is a grant to one app on one phone; showing it would be showing plumbing.
+  if (url.startsWith('content://')) return 'from the phone';
   try {
     const parsed = new URL(url, location.href);
     if (parsed.hostname.endsWith('modland.com')) {
@@ -773,7 +783,12 @@ function receive(message) {
   // The phone says which one it was on, and that is where the list opens -- selected rather than
   // started, so nothing makes a noise until somebody asks.
   setQueue(
-    message.queue.map((row) => ({ ...entryFor(row.url), name: row.title || entryFor(row.url).name })),
+    message.queue.map((row) => ({
+      ...entryFor(row.url),
+      name: row.title || entryFor(row.url).name,
+      // Base64 in, bytes out, once -- decoding at play time would do it again on every replay.
+      data: row.data ? Uint8Array.from(atob(row.data), (c) => c.charCodeAt(0)).buffer : undefined,
+    })),
     message.index ?? 0,
   );
   status(`${message.queue.length} tracks from the phone — press play`);
