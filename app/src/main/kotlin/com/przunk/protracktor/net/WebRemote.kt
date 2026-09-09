@@ -96,7 +96,14 @@ object WebRemote {
                 // kilobytes and not worth a second channel to avoid.
                 ""","data":"${android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)}""""
             }
-            """{"url":"${escape(track.id)}","title":"${escape(track.title)}"$data}"""
+            // **The filename travels beside the title, and they are not the same thing.** Four
+            // backends choose a loader by extension, and a local file's *title* is often the name
+            // with the extension taken off -- so "Tactic.sap" arrived as "Tactic", ASAP did not
+            // claim it, and it fell through to game-music-emu which answered "wrong file type".
+            // `TrackRef` has kept these apart since the beginning; the message did not.
+            val file = track.fileNameOrTitle
+            """{"url":"${escape(track.id)}","title":"${escape(track.title)}",""" +
+                """"file":"${escape(file)}"$data}"""
         }
         return """{"queue":[$rows],"index":$index}"""
     }

@@ -390,7 +390,7 @@ async function playAt(next) {
   $('sub').textContent = engineReady
     ? `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`
     : `${(bytes.byteLength / 1024).toFixed(0)} KB — waiting for the engine…`;
-  node.port.postMessage({ type: 'open', bytes, name: entry.name }, [bytes]);
+  node.port.postMessage({ type: 'open', bytes, name: entry.file ?? entry.name }, [bytes]);
   setPlaying(false);
   announceGesture();
 
@@ -786,6 +786,8 @@ function receive(message) {
     message.queue.map((row) => ({
       ...entryFor(row.url),
       name: row.title || entryFor(row.url).name,
+      // The decoder is handed this, not the title: four backends choose a loader by extension.
+      file: row.file || undefined,
       // Base64 in, bytes out, once -- decoding at play time would do it again on every replay.
       data: row.data ? Uint8Array.from(atob(row.data), (c) => c.charCodeAt(0)).buffer : undefined,
     })),

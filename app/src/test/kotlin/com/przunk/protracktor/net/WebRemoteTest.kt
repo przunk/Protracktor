@@ -21,13 +21,36 @@ class WebRemoteTest {
             index = 1,
         )
         assertEquals(
-            """{"queue":[{"url":"https://modland.com/x.mod","title":"hi"},""" +
-                """{"url":"asma://y.sap","title":"there"}],"index":1}""",
+            """{"queue":[{"url":"https://modland.com/x.mod","title":"hi","file":"hi"},""" +
+                """{"url":"asma://y.sap","title":"there","file":"there"}],"index":1}""",
             json,
         )
     }
 
     /** Modland is full of both, and a broken message would look like a broken connection. */
+    /**
+     * The owner's `Tactic.sap`, refused in the browser and playing on the phone.
+     *
+     * A local file's title is often its name with the extension taken off, and four backends choose
+     * a loader by that extension. `TrackRef` has kept the two apart since the beginning; the message
+     * to the browser did not.
+     */
+    @Test
+    fun `the filename travels beside the title`() {
+        val json = WebRemote.buildJson(
+            listOf(
+                TrackRef(
+                    id = "content://com.android.externalstorage.documents/document/x",
+                    title = "Tactic",
+                    subtitle = "",
+                    fileName = "Tactic.sap",
+                )
+            ),
+            index = 0,
+        )
+        assertTrue(json, json.contains(""""title":"Tactic","file":"Tactic.sap""""))
+    }
+
     @Test
     fun `quotes and backslashes in a title do not break the message`() {
         val json = WebRemote.buildJson(
