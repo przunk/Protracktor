@@ -39,7 +39,10 @@ CACHE = pathlib.Path.home() / ".protracktor" / "uade-probe"
 PROBE = ROOT / "native" / "probe" / "zxtune" / "build" / "probe-zxtune"
 
 # What zxtune's `players/` covers, ordered by how much of Modland's Spectrum tree each is worth.
-EXTENSIONS = ["pt3", "pt2", "stc", "asc", "sqt", "stp", "psm", "ftc", "gtr", "pt1"]
+# `.ym` and `.vtx` are register dumps rather than trackers and were added on 2026-09-09, when
+# vendoring lhasa made ZXTune's `ym_vtx` decoder buildable. They are the whole point of that work:
+# `docs/STATUS.md` C20 recorded 4,961 `.ym` files indexed and unopenable.
+EXTENSIONS = ["pt3", "pt2", "stc", "asc", "sqt", "stp", "psm", "ftc", "gtr", "pt1", "ym", "vtx"]
 
 
 def shared():

@@ -37,6 +37,7 @@
 #include "formats/chiptune/aym/soundtracker.h"
 #include "formats/chiptune/aym/soundtrackerpro.h"
 #include "formats/chiptune/aym/sqtracker.h"
+#include "formats/chiptune/aym/ym.h"
 #include "module/players/aym/aym_base.h"
 #include "module/players/aym/ascsoundmaster.h"
 #include "module/players/aym/fasttracker.h"
@@ -48,6 +49,7 @@
 #include "module/players/aym/soundtracker.h"
 #include "module/players/aym/soundtrackerpro.h"
 #include "module/players/aym/sqtracker.h"
+#include "module/players/aym/ymvtx.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -170,6 +172,11 @@ int main(int argc, char** argv)
   attempt("PSM", Module::ProSoundMaker::CreateFactory());
   attempt("FTC", Module::FastTracker::CreateFactory());
   attempt("GTR", Module::GlobalTracker::CreateFactory());
+  // Register dumps rather than trackers, and the reason `lhasa` is vendored: Modland's `.ym` files
+  // are LHA-packed, so the packed decoder is asked first and the bare one only for the rest.
+  attempt("YMp", Module::YMVTX::CreateFactory(FC::YM::CreatePackedYMDecoder()));
+  attempt("YM", Module::YMVTX::CreateFactory(FC::YM::CreateYMDecoder()));
+  attempt("VTX", Module::YMVTX::CreateFactory(FC::YM::CreateVTXDecoder()));
 
   if (!holder)
   {

@@ -997,6 +997,54 @@ Three causes ruled out along the way, each worth writing down so nobody pays for
   nothing repeats. Read as milliseconds it made every tune about six seconds long — plausible
   enough to be believed, and wrong. The median is 130 seconds.
 
+## 8. ~~`.ym` and `.vtx` — the LHA half of C20~~ — DONE 2026-09-09
+
+*`docs/STATUS.md` C20, found by the wasm probe on 2026-09-08: 4,961 Modland `.ym` files were in
+every index and no backend could open one. The entry offered two ways out and did not choose. The
+owner chose the second — "druga droga warta pracy" — on 2026-09-09.*
+
+**The diagnosis in C20 was one clause too pessimistic.** It said sc68 has no YM loader and Modland's
+YM files are LHA-packed, both true, and concluded that nothing here could open one packed or not.
+That last part was wrong: **ZXTune has a YM decoder** and we were not building it.
+`native/backends/zxtune/CMakeLists.txt` had excluded `formats/chiptune/aym/ym_vtx.cpp` since the
+backend was written, with the reason recorded honestly at the exclusion — *"VTX is LHA-compressed
+and would pull in `3rdparty/lhasa` for 879 files"*. What that note could not know is that the same
+dependency was about to be wanted for a second, larger reason, at which point 879 stopped being the
+number to weigh it against.
+
+**One dependency, two wishes.** UnExoticA — the Amiga game-soundtrack archive
+(`docs/PLAN_CATALOGUES.md`) — keeps every tune inside a `.lha`, so it needs LHA extraction before it
+needs anything else. Vendoring `lhasa` once serves both. It is ISC, all 35 sources verified per file
+(`docs/LICENSES.md`), and it is the only library in `native/vendor/` that decodes no music.
+
+**Upstream lhasa, not ZXTune's.** ZXTune bundles an older lhasa plus a patch, and its own
+`binary/compression/src/lha.cpp` includes it by a path that exists only inside its tree; its patched
+`lha_decoder_for_name` also returns a non-const pointer where upstream returns a const one, so that
+file does not compile against the real library. `native/backends/zxtune/lha_zxtune.cpp` implements
+the same two-function interface against upstream in forty lines. Vendoring a second, forked copy of
+a library to avoid writing forty lines is not the cheaper bargain.
+
+### Measured 2026-09-09, `./scripts/probe-zxtune.py --files 20`
+
+| | sampled | played |
+|---|---|---|
+| `.ym` | 20 of 4,961 | **20** |
+| `.vtx` | 20 of 879 | **20** |
+
+Every one loaded from a buffer, was audible in the first eight seconds, and stated a duration — so
+they arrive with a seek bar and need no song-length database. Overall for the whole AY set:
+223 of 240, about **98.4% of 26,678 Modland files**.
+
+**`.vtx` was added to `SupportedFormats` and `.ym` moved.** `.ym` had been sitting in the Atari ST
+group since the start, on the assumption sc68 handled it; nothing did. `.vtx` is a new name and so
+changes `SupportedFormats.fingerprint`, which marks every stored index stale — the owner
+re-downloads Modland's 40 MB. C20 argued against paying that price to *remove* dead rows; paying it
+for 879 files that play is the other side of the same bargain.
+
+**`.med` is still open.** The other half of C20 — 132 Modland files in the older Amiga *Music
+Editor* format, which libopenmpt's loader rejects because it wants `MMD` at offset zero. Nothing
+here decodes it and lhasa does not help.
+
 ## Not planned
 
 `.sc68` container files reference external replay binaries we do not ship, so they will not play even

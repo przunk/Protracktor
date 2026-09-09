@@ -11,6 +11,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # eventually, and silently.
 option(PROTRACKTOR_BUILD_ENGINE "Build the JNI engine (needs Oboe from Gradle)" ON)
 
+# lhasa first: it is not a decoder and nothing here plays an LHA file, but ZXTune's `.ym`/`.vtx`
+# path links against it and the UnExoticA catalogue will want its archive reader. Built whatever
+# `PROTRACKTOR_WITH_ZXTUNE` says, because the second use does not depend on the first.
+add_subdirectory(lhasa)
+
 add_subdirectory(backends/libopenmpt)
 add_subdirectory(backends/sc68)
 add_subdirectory(backends/asap)

@@ -179,14 +179,48 @@ class RemoteFiles(private val context: Context) {
         cacheDir.listFiles()?.forEach { it.delete() }
     }
 
+    /**
+     * One GET, and one retry when the answer was a doorman rather than the file.
+     *
+     * `files.exotica.org.uk` answers a client it has not seen with a 200 carrying a few hundred
+     * bytes of *"Verifying your browser…"*, a `Set-Cookie`, and a script that reloads the page. A
+     * plain fetch stores that HTML as if it were a module, and the failure arrives later as a
+     * decoder refusing a file that downloaded fine. Sending the cookie back and asking again is
+     * what the page itself does.
+     *
+     * **The condition is deliberately narrow**: a cookie was set, the type is HTML, and the body is
+     * under two kilobytes. No index and no module here is any of those things, so this cannot fire
+     * on a real answer -- and a host that fails this way twice is a host that is down, so there is
+     * one retry rather than a loop.
+     */
     private fun download(url: String): ByteArray? {
+        val first = attempt(url, cookie = null) ?: return null
+        if (!first.looksLikeAGate()) return first.body
+        val cookie = first.cookie ?: return first.body
+        return attempt(url, cookie)?.body
+    }
+
+    private class Attempt(val body: ByteArray, val contentType: String?, val cookie: String?) {
+        fun looksLikeAGate(): Boolean =
+            cookie != null && body.size < 2048 && contentType.orEmpty().startsWith("text/html")
+    }
+
+    private fun attempt(url: String, cookie: String?): Attempt? {
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
             connection.instanceFollowRedirects = true
+            // The name and value only. A cookie's attributes are the browser's business and this is
+            // not one; sending `path=/; HttpOnly` back would be sending the server its own notes.
+            if (cookie != null) connection.setRequestProperty("Cookie", cookie)
             if (connection.responseCode !in 200..299) return null
-            connection.inputStream.use { it.readBytes() }
+            Attempt(
+                body = connection.inputStream.use { it.readBytes() },
+                contentType = connection.contentType,
+                cookie = connection.headerFields["Set-Cookie"]
+                    ?.firstOrNull()?.substringBefore(';')?.takeIf { it.isNotBlank() },
+            )
         } finally {
             connection.disconnect()
         }

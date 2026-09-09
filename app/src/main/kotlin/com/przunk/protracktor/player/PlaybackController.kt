@@ -35,10 +35,12 @@ import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.Lha
 import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.net.WebRemote
 import com.przunk.protracktor.net.Sc68Replays
+import com.przunk.protracktor.net.UnExoticA
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -597,6 +599,11 @@ class PlaybackController private constructor(private val context: Context) {
         // converges on it instead of staying over forever. Nothing is in use yet, which is exactly
         // why this is the cheapest moment to do it.
         scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
+
+        // A catalogue that used to be offered and is not any more leaves its rows behind, and rows
+        // nothing lists are rows in every global search. Once at start-up, next to the cache sweep
+        // and for the same reason.
+        scope.launch(Dispatchers.IO) { runCatching { catalogues.pruneUnknownCatalogues() } }
 
         scope.launch(Dispatchers.IO) {
             runCatching {
@@ -1416,7 +1423,11 @@ class PlaybackController private constructor(private val context: Context) {
         var left = 0
         var used = 0
         for (track in tracks) {
-            if (Catalogue.owning(track.id) != null) continue
+            // **Skipped only when the browser can fetch it for itself.** Modland serves every file
+            // over HTTP, so its rows travel as a URL and cost nothing here. ASMA and UnExoticA do
+            // not publish one: `asma://` and `unexotica://` mean something on this phone and
+            // nothing anywhere else, so those tracks travel as bytes or they arrive dead.
+            if (Catalogue.owning(track.id) != null && track.id.startsWith("http")) continue
             if (used >= WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
             val bytes = loadBytes(track)
             if (bytes == null || used + bytes.size > WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
@@ -3439,7 +3450,13 @@ class PlaybackController private constructor(private val context: Context) {
 
     /** Reads a track's bytes, from wherever it lives. */
     private suspend fun loadBytes(ref: TrackRef): ByteArray? =
-        if (archiveCatalogueOf(ref.id) != null) {
+        if (UnExoticA.ENABLED && UnExoticA.pathFrom(ref.id) != null) {
+            // The one catalogue whose unit of download is not the tune: every UnExoticA file lives
+            // inside its game's `.lha`, so this fetches the archive -- cached like any other
+            // download, so the rest of that soundtrack is free -- and unpacks the one member.
+            // `docs/PLAN_UNEXOTICA.md` has the shape and the reason it is only three lines here.
+            loadFromUnExoticA(UnExoticA.pathFrom(ref.id).orEmpty())
+        } else if (archiveCatalogueOf(ref.id) != null) {
             // "<catalogue>://<entry>" -- read out of the archive that catalogue shipped as, which is
             // already on disk. No network, which is why an archive catalogue is worth its download.
             remoteFiles.readFromArchive(ref.id.substringBefore("://"), ref.id.substringAfter("://"))
@@ -3453,6 +3470,26 @@ class PlaybackController private constructor(private val context: Context) {
                 }.getOrNull()
             }
         }
+
+    /**
+     * A tune out of an UnExoticA game archive.
+     *
+     * Two steps and both can fail for reasons worth telling apart in a log: the archive did not
+     * arrive, or it arrived and does not hold what the index said it holds. The second means the
+     * index and the archive have drifted -- songdb's snapshot is not ExoticA's live tree -- and it
+     * is the failure worth watching for once real listening starts.
+     */
+    private suspend fun loadFromUnExoticA(path: String): ByteArray? {
+        val archiveUrl = UnExoticA.archiveUrlFor(path) ?: return null
+        val member = UnExoticA.split(path)?.second ?: return null
+        val archive = remoteFiles.fetch(archiveUrl) ?: return null
+        return withContext(backgroundWork) {
+            Lha.extract(archive, member) ?: run {
+                android.util.Log.w("Protracktor", "UnExoticA: $member is not in ${archiveUrl}")
+                null
+            }
+        }
+    }
 
     /**
      * Starts reading whatever comes next.

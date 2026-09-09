@@ -120,6 +120,28 @@ class CatalogueStore(context: Context) {
         }
     }
 
+    /**
+     * Throws away rows belonging to catalogues this build no longer offers.
+     *
+     * **This is what makes turning a catalogue off mean something.** `Catalogue.all` decides what is
+     * browsable, so removing an entry from it hides a catalogue immediately — and leaves its rows in
+     * the database, taking space and appearing in a global search, which is not "off" but "hidden".
+     * UnExoticA is behind a switch for a reason (`docs/PLAN_UNEXOTICA.md`), and the reason is that
+     * the switch might actually be thrown.
+     *
+     * Run once at start-up. Cheap when there is nothing to do: a `DELETE ... NOT IN` over an indexed
+     * column that matches no rows.
+     */
+    suspend fun pruneUnknownCatalogues() = withContext(Dispatchers.IO) {
+        val known = Catalogue.all.map { it.id }
+        val placeholders = known.joinToString(",") { "?" }
+        val ids = known.toTypedArray()
+        helper.writableDatabase.transaction {
+            delete("catalogue_tracks", "catalogue_id NOT IN ($placeholders)", ids)
+            delete("catalogues", "id NOT IN ($placeholders)", ids)
+        }
+    }
+
     suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String) =
         withContext(Dispatchers.IO) {
             val db = helper.writableDatabase

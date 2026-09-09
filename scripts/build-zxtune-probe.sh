@@ -44,9 +44,10 @@ mkdir -p "$OUT"
 # path from "bytes of a .pt3" to "samples".
 #
 # `ayemul.cpp` is excluded by name and that exclusion is the licence decision: it is the only AY
-# plugin reaching `3rdparty/z80ex`, which is GPL-2-only. `ym_vtx.cpp` is excluded because VTX is
-# LHA-compressed and pulling in `3rdparty/lhasa` for 879 Modland files is not this measurement's
-# business.
+# plugin reaching `3rdparty/z80ex`, which is GPL-2-only. `ym_vtx.cpp` was excluded on the same
+# grounds until 2026-09-09 -- YM and VTX are LHA-compressed and it wanted `3rdparty/lhasa`. It is
+# built now, against the upstream lhasa in `native/vendor/lhasa` and through our own
+# `native/backends/zxtune/lha_zxtune.cpp`, which is what the app links too.
 mapfile -t SOURCES < <(
     {
         find "$W/src/formats/chiptune/aym" "$W/src/module/players/aym" "$W/src/devices/aym/src" \
@@ -68,8 +69,14 @@ mapfile -t SOURCES < <(
         # than with the players.
         echo "$W/src/core/plugins/players/ay/freq_tables.cpp"
         echo "$W/3rdparty/fmt/src/format.cc"
+        # The LHA path: our adapter, and lhasa itself. The two architecture files guard themselves
+        # on `_WIN32`, so the whole of `lib/` compiles -- except the four sources the decoders
+        # `#include` textually, which are excluded below and in `native/lhasa/CMakeLists.txt` for
+        # the same reason.
+        echo "$ROOT/native/backends/zxtune/lha_zxtune.cpp"
+        find "$ROOT/native/vendor/lhasa/lib" -maxdepth 1 -name '*.c' 2>/dev/null
     } | grep -v -e '/ayemul\.cpp$' -e '/resampler\.cpp$' -e '/test' -e '/dumper/' \
-        -e '/ym_vtx\.cpp$' | sort -u
+        -e '/\(bit_stream_reader\|lh_new_decoder\|pma_common\|tree_decode\)\.c$' | sort -u
 )
 echo "→ compiling ${#SOURCES[@]} ZXTune sources plus the probe"
 
@@ -78,8 +85,14 @@ echo "→ compiling ${#SOURCES[@]} ZXTune sources plus the probe"
 # fail on a phone. Set it to `-funsigned-char` to build the ARM behaviour:
 #
 #     PROBE_CHAR_FLAGS=-funsigned-char ZXTUNE_PROBE_OUT=unsigned ./scripts/build-zxtune-probe.sh
+LHASA="$ROOT/native/vendor/lhasa"
+if [ ! -f "$LHASA/lib/lha_decoder.c" ]; then
+    echo "❌ lhasa is missing. Run ./scripts/fetch-native-deps.sh first."
+    exit 1
+fi
 FLAGS=(-O2 -w -std=c++20 ${PROBE_CHAR_FLAGS:+"$PROBE_CHAR_FLAGS"}
-       -I"$W/src" -I"$W/include" -I"$W" -I"$W/3rdparty/fmt/include")
+       -I"$W/src" -I"$W/include" -I"$W" -I"$W/3rdparty/fmt/include"
+       -I"$LHASA/lib/public")
 OBJ="$OUT/obj${ZXTUNE_PROBE_OUT:+-$ZXTUNE_PROBE_OUT}"
 mkdir -p "$OBJ"
 
@@ -88,11 +101,20 @@ mkdir -p "$OBJ"
 # library this size, is most of the first afternoon.
 OBJECTS=()
 for src in "${SOURCES[@]}"; do
-    flat="$(echo "${src#"$W/"}" | tr '/' '_')"
+    # Flattened relative to whichever tree the source came from -- ZXTune's clone, or ours. Two
+    # trees means two prefixes to strip, and a name that keeps a leading `/` makes an object path
+    # with a double slash that `find`-based cleanups then miss.
+    flat="$(echo "${src#"$W/"}" | sed "s|^$ROOT/||" | tr '/' '_')"
     obj="$OBJ/${flat%.*}.o"
     OBJECTS+=("$obj")
     if [ ! -f "$obj" ] || [ "$src" -nt "$obj" ]; then
-        g++ "${FLAGS[@]}" -c -o "$obj" "$src" &
+        # lhasa is C. `g++` would compile it as C++ and the library does not claim to be valid
+        # C++ -- it assigns `void*` to typed pointers, which C allows and C++ does not.
+        if [ "${src##*.}" = "c" ]; then
+            gcc -O2 -w -I"$LHASA/lib" -I"$LHASA/lib/public" -c -o "$obj" "$src" &
+        else
+            g++ "${FLAGS[@]}" -c -o "$obj" "$src" &
+        fi
         while [ "$(jobs -rp | wc -l)" -ge "$(nproc)" ]; do wait -n; done
     fi
 done

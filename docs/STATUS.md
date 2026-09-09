@@ -1,13 +1,15 @@
 # Status
 
-Updated: 2026-09-04 — version 0.3.0, versionCode from the commit count, schema version 10
+Updated: 2026-09-09 — version 0.3.0, versionCode from the commit count, schema version 10
 
 ## What works
 
 A usable player, as far as anything can be called that without a device saying so.
 
 - **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more), Atari ST
-  through sc68 3.0.0b (SNDH, YM, `.sc68`), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
+  through sc68 3.0.0b (SNDH, `.sc68`), the AY register dumps `.ym` and `.vtx` through ZXTune and
+  lhasa (`docs/PLAN_FORMATS.md` §8 — they are LHA-packed, which is why they did not play until
+  2026-09-09), Atari 8-bit through ASAP (SAP and 13 tracker formats), Commodore 64
   through libsidplayfp (PSID, RSID), seven console families through game-music-emu (NSF, GBS,
   SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
   and KSS routinely hold nothing at track 0), and the Amiga synth trackers through HivelyTracker
@@ -19,8 +21,12 @@ A usable player, as far as anything can be called that without a device saying s
   `.sc68` waits for the download.
 - **Online archives**: Modland, browsed offline from a downloaded index and fetched per track; ASMA,
   which arrives as one 20 MB archive and then needs no network at all; The Mod Archive, searched
-  live. HVSC's song lengths give SID tunes the duration the format cannot carry. Fetched music is
-  capped at 512 MB, least recently used first (`docs/ARCHITECTURE.md` §19).
+  live; and **UnExoticA**, Amiga game soundtracks — 4,338 playable tunes across 924 games, indexed
+  from `songdb` and fetched a game's `.lha` at a time. That one is behind a switch and can be taken
+  out again, because its archive's maintainers were asked a question on 2026-09-08 and have not
+  answered it yet (`docs/PLAN_UNEXOTICA.md`). HVSC's song lengths give SID tunes the duration the
+  format cannot carry. Fetched music is capped at 512 MB, least recently used first
+  (`docs/ARCHITECTURE.md` §19).
 - **Library**: folders granted through the storage access framework, remembered between sessions.
   A folder is **scanned by opening every file with a real decoder**, not by reading its name, and
   the result is stored so later launches read an index instead of walking the tree
@@ -409,37 +415,43 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C20. The index promises files no backend can open
+### C20. ~~The index promises files no backend can open~~ — HALF FIXED 2026-09-09
 
-*Found 2026-09-08 by the wasm probe (`docs/PLAN_WEB.md` §14), and it is an **Android** defect — the
-same files are refused on the phone. The web build only made it easy to run hundreds of files at
+*Found 2026-09-08 by the wasm probe (`docs/PLAN_WEB.md` §14), and it was an **Android** defect — the
+same files were refused on the phone. The web build only made it easy to run hundreds of files at
 once, which is what the probe is for.*
 
 `SupportedFormats.extensions` is what a folder scan and a catalogue index are filtered through, and
-it has the same rule written into it twice already: `.gym` and `.snd` were removed because listing
-them "only indexed files that cannot open". Two more are in that state and were not noticed.
+it had the same rule written into it twice already: `.gym` and `.snd` were removed because listing
+them "only indexed files that cannot open". Two more were in that state and had not been noticed.
 
-**`.ym` — 4,961 files in Modland.** `Sc68Backend::worthTrying` claims a file only on `ICE!`, `SC68`
-or an `SNDH` tag in the first 256 bytes; a YM file has none, so it never reaches sc68 at all. Nor
-would it help: the vendored `file68` has no YM loader and no LHA support, and **Modland's YM files
-are LHA-packed** (`-lh5-` at offset two). So nothing here can open one, packed or not.
+**`.ym` — 4,961 files in Modland. Fixed.** They play, 20 of 20 sampled
+(`docs/PLAN_FORMATS.md` §8). The entry below is left standing because the reasoning in it was
+**wrong in one clause** and that is worth keeping visible:
 
-**`.med` — 132 of Modland's 140.** They begin `MED\x04`, the older Amiga *Music Editor* format.
-libopenmpt's loader requires `MMD` at offset zero (`Load_med.cpp:865`) and handles MMD0–MMD3 only.
-The other 8 are genuine OctaMED and do play.
+> `Sc68Backend::worthTrying` claims a file only on `ICE!`, `SC68` or an `SNDH` tag in the first 256
+> bytes; a YM file has none, so it never reaches sc68 at all. Nor would it help: the vendored
+> `file68` has no YM loader and no LHA support, and **Modland's YM files are LHA-packed** (`-lh5-`
+> at offset two). So nothing here can open one, packed or not.
 
-**Two ways out, and they are not the same size:**
+Everything up to the last sentence holds. The last sentence surveyed the backends we *build* and
+concluded about the ones we *have*: ZXTune ships a YM/VTX decoder and `native/backends/zxtune/
+CMakeLists.txt` had been excluding it, in a comment on the exclusion, for want of lhasa. The lesson
+is narrow and repeats one from `docs/PLAN_FORMATS.md` §7 — **check the library's source tree, not
+the list of what the build compiles**, because the second is a decision somebody made and can be
+unmade.
 
-1. **Drop both extensions**, as `.gym` and `.snd` were dropped. Costs nothing to build, removes
-   5,093 dead rows from a Modland index — and changes `SupportedFormats.fingerprint`, which marks
-   every stored index stale, so the owner re-downloads a 40 MB index to gain nothing he can hear.
-2. **Add LHA unpacking** and keep `.ym`. `lhasa` is ISC-licensed and was already read and accepted
-   during the UnExoticA work, where it is needed for the same reason — every UnExoticA tune lives
-   inside a `.lha`. That makes one dependency answer two wishes. It does nothing for `.med`, which
-   needs a decoder nobody here has.
+`.vtx` came with it: 879 files, the format the original exclusion was weighed against.
 
-**Not decided.** The second is the interesting one and it is not urgent; the first is cheap and its
-only real cost is the re-index it forces.
+**`.med` — 132 of Modland's 140. Still open.** They begin `MED\x04`, the older Amiga *Music Editor*
+format. libopenmpt's loader requires `MMD` at offset zero (`Load_med.cpp:865`) and handles MMD0–MMD3
+only. The other 8 are genuine OctaMED and do play. lhasa does nothing for this; it needs a decoder
+nobody here has, which puts it with UADE's territory rather than with anything cheap.
+
+**The re-index this cost.** Adding `.vtx` changed `SupportedFormats.fingerprint`, so every stored
+index went stale and Modland's 40 MB is downloaded again. That price was the argument *against*
+option 1 in the original entry — paying it to remove 5,093 dead rows. Paying it to gain 5,840
+playable ones is the same transaction with the sign flipped.
 
 ### C19. ~~"More from this author" offered itself where it could never work~~ — FIXED 2026-09-08
 

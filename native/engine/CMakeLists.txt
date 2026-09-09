@@ -9,9 +9,12 @@ find_package(oboe REQUIRED CONFIG)
 # player_oboe.cpp is the audio callback and the JNI surface. docs/PLAN_WEB.md §13 S0 has the
 # measurement that chose the line between them; a second host links engine.cpp and replaces the
 # other file rather than forking either.
-add_library(protracktor_engine SHARED engine.cpp player_oboe.cpp)
+# `lha_jni.cpp` is a third source and belongs to neither half: it is the UnExoticA catalogue's
+# entire native surface, and `docs/PLAN_UNEXOTICA.md` promises that surface stays small enough to
+# delete. It is here rather than folded into player_oboe.cpp so that deleting it is one line.
+add_library(protracktor_engine SHARED engine.cpp player_oboe.cpp lha_jni.cpp)
 
 target_compile_options(protracktor_engine PRIVATE -Wall -Wextra -fexceptions -frtti)
 set_target_properties(protracktor_engine PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(protracktor_engine PRIVATE openmpt sc68 asap gme::gme sidplayfp hively zxtune oboe::oboe android log)
+target_link_libraries(protracktor_engine PRIVATE openmpt sc68 asap gme::gme sidplayfp hively zxtune lhasa oboe::oboe android log)
