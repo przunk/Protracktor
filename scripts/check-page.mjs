@@ -96,6 +96,11 @@ check(!!window.__api, 'the script finished loading');
 
 if (window.__api) {
   // A queue arriving from the phone, in the shape WebRemote sends.
+  window.__api.showPanel('nowplaying');
+  check(window.document.querySelectorAll('#fields dd').length === 1
+    && window.document.querySelector('#fields dd').textContent.includes('nothing has played'),
+    'Now Playing says so before anything has played, rather than opening onto nothing');
+
   window.__api.showPanel('pair');
   check($('pair').hidden === false, 'the code is up before anything arrives');
   window.__api.receive({
@@ -202,7 +207,10 @@ if (window.__api) {
   // play arrow on the button, which then did something other than what it showed.
   window.__api.playAt(0);
   await new Promise((r) => setTimeout(r, 80));
-  check($('sub').textContent.includes('opening'), 'the bytes reach the worklet');
+  // The engine says "ready" in the real page; the harness never runs one, so the wording is the
+  // one for an engine that has not answered yet. Either way the bytes have left.
+  check($('sub').textContent.includes('opening') || $('sub').textContent.includes('waiting for the engine'),
+    'the bytes reach the worklet');
   check($('playglyph').getAttribute('d') === 'M6 6h12v12H6z',
     'and the button still offers to stop while it opens them');
   window.__api.onWorklet({ type: 'failed', reason: 'nothing claimed it' });

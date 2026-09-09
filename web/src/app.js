@@ -85,9 +85,20 @@ async function start() {
   node.port.onmessage = (event) => onWorklet(event.data);
 }
 
+/**
+ * Whether the engine has said hello.
+ *
+ * **The one fact the page needed and did not have.** A track posted to a worklet whose engine is
+ * still compiling is queued there and answered later; a track posted to one that never compiled is
+ * queued for ever, and the screen sits on "opening…" with nothing to say. Knowing which of those is
+ * happening is the difference between a bug report and a shrug.
+ */
+let engineReady = false;
+
 function onWorklet(message) {
   switch (message.type) {
     case 'ready':
+      engineReady = true;
       status(`engine ready — ${message.backends}`);
       break;
     case 'opened': {
@@ -161,6 +172,23 @@ function describeLine(fields) {
  * listener asks first comes first, and the machine's own vocabulary comes last.
  */
 const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher', 'album', 'comment'];
+
+/**
+ * Now Playing, before anything has played.
+ *
+ * The owner said he could not expand it. It expanded — onto an empty list, which looks identical to
+ * a panel that did not open. A screen with nothing to say has to say that.
+ */
+function renderNothingPlaying() {
+  const list = $('fields');
+  list.replaceChildren();
+  const dt = document.createElement('dt');
+  dt.textContent = '—';
+  const dd = document.createElement('dd');
+  dd.textContent = 'nothing has played yet';
+  list.append(dt, dd);
+  $('subsongs').replaceChildren();
+}
 
 function renderNowPlaying(fields, subsongs, current) {
   const list = $('fields');
@@ -274,7 +302,9 @@ async function playAt(next) {
   //
   // Handed over, and the page now waits for the worklet to say `opened` or `failed`. It says which
   // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
-  $('sub').textContent = `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`;
+  $('sub').textContent = engineReady
+    ? `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`
+    : `${(bytes.byteLength / 1024).toFixed(0)} KB — waiting for the engine…`;
   node.port.postMessage({ type: 'open', bytes, name: entry.name }, [bytes]);
   setPlaying(false);
   announceGesture();
@@ -288,7 +318,9 @@ async function playAt(next) {
     if (loading !== abort) return;
     loading = null;
     setPlaying(false);
-    $('error').textContent = 'the engine did not answer — check the browser console';
+    $('error').textContent = engineReady
+      ? 'the decoder took the file and never answered — check the browser console'
+      : 'the engine never finished loading, so nothing can be opened — check the browser console';
     $('sub').textContent = '—';
   }, 10_000);
 }
@@ -671,6 +703,7 @@ addEventListener('keydown', (event) => {
 
 // Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
 // itself the moment a queue arrives.
+renderNothingPlaying();
 showPanel('pair');
 
 status('ready — press Play or load some URLs');
