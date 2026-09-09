@@ -143,6 +143,14 @@ object NativeEngine {
          */
         fun selectSubsong(index: Int) = nativeSelectSubsong(handle(), index)
 
+        /**
+         * What Oboe gave us, if it is not what the decoder asked for. Empty when all is well.
+         *
+         * Only meaningful after [start]: the stream does not exist until then. Read once, right
+         * after starting.
+         */
+        fun sampleRateNote(): String = nativeSampleRateNote(handle())
+
         override fun close() {
             if (closed) return
             closed = true
@@ -176,4 +184,5 @@ object NativeEngine {
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double
     @JvmStatic private external fun nativeDurationSeconds(handle: Long): Double
+    @JvmStatic private external fun nativeSampleRateNote(handle: Long): String
 }

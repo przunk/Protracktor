@@ -555,6 +555,14 @@ class PlaybackController private constructor(private val context: Context) {
      * own open, and the second overwrote `track` without closing the first, which went on playing
      * with nobody holding it.
      */
+    /**
+     * Whether the audio path has already been complained about this session.
+     *
+     * Once is a diagnosis; once per track is a nuisance, and the answer cannot change while the app
+     * runs — it is a property of the device's audio stack, not of the tune.
+     */
+    private var reportedSampleRate = false
+
     private var openJob: Job? = null
 
     /**
@@ -3329,6 +3337,19 @@ class PlaybackController private constructor(private val context: Context) {
             // `start()` there is no other thread to race with.
             val described = opened.describe()
             val started = opened.start()
+
+            // **Said out loud, once, because the owner cannot read logcat.** Backends that
+            // synthesise at a fixed rate ask Oboe for it and Oboe is meant to resample; nobody has
+            // ever checked that it does, and if it declines, every one of those tunes plays sharp
+            // with nothing to say so. He reported two SPCs sounding fast on 2026-09-09 — this is
+            // how that becomes a fact instead of a suspicion. Empty is the normal answer.
+            if (started && !reportedSampleRate) {
+                val note = runCatching { opened.sampleRateNote() }.getOrDefault("")
+                if (note.isNotEmpty()) {
+                    reportedSampleRate = true
+                    _state.update { it.copy(message = Message(note)) }
+                }
+            }
             // A SID has no length in it, so the backend reports none and HVSC's database is asked
             // instead. Only when the backend has nothing: a format that knows its own length knows
             // it better than a lookup on a hash could.
