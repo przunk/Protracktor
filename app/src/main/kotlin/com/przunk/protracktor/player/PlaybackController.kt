@@ -3392,6 +3392,23 @@ class PlaybackController private constructor(private val context: Context) {
                 val playing = track?.restart() ?: false
                 _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
             } else if (!_state.value.externalOpen) {
+                // **Not playing any more, said before the next pick is chosen, not after.**
+                //
+                // The poll that called this runs every 200 ms and skips only while `playing` is
+                // false or a load is running. The playlist's path satisfies that at once -- it
+                // starts loading before it returns. Random did not: `randomNext` launches, moves
+                // the cursor, publishes the row, and then *waits on a database query* for the next
+                // read-ahead pick before `playTransient` sets `playing = false` and starts the load.
+                // That query sorts the whole scope by a generated key (`docs/review-round-8.md`
+                // R7), and under a platform filter it can take several ticks. Every tick in that
+                // gap found the same finished track, still "playing", and advanced again.
+                //
+                // Which is the owner's report of 2026-09-10 exactly: a tune ends, five picks appear
+                // on the record at once and the sixth plays. Only at a natural end, because a
+                // pressed next leaves a track that is not finished; only sometimes, because it
+                // depends on whether the query beats the next tick -- and it stopped reproducing
+                // once SQLite had the pages cached.
+                _state.update { it.copy(playing = false) }
                 randomNext()
             } else {
                 _state.update { it.copy(playing = false) }
