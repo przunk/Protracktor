@@ -3173,12 +3173,23 @@ class PlaybackController private constructor(private val context: Context) {
         openAndPlay(now.queue.previous())
     }
 
+    /**
+     * Moves the playing position.
+     *
+     * **Off the main thread, because a seek is not quick.** Every emulator here reaches a position
+     * by running forward to it, so asking for the end of a five-minute SID is minutes of emulated
+     * 6502. That work used to happen inside the audio callback and wedged the app twice on
+     * 2026-09-10; it now happens on the caller's thread, which must therefore not be the thread
+     * drawing the screen.
+     *
+     * The slider is moved first and does not wait for the decoder to agree. A slider that springs
+     * back to where it was until the seek lands reads as a control that did not work — and it now
+     * has whole seconds in which to read that way.
+     */
     fun seekTo(seconds: Double) {
         val open = track ?: return
-        open.seekTo(seconds)
-        // Shown immediately rather than waiting for the next poll: a slider that springs back to
-        // where it was before catching up reads as a control that did not work.
         _state.update { it.copy(positionSeconds = seconds) }
+        scope.launch { withContext(Dispatchers.IO) { runCatching { open.seekTo(seconds) } } }
     }
 
     /**
