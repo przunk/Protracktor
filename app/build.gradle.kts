@@ -6,6 +6,22 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+/**
+ * The number of commits behind HEAD, used as the versionCode.
+ *
+ * Through `providers.exec` rather than `ProcessBuilder`: Gradle 9 refuses to start an external
+ * process at configuration time, because doing so cannot be cached. The provider API exists for
+ * exactly this and its result participates in the configuration cache properly.
+ *
+ * Falls back to 1 outside a git checkout — a source archive, say — which is wrong but harmless:
+ * nothing built that way is going to a store.
+ */
+val gitCommitCount: Int = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+    workingDir = rootProject.projectDir
+    isIgnoreExitValue = true
+}.standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }.getOrElse(1)
+
 android {
     namespace = "com.przunk.protracktor"
     compileSdk = 36
@@ -19,8 +35,20 @@ android {
         applicationId = "com.przunk.protracktor"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        // Counted, not typed. Play rejects an upload whose versionCode it has seen before, and a
+        // number a person has to remember to raise is a number that eventually is not raised. The
+        // commit count only ever grows, changes on every merge without anyone doing anything, and
+        // needs no discipline at all.
+        //
+        // Falls back to 1 outside a git checkout -- a source archive, say -- which is wrong but
+        // harmless: nothing built that way is going to a store.
+        versionCode = gitCommitCount
+
+        // Typed, deliberately, and it means something. See docs/BUILD.md: patch for a batch of
+        // fixes, minor for a round of work that added capability, major reserved for "publishable".
+        // Bumping it per merge was considered and rejected -- twenty merges in a day would make it
+        // a second, worse timestamp.
+        versionName = "0.3.0"
 
         // Stated explicitly rather than left to whatever the NDK defaults to that month, because
         // native decoder builds are the expensive part of this project and the ABI list drives
@@ -98,9 +126,24 @@ android {
 // whether a lazily supplied directory is generated or hand-written.
 val sc68Assets: File = layout.buildDirectory.dir("generated/sc68-assets").get().asFile
 
-val copySc68Data = tasks.register<Copy>("copySc68Data") {
-    from(rootProject.file("native/vendor/sc68/data")) {
-        include("Replay/**", "Sample/**")
+// `Sync` rather than `Copy`, so the destination ends up matching the source exactly. A `Copy` only
+// ever adds: when this task was narrowed from 99 replays to one, the other 98 stayed in the
+// generated assets and would have shipped anyway. The same would happen to any file dropped
+// upstream, silently and in the APK.
+val copySc68Data = tasks.register<Sync>("copySc68Data") {
+    // sc68 3.0.0b keeps them under file68/data68 rather than 2.2.1's data/, and ships 99 replays
+    // where 2.2.1 shipped 84 -- which is part of why more SNDH files play.
+    from(rootProject.file("native/vendor/sc68-3/file68/data68")) {
+        // **One replay, not ninety-nine** — see `docs/LICENSES.md`. `sndh_ice.bin` is sc68's own
+        // SNDH wrapper, sitting in sc68's own GPL-3-or-later tree, so shipping it needs nobody's
+        // permission. The other 98 are named after commercial Atari ST games and after other
+        // people's players, and sc68 says nothing about where they came from; they are downloaded
+        // from sc68's own SourceForge at the user's request instead, which leaves the
+        // distributing to SourceForge.
+        //
+        // Measured before deciding: this costs nothing for SNDH -- 30 of 30 either way, and 5,484
+        // Modland files -- and takes `.sc68` from 10 of 10 to 4 of 10 until the rest is fetched.
+        include("Replay/sndh_ice.bin")
     }
     into(File(sc68Assets, "sc68"))
 }
@@ -122,6 +165,15 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    // The QR scanner (docs/PLAN_HANDOFF.md §3 H2). CameraX gives a preview and a stream of frames;
+    // ZXing turns one into a room address. Together about 1.6 MB of the APK, which is the price of
+    // not making the owner send himself a link.
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.zxing.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

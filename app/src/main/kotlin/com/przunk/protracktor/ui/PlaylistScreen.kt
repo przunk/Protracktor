@@ -1,22 +1,13 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,9 +21,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -40,9 +31,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.przunk.protracktor.R
+import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.TrackRef
@@ -72,21 +71,33 @@ import com.przunk.protracktor.player.TrackRef
 @Composable
 fun PlaylistScreen(
     state: PlayerUiState,
+    listState: LazyListState,
     onPlayAt: (Int) -> Unit,
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
+    onAddToOtherPlaylist: (TrackRef) -> Unit = {},
+    onAddSelectedToPlaylist: (List<TrackRef>) -> Unit = {},
+    onRemoveMany: (List<Int>) -> Unit = {},
     onBrowse: () -> Unit,
-    onExitRandom: () -> Unit,
+    onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    // Random plays something that is not in this list, so the list is put behind glass: visible,
-    // clearly not what you are listening to, and not touchable by accident. Cheaper and more
-    // portable than a blur, which needs API 31 and this app runs from 29.
-    if (state.randomMode) {
+    // Random and a search both play something that is not in this list, so the list goes behind
+    // glass: visible, clearly not what you are listening to, and not touchable by accident. Cheaper
+    // and more portable than a blur, which needs API 31 and this app runs from 29.
+    if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state, null, {}, {}, { _, _ -> }, contentPadding, enabled = false)
-            RandomScrim(onExitRandom = onExitRandom, contentPadding = contentPadding)
+            PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
+            AwayScrim(
+                randomMode = state.randomMode,
+                externalMode = state.externalMode,
+                onReturnToPlaylist = onReturnToPlaylist,
+                contentPadding = contentPadding,
+            )
         }
         return
     }
@@ -97,11 +108,18 @@ fun PlaylistScreen(
     }
 
     PlaylistBody(
-        state = state,
+        tracks = state.queue.tracks,
+        listState = listState,
         currentIndex = state.queue.currentIndex,
         onPlayAt = onPlayAt,
         onRemoveAt = onRemoveAt,
         onMove = onMove,
+        onShowNeighbours = onShowNeighbours,
+        onShareFile = onShareFile,
+        onShareLink = onShareLink,
+        onAddToOtherPlaylist = onAddToOtherPlaylist,
+        onAddSelectedToPlaylist = onAddSelectedToPlaylist,
+        onRemoveMany = onRemoveMany,
         contentPadding = contentPadding,
         enabled = true,
         modifier = modifier,
@@ -110,16 +128,27 @@ fun PlaylistScreen(
 
 @Composable
 private fun PlaylistBody(
-    state: PlayerUiState,
+    // **The track list, not the whole player state.** `positionSeconds` ticks every 200 ms while
+    // anything plays, so taking `PlayerUiState` here recomposed every row five times a second --
+    // which is what "as if the FPS were low" was. Browse takes `BrowseState`, which does not tick,
+    // and stayed smooth at three hundred rows while this stuttered at twenty-two. That comparison
+    // is what found it.
+    tracks: List<TrackRef>,
+    listState: LazyListState,
     currentIndex: Int?,
     onPlayAt: (Int) -> Unit,
     onRemoveAt: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
+    onAddToOtherPlaylist: (TrackRef) -> Unit,
+    onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
+    onRemoveMany: (List<Int>) -> Unit,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
     // the offset applied to whichever row had inherited that index, which is what made rows overlap.
@@ -131,14 +160,27 @@ private fun PlaylistBody(
     // through a holder that is kept current. Capturing the track list directly is what broke the
     // drag after two rows: the handler kept answering with the position the row had when the
     // gesture began, so the third step was computed from a stale origin and threw the row back.
-    val tracks by rememberUpdatedState(state.queue.tracks)
+    val liveTracks by rememberUpdatedState(tracks)
     val move by rememberUpdatedState(onMove)
-    val indexOfTrack = remember { { id: String -> tracks.indexOfFirst { it.id == id } } }
-    val trackCount = remember { { tracks.size } }
+    val indexOfTrack = remember { { id: String -> liveTracks.indexOfFirst { it.id == id } } }
+    val trackCount = remember { { liveTracks.size } }
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
 
-    LazyColumn(state = listState, modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
-        itemsIndexed(state.queue.tracks, key = { _, track -> track.id }) { index, track ->
+    var following by remember { mutableStateOf(false) }
+    // Selection lives here and dies with the screen, the same as in Browse: a tick that survives a
+    // reload would act on a row the user never saw (`docs/ARCHITECTURE.md` §17).
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    LaunchedEffect(tracks) {
+        selected = selected.intersect(tracks.mapTo(mutableSetOf()) { it.id })
+    }
+    val selecting = selected.isNotEmpty()
+    // Takes back before the screen's own handler: leave the selection first, ticking nothing.
+    BackHandler(enabled = selecting) { selected = emptySet() }
+    val haptics = rememberHaptics()
+
+    Box(modifier = modifier.fillMaxSize()) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
+        itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
             TrackRow(
                 index = index,
                 track = track,
@@ -146,9 +188,24 @@ private fun PlaylistBody(
                 enabled = enabled,
                 dragging = track.id == draggingId,
                 dragOffset = if (track.id == draggingId) dragOffset else 0f,
+                selecting = selecting,
+                ticked = track.id in selected,
+                onToggle = {
+                    selected = if (track.id in selected) selected - track.id else selected + track.id
+                },
+                onStartSelecting = { selected = selected + track.id },
                 onPlay = { onPlayAt(index) },
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
+                onAddToOtherPlaylist = { onAddToOtherPlaylist(track) },
+                // Absent for a local file, which has no catalogue folder to open, and for a
+                // live-search catalogue, which publishes no index and no author to open one by.
+                onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
+                    ?.let { { onShowNeighbours(it) } },
+                onShareFile = { onShareFile(track) },
+                // Absent for a local file, which has no address anyone else could open.
+                onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
+                    ?.let { { onShareLink(it) } },
                 dragHandleModifier = Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
@@ -158,9 +215,84 @@ private fun PlaylistBody(
                     offset = { dragOffset },
                     setOffset = { dragOffset = it },
                     onMove = moveTrack,
+                    haptics = haptics,
                 ),
             )
         }
+    }
+
+        // What you can do with what you ticked. Two buttons for the owner's three actions: the
+        // picker behind "Add to playlist..." offers an existing playlist *or* a new one, so
+        // "make a new playlist from these" is in there rather than missing (`docs/BACKLOG.md` A4).
+        if (selecting) {
+            Surface(
+                tonalElevation = 3.dp,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    // The dock's height goes *outside* the bar, not inside it. Putting the whole
+                    // content padding within made the bar three rows tall and reaching a third of
+                    // the way up the screen -- it was clearing the dock by growing rather than by
+                    // sitting above it.
+                    .padding(bottom = contentPadding.calculateBottomPadding()),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.browse_selected, selected.size, selected.size
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    // Icon with its name underneath, like every other action in the app.
+                    LabelledAction(
+                        icon = PlayerIcons.PlaylistAdd,
+                        label = stringResource(R.string.action_add_to_playlist),
+                        onClick = {
+                            onAddSelectedToPlaylist(tracks.filter { it.id in selected })
+                            selected = emptySet()
+                        },
+                    )
+                    LabelledAction(
+                        icon = PlayerIcons.Remove,
+                        label = stringResource(R.string.action_delete),
+                        onClick = {
+                            onRemoveMany(
+                                tracks.indices.filter { tracks[it].id in selected }
+                            )
+                            selected = emptySet()
+                        },
+                    )
+                }
+            }
+        }
+
+        // At the very edge, so the row's own drag handle and this one cannot be confused
+        // (`docs/BACKLOG.md` A3). Absent while the list is behind glass: dragging a scrollbar for a
+        // list you cannot touch would be a control that lies.
+        if (enabled) {
+            DraggableScrollbar(
+                listState = listState,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(contentPadding),
+            )
+        }
+    }
+
+    // Not while selecting: it floats over the bottom-right corner, which is where the actions are,
+    // and following the playing track is not what you are doing when you are choosing rows.
+    if (enabled && !selecting) {
+        FollowTrackButton(
+            listState = listState,
+            currentIndex = currentIndex,
+            contentPadding = contentPadding,
+            following = following,
+            onFollowingChange = { following = it },
+        )
     }
 
     showingInfo?.let { track ->
@@ -194,11 +326,12 @@ private fun Modifier.dragToReorder(
     offset: () -> Float,
     setOffset: (Float) -> Unit,
     onMove: (Int, Int) -> Unit,
+    haptics: Haptics,
 ): Modifier = pointerInput(trackId) {
     detectDragGestures(
-        onDragStart = { setDragging(trackId); setOffset(0f) },
-        onDragEnd = { setDragging(null); setOffset(0f) },
-        onDragCancel = { setDragging(null); setOffset(0f) },
+        onDragStart = { setDragging(trackId); setOffset(0f); haptics.gestureStart() },
+        onDragEnd = { setDragging(null); setOffset(0f); haptics.gestureEnd() },
+        onDragCancel = { setDragging(null); setOffset(0f); haptics.gestureEnd() },
         onDrag = { change, delta ->
             change.consume()
             setOffset(offset() + delta.y)
@@ -208,8 +341,6 @@ private fun Modifier.dragToReorder(
             val from = indexOf(trackId)
             if (from < 0) return@detectDragGestures
 
-            // Measured rather than assumed: a row's height depends on whether it has a second line,
-            // and a hard-coded guess drifts by one position after a few moves.
             val height = listState.layoutInfo.visibleItemsInfo
                 .firstOrNull { it.index == from }?.size?.takeIf { it > 0 }
                 ?: return@detectDragGestures
@@ -220,14 +351,14 @@ private fun Modifier.dragToReorder(
             val target = (from + steps).coerceIn(0, trackCount() - 1)
             if (target != from) {
                 onMove(from, target)
-                // The row has moved under the finger, so the accumulated offset that caused the
-                // move is spent. What remains is the part of the drag past it.
+                haptics.tick()
                 setOffset(offset() - (target - from) * height)
             }
         },
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TrackRow(
     index: Int,
@@ -236,15 +367,32 @@ private fun TrackRow(
     enabled: Boolean,
     dragging: Boolean,
     dragOffset: Float,
+    selecting: Boolean,
+    ticked: Boolean,
+    onToggle: () -> Unit,
+    onStartSelecting: () -> Unit,
     onPlay: () -> Unit,
     onRemove: () -> Unit,
     onInfo: () -> Unit,
+    onAddToOtherPlaylist: () -> Unit,
+    onShowNeighbours: (() -> Unit)?,
+    onShareFile: () -> Unit,
+    onShareLink: (() -> Unit)?,
     dragHandleModifier: Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
 
     val label = SupportedFormats.labelFor(track.fileNameOrTitle)
-    val subtitle = listOf(track.displayAuthor, label).filter { it.isNotBlank() }.joinToString(" · ")
+    // In both modes, for the same reason the dock shows it in both: a count you only see once you
+    // have switched to the mode tells you nothing you did not already know.
+    val tunes = if (track.subsongs > 1) {
+        pluralStringResource(R.plurals.subsongs_count, track.subsongs, track.subsongs)
+    } else {
+        ""
+    }
+    val subtitle = listOf(track.displayAuthor, label, tunes)
+        .filter { it.isNotBlank() }
+        .joinToString(" · ")
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -252,10 +400,14 @@ private fun TrackRow(
             { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         },
         leadingContent = {
+            // The checkbox takes the ordinal's slot, which is already reserved and already this
+            // size -- so entering selection moves nothing (`docs/ARCHITECTURE.md` §17). The owner
+            // defended the ordinal for telling him where he is in three hundred rows; while
+            // selecting, what matters is which rows are ticked.
             Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
-                if (playing) {
-                    // A triangle rather than the dot this used to be: a triangle says what the row
-                    // IS, where a dot only says which one.
+                if (selecting) {
+                    Checkbox(checked = ticked, onCheckedChange = { onToggle() })
+                } else if (playing) {
                     Icon(
                         imageVector = PlayerIcons.Play,
                         contentDescription = stringResource(R.string.a11y_now_playing_row),
@@ -263,8 +415,6 @@ private fun TrackRow(
                         modifier = Modifier.size(20.dp),
                     )
                 } else {
-                    // The number stays. With three hundred tracks it is the only thing on the row
-                    // that says where in the list you are.
                     Text(
                         text = "${index + 1}",
                         style = MaterialTheme.typography.labelSmall,
@@ -274,7 +424,7 @@ private fun TrackRow(
                 }
             }
         },
-        trailingContent = if (!enabled) null else {
+        trailingContent = if (!enabled || selecting) null else {
             {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box {
@@ -287,6 +437,30 @@ private fun TrackRow(
                                 leadingIcon = { Icon(PlayerIcons.Info, contentDescription = null) },
                                 onClick = { menuOpen = false; onInfo() },
                             )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_add_to_playlist)) },
+                                leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
+                                onClick = { menuOpen = false; onAddToOtherPlaylist() },
+                            )
+                            onShowNeighbours?.let { show ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_show_neighbours)) },
+                                    leadingIcon = { Icon(PlayerIcons.Folder, contentDescription = null) },
+                                    onClick = { menuOpen = false; show() },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_share_file)) },
+                                leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
+                                onClick = { menuOpen = false; onShareFile() },
+                            )
+                            onShareLink?.let { share ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_share_link)) },
+                                    leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
+                                    onClick = { menuOpen = false; share() },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_delete)) },
                                 leadingIcon = { Icon(PlayerIcons.Remove, contentDescription = null) },
@@ -312,9 +486,23 @@ private fun TrackRow(
         },
         modifier = Modifier
             .fillMaxWidth()
-            .zIndex(if (dragging) 1f else 0f)
-            .graphicsLayer { translationY = dragOffset }
-            .clickable(enabled = enabled, onClick = onPlay),
+            // **Only while this row is being dragged.** `graphicsLayer` allocates a render node,
+            // and applied unconditionally that is one per row -- allocated and thrown away again
+            // for every row a fling brings past. Browse's rows have no such modifier, which is why
+            // three hundred of them scroll smoothly while twenty-two of these did not. At most one
+            // row is ever dragged, so at most one layer is ever needed.
+            .then(
+                if (dragging) {
+                    Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset }
+                } else {
+                    Modifier
+                }
+            )
+            .combinedClickable(
+                enabled = enabled,
+                onClick = { if (selecting) onToggle() else onPlay() },
+                onLongClick = { if (!selecting) onStartSelecting() },
+            ),
     )
 }
 
@@ -324,39 +512,6 @@ private fun TrackRow(
  * Deliberately not the full metadata: that means reading the file, and it is a wishlist item of its
  * own. This says where the track came from and what it is, which is what "which one is this" needs.
  */
-@Composable
-private fun TrackInfoDialog(track: TrackRef, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(track.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                InfoLine(R.string.field_artist, track.displayAuthor)
-                InfoLine(R.string.field_format, SupportedFormats.labelFor(track.fileNameOrTitle))
-                InfoLine(R.string.field_file, track.fileNameOrTitle)
-                InfoLine(R.string.info_location, track.subtitle)
-                InfoLine(
-                    R.string.info_size,
-                    if (track.sizeBytes > 0) "${track.sizeBytes / 1024} kB" else "",
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
-    )
-}
-
-@Composable
-private fun InfoLine(label: Int, value: String) {
-    if (value.isBlank()) return
-    Column {
-        Text(
-            text = stringResource(label),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
-    }
-}
 
 @Composable
 private fun EmptyPlaylist(
@@ -383,20 +538,45 @@ private fun EmptyPlaylist(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onBrowse) { Text(stringResource(R.string.action_browse)) }
+            // The same pair the top bar's actions and the follow-track button use, rather than
+            // the primary colour a bare `Button` defaults to. This is the same *offer* as Browse
+            // up there -- the owner asked for them to look alike, and two controls that do the
+            // same thing should not be told apart by their colour.
+            Button(
+                onClick = onBrowse,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+            ) {
+                Icon(
+                    imageVector = PlayerIcons.Cloud,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(stringResource(R.string.action_browse))
+            }
         }
     }
 }
 
 /**
- * The glass over the playlist during Random, and the way out of it.
+ * The glass over the playlist while something else is playing, and the way out of it.
+ *
+ * One component for both detours — Random and a search — because they are the same situation from
+ * the playlist's point of view: what you are hearing is not on this list. Only the wording differs.
  *
  * The way out is in the middle of the screen with a label rather than tucked into a corner: the
  * playlist is already covered, so there is room, and a mode you can enter but cannot obviously
  * leave is a trap.
  */
 @Composable
-private fun RandomScrim(onExitRandom: () -> Unit, contentPadding: PaddingValues) {
+private fun AwayScrim(
+    randomMode: Boolean,
+    externalMode: Boolean,
+    onReturnToPlaylist: () -> Unit,
+    contentPadding: PaddingValues,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -410,23 +590,42 @@ private fun RandomScrim(onExitRandom: () -> Unit, contentPadding: PaddingValues)
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // Three ways to be away from the playlist now, and the third does not behave like the
+            // other two: a file handed to us by another app has no next and no previous, so the
+            // scrim must not promise one.
             Icon(
-                imageVector = PlayerIcons.Dice,
+                imageVector = when {
+                    externalMode -> PlayerIcons.Folder
+                    randomMode -> PlayerIcons.Dice
+                    else -> PlayerIcons.Search
+                },
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringResource(R.string.random_playing_title),
+                text = stringResource(
+                    when {
+                        externalMode -> R.string.external_playing_title
+                        randomMode -> R.string.random_playing_title
+                        else -> R.string.search_playing_title
+                    }
+                ),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = stringResource(R.string.random_playing_body),
+                text = stringResource(
+                    when {
+                        externalMode -> R.string.external_playing_body
+                        randomMode -> R.string.random_playing_body
+                        else -> R.string.search_playing_body
+                    }
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onExitRandom) {
+            Button(onClick = onReturnToPlaylist) {
                 Text(stringResource(R.string.random_back_to_playlist))
             }
         }

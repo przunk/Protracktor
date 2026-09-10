@@ -71,6 +71,35 @@ ninja -C /tmp/protracktor-nativetest
 `PROTRACKTOR_BUILD_ENGINE=OFF` is required outside Gradle: the engine links Oboe, which arrives as a
 prefab package unpacked from an AAR, and only the Gradle build unpacks it.
 
+### Trying a decoder on the host before believing in it
+
+Every backend here was run on this machine against real files before it was integrated, and that has
+caught something every time — sc68 2.2.1's half-broken SNDH, the SidMon executables hiding among
+Modland's `.sid` files, and the render-contract bug that would have stopped every Atari ST track on
+its first audio callback. The probes are committed; their binaries are not, because they are
+host-specific.
+
+```bash
+./scripts/build-sc68-probes.sh     # sc68 2.2.1 vs 3.0.0b, the render contract, concurrency,
+./scripts/probe-sc68.py            #   and the subsong-rewind demonstration for C13
+
+./scripts/build-uade-probe.sh      # fetches and builds UADE 3.05, its two support libraries,
+./scripts/probe-uade.py            #   and the song database, then measures against Modland
+
+./scripts/build-gme-probe.sh       # the seven console families, which went in unmeasured
+./scripts/probe-gme.py             #   and were 100/141 until the probe said why
+
+./scripts/probe-openmpt.py         # the backend that carries 61% of the library
+./scripts/probe-extensions.py      # what libopenmpt would play if the app ever offered the file
+```
+
+Each downloads a deterministic, seeded sample from Modland and caches it under `~/.protracktor`, so
+a second run measures the same files and can be compared with the first. `build-uade-probe.sh`
+prints the two environment variables `probe-uade.py` needs.
+
+**Set `PYTHONUNBUFFERED=1` when redirecting one of these to a file**, or the progress lines sit in
+Python's buffer and a long run looks hung.
+
 ## Builds
 
 ```bash
@@ -129,9 +158,37 @@ is otherwise invisible until an upload is rejected.
 
 ### App Bundle (.aab)
 
-Not written. The owner is adding a bundle signing key later, and a bundle script guessing at how it
-will be configured would have to be rewritten when it arrives. There is nothing to upload to a store
-yet either.
+```
+./scripts/build-bundle.sh [extra gradle args…]
+```
+
+Written 2026-09-02, adapted from Kratkoza's with the owner's permission — both projects sign with
+the same workshop upload key through the same `PRZUNK_UPLOAD_*` Gradle properties, so the mechanism
+is deliberately identical rather than merely similar.
+
+**It refuses to hand over a bundle Play would reject.** That is the difference from
+`build-release.sh`, which only warns: for an APK the debug fallback earns its place, because an
+unsigned APK cannot be sideloaded at all and a debug-signed one is still useful. For a bundle headed
+to Play it buys nothing but a rejection discovered later instead of now, so a debug signature is a
+hard failure here.
+
+A bundle carries a **JAR** signature rather than an APK one, so `apksigner` cannot read it; the
+check uses `jarsigner -verify` and then `keytool -printcert -jarfile`.
+
+**Credentials**, in order of preference and neither written down:
+
+1. `~/.gradle/gradle.properties`, as above. If `PRZUNK_UPLOAD_STORE_FILE` is there, the script does
+   not ask.
+2. Typed at the prompt, passed to Gradle as `ORG_GRADLE_PROJECT_*` for the life of the process only.
+   Nothing reaches the repository, `gradle.properties`, or the shell history.
+
+Without a terminal, set `PRZUNK_UPLOAD_STORE_FILE`, `PRZUNK_UPLOAD_KEY_ALIAS`,
+`PRZUNK_UPLOAD_STORE_PASSWORD` and `PRZUNK_UPLOAD_KEY_PASSWORD` in the environment.
+
+The artifact is `dist/protracktor-<versionName>-<versionCode>.aab`, **without** the timestamp the
+APK names carry: Play identifies an upload by its versionCode, so the filename should be identified
+by the same thing. The script says so when a bundle for that code already exists — a rebuild is
+fine, a forgotten bump is not, and only you can tell which.
 
 ## Pushing to GitHub
 
@@ -151,3 +208,86 @@ Pushing is the owner's action. Agents do not hold tokens (AGENTS.md §3).
 
 There is no emulator in this environment. Nothing about on-screen behaviour is confirmed until the
 owner installs the APK on a phone. A build that compiles proves the build, and nothing else.
+
+## Versions
+
+**`versionCode` is the commit count.** `git rev-list --count HEAD`, read by Gradle through
+`providers.exec`. It only ever grows, changes on every merge without anyone doing anything, and
+needs no discipline — which matters because Play refuses an upload whose code it has seen, and a
+number a person has to remember to raise is a number that eventually is not raised. It stood at 2
+for the whole project and blocked an upload; it is 199 as of 2026-09-03.
+
+Outside a git checkout it falls back to 1. That is wrong and harmless: nothing built that way is
+going to a store.
+
+**`versionName` is typed by hand and means something.**
+
+| | when |
+| --- | --- |
+| **patch** — 0.3.**1** | a batch of fixes handed over |
+| **minor** — 0.**4**.0 | a round of work that added capability |
+| **major** — **1**.0.0 | reserved for "publishable" |
+
+Bumped at **hand-over**, which is when the number gets used, not at merge.
+
+**Bumping the minor on every merge was considered and rejected.** There were about twenty merges on
+2026-09-03 alone, several of them documentation. It would have reached 0.22.0 in a day and told
+nobody anything a timestamp does not — while costing an edit and a commit each time. The instinct
+behind it was right, though: something *should* move on every merge. That something is the
+versionCode, and now it does.
+
+**Artifact names are read out of the artifact**, with `aapt2 dump badging`, rather than scraped from
+`build.gradle.kts`. There is no number in the source to scrape any more, and asking the APK what it
+is cannot disagree with what it is. A bundle cannot be asked, so `build-bundle.sh` recomputes the
+commit count the same way Gradle does — the two expressions have to agree, and the script says so.
+
+## Which build to hand over
+
+**Release.** Since 2026-09-03, the APK given to the owner for testing is the release build:
+
+```
+./scripts/build-release.sh
+```
+
+It is what he will actually experience — a debug build is `debuggable=true`, which costs a great
+deal of ART optimisation and once produced twenty seconds of stutter that did not exist in release
+(`docs/STATUS.md` C10). It also goes through R8, so a missing keep rule or a stripped resource
+surfaces at hand-over rather than at a release.
+
+Debug stays the right build **while iterating** — it is two to three times faster — and **when a
+crash needs a readable stack trace**. Diagnose on debug, judge on release.
+
+Without `PRZUNK_UPLOAD_*` configured the release APK is signed with the local debug key: sideloadable
+and not publishable. `build-release.sh` says which key signed it, every time.
+
+## Telling a green suite from a green suite that ran
+
+`./scripts/test-protracktor.sh` prints how the result was reached, because Gradle has two ways of
+reporting a passing suite it did not execute:
+
+| what the script says | what happened |
+| --- | --- |
+| `124 tests passed in 13s` | they ran |
+| `… (up to date, not re-run)` | nothing changed since last time |
+| `… (from the build cache, not re-run)` | the answer came out of the build cache |
+
+Both of the second two print `BUILD SUCCESSFUL` and execute nothing. The FROM-CACHE case was
+invisible here until 2026-09-03, when a "genuinely executed" run at the end of a review turned out
+to have been served from the cache in one second.
+
+**`--really`** forces execution (`--rerun-tasks`). Worth it before claiming a suite is green on code
+nobody has actually run it against.
+
+## What the test script checks, beyond the tests
+
+`./scripts/test-protracktor.sh` runs the unit tests and then two things the Kotlin compiler and
+`aapt2` are both happy to let through:
+
+- **Format specifiers with their flags in the wrong place.** `%,1$d` is not a specifier — the
+  argument index comes first, `%1$,d` — and `String.format` throws when the string is rendered
+  rather than when it is built. One shipped, in a plural whose quantity is always `other`, so the
+  crash was certain and invisible here (`docs/STATUS.md` C5).
+- **Strings that exist in English and not in Polish.** The app is bilingual from the first screen
+  and fifteen strings had drifted to English-only across three days before anyone looked.
+
+Both were verified by breaking the files deliberately and confirming the script exits non-zero.

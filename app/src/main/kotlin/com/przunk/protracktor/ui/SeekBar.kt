@@ -1,23 +1,15 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -34,7 +26,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 
 /**
- * The seek control, used by both the dock and the expanded player.
+ * The seek control, used by both the dock and Now Playing.
  *
  * One component in two places so the two cannot drift apart. The owner asked to be able to move
  * through a track without opening anything first, and a bar that reads differently in each place
@@ -74,16 +66,37 @@ fun SeekBar(
         interactionSource = interaction,
         modifier = modifier
             .fillMaxWidth()
-            .then(if (compact) Modifier.height(28.dp) else Modifier)
+            // **The height is the touch target, not the look of the line.** The track's thickness
+            // is set on the track itself, so this can be a proper 48dp finger without the bar
+            // getting any fatter. It was 28dp, under Material's minimum, with a full-width button
+            // immediately below it -- so a low miss did not do nothing, it opened Now Playing. The
+            // owner met that in a car, which is where a small target costs the most.
+            .then(if (compact) Modifier.height(COMPACT_TOUCH_HEIGHT) else Modifier)
             .then(label?.let { text -> Modifier.semantics { contentDescription = text } } ?: Modifier),
         thumb = {
             // A visible grab point, which is what the owner asked for: a progress line with nothing
             // to take hold of does not look like something you can move.
-            SliderDefaults.Thumb(
-                interactionSource = interaction,
-                thumbSize = if (compact) DpSize(14.dp, 14.dp) else DpSize(20.dp, 20.dp),
-                enabled = enabled,
-            )
+            //
+            // **And nothing to take hold of when there is nothing to move.** SID and Atari ST
+            // cannot seek — libsidplayfp is running a program and has no notion of a position at
+            // all — and since HVSC started supplying SID durations, the bar shows a real length and
+            // looked exactly like a bar you could drag. The owner tried, on 2026-09-04. A greyed
+            // thumb reads as "not now"; no thumb reads as "this is progress", which is the truth.
+            //
+            // **Drawn here rather than by `SliderDefaults.Thumb`**, which grows while pressed. The
+            // track is inset by the thumb's radius, so a thumb that changes size makes the line
+            // itself widen at both ends the moment you touch it — which is what the owner saw. A
+            // fixed circle keeps the bar still under the finger.
+            if (enabled) {
+                val size = if (compact) 14.dp else 20.dp
+                Box(
+                    modifier = Modifier
+                        .size(size)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                )
+            } else {
+                Box(Modifier.size(0.dp))
+            }
         },
         track = { state ->
             SliderDefaults.Track(
@@ -99,3 +112,11 @@ fun SeekBar(
         ),
     )
 }
+
+/**
+ * How much finger the dock's seek bar answers to.
+ *
+ * Material asks for 48dp and the bar was 28dp, which is fine on a desk and not in a car. The line
+ * still draws 4dp thick — this is the target around it, not the thing you see.
+ */
+private val COMPACT_TOUCH_HEIGHT = 48.dp

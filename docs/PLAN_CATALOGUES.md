@@ -26,39 +26,80 @@ to open, which is worse than not offering it.
 
 Ordered by what they unlock, with what was actually checked on 2026-09-01.
 
-### ASMA — Atari 8-bit
+### ~~ASMA — Atari 8-bit~~ — DONE 2026-09-02
 
 The reference collection of `.sap`. Natural pair with ASAP.
 
-- `https://asma.atari.org/` responds; `asma.zip` does **not** (404). The distribution URL and its
-  shape are unknown — find them first.
+- Found: `https://asma.atari.org/asmadb/asma.zip`. Not an index — **the whole collection**, 20 MB
+  holding 6,335 `.sap` files. `asma/Docs/Asma.txt` looked like it might be a metadata index and is
+  four lines of version banner.
+- That made it the second kind of catalogue predicted below for HVSC; `docs/ARCHITECTURE.md` §13
+  records the shape.
 - ASMA ships an `.stil`-style info database, which would give durations and credits the way HVSC
   does for SID.
-- **Blocked on ASAP** (`docs/PLAN_FORMATS.md` §3).
+- ~~Blocked on ASAP~~ — ASAP landed 2026-09-01, which is what unblocked this.
 
-### HVSC — Commodore 64
+### HVSC — Commodore 64 — song lengths DONE 2026-09-02, browsing not built
 
 - Not an index-plus-fetch archive: it is distributed as one large collection, and the whole thing is
   a plausible download rather than a per-track fetch. That is a **different shape** from Modland and
   the code does not currently express it — expect a second kind of `Catalogue`, not another parser.
-- `Songlengths.md5` (5.2 MB) fetches directly — verified 2026-08-31. Worth having on its own, before
-  any browsing, because it is what gives SID tunes a duration.
-- **Blocked on `libsidplayfp`.**
+- `Songlengths.md5` (5.2 MB) fetches directly — re-checked 2026-09-02, still 5,205,150 bytes at the
+  address recorded in `docs/ARCHITECTURE.md`. **Done**: downloaded on demand from the online screen,
+  parsed and stored, and looked up whenever a backend reports no duration of its own.
+- The key is the **plain MD5 of the whole file**, not the header hash that libsidplayfp still
+  exposes as `SidTune::createMD5`. Older HVSC releases used the latter; this one does not. Checked
+  rather than assumed — three tunes fetched from the collection, all three found by file MD5.
+- ~~Blocked on `libsidplayfp`~~ — landed 2026-09-02.
+- Browsing the collection itself is **still not built**, and is a bigger job than the lengths were:
+  ASMA's archive shape (`docs/ARCHITECTURE.md` §13) is the model, but HVSC is an order of magnitude
+  larger and a whole-collection download is a different proposition at that size.
 
-### The Mod Archive
+### The Mod Archive — search-only integration DONE 2026-09-02
 
-- `https://api.modarchive.org/` responds (2026-09-01). It has a documented XML API, and it wants an
-  **API key**, which is a question for the owner: a key in a public GPL repository is a key that is
-  no longer private.
-- No single index file. This is a paged, queried archive — browsing would be online rather than
-  offline, which breaks the property that makes Modland pleasant. Consider search-only integration.
-- Formats are mostly trackers, so it is **playable today** — the only candidate here that is.
+- `https://api.modarchive.org/` responds (2026-09-01). The official XML API requires an API key
+  that is no longer issued via automatic self-service (requires contacting staff).
+- Instead of waiting for API keys, **integrated via live web search parser** (2026-09-02):
+  - Queries `https://modarchive.org/index.php?request=search&query=...` directly.
+  - Direct downloads via `https://api.modarchive.org/downloads.php?moduleid=...` require no key
+    or session, and are cached on-demand by `RemoteFiles`.
+  - Introduced `Catalogue.isOnlineOnly`: The Mod Archive participates in Search domain filters
+    without requiring a multi-megabyte local offline index download.
+  - Generates shareable web URLs pointing to `https://modarchive.org/index.php?request=view_by_moduleid&query=...`.
+- Supported tracker formats (MOD, XM, S3M, IT) are **playable today** via libopenmpt.
+- **Future direction:** `docs/WISHLIST.md` B19 envisions server-hosted periodic index dumps to allow
+  offline browsing in addition to live search.
 
-### AMP (amp.dascene.net)
+### AMP (amp.dascene.net) — investigated 2026-09-04, and the answer is no
 
-- Responds (2026-09-01). Heavy on Amiga custom formats, which is exactly what we cannot play.
-- Index format unknown; historically a web interface rather than a published index.
-- **Blocked on UADE**, which has its own licensing question.
+`GOAL.md` round 6 item 2 said: if AMP publishes nothing machine-readable, stop and write that down
+rather than scraping a website into a fragile parser. It publishes nothing machine-readable, and
+there is a second reason that matters more.
+
+**What was checked:** `/api`, `/list.php`, `/downloads/`, `/sitemap.xml` — all 404. `/download.php`
+is a page about donating, not a data endpoint. There is no bulk archive the way ASMA publishes one
+and no tab-separated index the way Modland does. The site is a PHP front end over a database, and
+the only route to a module is `downmod.php?index=N`.
+
+**And `robots.txt` asks us not to take it:**
+
+```
+User-Agent: *
+Disallow: /downmod.php
+Disallow: /downmod.php?
+Disallow: /downmod.php*
+Disallow: /modules/
+```
+
+The download endpoint and the module directory are exactly what an index would have to walk and
+what the app would then fetch from. That is the site telling automated clients to stay off its
+music, and it is not ours to reinterpret because our automated client happens to have a person
+behind it. It changes this from "hard to parse" to "asked not to", which is a different kind of no.
+
+**So AMP is not blocked on UADE.** It was recorded that way, and after 2026-09-04 that is no longer
+the binding reason: even with every Amiga format playing, the sanctioned way in does not exist. If
+AMP is ever wanted, the move is to ask them — they have a forum and a contact page — not to write a
+parser.
 
 ### Aminet
 
@@ -68,6 +109,51 @@ The reference collection of `.sap`. Natural pair with ASAP.
   before it needs anything else. libopenmpt unpacks some containers itself; `.lha` is not among them.
 
 ---
+
+## UnExoticA — the gap Modland does not cover
+
+*Raised by the owner, 2026-09-07: he went looking for an Amiga game soundtrack, found only the SNES
+rip under Nintendo SPC, and asked where the Amiga one lives.*
+
+**Modland is organised by musician and is mostly demoscene**, not game rips. That is the shape of
+the archive rather than an omission, and it leaves out a whole category of what people actually
+remember — the music from games they played. UnExoticA is the archive for that, indexed by game.
+
+**Measured from the songdb index rather than by touching their server**
+(`docs/reference/songdb.md`): 8,713 tunes with paths, of which **our format list covers 4,479 —
+51.4%**. The half we do not cover is almost exactly UADE's territory: Sierra AGI (745), Sonix (301),
+the P40A/P50A/P60A packers (451), TFMX (314), CustomPlay (204), David Whittaker (119), Sonic
+Arranger (116), Richard Joseph (105). So a low number here is not an argument against the catalogue;
+it is a second argument for revisiting UADE, and then the two stop being separate decisions.
+
+**Every file lives inside a `.lha` archive**, addressed as `Game/Author/Title.lha/Title/mod.name`.
+The unit of download is therefore a game's whole soundtrack — closer to ASMA's model than Modland's.
+Two things are settled and will not need redoing: the URL rule is
+`https://files.exotica.org.uk/pub/exotica/media/audio/UnExoticA/` plus the index path up to and
+including the `.lha`, with the remainder naming the file inside; and **lhasa is ISC**, so the
+extractor raises no licence question.
+
+**The extractor is no longer missing.** lhasa 0.6.0 was vendored on 2026-09-09 for an unrelated
+reason — ZXTune's `.ym` decoder reads an LHA-compressed stream, and 4,961 Modland files were
+unopenable without it (`docs/PLAN_FORMATS.md` §8). That work used the *decoder* half of the library;
+this catalogue needs the *reader* half, which walks an archive's headers and names its members. Both
+are built into `native/lhasa`.
+
+**Asked, 2026-09-08.**
+`files.exotica.org.uk/robots.txt` is `User-agent: * / Disallow: /` — a blanket disallow, not the
+AI-crawler list `www.exotica.org.uk` carries. The reading we agree on is that robots.txt governs
+crawlers rather than a user's own client fetching a file they asked for, and the app would be doing
+the latter. But it is a volunteer archive's bandwidth and every user would be pointed at it, so the
+answer is theirs to give rather than ours to infer — the same move that worked with UADE.
+
+**The owner decided on 2026-09-09 to build it before the reply**, for his own use and behind a
+switch: *"czekam na maila ale możemy przed publikacją używać już wersji, która spełni moje osobiste
+marzenia… W razie czego wyłączymy funkcję lub ją usuniemy. Proponuję dodać jako
+zależność/funkcję łatwousuwalną."* That is a different bargain from the one this section was written
+under — nothing is published, no user but him is pointed at the archive, and if the answer is no the
+feature comes out. What it requires of the implementation is that "comes out" be cheap and honest:
+one flag, one source file per layer, no rows of theirs left in anybody's database. That constraint
+is the design, and it is written down in §UnExoticA of `docs/PLAN_UNEXOTICA.md`.
 
 ## Work that is shared, and should come first
 
@@ -90,3 +176,9 @@ Do **nothing** here until `docs/PLAN_FORMATS.md` items 1 and 2 are done. Every c
 Mod Archive is blocked on a decoder, and The Mod Archive is the one whose shape fits our design
 worst. The best next move for online music is not another archive — it is being able to play more of
 the one we already have.
+
+**2026-09-04 made that recommendation literal rather than rhetorical.** Five names added to
+`SupportedFormats` gave Modland 5,558 more playable files than adding any archive would have, at a
+fraction of the cost, and AMP — the archive this section was holding a place for — turns out not to
+be available on any terms we should take. Playing more of what we have is not a stopgap until the
+next catalogue; it is the better move on the numbers.

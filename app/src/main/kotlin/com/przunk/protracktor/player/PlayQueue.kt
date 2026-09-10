@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.player
 
 /** What a repeat control cycles through. */
@@ -58,6 +46,16 @@ data class TrackRef(
      * display falls back to the source folder rather than to nothing.
      */
     val author: String = "",
+    /**
+     * How many tunes the file holds, where that is already known.
+     *
+     * Known for a **scanned local file** — the scan opened it and the index kept the answer — and
+     * **1 for everything else** until it has been played, because finding out means opening the
+     * file and a catalogue's index is a list of names on somebody else's server. So this is a hint
+     * for the list, never the authority: the authority is what the backend says once the file is
+     * open (`docs/BACKLOG.md` A2).
+     */
+    val subsongs: Int = 1,
 ) {
     /**
      * Whether two references point at the same actual file.

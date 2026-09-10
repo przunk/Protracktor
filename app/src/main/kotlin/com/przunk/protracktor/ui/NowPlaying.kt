@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +36,13 @@ import com.przunk.protracktor.player.PlayerUiState
 fun NowPlaying(
     state: PlayerUiState,
     onSeek: (Double) -> Unit,
+    onShowInPlaylist: (() -> Unit)?,
+    onShowNeighbours: (() -> Unit)?,
+    onShareFile: (() -> Unit)?,
+    onShareLink: (() -> Unit)?,
+    onAddToOtherPlaylist: (() -> Unit)? = null,
+    onSelectSubsong: (Int) -> Unit = {},
+    onToggleAllSubsongs: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val track = state.current
@@ -100,8 +97,57 @@ fun NowPlaying(
             }
         }
 
+        // Under the seek bar and above the actions: it is about what is playing, so it belongs
+        // with the transport rather than with the things you can do to the file.
+        SubsongStrip(
+            count = state.subsongCount,
+            current = state.subsong,
+            playAll = state.playAllSubsongs,
+            onSelect = onSelectSubsong,
+            onTogglePlayAll = onToggleAllSubsongs,
+            // So the strip knows a *different file* is playing rather than inferring it from the
+            // count, which two unrelated files can easily share.
+            trackKey = track?.id,
+        )
+
+        // One row of icons with their names underneath, rather than a stack of full-width text
+        // buttons that grew by two in a single day (`docs/BACKLOG.md` A17). Each is absent rather
+        // than disabled when it has nowhere to go -- a local file has no catalogue folder and no
+        // address anyone else could open.
+        // Equal columns sharing the width that is there, rather than a fixed cell size: five fixed
+        // cells do not fit a phone, and the ones that wrapped read as missing rather than as a
+        // second row. `weight` makes them a grid however many there are -- and the number does
+        // vary, deliberately. "Show in playlist" is absent while what plays is not in the playlist,
+        // and a local file has neither an author folder nor an address anyone else could open.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            onShowInPlaylist?.let {
+                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it, Modifier.weight(1f))
+            }
+            onShowNeighbours?.let {
+                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it, Modifier.weight(1f))
+            }
+            onAddToOtherPlaylist?.let {
+                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
+            }
+            onShareFile?.let {
+                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it, Modifier.weight(1f))
+            }
+            onShareLink?.let {
+                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it, Modifier.weight(1f))
+            }
+        }
+
         val message = state.metadata["message"].orEmpty()
-        val rows = FIELDS.mapNotNull { (key, label) ->
+        // The year is derived rather than looked up, because no two backends record it under the
+        // same name and one of them does not record a year at all -- see `ReleaseYear`. It goes
+        // first: of everything in this list it is the one fact about the tune rather than about
+        // the file.
+        val rows = listOfNotNull(
+            state.releaseYear.takeIf { it.isNotBlank() }?.let { R.string.field_year to it }
+        ) + FIELDS.mapNotNull { (key, label) ->
             state.metadata[key]?.takeIf { it.isNotBlank() && it != "0" }?.let { label to it }
         }
 
@@ -141,6 +187,10 @@ private val FIELDS = listOf(
     "format" to R.string.field_format,
     "tracker" to R.string.field_tracker,
     "artist" to R.string.field_artist,
+    // Filled by the songdb lookup where the file itself is silent, which for a plain `.mod` is
+    // always: the format has nowhere to record either.
+    "album" to R.string.field_album,
+    "publisher" to R.string.field_publisher,
     "composer" to R.string.field_composer,
     "hardware" to R.string.field_hardware,
     "channels" to R.string.field_channels,

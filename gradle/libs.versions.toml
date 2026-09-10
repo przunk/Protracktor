@@ -7,6 +7,10 @@ lifecycle = "2.8.7"
 activityCompose = "1.9.3"
 composeBom = "2024.12.01"
 oboe = "1.10.0"
+# The scanner. CameraX for the preview and the frame stream, ZXing for the decoding -- see the
+# libraries below for why not ML Kit.
+camerax = "1.4.1"
+zxing = "3.5.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -20,6 +24,15 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 oboe = { group = "com.google.oboe", name = "oboe", version.ref = "oboe" }
+androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+# **ZXing rather than ML Kit**, and the reason is the same one that governs the decoders: ML Kit's
+# barcode scanner is proprietary and arrives through Google Play services, which is a dependency on
+# a service rather than on a library, and it does not run on a device without them. ZXing is
+# Apache-2.0, pure Java, and reads a QR out of a byte array (`docs/LICENSES.md`).
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 junit = { group = "junit", name = "junit", version = "4.13.2" }
 # Test only. Lets the schema and its migrations run against a real SQLite engine on the JVM, which
 # is the only way to test them at all here: there is no emulator, and a migration meets somebody's

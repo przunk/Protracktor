@@ -1,61 +1,132 @@
-# sc68 -- GPL-2.0-or-later. Atari ST: SNDH and raw YM.
+# sc68 3.0.0b -- GPL-2.0-or-later. Atari ST: SNDH and the .sc68 container.
 #
 # SNDH files are 68000 machine code, not note data, so playing one means emulating an Atari ST.
-# That is what sc68 brings: emu68 (the CPU), io68 (the YM2149, MFP and friends), file68 (loading and
-# SNDH parsing), api68 (the player) and unice68 (the ICE depacker these files often arrive in).
+# That is what sc68 brings: emu68 (the CPU), io68 (the YM2149, MFP, STE microwire and Paula),
+# file68 (loading, SNDH parsing and a database of known tunes), libsc68 (the player) and unice68
+# (the ICE depacker these files usually arrive in).
 #
-# Released in 2003 with autotools. Rather than cross-compiling `configure` for Android, the handful
-# of defines it would have produced are supplied directly below -- the alternative is carrying a
-# generated config into the repository, where nobody would ever notice it going stale.
-set(SC68_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../../vendor/sc68")
+# ## Why 3.0.0b and not the 2.2.1 release
+#
+# Measured, not assumed. `./scripts/probe-sc68.py` runs both libraries over the same thirty SNDH
+# files and ten .sc68 files picked deterministically from Modland:
+#
+#     .sndh plays      14/30  ->  30/30
+#     .sc68 plays      10/10  ->  10/10
+#
+# 2.2.1 is from 2003 and its SNDH support is roughly half. Nothing on our side changes that.
+#
+# ## What that cost
+#
+# 3.x is not 2.2.1 with more formats: `api68_*` is gone entirely and there is no compatibility
+# header, so `Sc68Backend` is written against `sc68_*` instead. It also has no released tarball --
+# it exists only in SourceForge SVN, fetched by ./scripts/fetch-sc68-svn.py at a pinned revision
+# with a checksum manifest.
+set(SC68_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../../vendor/sc68-3")
+set(SC68_GEN "${CMAKE_CURRENT_SOURCE_DIR}/generated")
 
-if(NOT EXISTS "${SC68_SRC}/api68/api68.c")
+if(NOT EXISTS "${SC68_SRC}/libsc68/src/api68.c")
     message(FATAL_ERROR
-        "sc68 sources are missing. Run ./scripts/fetch-native-deps.sh first.\n"
-        "  expected: ${SC68_SRC}/api68/api68.c")
+        "sc68 3.0.0b sources are missing. Run ./scripts/fetch-sc68-svn.py first.\n"
+        "  expected: ${SC68_SRC}/libsc68/src/api68.c")
 endif()
 
-# The tools (as68, desa68, sourcer68, debug68, info68, sc68) are deliberately not here: they are
-# command-line programs, and one of them defines main().
-set(SC68_MODULES emu68 io68 file68 api68 unice68)
+# The source lists come from upstream's own Makefile.am files, not from a glob. Globbing picks up
+# three kinds of file that must not be compiled:
+#
+#   * lines68.c   -- the monolithic alternative to the sixteen line*_68.c files, and #errors unless
+#                    EMU68_MONOLITIC is set;
+#   * cc68.c      -- #errors that it is deprecated;
+#   * ym_atarist_table.c / ym_linear_table.c -- data tables that are #included, not compiled;
+#   * unice68.c   -- the command-line depacker, which defines main().
+#
+# A count assert below catches the tree changing shape under us, which is how the libopenmpt list
+# silently became empty once.
+set(SC68_EMU68
+    emu68.c error68.c getea68.c inst68.c ioplug68.c mem68.c
+    line0_68.c line1_68.c line2_68.c line3_68.c line4_68.c line5_68.c line6_68.c line7_68.c
+    line8_68.c line9_68.c lineA_68.c lineB_68.c lineC_68.c lineD_68.c lineE_68.c lineF_68.c
+    table68.c)
+set(SC68_IO68
+    io68.c mfp_io.c mfpemul.c mw_io.c mwemul.c paula_io.c paulaemul.c shifter_io.c
+    ym_envel.c ym_blep.c ym_dump.c ym_io.c ym_puls.c ymemul.c)
+# vfs68_ao.c and vfs68_curl.c are here although libao and libcurl are not: they compile to stubs,
+# and init68.c calls their shutdown functions unconditionally. Dropping them fails at link.
+set(SC68_FILE68
+    error68.c file68.c gzip68.c ice68.c init68.c
+    vfs68.c vfs68_ao.c vfs68_curl.c vfs68_fd.c vfs68_file.c vfs68_mem.c vfs68_null.c vfs68_z.c
+    msg68.c option68.c registry68.c rsc68.c string68.c timedb68.c uri68.c)
+set(SC68_LIB68 api68.c conf68.c libsc68.c mixer68.c)
+# New in 3.x: a small configuration/dialogue module that sc68_cntl calls into. Not optional.
+set(SC68_DIAL68 dial68.c dial_conf.c dial_tsel.c dial_finf.c)
+set(SC68_UNICE68 unice68_pack.c unice68_unpack.c unice68_version.c)
+
 set(SC68_SOURCES "")
-foreach(module IN LISTS SC68_MODULES)
-    file(GLOB module_sources CONFIGURE_DEPENDS "${SC68_SRC}/${module}/*.c")
-    list(APPEND SC68_SOURCES ${module_sources})
+foreach(f IN LISTS SC68_EMU68)
+    list(APPEND SC68_SOURCES "${SC68_SRC}/libsc68/emu68/${f}")
+endforeach()
+foreach(f IN LISTS SC68_IO68)
+    list(APPEND SC68_SOURCES "${SC68_SRC}/libsc68/io68/${f}")
+endforeach()
+foreach(f IN LISTS SC68_FILE68)
+    list(APPEND SC68_SOURCES "${SC68_SRC}/file68/src/${f}")
+endforeach()
+foreach(f IN LISTS SC68_LIB68)
+    list(APPEND SC68_SOURCES "${SC68_SRC}/libsc68/src/${f}")
+endforeach()
+foreach(f IN LISTS SC68_DIAL68)
+    list(APPEND SC68_SOURCES "${SC68_SRC}/libsc68/dial68/${f}")
+endforeach()
+foreach(f IN LISTS SC68_UNICE68)
+    list(APPEND SC68_SOURCES "${SC68_SRC}/unice68/${f}")
 endforeach()
 
-# unice68/unice68.c is the command-line depacker and defines main(). Harmless inside a shared
-# library, but it has no business in one, and it is what a host build trips over first.
-list(FILTER SC68_SOURCES EXCLUDE REGEX "unice68/unice68\\.c$")
+foreach(f IN LISTS SC68_SOURCES)
+    if(NOT EXISTS "${f}")
+        message(FATAL_ERROR "sc68: ${f} is missing. The vendored tree is not the shape this expects.")
+    endif()
+endforeach()
 
 list(LENGTH SC68_SOURCES SC68_SOURCE_COUNT)
-if(SC68_SOURCE_COUNT LESS 40)
-    message(FATAL_ERROR
-        "Found only ${SC68_SOURCE_COUNT} sc68 sources, expected around fifty. "
-        "The vendored tree is not the shape this expects.")
-endif()
-message(STATUS "sc68: ${SC68_SOURCE_COUNT} sources")
+message(STATUS "sc68 3.0.0b: ${SC68_SOURCE_COUNT} sources")
 
 add_library(sc68 STATIC ${SC68_SOURCES})
 
-target_include_directories(sc68 PUBLIC "${SC68_SRC}")
-
-target_compile_definitions(sc68 PRIVATE
-    HAVE_CONFIG_H=0
-    # 2003-era code assumes a hosted C library with these; Android's bionic has them all.
-    HAVE_STDLIB_H=1
-    HAVE_STRING_H=1
-    HAVE_STDIO_H=1
-    HAVE_UNISTD_H=1
-    # Where sc68 would look for external replay binaries. Empty because we ship none: an SNDH file
-    # carries its own 68000 code, which is the whole reason this backend needs a CPU emulator. The
-    # .sc68 container format does use external replays and will not play until that is dealt with --
-    # noted in docs/BACKLOG.md rather than left to be discovered.
-    SC68_SHARED_DATA_PATH=\"\"
+# generated/ first: it holds config.h, sc68/file68_features.h and sc68/trap68.h, which autoconf
+# would have produced and which no amount of include order in the vendored tree provides.
+# `generated/` twice, deliberately: some sources include the features header as
+# <sc68/file68_features.h> and others as "file68_features.h". Autoconf generates it into
+# file68/sc68/ and puts that directory on the include path, which makes both spellings work. Two
+# include paths reproduce that with one file, rather than two copies that can drift apart.
+target_include_directories(sc68 PUBLIC
+    "${SC68_GEN}"
+    "${SC68_GEN}/sc68"
+    "${SC68_SRC}"
+    "${SC68_SRC}/libsc68"
+    "${SC68_SRC}/libsc68/sc68"
+    "${SC68_SRC}/libsc68/emu68"
+    "${SC68_SRC}/libsc68/io68"
+    "${SC68_SRC}/file68"
+    "${SC68_SRC}/file68/sc68"
+    "${SC68_SRC}/unice68"
 )
 
-# Twenty-three years of new warnings are not defects we introduced and not ones we can fix without
-# forking upstream. Silenced rather than left to bury a warning that IS ours.
+target_compile_definitions(sc68 PRIVATE
+    HAVE_CONFIG_H=1
+    # **Assertions off, deliberately, in every build including debug.**
+    #
+    # sc68 asserts on an MFP timer mode it does not implement (event-count / pulse-width) and then
+    # handles it anyway -- mfpemul.c sets the timer to zero and carries on. Two of thirty measured
+    # SNDH files reach it. With assertions on, a debug build aborts the whole app on an ordinary
+    # file from the user's library; with them off, all thirty play. Upstream clearly intends the
+    # fallback, and a decoder's assertion is not a reason to take a music player down.
+    NDEBUG=1
+)
+
+# zlib for file68's gzip support (FILE68_Z in generated/sc68/file68_features.h). The NDK ships it.
+target_link_libraries(sc68 PUBLIC z)
+
+# Twenty years of new warnings are not defects we introduced and not ones we can fix without forking
+# upstream. Silenced rather than left to bury a warning that IS ours.
 target_compile_options(sc68 PRIVATE
     -w
     -Wno-implicit-function-declaration

@@ -1,23 +1,12 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.data
 
 import java.sql.Connection
 import java.sql.DriverManager
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -46,17 +35,18 @@ class SchemaSqlTest {
             }
         }
 
+    /** Every table a fresh install has. Named once, because two tests check against it. */
+    private fun freshTableNames(): Set<String> = setOf(
+        "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
+        "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
+        "track_metadata", "modland_favourites",
+    )
+
     @Test
     fun `the create statements execute`() {
         memoryDatabase().use { connection ->
             connection.run(SchemaSql.CREATE)
-            assertEquals(
-                setOf(
-                    "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
-                    "catalogues", "catalogue_tracks",
-                ),
-                connection.tableNames(),
-            )
+            assertEquals(freshTableNames(), connection.tableNames())
         }
     }
 
@@ -124,6 +114,31 @@ class SchemaSqlTest {
                 )
             }.isFailure
             assertTrue("the same track was accepted twice in one playlist", refused)
+        }
+    }
+
+    @Test
+    fun `the same track can belong to multiple playlists`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO playlists (id, name, position) VALUES (1, 'Main', 0)",
+                    "INSERT INTO playlists (id, name, position) VALUES (2, 'Favorites', 1)",
+                    "INSERT INTO tracks (id, title) VALUES ('modland://tune.mod', 'Cool Tune')",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 'modland://tune.mod', 0)",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (2, 'modland://tune.mod', 0)",
+                )
+            )
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT COUNT(*) FROM playlist_tracks WHERE track_id = 'modland://tune.mod'"
+                ).use { rows ->
+                    rows.next()
+                    assertEquals(2, rows.getInt(1))
+                }
+            }
         }
     }
 
@@ -196,6 +211,290 @@ class SchemaSqlTest {
                     assertEquals(0, rows.getInt(1))
                 }
             }
+        }
+    }
+
+    @Test
+    fun `song lengths are keyed by md5 and a second write for one tune replaces the first`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO song_lengths (md5, seconds) VALUES ('6d01', '235.594 61.288')",
+                    // HVSC publishes corrections, so the same tune arriving again has to win rather
+                    // than collide.
+                    "INSERT OR REPLACE INTO song_lengths (md5, seconds) VALUES ('6d01', '240')",
+                )
+            )
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT COUNT(*), MIN(seconds) FROM song_lengths").use { rows ->
+                    assertTrue(rows.next())
+                    assertEquals(1, rows.getInt(1))
+                    assertEquals("240", rows.getString(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a random sample returns the number asked for, and no track twice`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf("INSERT INTO catalogues (id, display_name) VALUES ('m', 'Modland')") +
+                    (1..20).map {
+                        "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                            "VALUES ('m', 'p$it', 'MOD', 'a', 't$it', 1)"
+                    }
+            )
+            // The query Random reads ahead with. One statement for three picks, and the reason it
+            // is one statement rather than three is that it cannot then hand back a duplicate --
+            // which would put the same tune twice in a row into a queue meant to surprise you.
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT path FROM catalogue_tracks ORDER BY RANDOM() LIMIT 3"
+                ).use { rows ->
+                    val paths = buildList { while (rows.next()) add(rows.getString(1)) }
+                    assertEquals(3, paths.size)
+                    assertEquals(3, paths.toSet().size)
+                }
+            }
+        }
+    }
+
+    /**
+     * What `ProtracktorDatabase.onDowngrade` runs, against a real engine.
+     *
+     * The one path in this file that had no test and needed one most: it meets a phone holding
+     * somebody's data exactly once, and until 2026-09-08 it threw every time. The list of tables to
+     * drop was written at version 1 and never grew, so the recreate hit `catalogues` and stopped --
+     * leaving an app that could not start at all.
+     */
+    @Test
+    fun `a downgrade recreates the database instead of tripping over what is already there`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf("INSERT INTO catalogues (id, display_name) VALUES ('m', 'Modland')")
+            )
+
+            val existing = connection.createStatement().use { statement ->
+                statement.executeQuery(SchemaSql.TABLE_NAMES).use { rows ->
+                    buildList { while (rows.next()) add(rows.getString(1)) }
+                }
+            }
+            connection.run(SchemaSql.dropStatements(existing))
+            connection.run(SchemaSql.CREATE)
+
+            // The shape a fresh install has, and nothing left of what was there.
+            assertEquals(freshTableNames(), connection.tableNames())
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT COUNT(*) FROM catalogues").use { rows ->
+                    rows.next()
+                    assertEquals(0, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the favourites clause draws only from tunes that are both listed and indexed`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf("INSERT INTO catalogues (id, display_name) VALUES ('modland', 'Modland')") +
+                    // Three indexed tunes, two of them favourites.
+                    (1..3).map {
+                        "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                            "VALUES ('modland', 'p$it', 'Protracker', 'a', 't$it', 1)"
+                    } +
+                    // A favourite Modland has moved since the list was compiled. A hundred of the
+                    // real 991 are in this state, and the join is what silently drops them -- if it
+                    // did not, the dice would hand out a download that 404s.
+                    listOf(
+                        "INSERT INTO modland_favourites (path) VALUES ('p1')",
+                        "INSERT INTO modland_favourites (path) VALUES ('p2')",
+                        "INSERT INTO modland_favourites (path) VALUES ('gone')",
+                    )
+            )
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT path FROM catalogue_tracks WHERE catalogue_id = 'modland' " +
+                        "AND path IN (SELECT path FROM modland_favourites) ORDER BY path"
+                ).use { rows ->
+                    assertEquals(
+                        listOf("p1", "p2"),
+                        buildList { while (rows.next()) add(rows.getString(1)) },
+                    )
+                }
+            }
+        }
+    }
+
+    private fun Connection.record(id: String, title: String, at: Long) =
+        prepareStatement(SchemaSql.PLAY_HISTORY_RECORD).use { statement ->
+            statement.setString(1, id)
+            statement.setString(2, title)
+            statement.setString(3, "")
+            statement.setString(4, "")
+            statement.setString(5, "")
+            statement.setLong(6, 0)
+            statement.setLong(7, at)
+            statement.setString(8, id)
+            statement.executeUpdate()
+        }
+
+    private fun Connection.historyRows(): List<Triple<String, String, Int>> =
+        createStatement().use { statement ->
+            statement.executeQuery(
+                "SELECT track_id, title, play_count FROM play_history ORDER BY played_at DESC"
+            ).use { rows ->
+                buildList {
+                    while (rows.next()) {
+                        add(Triple(rows.getString(1), rows.getString(2), rows.getInt(3)))
+                    }
+                }
+            }
+        }
+
+    @Test
+    fun `playing the same track again counts it instead of adding a row`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.record("a", "First name", 1_000)
+            connection.record("b", "Other", 2_000)
+            // The same track again, with the better title the app learned by opening it.
+            connection.record("a", "Its real name", 3_000)
+
+            val rows = connection.historyRows()
+            assertEquals(2, rows.size)
+            // Most recent first, so the replayed one has come back to the top.
+            assertEquals("a", rows[0].first)
+            assertEquals("Its real name", rows[0].second)
+            assertEquals(2, rows[0].third)
+            assertEquals(1, rows[1].third)
+        }
+    }
+
+    @Test
+    fun `history forgets the oldest once it is over its limit`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            val over = SchemaSql.PLAY_HISTORY_LIMIT + 5
+            (1..over).forEach { connection.record("t$it", "t$it", it.toLong()) }
+            connection.run(listOf(SchemaSql.PLAY_HISTORY_PRUNE))
+
+            val rows = connection.historyRows()
+            assertEquals(SchemaSql.PLAY_HISTORY_LIMIT, rows.size)
+            // The newest survived and the oldest did not.
+            assertEquals("t$over", rows.first().first)
+            assertTrue(rows.none { it.first == "t1" })
+        }
+    }
+
+    private fun Connection.indexRow(uri: String, folder: String, backends: String) =
+        run(listOf(
+            "INSERT INTO library_index (uri, folder_uri, path, file_name, indexed_at, backends) " +
+                "VALUES ('$uri', '$folder', 'p', 'f', 1, '$backends')"
+        ))
+
+    @Test
+    fun `rescanning one folder does not touch another`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.indexRow("a1", "folderA", "set1")
+            connection.indexRow("a2", "folderA", "set1")
+            connection.indexRow("b1", "folderB", "set1")
+
+            // What replaceFolder does: clear this folder, then insert. A global delete here would
+            // silently cost the user every other folder they had scanned.
+            connection.run(listOf("DELETE FROM library_index WHERE folder_uri = 'folderA'"))
+            connection.indexRow("a9", "folderA", "set2")
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT folder_uri, COUNT(*) FROM library_index GROUP BY folder_uri ORDER BY folder_uri"
+                ).use { rows ->
+                    assertTrue(rows.next())
+                    assertEquals("folderA", rows.getString(1)); assertEquals(1, rows.getInt(2))
+                    assertTrue(rows.next())
+                    assertEquals("folderB", rows.getString(1)); assertEquals(1, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `an index built by other decoders is reported stale`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.indexRow("a1", "folderA", "sc68:2.2.1")
+            connection.indexRow("a2", "folderA", "sc68:2.2.1")
+
+            val stale = { backends: String ->
+                connection.createStatement().use { statement ->
+                    statement.executeQuery(
+                        "SELECT 1 FROM library_index WHERE folder_uri = 'folderA' " +
+                            "AND backends <> '$backends' LIMIT 1"
+                    ).use { it.next() }
+                }
+            }
+            // Replacing sc68 2.2.1 with 3.0.0b took .sndh from 14/30 to 30/30 -- every "nothing can
+            // play this" the old set wrote down became wrong, and the index has to notice.
+            assertTrue(stale("sc68:3.0.0b"))
+            assertFalse(stale("sc68:2.2.1"))
+        }
+    }
+
+    @Test
+    fun `migrating to the library index keeps what was already indexed and played`() {
+        memoryDatabase().use { connection ->
+            // Everything up to the version before the index existed.
+            connection.run(VERSION_1_SCHEMA)
+            connection.run(SchemaSql.migrationsBetween(1, 7))
+            connection.run(listOf(
+                "INSERT INTO playlists (name, position) VALUES ('Mine', 0)",
+                "INSERT INTO tracks (id, title) VALUES ('u1', 'A tune')",
+                "INSERT INTO play_history (track_id, title, played_at) VALUES ('u1', 'A tune', 5)",
+            ))
+
+            connection.run(SchemaSql.migrationsBetween(7, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT (SELECT COUNT(*) FROM playlists), (SELECT COUNT(*) FROM tracks), " +
+                        "(SELECT COUNT(*) FROM play_history), (SELECT COUNT(*) FROM library_index)"
+                ).use { rows ->
+                    assertTrue(rows.next())
+                    assertEquals(1, rows.getInt(1))
+                    assertEquals(1, rows.getInt(2))
+                    assertEquals(1, rows.getInt(3))
+                    // New and empty, which is what a non-destructive migration looks like: the
+                    // index is built by scanning, not invented from what was there.
+                    assertEquals(0, rows.getInt(4))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a migration run twice fails, which is why there is one database helper`() {
+        // Not a wish, a constraint. The statements are plain CREATE TABLE, so running a migration
+        // twice throws -- and `SQLiteOpenHelper` synchronises within an instance, not between
+        // instances. Five stores each holding their own helper (which is what this project had
+        // until 2026-09-03) meant five things that could independently decide to migrate, and two
+        // of them racing during an upgrade crashes the launch that upgrades.
+        //
+        // If somebody makes these idempotent and this test starts failing, the right response is
+        // not to delete it: it is to ask whether ProtracktorDatabase still needs to be a singleton,
+        // and to answer that question deliberately. `docs/review.md` R3.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            val again = runCatching { connection.run(SchemaSql.MIGRATIONS.getValue(SchemaSql.VERSION)) }
+            assertTrue(
+                "the newest migration replayed without error; see the comment above",
+                again.isFailure,
+            )
         }
     }
 

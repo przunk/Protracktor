@@ -1,19 +1,9 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.engine
+
+import com.przunk.protracktor.player.SupportedFormats
 
 /**
  * The Kotlin side of the native player.
@@ -42,7 +32,31 @@ object NativeEngine {
      * Empty when nothing failed. Worth showing: a file no backend claims and a file a backend
      * claimed and then choked on are different problems, and they look identical from outside.
      */
-    fun lastOpenError(): String = nativeLastOpenError()
+    /**
+     * What [open] produced: the track, or nothing and the reason.
+     *
+     * The reason is worth carrying. A file no backend claims and a file a backend claimed and then
+     * choked on are different problems, and they look identical from outside -- it took a host
+     * probe to find that sc68 2.2.1 loaded some SNDH files and failed validation on others.
+     */
+    data class Opened(val track: Track?, val error: String)
+
+    /**
+     * Which decoders this build has, and at which versions.
+     *
+     * Stored with every row of the local index, because an index records verdicts -- what a file is,
+     * and whether anything can play it -- and those are only true of the decoders that produced
+     * them. Replacing sc68 2.2.1 with 3.0.0b took `.sndh` from 14 of 30 to 30 of 30 on one morning:
+     * every "nothing can play this" the old set had written down became wrong. An index that cannot
+     * notice that is an index that quietly outlives its own reasoning.
+     */
+    /**
+     * What this build would put in an index: the decoders, and the names they are offered.
+     *
+     * Both halves matter and only one used to be recorded. See `SupportedFormats.fingerprint`.
+     */
+    fun backendsFingerprint(): String =
+        nativeBackendsFingerprint() + ";" + SupportedFormats.fingerprint
 
     /**
      * Opens a module from its bytes. Returns a handle, or `null` if the bytes are not a module the
@@ -55,9 +69,17 @@ object NativeEngine {
      * formats ASAP handles are told apart by extension rather than by any header, and one of them
      * shares `.fc` with an Amiga format libopenmpt claims.
      */
-    fun open(bytes: ByteArray, fileName: String): Track? {
-        val handle = nativeOpen(bytes, fileName)
-        return if (handle == 0L) null else Track(handle)
+    fun open(bytes: ByteArray, fileName: String): Opened {
+        // The reason comes back with the call. It used to sit in a process-wide string that the
+        // caller collected afterwards, which was fine while one thread opened files at a time and
+        // became a data race -- confirmed under ThreadSanitizer -- the moment library scanning was
+        // made concurrent with playback (`docs/review.md` R2).
+        val reason = arrayOfNulls<String>(1)
+        val handle = nativeOpen(bytes, fileName, reason)
+        return Opened(
+            track = if (handle == 0L) null else Track(handle),
+            error = reason[0].orEmpty(),
+        )
     }
 
     /** An open module. Must be [close]d; the native side owns memory that GC does not see. */
@@ -109,6 +131,26 @@ object NativeEngine {
 
         fun durationSeconds(): Double = nativeDurationSeconds(handle())
 
+        /** How many tunes are inside this file. One for a format that holds one. */
+        fun subsongCount(): Int = nativeSubsongCount(handle())
+
+        /**
+         * Plays tune [index], counted from zero.
+         *
+         * Handed to the audio callback rather than applied here, the same way a seek is: the
+         * callback is the only thread that touches the decoder, and swapping one underneath a read
+         * in progress is how a player crashes.
+         */
+        fun selectSubsong(index: Int) = nativeSelectSubsong(handle(), index)
+
+        /**
+         * What Oboe gave us, if it is not what the decoder asked for. Empty when all is well.
+         *
+         * Only meaningful after [start]: the stream does not exist until then. Read once, right
+         * after starting.
+         */
+        fun sampleRateNote(): String = nativeSampleRateNote(handle())
+
         override fun close() {
             if (closed) return
             closed = true
@@ -123,17 +165,24 @@ object NativeEngine {
         }
     }
 
-    @JvmStatic private external fun nativeOpen(data: ByteArray, fileName: String): Long
+    @JvmStatic private external fun nativeOpen(
+        data: ByteArray,
+        fileName: String,
+        errorOut: Array<String?>,
+    ): Long
     @JvmStatic private external fun nativeClose(handle: Long)
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
     @JvmStatic private external fun nativeStop(handle: Long)
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
     @JvmStatic private external fun nativeSeek(handle: Long, seconds: Double)
+    @JvmStatic private external fun nativeSubsongCount(handle: Long): Int
+    @JvmStatic private external fun nativeSelectSubsong(handle: Long, index: Int)
     @JvmStatic private external fun nativeSetDataPath(path: String)
-    @JvmStatic private external fun nativeLastOpenError(): String
+    @JvmStatic private external fun nativeBackendsFingerprint(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double
     @JvmStatic private external fun nativeDurationSeconds(handle: Long): Double
+    @JvmStatic private external fun nativeSampleRateNote(handle: Long): String
 }

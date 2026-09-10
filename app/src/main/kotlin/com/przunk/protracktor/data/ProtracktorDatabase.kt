@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.data
 
 import android.content.Context
@@ -30,8 +18,35 @@ import android.database.sqlite.SQLiteOpenHelper
  *
  * All the SQL is in [SchemaSql] so it can be tested on the JVM. This class only executes it.
  */
-class ProtracktorDatabase(context: Context) :
+class ProtracktorDatabase private constructor(context: Context) :
     SQLiteOpenHelper(context, SchemaSql.NAME, null, SchemaSql.VERSION) {
+
+    companion object {
+        @Volatile
+        private var instance: ProtracktorDatabase? = null
+
+        /**
+         * The one helper for this process.
+         *
+         * **Not a style preference.** `SQLiteOpenHelper` synchronises within an instance and not
+         * between instances, so five stores each holding their own -- which is what this was --
+         * meant five connection pools on one file and five things that could independently decide
+         * to run `onUpgrade`. Two of them opening at once during an upgrade can both read the old
+         * version and both migrate; the statements are plain `CREATE TABLE` and the second run
+         * fails with "table already exists", on the launch that upgrades, which is the launch that
+         * matters. `docs/review.md` R3 has the reproduction.
+         *
+         * `IF NOT EXISTS` would have silenced the symptom and left five pools racing, which is the
+         * wrong half of the problem.
+         *
+         * Double-checked locking on a `@Volatile` field: the fast path is a read, and the slow one
+         * happens once per process.
+         */
+        fun of(context: Context): ProtracktorDatabase =
+            instance ?: synchronized(this) {
+                instance ?: ProtracktorDatabase(context.applicationContext).also { instance = it }
+            }
+    }
 
     override fun onConfigure(db: SQLiteDatabase) {
         // Off by default on Android. The schema leans on ON DELETE CASCADE, which without this is
@@ -56,11 +71,22 @@ class ProtracktorDatabase(context: Context) :
      * default behaviour throws on **every** start, which leaves an app that cannot be launched at
      * all until its data is cleared by hand -- losing exactly the same data, and leaving the user
      * to work out why (AGENTS.md §10).
+     *
+     * **And this method did the same thing for seven versions.** It dropped a list of five tables
+     * written when there were five, then ran a [SchemaSql.CREATE] that had grown to twelve -- so
+     * the recreate met a `catalogues` that was still there and threw, on every start, exactly the
+     * failure above. Nothing caught it because a downgrade needs a device: the tests here run
+     * migrations, and migrations never take this path.
+     *
+     * The tables are asked of the file now. A hard-coded list is a claim about the schema that
+     * lives somewhere other than the schema, and it went stale the first time one was added.
      */
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.transaction {
-            listOf("player_state", "granted_folders", "playlist_tracks", "tracks", "playlists")
-                .forEach { execSQL("DROP TABLE IF EXISTS $it") }
+            val existing = rawQuery(SchemaSql.TABLE_NAMES, null).use { row ->
+                buildList { while (row.moveToNext()) add(row.getString(0)) }
+            }
+            SchemaSql.dropStatements(existing).forEach(::execSQL)
             SchemaSql.CREATE.forEach(::execSQL)
         }
     }

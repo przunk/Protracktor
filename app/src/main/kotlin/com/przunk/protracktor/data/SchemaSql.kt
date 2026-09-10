@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.data
 
 /**
@@ -38,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 5
+    const val VERSION = 12
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -109,6 +97,180 @@ object SchemaSql {
         "ALTER TABLE tracks ADD COLUMN author TEXT NOT NULL DEFAULT ''",
     )
 
+    /**
+     * HVSC's SID song lengths, added at version 6.
+     *
+     * Keyed by the MD5 of the SID file, which is what the published database is keyed by
+     * ([SongLengths]). One row per tune and about 61,000 of them, so this is the largest table
+     * after the Modland index -- kept in the database rather than the 5 MB text file it came from
+     * because the question asked of it is "this one hash", sixty thousand times per session, and a
+     * file is the wrong shape for that.
+     *
+     * `seconds` holds every subsong's length, not just the first, so the table does not have to be
+     * rebuilt when subsongs become selectable (docs/BACKLOG.md A2).
+     */
+    private val SONG_LENGTHS_V6: List<String> = listOf(
+        """
+        CREATE TABLE song_lengths (
+            md5 TEXT PRIMARY KEY NOT NULL,
+            seconds TEXT NOT NULL
+        )
+        """.trimIndent(),
+    )
+
+    /**
+     * What has been played, added at version 7.
+     *
+     * **Self-contained on purpose.** It cannot reference `tracks`: a tune played from Random or
+     * from a search result is never added to a playlist, so it has no row there, and those are
+     * exactly the tunes this list exists to answer questions about — "that thing yesterday, what
+     * was it". A foreign key would have meant history only for music you had already decided to
+     * keep, which is the opposite of the point.
+     *
+     * **One row per track, not one per play.** `played_at` moves and `play_count` rises. A true log
+     * would fill with a repeat-one track fifty times over and bury the tune from two days ago,
+     * which is the thing being looked for.
+     */
+    private val PLAY_HISTORY_V7: List<String> = listOf(
+        """
+        CREATE TABLE play_history (
+            track_id TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            subtitle TEXT NOT NULL DEFAULT '',
+            file_name TEXT NOT NULL DEFAULT '',
+            author TEXT NOT NULL DEFAULT '',
+            size INTEGER NOT NULL DEFAULT 0,
+            played_at INTEGER NOT NULL,
+            play_count INTEGER NOT NULL DEFAULT 1
+        )
+        """.trimIndent(),
+
+        "CREATE INDEX idx_play_history_recent ON play_history(played_at DESC)",
+    )
+
+    /**
+     * The scanned local library, added at version 8.
+     *
+     * **What it is for.** Scanning a folder means opening every file with a real backend to find out
+     * what it is -- which is the only way to stop trusting a filename ({@code docs/BACKLOG.md} A6,
+     * {@code docs/STATUS.md} C4) and is far too expensive to repeat. This is where the answer is
+     * kept so a later launch, or re-entering the folder, reads instead of re-probing.
+     *
+     * **Identity is the document URI**, the same thing a track reference uses. Nothing here
+     * references `tracks`: a file can be indexed without ever being added to a playlist, which is
+     * the normal case.
+     *
+     * **`backends` is the invalidation rule.** Every row records which decoder set produced it. When
+     * the app ships a different set -- as it just did, replacing sc68 2.2.1 with 3.0.0b, which took
+     * `.sndh` from 14/30 to 30/30 -- rows produced by the old one are stale, and files that were
+     * unplayable may now be playable. Without this the index would quietly outlive the reason its
+     * verdicts were true. `docs/BACKLOG.md` A7 has the same problem for catalogue indexes and
+     * solves it with a note to a human; this does better.
+     *
+     * `folder_uri` is what a granted tree being forgotten deletes, and what tells us a row's source
+     * may no longer be reachable.
+     */
+    private val LIBRARY_INDEX_V8: List<String> = listOf(
+        """
+        CREATE TABLE library_index (
+            uri TEXT PRIMARY KEY NOT NULL,
+            folder_uri TEXT NOT NULL,
+            path TEXT NOT NULL DEFAULT '',
+            file_name TEXT NOT NULL,
+            size INTEGER NOT NULL DEFAULT 0,
+            backend TEXT NOT NULL DEFAULT '',
+            format TEXT NOT NULL DEFAULT '',
+            title TEXT NOT NULL DEFAULT '',
+            author TEXT NOT NULL DEFAULT '',
+            duration_ms INTEGER NOT NULL DEFAULT 0,
+            subsongs INTEGER NOT NULL DEFAULT 1,
+            indexed_at INTEGER NOT NULL,
+            backends TEXT NOT NULL DEFAULT ''
+        )
+        """.trimIndent(),
+
+        // Browsing a granted tree reads by folder and then by path; searching reads by title.
+        "CREATE INDEX idx_library_folder ON library_index(folder_uri, path, file_name)",
+        "CREATE INDEX idx_library_title ON library_index(title)",
+    )
+
+    /**
+     * Which decoders built a catalogue index, added at version 9.
+     *
+     * A catalogue index is filtered **at index time** to the formats a backend can play, so an
+     * index built before a backend existed is permanently missing that backend's formats — and it
+     * looks empty rather than stale. The owner met this on 2026-09-03: his Modland index predated
+     * libsidplayfp, so 60,572 C64 tunes were simply absent and nothing said why.
+     *
+     * `docs/BACKLOG.md` A7 had been carrying this as a note asking a human to remember, while the
+     * local library index (version 8) already recorded its decoder set and offered a rescan. This
+     * closes that asymmetry.
+     */
+    private val CATALOGUE_BACKENDS_V9: List<String> = listOf(
+        "ALTER TABLE catalogues ADD COLUMN backends TEXT NOT NULL DEFAULT ''",
+    )
+
+    /**
+     * Whether to play every tune inside a file, added at version 10.
+     *
+     * A setting rather than a property of a track, and stored with the other playback modes for the
+     * same reason shuffle and repeat are: it applies to whatever plays next, not to one row. Off by
+     * default, which the owner chose — a file reporting 256 subsongs would otherwise take over a
+     * listening session the first time one appeared.
+     */
+    /**
+     * Author, publisher, album and year by file hash, added at version 11.
+     *
+     * The second database of facts about files we did not write, after HVSC's song lengths, and it
+     * exists for the same reason: **the formats cannot carry what people want to know.** A plain
+     * `.mod` or `.xm` has nowhere to put a release year, which is why `docs/WISHLIST.md` B20 could
+     * show one for a SNDH and nothing for the 80,000 ProTracker files in Modland.
+     *
+     * **Keyed by the first twelve hex characters of the MD5, not the whole of it.** That is what
+     * the published database uses -- a deliberate 48-bit prefix -- and storing the full hash here
+     * would mean every lookup missed. `song_lengths` next door is keyed by the whole thing, because
+     * HVSC publishes the whole thing; two tables, two conventions, and the difference is the
+     * publisher's rather than ours.
+     */
+    private val TRACK_METADATA_V11: List<String> = listOf(
+        """
+        CREATE TABLE track_metadata (
+            md5 TEXT PRIMARY KEY NOT NULL,
+            author TEXT NOT NULL,
+            publisher TEXT NOT NULL,
+            album TEXT NOT NULL,
+            year TEXT NOT NULL
+        )
+        """.trimIndent(),
+    )
+
+    /**
+     * Modland's own favourites, added at version 12.
+     *
+     * **Paths, not hashes** -- the odd one out among the tables of facts about other people's
+     * files, and deliberately. `track_metadata` and `song_lengths` answer questions about a file
+     * the user already has, so they key on its digest; this one answers "what should I play", which
+     * is a question about the *catalogue*, and the catalogue's identity is the path. Keying on the
+     * hash would mean downloading a tune before knowing whether it was worth downloading.
+     *
+     * One column and nothing else. Everything else about the tune -- format, author, title, size --
+     * is in `catalogue_tracks` already, and a second copy would be a second thing to keep current.
+     * The join is what turns the list into music, and it is also what quietly drops the favourites
+     * this build cannot play: measured 2026-09-08, 991 favourites, of which 891 are still at the
+     * path Modland publishes today and 835 survive the index filter.
+     */
+    private val MODLAND_FAVOURITES_V12: List<String> = listOf(
+        """
+        CREATE TABLE modland_favourites (
+            path TEXT PRIMARY KEY NOT NULL
+        )
+        """.trimIndent(),
+    )
+
+    private val PLAY_ALL_SUBSONGS_V10: List<String> = listOf(
+        "ALTER TABLE player_state ADD COLUMN play_all_subsongs INTEGER NOT NULL DEFAULT 0",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -163,7 +325,10 @@ object SchemaSql {
         """.trimIndent(),
 
         "INSERT INTO player_state (id) VALUES (0)",
-    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5
+    ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
+        PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
+        CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
+        MODLAND_FAVOURITES_V12
 
 
 
@@ -179,7 +344,80 @@ object SchemaSql {
         3 to TRACK_SIZE_V3,
         4 to TRACK_FILE_NAME_V4,
         5 to TRACK_AUTHOR_V5,
+        6 to SONG_LENGTHS_V6,
+        7 to PLAY_HISTORY_V7,
+        8 to LIBRARY_INDEX_V8,
+        9 to CATALOGUE_BACKENDS_V9,
+        10 to PLAY_ALL_SUBSONGS_V10,
+        11 to TRACK_METADATA_V11,
+        12 to MODLAND_FAVOURITES_V12,
     )
+
+    /**
+     * Records a play, or moves an existing one up and counts it.
+     *
+     * Here rather than in [HistoryStore] because it is the one statement in the app with real logic
+     * in it, and this file is the part that a JVM test can run against a real SQLite engine.
+     *
+     * **Not** `ON CONFLICT ... DO UPDATE`, which is the obvious way to write an upsert. That needs
+     * SQLite 3.24; API 29 ships 3.22 and `minSdk` is 29, so the obvious way crashes on the oldest
+     * device supported — and nothing here would catch it, because the tests run against a current
+     * SQLite through `sqlite-jdbc` and this machine has no emulator.
+     *
+     * Parameters: track_id, title, subtitle, file_name, author, size, played_at, **track_id again**
+     * for the count lookup.
+     */
+    val PLAY_HISTORY_RECORD: String = """
+        INSERT OR REPLACE INTO play_history
+            (track_id, title, subtitle, file_name, author, size, played_at, play_count)
+        VALUES (
+            ?, ?, ?, ?, ?, ?, ?,
+            COALESCE((SELECT play_count FROM play_history WHERE track_id = ?), 0) + 1
+        )
+    """.trimIndent()
+
+    /** How many tracks history remembers. Past this the oldest are forgotten. */
+    const val PLAY_HISTORY_LIMIT = 500
+
+    /** Forgets the oldest. Run in the same transaction as [PLAY_HISTORY_RECORD]. */
+    val PLAY_HISTORY_PRUNE: String =
+        "DELETE FROM play_history WHERE track_id NOT IN " +
+            "(SELECT track_id FROM play_history ORDER BY played_at DESC LIMIT $PLAY_HISTORY_LIMIT)"
+
+    /**
+     * Every table in the file, asked of the file rather than listed.
+     *
+     * `onDowngrade` recreates the database, and to do that it must first remove what is there. The
+     * list it used to carry was written at version 1 and named five tables; [CREATE] makes twelve.
+     * Seven migrations added tables that nothing removed, so the recreate ran `CREATE TABLE
+     * catalogues` against a `catalogues` that still existed and threw -- **on every start**, which
+     * is the state the whole method exists to prevent. Verified against a real SQLite on
+     * 2026-09-08: `[SQLITE_ERROR] table catalogues already exists`.
+     *
+     * Asking the file is the fix, and it is the fix rather than a longer list because a longer list
+     * would go stale the same way, quietly, and only on somebody's phone.
+     *
+     * `android_metadata` is left alone: Android creates it when it opens the file, and it holds the
+     * locale rather than anything of ours.
+     */
+    const val TABLE_NAMES: String =
+        "SELECT name FROM sqlite_master WHERE type = 'table' " +
+            "AND name NOT LIKE 'sqlite_%' AND name <> 'android_metadata'"
+
+    /**
+     * Removes the named tables, and with them their indexes.
+     *
+     * **In reverse, and that is load-bearing.** `DROP TABLE` runs an implicit delete of the table's
+     * rows, and that delete resolves foreign keys -- so dropping `playlists` before
+     * `playlist_tracks`, which references it, fails with `no such table: main.playlists`. The app
+     * turns foreign keys on, so this is not theoretical; the test found it on the first run.
+     *
+     * `sqlite_master` lists tables in creation order and a child is always created after the parent
+     * it references, so walking it backwards is dependency order. Quoted names, because a table
+     * name is whatever somebody wrote in a migration.
+     */
+    fun dropStatements(tables: List<String>): List<String> =
+        tables.reversed().map { "DROP TABLE IF EXISTS \"$it\"" }
 
     /** Statements to run when upgrading from [from] to [to]. Throws if a step is missing. */
     fun migrationsBetween(from: Int, to: Int): List<String> =

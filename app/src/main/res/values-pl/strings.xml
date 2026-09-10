@@ -2,6 +2,10 @@
 <resources>
     <string name="app_name">Protracktor</string>
 
+    <string name="search_playing_title">Odtwarzanie z wyszukiwania</string>
+    <string name="search_playing_body">Nic z tej playlisty nie gra.\nNastępny i poprzedni chodzą po wynikach.</string>
+    <string name="external_playing_title">Odtwarzanie pliku z zewnątrz</string>
+    <string name="external_playing_body">Inna aplikacja podała ten plik Protracktorowi. Nic po nim nie następuje.\nPlus go zachowuje.</string>
     <string name="random_playing_title">Odtwarzanie losowe</string>
     <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny.\nPlus zachowuje ten.</string>
     <string name="random_back_to_playlist">Wróć do playlisty</string>
@@ -21,6 +25,8 @@
     <string name="dock_loading">Wczytywanie…</string>
     <string name="dock_idle_subtitle">Dotknij, aby przeglądać</string>
 
+    <string name="action_follow_track">Śledź utwór</string>
+    <string name="action_show_in_playlist">Pokaż na playliście</string>
     <string name="action_browse">Przeglądaj</string>
     <string name="action_add_folder">Dodaj katalog</string>
     <string name="action_add_files">Dodaj pliki</string>
@@ -36,12 +42,28 @@
     <string name="a11y_reorder">Przeciągnij, aby przenieść %1$s</string>
     <string name="action_back">Wstecz</string>
     <string name="action_delete">Usuń</string>
-    <string name="action_cancel">Anuluj</string>
     <string name="action_save">Zapisz</string>
 
     <string name="browse_select_all">Zaznacz wszystko</string>
     <string name="browse_select_none">Odznacz wszystko</string>
     <string name="browse_nothing_found">W tym katalogu nie ma nic do odtworzenia.</string>
+    <string name="open_failed_not_fetched">Nie udało się pobrać %1$s. To może być połączenie — spróbuj ponownie.</string>
+    <string name="open_failed_format">%1$s to format, którego Protracktor jeszcze nie odtwarza.</string>
+    <string name="open_failed_file">Nie udało się otworzyć %1$s. Inne pliki tego formatu grają, więc chodzi o ten jeden.</string>
+    <string name="open_failed_file_because">Nie udało się otworzyć %1$s: %2$s</string>
+    <string name="search_nothing_found">Nie znaleziono żadnego wyniku.</string>
+    <string name="search_live_needs_query">The Mod Archive przeszukiwany jest na żywo i potrzebuje frazy.</string>
+    <string name="search_not_yet">Wyszukaj albo zostaw puste pole, żeby znaleźć wszystko w zakresie.</string>
+    <string name="scope_local">Biblioteka lokalna</string>
+    <string name="scope_online">Katalogi online</string>
+    <string name="scope_platform">Wg platformy</string>
+    <string name="scope_label_everywhere">Wszędzie</string>
+    <string name="scope_label_local">Biblioteka lokalna</string>
+    <string name="scope_label_online">Online</string>
+    <string name="scope_label_online_some">Online: %1$s</string>
+    <string name="scope_label_all_platforms">Wszystkie platformy</string>
+    <string name="scope_label_more">%1$s +%2$d</string>
+    <string name="browse_search_capped">Pokazano %1$d z około %2$d dopasowań — zawęź wyszukiwanie lub przeglądaj według formatu.</string>
     <plurals name="browse_add_selected">
         <item quantity="one">Dodaj %d utwór</item>
         <item quantity="few">Dodaj %d utwory</item>
@@ -53,17 +75,18 @@
     <string name="playlist_unsaved_title">Niezapisane zmiany</string>
     <string name="playlist_unsaved_body">Ta playlista ma zmiany, których jeszcze nie zapisano. Zapisz je przed przełączeniem albo odrzuć.</string>
     <string name="a11y_choose_playlist">Wybierz playlistę</string>
-    <string name="a11y_save_playlist">Zapisz playlistę</string>
-    <string name="a11y_discard_changes">Odrzuć zmiany</string>
-
     <string name="playlist_switch_title">Playlisty</string>
     <string name="playlist_new">Nowa playlista</string>
     <string name="playlist_rename">Zmień nazwę</string>
     <string name="playlist_name_label">Nazwa</string>
+    <string name="playlist_clear_title">Opróżnić %1$s?</string>
+    <string name="playlist_clear_body">To twoja jedyna playlista, więc zostaje — pusta i z domyślną nazwą. Utwory zostają w bibliotece.</string>
+    <string name="action_empty">Opróżnij</string>
     <string name="playlist_delete_title">Usunąć %1$s?</string>
     <string name="playlist_delete_body">Playlista znika; utwory zostają w bibliotece.</string>
 
     <string name="a11y_forget_folder">Zapomnij katalog %1$s</string>
+    <string name="a11y_playlist_menu">Akcje dla %1$s</string>
     <string name="a11y_rename_playlist">Zmień nazwę %1$s</string>
     <string name="a11y_delete_playlist">Usuń %1$s</string>
 
@@ -72,12 +95,13 @@
     <string name="domain_online_title">Katalogi online</string>
     <string name="domain_online_body">Przeglądaj archiwa — indeks pobierany raz, potem działa offline</string>
     <string name="domain_random_title">Losowo</string>
-    <string name="domain_random_body">Zagraj coś z zaindeksowanych katalogów</string>
+    <string name="domain_random_body">Zagraj coś z zaindeksowanych katalogów. Przytrzymaj, żeby wybrać platformę.</string>
     <string name="domain_search_title">Szukaj</string>
     <string name="domain_search_body">W bibliotece i w katalogach</string>
 
     <string name="browse_indexing">Indeksowanie %1$s…</string>
     <string name="browse_unknown">(nieznany)</string>
+    <string name="catalogue_stale">Zaindeksowany starszymi dekoderami — przeindeksuj, żeby zobaczyć formaty dodane później.</string>
     <string name="catalogue_not_indexed">Brak indeksu — dotknij strzałki, aby go pobrać</string>
     <string name="catalogue_more_coming">Kolejne archiwa są w planach. Trafiają tu tylko te, których format indeksu jest już obsłużony.</string>
     <string name="a11y_index_catalogue">Pobierz indeks dla %1$s</string>
@@ -91,6 +115,9 @@
     <string name="browse_title">Dodaj muzykę</string>
     <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
 
+    <string name="field_year">Rok</string>
+    <string name="field_album">Album</string>
+    <string name="field_publisher">Wydawca</string>
     <string name="field_format">Format</string>
     <string name="field_tracker">Tracker</string>
     <string name="field_artist">Autor</string>
@@ -110,13 +137,174 @@
 
     <string name="a11y_seek">Przewiń w utworze</string>
     <string name="a11y_keep_track">Dodaj ten utwór do playlisty</string>
+    <string name="a11y_preview">Odtwórz %1$s</string>
     <string name="a11y_play">Odtwórz</string>
+    <string name="a11y_stop_loading">Przerwij wczytywanie</string>
     <string name="a11y_pause">Pauza</string>
     <string name="a11y_previous">Poprzedni utwór</string>
+    <string name="a11y_next_file">Następny plik, z pominięciem pozostałych utworów w tym</string>
+    <string name="a11y_previous_file">Poprzedni plik</string>
     <string name="a11y_next">Następny utwór</string>
     <string name="a11y_shuffle_off">Losowo wyłączone</string>
     <string name="a11y_shuffle_on">Losowo włączone</string>
     <string name="a11y_repeat_off">Powtarzanie wyłączone</string>
     <string name="a11y_repeat_playlist">Powtarzanie playlisty</string>
     <string name="a11y_repeat_one">Powtarzanie tego utworu</string>
+
+    <string name="domain_history_title">Historia</string>
+    <string name="domain_history_body">Odtworzone utwory, od najnowszych</string>
+    <string name="history_empty">Nic jeszcze nie zagrało. Wszystko, co odtworzysz — z playlisty, z losowania czy z wyszukiwania — trafi tutaj.</string>
+    <string name="action_clear_history">Wyczyść historię</string>
+
+    <string name="song_lengths_title">Długości utworów SID (HVSC)</string>
+    <string name="song_lengths_none">Nie pobrano — utwory SID nie pokażą długości</string>
+    <plurals name="song_lengths_count">
+        <item quantity="one">%1$d utwór</item>
+        <item quantity="few">%1$,d utwory</item>
+        <item quantity="many">%1$,d utworów</item>
+        <item quantity="other">%1$,d utworu</item>
+    </plurals>
+    <string name="a11y_download_song_lengths">Pobierz bazę długości utworów HVSC</string>
+
+    <string name="action_show_neighbours">Więcej tego autora</string>
+    <string name="action_share_file">Udostępnij plik</string>
+    <string name="action_share_link">Udostępnij link</string>
+    <string name="share_chooser">Udostępnij</string>
+
+    <string name="replays_title">Procedury odtwarzające Atari ST</string>
+    <string name="replays_none">Potrzebne większości plików .sc68. 98 małych plików, około 1,2 MB, pobierane ze strony samego sc68 — to cudzy kod i ta aplikacja go nie rozpowszechnia. SNDH ich nie potrzebuje.</string>
+    <string name="storage_confirm_replays">Można je pobrać ponownie z tego ekranu. Do tego czasu większość plików .sc68 zagra ciszą. SNDH to nie dotyczy.</string>
+    <string name="settings_title">Ustawienia</string>
+    <string name="settings_appearance">Wygląd</string>
+    <string name="settings_theme">Motyw</string>
+    <string name="settings_theme_system">Systemowy</string>
+    <string name="settings_theme_light">Jasny</string>
+    <string name="settings_theme_dark">Ciemny</string>
+    <string name="settings_dynamic_colour">Systemowa paleta kolorów</string>
+    <string name="settings_dynamic_colour_detail">Bierz kolory z tapety.</string>
+    <string name="settings_playback">Odtwarzanie</string>
+    <string name="settings_play_all_subsongs">Graj wszystkie utwory w pliku</string>
+    <string name="settings_play_all_subsongs_detail">Niektóre pliki mieszczą kilkadziesiąt utworów. Wyłączone — gra tylko pierwszy, a playlista idzie dalej.</string>
+    <string name="settings_language">Język</string>
+    <string name="settings_language_detail">Wybierz język używany przez Protracktor.</string>
+    <string name="settings_language_system">Systemowy</string>
+    <string name="settings_language_polish">Polski</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_about">O aplikacji</string>
+    <string name="settings_version">Wersja</string>
+    <string name="settings_decoders">Dekodery w tej wersji</string>
+    <string name="settings_licence">Licencja</string>
+    <string name="settings_licence_detail">GNU GPL w wersji 3 lub nowszej. Kod źródłowy: github.com/przunk/protracktor.</string>
+    <string name="storage_title">Miejsce na tym telefonie</string>
+    <string name="storage_database">Playlisty, historia i indeksy, które nie są plikami: %1$d MB. Zostaje, bo są tu twoje własne listy.</string>
+    <string name="storage_cache">Pobrana muzyka</string>
+    <string name="storage_cache_detail">%1$d MB z %2$d MB, najstarsze usuwane najpierw</string>
+    <string name="storage_index">Indeks %1$s</string>
+    <string name="catalogue_count_and_size">%1$s · %2$d MB na telefonie</string>
+    <string name="storage_index_and_archive">%1$s, w tym archiwum %2$d MB</string>
+    <string name="storage_megabytes">%1$d MB</string>
+    <string name="storage_confirm_title">Usunąć: %1$s?</string>
+    <string name="storage_confirm_index">Można go pobrać ponownie z tego ekranu. Do tego czasu tego katalogu nie da się przeglądać ani przeszukiwać, a jego utwory nie zagrają.</string>
+    <string name="storage_confirm_track_metadata">Można je pobrać ponownie z Browse. Do tego czasu większość utworów nie pokaże roku ani autora.</string>
+    <string name="storage_confirm_favourites">Można je pobrać ponownie z Browse. Do tego czasu nie da się zawęzić losowania do ulubionych.</string>
+    <plurals name="favourites_listed">
+        <item quantity="few">%1$d utwory</item>
+        <item quantity="many">%1$d utworów</item>
+        <item quantity="one">%1$d utwór</item>
+        <item quantity="other">%1$d utworów</item>
+    </plurals>
+    <string name="storage_confirm_song_lengths">Można je pobrać ponownie z tego ekranu. Do tego czasu utwory SID nie pokażą czasu trwania.</string>
+    <string name="a11y_delete_storage">Usuń: %1$s</string>
+    <plurals name="subsongs_count">
+        <item quantity="one">%1$d utwór</item>
+        <item quantity="few">%1$d utwory</item>
+        <item quantity="many">%1$d utworów</item>
+        <item quantity="other">%1$d utworu</item>
+    </plurals>
+    <string name="subsongs_position">Utwór %1$d z %2$d</string>
+    <string name="subsongs_all">Wszystkie</string>
+    <string name="subsongs_first_only">Tylko pierwszy</string>
+    <string name="a11y_expand_player">Otwórz odtwarzacz</string>
+    <string name="action_import_playlist">Importuj</string>
+    <string name="action_export_playlist">Eksportuj</string>
+    <string name="action_scan_folder">Przeskanuj ten folder</string>
+    <string name="scan_listing">Listowanie folderu…</string>
+    <string name="scan_progress">Otwieranie plików: %1$d z %2$d</string>
+    <string name="folder_unscanned">Jeszcze nieskanowany. Skanowanie otwiera każdy plik, żeby sprawdzić, czym naprawdę jest, zamiast ufać nazwie.</string>
+    <string name="folder_stale">Ten folder skanowano innym zestawem dekoderów. Pliki, które wtedy nie grały, mogą grać teraz.</string>
+    <string name="action_to_playlist">Playlista</string>
+    <string name="action_add_track">Dodaj do playlisty</string>
+    <string name="a11y_track_menu">Akcje dla %1$s</string>
+    <plurals name="browse_selected">
+        <item quantity="one">%d zaznaczony</item>
+        <item quantity="few">%d zaznaczone</item>
+        <item quantity="many">%d zaznaczonych</item>
+        <item quantity="other">%d zaznaczonego</item>
+    </plurals>
+
+    <string name="action_add_to_playlist">Dodaj do playlisty…</string>
+    <string name="action_add_to_other_playlist">Dodaj do innej playlisty…</string>
+    <string name="dialog_add_to_playlist_title">Dodaj do playlisty</string>
+    <plurals name="dialog_add_tracks_to_playlist_title">
+        <item quantity="one">Dodaj %d utwór do playlisty</item>
+        <item quantity="few">Dodaj %d utwory do playlisty</item>
+        <item quantity="many">Dodaj %d utworów do playlisty</item>
+        <item quantity="other">Dodaj %d utworu do playlisty</item>
+    </plurals>
+    <string name="playlist_active_indicator">Bieżąca playlista</string>
+    <string name="notice_added_to_named_playlist">Dodano „%1$s” do playlisty %2$s.</string>
+    <string name="notice_already_in_playlist">„%1$s” znajduje się już na playliście %2$s.</string>
+    <plurals name="notice_added_count_to_playlist">
+        <item quantity="one">Dodano %1$d utwór do playlisty %2$s.</item>
+        <item quantity="few">Dodano %1$d utwory do playlisty %2$s.</item>
+        <item quantity="many">Dodano %1$d utworów do playlisty %2$s.</item>
+        <item quantity="other">Dodano %1$d utworu do playlisty %2$s.</item>
+    </plurals>
+    <string name="notice_all_already_in_playlist">Wszystkie utwory znajdują się już na playliście %1$s.</string>
+    <string name="catalogue_online_search">Wyszukiwanie online</string>
+    <plurals name="replays_count">
+        <item quantity="one">%1$d procedura odtwarzająca</item>
+        <item quantity="few">%1$d procedury odtwarzające</item>
+        <item quantity="many">%1$d procedur odtwarzających</item>
+        <item quantity="other">%1$d procedury odtwarzającej</item>
+    </plurals>
+    <string name="track_metadata_title">Metadane utworów (songdb)</string>
+    <string name="track_metadata_none">Nie pobrano — większość utworów nie pokaże roku ani autora</string>
+    <plurals name="track_metadata_count">
+        <item quantity="few">%1$d opisane utwory</item>
+        <item quantity="many">%1$d opisanych utworów</item>
+        <item quantity="one">%1$d opisany utwór</item>
+        <item quantity="other">%1$d opisanych utworów</item>
+    </plurals>
+    <string name="a11y_download_track_metadata">Pobierz metadane utworów</string>
+    <string name="domain_random_title_scoped">Losowo · %1$s</string>
+    <string name="domain_random_body_scoped">Przytrzymaj, żeby zmienić źródło losowania</string>
+    <string name="a11y_choose_random_scope">Wybierz, z czego losować</string>
+    <string name="random_scope_title">Losuj z</string>
+    <string name="random_scope_everything">Wszystkiego</string>
+    <string name="action_send_to_browser">WEB</string>
+    <string name="action_send_as_link">Wyślij zamiast tego linkiem</string>
+    <string name="action_pair_again">Zeskanuj inną przeglądarkę</string>
+    <string name="scan_hint">Skieruj na kod na stronie odtwarzacza.</string>
+    <string name="scan_refused">Bez aparatu nie da się odczytać kodu. Playlistę nadal można wysłać linkiem.</string>
+    <string name="action_cancel">Anuluj</string>
+    <string name="paired_with">Sparowano z %1$s</string>
+    <string name="pair_forget">Zapomnij sparowaną przeglądarkę</string>
+    <string name="settings_web_player_section">Odtwarzacz webowy</string>
+    <string name="settings_web_player">Adres odtwarzacza webowego</string>
+    <string name="settings_web_player_body">Dokąd prowadzi link z ekranu skanera. Puste pole oznacza „ta przeglądarka, z którą jesteś sparowany” — i zwykle o to chodzi.</string>
+    <string name="random_scope_favourites">Ulubionych</string>
+    <string name="random_scope_favourites_missing">Ulubione wymagają listy Modlandu — 142 KB, pobierane raz.</string>
+    <string name="random_scope_favourites_unindexed">Żadnego z ulubionych nie ma w twoim indeksie Modlandu. Najpierw zaindeksuj Modland.</string>
+    <string name="random_scope_favourites_download">Pobierz</string>
+    <string name="random_scope_favourites_downloading">Pobieranie…</string>
+    <string name="favourites_title">Ulubione Modlandu</string>
+    <string name="favourites_none">Nie pobrano — po pobraniu można losować tylko z nich</string>
+    <plurals name="favourites_count">
+        <item quantity="few">%1$d ulubione w twoim indeksie</item>
+        <item quantity="many">%1$d ulubionych w twoim indeksie</item>
+        <item quantity="one">%1$d ulubiony w twoim indeksie</item>
+        <item quantity="other">%1$d ulubionych w twoim indeksie</item>
+    </plurals>
+    <string name="a11y_download_favourites">Pobierz ulubione Modlandu</string>
 </resources>

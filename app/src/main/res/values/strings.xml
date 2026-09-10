@@ -2,6 +2,10 @@
 <resources>
     <string name="app_name">Protracktor</string>
 
+    <string name="search_playing_title">Playing from search</string>
+    <string name="search_playing_body">Nothing from this playlist is playing.\nNext and previous walk the results.</string>
+    <string name="external_playing_title">Playing a file from outside</string>
+    <string name="external_playing_body">Another app handed this to Protracktor. Nothing follows it.\nThe plus keeps it.</string>
     <string name="random_playing_title">Playing at random</string>
     <string name="random_playing_body">Nothing from this playlist is playing. Next picks another.\nThe plus keeps this one.</string>
     <string name="random_back_to_playlist">Back to the playlist</string>
@@ -19,7 +23,68 @@
     <string name="dock_loading">Loading…</string>
     <string name="dock_idle_subtitle">Tap to browse</string>
 
+    <string name="action_follow_track">Follow track</string>
+    <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
+    <string name="replays_title">Atari ST replay routines</string>
+    <string name="replays_none">Needed by most .sc68 files. 98 small files, about 1.2 MB, downloaded from sc68\'s own site — they are other people\'s code and this app does not distribute them. SNDH does not need them.</string>
+    <string name="storage_confirm_replays">They can be downloaded again from this screen. Until then, most .sc68 files will play silence. SNDH is unaffected.</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_dynamic_colour">System colour palette</string>
+    <string name="settings_dynamic_colour_detail">Take colours from your wallpaper.</string>
+    <string name="settings_playback">Playback</string>
+    <string name="settings_play_all_subsongs">Play every tune in a file</string>
+    <string name="settings_play_all_subsongs_detail">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_detail">Choose the language used by Protracktor.</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_polish">Polski</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_decoders">Decoders in this build</string>
+    <string name="settings_licence">Licence</string>
+    <string name="settings_licence_detail">GNU GPL version 3 or later. The source is at github.com/przunk/protracktor.</string>
+    <string name="storage_title">Storage on this phone</string>
+    <string name="storage_database">Playlists, history and the indexes that are not files: %1$d MB. Kept, because your own lists are in here.</string>
+    <string name="storage_cache">Fetched music</string>
+    <string name="storage_cache_detail">%1$d MB of %2$d MB, oldest deleted first</string>
+    <string name="storage_index">%1$s index</string>
+    <string name="catalogue_count_and_size">%1$s · %2$d MB on this phone</string>
+    <string name="storage_index_and_archive">%1$s, including a %2$d MB archive</string>
+    <string name="storage_megabytes">%1$d MB</string>
+    <string name="storage_confirm_title">Delete %1$s?</string>
+    <string name="storage_confirm_index">It can be downloaded again from this screen. Until then, this catalogue cannot be browsed or searched, and its tracks will not play.</string>
+    <string name="storage_confirm_track_metadata">It can be downloaded again from Browse. Until then, most tunes will show no year or author.</string>
+    <string name="storage_confirm_favourites">It can be downloaded again from Browse. Until then, Random cannot be scoped to the favourites.</string>
+    <plurals name="favourites_listed">
+        <item quantity="one">%1$d tune</item>
+        <item quantity="other">%1$d tunes</item>
+    </plurals>
+    <string name="storage_confirm_song_lengths">They can be downloaded again from this screen. Until then, SID tracks will not show a duration.</string>
+    <string name="a11y_delete_storage">Delete %1$s</string>
+    <plurals name="subsongs_count">
+        <item quantity="one">%1$d tune</item>
+        <item quantity="other">%1$d tunes</item>
+    </plurals>
+    <string name="subsongs_position">Tune %1$d of %2$d</string>
+    <string name="subsongs_all">All tunes</string>
+    <string name="subsongs_first_only">First only</string>
+    <string name="a11y_expand_player">Open the player</string>
+    <string name="action_import_playlist">Import</string>
+    <string name="action_export_playlist">Export</string>
+    <string name="action_scan_folder">Scan this folder</string>
+    <string name="scan_listing">Listing the folder…</string>
+    <string name="scan_progress">Opening files: %1$d of %2$d</string>
+    <string name="folder_unscanned">Not scanned yet. Scanning opens every file to find out what it really is, rather than trusting its name.</string>
+    <string name="folder_stale">This folder was scanned with a different set of decoders. Files that could not be played then may play now.</string>
+    <string name="action_to_playlist">Playlist</string>
+    <string name="action_add_track">Add to the playlist</string>
     <string name="action_add_folder">Add a folder</string>
     <string name="action_add_files">Add files</string>
     <string name="action_scanning">Scanning…</string>
@@ -34,12 +99,35 @@
     <string name="a11y_reorder">Drag to move %1$s</string>
     <string name="action_back">Back</string>
     <string name="action_delete">Delete</string>
-    <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
 
     <string name="browse_select_all">Select all</string>
     <string name="browse_select_none">Select none</string>
     <string name="browse_nothing_found">Nothing playable in this folder.</string>
+    <!-- Four different reasons a track will not open. They used to be one message, which sent
+         the owner looking in the wrong place twice in a day: a download failure read as an
+         unsupported format, and one bad file read as a whole platform being unsupported. -->
+    <string name="open_failed_not_fetched">Could not download %1$s. It may be the connection — try again.</string>
+    <string name="open_failed_format">%1$s is a format Protracktor cannot play yet.</string>
+    <string name="open_failed_file">%1$s would not open. Other files of this format do play, so it is this one.</string>
+    <string name="open_failed_file_because">%1$s would not open: %2$s</string>
+    <string name="search_nothing_found">Nothing found for this search.</string>
+    <string name="search_live_needs_query">The Mod Archive is searched live and needs something to search for.</string>
+    <string name="search_not_yet">Search, or leave the field empty to find everything in scope.</string>
+    <!-- The three search scopes. The tile labels are short; the field label below them is the one
+         that has to state the whole scope, so it can be longer. -->
+    <string name="scope_local">Local library</string>
+    <string name="scope_online">Online catalogues</string>
+    <string name="scope_platform">By platform</string>
+    <string name="scope_label_everywhere">Everywhere</string>
+    <string name="scope_label_local">Local library</string>
+    <string name="scope_label_online">Online</string>
+    <string name="scope_label_online_some">Online: %1$s</string>
+    <string name="scope_label_all_platforms">All platforms</string>
+    <string name="scope_label_more">%1$s +%2$d</string>
+    <!-- A search returns at most 2,000 rows per source. Saying so, with the real total, is the
+         difference between a limit and a list that looks wrong. -->
+    <string name="browse_search_capped">Showing %1$d of about %2$d matches — narrow the search, or browse by format.</string>
     <plurals name="browse_add_selected">
         <item quantity="one">Add %d track</item>
         <item quantity="other">Add %d tracks</item>
@@ -49,17 +137,18 @@
     <string name="playlist_unsaved_title">Unsaved changes</string>
     <string name="playlist_unsaved_body">This playlist has edits that are not written yet. Save them before switching, or throw them away.</string>
     <string name="a11y_choose_playlist">Choose a playlist</string>
-    <string name="a11y_save_playlist">Save the playlist</string>
-    <string name="a11y_discard_changes">Discard the changes</string>
-
     <string name="playlist_switch_title">Playlists</string>
     <string name="playlist_new">New playlist</string>
     <string name="playlist_rename">Rename playlist</string>
     <string name="playlist_name_label">Name</string>
+    <string name="playlist_clear_title">Empty %1$s?</string>
+    <string name="playlist_clear_body">It is your only playlist, so it stays — emptied and renamed. The tracks stay in your library.</string>
+    <string name="action_empty">Empty</string>
     <string name="playlist_delete_title">Delete %1$s?</string>
     <string name="playlist_delete_body">The playlist goes; the tracks stay in your library.</string>
 
     <string name="a11y_forget_folder">Forget the folder %1$s</string>
+    <string name="a11y_playlist_menu">Actions for %1$s</string>
     <string name="a11y_rename_playlist">Rename %1$s</string>
     <string name="a11y_delete_playlist">Delete %1$s</string>
 
@@ -68,14 +157,43 @@
     <string name="domain_online_title">Online catalogues</string>
     <string name="domain_online_body">Browse the archives — indexed once, then browsable offline</string>
     <string name="domain_random_title">Random</string>
-    <string name="domain_random_body">Play something from the indexed catalogues</string>
+    <string name="domain_random_body">Play something from the indexed catalogues. Hold to pick a platform.</string>
     <string name="domain_search_title">Search</string>
     <string name="domain_search_body">Across your library and the catalogues</string>
 
     <string name="browse_indexing">Indexing %1$s…</string>
     <string name="browse_unknown">(unknown)</string>
+    <string name="catalogue_stale">Indexed with older decoders — re-index to see formats added since.</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
-    <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>
+    <plurals name="browse_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="few">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="a11y_track_menu">Actions for %1$s</string>
+    <string name="action_share_file">Share the file</string>
+    <string name="action_share_link">Share a link</string>
+    <string name="share_chooser">Share</string>
+    <string name="action_show_neighbours">More from this author</string>
+    <string name="domain_history_title">History</string>
+    <string name="domain_history_body">Tunes you have played, most recent first</string>
+    <string name="history_empty">Nothing played yet. Anything you play — from a playlist, from Random or from a search — turns up here.</string>
+    <string name="action_clear_history">Clear history</string>
+        <string name="song_lengths_title">SID song lengths (HVSC)</string>
+    <string name="song_lengths_none">Not downloaded — SID tunes will show no length</string>
+    <string name="track_metadata_title">Track metadata (songdb)</string>
+    <string name="track_metadata_none">Not downloaded — most tunes will show no year or author</string>
+    <plurals name="track_metadata_count">
+        <item quantity="one">%1$d tune described</item>
+        <item quantity="other">%1$d tunes described</item>
+    </plurals>
+    <string name="a11y_download_track_metadata">Download the track metadata</string>
+    <plurals name="song_lengths_count">
+        <item quantity="one">%1$d tune</item>
+        <item quantity="other">%1$,d tunes</item>
+    </plurals>
+    <string name="a11y_download_song_lengths">Download the HVSC song length database</string>
+        <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>
     <string name="a11y_index_catalogue">Download the index for %1$s</string>
 
     <string name="search_label">Title or author</string>
@@ -87,6 +205,9 @@
     <string name="browse_title">Add music</string>
     <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>
 
+    <string name="field_year">Year</string>
+    <string name="field_album">Album</string>
+    <string name="field_publisher">Publisher</string>
     <string name="field_format">Format</string>
     <string name="field_tracker">Tracker</string>
     <string name="field_artist">Artist</string>
@@ -106,13 +227,71 @@
 
     <string name="a11y_seek">Seek within the track</string>
     <string name="a11y_keep_track">Add this track to the playlist</string>
+    <string name="a11y_preview">Play %1$s</string>
     <string name="a11y_play">Play</string>
+    <string name="a11y_stop_loading">Stop loading</string>
     <string name="a11y_pause">Pause</string>
     <string name="a11y_previous">Previous track</string>
+    <string name="a11y_next_file">Next file, past the tunes left in this one</string>
+    <string name="a11y_previous_file">Previous file</string>
     <string name="a11y_next">Next track</string>
     <string name="a11y_shuffle_off">Shuffle off</string>
     <string name="a11y_shuffle_on">Shuffle on</string>
     <string name="a11y_repeat_off">Repeat off</string>
     <string name="a11y_repeat_playlist">Repeating the playlist</string>
     <string name="a11y_repeat_one">Repeating this track</string>
+
+    <string name="action_add_to_playlist">Add to playlist…</string>
+    <string name="action_add_to_other_playlist">Add to another playlist…</string>
+    <string name="dialog_add_to_playlist_title">Add to playlist</string>
+    <plurals name="dialog_add_tracks_to_playlist_title">
+        <item quantity="one">Add %d track to playlist</item>
+        <item quantity="other">Add %d tracks to playlist</item>
+    </plurals>
+    <string name="playlist_active_indicator">Current playlist</string>
+    <string name="notice_added_to_named_playlist">Added \"%1$s\" to %2$s.</string>
+    <string name="notice_already_in_playlist">\"%1$s\" is already in %2$s.</string>
+    <plurals name="notice_added_count_to_playlist">
+        <item quantity="one">Added %1$d track to %2$s.</item>
+        <item quantity="other">Added %1$d tracks to %2$s.</item>
+    </plurals>
+    <string name="notice_all_already_in_playlist">All tracks are already in %1$s.</string>
+    <string name="catalogue_online_search">Live online search</string>
+    <plurals name="replays_count">
+        <item quantity="one">%1$d replay routine</item>
+        <item quantity="other">%1$d replay routines</item>
+    </plurals>
+    <string name="domain_random_title_scoped">Random · %1$s</string>
+    <string name="domain_random_body_scoped">Hold to change what it picks from</string>
+    <string name="a11y_choose_random_scope">Choose what Random picks from</string>
+    <string name="random_scope_title">Random picks from</string>
+    <string name="random_scope_everything">Everything</string>
+    <!-- **WEB, and the same word in Polish.** It is the name of the other half of this project,
+         not a sentence about where something is going. The prose around it still says "browser",
+         deliberately: that is the machine at the other end, and it is the right word for it. -->
+    <string name="action_send_to_browser">WEB</string>
+    <string name="action_send_as_link">Send as a link instead</string>
+    <string name="action_pair_again">Scan a different browser</string>
+    <string name="scan_hint">Point this at the code on the player page.</string>
+    <string name="scan_refused">Without the camera the code cannot be read. You can still send the playlist as a link.</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="paired_with">Paired with %1$s</string>
+    <string name="pair_forget">Forget the paired browser</string>
+    <!-- Its own group in Settings, below the appearance one. The web player is a second copy of
+         the app rather than a preference about this one. -->
+    <string name="settings_web_player_section">Web player</string>
+    <string name="settings_web_player">Web player address</string>
+    <string name="settings_web_player_body">Where the link from the scanner screen points. Left empty it follows the browser you paired with, which is usually what you want.</string>
+    <string name="random_scope_favourites">Favourites</string>
+    <string name="random_scope_favourites_missing">Favourites needs Modland\'s own list — 142 KB, downloaded once.</string>
+    <string name="random_scope_favourites_unindexed">None of the favourites are in your Modland index. Index Modland first.</string>
+    <string name="random_scope_favourites_download">Download</string>
+    <string name="random_scope_favourites_downloading">Downloading…</string>
+    <string name="favourites_title">Modland favourites</string>
+    <string name="favourites_none">Not downloaded — Random can be scoped to them once it is</string>
+    <plurals name="favourites_count">
+        <item quantity="one">%1$d favourite in your index</item>
+        <item quantity="other">%1$d favourites in your index</item>
+    </plurals>
+    <string name="a11y_download_favourites">Download the Modland favourites</string>
 </resources>

@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.player
 
 import android.app.Notification
@@ -130,6 +118,16 @@ class PlaybackService : Service() {
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, state.metadata["artist"].orEmpty())
                 .putString(MediaMetadata.METADATA_KEY_ALBUM, track?.subtitle.orEmpty())
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, (state.durationSeconds * 1000).toLong())
+                // The generated cover, for the lock screen and Android Auto. Cached by
+                // `TrackArtworkBitmaps`, which matters here: this method runs five times a second.
+                .apply {
+                    track?.let {
+                        putBitmap(
+                            MediaMetadata.METADATA_KEY_ALBUM_ART,
+                            TrackArtworkBitmaps.forTrack(it.fileName, it.title, it.id),
+                        )
+                    }
+                }
                 .build()
         )
 
@@ -137,8 +135,16 @@ class PlaybackService : Service() {
             PlaybackState.ACTION_PAUSE or
             PlaybackState.ACTION_PLAY_PAUSE or
             PlaybackState.ACTION_STOP
-        if (state.queue.hasNext) actions = actions or PlaybackState.ACTION_SKIP_TO_NEXT
-        if (state.queue.hasPrevious) actions = actions or PlaybackState.ACTION_SKIP_TO_PREVIOUS
+        // `canGoNext`, not `queue.hasNext`. The queue is the playlist, and next does not always
+        // walk the playlist: in Random it walks the picks, and in a search it walks the results.
+        // Asking the queue meant the notification hid its skip buttons in exactly the mode where
+        // the dock was showing them -- the owner found it in Random, and search had it too.
+        //
+        // Since Android 13 the system builds these buttons from the session's PlaybackState rather
+        // than from the notification's own actions, so this line is what decides whether they
+        // exist. The `Notification.Action`s below were always added and were never the problem.
+        if (state.canGoNext) actions = actions or PlaybackState.ACTION_SKIP_TO_NEXT
+        if (state.canGoPrevious) actions = actions or PlaybackState.ACTION_SKIP_TO_PREVIOUS
         // Advertised only when the backend can honour it. sc68 emulates a 68000 and cannot seek;
         // a lock screen offering a scrubber that does nothing is the same lie as an app that does.
         if (state.seekable) actions = actions or PlaybackState.ACTION_SEEK_TO
@@ -155,8 +161,15 @@ class PlaybackService : Service() {
         )
     }
 
-    private fun contentOf(state: PlayerUiState) =
-        NotificationContent(state.current?.title, state.current?.subtitle, state.playing)
+    private fun contentOf(state: PlayerUiState) = NotificationContent(
+        title = state.current?.title,
+        subtitle = state.current?.subtitle,
+        // Part of the key `distinctUntilChanged` compares, because they decide the picture. Without
+        // them, two tracks with the same title and subtitle would keep the first one's cover.
+        fileName = state.current?.fileName.orEmpty(),
+        id = state.current?.id.orEmpty(),
+        playing = state.playing,
+    )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -188,6 +201,8 @@ class PlaybackService : Service() {
     private data class NotificationContent(
         val title: String?,
         val subtitle: String?,
+        val fileName: String,
+        val id: String,
         val playing: Boolean,
     )
 
@@ -231,6 +246,23 @@ class PlaybackService : Service() {
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(content.title ?: getString(R.string.dock_idle_title))
             .setContentText(content.subtitle.orEmpty())
+            // The two lines that answer B21, and they only work together. Since Android 12 the
+            // media notification takes its colour from the artwork, so `setColorized` alone does
+            // nothing -- which is why the bar was grey while the controls were fine.
+            //
+            // Whether the platform honours the colour at all is the device's business: several
+            // manufacturers ignore it, and Android only applies it to a foreground service's own
+            // notification -- which this is, including while paused, because the service stays in
+            // the foreground until playback is actually over. The design does not depend on it: the
+            // square is
+            // coloured either way, so an uncoloured bar still gets a cover that says what is
+            // playing -- which was the other half of the complaint.
+            .setLargeIcon(
+                content.title?.let {
+                    TrackArtworkBitmaps.forTrack(content.fileName, it, content.id)
+                }
+            )
+            .setColorized(true)
             .setContentIntent(open)
             .setOngoing(content.playing)
             .setShowWhen(false)

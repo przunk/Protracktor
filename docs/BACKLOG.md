@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A1. Search results need the path too, and a way to hear a track first
+## A1. ~~Search results need the path too, and a way to hear a track first~~ — DONE 2026-09-02
 
 
 Both reported 2026-09-01, both about the Search view specifically.
@@ -34,7 +34,7 @@ behind it: **what do next and previous mean while listening from a search?** The
 everything else here is that the results become the queue for as long as you are in them, the way
 Random has its own history. Playing from search must not quietly rewrite the playlist.
 
-## A2. Subsongs — decided 2026-09-01, UI still open
+## A2. ~~Subsongs~~ — DONE 2026-09-03
 
 
 game-music-emu reports track counts in the hundreds — one GBS in the sample said 99, an HES said 256
@@ -54,7 +54,44 @@ become a playlist of two thousand rows.
 - **(d)** It must be easy to reach: no clicking through several places, and no complicating the way
   back to the playlist.
 
-Nobody has a good design yet, his words included. **To be discussed before anything is built.**
+**Designed with him on 2026-09-03 and built.** What was agreed, and where each of his constraints
+landed:
+
+| | |
+| --- | --- |
+| **Dock — transport** | untouched. A control that does nothing for most files does not belong beside shuffle and repeat |
+| **Dock — title row** | now visibly a control, and says *"tune 3 of 15"* when the mode is on |
+| **Expanded player** | the strip of tunes and the mode toggle — **(c)**: that screen *is* the track, so nothing is covered |
+| **Playlist row** | the count, in both modes |
+
+**The mode decides what the transport means, and that is his correction rather than my design.** I
+proposed that `next` should walk tunes inside any multi-tune file. He pointed out that this makes a
+button mean different things depending on the *file* — which is not something the user chose — and
+tied it to the mode instead: **"all tunes"** and next walks them, **"first only"** and next is the
+next file. That is exactly the principle behind his first complaint about this app, that next and
+previous behaved unpredictably. I had it written down and proposed the opposite anyway.
+
+**Default is "first only"**, his choice: a file reporting 256 subsongs should not take over a
+listening session the first time one appears.
+
+**Two things he caught that the design would have failed on:**
+
+- The toggle belongs where the track's settings are, not in the transport bar. I read "in the dock"
+  and "in the place of the track's settings" as the same place; they are not, and he meant the
+  second.
+- **The dock's title row did not look clickable**, and it is the way to all of this. Fixed with the
+  same remedy the playlist name in the top bar needed: a visible surface and a chevron.
+
+**One hole in the design, named and then closed properly.** We had agreed the count would appear
+only in "all tunes" — which meant you had to already know a file held fifteen tunes in order to
+switch to the mode that would tell you. I patched it by putting an indicator in the dock; the owner
+went further and removed the condition: *"we can always show 1 of n, even in play-only-one."* He is
+right, and it is the simpler rule. A count is true whatever the mode does with it.
+
+**Still not solved, deliberately:** console formats over-report. A GBS claims 99 and an HES 256, and
+many are silence or sound effects rather than tunes. We already store per-subsong durations for SID
+and GME knows its own, so greying out the empty ones is reachable — but it is a separate question
+and is not tangled into this.
 
 Two observations to bring to that conversation:
 
@@ -67,7 +104,24 @@ Two observations to bring to that conversation:
 Schema is not a constraint: the owner has confirmed the database can change freely and he can
 reinstall, since nobody else uses the app yet.
 
-## A3. Getting up and down a long list
+## A3. ~~Getting up and down a long list~~ — DONE 2026-09-03
+
+**The owner's decision**, after reserving this for a conversation on 2026-09-02: *"I want a visible
+scrollbar on the right that you can grab and drag down."* So it is a real thumb the user can take
+hold of, not a fast-scroll gesture and not jump-to-letter.
+
+Worth knowing before building: the playlist already has a drag handle per row for reordering, and a
+draggable scrollbar is a second drag on the same screen. They must not be confusable — the handle is
+inside the row, the scrollbar is at the edge, and that separation has to survive selection mode
+(`docs/ARCHITECTURE.md` §17) where rows also respond to a long press.
+
+**Built**, on the playlist and on Browse's track lists. Ten device-independent pixels at the very
+edge: wide enough to take hold of, narrow enough that a thumb scrolling the list does not land on
+it. It positions by **item counts rather than pixels** — rows here are one height, and asking a lazy
+list for the pixel extent of half a million unmeasured items is not a question it can answer — and
+it drags with `scrollToItem` rather than an animated scroll, because a list animating its way
+towards a finger reads as lag. Absent when everything already fits, since a scrollbar for six rows
+is furniture.
 
 
 Raised 2026-09-01. Three hundred tracks is a lot of flicking.
@@ -91,7 +145,42 @@ The scrollbar can follow if flicking still annoys.
 position; a scrollbar reports it better and takes no row space. That is not a reason to remove the
 number now, but it is a reason to ask again then.
 
-## A4. Bulk operations on the playlist
+## A4. ~~Bulk operations on the playlist~~ — DONE 2026-09-03
+
+**Agreed 2026-09-02 (evening):** *"long-press/bulk operations should be implemented the same way on
+the playlist"*, and the actions were settled on 2026-09-03. So the gesture and its behaviour come straight from `docs/ARCHITECTURE.md` §17 —
+long press to start, tap to tick, back to leave with nothing ticked, no layout shift when the
+checkbox arrives.
+
+**Decided 2026-09-03.** Three actions, in the owner's words: **add to another playlist**, **remove
+from this playlist**, and **make a new playlist from these**. *Play these only* was my guess and he
+did not ask for it; it is not in.
+
+**Built.** Long press starts selecting, exactly as in Browse, and the checkbox takes the ordinal's
+slot — already reserved and already that size, so entering selection moves nothing.
+
+**Corrected after he used it:** the actions are icons with labels like everywhere else rather than
+bare text; the bar is one row, because the dock's height was being applied *inside* it and made it
+three; and the follow-track button is hidden while selecting, since it floats over the corner where
+the actions now are.
+
+**Two buttons for three actions, and that is not a shortcut.** *Add to playlist…* opens the picker,
+which offers an existing playlist **or a new one** — so "make a new playlist from these" is in there
+rather than missing. *Remove* is the other. Say if you would rather see three.
+
+**Undo restores the whole selection**, which was the thing that could lose data. `TrackEditing` is a
+separate object with a round-trip test over two hundred generated selections, because the ordering
+is the trick: putting the lowest index back first makes room for the next, and going the other way
+returns a list that is subtly wrong rather than obviously broken. Reversing that order fails three
+tests, which was checked by reversing it.
+
+**Two things §17 does not cover, because Browse does not have them:**
+
+- **The drag handle.** Long-press-to-select and drag-to-reorder are different gestures on the same
+  row, and the handle is what keeps them apart. Selection must not make the handle ambiguous.
+- **Undo.** A bulk delete is one edit, not twenty, so undo has to restore the whole selection. The
+  current single-track `lastRemoval` will not do.
+
 
 
 Raised 2026-09-01. Long-press a row to start a selection, then **tap** further rows to add them —
@@ -111,6 +200,656 @@ that is not the playlist.
 - **The draft model.** A bulk delete is one edit, not twenty, so undo has to restore the whole
   selection — the current single-track `lastRemoval` will not do.
 
+## A9. ~~The app icon~~ — DONE 2026-09-02
+
+Raised 2026-09-02: the launcher icon was a placeholder (`@android:drawable/ic_media_play`). Google Play
+flagged this on upload.
+
+**Built:** Created a proper adaptive icon (API 26+) featuring stylized tracker equalizer bars in cyan
+on a dark indigo background (`res/drawable/ic_launcher_foreground.xml` and `ic_launcher_background.xml`),
+along with pre-rendered fallback PNGs across all five screen densities (`mipmap-mdpi` through
+`mipmap-xxxhdpi`) including round variants (`ic_launcher_round`). Updated `AndroidManifest.xml`.
+
+**Odświeżone 2026-09-03:** właściciel wybrał znak „P + Play” z pierwszej planszy koncepcyjnej. Literę
+`P` tworzą cztery oddzielone kanały trackera z regularnymi komórkami w dwóch odcieniach; dwa kanały
+schodzą do dołu, a dwa budują brzuszek litery. Trójkąt Play jest przezroczystym wycięciem wyłącznie
+w trzecim kanale i kończy się tuż przed jego prawą krawędzią. Prawie czarne tło zastąpiło niebieskie
+koło, którego nie było w wybranym koncepcie.
+Generator `scripts/GenerateLauncherIcons.java` utrzymuje z jednej geometrii adaptive icon,
+monochromatyczną ikonę systemową Androida 13+ oraz fallbacki PNG dla starszych launcherów. Ten sam
+generator zapisuje pełny plik 512 × 512 px w
+`artwork/protracktor-launcher-icon-512.png`. Znak zajmuje 82% geometrii źródłowej wokół środka
+`54 × 54`, aby zachować margines także pod okrągłą maską launchera.
+
+## A8. ~~Haptics for the gestures that deserve them~~ — MOSTLY DONE 2026-09-02
+
+Three of the four landed: picking a row up, putting it down, and each position it crosses, plus the
+snackbar's dismiss threshold. The fourth — long-press that starts a selection — belongs to A4 and
+should be added there rather than left as a loose end here.
+
+Raised 2026-09-01.
+
+**The whole risk here is doing too much of it.** Haptics on every tap is noise, and noise is what
+makes people turn the setting off system-wide — at which point the app loses the few buzzes that
+would have been useful. So the list is short on purpose:
+
+- **Drag start and drop** — picking a row up and putting it down. The gesture has no other
+  confirmation that it began.
+- **Crossing a reorder boundary** — one tick per position the row passes. This is the one that
+  actually helps: it tells you a move happened without looking, which is exactly when you cannot
+  look, because your thumb is over the row.
+- **Long-press that starts a selection** (`A4`) — a long press with no feedback feels like a press
+  that failed.
+- **Swipe past the snackbar's dismiss threshold** — it already fades; a tick says "let go now".
+
+And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
+result. The screen already answered.
+
+**Implementation notes.** Compose's `LocalHapticFeedback` offers only `LongPress` and
+`TextHandleMove`, which is thin. The richer constants live on `View.performHapticFeedback` —
+`GESTURE_START` and `GESTURE_END` (API 30+), `SEGMENT_TICK` (API 34), `CONFIRM` and `REJECT`. With
+`minSdk 29` that means a small helper that degrades: the good constant where it exists, `LongPress`
+where it does not, nothing where the device has no vibrator.
+
+Android already honours the user's system haptics setting, so there is no need for our own — and
+adding one would be inventing a preference the platform already owns.
+
+## A10. ~~Sharing — the file, and a link to it~~ — DONE 2026-09-02
+
+Raised 2026-09-02 by the owner. Two actions, and they are **not** the same feature:
+
+- **Share the file.** An `ACTION_SEND` with the bytes, so a tune can go into a chat. These are
+  kilobytes, which is what makes this pleasant — the whole point of the formats.
+- **Share a link** to a track in an online catalogue, so the other person gets the tune without
+  receiving a file at all.
+
+**What has to be settled before either is built:**
+
+- **A local file has no shareable URI.** What the library holds is a SAF document URI, and a
+  permission grant that belongs to this app. Handing it to another app hands over nothing it can
+  read. The file has to be copied out through a `FileProvider` — which means a copy, a cache
+  directory for it, and an eviction rule for that directory (`docs/OPEN_QUESTIONS.md` Q5 again).
+- **Not every catalogue track has a link.** Modland tracks do: the id is an `https://` URL and can
+  be shared as it stands. **ASMA tracks do not** — their id is `asma://<entry>`, an address inside a
+  20 MB archive on this device (`docs/ARCHITECTURE.md` §13), and it means nothing anywhere else. So
+  the action is either hidden for archive catalogues, or it shares the archive's own page and names
+  the file, which is a worse thing that at least exists. Decide, do not let it fail quietly.
+- **What a shared link should be.** A raw `modland.com` URL is honest and ugly, and it points at a
+  file rather than at anything a person can look at. Worth a conversation before choosing.
+
+Sharing the whole **playlist** is a third thing again, and nobody has asked for it — the formats
+would be a list of URLs plus local files that cannot travel. Not in scope here.
+
+**Built**, and both questions above were decided rather than dodged:
+
+- The file is copied into a `FileProvider` directory in the cache and shared from there, because
+  neither place our files live can be handed to another app — a SAF grant cannot be passed on, and
+  app-private storage cannot be read from outside. Copies are swept an hour after they are made,
+  not immediately, because the receiving app reads the file after the chooser closes.
+- The link asks the catalogue what it publishes. Modland serves every file over HTTP, so the link
+  is the file. ASMA publishes one archive and no per-file address, so the share names the
+  collection and the path inside it — a real thing to act on, rather than an `asma://` reference
+  that means nothing on anyone else's phone. `Catalogue.webUrlFor` returning null is what says so.
+- The MIME type is `application/octet-stream`, not `audio/*`: no chat app can play a `.mod`, and
+  claiming an audio type invites the receiving end to try and fail.
+
+**Decided by the owner 2026-09-02**: the link points at **the file** — exactly what is being played
+— and what to do with it is the recipient's business. So Modland's track URL stays as it is, and
+the reason ASMA cannot have one (it publishes an archive, not a file tree) is now the whole reason
+its share names the collection and the path instead.
+
+## A11. ~~Random should read ahead, the way the playlist does~~ — DONE 2026-09-02
+
+Raised 2026-09-02 by the owner: waiting for each random track to download is the wait R9 exists to
+remove, and Random is the one place still paying it in full.
+
+**Why the existing read-ahead does not cover it.** `prefetchUpcoming()` reads the next track while
+the current one plays, and it works by asking the queue what comes next. Random has no next:
+`playRandom()` calls `catalogues.random()` at the moment you press it, so the track that comes next
+does not exist until it is already needed. Nothing can be read ahead because nothing has been
+decided.
+
+**So the change is to decide sooner, not to cache harder.** Pick two or three ahead, put them in
+`randomHistory` past `randomCursor`, and let the existing read-ahead do its job. Pressing next then
+takes the one already chosen and already fetched, and picks a new one at the far end to replace it.
+The history machinery is already the right shape for this: `randomCursor` sitting behind
+`randomHistory.lastIndex` is exactly what "there is a queue ahead" means, and `randomNext()` already
+walks into it rather than picking fresh.
+
+**Watch for:**
+
+- **Read-ahead is single-slot today.** `prefetched` holds one track's bytes and `MAX_PREFETCH_BYTES`
+  bounds it. Two or three ahead means several, which is a small cache with an eviction rule, not a
+  variable.
+- **Fetching things nobody hears.** Three ahead on a metered connection is three downloads for one
+  listen if the user stops. These files are kilobytes, so the cost is small — but it is not nothing,
+  and it should be a considered number rather than whatever felt right.
+- **Going back must not re-pick.** `randomPrevious()` walks the history; nothing about a queue ahead
+  may make the past re-roll.
+
+**Built**, three ahead. One thing had to be decided that the write-up above did not foresee: with a
+queue ahead, **the dice and next stop meaning the same thing.** Next means forward, and walks into
+the queue. The dice means "surprise me", so it drops the picks that were read ahead and never heard
+and re-rolls — but keeps everything actually played, which the old code did not: it truncated at the
+cursor and so discarded real history along with the guesses. Telling the two apart is what
+`randomPlayed` is for. **Confirmed by the owner 2026-09-02** — the dice re-rolls, next walks
+forward.
+
+## A12. ~~Random should keep going when a track ends~~ — DONE 2026-09-02
+
+Raised 2026-09-02 by the owner: Random stops at the end of each track and has to be pressed again.
+
+Today that is deliberate and the comment in `handleTrackEnded()` says why — *"Rolling on into the
+playlist would be answering a question the user did not ask by pressing Random."* **That reasoning
+survives.** What the owner wants is not rolling into the playlist; it is rolling on to the next
+random pick. The transient track ending should call `randomNext()`, and the comment should be
+narrowed to say what it is really guarding against rather than deleted.
+
+**One thing to get right:** a transient track is also how a **search result** is played, and those
+already have their own queue (`resultsQueue`) handled earlier in the same function. The change must
+reach the Random path only — a search result playing on into a random tune would be the same mistake
+in the other direction.
+
+Pairs naturally with **A11**: continuous play is where reading ahead stops being a nicety, because
+the gap between tracks becomes the only thing the listener notices.
+
+**Built.** Repeat-one is honoured — it says "keep playing this" on the dock while Random runs, and
+skipping under it would be the app contradicting its own button. Not confirmed on a device.
+
+## A13. ~~Application settings~~ — DONE 2026-09-04
+
+Raised 2026-09-02 by the owner. There is no settings screen at all today, and several decisions
+that are currently hard-coded or implicit are exactly the kind a person wants to change once and
+never think about again.
+
+**What already exists and would move there** — this is the argument for the screen, and it is worth
+gathering before designing it, because a settings screen designed before its contents is a screen of
+somebody's guesses:
+
+- ~~**Storage.**~~ **Done 2026-09-04**, as round 6 item 3, and deliberately without waiting for
+  this screen to be designed. Every stored thing now has a delete beside it — the fetched cache,
+  each downloaded archive, each catalogue index, the HVSC song lengths — in a `StorageSection` that
+  lives on the Online catalogues screen because Browse already answers "what does this app have of
+  mine" and needs no new navigation to do it. **That placement is the placeholder, not the
+  feature**: when this screen is designed the section moves in one piece. See
+  `docs/ARCHITECTURE.md` §19.
+- ~~**Language.**~~ **Done 2026-09-04:** System, Polish and English are selected inside the app and
+  work across its whole supported API range, rather than handing Android 13+ off to a system page.
+- **Behaviour that is currently a decision we made for the user.** Whether Random keeps going
+  (A12), how far it reads ahead (A11), whether the playlist follows the playing track by default
+  (B14 is off by default and forgets when you leave the screen).
+- **Per-format playback settings** — `docs/WISHLIST.md` B11 is a whole sub-tree of this, and the
+  reason not to design the screen around a flat list of switches.
+
+**What to decide before building:** whether this is one screen or a section per topic, and where it
+is reached from. The app has no overflow menu at the top level today, and adding one to reach a
+single screen is a navigation change — `docs/OPEN_QUESTIONS.md` Q1 is still open and touches the
+same surface.
+
+## A14. Getting ready for the Play Store
+
+Raised 2026-09-02 by the owner. Nothing here is written down anywhere yet; `docs/BUILD.md` covers
+building and signing an APK and explicitly stops short of a bundle.
+
+**What is already true:** the release build goes through R8, is signed from `PRZUNK_UPLOAD_*`, and
+`build-release.sh` prints the certificate subject so an accidentally debug-signed artifact is
+visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
+
+**What is missing, roughly in the order it will bite:**
+
+- ~~**An App Bundle.**~~ `./scripts/build-bundle.sh`, written 2026-09-02. The key itself is still
+  the owner's to create; the script asks for it and refuses to produce a debug-signed bundle.
+- ~~**The launcher icon** (A9)~~ — done 2026-09-03: an adaptive icon with a monochrome layer for
+  themed icons, at every density.
+- ~~**A privacy policy and a data-safety declaration.**~~ **Written 2026-09-04** as round 6 item 5:
+  `docs/PRIVACY.md` is the policy, publishable at its own GitHub URL, and `docs/PLAY_STORE.md`
+  answers the data-safety form row by row. Both claims were checked against the source rather than
+  assumed — no analytics SDK, no identifier read anywhere, five network hosts and all of them
+  archives. `ACCESS_NETWORK_STATE` was found declared and unused, and removed.
+- ~~**The replay binaries.**~~ **Settled 2026-09-04**, which was the last thing genuinely blocking a
+  listing: the APK ships only sc68's own replay and downloads the rest at the user's request. The
+  letters to sc68 and UADE are in `docs/letters/`; the UADE one has been sent. Neither reply gates
+  anything.
+- ~~**The GPL and the store.**~~ **Written down 2026-09-04** in `docs/PLAY_STORE.md`, including why
+  the Apple App Store problem people cite does not apply to Play. The **replay binaries** question
+  (`docs/LICENSES.md`) is untouched by that and still the owner's to settle *before* publishing —
+  it is now measured for both sc68 and UADE rather than argued.
+- **Content rating, listing text, screenshots, a feature graphic.** Mechanical, but none exists.
+- ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
+  count now and nobody has to remember it.
+
+- **`docs/letters/` before the repository goes public.** The listing points at the source, so
+  publishing the app publishes the repository, and that directory holds correspondence with other
+  projects' maintainers. It is gitignored as of 2026-09-05, which only stops new ones — the five
+  already committed are in the history. The owner's decision is to rewrite it and force-push;
+  `docs/PLAY_STORE.md` has the command, tried on a copy. **It does not remove the quotations** —
+  Heikki Orsila's and Matti Tiainen's replies are quoted verbatim in `LICENSES.md`,
+  `PLAN_FORMATS.md` and several commit messages, and those are the words that are not ours.
+
+**Not started, and not to be started without the owner**: publishing is his account, his key and
+his name on the listing.
+
+## A15. ~~The Random icon does not look like a die~~ — DONE 2026-09-02
+
+Reported by the owner: *"it does not look like a die, it looks like the Excel logo"*, which was
+exact. It was Material's `casino` glyph, whose pips wind the same way as its outline, so under
+non-zero winding they filled in and left a solid rounded square. Redrawn as an outline plus five
+pips, rendered even-odd. `PlayerIcons.icon()` gained a `hollow` flag for the next icon with the
+same symptom.
+
+## A16. ~~No way back to the playlist from a browse jump~~ — DONE 2026-09-02
+
+Raised 2026-09-02 by the owner, after using **B2**: *"more from this author"* opens the browser at
+the author's folder, which is right; back then walks up the folder levels, which is also right; but
+there is **no one-tap way back to the playlist** from wherever you have got to.
+
+**Why it is a real gap and not a missing button.** The rule the app follows today is "back goes up
+one level, and from the top it leaves Browse". That is correct and it is also slow: land three
+levels deep from a jump and getting out is four taps. The jump made it easy to arrive somewhere
+deep, and nothing made it easy to leave.
+
+**Options, none chosen — this is the owner's call:**
+
+1. **A close affordance on Browse itself**, separate from back. An X in the top bar next to the
+   back arrow. Cheapest, and it makes the two gestures visibly different things.
+2. **Back from a jump returns whence it came**, rather than walking up. The jump becomes one step
+   in the history rather than a teleport, which is what a browser tab does.
+3. **The player dock is already on every screen** — tapping the identity row could mean "take me
+   back to the list", which is close to what B13 already does inside the playlist.
+
+**Both 1 and 2 were built**, because they turned out to answer different halves:
+
+- The header carries a labelled **Playlist** action — icon and word, at the owner's request — that
+  leaves Browse from any depth in one press. That is the way *out*, as distinct from back.
+- **Back after a jump returns to the playlist** rather than walking up. The owner reported this as
+  a defect and he is right: a jump puts you three levels deep without your passing through any of
+  them, so climbing out of a hierarchy you never climbed into is not "back". `arrivedByJump` marks
+  it and is cleared by any ordinary navigation, so browsing down from the landing place behaves
+  normally again.
+
+**Related and unsettled**: `docs/OPEN_QUESTIONS.md` Q1, the navigation model, touches exactly this.
+
+## A17. ~~The actions in a track's details need sorting out~~ — DONE 2026-09-03
+
+Raised 2026-09-02 by the owner about two places at once:
+
+- **Now Playing**, where every action is its own full-width row — *show in playlist*, *more
+  from this author*, *share the file*, *share a link* — and the list grows every time one is added.
+  Four now, and A10 and B2 added two of them in a day.
+- **The history list**, where the owner says the actions are *"średnio"* — the row menu offers
+  what a playlist row offers, and some of it does not belong on something that is not in a playlist.
+
+Not a layout tweak: the question is what a track's actions *are*, once there are more than fit
+comfortably.
+
+**Agreed with the owner 2026-09-03:** an **icon with its label above or below it**, and all of them
+**in one row**. The same shape as the *Playlist* action already in the Browse header, so the two
+will not read as different kinds of control.
+
+**And one action goes.** Since *add to another playlist* exists, he does not want a separate *add to
+the current one*: one item, **"Add to playlist…"**, opening the picker. The picker should put the
+**current playlist first**, so the common case is still two unthinking taps. The dock's **+** keeps
+adding to the current playlist without asking — that is the reflex, and the menu is the decision.
+The bulk button stays as it is, because it already names its target on its face.
+
+**Built.** Now Playing's actions are one wrapping row of icons with their names underneath,
+through a shared `LabelledAction` — the shape the owner had already asked for twice, now in one
+place rather than copied. **Corrected after he saw it:** they are drawn in the accent colour,
+because the full-width text buttons they replaced were accented by default and losing that made
+them read as labels rather than controls; and every cell is one fixed width, because sized to their
+own text they came out ragged and a row of different-sized things does not read as a set of equals. The two add actions became one **"Add to playlist…"** opening the picker,
+with the current playlist sorted to the top.
+
+**And it took some code out.** `addToPlaylistAndSay` and the `onAddStayingHere` wiring existed to
+give the *current-playlist* menu item feedback while staying in Browse (`docs/STATUS.md` C7). That
+menu item is gone, and the picker's own path already reports back **and names the target**, which is
+strictly better. Removed rather than kept for a caller that no longer exists.
+
+## A18. ~~Should playing something reorder the list it came from?~~ — DECIDED 2026-09-03: no
+
+Raised 2026-09-02 by the owner: what should happen to the order of the displayed list after one of
+its entries is played.
+
+Worth pinning down **which** list before designing anything, because the answer is probably not the
+same for each: the playlist (where order is the user's and must not move by itself), history (where
+order is recency and playing something arguably *should* move it to the top — it already does in
+the database, the view just does not refresh under you), and a browse or search result (where order
+is the archive's).
+
+The reason it needed a conversation rather than a decision: a list that reorders under a finger is
+the single most disorienting thing a list can do, and the owner had already said (defending the
+ordinal numbers) that knowing where you are in three hundred rows matters to him.
+
+**Decided: no.** *"I don't think I want to reorder a list just because I clicked something again.
+The first play is what matters."* So history keeps the order it has while you are looking at it, and
+a replay does not move a row. Current behaviour is now the chosen behaviour rather than an accident.
+
+**What he actually wanted from history is the date and time**, which is `docs/WISHLIST.md` B15 and
+is now the live half of this conversation.
+
+## A19. Should a jump also fetch the whole author's folder? — DEFERRED 2026-09-03
+
+Raised 2026-09-02 by the owner, about **B2**: having jumped to an author's folder, pre-fetch what is
+in it so playing any of it is instant.
+
+**Deferred by the owner**, for the reason the entry already gave: *"an author is effectively the
+lowest-level folder and can have hundreds of tracks."* Not to be raised again unprompted.
+
+**Why it is not simply "yes".** An author's folder in Modland can hold a handful of tunes or a
+couple of hundred, and the app cannot tell before it fetches which it is. The read-ahead built for
+Random (A11) is bounded at three because three is the cost of a feature nobody asked to pay for on
+a metered connection; a folder is unbounded.
+
+**What is worth knowing before deciding:**
+
+- These files are kilobytes. A folder of thirty is perhaps a megabyte, which is nothing; a folder of
+  three hundred is not.
+- The cache has **no eviction budget at all** (`docs/OPEN_QUESTIONS.md` Q5). Fetching folders makes
+  that question urgent rather than theoretical.
+- A middle position exists and may be the right one: fetch the first *n* of the folder, in the order
+  shown, on the same machinery A11 already uses.
+
+## A20. ~~Browse forgets where you were when you go back~~ — DONE 2026-09-03
+
+Raised 2026-09-02 by the owner, with the use case that shows it:
+
+> I go into Browse and look for an author's folder — say Przunk. I go in, listen to something, press
+> back — and it puts me at the **start** of the folder list. I expect to be back where I was: at the
+> folder I came out of.
+
+**A defect in effect, and listed here because it is the same piece of work as A3 and A16 rather than
+a separate fix.** It is not a wrong-behaviour bug so much as a missing one: nothing in Browse
+remembers a position at all.
+
+**What the code says** (read, not measured): `BrowseScreen` never creates a `LazyListState`. Every
+level is a `LazyColumn` with no explicit state, and the levels are the *same* call site recomposed
+with different data — catalogue list, then formats, then authors, then tracks. So the scroll state
+is neither saved per level nor reset between them: it persists across a level change by accident and
+is then clamped to whatever the new, usually shorter, list can hold. Going into a folder from row
+900 of the authors and coming back out lands near the top, which is exactly what the owner sees.
+
+**What it should do**, and the second half is the part that is easy to leave out:
+
+1. Each level keeps its own scroll position, restored on the way back up.
+2. Coming back should put the row you **came from** on screen — not merely the offset you happened
+   to have. Those differ whenever the list changed underneath, and the second is what "back where I
+   was" means to a person.
+
+**Built.** `BrowseScroll` keeps one scroll state per level for the life of a Browse session, and
+records the row you descended by so that returning finds it again. Identity first and **no index
+fallback**: an index is only "where I was" while the list is unchanged, and the case this exists for
+is exactly the one where it changed. When the row has gone, the level's own saved offset is already
+close enough, and jumping somewhere arbitrary because a number still parses would be worse. The
+animate-when-near / jump-when-far helper is shared with B13 and B14 rather than reimplemented.
+
+**Shares its machinery with:**
+
+- **A3** (getting up and down a long list) — both need Browse to have a real, addressable list state
+  rather than an anonymous one.
+- **B13/B14**, which already solved "put this row on screen, animate when near and jump when far"
+  for the playlist. That helper should be reused rather than written twice.
+- **A16** (no way back to the playlist), which is about the same back button doing too many jobs.
+
+## A21. ~~The playlist picker should say how big each playlist is~~ — DONE 2026-09-03
+
+Raised 2026-09-03 by the owner. Choosing where to add a track shows a list of names and nothing
+else, so there is no way to tell a playlist you filled from one you made and forgot. The count is
+already in the database — `LibraryStore.playlists()` reads the rows the picker shows.
+
+**Built**, counted in the same query with a `LEFT JOIN` rather than by reading every playlist's
+tracks: the picker shows all of them at once, and one statement is one statement.
+
+**In both places, on the second try.** The first attempt changed only the *add-to* dialogue and
+missed the **switcher** in the top bar, which is where the owner actually looked. That row now shows
+the count where a dot used to say "this is the current one" — the dot spent a slot saying something
+the row can say by being highlighted, and left the question a list of bare names cannot answer.
+Highlighting the whole row is the same convention the playlist already uses for the playing track,
+so "which one am I in" is one idea rather than two.
+
+## A22. ~~Online catalogue indexes go stale and nothing says so~~ — DONE 2026-09-03
+
+Raised 2026-09-03 by the owner, after failing to find any C64 music: **his Modland index predates
+libsidplayfp**, so it contains no `.sid` entries at all. The index filters by filename *at index
+time*, and the filter only admits formats a backend can play — so an index built before a backend
+existed is permanently missing that backend's formats, and looks simply empty rather than stale.
+
+**The asymmetry is the point.** Round 5 built exactly this mechanism for the *local* library: every
+row records which decoder set produced it, and a folder scanned by a different one says so and
+offers a rescan (`docs/ARCHITECTURE.md` §18). Catalogue indexes still rely on A7's note asking a
+human to remember. The owner hit that gap the first time it mattered.
+
+**The straightforward fix** is the same one: a `backends` column on `catalogues`, written at index
+time and compared on open. The catalogue row already shows a track count and an indexed-at date;
+"indexed with older decoders — re-index to see C64 music" belongs beside them.
+
+**Built**, and the decision that came with it: **the row says so and the user presses the button
+that was already there.** Not automatic. A Modland re-index is a 5.75 MB download and half a million
+rows, and starting that because somebody opened a screen would be indefensible; the catalogue row
+already carries a re-index button, so the notice only has to say *why* to press it. That also leaves
+the choice open — making it automatic later is adding a trigger, not redoing the mechanism.
+
+**And the owner closed that question on 2026-09-03, with a better reason than mine.** Automatic
+re-indexing is not deferred for taste: *"we can't do anything better until we have an online worker
+that indexes this for us automatically."* Re-indexing on the device means every user downloading
+5.75 MB and rebuilding half a million rows to learn what one server could have worked out once. So
+the notice is the right answer **for as long as the index is built on the phone**, and the real
+alternative is a different piece of infrastructure rather than a different trigger.
+
+**An index with no recorded decoder set counts as stale**, which is not a detail: every index that
+exists today predates the column, including the one that caused this. Treating "unknown" as current
+would have left the owner exactly where he started.
+
+**Also fixed here** (`docs/STATUS.md` C9): a catalogue track that no decoder can open now names the
+format the archive files it under — *"SidMon 1 is a format Protracktor cannot play yet"* rather than
+*"no backend recognised it"*. The archive knew; the app was not asking.
+
+## A23. ~~The Browse button should be an icon with a label~~ — DONE 2026-09-03
+
+Raised 2026-09-03 by the owner: it is a bare text button, while the way *out* of Browse — added the
+day before for **A16** — is an icon with its name underneath. Two controls that do opposite things
+should not be told apart by one being drawn and the other written.
+
+Same treatment as A17's action row, and small enough to go with it.
+
+## A24. A baseline profile — NOT NEEDED FOR NOW, 2026-09-03
+
+Raised 2026-09-03 out of `docs/STATUS.md` C10. The list is janky until it has been scrolled ten or
+fifteen times, then it is fine — and adding **more** tracks made it faster. That is a warm-up curve,
+not a cost per row or per second: ART interprets until the JIT compiles the paths, and Compose
+composes each type once before it is cheap.
+
+A baseline profile ships those traces AOT-compiled, so the first run is already warm. It is the
+standard answer to exactly this shape of complaint.
+
+**Not started, and it needs a device.** A real profile is generated by running the app under a
+macrobenchmark; this workshop has no emulator, so it is the owner's run rather than one that can be
+done here. A hand-written profile is possible and worth less — it guesses at what a real one
+measures.
+
+**Ruled out, and it was the whole thing.** Everything had been measured on a **debug** build. The
+release build stutters not at all — the owner's words were "zero stuttering now" — so there is
+nothing here to fix and this stays as a note rather than as work.
+
+**Worth having if the release build is ever janky on a cold start**, which is what a baseline profile
+is genuinely for. Not before.
+
+## A30. ~~The button to the browser should say "WEB"~~ — DONE 2026-09-10
+
+*Owner, 2026-09-09: **"zmieniłbym 'to browser'/'do przeglądarki' na 'WEB' (pl/eng tak samo)"**.*
+
+Done, and the same word in both languages: it is the name of the other half of this project, not a
+sentence about where something is going.
+
+**The prose around it still says "browser", and that is deliberate.** *Scan a different browser*,
+*Forget the paired browser*, and the sentence under the web player address all describe the machine
+at the other end, which is a browser and is the right word for it. Only the button is a name.
+
+## A29. ~~Play MP3 too~~ — DONE 2026-09-10
+
+*Owner, 2026-09-01 as `docs/WISHLIST.md` B4, promoted to work on 2026-09-09, built on 2026-09-10
+with one rule of his attached: **"wysyłanie mp3 w kodzie QR ma zawsze dawać tylko info o pliku i
+niedostępne odtwarzanie"**.*
+
+**minimp3**, CC0-1.0 — two headers, one object, and the smallest vendored decoder here. `mp3dec_ex`
+rather than the plain frame loop, for the two things a player needs and a frame loop cannot give: a
+length for a variable-bitrate file, and an index to seek with.
+
+### Measured 2026-09-10, against the conformance suite minimp3 ships
+
+83 MPEG conformance bitstreams through the engine:
+
+| | |
+|---|---|
+| played | **70** |
+| silent | 10 — every one an `l3-nonstandard-*`: a stream that is an ID3 tag and no audio, a corrupted VBR tag, a truncated side info |
+| refused | 3 — a tag-only file, a file too small to hold a frame, and a deliberate over-allocation |
+
+**So everything that contains audio played, and everything that did not is a stream designed not
+to.** Layer 1, Layer 2, Layer 3, MPEG-2 LSF and free-format among them.
+
+**And it decodes correctly, not merely audibly.** Eleven Layer 3 vectors compared sample by sample
+against the reference PCM shipped beside them: **worst RMS 0.04 out of 32,768, worst single sample
+off by one.** That is rounding, not decoding.
+
+*The first run of that comparison showed two vectors "wrong" with an RMS of 6,000. The comparison was
+wrong, not the decoder — it read a stereo reference as if it were mono. The same lesson as the
+worklet stub in `docs/review-round-8.md` R1, twice in one day: a measurement that reads the wrong
+thing is evidence of the wrong conclusion.*
+
+### The two decisions, answered
+
+**`.mp3` is not in `SupportedFormats.extensions`, and that was the whole question.** That list is
+what a catalogue index is filtered through *and* what `fingerprint` is computed from, so a name
+added there marks every stored index stale and costs the owner a 40 MB re-download. No archive here
+holds an MP3. It lives in `localOnlyExtensions` instead, and a test asserts that it is in neither of
+the two sets the fingerprint is made of — if that ever fails, somebody owes him a download.
+
+**A folder scan needed nothing at all.** It lists every file and lets a decoder answer
+(`MediaScanner.listFiles`), so an MP3 in a scanned folder simply plays. The name only had to be
+judged in one place: deciding whether a failure means "this app cannot play this format" or "this
+file is broken", which is what `looksPlayable` now answers and `inCatalogueIndex` does not.
+
+### And it never travels to the browser
+
+By the owner's rule, and the rule is arithmetic before it is a preference: this whole handoff rests
+on a tracker module being kilobytes — Modland's median is 20 KB and the budget for a *whole queue*
+is eight megabytes — and one four-minute MP3 is more than that budget by itself. So an MP3 goes as a
+name in its own place, in the link and in the paired message alike, and the page draws it greyed and
+unplayable exactly as A28 draws a file that stayed on the phone.
+
+A rule rather than a size check, so a short MP3 cannot surprise anybody by behaving differently.
+
+**Not a tag reader.** minimp3 decodes and does not read ID3, and inventing one for a single format
+would be a second metadata path to keep in step with `SongDbMetadata`. An MP3 is named by its
+filename, which is what this app already does for every format that says nothing about itself.
+## A28. ~~The web player carries the local files it cannot play~~ — DONE 2026-09-10
+
+*Owner, 2026-09-09, after an external listener opened a shared link: **"nasze listy nie są zgodne"**.*
+
+A local file's id is a storage grant valid on one phone, so its music was never going to travel. Its
+**place in the list** was, and that was the defect: track seven here was track five there.
+
+**Built as he shaped it.** The file travels as a name under a `phone:` scheme in the link — and as
+`"local":true` in the paired message, which covers the second case nobody had named: a file that
+*could* have travelled as bytes and did not fit `WebRemote.LOCAL_BYTES_BUDGET` used to arrive as a
+row that failed on the first touch. The page draws both greyed, in their own positions, unclickable,
+and `next`, `previous` and shuffle step over them rather than stopping on a row that can never play.
+
+**Grey, not red**: `.failed` means a decoder refused the music, and these never had any to refuse.
+
+**What the measurement changed.** Deflate makes the names nearly free — a hundred tracks of ordinary
+filenames pack well under the two-thousand-character limit whether their ghosts travel or not. So
+the guard that drops them fires only for a long queue of *unlike* names, and the real tracks are
+never what goes. `left` now means "the link was too long even for their names", which is a much
+rarer and much more honest thing for that number to say.
+## A27. ~~The web player has no actions~~ — DONE 2026-09-10
+
+*Owner, 2026-09-09, with a screenshot of the phone's panel (`user/Screenshot_20260909-215818.png`),
+and the same evening: every row should have a menu too — send file, send link, information.*
+
+**The panel** has the phone's row of labelled squares, in the same place: *Show in playlist*, *Save
+the file*, *Copy a link*. `Add to playlist…` is deliberately absent — the page has no playlists, and
+`docs/PLAN_HANDOFF.md` §5a is why.
+
+**Every row** has the phone's three dots, and the same three actions. They are **disabled together**
+for a row that stayed on the phone: no file to save, no address to copy, nothing to read. A menu
+offering three things and doing none of them is worse than one with three greyed.
+
+**Information was the expensive one, as predicted.** It opens a **second** decoder handle in the
+worklet, describes the file and closes it, leaving the one making sound untouched. The cost is
+opening a decoder on the audio thread: the median module here is 20 KB and that is nothing, but a
+very large file is what to blame if this ever glitches, and that is written where the code is.
+
+*Copy a link* copies the **track's own address**, not the page's. A link to the page carries the
+whole queue and the phone already sends that; what is useful from a row is the one file, at an
+address anybody can open.
+## A26. Two rough edges on the JNI boundary
+
+*Found 2026-09-08, while answering an experienced C++ engineer's objection to JNI (`docs/OPEN_QUESTIONS.md`
+Q9). Neither misbehaves, so neither is a defect — they are the two places where the criticism lands
+on our code specifically rather than on the API in general.*
+
+**A full copy of every file across the boundary.** `engine.cpp:1745` reads the module with
+`GetByteArrayRegion` into a `std::vector`. At Modland's median of 20 KB that is nothing; the largest
+file in the archive is **71.6 MB**, and there the copy is real and avoidable — a direct `ByteBuffer`
+and `GetDirectBufferAddress` would hand the decoder the bytes where they already are. Worth doing
+when something makes large files common; not before, because the change moves ownership of the
+buffer's lifetime to the Kotlin side and that is a new thing to get wrong.
+
+**Errors come back through a one-element array.** `nativeOpen` takes a `jobjectArray errorOut` and
+writes the failure message into slot zero. It is the classic JNI idiom for "return two things" and it
+is as ugly as it sounds. The alternatives are a small result object or throwing across the boundary,
+and both are more code than this earns today — recorded so that the next person to touch the
+signature knows it was seen rather than missed.
+
+## A25. ~~Import and export a playlist~~ — DONE 2026-09-03
+
+Raised 2026-09-03 by the owner.
+
+**The hard part is not the file format, it is what a playlist refers to.** Rows point at three
+different kinds of thing and only some of them travel:
+
+| what a row is | portable? |
+| --- | --- |
+| a catalogue track — `https://modland.com/...` or `asma://...` | **yes**, it means the same anywhere |
+| a local file — a storage-access-framework document URI | **no**. The URI is issued by a provider on *this* device, and the framework hands out a different one for the same file reached a different way |
+
+So an export that simply writes the ids produces a file that works perfectly on the phone it came
+from and not at all anywhere else — which is the one case where somebody would want it.
+
+**What might survive the trip**, and what to decide between:
+
+- **Path and filename plus size**, and let import match against the local index on the other side.
+  `TrackRef.sameFileAs` already settles identity by name and size for exactly this reason, and
+  `library_index` is the thing that could answer the question. It would match a library that holds
+  the same tunes in a different place, which is the realistic case.
+- **A hash of the file's bytes.** Exact, survives renaming, and costs reading every file on both
+  sides — which the scan already does once, so it could be stored.
+- **Both**, with the hash as the authority and the name as the fallback.
+
+**Format:** M3U is the obvious choice — every player reads it, and `#EXTINF` carries a title. Its
+weakness is the same one above: it holds paths, and we hold URIs. An `#EXT` comment of our own could
+carry what M3U cannot, in a way other players ignore.
+
+**Worth deciding early:** whether export is *for another copy of this app* or *for other players*.
+They pull in opposite directions — the first wants our identifiers, the second wants plain paths —
+and trying to serve both is how a format ends up serving neither.
+
+**Built 2026-09-03, and that question is answered by putting each thing where it belongs rather than
+choosing between them.** The file is M3U: the location line is what another player reads — a real
+URL for a catalogue track, a path for a local file — and our identifiers go in `#PROTRACKTOR:`
+comments, which every other program ignores by the format's own rules.
+
+**Import gives each line two chances.** Its recorded id, which is exact and makes a backup restore
+perfectly on the device that wrote it; and failing that a match on filename **and size** against the
+scanned library, which is how a list written on another phone finds the same tunes here. Size is not
+decoration — `elysium.mod` is a filename several hundred people have used.
+
+**Import always makes a new playlist**, never appends to the open one: an import that edited whatever
+happened to be in front of you would be a change nobody asked for, and undoing it means working out
+which rows were new. It says how many of the file's lines it could not place rather than quietly
+arriving shorter.
+
 ## A5. Formats we do not play yet — planned in `docs/PLAN_FORMATS.md`
 
 
@@ -120,13 +859,22 @@ not have to be rediscovered.
 - **`.sap`** — Atari 8-bit. Needs ASAP (GPL-2.0-or-later, by Piotr Fusik, has an Android port).
 - **`.sndh`** — should already work; see the defect in `docs/STATUS.md`. Fix before adding anything.
 - **SID, NSF, SPC, GBS, VGM, AY** — `libsidplayfp` and game-music-emu, in that order of value.
+- **AHX and HVL** — 1,433 Modland files, removed from `SupportedFormats` on 2026-09-04 because
+  nothing here plays them. HivelyTracker is a small standalone library and would be the cheapest
+  format win available (`docs/PLAN_FORMATS.md` §5).
 - **Amiga custom (TFMX, Hippel, Future Composer, …)** — UADE, last, and its bundled replay binaries
-  need a licence decision of their own.
+  need a licence decision of their own. **Measured 2026-09-04** and the estimate in this item was
+  wrong: the corrected current top-25 sample reaches successful format directories holding 5,799
+  Modland files, not tens of thousands. The first 184/300 result was also wrong because the probe
+  enabled UADE's strict content-only mode; the same historical corpus is 196/300, with Hippel COSO
+  at 11 full plus 1 silent first buffer instead of 0/12. Numbers, the
+  process-model problem and the licence trade are in `docs/PLAN_FORMATS.md` §4; nothing is
+  integrated.
 
 Each new backend also means **re-indexing the catalogues**: the index only keeps entries whose
 filename a backend might handle.
 
-## A6. Probe content instead of trusting extensions
+## A6. ~~Probe content instead of trusting extensions~~ — DONE 2026-09-03
 
 
 > "wczytuje dobrze pliki z folderu ale opiera się o rozszerzenie tylko (na razie ok)"
@@ -138,18 +886,25 @@ foreground scan.
 
 ## A7. More online catalogues — planned in `docs/PLAN_CATALOGUES.md`
 
+**`docs/WISHLIST.md` B10 is this item.** It was raised as a wish a day before this was agreed and
+nobody struck it; the owner spotted the duplicate on 2026-09-02. This is the live one.
 
-Modland is wired up and verified end to end. The owner asked for several: ASMA, AMP
-(amp.dascene.net), Aminet, ModArchive and others.
+Modland and ASMA are wired up and verified end to end. On 2026-09-02, **The Mod Archive** was
+integrated as the third online catalogue via live search (`isOnlineOnly`), providing direct access to
+tens of thousands of tracker modules (MOD, XM, S3M, IT) playable through libopenmpt.
 
 Each needs two things, and the second is usually the blocker:
 
-- **Its index parser.** `Catalogue` is a sealed class; adding one is writing `parseIndex` and
-  `urlFor` against whatever that archive publishes. None of the others is a single tab-separated
-  file the way Modland's is.
+- **Its index parser or search integration.** `Catalogue` is a sealed class; adding one is writing
+  `parseIndex` or live search and `urlFor` against whatever that archive publishes. None of the others
+  is a single tab-separated file the way Modland's is.
 - **A backend that can play what it holds.** ASMA is Atari 8-bit SAP and needs ASAP; AMP is heavy on
   Amiga custom formats and needs UADE. Indexing an archive we cannot play produces a browsable list
   of tracks that fail to open.
+
+**Adding one now also means writing `pathFrom`**, the inverse of `urlFor` — it is what "more from
+this author" uses to get from a track back to where it came from (`docs/WISHLIST.md` B2). It is
+abstract, so the compiler asks for it.
 
 **Also**: re-index after adding any backend. The index deliberately keeps only entries whose
 filename a backend might handle, so formats added later are simply absent until a re-index.
@@ -173,9 +928,10 @@ it exists. Do it first.
 playing. **Not** the playback position — that is `docs/OPEN_QUESTIONS.md` Q6, still open, and
 formats that cannot seek make it expensive.
 
-**Where:** app-private storage. Room is the eventual home (it is what item 2 and the R9 index need),
-but a first cut may use a plain file plus `SharedPreferences` — no new dependency, and the migration
-into Room happens with the index rather than twice.
+**Where:** app-private storage — the database, which is where playlists and the catalogue indexes
+already live (`docs/ARCHITECTURE.md` §9). Written before that was built, this said "Room"; there is
+no Room here and a plain file plus `SharedPreferences` is no longer the cheaper first cut, because
+the schema and its migrations are already in place and tested.
 
 **Watch for:**
 - SAF grants must be persisted too, or the saved URIs will be unreadable on the next launch.
@@ -246,8 +1002,8 @@ The largest item and the one that makes the app usable rather than demonstrable.
 
 - ~~Audio focus and becoming-noisy~~ — done 2026-09-01.
 - Headphone and Bluetooth controls, lock-screen transport. Needs the `MediaSession`.
-- `docs/ARCHITECTURE.md` §4 already picked the approach: Media3's `SimpleBasePlayer` over the native
-  engine, so the session comes without writing an ExoPlayer renderer for a synthesiser.
+- `docs/ARCHITECTURE.md` §4 picked Media3's `SimpleBasePlayer`; **§12 records that the platform's own
+  `android.media.session` was used instead**, and Media3 never became a dependency.
 - Android 14+ requires a `foregroundServiceType` and its permission; `targetSdk` is 36, so this is
   not optional.
 
@@ -350,14 +1106,24 @@ properly is nearly free.
 
 
 Read-ahead and a disk cache both landed. What is left is the measurement: whether the owner's
-five-to-thirty second wait on an SMB share actually became nothing. Also still open is the cache
+five-to-thirty second wait actually became nothing. Also still open is the cache
 eviction budget (`docs/OPEN_QUESTIONS.md` Q5) — nothing is ever deleted today.
 
 Nothing is cached and nothing is prepared ahead. A local module is fast because it is small.
 
-Two things make this real, and the owner's own setup shows why: his library sits on an **SMB share**
-(the `hierynomus.smbj` traces in his log are the SAF provider for it), so every read crosses a
-network before it reaches us.
+> **Correction, 2026-09-03.** This said the owner's library sits on an SMB share, inferred from a
+> `hierynomus.smbj` trace in one of his logs. **It does not** — his library is local on the phone,
+> and that log was incidental. The inference was recorded as a fact about him and then quietly
+> shaped several decisions: R9's justification, C3's measurement, and how urgent the fetched-file
+> read-ahead looked.
+>
+> **What survives the correction, and deliberately.** He asked to keep hardening against awkward
+> providers anyway: *"SMB is a nuisance and we should be robust to nuisances."* So the work stays —
+> but as a choice made on purpose, not as a response to a setup he does not have. The difference
+> matters, because the second kind of reasoning cannot be checked.
+
+Two things make this real: reads can cross a network, and these formats are small enough that the
+round trip dominates.
 
 - A cache of fetched bytes, keyed by source identity, with the eviction budget from
   `docs/OPEN_QUESTIONS.md` Q5.
@@ -368,4 +1134,3 @@ network before it reaches us.
 - Remote catalogues — Modland and HVSC (`docs/ARCHITECTURE.md` §8, endpoints already measured).
 - The remaining backends: `libsidplayfp`, game-music-emu, UADE last.
 - Everything in `docs/WISHLIST.md`.
-

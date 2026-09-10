@@ -1,21 +1,11 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,20 +15,36 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import com.przunk.protracktor.player.Platforms
+import com.przunk.protracktor.player.RandomScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -52,15 +58,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
+import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
+import com.przunk.protracktor.player.DownloadKeys
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
 
 /**
@@ -81,65 +90,138 @@ fun BrowseScreen(
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
+    onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
+    onDownloadSongLengths: () -> Unit,
+    onDownloadTrackMetadata: () -> Unit,
+    onDownloadFavourites: () -> Unit,
+    onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
+    onChooseRandomScope: () -> Unit,
     onQueryChange: (String) -> Unit,
-    onToggleLocal: () -> Unit,
-    onToggleOnline: () -> Unit,
+    onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
+    onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
+    onClearHistory: () -> Unit,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
 ) {
+    // One per Browse session. It dies when Browse closes, which is what makes a fresh entry start
+    // at the top (`docs/STATUS.md` C6) while a descent and return does not.
+    val scroll = rememberBrowseScroll()
+
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-        if (browse.indexing != null) {
+        if (browse.indexing.isNotEmpty()) {
             // An index download is minutes of work on a slow connection. Saying which catalogue and
             // showing movement is the difference between "working" and "hung".
+            //
+            // **One line each, since 2026-09-09.** Several can run at once, and a banner that named
+            // only the most recent was how the owner came to believe a second tap cancelled the
+            // first. The row itself now carries its own spinner too; this stays because it is the
+            // only thing that says *how far* the replay download has got.
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.browse_indexing, browse.indexing),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                browse.indexing.values.sorted().forEach { label ->
+                    Text(
+                        text = stringResource(R.string.browse_indexing, label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         }
 
         when (browse.domain) {
-            BrowseDomain.ROOT -> DomainChooser(onOpenDomain = onOpenDomain, onRandom = onRandom)
+            BrowseDomain.ROOT -> DomainChooser(
+                browse = browse,
+                onOpenDomain = onOpenDomain,
+                onRandom = onRandom,
+                onChooseRandomScope = onChooseRandomScope,
+            )
             BrowseDomain.LOCAL -> LocalDomain(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
                 onPickFolder = onPickFolder,
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
                 onForgetFolder = onForgetFolder,
+                onScanFolder = onScanFolder,
+                onPlay = onPlay,
                 onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.ONLINE -> OnlineDomain(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
                 onIndexCatalogue = onIndexCatalogue,
+                onDownloadSongLengths = onDownloadSongLengths,
+                onDownloadTrackMetadata = onDownloadTrackMetadata,
+                onDownloadFavourites = onDownloadFavourites,
+                onDownloadReplays = onDownloadReplays,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
+                onPlay = onPlay,
                 onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
+            )
+            BrowseDomain.HISTORY -> HistoryDomain(
+                browse = browse,
+                scroll = scroll,
+                playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
+                onClearHistory = onClearHistory,
+                onPlay = onPlay,
+                onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
             BrowseDomain.SEARCH -> SearchDomain(
                 browse = browse,
+                scroll = scroll,
                 playlistName = playlistName,
+                playingId = playingId,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
                 onQueryChange = onQueryChange,
-                onToggleLocal = onToggleLocal,
-                onToggleOnline = onToggleOnline,
+                onScope = onScope,
                 onToggleCatalogue = onToggleCatalogue,
+                onTogglePlatform = onTogglePlatform,
                 onSearch = onSearch,
+                onPlay = onPlay,
                 onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
         }
     }
 }
 
 @Composable
-private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> Unit) {
+private fun DomainChooser(
+    browse: BrowseState,
+    onOpenDomain: (BrowseDomain) -> Unit,
+    onRandom: () -> Unit,
+    onChooseRandomScope: () -> Unit,
+) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             DomainRow(
@@ -158,11 +240,34 @@ private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> 
             )
         }
         item {
+            // The scope lives in the title and the subtitle, the way the search field's label
+            // carries what a search covers. A dice that quietly remembered a setting would have
+            // stopped being a dice; saying it out loud is what lets it remember one at all.
+            val scopeName = when (val scope = browse.randomScope) {
+                is RandomScope.Everything -> null
+                is RandomScope.Favourites -> stringResource(R.string.random_scope_favourites)
+                is RandomScope.OnPlatform -> Platforms.byId(scope.platformId)?.name
+            }
             DomainRow(
                 icon = PlayerIcons.Dice,
-                title = stringResource(R.string.domain_random_title),
-                subtitle = stringResource(R.string.domain_random_body),
+                title = scopeName?.let {
+                    stringResource(R.string.domain_random_title_scoped, it)
+                } ?: stringResource(R.string.domain_random_title),
+                subtitle = stringResource(
+                    if (scopeName != null) R.string.domain_random_body_scoped
+                    else R.string.domain_random_body
+                ),
                 onClick = onRandom,
+                onLongClick = onChooseRandomScope,
+                longClickLabel = stringResource(R.string.a11y_choose_random_scope),
+            )
+        }
+        item {
+            DomainRow(
+                icon = PlayerIcons.History,
+                title = stringResource(R.string.domain_history_title),
+                subtitle = stringResource(R.string.domain_history_body),
+                onClick = { onOpenDomain(BrowseDomain.HISTORY) },
             )
         }
         item {
@@ -176,21 +281,135 @@ private fun DomainChooser(onOpenDomain: (BrowseDomain) -> Unit, onRandom: () -> 
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DomainRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    longClickLabel: String? = null,
 ) {
+    val haptics = rememberHaptics()
+    val currentClick by rememberUpdatedState(onClick)
+    val currentLongClick by rememberUpdatedState(onLongClick)
+    val rememberedClick = remember { { currentClick() } }
+    val rememberedLongClick: () -> Unit = remember {
+        {
+            haptics.gestureEnd()
+            currentLongClick?.invoke()
+        }
+    }
     ListItem(
         headlineContent = { Text(title, style = MaterialTheme.typography.titleMedium) },
         supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
         leadingContent = {
             Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
         },
-        modifier = Modifier.clickable(onClick = onClick),
+        // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so a
+        // row with nothing to hold does not advertise a long press to TalkBack that does nothing.
+        modifier = if (onLongClick == null) {
+            Modifier.clickable(onClick = rememberedClick)
+        } else {
+            // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at length:
+            // a fresh lambda restarts the gesture detector, and a detector restarted under a finger
+            // that is still down starts timing another long press. This row has not been held long
+            // enough to show it, which is not a reason to leave it.
+            Modifier.combinedClickable(
+                onClick = rememberedClick,
+                onLongClickLabel = longClickLabel,
+                onLongClick = rememberedLongClick,
+            )
+        },
     )
+}
+
+/**
+ * Where the dice picks from.
+ *
+ * The **same chips as the search filter**, down to the rule that a platform with nothing indexed is
+ * drawn disabled — one vocabulary for "which machine", not two. `Platforms` and the counts were
+ * built for the search and are reused whole.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+internal fun RandomScopeSheet(
+    browse: BrowseState,
+    onPick: (RandomScope) -> Unit,
+    onDownloadFavourites: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text(
+            text = stringResource(R.string.random_scope_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = browse.randomScope is RandomScope.Everything,
+                onClick = { onPick(RandomScope.Everything) },
+                label = { Text(stringResource(R.string.random_scope_everything)) },
+            )
+            // Beside "Everything" rather than among the platforms, because it is not one: it cuts
+            // across every machine in the list. Disabled with a reason the sheet can show, since a
+            // chip that is simply dead is the complaint the platform chips already earned.
+            FilterChip(
+                selected = browse.randomScope is RandomScope.Favourites,
+                enabled = browse.favouriteCount > 0,
+                onClick = { onPick(RandomScope.Favourites) },
+                label = { Text(stringResource(R.string.random_scope_favourites)) },
+            )
+            Platforms.all.forEach { platform ->
+                val held = browse.platformCounts[platform.id] ?: 0
+                FilterChip(
+                    selected = (browse.randomScope as? RandomScope.OnPlatform)?.platformId == platform.id,
+                    enabled = held > 0,
+                    onClick = { onPick(RandomScope.OnPlatform(platform.id)) },
+                    label = { Text(platform.name) },
+                )
+            }
+        }
+
+        // **A disabled chip has to say why, and here it can also fix it.** The owner met a dead
+        // platform chip once already and asked for the reason to be shown; a dead Favourites chip
+        // is worse, because the thing it needs is a 142 KB download the app can start from this
+        // sheet. Zero has two causes, and they take different advice -- the list was never
+        // downloaded, or it was and Modland is not indexed, in which case offering a download
+        // again would send somebody round a loop.
+        if (browse.favouriteCount == 0) {
+            val downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(
+                        if (browse.favouritesListed > 0) R.string.random_scope_favourites_unindexed
+                        else R.string.random_scope_favourites_missing
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                if (browse.favouritesListed == 0) {
+                    TextButton(onClick = onDownloadFavourites, enabled = !downloading) {
+                        Text(
+                            stringResource(
+                                if (downloading) R.string.random_scope_favourites_downloading
+                                else R.string.random_scope_favourites_download
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
 }
 
 // --- local ------------------------------------------------------------------------------------
@@ -198,15 +417,79 @@ private fun DomainRow(
 @Composable
 private fun LocalDomain(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
+    onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
-    if (browse.openFolder != null) {
-        Selectable(browse = browse, playlistName = playlistName, onAdd = onAdd)
+    val folder = browse.openFolder
+    if (folder != null) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // A scan reads every file in the tree, so it says how far it has got. On a network
+            // share this is minutes, and a spinner with no number is indistinguishable from a hang.
+            browse.scanProgress?.let { (done, total) ->
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(
+                        text = if (total > 0) {
+                            stringResource(R.string.scan_progress, done, total)
+                        } else {
+                            stringResource(R.string.scan_listing)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (total > 0) {
+                        LinearProgressIndicator(
+                            progress = { done.toFloat() / total },
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                    }
+                }
+            }
+
+            if (browse.scanProgress == null && (browse.folderUnscanned || browse.folderStale)) {
+                // Two different sentences, because they are two different situations: never looked,
+                // versus looked with decoders this build no longer has.
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Text(
+                        text = stringResource(
+                            if (browse.folderUnscanned) R.string.folder_unscanned
+                            else R.string.folder_stale
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = { onScanFolder(folder) },
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    ) { Text(stringResource(R.string.action_scan_folder)) }
+                }
+            }
+
+            Selectable(
+                browse = browse,
+                scroll = scroll,
+                playlistName = playlistName,
+                playingId = playingId,
+                onPlay = onPlay,
+                onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
+            )
+        }
         return
     }
 
@@ -244,7 +527,10 @@ private fun LocalDomain(
                                 )
                             }
                         },
-                        modifier = Modifier.clickable { onOpenFolder(folder) },
+                        modifier = Modifier.clickable {
+                            scroll.descendingFrom(browse.levelKey(), folder.uri)
+                            onOpenFolder(folder)
+                        },
                     )
                 }
             }
@@ -257,20 +543,46 @@ private fun LocalDomain(
 @Composable
 private fun OnlineDomain(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onIndexCatalogue: (String) -> Unit,
+    onDownloadSongLengths: () -> Unit,
+    onDownloadTrackMetadata: () -> Unit,
+    onDownloadFavourites: () -> Unit,
+    onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     when {
-        browse.openAuthor != null -> Selectable(browse = browse, playlistName = playlistName, onAdd = onAdd)
+        browse.openAuthor != null -> Selectable(
+            browse = browse,
+            scroll = scroll,
+            playlistName = playlistName,
+            playingId = playingId,
+            onPlay = onPlay,
+            onAdd = onAdd,
+            onAddToOtherPlaylist = onAddToOtherPlaylist,
+            onShowNeighbours = onShowNeighbours,
+            onShareFile = onShareFile,
+            onShareLink = onShareLink,
+        )
 
         browse.openCatalogue != null -> {
             if (browse.loading) {
                 Loading()
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                val key = browse.levelKey()
+                val listState = scroll.stateFor(key)
+                RestorePosition(scroll, key, listState, browse.groups.map { it.name }, browse.loading)
+
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                     items(browse.groups, key = { it.name }) { group ->
                         ListItem(
                             headlineContent = {
@@ -283,47 +595,219 @@ private fun OnlineDomain(
                             trailingContent = {
                                 Text("${group.count}", style = MaterialTheme.typography.labelMedium)
                             },
-                            modifier = Modifier.clickable { onOpenGroup(group.name) },
+                            modifier = Modifier.clickable {
+                                scroll.descendingFrom(key, group.name)
+                                onOpenGroup(group.name)
+                            },
                         )
                     }
                 }
             }
         }
 
-        else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+        else -> {
+        val key = browse.levelKey()
+        val listState = scroll.stateFor(key)
+        RestorePosition(scroll, key, listState, browse.catalogues.map { it.id }, browse.loading)
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             items(browse.catalogues, key = { it.id }) { catalogue ->
                 ListItem(
                     headlineContent = { Text(catalogue.displayName) },
                     supportingContent = {
-                        Text(
-                            if (catalogue.indexed) {
-                                pluralStringResource(
-                                    R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
+                        Column {
+                            // What it holds, and what that costs. The size used to appear only
+                            // in the storage section and, oddly, in the notice after deleting it --
+                            // so the one moment you were told how much a catalogue weighed was the
+                            // moment you no longer had it. It belongs where the decision is made.
+                            val archived = browse.archiveBytes[catalogue.id] ?: 0L
+                            Text(
+                                if (catalogue.isOnlineOnly) {
+                                    stringResource(R.string.catalogue_online_search)
+                                } else if (catalogue.indexed) {
+                                    val counted = pluralStringResource(
+                                        R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
+                                    )
+                                    if (archived > 0L) {
+                                        stringResource(
+                                            R.string.catalogue_count_and_size,
+                                            counted,
+                                            archived / (1024 * 1024),
+                                        )
+                                    } else {
+                                        counted
+                                    }
+                                } else {
+                                    stringResource(R.string.catalogue_not_indexed)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                // The sentence already carries the meaning; error colour reinforces
+                                // the reduced functionality without making colour the only signal.
+                                color = if (catalogue.requiresIndex) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                            // An index keeps only the formats a decoder could play when it was
+                            // built, so one built by an older set is missing whatever arrived
+                            // since -- and looks empty rather than out of date. The owner lost
+                            // 60,572 C64 tunes to exactly this and nothing said why.
+                            if (catalogue.isStale(browse.backends)) {
+                                Text(
+                                    text = stringResource(R.string.catalogue_stale),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
-                            } else {
-                                stringResource(R.string.catalogue_not_indexed)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                            }
+                        }
                     },
                     leadingContent = { Icon(PlayerIcons.Cloud, contentDescription = null) },
-                    trailingContent = {
-                        IconButton(onClick = { onIndexCatalogue(catalogue.id) }) {
-                            Icon(
-                                PlayerIcons.Download,
-                                stringResource(R.string.a11y_index_catalogue, catalogue.displayName),
-                            )
-                        }
+                    trailingContent = if (catalogue.isOnlineOnly) {
+                        null
+                    } else {
+                        { DownloadAction(
+                            downloading = browse.indexing.containsKey(catalogue.id),
+                            description = stringResource(
+                                R.string.a11y_index_catalogue, catalogue.displayName,
+                            ),
+                            onClick = { onIndexCatalogue(catalogue.id) },
+                        ) }
                     },
                     // Only openable once there is an index. Tapping an empty catalogue and landing
                     // on an empty list would teach nothing about why.
-                    modifier = if (catalogue.indexed) {
+                    modifier = if (catalogue.indexed && !catalogue.isOnlineOnly) {
                         Modifier.clickable { onOpenCatalogue(catalogue) }
                     } else {
                         Modifier
                     },
                 )
             }
+            // Not a catalogue: nothing in it can be played. It answers "how long is this SID"
+            // about tunes that came from anywhere at all, which is why it sits under the list
+            // rather than in it.
+            item {
+                HorizontalDivider()
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.song_lengths_title)) },
+                    supportingContent = {
+                        Text(
+                            if (browse.songLengthCount > 0) {
+                                pluralStringResource(
+                                    R.plurals.song_lengths_count,
+                                    browse.songLengthCount,
+                                    browse.songLengthCount,
+                                )
+                            } else {
+                                stringResource(R.string.song_lengths_none)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = { Icon(PlayerIcons.Info, contentDescription = null) },
+                    trailingContent = {
+                        DownloadAction(
+                            downloading = browse.indexing.containsKey(DownloadKeys.SONG_LENGTHS),
+                            description = stringResource(R.string.a11y_download_song_lengths),
+                            onClick = onDownloadSongLengths,
+                        )
+                    },
+                )
+            }
+            // Beside the song lengths and for the same reason: nothing in it plays, it answers a
+            // question the *file* cannot. A plain `.mod` has nowhere to record a year.
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.track_metadata_title)) },
+                    supportingContent = {
+                        Text(
+                            if (browse.trackMetadataCount > 0) {
+                                pluralStringResource(
+                                    R.plurals.track_metadata_count,
+                                    browse.trackMetadataCount,
+                                    browse.trackMetadataCount,
+                                )
+                            } else {
+                                stringResource(R.string.track_metadata_none)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = { Icon(PlayerIcons.History, contentDescription = null) },
+                    trailingContent = {
+                        DownloadAction(
+                            downloading = browse.indexing.containsKey(DownloadKeys.TRACK_METADATA),
+                            description = stringResource(R.string.a11y_download_track_metadata),
+                            onClick = onDownloadTrackMetadata,
+                        )
+                    },
+                )
+            }
+            // The third of the same kind, and the one that changes what plays rather than what is
+            // shown: it is what the dice draws from when Random is scoped to the favourites. The
+            // count is the playable one -- listed and indexed -- because that is the number the
+            // dice obeys, and because it is zero in both of the states that leave the chip dead.
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.favourites_title)) },
+                    supportingContent = {
+                        Text(
+                            if (browse.favouriteCount > 0) {
+                                pluralStringResource(
+                                    R.plurals.favourites_count,
+                                    browse.favouriteCount,
+                                    browse.favouriteCount,
+                                )
+                            } else {
+                                stringResource(R.string.favourites_none)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = { Icon(PlayerIcons.Dice, contentDescription = null) },
+                    trailingContent = {
+                        DownloadAction(
+                            downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES),
+                            description = stringResource(R.string.a11y_download_favourites),
+                            onClick = onDownloadFavourites,
+                        )
+                    },
+                )
+            }
+            // Not a catalogue either, and offered rather than shipped. sc68 needs a small 68000
+            // routine for each tune and the app carries exactly one of the ninety-nine -- sc68's
+            // own. The rest are other people's code of unestablished status, so the device fetches
+            // them from sc68 instead of us handing them out (`docs/LICENSES.md`).
+            item {
+                if (browse.replayCount == 0) {
+                    HorizontalDivider()
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.replays_title)) },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.replays_none),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
+                        // Ninety-eight small files, so this one is worth a spinner more than any of
+                        // them. The whole row is the button here rather than an arrow at the end.
+                        trailingContent = if (browse.indexing.containsKey(DownloadKeys.REPLAYS)) {
+                            { CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp) }
+                        } else {
+                            null
+                        },
+                        modifier = if (browse.indexing.containsKey(DownloadKeys.REPLAYS)) {
+                            Modifier
+                        } else {
+                            Modifier.clickable { onDownloadReplays() }
+                        },
+                    )
+                }
+            }
+
+            // The storage section lived here from 2026-09-04 until the settings screen existed,
+            // which was always the plan and was said so at the time. Browse is for finding music;
+            // what the app is keeping on the phone is not that.
             item {
                 Text(
                     text = stringResource(R.string.catalogue_more_coming),
@@ -332,6 +816,7 @@ private fun OnlineDomain(
                     modifier = Modifier.padding(24.dp),
                 )
             }
+        }
         }
     }
 }
@@ -344,20 +829,34 @@ private fun OnlineDomain(
 @Composable
 private fun SearchDomain(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
     onQueryChange: (String) -> Unit,
-    onToggleLocal: () -> Unit,
-    onToggleOnline: () -> Unit,
+    onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
+    onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = browse.query,
             onValueChange = onQueryChange,
             singleLine = true,
-            label = { Text(stringResource(R.string.search_label)) },
+            // One line, always. "Online: ASMA (Atari 8-bit), The Mod Archive" wrapped and made the
+            // field taller, so adding a third catalogue -- which shortens the text to
+            // "Modland, ASMA (Atari 8-bit) +1" -- made the whole screen jump back up. The label is
+            // a statement of scope, not a place to read catalogue names in full; the chips
+            // underneath show which are lit.
+            label = {
+                Text(scopeLabel(browse), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
             trailingIcon = {
@@ -368,58 +867,52 @@ private fun SearchDomain(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
 
-        // Two levels: which side to search, then which catalogues within the online side. The
-        // earlier version treated "no catalogue ticked" as "all of them", which made the filter look
-        // broken -- unticking Modland searched Modland anyway.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(
-                selected = browse.searchLocal,
-                onClick = onToggleLocal,
-                label = { Text(stringResource(R.string.search_scope_local)) },
-            )
-            FilterChip(
-                selected = browse.searchOnline,
-                onClick = onToggleOnline,
-                label = { Text(stringResource(R.string.search_scope_online)) },
-            )
-        }
+        SearchScopePanel(
+            browse = browse,
+            onScope = onScope,
+            onToggleCatalogue = onToggleCatalogue,
+            onTogglePlatform = onTogglePlatform,
+        )
 
-        val indexed = browse.catalogues.filter { it.indexed }
-        if (browse.searchOnline && indexed.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                indexed.forEach { catalogue ->
-                    FilterChip(
-                        selected = catalogue.id in browse.searchCatalogues,
-                        onClick = { onToggleCatalogue(catalogue.id) },
-                        label = { Text(catalogue.displayName) },
-                    )
-                }
-            }
-        }
-        if (browse.searchOnline && indexed.isEmpty()) {
-            Text(
-                text = stringResource(R.string.search_no_catalogues),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        if (browse.loading) {
+            Loading()
+        } else {
+            Selectable(
+                browse = browse,
+                scroll = scroll,
+                playlistName = playlistName,
+                playingId = playingId,
+                onPlay = onPlay,
+                onAdd = onAdd,
+                onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onShowNeighbours = onShowNeighbours,
+                onShareFile = onShareFile,
+                onShareLink = onShareLink,
             )
         }
-
-        if (browse.loading) Loading() else Selectable(browse, playlistName, onAdd)
     }
 }
 
 // --- shared -----------------------------------------------------------------------------------
 
+/**
+ * Waiting, said near the top rather than in the middle.
+ *
+ * **The middle of the window is not the middle of what you can see.** The app is edge-to-edge, so
+ * the keyboard is drawn *over* the content rather than shrinking it — and a spinner centred in the
+ * full height sits underneath it for the whole of a search, which is the one place you most want to
+ * know something is happening. The owner reported exactly that on 2026-09-04.
+ *
+ * `imePadding` alone would have fixed the search case and left the spinner wherever the remaining
+ * space happened to centre. Near the top is better for every caller: it is where the results will
+ * appear, so the spinner marks the place rather than moving out of it.
+ */
 @Composable
 private fun Loading() {
-    Box(modifier = Modifier.fillMaxSize().padding(48.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier.fillMaxWidth().imePadding().padding(top = 32.dp, bottom = 48.dp),
+        contentAlignment = Alignment.TopCenter,
+    ) {
         CircularProgressIndicator()
     }
 }
@@ -430,89 +923,456 @@ private fun Loading() {
  * Selection is this composable's own business and dies with it. Holding it in the controller would
  * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
  */
+// --- history ----------------------------------------------------------------------------------
+
+/**
+ * What has been played.
+ *
+ * Deliberately the same list component as everywhere else, so a tune found here can be played or
+ * ticked into a playlist exactly as it can when found anywhere else. The only thing history adds is
+ * the way out of it.
+ */
+@Composable
+private fun HistoryDomain(
+    browse: BrowseState,
+    scroll: BrowseScroll,
+    playlistName: String?,
+    playingId: String?,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
+    onClearHistory: () -> Unit,
+    onPlay: (Int) -> Unit,
+    onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
+) {
+    if (browse.loading) {
+        Loading()
+        return
+    }
+    if (browse.history.isEmpty()) {
+        Text(
+            text = stringResource(R.string.history_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(24.dp),
+        )
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onClearHistory) {
+                Text(stringResource(R.string.action_clear_history))
+            }
+        }
+        Selectable(
+            browse = browse,
+            scroll = scroll,
+            playlistName = playlistName,
+            playingId = playingId,
+            onPlay = onPlay,
+            onAdd = onAdd,
+            onAddToOtherPlaylist = onAddToOtherPlaylist,
+            onShowNeighbours = onShowNeighbours,
+            onShareFile = onShareFile,
+            onShareLink = onShareLink,
+        )
+    }
+}
+
+/**
+ * The track list, shared by every domain.
+ *
+ * Two modes, and `docs/ARCHITECTURE.md` §17 is why they are these two. **Normally a tap plays** --
+ * the app used to select on tap, which almost nothing does, and the owner said so. **A long press
+ * starts selecting**, a checkbox appears where nothing was, and further taps tick rows. Back leaves
+ * the selection with nothing ticked.
+ *
+ * Selection is this composable's own business and dies with it. Holding it in the controller would
+ * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
+ */
+/**
+ * Puts the row you came out of back on screen, once the list it lives in has arrived.
+ *
+ * Identity first, and there is no index fallback on purpose: an index is only "where I was" while
+ * the list is unchanged, and the case this exists for is precisely the one where it changed. When
+ * the row is gone, the level's own saved offset is already correct enough, and jumping somewhere
+ * arbitrary because a number still parses would be worse than leaving it alone.
+ */
+@Composable
+private fun RestorePosition(
+    scroll: BrowseScroll,
+    key: String,
+    listState: LazyListState,
+    rowKeys: List<String>,
+    loading: Boolean,
+) {
+    LaunchedEffect(key, rowKeys, loading) {
+        when (val what = scroll.restoreFor(key, rowKeys, loading)) {
+            is Restore.ScrollTo -> {
+                listState.bringIntoView(what.index)
+                scroll.returned(key)
+            }
+            Restore.Forget -> scroll.returned(key)
+            Restore.Wait, Restore.Nothing -> Unit
+        }
+    }
+}
+
 @Composable
 private fun Selectable(
     browse: BrowseState,
+    scroll: BrowseScroll,
     playlistName: String?,
+    playingId: String?,
+    onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
+    onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
+    onShowNeighbours: (TrackRef) -> Unit,
+    onShareFile: (TrackRef) -> Unit,
+    onShareLink: (TrackRef) -> Unit,
 ) {
     var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
     }
+    var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
+    // Reset when the list underneath changes: following a row in a folder you have just left is
+    // following nothing.
+    var following by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
+        mutableStateOf(false)
+    }
     LaunchedEffect(browse.tracks) {
         selected = selected.intersect(browse.tracks.map { it.id }.toSet())
+    }
+    val selecting = selected.isNotEmpty()
+
+    // Takes back before the level-and-exit handler outside, because the innermost enabled handler
+    // wins. That is the stack the owner asked for: leave the selection, then go up a level, then
+    // out to the playlist -- one step each.
+    BackHandler(enabled = selecting) { selected = emptySet() }
+
+    showingInfo?.let { track ->
+        TrackInfoDialog(track = track, onDismiss = { showingInfo = null })
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (browse.tracks.isNotEmpty()) {
+            // A fixed height, because the select-all button only exists while selecting and a
+            // header that grows when it appears shifts the whole list under the finger that just
+            // long-pressed. Same reason as the row below.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = pluralStringResource(
-                        R.plurals.track_count, browse.tracks.size, browse.tracks.size
-                    ),
+                    text = if (selecting) {
+                        pluralStringResource(R.plurals.browse_selected, selected.size, selected.size)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.track_count, browse.tracks.size, browse.tracks.size
+                        )
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(
-                    onClick = {
-                        selected = if (selected.size == browse.tracks.size) {
-                            emptySet()
-                        } else {
-                            browse.tracks.map { it.id }.toSet()
+                // Only while selecting. Before that there is nothing to select all of, and the
+                // button was advertising a mode the user had not entered.
+                if (selecting) {
+                    TextButton(
+                        onClick = {
+                            selected = if (selected.size == browse.tracks.size) {
+                                emptySet()
+                            } else {
+                                browse.tracks.map { it.id }.toSet()
+                            }
                         }
-                    }
-                ) {
-                    Text(
-                        stringResource(
-                            if (selected.size == browse.tracks.size) R.string.browse_select_none
-                            else R.string.browse_select_all
+                    ) {
+                        Text(
+                            stringResource(
+                                if (selected.size == browse.tracks.size) R.string.browse_select_none
+                                else R.string.browse_select_all
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
 
         when {
             browse.loading -> Loading()
-            browse.tracks.isEmpty() -> Text(
-                text = stringResource(R.string.browse_nothing_found),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(24.dp),
-            )
-            else -> LazyColumn(modifier = Modifier.weight(1f)) {
-                items(browse.tracks, key = { it.id }) { track ->
-                    val ticked = track.id in selected
-                    ListItem(
-                        headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
-                            // The full source here rather than just the author: in a search result
-                            // the question is "which one is this", and two tunes with one name are
-                            // told apart by where they live.
-                            { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            // An empty list is two different states and only one of them is a disappointment.
+            // Nothing searched yet reads as ordinary text; nothing *found* borrows the colour the
+            // stale-index warnings use, because it is the same kind of news.
+            browse.tracks.isEmpty() -> {
+                val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
+                Text(
+                    text = stringResource(
+                        when {
+                            browse.domain != BrowseDomain.SEARCH -> R.string.browse_nothing_found
+                            // Said before "nothing found", because it is the reason there is
+                            // nothing rather than a result.
+                            browse.liveSearchNeededQuery -> R.string.search_live_needs_query
+                            browse.searched -> R.string.search_nothing_found
+                            else -> R.string.search_not_yet
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (searchedAndEmpty) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(24.dp),
+                )
+            }
+            else -> {
+                // Said above the list rather than at its end, because the end is 2,000 rows away and
+                // the point of the line is to stop the scrolling, not to reward it.
+                if (browse.searchMatches > browse.tracks.size) {
+                    Text(
+                        text = stringResource(
+                            R.string.browse_search_capped,
+                            browse.tracks.size,
+                            browse.searchMatches,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                    )
+                }
+                val key = browse.levelKey()
+                val listState = scroll.stateFor(key)
+                RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
+                Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
+                    BrowseTrackRow(
+                        track = track,
+                        index = index,
+                        ticked = track.id in selected,
+                        selecting = selecting,
+                        playing = track.id == playingId,
+                        onPlay = { onPlay(index) },
+                        onToggle = {
+                            selected = if (track.id in selected) selected - track.id
+                            else selected + track.id
                         },
-                        leadingContent = { Checkbox(checked = ticked, onCheckedChange = null) },
-                        modifier = Modifier.clickable {
-                            selected = if (ticked) selected - track.id else selected + track.id
-                        },
+                        onStartSelecting = { selected = selected + track.id },
+                        onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
+                        onInfo = { showingInfo = track },
+                        // Not for a live-search catalogue: it publishes no index, and its result
+                        // rows carry no author, so there is nowhere for this to go.
+                        onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
+                            ?.let { { onShowNeighbours(it) } },
+                        onShareFile = { onShareFile(track) },
+                        onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
+                            ?.let { { onShareLink(it) } },
+                    )
+                }
+            }
+
+                DraggableScrollbar(
+                    listState = listState,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
+
+                // The same button the playlist has. These are the lists you scroll a long way down
+                // while something plays -- a folder, a search, an author's other tunes -- so losing
+                // the playing row here costs more than it does on the playlist, not less.
+                //
+                // **After the list, not before it.** Children of a `Box` draw in order, so put
+                // above the `LazyColumn` it was painted and then covered by every row -- present,
+                // correct and invisible, which is how the owner found it.
+                //
+                // Hidden while selecting for the reason it is hidden on the playlist: it floats
+                // over the bottom-right corner, which is where the actions are, and following the
+                // music is not what you are doing when you are ticking rows.
+                if (!selecting) {
+                    FollowTrackButton(
+                        listState = listState,
+                        currentIndex = browse.tracks.indexOfFirst { it.id == playingId }
+                            .takeIf { it >= 0 },
+                        contentPadding = PaddingValues(0.dp),
+                        following = following,
+                        onFollowingChange = { following = it },
+                    )
+                }
+            }
+            }
+        }
+
+        if (selecting) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Button(
+                    onClick = {
+                        onAdd(browse.tracks.filter { it.id in selected })
+                        selected = emptySet()
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        pluralStringResource(R.plurals.browse_add_selected, selected.size, selected.size) +
+                            (playlistName?.let { " \u2192 $it" } ?: "")
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        val toAdd = browse.tracks.filter { it.id in selected }
+                        selected = emptySet()
+                        onAddToOtherPlaylist(toAdd)
+                    },
+                ) {
+                    Icon(
+                        imageVector = PlayerIcons.PlaylistAdd,
+                        contentDescription = stringResource(R.string.action_add_to_playlist),
                     )
                 }
             }
         }
+    }
+}
 
-        if (selected.isNotEmpty()) {
-            Button(
-                onClick = { onAdd(browse.tracks.filter { it.id in selected }) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    pluralStringResource(R.plurals.browse_add_selected, selected.size, selected.size) +
-                        (playlistName?.let { " → $it" } ?: "")
-                )
+/**
+ * One row of a track list outside the playlist.
+ *
+ * The same anatomy as a playlist row minus the drag handle, which is the only thing that is
+ * genuinely different: a playlist has an order that belongs to the user and these do not.
+ *
+ * No ordinal. In the playlist the number answers "where am I in three hundred rows of *my* list";
+ * here it would only say which row of somebody else's archive this is. The space it would have
+ * taken is the checkbox's, so the row does not change width when selection begins.
+ */
+/** Wide enough for a checkbox, and reserved whether or not one is showing. */
+private val CHECKBOX_SLOT = 40.dp
+
+/** What every track row is at least, in both modes, so entering selection moves nothing. */
+private val ROW_HEIGHT = 72.dp
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun BrowseTrackRow(
+    track: TrackRef,
+    index: Int,
+    ticked: Boolean,
+    selecting: Boolean,
+    playing: Boolean,
+    onPlay: () -> Unit,
+    onToggle: () -> Unit,
+    onStartSelecting: () -> Unit,
+    onAddToOtherPlaylist: () -> Unit,
+    onInfo: () -> Unit,
+    onShowNeighbours: (() -> Unit)?,
+    onShareFile: () -> Unit,
+    onShareLink: (() -> Unit)?,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+
+    ListItem(
+        headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
+            // The full source rather than just the author: in a search result the question is
+            // "which one is this", and two tunes with one name are told apart by where they live.
+            { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        },
+        // The slot is always here, empty or not. Letting it appear along with the checkbox made
+        // every row grow the moment selection started, so the list jumped by more than a row --
+        // under the very finger that had just long-pressed one.
+        leadingContent = {
+            Box(modifier = Modifier.size(CHECKBOX_SLOT), contentAlignment = Alignment.Center) {
+                if (selecting) Checkbox(checked = ticked, onCheckedChange = { onToggle() })
             }
+        },
+        // Nothing here while selecting: a menu on a row you are ticking is a second meaning for a
+        // press that already has one.
+        trailingContent = if (selecting) {
+            null
+        } else {
+            {
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(PlayerIcons.More, stringResource(R.string.a11y_track_menu, track.title))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_to_playlist)) },
+                            leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
+                            onClick = { menuOpen = false; onAddToOtherPlaylist() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_info)) },
+                            leadingIcon = { Icon(PlayerIcons.Info, contentDescription = null) },
+                            onClick = { menuOpen = false; onInfo() },
+                        )
+                        onShowNeighbours?.let { show ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_show_neighbours)) },
+                                leadingIcon = { Icon(PlayerIcons.Folder, contentDescription = null) },
+                                onClick = { menuOpen = false; show() },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_share_file)) },
+                            leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
+                            onClick = { menuOpen = false; onShareFile() },
+                        )
+                        onShareLink?.let { share ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_share_link)) },
+                                leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
+                                onClick = { menuOpen = false; share() },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        colors = if (playing) {
+            ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        } else {
+            ListItemDefaults.colors()
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            // A floor rather than a fixed height: rows with no source line are shorter than rows
+            // with one, and a list whose rows change height when a checkbox arrives is the defect
+            // this is here to prevent.
+            .heightIn(min = ROW_HEIGHT)
+            // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
+            // into a scroll is claimed by the list before it ever becomes a long press. Both matter:
+            // the owner's complaint about another player is a long press firing at a twentieth of a
+            // second mid-scroll, after which back throws him out of the list entirely.
+            .combinedClickable(
+                onClick = { if (selecting) onToggle() else onPlay() },
+                onLongClick = { if (!selecting) onStartSelecting() },
+            ),
+    )
+}
+
+/**
+ * The arrow that starts a download, and the spinner it becomes while one is running.
+ *
+ * **In the row rather than only in the banner.** Several of these can run at once — they always
+ * could, being independent coroutines — but the screen only ever showed the most recent one, so
+ * tapping a second arrow looked like it had cancelled the first (owner, 2026-09-09). A row that
+ * shows its own state cannot lie about it, and the same spinner is what says "this one is already
+ * going" when a second tap would otherwise do nothing visible.
+ *
+ * The same size as the icon it replaces, so nothing in the list moves when it appears.
+ */
+@Composable
+private fun DownloadAction(downloading: Boolean, description: String, onClick: () -> Unit) {
+    if (downloading) {
+        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+        }
+    } else {
+        IconButton(onClick = onClick) {
+            Icon(PlayerIcons.Download, description)
         }
     }
 }

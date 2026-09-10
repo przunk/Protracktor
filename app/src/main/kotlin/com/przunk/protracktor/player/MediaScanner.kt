@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.player
 
 import android.content.ContentResolver
@@ -71,67 +59,100 @@ object MediaScanner {
             ?: treeUri.lastPathSegment.orEmpty()
 
     /** Walks a granted folder tree, depth first, and returns everything that looks playable. */
-    suspend fun scanTree(context: Context, treeUri: Uri): List<TrackRef> = withContext(Dispatchers.IO) {
-        val resolver = context.contentResolver
-        val found = mutableListOf<TrackRef>()
+    // `scanTree` lived here: it walked a tree and kept files whose *name* looked playable. It is
+    // gone rather than deprecated, because leaving it would leave the defect it embodies within
+    // reach -- `listFiles` plus a real decoder is the replacement (`docs/BACKLOG.md` A6), and there
+    // is no case where the old behaviour is the right answer for a local folder.
 
-        // The path is accumulated as we descend rather than read back off each document id. Document
-        // ids are the provider's business: the framework's own are readable paths, but a network
-        // provider's are often short opaque handles -- which is why the owner saw only "AMIGA" where
-        // he expected the whole path. Walking down, we always know where we are.
+    /** One file as the tree listing found it, before anything has been opened. */
+    data class Candidate(
+        val uri: String,
+        val path: String,
+        val fileName: String,
+        val sizeBytes: Long,
+    )
+
+    /**
+     * Every file in a tree, with **no filter on its name**.
+     *
+     * The scan this replaced kept only names a backend might handle -- `docs/STATUS.md` C4: a misnamed
+     * file is skipped and a misleadingly named one is added and refuses only when played. Deciding
+     * by content means opening the file, and opening the file means listing it first -- so this
+     * lists everything and lets the decoder decide.
+     *
+     * The one thing it does filter on is **size**, and that is content rather than a name: these
+     * formats are kilobytes to a few megabytes, and reading a four-gigabyte film off a network
+     * share to discover it is not a SID helps nobody.
+     */
+    suspend fun listFiles(
+        context: Context,
+        treeUri: Uri,
+        maxBytes: Long = MAX_PROBE_BYTES,
+    ): List<Candidate> = withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+        val found = mutableListOf<Candidate>()
         val pending = ArrayDeque(listOf(DocumentsContract.getTreeDocumentId(treeUri) to rootPathOf(treeUri)))
 
         while (pending.isNotEmpty()) {
-            // A deep tree on a slow provider can take a while; cancelling the scan has to actually
-            // stop it rather than let it run on in the background.
             coroutineContext.ensureActive()
             val (documentId, path) = pending.removeFirst()
-            collectChildren(resolver, treeUri, documentId, path, found, pending)
-        }
-        found.sortedWith(compareBy({ it.subtitle }, { it.title }))
-    }
-
-    private fun collectChildren(
-        resolver: ContentResolver,
-        treeUri: Uri,
-        parentDocumentId: String,
-        parentPath: String,
-        found: MutableList<TrackRef>,
-        pending: ArrayDeque<Pair<String, String>>,
-    ) {
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
-        resolver.query(
-            childrenUri,
-            arrayOf(
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                DocumentsContract.Document.COLUMN_MIME_TYPE,
-                DocumentsContract.Document.COLUMN_SIZE,
-            ),
-            null, null, null,
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                val documentId = cursor.getString(0)
-                val displayName = cursor.getString(1) ?: continue
-                val mimeType = cursor.getString(2)
-
-                if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
-                    pending.addLast(documentId to "$parentPath/$displayName")
-                } else if (SupportedFormats.looksPlayable(displayName)) {
-                    found += TrackRef(
-                        id = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId).toString(),
-                        title = displayName,
-                        // The whole path. One folder name does not say which library it came from,
-                        // which is what the owner asked to be able to see.
-                        subtitle = parentPath,
-                        sizeBytes = if (cursor.isNull(3)) 0L else cursor.getLong(3),
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
+            resolver.query(
+                childrenUri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                    DocumentsContract.Document.COLUMN_SIZE,
+                ),
+                null, null, null,
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val childId = cursor.getString(0)
+                    val displayName = cursor.getString(1) ?: continue
+                    if (cursor.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) {
+                        pending.addLast(childId to "$path/$displayName")
+                        continue
+                    }
+                    val size = if (cursor.isNull(3)) 0L else cursor.getLong(3)
+                    if (!worthReading(displayName, size, maxBytes)) continue
+                    found += Candidate(
+                        uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, childId).toString(),
+                        path = path,
                         fileName = displayName,
+                        sizeBytes = size,
                     )
                 }
             }
         }
+        found.sortedWith(compareBy({ it.path }, { it.fileName }))
     }
 
+    /**
+     * Whether a scan should read this file at all.
+     *
+     * **The name is a parameter and is deliberately unused.** That is the rule this function exists
+     * to hold: a scan decides what a file is by opening it, never by what it is called
+     * (`docs/BACKLOG.md` A6, `docs/STATUS.md` C4). It takes the name so that the day somebody
+     * reaches for it here, the change is visible in a diff and fails a test, instead of quietly
+     * restoring the behaviour this replaced.
+     *
+     * Size is content, not a name, and is the one thing it does judge on.
+     */
+    fun worthReading(
+        @Suppress("UNUSED_PARAMETER") displayName: String,
+        sizeBytes: Long,
+        maxBytes: Long = MAX_PROBE_BYTES,
+    ): Boolean = sizeBytes <= maxBytes
+
+    /**
+     * The largest file worth reading to find out what it is.
+     *
+     * Everything this app plays is far below it -- a big VGM is a few megabytes and a SID is
+     * kilobytes -- so the ceiling costs no real music and saves reading films, disk images and
+     * archives off a network share.
+     */
+    const val MAX_PROBE_BYTES: Long = 32L * 1024 * 1024
 
     /** Builds references for individually picked files. */
     fun fromDocuments(context: Context, uris: List<Uri>): List<TrackRef> = uris.map { uri ->

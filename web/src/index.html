@@ -1,0 +1,691 @@
+<!doctype html>
+<!--
+  SPDX-FileCopyrightText: 2026 Przunk
+  SPDX-License-Identifier: GPL-3.0-or-later
+
+  The page, dressed as the app (GOAL.md round 7).
+
+  **The colours are the owner's, sampled rather than guessed.** His phone runs dynamic colour, so it
+  does not show the Material 3 baseline at all: the scheme below was read out of two screenshots he
+  supplied, pixel by pixel — `docs/reference/app-colours.json` records where each one was taken from.
+  A browser cannot read a wallpaper, so everyone sees his scheme; that is the honest cost of looking
+  like his app rather than like a generic Material page.
+
+  The structure follows the app screen for screen: a top bar of labelled actions, a list of rows that
+  are index-title-subtitle, and a dock that is a seek row, a now-playing card and the transport.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protracktor</title>
+<style>
+  :root {
+    color-scheme: dark;
+    /* Sampled from the owner's screenshots, 2026-09-09. See docs/reference/app-colours.json. */
+    --bg: #180523;
+    --surface-container: #2D133C;
+    --secondary-container: #622B80;
+    --on-secondary-container: #F5DDFD;
+    --primary: #EE83ED;
+    --on-primary: #3B0B3A;
+    --primary-container: #E9C1FB;
+    --on-surface: #F5DDFD;
+    --on-surface-variant: #BCA0C7;
+    --surface-variant: #3F274C;
+    --outline: #8E4B92;
+    --error: #FF9B9B;
+
+    /* Material's own shapes, which is most of why a Material screen reads as one. */
+    --shape-s: 8px;
+    --shape-m: 12px;
+    --shape-l: 16px;
+    --shape-xl: 28px;
+  }
+  /*
+   * The Material 3 type scale, at the roles the app actually asks for.
+   *
+   * Read out of the Compose sources rather than eyeballed: a track's title and the dock's title are
+   * `titleMedium`, their subtitles are `bodyMedium`, a row's position and the labels under the
+   * actions are `labelSmall`. Sizes are Material's own; the *font* is not, because Roboto is not on
+   * every desktop and pulling it from Google would be the page's only network dependency besides
+   * the music.
+   */
+  :root {
+    --title-medium: 16px;      /* weight 500, tracking .15px */
+    --body-large: 16px;
+    --body-medium: 14px;
+    --body-small: 12px;
+    --label-large: 14px;       /* weight 500 */
+    --label-small: 11px;       /* weight 500, tracking .5px */
+    --headline-small: 24px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--on-surface);
+    font: 400 15px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* A phone-shaped column rather than a stretched page: the app's proportions are the point, and
+     a 74-pixel row across 2,000 pixels of monitor is not the same object. */
+  .app {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* --- top bar ------------------------------------------------------------------------------ */
+
+  header {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    padding: 12px 12px 8px;
+  }
+  .playlist {
+    background: var(--surface-container);
+    border-radius: var(--shape-m);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    border: 0; font: inherit; color: inherit; cursor: pointer; text-align: left;
+  }
+  .playlist:hover { filter: brightness(1.12); }
+  .playlist .text { min-width: 0; }
+  .playlist .chev { width: 20px; height: 20px; fill: var(--on-surface-variant); flex: none; }
+  .playlist .name { font-size: var(--headline-small); font-weight: 400; letter-spacing: 0;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .playlist .count { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 1px; }
+  .spacer { flex: 1; }
+
+  /* The owner asked for this shape twice (BACKLOG A16, A17, A23): an icon with its name underneath,
+     because an icon alone does not say where it goes and a word alone does not read as a control. */
+  .action {
+    background: var(--secondary-container);
+    color: var(--on-secondary-container);
+    border: 0;
+    border-radius: var(--shape-m);
+    min-width: 62px;
+    padding: 8px 10px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font: inherit;
+    font-size: var(--label-small);
+    font-weight: 500;
+    letter-spacing: .5px;
+    cursor: pointer;
+  }
+  .action:hover { filter: brightness(1.12); }
+  /* Shut, and looking it. `aria-disabled` rather than `disabled`, because the button still has to
+     answer a press -- with the reason, which a disabled button cannot give. */
+  .action[aria-disabled="true"] { opacity: .45; }
+  .action[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
+  .action svg { width: 22px; height: 22px; fill: currentColor; }
+
+  /* --- the list ----------------------------------------------------------------------------- */
+
+  main { flex: 1; overflow-y: auto; padding: 4px 0 8px; scrollbar-color: var(--outline) transparent; }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li.track {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 18px;
+    cursor: pointer;
+  }
+  /* **Three states, and they must not look alike.** Hover is a hint that a row is clickable;
+     "selected and loading" is a promise the page has taken on; "playing" is the answer. The owner
+     met all three wearing the same clothes. */
+  li.track:hover { background: color-mix(in srgb, var(--on-surface) 7%, transparent); }
+  li.track.playing { background: color-mix(in srgb, var(--primary) 16%, transparent); }
+  li.track.playing:hover { background: color-mix(in srgb, var(--primary) 22%, transparent); }
+  li.track.loading { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+  li.track.loading .n { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+  li.track.failed .title { color: var(--error); }
+  /*
+    A file that stayed on the phone. **Grey, not red** -- red is `.failed`, which means a decoder
+    refused the music, and this row never had any music to refuse. It keeps its number so the two
+    lists count the same, and it does not answer a hover or a click, because there is nothing
+    behind it to answer with.
+  */
+  li.track.local { cursor: default; }
+  li.track.local:hover { background: transparent; }
+  li.track.local .n,
+  li.track.local .title { color: color-mix(in srgb, var(--on-surface) 38%, transparent); }
+  li.track.local .meta { color: color-mix(in srgb, var(--on-surface-variant) 55%, transparent); font-style: italic; }
+  /* Selected is the quietest of the four: the queue points here, nothing has started. */
+  li.track.selected .n { color: var(--primary); }
+  li.track .n {
+    color: var(--on-surface-variant);
+    font-size: var(--label-small);
+    font-variant-numeric: tabular-nums;
+    min-width: 22px;
+    text-align: right;
+  }
+  li.track .text { min-width: 0; flex: 1; }
+  li.track .title {
+    font-size: var(--title-medium);
+    font-weight: 500;
+    letter-spacing: .15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  li.track .meta {
+    font-size: var(--body-medium);
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  li.track.playing .title { color: var(--primary); }
+  li.track.playing .n { color: var(--primary); }
+
+  /* --- panels ------------------------------------------------------------------------------- */
+
+  .panel { padding: 10px 18px 18px; }
+  .panel[hidden] { display: none; }
+
+  /* Material's own scrim value, so a dialog dims the page by the amount every other dialog does. */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    background: rgba(0, 0, 0, .55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .overlay[hidden] { display: none; }
+  .sheet {
+    background: var(--surface-container);
+    border-radius: var(--shape-xl);
+    padding: 22px 24px 16px;
+    max-width: 420px; width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
+    text-align: center;
+  }
+  .sheet.wide { max-width: 560px; text-align: left; }
+  .sheet .note { margin-bottom: 14px; }
+  .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+  .text-button {
+    background: none; border: 0; color: var(--primary);
+    font: inherit; font-weight: 500; padding: 10px 14px;
+    border-radius: var(--shape-xl); cursor: pointer; margin-top: 8px;
+  }
+  .text-button:hover { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+  .note { color: var(--on-surface-variant); font-size: var(--body-medium); margin: 0 0 10px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  /* A code drawn dark on dark is not a code; the quiet zone is part of the specification. */
+  .qr { display: inline-block; background: #fff; padding: 12px; border-radius: var(--shape-m); line-height: 0; }
+  .qr table { border-collapse: collapse; }
+  .qr td { width: 5px; height: 5px; }
+  textarea {
+    width: 100%; height: 110px;
+    background: var(--surface-container);
+    color: var(--on-surface);
+    border: 1px solid var(--surface-variant);
+    border-radius: var(--shape-m);
+    padding: 10px;
+    font-family: ui-monospace, monospace; font-size: 12px;
+  }
+  .filled {
+    background: var(--primary); color: var(--on-primary);
+    border: 0; border-radius: var(--shape-xl);
+    padding: 10px 22px; font: inherit; font-weight: 500; cursor: pointer;
+    margin-top: 10px;
+  }
+
+  /* --- the dock ----------------------------------------------------------------------------- */
+
+  footer { padding: 0 0 10px; }
+  .seekrow {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 18px 2px;
+    font-size: var(--label-small); color: var(--on-surface-variant);
+    font-variant-numeric: tabular-nums;
+  }
+  input[type=range] {
+    flex: 1; appearance: none; background: transparent; height: 20px; margin: 0;
+    /*
+      How much of the track is behind the handle, set from script. A gradient rather than
+      `::-moz-range-progress`, because that pseudo-element exists in one engine and has no webkit
+      counterpart -- so the portable answer is to paint the track itself and move the stop.
+      Custom properties inherit into pseudo-elements, which is what makes this reachable at all.
+    */
+    --fill: 0%;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--primary) var(--fill), var(--surface-variant) var(--fill));
+  }
+  input[type=range]::-moz-range-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--primary) var(--fill), var(--surface-variant) var(--fill));
+  }
+  /* A disabled seek bar says "you cannot move this", so it must not also say "you are here". */
+  input[type=range]:disabled::-webkit-slider-runnable-track { background: var(--surface-variant); }
+  input[type=range]:disabled::-moz-range-track { background: var(--surface-variant); }
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--primary); margin-top: -5px;
+  }
+  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--primary); }
+  input[type=range]:disabled::-webkit-slider-thumb { background: var(--surface-variant); }
+
+  .nowcard {
+    margin: 4px 12px 0;
+    background: var(--surface-container);
+    border-radius: var(--shape-l);
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+  }
+  .nowcard .text { min-width: 0; flex: 1; }
+  .nowcard .title { font-size: var(--title-medium); font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowcard svg { width: 22px; height: 22px; fill: var(--on-surface-variant); flex: none; }
+
+  /*
+    Three parts: a spacer, the five buttons, the volume. **The spacer is the whole point.**
+    The volume used to be positioned absolutely so it could not decentre the transport, and at
+    ordinary widths `space-evenly` then put `repeat` underneath it (`docs/STATUS.md` C22).
+    Reserving a matching width on the left keeps play in the middle *and* keeps the two apart,
+    which absolute positioning could only ever do one of.
+  */
+  .transport {
+    display: flex; align-items: center;
+    padding: 10px 12px 2px;
+    --volume-width: 124px;
+  }
+  .transport .buttons {
+    flex: 1; display: flex; align-items: center; justify-content: space-evenly;
+  }
+  .tspacer { flex: none; width: var(--volume-width); }
+  /*
+    Volume, at the right end of the transport — where every desktop player puts it, and the only
+    control here the phone does not have: Android has hardware volume keys and a page has nothing.
+  */
+  .volume {
+    flex: none; width: var(--volume-width);
+    display: flex; align-items: center; justify-content: flex-end; gap: 2px;
+  }
+  .volume .tbutton { width: 36px; height: 36px; }
+  .volume .tbutton svg { width: 20px; height: 20px; }
+  .volume input[type=range] { flex: none; width: 84px; }
+  /*
+    Narrow screens keep the button and lose the slider. A 84px slider beside five transport buttons
+    on a 360px screen either overlaps `repeat` or shrinks it, and the phone this would be on has
+    volume keys of its own — so the icon stays as a mute toggle and the fine control goes.
+  */
+  @media (max-width: 560px) {
+    .volume input[type=range] { display: none; }
+    /* The spacer shrinks with it, or the buttons sit off-centre by the width of a slider nobody
+       can see. One variable, so the two cannot drift apart. */
+    .transport { --volume-width: 40px; }
+  }
+  .tbutton {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    width: 48px; height: 48px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: var(--on-surface);
+  }
+  .tbutton:hover:not(:disabled) { background: color-mix(in srgb, var(--on-surface) 10%, transparent); }
+  .tbutton:disabled { color: color-mix(in srgb, var(--on-surface) 38%, transparent); cursor: default; }
+  .tbutton svg { width: 26px; height: 26px; fill: currentColor; }
+  .tbutton.play {
+    width: 64px; height: 64px;
+    background: var(--primary); color: var(--on-primary);
+  }
+  .tbutton.play:hover { filter: brightness(1.06); background: var(--primary); }
+  .tbutton.play svg { width: 34px; height: 34px; }
+  .tbutton.on { color: var(--primary); }
+
+  #nowplaying .statusline {
+    padding: 14px 0 0;
+    margin-top: 14px;
+    border-top: 1px solid var(--surface-variant);
+  }
+  .statusline {
+    padding: 6px 18px 0;
+    color: var(--on-surface-variant); font-size: var(--body-small);
+    overflow-wrap: anywhere;
+  }
+  .error { color: var(--error); }
+
+  /* Now Playing, sitting on top of the dock the way it does on the phone. */
+  #nowplaying {
+    margin: 0 12px 8px;
+    background: var(--surface-container);
+    border-radius: var(--shape-l);
+    padding: 18px 20px 16px;
+    max-height: 46vh;
+    overflow-y: auto;
+  }
+  #nowplaying[hidden] { display: none; }
+  .np-head { margin-bottom: 12px; }
+  /* Labelled squares in a row, sized as the phone sizes them. */
+  .npactions { display: flex; gap: 8px; margin-bottom: 16px; }
+  .action {
+    flex: 1; min-width: 0;
+    background: var(--secondary-container); color: var(--on-surface);
+    border: 0; border-radius: var(--shape-l);
+    padding: 12px 6px 10px; font: inherit; font-size: 12px; cursor: pointer;
+    display: grid; justify-items: center; gap: 6px;
+  }
+  .action:hover:not(:disabled) { filter: brightness(1.12); }
+  .action:disabled { opacity: .38; cursor: default; }
+  .action svg { width: 22px; height: 22px; fill: currentColor; }
+  .action span { line-height: 1.2; }
+
+  /*
+    A row's own menu. Three dots, the phone's affordance, and a popup anchored to the row rather
+    than a dialog: what it acts on is the row you opened it from, and a dialog in the middle of the
+    screen would lose that.
+  */
+  .rowmenu {
+    flex: none; background: none; border: 0; padding: 0; margin-left: 4px;
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    color: var(--on-surface-variant);
+    display: grid; place-items: center;
+  }
+  .rowmenu:hover { background: color-mix(in srgb, var(--on-surface) 10%, transparent); }
+  .rowmenu svg { width: 18px; height: 18px; fill: currentColor; }
+  #menu {
+    position: fixed; z-index: 30;
+    background: var(--surface-container); color: var(--on-surface);
+    border-radius: var(--shape-s); padding: 6px 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+    min-width: 190px;
+  }
+  #menu[hidden] { display: none; }
+  #menu button {
+    display: block; width: 100%; text-align: left;
+    background: none; border: 0; padding: 10px 16px; font: inherit; color: inherit; cursor: pointer;
+  }
+  #menu button:hover:not(:disabled) { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #menu button:disabled { opacity: .38; cursor: default; }
+  .np-title {
+    font-size: var(--headline-small); line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
+  dt { color: var(--on-surface-variant); font-size: var(--body-small); }
+  dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
+  /* Browsing: one list, four levels, and a head that says where you are. */
+  #browsesearch {
+    width: 100%; box-sizing: border-box; margin: 6px 0 8px;
+    background: var(--surface-container); color: var(--on-surface);
+    border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
+    padding: 10px 16px; font: inherit;
+  }
+  .browsehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #browselist { list-style: none; margin: 0; padding: 0; max-height: 56vh; overflow-y: auto; }
+  #browselist li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px; border-radius: var(--shape-s); cursor: pointer;
+  }
+  #browselist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #browselist .bname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #browselist .bcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
+
+  /* The playlist sheet: a list of names, what is in each, and what may be done to it. */
+  #playlistlist { list-style: none; margin: 0 0 16px; padding: 0; max-height: 46vh; overflow-y: auto; }
+  #playlistlist li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--shape-s); cursor: pointer;
+  }
+  #playlistlist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #playlistlist li[aria-current="true"] { background: var(--secondary-container); }
+  #playlistlist .pname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #playlistlist .pcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
+  #playlistlist .pdrop {
+    background: none; border: 0; padding: 4px 8px; cursor: pointer;
+    color: var(--on-surface-variant); font: inherit; border-radius: var(--shape-s); flex: none;
+  }
+  #playlistlist .pdrop:hover { background: color-mix(in srgb, var(--error) 22%, transparent); color: var(--on-surface); }
+  .sheet .row { display: flex; gap: 10px; justify-content: flex-end; }
+  .sheet .plain {
+    background: none; color: var(--on-surface-variant); border: 0;
+    padding: 10px 18px; font: inherit; border-radius: var(--shape-xl); cursor: pointer;
+  }
+  /* What the page is holding. The phone has a storage screen; this is the honest one line of it. */
+  .storage { color: var(--on-surface-variant); font-size: var(--body-small); margin: 14px 0 0; text-align: left; }
+
+  .subsongbar { margin-top: 14px; }
+  .subsongbar[hidden] { display: none; }
+  .toggle {
+    background: var(--surface-container); color: var(--on-surface-variant);
+    border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
+    padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .toggle[aria-checked="true"] {
+    background: var(--secondary-container); color: var(--on-surface); border-color: var(--secondary-container);
+  }
+  .subsongs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .subsong {
+    background: var(--surface-container); color: var(--on-surface);
+    border: 1px solid var(--surface-variant); border-radius: var(--shape-s);
+    min-width: 40px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .subsong[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <!--
+      The playlist chip is a button now, as it is on the phone: what is showing, how much is in it,
+      and a way to the others. `ui/PlaylistSwitcher.kt` is the shape being copied.
+    -->
+    <button class="playlist" id="playlistchip">
+      <div class="text">
+        <div class="name" id="playlistname">From the phone</div>
+        <div class="count" id="count">nothing yet</div>
+      </div>
+      <svg viewBox="0 0 24 24" class="chev"><path d="m7 10 5 5 5-5z"/></svg>
+    </button>
+    <div class="spacer"></div>
+    <button class="action" id="tab-browse" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4a7.48 7.48 0 0 0-6.63 4.03A5.99 5.99 0 0 0 6 20h13a5 5 0 0 0 .35-9.96z"/></svg>
+      Browse
+    </button>
+    <button class="action" id="tab-pair" aria-pressed="true">
+      <svg viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 16h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm0 10h2v2h-2v-2zm-6-6h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm0-4h2v2h-2v-2zm2 2h2v2h-2v-2z"/></svg>
+      Pair
+    </button>
+    <button class="action" id="tab-paste" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm0 5 5 5h-3v4h-4v-4H7l5-5z"/></svg>
+      Paste
+    </button>
+  </header>
+
+  <main>
+    <ol id="queue"></ol>
+
+
+
+
+  </main>
+
+  <footer>
+    <!--
+      Now Playing, and **it belongs to the dock**. On the phone it expands upward from the dock over
+      the playlist (`ui/NowPlaying.kt`); under the list it was somewhere you had to scroll to find,
+      which is the opposite of "what is playing right now".
+    -->
+    <section id="nowplaying" hidden>
+      <div class="np-head">
+        <div class="np-title" id="np-title">Nothing playing</div>
+      </div>
+      <!--
+        The phone's row of labelled squares, in the same place and the same order — with the one
+        that has nothing to point at here left out. `Add to playlist…` needs playlists, and the page
+        deliberately has none (`docs/PLAN_HANDOFF.md` §5a).
+      -->
+      <div class="npactions">
+        <button class="action" id="np-show">
+          <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3a8 8 0 0 0-7.94-7.94V1h-2v2.06A8 8 0 0 0 3.06 11H1v2h2.06A8 8 0 0 0 11 20.94V23h2v-2.06A8 8 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/></svg>
+          <span>Show in playlist</span>
+        </button>
+        <button class="action" id="np-save">
+          <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+          <span>Save the file</span>
+        </button>
+        <button class="action" id="np-link">
+          <svg viewBox="0 0 24 24"><path d="M3.9 12A3.1 3.1 0 0 1 7 8.9h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10z"/></svg>
+          <span>Copy a link</span>
+        </button>
+      </div>
+      <dl id="fields"></dl>
+      <!--
+        The phone's "play all subsongs" setting, in the one place it means something here. Hidden
+        for a file that holds one tune, because a switch that governs nothing is a question the
+        listener has to answer for no reason.
+      -->
+      <div id="subsongbar" class="subsongbar" hidden>
+        <button id="allsubsongs" class="toggle" role="switch" aria-checked="false">Play every tune in this file</button>
+      </div>
+      <div id="subsongs" class="subsongs"></div>
+      <!--
+        The machine's own talk, at the bottom of the one panel somebody opens on purpose. It is
+        useful when something is wrong and noise when nothing is, and the dock is where the music
+        is named -- so it lives here rather than over the transport.
+      -->
+      <div class="statusline" id="status">starting…</div>
+    </section>
+
+    <div class="statusline error" id="error"></div>
+
+    <div class="seekrow">
+      <span id="elapsed">0:00</span>
+      <input type="range" id="seek" min="0" max="1000" value="0" disabled aria-label="Position">
+      <span id="remaining">0:00</span>
+    </div>
+
+    <div class="nowcard" id="nowcard">
+      <div class="text">
+        <div class="title" id="title">Nothing playing</div>
+        <div class="meta" id="sub">Scan the code with your phone, or paste some URLs</div>
+      </div>
+      <svg viewBox="0 0 24 24" id="expand"><path d="m7.4 15.4-1.4-1.4 6-6 6 6-1.4 1.4-4.6-4.6z"/></svg>
+    </div>
+
+    <div class="transport">
+      <div class="tspacer"></div>
+      <div class="buttons">
+      <button class="tbutton" id="shuffle" title="Shuffle" disabled>
+        <svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+      </button>
+      <button class="tbutton" id="prev" title="Previous" disabled>
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+      <button class="tbutton play" id="playpause" title="Play" disabled>
+        <svg viewBox="0 0 24 24"><path id="playglyph" d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="tbutton" id="next" title="Next" disabled>
+        <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zm-2.5 6L5 6v12z"/></svg>
+      </button>
+      <button class="tbutton" id="repeat" title="Repeat" disabled>
+        <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+      </button>
+      </div>
+      <!--
+        Not disabled with the rest: the level is a setting, not a transport control, and it is
+        worth being able to turn the volume down before the first tune rather than after it.
+      -->
+      <div class="volume">
+        <button class="tbutton" id="mute" title="Mute">
+          <!-- The id is on the `path`, not on the `svg`. The play button taught that lesson: the
+               id sat on the wrapper, the shape never changed, and a page check read the same wrong
+               attribute and passed. -->
+          <svg viewBox="0 0 24 24"><path id="volglyph" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        </button>
+        <input type="range" id="volume" min="0" max="100" value="100" aria-label="Volume">
+      </div>
+    </div>
+  </footer>
+
+  <div id="menu" hidden role="menu"></div>
+
+  <!--
+    The playlists, over the page like the other two dialogs. "From the phone" is always the first
+    row and has no delete: it is a view of the last thing the phone sent rather than something
+    somebody made.
+  -->
+  <!--
+    Browsing an archive, as the phone browses one: catalogue, then format, then author, then tracks.
+    A stack rather than a router — there are four levels and one way through them, and the back
+    button is the only navigation.
+  -->
+  <div class="overlay" id="browse" hidden>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <button class="plain" id="browseback" hidden>← Back</button>
+        <h2 id="browsetitle">Browse</h2>
+        <button class="plain" data-close>Close</button>
+      </div>
+      <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
+      <p class="note" id="browsenote"></p>
+      <ol id="browselist"></ol>
+    </div>
+  </div>
+
+  <div class="overlay" id="playlists" hidden>
+    <div class="sheet">
+      <h2>Playlists</h2>
+      <ol id="playlistlist"></ol>
+      <div class="row">
+        <button class="filled" id="newlist">New empty playlist</button>
+        <button class="filled" id="saveas">Save this queue as…</button>
+        <button class="plain" data-close>Close</button>
+      </div>
+      <p class="storage" id="storageline"></p>
+    </div>
+  </div>
+
+  <!--
+    Two things that interrupt: a code to scan and a box to paste into. **Over the page rather than
+    under the list**, which is where the owner found them and correctly did not like it: a code you
+    have to scroll to is a code you have to look for, and the whole point of it is that it is the
+    first thing a phone's camera should meet.
+
+    Each closes the moment its job is done -- the code when a queue arrives, the box when it is
+    loaded -- because a dialog that outlives its reason is a dialog somebody has to dismiss.
+  -->
+  <div class="overlay" id="pair" hidden>
+    <div class="sheet">
+      <p class="note" id="pairnote">Scan this with Protracktor on your phone to send it a playlist.</p>
+      <div id="qr" class="qr"></div>
+      <p class="note mono" id="pairurl"></p>
+      <button class="text-button" data-close>Close</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="paste" hidden>
+    <div class="sheet wide">
+      <p class="note">One URL per line. Modland, ASMA and HVSC all allow a browser to read them directly.</p>
+      <textarea id="urls" spellcheck="false"></textarea>
+      <p class="note" id="pastenote"></p>
+      <div class="sheet-actions">
+        <button class="text-button" data-close>Cancel</button>
+        <button class="filled" id="load">Load these</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../lib/qrcode.js"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.data
 
 import android.content.ContentValues
@@ -28,9 +16,21 @@ data class SavedPlayerState(
     val currentTrackId: String?,
     val shuffle: Boolean,
     val repeat: RepeatMode,
+    /** Whether to play every tune inside a file rather than only the first. */
+    val playAllSubsongs: Boolean = false,
 )
 
-data class SavedPlaylist(val id: Long, val name: String)
+data class SavedPlaylist(
+    val id: Long,
+    val name: String,
+    /**
+     * How many tracks are in it.
+     *
+     * Shown wherever a playlist is chosen: a list of bare names gives no way to tell one you filled
+     * from one you made and forgot (`docs/BACKLOG.md` A21).
+     */
+    val trackCount: Int = 0,
+)
 
 /** A folder the user granted, kept so browsing does not start at a file picker every session. */
 data class GrantedFolder(val uri: String, val displayName: String)
@@ -43,7 +43,7 @@ data class GrantedFolder(val uri: String, val displayName: String)
  */
 class LibraryStore(context: Context) {
 
-    private val helper = ProtracktorDatabase(context.applicationContext)
+    private val helper = ProtracktorDatabase.of(context)
 
     // --- playlists ----------------------------------------------------------------------------
 
@@ -66,9 +66,20 @@ class LibraryStore(context: Context) {
 
     suspend fun playlists(): List<SavedPlaylist> = withContext(Dispatchers.IO) {
         helper.readableDatabase
-            .rawQuery("SELECT id, name FROM playlists ORDER BY position, id", null)
+            .rawQuery(
+                // Counted in the query rather than by reading every playlist's tracks: the picker
+                // shows all of them at once, and one statement is one statement.
+                "SELECT p.id, p.name, COUNT(t.track_id) " +
+                    "FROM playlists p LEFT JOIN playlist_tracks t ON t.playlist_id = p.id " +
+                    "GROUP BY p.id, p.name, p.position ORDER BY p.position, p.id",
+                null,
+            )
             .use { row ->
-                buildList { while (row.moveToNext()) add(SavedPlaylist(row.getLong(0), row.getString(1))) }
+                buildList {
+                    while (row.moveToNext()) {
+                        add(SavedPlaylist(row.getLong(0), row.getString(1), row.getInt(2)))
+                    }
+                }
             }
     }
 
@@ -160,9 +171,21 @@ class LibraryStore(context: Context) {
      * These lists are hundreds of rows, not millions.
      */
     suspend fun replaceTracks(playlistId: Long, tracks: List<TrackRef>) = withContext(Dispatchers.IO) {
+        // **A playlist cannot hold the same track twice, and this is the one place that can
+        // promise it.** Every write of a playlist comes through here, so the guarantee is made
+        // once rather than remembered at five call sites -- one of which, importing an M3U, takes
+        // a text file anybody can write.
+        //
+        // It is not a tidiness rule. A playlist row is a `LazyColumn` item keyed by track id, and
+        // a repeated key throws on the main thread while drawing; the same shape of duplicate in
+        // search results crashed the app on 2026-09-04. Note the old code would not even have
+        // stored the repeat -- `playlist_tracks` conflicts on the same track id and the second
+        // insert replaced the first, leaving a gap in `position` and a list shorter than the
+        // caller thinks. Quietly wrong instead of loudly wrong.
+        val unique = tracks.distinctBy { it.id }
         helper.writableDatabase.transaction {
             delete("playlist_tracks", "playlist_id = ?", arrayOf(playlistId.toString()))
-            tracks.forEachIndexed { position, track ->
+            unique.forEachIndexed { position, track ->
                 insertWithOnConflict(
                     "tracks", null,
                     ContentValues().apply {
@@ -192,7 +215,8 @@ class LibraryStore(context: Context) {
 
     suspend fun loadPlayerState(): SavedPlayerState? = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT active_playlist_id, current_track_id, shuffle, repeat_mode FROM player_state WHERE id = 0",
+            "SELECT active_playlist_id, current_track_id, shuffle, repeat_mode, play_all_subsongs " +
+                "FROM player_state WHERE id = 0",
             null,
         ).use { row ->
             if (!row.moveToFirst()) return@withContext null
@@ -202,6 +226,7 @@ class LibraryStore(context: Context) {
                 shuffle = row.getInt(2) != 0,
                 // An unknown mode from a newer build must not crash an older one.
                 repeat = runCatching { RepeatMode.valueOf(row.getString(3)) }.getOrDefault(RepeatMode.OFF),
+                playAllSubsongs = row.getInt(4) != 0,
             )
         }
     }
@@ -214,6 +239,7 @@ class LibraryStore(context: Context) {
                 put("current_track_id", state.currentTrackId)
                 put("shuffle", if (state.shuffle) 1 else 0)
                 put("repeat_mode", state.repeat.name)
+                put("play_all_subsongs", if (state.playAllSubsongs) 1 else 0)
             },
             "id = 0", null,
         )

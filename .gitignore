@@ -15,6 +15,15 @@ keystore.properties
 # Vendored native sources are fetched by scripts/fetch-native-deps.sh, not committed
 native/vendor/
 
+# Host probes: the sources and their generated config are committed, the objects and binaries are
+# not. They are built by ./scripts/build-sc68-probes.sh and are host-specific.
+native/probe/*/build/
+native/probe/*/probe-*
+
+# probe-extensions.py loads probe-uade.py as a module to reuse its index and download plumbing
+# rather than copying it, and importlib leaves this behind.
+scripts/__pycache__/
+
 # IDE
 .idea/
 *.hprof
@@ -22,3 +31,15 @@ native/vendor/
 # OS
 .DS_Store
 Thumbs.db
+
+# Correspondence. Drafts and sent letters to the maintainers of libraries we use -- other people's
+# names, other people's replies, and half-finished thoughts addressed to them by name. Useful to
+# keep locally and not ours to publish.
+#
+# The five that were once committed were taken out of the history on 2026-09-05 and the
+# correspondence in the commit messages paraphrased; this line is what stops the next one going in.
+docs/letters/
+
+# Written by scripts/serve-web.mjs on first run. Machine-specific: a port and the address the QR
+# code advertises, which is different on every machine that runs it.
+/server.json

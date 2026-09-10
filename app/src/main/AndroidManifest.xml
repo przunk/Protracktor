@@ -10,25 +10,202 @@
          works and only the controls are missing. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+        The QR scanner, and the only permission in this app that a music player has to justify.
+        It is asked for at the moment the scanner opens and never at startup, it is used for one
+        thing, reading a pairing code off a screen, and nothing is recorded: frames are decoded
+        and dropped (docs/PLAN_HANDOFF.md §3 H2).
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- A phone with no camera can still do everything else, so this must not filter it out. -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <!-- Online catalogues: the index is downloaded once, then browsing works offline. The network
          is next needed when a track that is not cached is played. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
-        android:icon="@android:drawable/ic_media_play"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.Protracktor">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Protracktor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                A tune tapped in a file manager, a chat app or a download (`docs/WISHLIST.md` B24).
+
+                **Two filters, because the two cases match on different things.** A `content://`
+                from a document provider usually has no extension anywhere in the URI, so it can
+                only be recognised by its mime type, and that type is nearly always
+                `application/octet-stream`, which says only "bytes". That is as good as it gets, and
+                it is why this app appears for some files it cannot play. It says so when it opens
+                one, which is the honest trade: the alternative is not appearing for the files it
+                *can* play.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-tracker-module" />
+            </intent-filter>
+
+            <!--
+                A link, and a name we can read. **`pathPattern` is not a regular expression**: its
+                `.*` does not backtrack, so `.*\.mod` fails on any path with an earlier dot in it.
+                Hence three patterns per extension, for zero, one and two dots before the last.
+                `pathAdvancedPattern` would do this properly and is API 31; `minSdk` here is 29.
+
+                Lower case only, deliberately: patterns are case-sensitive and doubling this list
+                to catch `.MOD` would double a list that is already the largest thing in this file.
+
+                **And this will not do what a link tap looks like it should.** Since Android 12 an
+                unverified web link opens the browser with no chooser at all; being offered needs an
+                `assetlinks.json` on the domain, and we own none of these archives. What this buys
+                is "Open by default -> Add link" for somebody who wants it, once, per domain.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:pathPattern=".*\\.mod" />
+                <data android:pathPattern=".*\\..*\\.mod" />
+                <data android:pathPattern=".*\\..*\\..*\\.mod" />
+                <data android:pathPattern=".*\\.xm" />
+                <data android:pathPattern=".*\\..*\\.xm" />
+                <data android:pathPattern=".*\\..*\\..*\\.xm" />
+                <data android:pathPattern=".*\\.s3m" />
+                <data android:pathPattern=".*\\..*\\.s3m" />
+                <data android:pathPattern=".*\\..*\\..*\\.s3m" />
+                <data android:pathPattern=".*\\.it" />
+                <data android:pathPattern=".*\\..*\\.it" />
+                <data android:pathPattern=".*\\..*\\..*\\.it" />
+                <data android:pathPattern=".*\\.med" />
+                <data android:pathPattern=".*\\..*\\.med" />
+                <data android:pathPattern=".*\\..*\\..*\\.med" />
+                <data android:pathPattern=".*\\.ahx" />
+                <data android:pathPattern=".*\\..*\\.ahx" />
+                <data android:pathPattern=".*\\..*\\..*\\.ahx" />
+                <data android:pathPattern=".*\\.hvl" />
+                <data android:pathPattern=".*\\..*\\.hvl" />
+                <data android:pathPattern=".*\\..*\\..*\\.hvl" />
+                <data android:pathPattern=".*\\.okt" />
+                <data android:pathPattern=".*\\..*\\.okt" />
+                <data android:pathPattern=".*\\..*\\..*\\.okt" />
+                <data android:pathPattern=".*\\.dbm" />
+                <data android:pathPattern=".*\\..*\\.dbm" />
+                <data android:pathPattern=".*\\..*\\..*\\.dbm" />
+                <data android:pathPattern=".*\\.digi" />
+                <data android:pathPattern=".*\\..*\\.digi" />
+                <data android:pathPattern=".*\\..*\\..*\\.digi" />
+                <data android:pathPattern=".*\\.sndh" />
+                <data android:pathPattern=".*\\..*\\.sndh" />
+                <data android:pathPattern=".*\\..*\\..*\\.sndh" />
+                <data android:pathPattern=".*\\.sc68" />
+                <data android:pathPattern=".*\\..*\\.sc68" />
+                <data android:pathPattern=".*\\..*\\..*\\.sc68" />
+                <data android:pathPattern=".*\\.ym" />
+                <data android:pathPattern=".*\\..*\\.ym" />
+                <data android:pathPattern=".*\\..*\\..*\\.ym" />
+                <data android:pathPattern=".*\\.sap" />
+                <data android:pathPattern=".*\\..*\\.sap" />
+                <data android:pathPattern=".*\\..*\\..*\\.sap" />
+                <data android:pathPattern=".*\\.rmt" />
+                <data android:pathPattern=".*\\..*\\.rmt" />
+                <data android:pathPattern=".*\\..*\\..*\\.rmt" />
+                <data android:pathPattern=".*\\.sid" />
+                <data android:pathPattern=".*\\..*\\.sid" />
+                <data android:pathPattern=".*\\..*\\..*\\.sid" />
+                <data android:pathPattern=".*\\.psid" />
+                <data android:pathPattern=".*\\..*\\.psid" />
+                <data android:pathPattern=".*\\..*\\..*\\.psid" />
+                <data android:pathPattern=".*\\.nsf" />
+                <data android:pathPattern=".*\\..*\\.nsf" />
+                <data android:pathPattern=".*\\..*\\..*\\.nsf" />
+                <data android:pathPattern=".*\\.nsfe" />
+                <data android:pathPattern=".*\\..*\\.nsfe" />
+                <data android:pathPattern=".*\\..*\\..*\\.nsfe" />
+                <data android:pathPattern=".*\\.spc" />
+                <data android:pathPattern=".*\\..*\\.spc" />
+                <data android:pathPattern=".*\\..*\\..*\\.spc" />
+                <data android:pathPattern=".*\\.gbs" />
+                <data android:pathPattern=".*\\..*\\.gbs" />
+                <data android:pathPattern=".*\\..*\\..*\\.gbs" />
+                <data android:pathPattern=".*\\.vgm" />
+                <data android:pathPattern=".*\\..*\\.vgm" />
+                <data android:pathPattern=".*\\..*\\..*\\.vgm" />
+                <data android:pathPattern=".*\\.vgz" />
+                <data android:pathPattern=".*\\..*\\.vgz" />
+                <data android:pathPattern=".*\\..*\\..*\\.vgz" />
+                <data android:pathPattern=".*\\.hes" />
+                <data android:pathPattern=".*\\..*\\.hes" />
+                <data android:pathPattern=".*\\..*\\..*\\.hes" />
+                <data android:pathPattern=".*\\.kss" />
+                <data android:pathPattern=".*\\..*\\.kss" />
+                <data android:pathPattern=".*\\..*\\..*\\.kss" />
+                <data android:pathPattern=".*\\.pt3" />
+                <data android:pathPattern=".*\\..*\\.pt3" />
+                <data android:pathPattern=".*\\..*\\..*\\.pt3" />
+                <data android:pathPattern=".*\\.pt2" />
+                <data android:pathPattern=".*\\..*\\.pt2" />
+                <data android:pathPattern=".*\\..*\\..*\\.pt2" />
+                <data android:pathPattern=".*\\.stc" />
+                <data android:pathPattern=".*\\..*\\.stc" />
+                <data android:pathPattern=".*\\..*\\..*\\.stc" />
+                <data android:pathPattern=".*\\.mtm" />
+                <data android:pathPattern=".*\\..*\\.mtm" />
+                <data android:pathPattern=".*\\..*\\..*\\.mtm" />
+                <data android:pathPattern=".*\\.far" />
+                <data android:pathPattern=".*\\..*\\.far" />
+                <data android:pathPattern=".*\\..*\\..*\\.far" />
+                <data android:pathPattern=".*\\.669" />
+                <data android:pathPattern=".*\\..*\\.669" />
+                <data android:pathPattern=".*\\..*\\..*\\.669" />
+                <data android:pathPattern=".*\\.ptm" />
+                <data android:pathPattern=".*\\..*\\.ptm" />
+                <data android:pathPattern=".*\\..*\\..*\\.ptm" />
+                <data android:pathPattern=".*\\.stm" />
+                <data android:pathPattern=".*\\..*\\.stm" />
+                <data android:pathPattern=".*\\..*\\..*\\.stm" />
+                <data android:pathPattern=".*\\.ult" />
+                <data android:pathPattern=".*\\..*\\.ult" />
+                <data android:pathPattern=".*\\..*\\..*\\.ult" />
+                <data android:pathPattern=".*\\.dmf" />
+                <data android:pathPattern=".*\\..*\\.dmf" />
+                <data android:pathPattern=".*\\..*\\..*\\.dmf" />
+                <data android:pathPattern=".*\\.mdl" />
+                <data android:pathPattern=".*\\..*\\.mdl" />
+                <data android:pathPattern=".*\\..*\\..*\\.mdl" />
+                <data android:pathPattern=".*\\.gdm" />
+                <data android:pathPattern=".*\\..*\\.gdm" />
+                <data android:pathPattern=".*\\..*\\..*\\.gdm" />
+            </intent-filter>
+
+            <!-- The share sheet. Same mime types as the tap, for the same reason. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
 
@@ -36,6 +213,23 @@
             android:name=".player.PlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!--
+            Sharing a tune means handing another app a file it can read, and neither of the places
+            our files live can do that: a document URI from the storage access framework belongs to
+            the provider that issued it and we cannot pass on a grant we do not own, and a
+            downloaded file is inside app-private storage that nothing else can see. So a share
+            copies the bytes somewhere this provider can vouch for them.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.shares"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

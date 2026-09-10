@@ -1,18 +1,6 @@
-/*
- * Protracktor -- a player for retro platform music formats.
- * Copyright (C) 2026 Przunk
- *
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
- * the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <https://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.przunk.protracktor.player
 
 import android.app.Application
@@ -21,6 +9,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.GrantedFolder
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -37,9 +26,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val state: StateFlow<PlayerUiState> get() = controller.state
     val browse: StateFlow<BrowseState> get() = controller.browse
 
+    /** One-shot "scroll the playlist here" events. */
+    val reveal: SharedFlow<Int> get() = controller.reveal
+    val showBrowse: SharedFlow<Unit> get() = controller.showBrowse
+    val share: SharedFlow<Intent> get() = controller.share
+
     fun addFolder(treeUri: Uri) = controller.addFolder(treeUri)
     fun addFiles(uris: List<Uri>) = controller.addFiles(uris)
     fun removeTrack(index: Int) = controller.removeTrack(index)
+
+    fun removeTracks(indices: List<Int>) = controller.removeTracks(indices)
     fun moveTrack(from: Int, to: Int) = controller.moveTrack(from, to)
     fun dismissMessage() = controller.dismissMessage()
     fun undoRemoval() = controller.undoRemoval()
@@ -50,7 +46,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun cycleRepeat() = controller.cycleRepeat()
 
     fun createPlaylist(name: String) = controller.createPlaylist(name)
-    fun renameActivePlaylist(name: String) = controller.renameActivePlaylist(name)
+    fun renamePlaylist(id: Long, name: String) = controller.renamePlaylist(id, name)
     fun deletePlaylist(id: Long) = controller.deletePlaylist(id)
     fun switchToPlaylist(id: Long) = controller.switchToPlaylist(id)
 
@@ -62,6 +58,54 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun openDomain(domain: BrowseDomain) = controller.openDomain(domain)
     fun browseBack(): Boolean = controller.browseBack()
     fun indexCatalogue(id: String) = controller.indexCatalogue(id)
+
+    fun downloadSongLengths() = controller.downloadSongLengths()
+    fun downloadTrackMetadata() = controller.downloadTrackMetadata()
+    fun downloadFavourites() = controller.downloadFavourites()
+    fun sendQueueToBrowser() = controller.sendQueueToBrowser()
+    fun pairWith(endpoint: String) = controller.pairWith(endpoint)
+    fun forgetPairing() = controller.forgetPairing()
+    fun sendQueueAsLink() = controller.sendQueueAsLink()
+    fun rescan() = controller.rescan()
+    val scan get() = controller.scan
+
+    /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
+    fun playExternal(uri: android.net.Uri, name: String? = null) {
+        ensureServiceRunning()
+        controller.playExternal(uri, name)
+    }
+
+    // Giving disk back, one copy at a time (`docs/ARCHITECTURE.md` §19).
+    fun clearFetchedCache() = controller.clearFetchedCache()
+    fun deleteCatalogueIndex(catalogueId: String) = controller.deleteCatalogueIndex(catalogueId)
+    fun clearSongLengths() = controller.clearSongLengths()
+    fun clearTrackMetadata() = controller.clearTrackMetadata()
+    fun clearFavourites() = controller.clearFavourites()
+
+    // The sc68 replay routines the app does not ship (`docs/LICENSES.md`).
+    /** Re-reads what is stored. Settings shows those numbers and can be opened without Browse. */
+    fun refreshCatalogues() = controller.refreshCatalogues()
+
+    fun downloadReplays() = controller.downloadReplays()
+    fun deleteReplays() = controller.deleteReplays()
+
+    fun selectSubsong(index: Int) = controller.selectSubsong(index)
+
+    fun toggleAllSubsongs() = controller.toggleAllSubsongs()
+
+    fun exportPlaylist(id: Long) = controller.exportPlaylist(id)
+
+    fun importPlaylist(uri: Uri) = controller.importPlaylist(uri)
+
+    fun clearHistory() = controller.clearHistory()
+
+    fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)
+
+    fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
+
+    fun shareFile(track: TrackRef) = controller.shareFile(track)
+
+    fun shareLink(track: TrackRef) = controller.shareLink(track)
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the
@@ -71,13 +115,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun playRandom() = controller.playRandom()
     fun keepTransient() = controller.keepTransient()
-    fun exitRandom() = controller.exitRandom()
+    fun returnToPlaylist() = controller.returnToPlaylist()
+    fun playFromResults(results: List<TrackRef>, index: Int) = controller.playFromResults(results, index)
     fun setQuery(query: String) = controller.setQuery(query)
-    fun toggleSearchLocal() = controller.toggleSearchLocal()
-    fun toggleSearchOnline() = controller.toggleSearchOnline()
+    fun setSearchScope(scope: SearchScope) = controller.setSearchScope(scope)
+    fun setRandomScope(scope: RandomScope) = controller.setRandomScope(scope)
+    fun toggleSearchPlatform(id: String) = controller.toggleSearchPlatform(id)
     fun toggleSearchCatalogue(id: String) = controller.toggleSearchCatalogue(id)
     fun runSearch() = controller.runSearch()
     fun addToPlaylist(tracks: List<TrackRef>) = controller.addToPlaylist(tracks)
+    fun addToPlaylist(targetPlaylistId: Long, tracks: List<TrackRef>) =
+        controller.addToPlaylist(targetPlaylistId, tracks)
+    fun createPlaylistAndAdd(name: String, tracks: List<TrackRef>) =
+        controller.createPlaylistAndAdd(name, tracks)
 
     fun playAt(index: Int) {
         ensureServiceRunning()
@@ -87,6 +137,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun togglePlayPause() {
         ensureServiceRunning()
         controller.togglePlayPause()
+    }
+
+    fun nextFile() {
+        ensureServiceRunning()
+        controller.nextFile()
+    }
+
+    fun previousFile() {
+        ensureServiceRunning()
+        controller.previousFile()
     }
 
     fun next() {

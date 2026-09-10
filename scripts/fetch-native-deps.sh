@@ -68,9 +68,16 @@ fetch libopenmpt \
       "9273b88b67973cc69e54d748ab1b749399d6d07695f1c37d0c59f88b4106074f" \
       1
 
-# sc68 -- GPL-2.0-OR-LATER (verified 2026-09-01: all 51 licensed sources say "or (at your option)
-# any later version", which is what lets it combine with our GPL-3 application). Atari ST: SNDH and
-# raw YM. Brings its own 68000 emulator, which is why SNDH needs it at all.
+# sc68 -- GPL-2.0-OR-LATER.
+#
+# **2.2.1, and it is no longer what the app plays.** The app uses 3.0.0b, which exists only in
+# SourceForge SVN and is fetched by ./scripts/fetch-sc68-svn.py. This release is kept because
+# ./scripts/probe-sc68.py measures the two against each other, and the whole reason item 1 of
+# GOAL.md round 5 took a day was that nobody could re-run the earlier measurement. Removing the
+# ability to compare is how that happens again.
+#
+# Licence verified 2026-09-01: all 51 licensed sources say "or (at your option) any later version",
+# whatever COPYING says on its own.
 fetch sc68 \
       "2.2.1" \
       "https://downloads.sourceforge.net/project/sc68/sc68/2.2.1/sc68-2.2.1.tar.gz" \
@@ -94,6 +101,87 @@ fetch gme \
       "https://github.com/libgme/game-music-emu/releases/download/0.6.5/libgme-0.6.5-src.tar.gz" \
       "a133f19278222136ba0d8c27b64a07987ba05fec9d2e6d293ccd8cabdd97ddbb" \
       1
+
+# libsidplayfp -- GPL-2.0-OR-LATER (verified 2026-09-02: COPYING is the version 2 text again, and the
+# sources say "either version 2 of the License, or (at your option) any later version"). Commodore
+# 64: PSID and RSID, roughly 72,000 files in Modland alone.
+fetch sidplayfp \
+      "3.1.1" \
+      "https://github.com/libsidplayfp/libsidplayfp/releases/download/v3.1.1/libsidplayfp-3.1.1.tar.gz" \
+      "12b79190593bf480b2d11481b5c2de62bac07f344437a66cd8d887329875c626" \
+      1
+
+# HivelyTracker -- BSD-3-Clause (verified 2026-09-05: LICENSE is the three-clause text, Copyright
+# (c) 2006-2018 Pete Gordon, and `hvl2wav/` carries no other notice). AHX and HVL, the Amiga
+# synth-tracker formats libopenmpt has no loader for at all.
+#
+# The whole backend is `hvl2wav/replay.c` plus two headers -- the smallest vendored decoder here,
+# smaller than ASAP. The rest of the archive is the tracker's GUI and is not built.
+#
+# GitHub generates tag tarballs rather than storing them, so this checksum can in principle change
+# without the tag changing. It is pinned anyway: a download nobody checks is worse than one that
+# occasionally needs a deliberate look.
+fetch hively \
+      "V1_9" \
+      "https://github.com/pete-gordon/hivelytracker/archive/refs/tags/V1_9.tar.gz" \
+      "a3c6d8a041fe9952f0a72a31953461254b497d3bfbf3d07301d1bf4e9e8fb65d" \
+      1
+
+# minimp3 -- CC0-1.0, a public domain dedication (verified 2026-09-10: `LICENSE` is the CC0 text and
+# both headers repeat "the author(s) have dedicated all copyright and related and neighboring rights
+# to this software to the public domain worldwide"). MP3, and nothing else.
+#
+# **Two headers, no library.** `minimp3.h` is the decoder and `minimp3_ex.h` adds the part that
+# matters here -- a duration for a variable-bitrate file and an index to seek with, neither of which
+# a plain frame decoder can give. `docs/BACKLOG.md` A29 chose this over Android's own MediaCodec: the
+# engine is native from the file to the speaker, and routing one format through the platform would
+# mean two playback paths to keep in step and nothing at all for the browser.
+#
+# Pinned to a commit, because there are no releases. GitHub generates these tarballs rather than
+# storing them, so the checksum can in principle move without the commit moving -- the same caveat
+# HivelyTracker's tag tarball carries above, and pinned anyway for the same reason.
+fetch minimp3 \
+      "ea99364" \
+      "https://codeload.github.com/lieff/minimp3/tar.gz/ea99364f61c14656440e8d77e9c233ccf3124633" \
+      "5628166eb82a9bb581317918a334c317a2c0a30278bb14a20381307976768f34" \
+      1
+
+# lhasa -- ISC (verified 2026-09-09: COPYING.md is the ISC text, Copyright (c) 2011-2025 Simon
+# Howard, and all 35 sources and headers under lib/ repeat the grant per file). An LHA/LZH
+# decompressor, and the only one here that decodes no music at all.
+#
+# It is vendored for two things that turn out to be the same thing. ZXTune's `.ym` and `.vtx`
+# decoders read an LHA-compressed stream and were excluded from our build for want of it
+# (`native/backends/zxtune/CMakeLists.txt`), which left 4,961 Modland `.ym` files indexed and
+# unopenable -- `docs/STATUS.md` C20. And every UnExoticA tune lives inside a `.lha` archive
+# (`docs/PLAN_CATALOGUES.md`), which needs the other half of this library, the archive reader.
+#
+# ZXTune bundles its own patched copy of an older lhasa. We fetch upstream instead and adapt to it
+# in `native/backends/zxtune/lha_zxtune.cpp`: one lhasa in the tree, pinned and checksummed like
+# everything else here, rather than two of which one arrives inside a 182 MB sparse clone.
+fetch lhasa \
+      "0.6.0" \
+      "https://github.com/fragglet/lhasa/releases/download/v0.6.0/lhasa-0.6.0.tar.gz" \
+      "9840154367f73e9d9c3196f944a121ab4d398d84e921c8fe8fca8a931274aed7" \
+      1
+
+# sc68 3.0.0b is not a release and has no tarball: it lives only in SourceForge SVN. Its fetch
+# pins a revision and verifies a checksum manifest, which the tarball fetch above gets for free
+# from a published sha256 -- so it is a separate script rather than another `fetch` line.
+echo
+if ! "$PROJECT_DIR/scripts/fetch-sc68-svn.py"; then
+    echo "  ❌ sc68 3.0.0b could not be fetched. The Atari ST backend will not build."
+    exit 1
+fi
+
+# ZXTune has no release tarball either, and its repository is 182 MB of which almost nothing is
+# wanted -- so it is a sparse, blobless clone rather than a `fetch` line, for the same reason sc68
+# is a script. Its own header explains the exclusions.
+echo
+if ! "$PROJECT_DIR/scripts/fetch-zxtune.py"; then
+    echo "  ❌ ZXTune could not be fetched. The ZX Spectrum backend will not build."
+    exit 1
+fi
 
 echo
 echo "✅ done — sources in native/vendor/ (gitignored)"
