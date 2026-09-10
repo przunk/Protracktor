@@ -415,7 +415,7 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C33. ~~The index download choked on the zip's own tail~~ — FIXED 2026-09-10
+### C34. ~~The index download choked on the zip's own tail~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, on the first try at the Modland index:* "unexpected input after the end of
 stream".
