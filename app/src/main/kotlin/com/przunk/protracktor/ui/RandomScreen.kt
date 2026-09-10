@@ -105,14 +105,21 @@ fun RandomScreen(
         // viewport would land it behind the dock again.
         val viewport = bottom - top
         val height = row?.size ?: layout.visibleItemsInfo.firstOrNull()?.size ?: 0
-        // Below the fold — or appended, which looks the same and wants the same answer. A negative
-        // offset lands the row at the bottom of the viewport rather than the top, which is the
-        // smallest move that reveals it and keeps the rows above it where they were.
-        val below = row == null || row.offset > top
-        if (below) {
-            listState.animateScrollToItem(index, -(viewport - height).coerceAtLeast(0))
-        } else {
+        // **Which side it left by is decided from the index, not from whether the row was found.**
+        // A row missing from `visibleItemsInfo` is missing whichever way it went: appended below
+        // the last row, or scrolled off above the first by Previous. Treating "not found" as
+        // "below" made Previous land the row at the *bottom* of the screen -- a whole page of
+        // travel for a move of one row, and the opposite of what Next does going the other way
+        // (owner, 2026-09-10).
+        val first = layout.visibleItemsInfo.firstOrNull()?.index ?: 0
+        val above = if (row != null) row.offset < top else index < first
+        if (above) {
+            // Off the top: the row goes to the top edge, which for a step of one is a scroll of one.
             listState.animateScrollToItem(index)
+        } else {
+            // Off the bottom, or appended: the row goes to the bottom edge. A negative offset is
+            // what puts it there rather than at the top -- the smallest move that reveals it.
+            listState.animateScrollToItem(index, -(viewport - height).coerceAtLeast(0))
         }
     }
 
