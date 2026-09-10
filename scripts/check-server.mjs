@@ -83,7 +83,13 @@ try {
   check(typo.status === 404 && (await typo.text()).includes('the player is at'),
     'and a mistyped path still says where the player is');
 
-  await new Promise((r) => setTimeout(r, 100));
+  // **Waited for, not slept on.** This was 100 ms flat, which is a bet that the child's stdout has
+  // reached this process by then -- and it lost one run in a suite that had otherwise been green
+  // all afternoon. A check that fails when the machine is busy is a check nobody trusts, and an
+  // untrusted check gets re-run until it passes, which is the same as not having it.
+  for (let i = 0; i < 100 && !log.includes('404 /src/nothing-here.js'); i++) {
+    await new Promise((r) => setTimeout(r, 20));
+  }
   check(log.includes('404 /src/nothing-here.js'), 'every miss is written to the log');
 } finally {
   server.kill();
