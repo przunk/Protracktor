@@ -479,6 +479,17 @@ class PlaybackController private constructor(private val context: Context) {
          * listen into a handful of downloads.
          */
         private const val READ_AHEAD = 3
+
+        /**
+         * How many times over to draw, so repeats can be dropped and enough still remain.
+         *
+         * Four is not measured, and does not need to be: the cost is a `LIMIT 12` where a `LIMIT 3`
+         * would do, against a query that already sorts the whole scope by a generated key
+         * (`docs/review-round-8.md` R7). If the pool is wide enough for repeats to be rare the
+         * extra rows are thrown away, and if it is narrow enough for them to be common this is what
+         * stops the dice looping over the same handful.
+         */
+        private const val OVERDRAW = 4
     }
 
     // Main.immediate so a press and the state change it causes land in the same frame; the work
@@ -2413,16 +2424,13 @@ class PlaybackController private constructor(private val context: Context) {
      * because nothing had been decided for it to read. Deciding early is what makes the wait go.
      */
     private suspend fun advanceRandom() {
-        // **Forward always means a new tune** (owner, 2026-09-10: "następny utwór nie był
-        // wylosowany, tylko grał z historii i nie wskoczył na listę").
+        // **Forward walks the record, and rolls only at its end** (owner, 2026-09-10: "next
+        // powinien losować tylko gdy jesteśmy na końcu listy").
         //
-        // Stepping back — with Previous, or by pressing a row in the record, which is new — leaves
-        // the cursor behind the end. Advancing from there used to walk *forward through what had
-        // already been heard*, which is ordinary playlist behaviour and wrong for a dice: the tune
-        // it produced was one he had just chosen to revisit, and the list did not grow, so the dice
-        // looked broken. Nothing is lost by skipping the walk, because everything behind the cursor
-        // is one press away in the list itself. That is what the list is for.
-        randomCursor = maxOf(randomCursor, randomPlayed)
+        // I had this the other way round for one build, on the theory that a dice should always
+        // give something new. He tried it and it was wrong: with a list on screen, next means the
+        // next row, and rolling from the middle of the record would leave a gap between what you
+        // are hearing and what you are looking at.
         fillRandomQueue()
         if (randomCursor >= randomHistory.lastIndex) {
             // Which sentence depends on the scope, because "nothing is indexed" is only true of
@@ -2461,11 +2469,28 @@ class PlaybackController private constructor(private val context: Context) {
             is RandomScope.Everything, is RandomScope.Favourites -> emptySet()
             is RandomScope.OnPlatform -> Platforms.catalogueFormatsOf(setOf(scope.platformId))
         }
-        randomHistory += catalogues.randomSample(
-            short,
+        // **Drawn wide and filtered, because the query cannot exclude anything.** `randomSample`
+        // is `ORDER BY RANDOM() LIMIT n` over the whole scope every time, so nothing stops it
+        // handing back a tune this session has already played -- which reads exactly like the dice
+        // replaying history, and is likelier the narrower the scope: Favourites is 991 tunes, not
+        // half a million. Asking for more than is needed and dropping the repeats is one query and
+        // no schema.
+        val already = randomHistory.mapTo(mutableSetOf()) { it.id }
+        val drawn = catalogues.randomSample(
+            short * OVERDRAW,
             formats = formats,
             favouritesOnly = scope is RandomScope.Favourites,
-        ).map(::toTrackRef)
+        ).map(::toTrackRef).filter { already.add(it.id) }.take(short)
+        // A pool smaller than the session can exhaust honestly — forty favourites cannot fill an
+        // evening without repeating. Sooner than repeat silently or stop dead, the dice repeats,
+        // which is what it did before any of this and what a small pool means.
+        randomHistory += drawn.ifEmpty {
+            catalogues.randomSample(
+                short,
+                formats = formats,
+                favouritesOnly = scope is RandomScope.Favourites,
+            ).map(::toTrackRef)
+        }
     }
 
     /**

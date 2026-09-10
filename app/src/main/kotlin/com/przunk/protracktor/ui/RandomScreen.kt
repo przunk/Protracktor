@@ -113,6 +113,9 @@ fun RandomScreen(
             contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
             enabled = true,
             reorderable = false,
+            // By position, because the dice may legitimately give the same tune twice out of a
+            // small pool and two rows with one key is a crash, not a blemish.
+            keyOf = { index, track -> "$index:${track.id}" },
         )
     }
 }
