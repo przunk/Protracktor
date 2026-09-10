@@ -18,6 +18,8 @@ data class SavedPlayerState(
     val repeat: RepeatMode,
     /** Whether to play every tune inside a file rather than only the first. */
     val playAllSubsongs: Boolean = false,
+    /** What Random picks from, as `RandomScope.stored()` writes it. Empty means never set. */
+    val randomScope: String = "",
 )
 
 data class SavedPlaylist(
@@ -215,7 +217,8 @@ class LibraryStore(context: Context) {
 
     suspend fun loadPlayerState(): SavedPlayerState? = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT active_playlist_id, current_track_id, shuffle, repeat_mode, play_all_subsongs " +
+            "SELECT active_playlist_id, current_track_id, shuffle, repeat_mode, play_all_subsongs, " +
+                "random_scope " +
                 "FROM player_state WHERE id = 0",
             null,
         ).use { row ->
@@ -227,6 +230,7 @@ class LibraryStore(context: Context) {
                 // An unknown mode from a newer build must not crash an older one.
                 repeat = runCatching { RepeatMode.valueOf(row.getString(3)) }.getOrDefault(RepeatMode.OFF),
                 playAllSubsongs = row.getInt(4) != 0,
+                randomScope = if (row.isNull(5)) "" else row.getString(5),
             )
         }
     }
@@ -240,6 +244,7 @@ class LibraryStore(context: Context) {
                 put("shuffle", if (state.shuffle) 1 else 0)
                 put("repeat_mode", state.repeat.name)
                 put("play_all_subsongs", if (state.playAllSubsongs) 1 else 0)
+                put("random_scope", state.randomScope)
             },
             "id = 0", null,
         )

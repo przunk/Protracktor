@@ -115,6 +115,14 @@ fun ProtracktorApp(
     // Not saveable: a sheet asking a question should not survive a rotation as an unanswered one.
     var choosingRandomScope by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    /**
+     * The Random view: a full-screen destination like Browse and Settings.
+     *
+     * **Not a mode of the playlist screen.** It shows a different list, with different actions, and
+     * leaving it ends the session — which is a destination, not a state the playlist can be in
+     * (`docs/PLAN_RANDOM.md`).
+     */
+    var showRandom by rememberSaveable { mutableStateOf(false) }
     var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -185,6 +193,7 @@ fun ProtracktorApp(
             scanning -> "scanner"
             showSettings -> "settings"
             showBrowse -> "browse"
+            showRandom -> "random"
             else -> "player"
         }
     ) { if (scanning) press() else transition() }
@@ -195,6 +204,9 @@ fun ProtracktorApp(
     var pendingAddToPlaylist by remember { mutableStateOf<List<com.przunk.protracktor.player.TrackRef>?>(null) }
     // Hoisted so Now Playing can send the list to the playing track without owning the list.
     val playlistState = rememberLazyListState()
+    // Its own scroll position. Sharing the playlist's would put the Random view wherever the
+    // playlist was left, in a list of a different length.
+    val randomState = rememberLazyListState()
 
     // Newly added tracks land at the end of the list, out of sight. Going to them is the
     // confirmation that the removed snackbar used to be.
@@ -233,6 +245,11 @@ fun ProtracktorApp(
                         Text(stringResource(R.string.settings_title))
                     } else if (showBrowse) {
                         Text(stringResource(R.string.browse_title))
+                    } else if (showRandom) {
+                        // The screen says "Playing at random" over its own list, so the bar stays
+                        // out of its way. The playlist chip in particular would be offering to
+                        // switch a playlist that nothing is playing from.
+                        Text(stringResource(R.string.domain_random_title))
                     } else {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -327,7 +344,19 @@ fun ProtracktorApp(
                             modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }
-                    if (!showBrowse && !showSettings) {
+                    // **Leaving ends the session**, which is what it has always done -- the record
+                    // goes, the tunes stay in the history, and the playlist is exactly where it was
+                    // left because nothing ever wrote to it.
+                    if (showRandom) {
+                        LabelledAction(
+                            icon = PlayerIcons.Playlist,
+                            label = stringResource(R.string.action_to_playlist),
+                            onClick = { viewModel.returnToPlaylist(); showRandom = false },
+                            haptic = null,
+                            modifier = Modifier.padding(end = TOP_BAR_EDGE),
+                        )
+                    }
+                    if (!showBrowse && !showSettings && !showRandom) {
                         // Only while there is something to save. A permanently lit Save button
                         // teaches nothing about whether the list on screen is the list on disk.
                         if (state.dirty) {
@@ -454,7 +483,14 @@ fun ProtracktorApp(
                 onDownloadReplays = viewModel::downloadReplays,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
-                onRandom = { viewModel.playRandom(); showBrowse = false },
+                // **Open, not just play.** The dice used to start a tune and drop you back on a
+                // playlist behind glass; now it opens the record it is about to fill, and rolls
+                // once so there is no second press between here and music.
+                onRandom = {
+                    viewModel.openRandom()
+                    showBrowse = false
+                    showRandom = true
+                },
                 onChooseRandomScope = { choosingRandomScope = true },
                 onQueryChange = viewModel::setQuery,
                 onScope = viewModel::setSearchScope,
@@ -478,6 +514,21 @@ fun ProtracktorApp(
                 onAddToOtherPlaylist = { tracks ->
                     pendingAddToPlaylist = tracks
                 },
+            )
+        } else if (showRandom) {
+            RandomScreen(
+                state = state,
+                browse = browse,
+                listState = randomState,
+                onPlayAt = viewModel::playRandomAt,
+                onRemoveAt = viewModel::removeRandomAt,
+                onFilter = { choosingRandomScope = true },
+                onShowNeighbours = viewModel::showNeighboursOf,
+                onShareFile = viewModel::shareFile,
+                onShareLink = viewModel::shareLink,
+                onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
+                onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
+                contentPadding = insets,
             )
         } else {
             PlaylistScreen(
@@ -511,18 +562,32 @@ fun ProtracktorApp(
 
     if (showBrowse) {
         BackHandler { if (!viewModel.browseBack()) showBrowse = false }
+    }
 
-        if (choosingRandomScope) {
-            RandomScopeSheet(
-                browse = browse,
-                onDownloadFavourites = viewModel::downloadFavourites,
-                onPick = {
-                    viewModel.setRandomScope(it)
-                    choosingRandomScope = false
-                },
-                onDismiss = { choosingRandomScope = false },
-            )
-        }
+    // Back out of Random is the same act as the button: the session ends and the playlist is where
+    // it was left.
+    if (showRandom) {
+        BackHandler { viewModel.returnToPlaylist(); showRandom = false }
+
+        // **A file arriving from another app takes the screen.** It replaces what is playing, so
+        // leaving the Random view up would show a record of a session that has been ended
+        // underneath it -- rows that play nothing and a heading that is no longer true.
+        LaunchedEffect(state.externalMode) { if (state.externalMode) showRandom = false }
+    }
+
+    // **Lifted out of Browse**, which used to be the only place it could open. The Random view's
+    // Filter button opens the same sheet, and a sheet that exists only under one destination cannot
+    // be reached from another (`docs/PLAN_RANDOM.md`).
+    if (choosingRandomScope) {
+        RandomScopeSheet(
+            browse = browse,
+            onDownloadFavourites = viewModel::downloadFavourites,
+            onPick = {
+                viewModel.setRandomScope(it)
+                choosingRandomScope = false
+            },
+            onDismiss = { choosingRandomScope = false },
+        )
     }
 
     if (showNowPlaying) {

@@ -9,6 +9,9 @@
     <string name="random_playing_title">Playing at random</string>
     <string name="random_playing_body">Nothing from this playlist is playing. Next picks another.\nThe plus keeps this one.</string>
     <string name="random_back_to_playlist">Back to the playlist</string>
+    <string name="random_filter">Filter</string>
+    <string name="random_rolling">Rolling…</string>
+    <string name="random_nothing_to_pick">Nothing to pick from. Index a catalogue, or widen the filter.</string>
 
     <string name="playlist_default_name">Playlist</string>
     <string name="playlist_empty_title">Nothing here yet</string>

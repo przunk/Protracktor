@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 12
+    const val VERSION = 13
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -271,6 +271,17 @@ object SchemaSql {
         "ALTER TABLE player_state ADD COLUMN play_all_subsongs INTEGER NOT NULL DEFAULT 0",
     )
 
+    /**
+     * What Random picks from, added at version 13.
+     *
+     * A word rather than a set of columns: the scope is one choice of three shapes, and two of them
+     * carry nothing. `RandomScope.stored()` owns the vocabulary. Empty means "never set", which
+     * reads back as Everything -- the same answer an upgraded phone gives.
+     */
+    private val RANDOM_SCOPE_V13: List<String> = listOf(
+        "ALTER TABLE player_state ADD COLUMN random_scope TEXT NOT NULL DEFAULT ''",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -328,7 +339,7 @@ object SchemaSql {
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
-        MODLAND_FAVOURITES_V12
+        MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13
 
 
 
@@ -351,6 +362,7 @@ object SchemaSql {
         10 to PLAY_ALL_SUBSONGS_V10,
         11 to TRACK_METADATA_V11,
         12 to MODLAND_FAVOURITES_V12,
+        13 to RANDOM_SCOPE_V13,
     )
 
     /**
