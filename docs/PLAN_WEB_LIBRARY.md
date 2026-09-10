@@ -58,14 +58,14 @@ the zip into storage in batches.
 
 `web/tools/storage-check.html`, 60,000 records of Modland's real shape:
 
-| batch | | at work | at home |
+| batch | | at work (Firefox 155, Windows) | at home |
 |---|---|---|---|
-| 1,000 | | 8,966 rows/s | 16,741 rows/s |
-| 5,000 | | 9,878 | 17,616 |
-| 20,000 | | **12,552** → 41 s | **18,916** → **27 s** |
-| 5,000 | **with the `(format, author)` index** | 7,176 | 13,387 |
+| 1,000 | | 10,573 rows/s | 16,741 rows/s |
+| 5,000 | | 11,019 | 17,616 |
+| 20,000 | | **12,544** → 41 s | **18,916** → **27 s** |
+| 5,000 | **with the `(format, author)` index** | 7,855 | 13,387 |
 
-**The index costs about a quarter of the throughput** — 27% at work, 24% at home, comparing the two
+**The index costs about a quarter of the throughput** — 29% at work, 24% at home, comparing the two
 runs that share a batch size.
 
 *An earlier version of this table said 43%, which was wrong: it compared the indexed run against the
@@ -87,6 +87,7 @@ Modland's real spread:
 |---|---|
 | a record per track | **41 s** |
 | **a record per bucket** | **2.6 s** |
+| **the whole index, on disk** | **18 MB** |
 
 **Sixteen times faster, and better than the arithmetic said.** Dividing the per-track rate by 11.8
 predicted three and a half seconds; the real answer is 2.6, because a larger record amortises the
@@ -95,6 +96,11 @@ rather than divided.
 
 **So the question in the next section is settled: the index belongs in the browser.** Two and a half
 seconds is not a progress bar, it is a pause — and it is once.
+
+**And it answers a second question without being asked.** The browser offered **473 GB** and granted
+`persist()`. Eighteen megabytes against that is not a budget worth writing code for: the storage
+screen should *report* what the page holds, and there is no eviction rule to design. A hand-built
+playlist is also safe from being swept, which was the only real risk in S2.
 
 ---
 
@@ -277,7 +283,9 @@ desk.
 
 1. **The relay, and therefore UnExoticA and The Mod Archive in the browser** — it changes who
    fetches from ExoticA, and they have not answered the first letter yet.
-2. **How much storage the page may take**, and whether it asks before the first 5.76 MB.
+2. ~~How much storage the page may take~~ — **answered by the measurement**: 18 MB held, 473 GB
+   offered, persistence granted. The page reports; it does not ration. Whether it *asks* before the
+   first 5.76 MB download is still worth a word, and the answer is probably yes, once.
 3. **Whether "From the phone" is one playlist or the newest of several.** Replacing it wholesale is
    simplest and is what he described; keeping the last few would let him go back to yesterday's
    queue, and the phone has no equivalent.
