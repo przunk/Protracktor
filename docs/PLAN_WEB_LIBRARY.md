@@ -77,11 +77,24 @@ baseline is the third time in two days that a comparison, not the thing measured
 workable and forty-one is a wait; either way the structure below removes the question rather than
 answering it.
 
-**Still unmeasured, and it is now the only number that matters:** the design in S3 does not write
-half a million small records at all. It writes 43,715 large ones — the same 30 MB in an eleventh of
-the transactions, which is a completely different balance between per-record overhead and payload.
-Extrapolating one from the other would be the guess this page exists to avoid, so the page writes
-the real thing and reports it.
+### And then the shape that matters, measured on the slower of the two
+
+The design in S3 does not write half a million small records at all. It writes 43,715 large ones —
+the same 30 MB in an eleventh of the transactions. The tool writes those, all of them, with
+Modland's real spread:
+
+| | at work, the slower machine |
+|---|---|
+| a record per track | **41 s** |
+| **a record per bucket** | **2.6 s** |
+
+**Sixteen times faster, and better than the arithmetic said.** Dividing the per-track rate by 11.8
+predicted three and a half seconds; the real answer is 2.6, because a larger record amortises the
+per-transaction cost that dominates the small ones. That gap is the whole reason this was measured
+rather than divided.
+
+**So the question in the next section is settled: the index belongs in the browser.** Two and a half
+seconds is not a progress bar, it is a pause — and it is once.
 
 ---
 
@@ -95,7 +108,8 @@ browses with no server involved. It is what the phone does, one layer down.
 **On the server (`serve-web.mjs`).** The Pi already holds the page and the pairing rooms; it could
 hold the index and answer queries. Much less code in the page and instantly fast on a phone.
 
-**Recommendation: in the browser**, and the reason is what the server would become. `serve-web.mjs`
+**Settled: in the browser**, by his measurement above — 2.6 seconds for the whole index — and by
+what the server would otherwise become. `serve-web.mjs`
 is three hundred lines of static files and pairing — small enough that the whole of it is read
 before it is changed. Putting half a million rows and a query language in it makes it a database
 server that has to be deployed, migrated and kept in step with the app's schema, and the project
@@ -175,10 +189,9 @@ So store **a record per bucket**, holding its tracks, keyed by `format/author`. 
 fewer writes and no index at all** — the key *is* the lookup, which is the structure an index would
 have built anyway.
 
-**How much that is worth is being measured rather than divided.** 43,715 records at his per-track
-rate would be three or four seconds, but those records are eleven times larger and IndexedDB is not
-priced per row alone. The tool writes the real buckets — median 3 tracks, the four biggest holding
-3,600 — and reports the seconds and the megabytes on disk.
+**Measured rather than divided, and the measurement was kinder than the division.** 43,715 real
+buckets, Modland's whole content, on the slower of his two machines: **2.6 seconds** against the 41
+a record per track costs. Dividing had predicted three and a half.
 
 Two more things fall out of it rather than being designed:
 
