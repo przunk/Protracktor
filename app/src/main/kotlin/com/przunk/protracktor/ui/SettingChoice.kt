@@ -43,6 +43,7 @@ internal fun <T> SettingChoice(
     modifier: Modifier = Modifier,
     supporting: String? = null,
 ) {
+    val haptics = rememberHaptics()
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         if (supporting != null) {
@@ -57,7 +58,13 @@ internal fun <T> SettingChoice(
             options.forEachIndexed { index, option ->
                 SegmentedButton(
                     selected = option == selected,
-                    onClick = { onSelect(option) },
+                    // **Only when it is a different answer.** Tapping the segment that is already
+                    // lit changes nothing, and a buzz for it would be the phone agreeing with
+                    // itself.
+                    onClick = {
+                        if (option != selected) haptics.toggle(on = true)
+                        onSelect(option)
+                    },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                 ) {
                     Text(

@@ -80,6 +80,7 @@ fun SettingsScreen(
     onClearFavourites: () -> Unit,
     onDeleteReplays: () -> Unit,
 ) {
+    val haptics = rememberHaptics()
     val context = LocalContext.current
     // Asked of the package manager rather than of `BuildConfig`, which this build does not
     // generate — and which would report what was compiled rather than what is installed.
@@ -111,7 +112,10 @@ fun SettingsScreen(
                     )
                 },
                 trailingContent = {
-                    Switch(checked = playAllSubsongs, onCheckedChange = { onToggleAllSubsongs() })
+                    Switch(
+                        checked = playAllSubsongs,
+                        onCheckedChange = { on -> haptics.toggle(on); onToggleAllSubsongs() },
+                    )
                 },
             )
         }
@@ -154,7 +158,10 @@ fun SettingsScreen(
                         )
                     },
                     trailingContent = {
-                        Switch(checked = dynamicColour, onCheckedChange = onDynamicColourChanged)
+                        Switch(
+                            checked = dynamicColour,
+                            onCheckedChange = { on -> haptics.toggle(on); onDynamicColourChanged(on) },
+                        )
                     },
                 )
             }

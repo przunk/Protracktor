@@ -380,6 +380,7 @@ private fun TrackRow(
     onShareLink: (() -> Unit)?,
     dragHandleModifier: Modifier,
 ) {
+    val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
 
     val label = SupportedFormats.labelFor(track.fileNameOrTitle)
@@ -406,7 +407,10 @@ private fun TrackRow(
             // selecting, what matters is which rows are ticked.
             Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
                 if (selecting) {
-                    Checkbox(checked = ticked, onCheckedChange = { onToggle() })
+                    Checkbox(
+                        checked = ticked,
+                        onCheckedChange = { on -> haptics.toggle(on); onToggle() },
+                    )
                 } else if (playing) {
                     Icon(
                         imageVector = PlayerIcons.Play,

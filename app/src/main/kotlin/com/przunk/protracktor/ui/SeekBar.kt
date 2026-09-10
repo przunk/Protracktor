@@ -16,6 +16,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,12 +55,35 @@ fun SeekBar(
     val shown = (scrubbing ?: positionSeconds.toFloat()).coerceIn(0f, range)
     val interaction = remember { MutableInteractionSource() }
 
+    // **"Taki haptic żebym czuł że go trzymam"** (owner, 2026-09-10). Three parts, and all three
+    // are needed for that sentence to be true: a firm one when the thumb is taken hold of, a very
+    // light one per notch while it moves, and the gesture's own end when it is let go.
+    //
+    // The notches are a fixed count across the bar rather than a fixed number of seconds, so a
+    // ninety-second chiptune and a twenty-minute SID feel the same under the thumb. Without them
+    // this would fire on every pixel of movement — a continuous rattle, not a texture.
+    val haptics = rememberHaptics()
+    var notch by remember { mutableIntStateOf(-1) }
+
     Slider(
         value = shown,
-        onValueChange = { scrubbing = it },
+        onValueChange = { value ->
+            val step = (value / range * SEEK_NOTCHES).toInt()
+            if (scrubbing == null) {
+                haptics.grab()
+                // Adopted rather than compared, so taking hold is one buzz and not two.
+                notch = step
+            } else if (step != notch) {
+                notch = step
+                haptics.scrub()
+            }
+            scrubbing = value
+        },
         onValueChangeFinished = {
             scrubbing?.let { onSeek(it.toDouble()) }
             scrubbing = null
+            notch = -1
+            haptics.gestureEnd()
         },
         valueRange = 0f..range,
         enabled = enabled,
@@ -120,3 +144,11 @@ fun SeekBar(
  * still draws 4dp thick — this is the target around it, not the thing you see.
  */
 private val COMPACT_TOUCH_HEIGHT = 48.dp
+
+/**
+ * How many notches the thumb passes from one end of the bar to the other.
+ *
+ * Forty is a thumb's width of travel per notch on a phone-sized bar — often enough to feel like a
+ * surface rather than a series of events, rare enough that a slow drag does not become a rattle.
+ */
+private const val SEEK_NOTCHES = 40

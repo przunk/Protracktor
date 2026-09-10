@@ -15,6 +15,50 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A31. Haptics on the seven places he named — DONE 2026-09-10
+
+*Owner, 2026-09-10, after feeling what A8 had built and finding it too sparse.* Four asked for
+plainly, three offered as an "accent" — his word — and all seven built.
+
+**This overturns A8's closing rule**, which forbade haptics on anything with a visible result. What
+survives of that rule is its reason: haptics everywhere is noise, and noise is what makes somebody
+turn the setting off system-wide, at which point the useful ones go too. So the answer is not "no",
+it is **weight** — the buzzes that carry information a finger cannot otherwise get keep the firm
+effects, and the ones he asked for as accents get the lightest the platform has.
+
+The vocabulary in `ui/Haptics.kt` grew from three to eight, each with a fallback because `minSdk`
+is 29 and the interesting constants arrived in API 30 and 34:
+
+| | effect (API 34 / 30 / 29) | where |
+|---|---|---|
+| `press()` | `CONFIRM` / `CONFIRM` / `KEYBOARD_TAP` | indexing arrows, the replay row, the pairing camera, play-pause, next, previous |
+| `toggle(on)` | `TOGGLE_ON`,`TOGGLE_OFF` / `CONTEXT_CLICK` | shuffle, repeat, the two Settings switches, the segmented pickers, the selection checkboxes |
+| `grab()` | `DRAG_START` / `GESTURE_START` / `LONG_PRESS` | taking hold of the seek thumb |
+| `scrub()` | `SEGMENT_FREQUENT_TICK` / `CLOCK_TICK` | each notch while dragging it |
+| `transition()` | `CLOCK_TICK` | arriving at another view, another folder |
+| `tick()` | `SEGMENT_TICK` / `CONTEXT_CLICK` | a row that actually changed places *(fallback strengthened from `CLOCK_TICK`: this says a thing happened, and on an older phone the old one was faint enough to be missed under a moving thumb)* |
+
+**Three decisions worth keeping.**
+
+1. **Navigation is watched, not called.** `HapticOnChange(key) { … }` fires when a destination
+   changes and never on first composition. Views are switched from a dozen sites — three buttons,
+   two Back handlers, a link arriving, a scan finishing, Random starting — and a call at each is a
+   list that goes one short the moment somebody adds a route. The destination is the fact.
+2. **Only when something actually changed.** Tapping the segment that is already lit, or a row that
+   does not move, buzzes nothing. A phone agreeing with itself is not feedback.
+3. **Repeat has three states and two of them are lit.** `ToggleControl` takes `activeAfter` rather
+   than assuming `!active`, or the off → all → one → off cycle would tell the finger "you turned it
+   off" in the middle of turning it up.
+
+**The one to watch is `transition()`** — it fires on every level of every descent and every Back,
+making it much the most frequent haptic in the app. It is the lightest effect there is and one line
+to remove if it wears out its welcome.
+
+**Not covered, and deliberately**: choosing a subsong in the strip. He did not ask for it, and it is
+the obvious next candidate rather than a gap.
+
+None of this has a unit test. It is `View.performHapticFeedback`, so it is checked with a thumb.
+
 ## A1. ~~Search results need the path too, and a way to hear a track first~~ — DONE 2026-09-02
 
 
@@ -242,8 +286,13 @@ would have been useful. So the list is short on purpose:
   that failed.
 - **Swipe past the snackbar's dismiss threshold** — it already fades; a tick says "let go now".
 
-And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
-result. The screen already answered.
+~~And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
+result. The screen already answered.~~
+
+**The owner reversed this on 2026-09-10 — see A31.** He asked for haptics on the transport, on
+moving between views and folders, and on holding the seek bar: exactly the list this paragraph
+ruled out. He is the one holding the phone; this was written from the armchair. The reasoning
+behind the rule survives as *weight* rather than as a ban, which A31 sets out.
 
 **Implementation notes.** Compose's `LocalHapticFeedback` offers only `LongPress` and
 `TextHandleMove`, which is thin. The richer constants live on `View.performHapticFeedback` —

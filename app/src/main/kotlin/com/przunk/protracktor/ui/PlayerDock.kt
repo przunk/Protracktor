@@ -66,6 +66,7 @@ fun PlayerDock(
     onRepeat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = rememberHaptics()
     val loaded = state.current
     val expandLabel = stringResource(R.string.a11y_expand_player)
     Surface(
@@ -235,7 +236,7 @@ fun PlayerDock(
                 )
 
                 FilledIconButton(
-                    onClick = onPlayPause,
+                    onClick = { haptics.press(); onPlayPause() },
                     // A transient track counts: pressing Random with an empty playlist must still
                     // give you something you can pause.
                     enabled = state.loadingTrack || state.current != null || state.queue.tracks.isNotEmpty(),
@@ -284,6 +285,8 @@ fun PlayerDock(
                     ),
                     enabled = state.queue.tracks.isNotEmpty(),
                     onClick = onRepeat,
+                    // off → all → one → off: only the last step turns the light out.
+                    activeAfter = state.queue.repeat != RepeatMode.ONE,
                 )
             }
         }
@@ -297,9 +300,18 @@ private fun ToggleControl(
     description: String,
     enabled: Boolean,
     onClick: () -> Unit,
+    /**
+     * Whether the control will be lit **after** this press.
+     *
+     * Not `!active`, because repeat has three states and two of them are lit: off → all → one →
+     * off. Guessing the opposite of the current state would tell the finger "you turned it off"
+     * halfway through turning it up. The caller knows the cycle; this does not.
+     */
+    activeAfter: Boolean = !active,
 ) {
+    val haptics = rememberHaptics()
     IconButton(
-        onClick = onClick,
+        onClick = { haptics.toggle(activeAfter); onClick() },
         enabled = enabled,
         modifier = Modifier
             .size(TRANSPORT_TARGET)
@@ -376,7 +388,10 @@ private fun TransportButton(
     val currentClick by rememberUpdatedState(onClick)
     val currentLongClick by rememberUpdatedState(onLongClick)
     val currentLongEnabled by rememberUpdatedState(longClickEnabled)
-    val click = remember { { currentClick() } }
+    // Inside the remembered lambda, not wrapped around it: `combinedClickable` keys its gesture
+    // detector on this identity, and the paragraph above is what happens when that identity moves.
+    // `haptics` is itself remembered on the View, so this stays one stable lambda.
+    val click = remember { { haptics.press(); currentClick() } }
     val longClick = remember {
         {
             if (currentLongEnabled) {

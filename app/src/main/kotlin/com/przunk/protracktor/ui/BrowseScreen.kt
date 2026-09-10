@@ -120,6 +120,23 @@ fun BrowseScreen(
     // at the top (`docs/STATUS.md` C6) while a descent and return does not.
     val scroll = rememberBrowseScroll()
 
+    // **A step through the catalogue, felt** (owner, 2026-09-10). Keyed on where Browse is rather
+    // than on the taps that got it there: descending, Back, "more from this author" and the jump a
+    // search result makes all end up changing these five fields, and a call at each of those sites
+    // would be a list that goes stale the first time a sixth route is added.
+    //
+    // `transition()` is the lightest thing in `Haptics`, on purpose — this fires on every level of
+    // every descent, which is the most frequent haptic in the app by a wide margin.
+    HapticOnChange(
+        listOf(
+            browse.domain,
+            browse.openFolder,
+            browse.openCatalogue?.id,
+            browse.openFormat,
+            browse.openAuthor,
+        )
+    ) { transition() }
+
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
         // **The banner that used to live here is gone** (owner, 2026-09-10): "jest to redundantne
         // i psuje UI (przeskakuje na czas istnienia paska)". It named the running downloads and
@@ -553,6 +570,7 @@ private fun OnlineDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
+    val haptics = rememberHaptics()
     when {
         browse.openAuthor != null -> Selectable(
             browse = browse,
@@ -797,7 +815,8 @@ private fun OnlineDomain(
                         modifier = if (browse.indexing.containsKey(DownloadKeys.REPLAYS)) {
                             Modifier
                         } else {
-                            Modifier.clickable { onDownloadReplays() }
+                            // The same act as an arrow, only the whole row is the button.
+                            Modifier.clickable { haptics.press(); onDownloadReplays() }
                         },
                     )
                 }
@@ -1268,6 +1287,7 @@ private fun BrowseTrackRow(
     onShareFile: () -> Unit,
     onShareLink: (() -> Unit)?,
 ) {
+    val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
 
     ListItem(
@@ -1282,7 +1302,12 @@ private fun BrowseTrackRow(
         // under the very finger that had just long-pressed one.
         leadingContent = {
             Box(modifier = Modifier.size(CHECKBOX_SLOT), contentAlignment = Alignment.Center) {
-                if (selecting) Checkbox(checked = ticked, onCheckedChange = { onToggle() })
+                if (selecting) {
+                    Checkbox(
+                        checked = ticked,
+                        onCheckedChange = { on -> haptics.toggle(on); onToggle() },
+                    )
+                }
             }
         },
         // Nothing here while selecting: a menu on a row you are ticking is a second meaning for a
@@ -1369,6 +1394,7 @@ private fun BrowseTrackRow(
  */
 @Composable
 private fun DownloadAction(downloading: Boolean, description: String, onClick: () -> Unit) {
+    val haptics = rememberHaptics()
     Box(
         modifier = Modifier.width(84.dp).height(48.dp),
         contentAlignment = Alignment.Center,
@@ -1389,7 +1415,10 @@ private fun DownloadAction(downloading: Boolean, description: String, onClick: (
                 )
             }
         } else {
-            IconButton(onClick = onClick) {
+            // **The one button in this app whose result is a spinner.** Everything it starts is
+            // minutes of work over the network, and until the first byte arrives the screen has
+            // nothing to show but the spinner it swapped in. The buzz is the receipt.
+            IconButton(onClick = { haptics.press(); onClick() }) {
                 Icon(PlayerIcons.Download, description)
             }
         }
