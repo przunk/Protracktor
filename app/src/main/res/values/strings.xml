@@ -161,7 +161,7 @@
     <string name="domain_search_title">Search</string>
     <string name="domain_search_body">Across your library and the catalogues</string>
 
-    <string name="browse_indexing">Indexing %1$s…</string>
+    <string name="browse_indexing_short">indexing…</string>
     <string name="browse_unknown">(unknown)</string>
     <string name="catalogue_stale">Indexed with older decoders — re-index to see formats added since.</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>

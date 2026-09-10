@@ -99,7 +99,7 @@
     <string name="domain_search_title">Szukaj</string>
     <string name="domain_search_body">W bibliotece i w katalogach</string>
 
-    <string name="browse_indexing">Indeksowanie %1$s…</string>
+    <string name="browse_indexing_short">indeksowanie…</string>
     <string name="browse_unknown">(nieznany)</string>
     <string name="catalogue_stale">Zaindeksowany starszymi dekoderami — przeindeksuj, żeby zobaczyć formaty dodane później.</string>
     <string name="catalogue_not_indexed">Brak indeksu — dotknij strzałki, aby go pobrać</string>
