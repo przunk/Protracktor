@@ -138,5 +138,10 @@ object QueueLink {
      * and because a link is opened on the machine that runs the browser: from the phone's point of
      * view `localhost` is meaningless, and from the desktop's it is exactly right.
      */
-    const val DEFAULT_BASE = "http://localhost:8173/src"
+    // **With the trailing slash**, and that is not cosmetic. `linkTo` trims and re-adds one, so a
+    // generated link is the same either way -- but this string is what Settings shows, and it is
+    // therefore the shape somebody copies when they type their own address. Ending it at `/src`
+    // taught the pattern that broke: a page opened there loads at an address its own relative URLs
+    // are wrong from (`docs/STATUS.md` C29).
+    const val DEFAULT_BASE = "http://localhost:8173/src/"
 }

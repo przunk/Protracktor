@@ -126,4 +126,15 @@ if [ -d web/node_modules/jsdom ]; then
     echo "🖥  $page_checks page checks passed"
 fi
 
+# The server, over a real socket. Needs no npm -- it is node and the standard library -- and it is
+# separate from the page checks because the bug it exists for (`docs/STATUS.md` C29) lives in the
+# address a file is served at, which jsdom never sees.
+if ! server_output=$(node scripts/check-server.mjs 2>&1); then
+    echo "❌ Server checks failed:"
+    echo "$server_output" | sed 's/^/   /'
+    exit 1
+fi
+server_checks=$(echo "$server_output" | grep -c '✓' || true)
+echo "🌐 $server_checks server checks passed"
+
 echo "✅ $total tests passed in $(($(date +%s) - started_at))s$cached"
