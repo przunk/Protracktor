@@ -98,7 +98,13 @@ window.fetch = async (url, options) => {
   return { ok: true, arrayBuffer: async () => new ArrayBuffer(64) };
 };
 
+// **`rules.js` is inlined rather than stripped.** Everything else the page imports is a browser's
+// business, but the rules are the page's own code -- dropping the import would leave the functions
+// undefined and the checks would test a page that cannot run, which is the failure this harness has
+// already shipped once (the worklet stub that ignored transfers, `docs/review-round-8.md` R1).
+const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -551,6 +557,53 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
   check(wanted.size > 0, `${wanted.size} engine functions are called`);
   check(missing.length === 0,
     missing.length ? `the built engine is missing: ${missing.join(', ')}` : 'and the built engine exports all of them');
+}
+
+// --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
+//
+// **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`
+// drives, so a rule changed on one side and not the other fails on the side that did not change.
+// C23, C30 and C31 were each one screen doing what the other did not, and all three were found by
+// the owner rather than here.
+{
+  console.log('\nshared rules:');
+  const rules = await import(path.resolve('web/src/rules.js'));
+  const text = fs.readFileSync('docs/rules/queue-cases.tsv', 'utf8');
+
+  const groups = {};
+  let group = null;
+  let header = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    if (line.startsWith('[') && line.endsWith(']')) { group = line.slice(1, -1); header = null; groups[group] = []; continue; }
+    const cells = raw.split('\t').map((c) => c.trim());
+    if (!header) { header = cells; continue; }
+    groups[group].push(Object.fromEntries(header.map((h, i) => [h, cells[i]])));
+  }
+
+  const number = (v) => (v === '-' ? null : Number(v));
+  const yes = (v) => v === 'yes';
+  // A group that is empty is an agreement that quietly stopped being one -- the failure this whole
+  // file exists to prevent, wearing a green tick.
+  const each = (name, run) => {
+    const list = groups[name] ?? [];
+    check(list.length > 0, `'${name}' has cases to check`);
+    let wrong = 0;
+    for (const c of list) if (!run(c)) { wrong++; console.log(`    ✗ ${c.why}`); }
+    check(wrong === 0, `${name}: ${list.length} cases from the shared file`);
+  };
+
+  each('next', (c) =>
+    rules.nextIndex({ tracks: +c.tracks, at: +c.at, repeat: c.repeat }) === number(c.expect));
+  each('previous', (c) =>
+    rules.previousIndex({ tracks: +c.tracks, at: +c.at, repeat: c.repeat }) === number(c.expect));
+  each('subsong', (c) =>
+    rules.nextSubsong({ playAll: yes(c.playAll), subsong: +c.subsong, count: +c.count,
+                        repeatOne: yes(c.repeatOne) }) === number(c.expect));
+  each('playFromEnd', (c) =>
+    rules.shouldRestart({ engineFinished: yes(c.engineFinished), position: +c.position,
+                          duration: +c.duration }) === yes(c.expect));
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

@@ -3,6 +3,8 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
+import { nextIndex, previousIndex, nextSubsong, shouldRestart } from './rules.js';
+
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -268,8 +270,12 @@ function onWorklet(message) {
     case 'ended': {
       // **The file before the queue**, when the listener asked for that. Repeat-one is checked
       // first and deliberately: it means "this tune again", and a file's other tunes are not it.
-      if (repeat !== 'one' && playAllSubsongs && currentSubsong + 1 < subsongCount) {
-        node?.port.postMessage({ type: 'subsong', index: currentSubsong + 1 });
+      const inside = nextSubsong({
+        playAll: playAllSubsongs, subsong: currentSubsong,
+        count: subsongCount, repeatOne: repeat === 'one',
+      });
+      if (inside != null) {
+        node?.port.postMessage({ type: 'subsong', index: inside });
         break;
       }
       // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
@@ -809,7 +815,14 @@ function seek(from, step) {
   return null;
 }
 
-/** What `next` should play, or null at the end. */
+/**
+ * What `next` should play, or null at the end.
+ *
+ * **The rule comes from `rules.js`, which `docs/rules/queue-cases.tsv` checks against the phone's.**
+ * What is left here is the two things that cannot be shared: the shuffled order, whose permutation
+ * differs between the two runtimes by construction, and stepping over rows that stayed on the phone,
+ * which only this side has.
+ */
 function afterCurrent() {
   if (repeat === 'one' && index >= 0) return index;
   if (shuffle) {
@@ -818,9 +831,10 @@ function afterCurrent() {
     if (repeat === 'all') { reshuffle(null); return order[0] ?? null; }
     return null;
   }
-  const ahead = seek(index + 1, 1);
-  if (ahead != null) return ahead;
-  return repeat === 'all' ? seek(0, 1) : null;
+  const candidate = nextIndex({ tracks: queue.length, at: index, repeat });
+  if (candidate == null) return null;
+  const ahead = seek(candidate, 1);
+  return ahead ?? (repeat === 'all' ? seek(0, 1) : null);
 }
 
 /** What `previous` should play, or null. */
@@ -831,9 +845,10 @@ function beforeCurrent() {
     const at = history.lastIndexOf(index);
     return at > 0 ? history[at - 1] : null;
   }
-  const back = seek(index - 1, -1);
-  if (back != null) return back;
-  return repeat === 'all' && queue.length ? seek(queue.length - 1, -1) : null;
+  const candidate = previousIndex({ tracks: queue.length, at: index, repeat });
+  if (candidate == null) return null;
+  const back = seek(candidate, -1);
+  return back ?? (repeat === 'all' && queue.length ? seek(queue.length - 1, -1) : null);
 }
 
 /**
@@ -913,7 +928,7 @@ $('playpause').onclick = async () => {
   }
   // **It reached the end and nothing followed, so this press means "again".** The bytes are still
   // in the worklet, so it rewinds rather than fetching them a second time.
-  if (finished) {
+  if (shouldRestart({ engineFinished: finished, position: 0, duration: 0 })) {
     finished = false;
     if (context?.state === 'suspended') await context.resume();
     node?.port.postMessage({ type: 'rewind' });

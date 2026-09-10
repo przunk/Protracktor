@@ -147,9 +147,23 @@ alike. Neither implementation is the reference; the file is. A rule that changes
 not the other fails on the side that did not change, which is what C23, C30 and C31 all needed and
 none of them had.
 
-- **Deliverable:** `docs/rules/queue-cases.json`, read by `PlayQueueTest` and by `check-page.mjs`.
-- **Checked by:** deleting a rule from either side and watching the other side's suite go red.
-- **Size:** small, and it pays for itself on the second bug.
+**Built 2026-09-10.** `docs/rules/queue-cases.tsv` — 22 cases in four groups — read by
+`RuleCasesTest.kt` and by `check-page.mjs`, and the page's own `web/src/rules.js` is what the second
+one drives, so the rules are not merely checked but **used**.
+
+**Tab-separated rather than JSON**, because a unit test has only a stub of `org.json` and would have
+failed by finding nothing rather than by saying so. Everything else this project reads is a TSV
+anyway.
+
+**Verified by breaking it**: one expected value changed in the file, and both suites went red — the
+page check naming the case, `RuleCasesTest` naming the group. That is the mechanism, and a mechanism
+nobody has watched work is not one.
+
+Two things are deliberately not in the file. **Shuffle**, because the two sides shuffle with
+different generators and agreeing on a permutation would mean sharing an implementation. And
+**stepping back through a file's tunes**, because on the phone that rule is still inline in
+`PlaybackController.previous()` rather than extracted — C31's other half, and the next thing to pull
+out.
 
 ### S2. Storage, and playlists that survive a reload
 
