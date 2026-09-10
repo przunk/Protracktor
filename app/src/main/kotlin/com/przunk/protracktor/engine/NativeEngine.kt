@@ -110,10 +110,14 @@ object NativeEngine {
         fun restart(): Boolean = nativeRestart(handle())
 
         /**
-         * Moves the playing position.
+         * Moves the playing position. **Not from the main thread.**
          *
-         * Takes effect on the audio thread's next pass rather than immediately, so the position
-         * read straight afterwards may still be the old one.
+         * It used to be handed to the audio callback and applied there, which returned at once and
+         * was the wrong trade: a seek is unbounded work for every emulator behind this — they
+         * reach a position by running forward to it — and doing it inside a callback with a
+         * millisecond budget starved the stream and froze the app. It is now done on the calling
+         * thread while the callback plays silence, so this call blocks for as long as the decoder
+         * needs, which for a long tune is seconds.
          */
         fun seekTo(seconds: Double) = nativeSeek(handle(), seconds)
 

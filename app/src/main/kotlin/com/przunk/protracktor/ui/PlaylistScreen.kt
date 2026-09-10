@@ -157,6 +157,20 @@ internal fun PlaylistBody(
      * is exactly the defect `docs/STATUS.md` C23, C30 and C31 each were.
      */
     reorderable: Boolean = true,
+    /**
+     * What identifies a row to the list.
+     *
+     * **The track id everywhere but Random.** A playlist cannot hold the same file twice —
+     * `appendTracks` drops a candidate that `sameFileAs` anything already there — so the id is
+     * unique and reordering keeps a row's identity while it moves.
+     *
+     * The Random record has no such rule. The dice draws from a pool that may be small: forty
+     * favourites cannot fill an evening without repeating, and the read-ahead falls back to
+     * allowing one rather than stopping dead. Two rows with one key is not a cosmetic problem —
+     * `LazyColumn` throws on it — so that view keys by position, which it can afford, having
+     * nothing to reorder.
+     */
+    keyOf: (Int, TrackRef) -> Any = { _, track -> track.id },
 ) {
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
@@ -189,7 +203,7 @@ internal fun PlaylistBody(
 
     Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
-        itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
+        itemsIndexed(tracks, key = keyOf) { index, track ->
             TrackRow(
                 index = index,
                 track = track,

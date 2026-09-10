@@ -1511,10 +1511,29 @@ public:
 
     bool canSeek() const override { return durationSeconds_ > 0; }
 
+    /**
+     * Moves the position, **never past the end**.
+     *
+     * `Renderer::SetPosition` reaches a position by running the emulation forward to it, and asked
+     * for one the tune never reaches it runs forward for ever. Measured on the host, 2026-09-10:
+     * seeking to 90% of a 192-second PT3 returns at once, before or after a first render, and
+     * seeking to `duration + 30s` had not returned after four minutes. On the phone that came back
+     * as `SIGSEGV` inside `AYMRenderer::SetPosition` -- a runaway walking off the end of its own
+     * state rather than a null anybody passed in.
+     *
+     * The owner reached it the obvious way: dragging the slider to the far right. The bar's own
+     * maximum *is* the duration, and a float that rounds a hair over it is enough, so this needed
+     * no unusual gesture to find.
+     *
+     * Half a second short of the end, not a hair short: the last position the renderer can actually
+     * reach is the last one it emits, which is a frame before the end rather than the end itself.
+     */
     void seek(double seconds) override {
+        const double limit = durationSeconds_ > 0.5 ? durationSeconds_ - 0.5 : 0.0;
+        const double target = std::clamp(seconds, 0.0, limit);
         renderer_->SetPosition(
-            Time::AtMillisecond() + Time::Milliseconds(static_cast<uint_t>(seconds * 1000.0)));
-        rendered_ = static_cast<std::size_t>(std::max(0.0, seconds) * kSampleRate);
+            Time::AtMillisecond() + Time::Milliseconds(static_cast<uint_t>(target * 1000.0)));
+        rendered_ = static_cast<std::size_t>(target * kSampleRate);
         chunk_ = Sound::Chunk();
         chunkPos_ = 0;
         ended_ = false;

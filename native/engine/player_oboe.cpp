@@ -70,19 +70,25 @@ public:
      * So when nothing is running, the switch happens here and the stream is started again.
      */
     void requestSubsong(int index) {
-        if (running()) {
-            pendingSubsong_.store(index, std::memory_order_release);
-            return;
-        }
-        stop();
-        if (backend_->selectSubsong(index)) {
+        // **Under the lock, on this thread, running or not.** Switching tune is the same unbounded
+        // work as a seek -- several backends reach tune five by running through four -- and it was
+        // handed to the callback for the same reason and with the same consequence. The callback
+        // plays silence while this holds the lock, which is a gap of a buffer or two where the old
+        // way risked a stalled stream and a frozen app.
+        const bool wasRunning = running();
+        {
+            const std::lock_guard<std::mutex> held(decoderGuard_);
+            if (!backend_->selectSubsong(index)) return;
             finished_.store(false, std::memory_order_release);
-            // Stopped, so this thread owns the backend and may ask it directly.
             publishPosition();
             publishDuration();
             publishDescribe();
-            start();
         }
+        // A finished tune has no callback left to hand anything to: `onAudioReady` returned `Stop`
+        // and Oboe will not enter it again, so the stream needs starting for the new tune to be
+        // heard. Every subsong of a finished file otherwise "played" instantly and in silence,
+        // which is what the owner saw before this was understood.
+        if (!wasRunning) start();
     }
 
     /**
@@ -93,31 +99,34 @@ public:
      */
     bool running() const { return stream_ != nullptr && !isFinished(); }
 
-    // Not locked, and deliberately so. Oboe's stop() blocks until an in-flight callback returns, and
-    // every control path below stops the stream before touching the backend -- so the callback is
-    // the only reader while it runs, and never concurrent with a writer. A mutex here would be a
-    // lock on the audio thread bought for nothing.
+    /**
+     * **The decoder is locked, and the audio thread never waits for it.**
+     *
+     * This used to hand a seek to the callback through an atomic, on the reasoning that the
+     * callback is the only thread touching the decoder so the race disappears. The race did
+     * disappear. What replaced it was worse: `Backend::seek` is **unbounded work** for every
+     * emulator here -- a SID, an SC68, a GME and libopenmpt all reach a position by running
+     * forward to it -- so seeking near the end of a five-minute tune meant emulating five minutes
+     * of a 6502 inside a callback with a few milliseconds to answer in. The stream starves, goes
+     * silent and stops advancing, and the next `close()` blocks waiting for that callback to
+     * return, which on `Dispatchers.Main.immediate` is a frozen app. The owner hit exactly that
+     * twice on 2026-09-10, both times by dragging the seek bar while a tune was still loading.
+     *
+     * So the work moved off this thread and a `try_lock` guards what is left. Failing to take the
+     * lock is not an error and never blocks: it means somebody is seeking, and a buffer of silence
+     * is the correct thing to play while they are. `try_lock` on an uncontended mutex is an atomic
+     * compare-and-swap, which is what the old design was paying anyway.
+     */
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *stream, void *audioData,
                                           int32_t numFrames) override {
         auto *out = static_cast<float *>(audioData);
 
-        // A seek requested from another thread is applied HERE rather than there. A decoder cannot
-        // be moved under a read in progress, and the audio callback is the only thread that reads
-        // it, so handing the request over and letting the callback act on it removes the race
-        // without stopping the stream and clicking.
-        const int subsong = pendingSubsong_.exchange(-1, std::memory_order_acq_rel);
-        if (subsong >= 0 && backend_->selectSubsong(subsong)) {
-            finished_.store(false, std::memory_order_release);
-            // A different tune is a different length **and a different name**, and this is the
-            // thread allowed to ask for either.
-            publishDuration();
-            publishDescribe();
-        }
-
-        const double seekTo = pendingSeek_.exchange(NO_SEEK, std::memory_order_acq_rel);
-        if (seekTo >= 0.0 && backend_->canSeek()) {
-            backend_->seek(seekTo);
-            finished_.store(false, std::memory_order_release);
+        std::unique_lock<std::mutex> held(decoderGuard_, std::try_to_lock);
+        if (!held.owns_lock()) {
+            // Somebody has the decoder. Silence for this buffer, and the stream stays alive --
+            // which is the whole point, because a stream that stalls is what wedged the app.
+            std::memset(out, 0, static_cast<std::size_t>(numFrames) * 2 * sizeof(float));
+            return oboe::DataCallbackResult::Continue;
         }
 
         const std::size_t rendered =
@@ -187,15 +196,13 @@ public:
     void seek(double seconds) {
         if (!backend_->canSeek()) return;
         const double target = seconds < 0.0 ? 0.0 : seconds;
-        // `running()`, not `stream_`: seeking a tune that has just ended would otherwise store a
-        // request for a callback that will never run again. Same trap as the subsong switch above.
-        if (running()) {
-            pendingSeek_.store(target, std::memory_order_release);
-        } else {
-            backend_->seek(target);
-            finished_.store(false, std::memory_order_release);
-            publishPosition();
-        }
+        // **On this thread, holding the lock**, however long it takes. The callback finds the lock
+        // taken and plays silence meanwhile; nothing waits on anything that has a deadline. The
+        // caller must not be the main thread -- `NativeEngine.Track.seekTo` says so and keeps to it.
+        const std::lock_guard<std::mutex> held(decoderGuard_);
+        backend_->seek(target);
+        finished_.store(false, std::memory_order_release);
+        publishPosition();
     }
 
     /** Back to the beginning and playing. For repeat-one, and for replaying a finished tune. */
@@ -331,15 +338,17 @@ private:
     std::atomic<bool> finished_{false};
     std::atomic<float> gain_{1.0f};
 
-    // -1 means "nothing requested". A sentinel rather than a second flag: one atomic exchange in
-    // the callback both reads the request and clears it.
-    static constexpr double NO_SEEK = -1.0;
-    std::atomic<double> pendingSeek_{NO_SEEK};
+    /**
+     * Held by whoever is touching the decoder. **The audio callback only ever tries.**
+     *
+     * The two requests that used to be queued for the callback -- a seek and a subsong switch --
+     * are done by their caller under this instead, because both are unbounded and the callback is
+     * not allowed to be. Nothing with a deadline ever blocks on it.
+     */
+    mutable std::mutex decoderGuard_;
     /** Published by the audio thread so the poll never touches a backend that is rendering. */
     std::atomic<double> position_{0.0};
     std::atomic<double> duration_{0.0};
-    /** -1 means nothing pending. Applied by the audio callback, like a seek. */
-    std::atomic<int> pendingSubsong_{-1};
 };
 
 Player *asPlayer(jlong handle) { return reinterpret_cast<Player *>(handle); }
