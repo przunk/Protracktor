@@ -131,7 +131,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -678,11 +678,22 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
   }
 
   const { records, tracks, buckets, formats } = archive.toRecords(index);
+  // Stored, then searched, through a real IndexedDB -- because search reads by key range and a
+  // range query is the one thing a plain object could not have stood in for.
+  const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+  await store.clear('modland:');
+  await store.putAll(records, 100);
   check(tracks === 6, 'every row becomes a track');
   check(buckets === 5, 'and rows sharing a format and author share a bucket');
   check(formats === 4, 'with the formats counted');
-  // 5 buckets + 4 author lists + 1 format list.
-  check(records.length === 10, 'stored as buckets and the three lists that index them, nothing else');
+  // 5 buckets + 4 author lists + 1 format list + the title shards, one per two-character start.
+  const titleShards = records.filter((r) => r.key.startsWith('modland:titles:'));
+  check(records.length === 10 + titleShards.length, 'stored as buckets, the lists, and nothing else');
+  check(titleShards.length === 5,
+    'titles are sharded by their first two characters — el, an, !!, to, x (one is a single letter, padded)');
+  const bang = titleShards.find((r) => r.key === 'modland:titles:!!');
+  check(bang?.entries[0][0] === '!!uu !! !!.it',
+    'and a shard carries the title, its format and its author — no second lookup to play a hit');
 
   const formatList = records.find((r) => r.key === 'modland:formats').formats.map((f) => f.name);
   check(formatList.join(',') === 'Coop,Impulsetracker,Octamed,Protracker', 'formats come out sorted');
@@ -690,11 +701,45 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
   check(fourMat.tracks.length === 2, 'a bucket holds its own tracks');
   check(fourMat.tracks[0].s === 20000, 'with the size the index gave');
 
-  // The whole point of the shape: no track ever needs a second lookup to become playable.
-  await archive.downloadModland; // referenced so an unused-export change is noticed here too
   check(archive.urlFor('Coop', 'Alice & Bob', 'together.mod')
         === 'https://modland.com/pub/modules/Coop/Alice%20%26%20Bob/together.mod',
     'and an author with a space and an ampersand still addresses');
+
+  console.log('\nsearch:');
+  const { hits } = await archive.searchTitles('elysium');
+  check(hits.length === 2, 'a title is found wherever it lives');
+  check(hits.every((h) => h.url.startsWith('https://modland.com/')), 'and comes back playable');
+  // The reason every shard is read rather than one: a person typing a name means the middle of it
+  // as often as the start.
+  const inside = await archive.searchTitles('gether');
+  check(inside.hits[0]?.name === 'together.mod', 'including from the middle of a name');
+  check((await archive.searchTitles('!!uu')).hits[0]?.name === '!!uu !! !!.it',
+    'and a name that is mostly punctuation');
+  check((await archive.searchTitles('e')).hits.length === 0, 'one letter is not a search');
+
+  const people = await archive.searchAuthors('mat');
+  check(people.length === 1 && people[0].author === '4-Mat', 'an author is found by part of a name');
+  check(people[0].format === 'Protracker' && people[0].count === 2,
+    'with where they are filed and how much is there');
+}
+
+// --- browsing must not rewrite what the phone sent (owner, 2026-09-10) --------------------------
+if (window.__api) {
+  console.log('\nbrowsing and the phone\'s playlist:');
+  // The phone's list is showing, which is where a fresh page starts.
+  window.__api.receive({
+    queue: [{ url: 'https://modland.com/pub/modules/Protracker/4-Mat/one.mod', title: 'One' }],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  const before = $('title').textContent;
+
+  window.__api.playFromBrowse(
+    [{ url: 'https://modland.com/pub/modules/Protracker/Other/x.mod', name: 'X' }], 0);
+  await new Promise((r) => setTimeout(r, 20));
+  check($('title').textContent === before, 'playing from Browse leaves the phone\'s queue alone');
+  check($('browsenote').textContent.includes('Switch to one of your own'),
+    'and says what to do instead of doing nothing');
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------

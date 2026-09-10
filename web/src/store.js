@@ -131,6 +131,30 @@ export const catalogue = {
     }
   },
 
+  /**
+   * Every record whose key starts with [prefix].
+   *
+   * A cursor over a key range, which is the one thing IndexedDB does well without an index —
+   * because the key *is* the order. Used by search, which reads all 1,663 title shards and would
+   * otherwise have to guess which two-character keys exist.
+   */
+  async byPrefix(prefix) {
+    const db = await open();
+    return new Promise((resolve, reject) => {
+      const found = [];
+      const transaction = db.transaction('catalogue', 'readonly');
+      const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`);
+      transaction.objectStore('catalogue').openCursor(range).onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) return;
+        found.push(cursor.value);
+        cursor.continue();
+      };
+      transaction.oncomplete = () => resolve(found);
+      transaction.onerror = () => reject(transaction.error);
+    });
+  },
+
   /** Everything belonging to one archive, for a re-index or a delete. */
   async clear(prefix) {
     const db = await open();

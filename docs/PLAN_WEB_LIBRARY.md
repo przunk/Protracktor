@@ -174,7 +174,12 @@ Stores: `playlists`, `tracks`, `history`, `settings`, and later `catalogue`. Ask
 `navigator.storage.persist()` — without it a browser may evict the lot under pressure, which for a
 playlist somebody built by hand is data loss rather than a cache miss.
 
-**Playlists as the owner described them:**
+**Playlists as the owner described them**, and the rule he added on 2026-09-10 after using it —
+*"te funkcje powinny działać tylko jak przełączę listę"*: **browsing never writes into the phone's
+playlist.** Pressing a tune found by browsing while that one is showing does nothing but say to
+switch or make one. A page that quietly rewrote it would make the two devices disagree about what
+he built.
+
 
 - **"From the phone"** — always present, cannot be deleted, and **replaced wholesale** by each
   handoff. It is a view of the last thing the phone sent, not a document.
@@ -280,15 +285,27 @@ compared when one is read, and a mismatch says so rather than showing a short li
 - **Still to be checked by him:** the download itself, on the Pi.
 - **Not built yet:** ASMA, whose index *is* its 20 MB archive.
 
-### S4. Search
+### S4. Search — **built 2026-09-10**
 
-The phone searches title and author with `LIKE` over an indexed table. IndexedDB has no `LIKE`, so
-this is a **prefix** search over a lower-cased key, or a cursor scan with a cap. Prefix is what an
-index can do quickly and is most of what a person types; substring needs a scan and should say so by
-being slower rather than by being absent.
+A field at the top of Browse, matching **authors and tunes together**, because a person typing a
+name does not know which they are after. It says how long it took, in milliseconds, rather than
+showing a spinner.
 
-**`SearchResults.kt` is pure and its rules — scope, per-source caps, what the empty query means —
-are already extracted.** This is the first place S1's shared cases earn their keep.
+**Titles are sharded by their first two characters** — 1,663 records instead of 43,715 — and
+**every shard is read**. That is the design and not a shortcut: an index on the first characters
+answers a prefix instantly and never finds `elysium` inside `the elysium remix`, which is what
+somebody typing a name expects. Reading a twenty-sixth of the index to get a substring search is
+what the sharding was for.
+
+Measured while choosing it: the shards cost **433 ms** to build and about **29 MB**, against 473 GB
+offered. Each entry carries the title, its format and its author, so a hit is playable with no
+second lookup.
+
+**Authors are matched by scanning the 339 format lists**, which hold all 43,715 names between them
+and cost nothing.
+
+*`SearchResults.kt`'s rules — scope, per-source caps — are not shared yet. There is one source here,
+so there is nothing to scope; when ASMA arrives that changes and the cases file is where it goes.*
 
 ### S5. Random
 

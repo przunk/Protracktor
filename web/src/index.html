@@ -416,6 +416,12 @@
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
   /* Browsing: one list, four levels, and a head that says where you are. */
+  #browsesearch {
+    width: 100%; box-sizing: border-box; margin: 6px 0 8px;
+    background: var(--surface-container); color: var(--on-surface);
+    border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
+    padding: 10px 16px; font: inherit;
+  }
   .browsehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -626,6 +632,7 @@
         <h2 id="browsetitle">Browse</h2>
         <button class="plain" data-close>Close</button>
       </div>
+      <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
       <p class="note" id="browsenote"></p>
       <ol id="browselist"></ol>
     </div>
@@ -636,6 +643,7 @@
       <h2>Playlists</h2>
       <ol id="playlistlist"></ol>
       <div class="row">
+        <button class="filled" id="newlist">New empty playlist</button>
         <button class="filled" id="saveas">Save this queue as…</button>
         <button class="plain" data-close>Close</button>
       </div>

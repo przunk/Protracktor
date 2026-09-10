@@ -1086,12 +1086,27 @@ async function renderBrowse() {
   tracks.forEach((track, i) => {
     // **The whole author becomes the queue**, which is what the phone does: a person who opened a
     // folder and pressed a tune meant that folder, not that one file.
-    row(track.name, Math.round(track.size / 1024), () => {
-      setQueue(tracks, i);
-      showPanel(null);
-      playAt(i);
-    });
+    row(track.name, Math.round(track.size / 1024), () => playFromBrowse(tracks, i));
   });
+}
+
+/**
+ * Plays something found by browsing — into a playlist of the browser's own.
+ *
+ * **Never into "From the phone"** (owner, 2026-09-10). That one is a view of the last thing the
+ * phone sent, and a page that quietly rewrites it makes the two devices disagree about what he
+ * built. So browsing asks him to switch or make one, once, rather than deciding for him.
+ */
+function playFromBrowse(tracks, at) {
+  if (activePlaylist === PHONE) {
+    $('browsenote').textContent =
+      'This would replace what the phone sent. Switch to one of your own playlists first, or make '
+      + 'an empty one — the name at the top left opens them.';
+    return;
+  }
+  setQueue(tracks, at);
+  showPanel(null);
+  playAt(at);
 }
 
 async function downloadIndex() {
@@ -1116,6 +1131,62 @@ async function downloadIndex() {
   }
 }
 
+/**
+ * Searching the index.
+ *
+ * Authors and tunes together, because a person typing a name does not know which they are after.
+ * Debounced, and it says how long it took: reading 1,663 title shards is a real amount of work and
+ * a number is more honest than a spinner.
+ */
+let searchTimer = null;
+async function runSearch(query) {
+  const list = $('browselist');
+  const note = $('browsenote');
+  if (query.trim().length < 2) { browsePath = []; await renderBrowse(); return; }
+  if (!(await archive.meta())?.tracks) { note.textContent = 'Download the index first.'; return; }
+
+  note.textContent = 'searching…';
+  const started = performance.now();
+  const [people, { hits, capped }] = await Promise.all([
+    archive.searchAuthors(query), archive.searchTitles(query),
+  ]);
+  list.replaceChildren();
+
+  const row = (name, right, onclick) => {
+    const li = document.createElement('li');
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = name;
+    const side = document.createElement('div');
+    side.className = 'bcount';
+    side.textContent = right;
+    li.append(label, side);
+    li.onclick = onclick;
+    list.append(li);
+  };
+
+  for (const { format, author, count } of people) {
+    row(`${author}`, `${format} · ${count}`, async () => {
+      browsePath = ['modland', format, author];
+      $('browsesearch').value = '';
+      await renderBrowse();
+    });
+  }
+  hits.forEach((track, i) => row(track.name, track.meta.replace('Modland/', ''),
+                                 () => playFromBrowse(hits, i)));
+
+  const ms = Math.round(performance.now() - started);
+  note.textContent = (people.length + hits.length)
+    ? `${people.length} authors and ${hits.length}${capped ? '+' : ''} tunes, in ${ms} ms.`
+    : `nothing matched, in ${ms} ms.`;
+}
+
+$('browsesearch').oninput = () => {
+  clearTimeout(searchTimer);
+  const query = $('browsesearch').value;
+  searchTimer = setTimeout(() => runSearch(query), 250);
+};
+
 $('tab-browse').onclick = async () => {
   if (!$('browse').hidden) { showPanel(null); return; }
   browsePath = [];
@@ -1127,6 +1198,21 @@ $('browseback').onclick = async () => { browsePath = browsePath.slice(0, -1); aw
 $('playlistchip').onclick = () => {
   renderPlaylists();
   showPanel($('playlists').hidden ? 'playlists' : null);
+};
+
+$('newlist').onclick = async () => {
+  const name = prompt('Call it what?', 'New playlist');
+  if (!name) return;
+  const id = `p${Date.now().toString(36)}`;
+  await playlists.save({ id, name, tracks: [], index: 0 });
+  activePlaylist = id;
+  $('playlistname').textContent = name;
+  await settings.set('active', id);
+  // Emptied on purpose: the point of a new list is to put something in it, and leaving the previous
+  // queue on screen under a new name is the opposite of empty.
+  setQueue([], 0);
+  renderPlaylists();
+  status(`${name} — empty. Browse for something to put in it.`);
 };
 
 $('saveas').onclick = async () => {
