@@ -415,6 +415,36 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C35. ~~A Random tune ending skipped several picks at once~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10, Random on Atari ST:* "jak skończyło grać enchanted land, to od razu przeskoczyło
+po wszystkich (pojawiły się na liście) i zaczął grać zynaps" — five picks on the record at once, the
+sixth playing. Seen again on the 37th pick of a later session, then refusing to reproduce.
+
+**A race between the end-of-track poll and the Random advance.** The poll runs every 200 ms and
+skips only while `playing` is false or a load is running. The playlist and search paths call
+`load()` before returning, so the next tick finds a load in progress. Random did not: `randomNext`
+moves the cursor and publishes the row, then waits on the database for the next read-ahead pick,
+and only after that does `playTransient` clear `playing` and start the load. Every tick inside that
+wait found the same finished track, still "playing", and advanced again — one more row each time.
+
+Every detail of the report follows from that:
+
+- **only at a natural end** — a pressed next leaves a track that is not finished, so the poll never
+  sees one;
+- **five, then two, then none** — the count is the query's duration divided by 200 ms;
+- **worse under a platform filter** — `format IN (…)` cannot use an index, so the scope is scanned
+  and sorted whole (`docs/review-round-8.md` R7 predicted the cost, not this consequence);
+- **gone on the second try** — SQLite's page cache was warm by then.
+
+**Fixed by clearing `playing` before the advance, not after.** The poll's own comment already stated
+the rule — *"every skip sets `playing = false` before the load starts"* — and this path broke it.
+Not reproduced on the host: it needs the phone's database under the phone's timing, so the device
+is the test.
+
+The query itself is still unmeasured and still sorts the scope per pick. That is R7, and it is now
+known to be more than a performance question.
+
 ### C34. ~~The index download choked on the zip's own tail~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, on the first try at the Modland index:* "unexpected input after the end of
