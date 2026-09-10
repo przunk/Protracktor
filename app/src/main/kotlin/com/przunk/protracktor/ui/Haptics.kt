@@ -7,16 +7,10 @@ import android.os.Build
 import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalView
 
 /**
@@ -179,46 +173,5 @@ fun HapticOnChange(key: Any?, effect: Haptics.() -> Unit) {
             return@LaunchedEffect
         }
         haptics.effect()
-    }
-}
-
-/**
- * A notch per row as a long list is dragged past.
- *
- * *"Czy na przesuwanie listy też sugerujesz dać coś super delikatnego ale rzadko po przewinięciu
- * 1 wiersza"* (owner, 2026-09-10) — yes, with one condition, and the condition is the whole reason
- * this is a function rather than three lines at each list.
- *
- * **Only while the finger is down.** A fling across fifty rows fires fifty times, and fifty of
- * anything inside a second is not texture, it is a phone going off in your hand. So the drag is
- * watched as well as the position: rows clicking past under the thumb, then silence while the list
- * coasts. That is also what the hand expects — a list nobody is touching is not something you
- * should be able to feel.
- *
- * `scrub()` because it is the lightest thing here, and this is the most frequent haptic in the app
- * by some distance the moment anyone opens a long author list.
- */
-@Composable
-fun HapticOnRowScroll(listState: LazyListState) {
-    val haptics = rememberHaptics()
-
-    var dragging by remember { mutableStateOf(false) }
-    LaunchedEffect(listState) {
-        listState.interactionSource.interactions.collect { interaction ->
-            when (interaction) {
-                is DragInteraction.Start -> dragging = true
-                is DragInteraction.Stop, is DragInteraction.Cancel -> dragging = false
-            }
-        }
-    }
-
-    // `derivedStateOf` so this reads the index rather than recomposing on every pixel of scroll:
-    // `firstVisibleItemScrollOffset` changes constantly and the row number does not.
-    val row by remember(listState) { derivedStateOf { listState.firstVisibleItemIndex } }
-    var previous by remember { mutableIntStateOf(row) }
-    LaunchedEffect(row) {
-        if (row == previous) return@LaunchedEffect
-        previous = row
-        if (dragging) haptics.scrub()
     }
 }

@@ -179,9 +179,6 @@ private fun PlaylistBody(
     val haptics = rememberHaptics()
 
     Box(modifier = modifier.fillMaxSize()) {
-    // A notch per row while the finger is on the list, silence while it coasts.
-    HapticOnRowScroll(listState)
-
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
             TrackRow(

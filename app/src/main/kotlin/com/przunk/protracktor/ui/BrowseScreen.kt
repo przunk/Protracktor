@@ -591,8 +591,6 @@ private fun OnlineDomain(
             } else {
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                // A notch per row while the finger is on the list, silence while it coasts.
-                HapticOnRowScroll(listState)
                 RestorePosition(scroll, key, listState, browse.groups.map { it.name }, browse.loading)
 
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -621,8 +619,6 @@ private fun OnlineDomain(
         else -> {
         val key = browse.levelKey()
         val listState = scroll.stateFor(key)
-        // A notch per row while the finger is on the list, silence while it coasts.
-        HapticOnRowScroll(listState)
         RestorePosition(scroll, key, listState, browse.catalogues.map { it.id }, browse.loading)
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             items(browse.catalogues, key = { it.id }) { catalogue ->
@@ -1164,8 +1160,6 @@ private fun Selectable(
                 }
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
-                // A notch per row while the finger is on the list, silence while it coasts.
-                HapticOnRowScroll(listState)
                 RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
                 Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {

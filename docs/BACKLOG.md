@@ -53,44 +53,28 @@ przyciski funkcyjne save revert…, track song"*, and a question about the list:
 - **Long press that starts a selection** — `gestureEnd()`. A8 owed this since 2026-09-01.
 - **Subsongs** — `pick()`, and nothing at all for the one already playing.
 
-### A31a. A notch per row while a list is dragged
+### A31a. ~~A notch per row while a list is dragged~~ — BUILT AND REMOVED, same day
 
-*His question, and worth writing down because the answer has a condition:* "czy na przesuwanie listy
-też sugerujesz dać coś super delikatnego ale «rzadko» po przewinięciu 1 wiersza".
+*His question:* "czy na przesuwanie listy też sugerujesz dać coś super delikatnego ale «rzadko» po
+przewinięciu 1 wiersza". *His answer, once he had felt it:* **"wywal to przewijanie bo nie jest
+fajne."**
 
-Yes — **but only while the finger is down**. A fling across fifty rows would fire fifty times, and
-fifty of anything inside a second is not texture, it is a phone going off in your hand. So
-`HapticOnRowScroll` watches the drag as well as the position: rows clicking past under the thumb,
-then silence while the list coasts. That is also what the hand expects, since a list nobody is
-touching is not a thing you should be able to feel.
+Built as `HapticOnRowScroll`: one `scrub()` per row, and only while the finger was down, so a fling
+across fifty rows would not fire fifty times. The care went into the right problem and the thing
+was still wrong — a list is a surface you read, and giving it a texture makes reading it feel like
+operating it.
 
-On the three long lists in Browse and on the playlist. Not on the sheets — a switcher with four
-rows in it does not scroll far enough to have a texture.
+**Kept here rather than deleted** because the idea is an obvious one to have twice. It was tried, it
+worked as designed, and as designed it was not nice. The divisor this entry once proposed as the
+fix would not have saved it; less of something unpleasant is not pleasant.
 
-**This is the one most likely to be wrong**, and it is wrong in a way that only a thumb can settle:
-a notch per row may be too often on a fast drag through six hundred authors. If so the fix is a
-divisor, not a deletion.
+### A31b. The follow-track button had none
 
-**Three decisions worth keeping.**
+*Owner, 2026-09-10: "dodaj też do «follow current track» bo dalej nie ma".*
 
-1. **Navigation is watched, not called.** `HapticOnChange(key) { … }` fires when a destination
-   changes and never on first composition. Views are switched from a dozen sites — three buttons,
-   two Back handlers, a link arriving, a scan finishing, Random starting — and a call at each is a
-   list that goes one short the moment somebody adds a route. The destination is the fact.
-2. **Only when something actually changed.** Tapping the segment that is already lit, or a row that
-   does not move, buzzes nothing. A phone agreeing with itself is not feedback.
-3. **Repeat has three states and two of them are lit.** `ToggleControl` takes `activeAfter` rather
-   than assuming `!active`, or the off → all → one → off cycle would tell the finger "you turned it
-   off" in the middle of turning it up.
-
-**The one to watch is `transition()`** — it fires on every level of every descent and every Back,
-making it much the most frequent haptic in the app. It is the lightest effect there is and one line
-to remove if it wears out its welcome.
-
-**Not covered, and deliberately**: choosing a subsong in the strip. He did not ask for it, and it is
-the obvious next candidate rather than a gap.
-
-None of this has a unit test. It is `View.performHapticFeedback`, so it is checked with a thumb.
+`toggle(on = true)` on the press, and deliberately **nothing when following switches off** — that
+happens because the user dragged the list, and a buzz mid-scroll would be answering a gesture
+nobody aimed at the button. On is a press; off is a side effect of looking somewhere else.
 
 ## A1. ~~Search results need the path too, and a way to hear a track first~~ — DONE 2026-09-02
 
