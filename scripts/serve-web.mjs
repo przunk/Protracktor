@@ -16,8 +16,13 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 
-const root = path.resolve('web');
+// **From this file's own location, not from the caller's working directory.** `run.sh` happens to
+// `cd` first and so does `serve-web.sh`, so `path.resolve('web')` worked -- as long as nobody ever
+// started the server any other way. A systemd unit with the wrong `WorkingDirectory`, or a plain
+// `node ~/protracktor-web/scripts/serve-web.mjs`, made every single request 404 with no clue why.
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'web');
 
 /**
  * Settings, from a file beside the page rather than from flags.
@@ -240,6 +245,21 @@ http.createServer((request, response) => {
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
   fs.readFile(file, (error, data) => {
     if (error) {
+      // **Said out loud**, because the one place this gets diagnosed is a log file on a machine in
+      // another room. A missing asset is otherwise invisible from here and, in the browser, wears a
+      // disguise -- see below.
+      console.log(`404 ${url.pathname}`);
+      const known = types[path.extname(file)];
+      if (known) {
+        // **Typed as what was asked for, and empty.** A 404 served as `text/plain` is what Firefox
+        // reports as *"Loading module … was blocked because of a disallowed MIME type
+        // (text/plain)"* -- which sends whoever reads it looking for a MIME bug in a server that
+        // does not have one. The owner lost an evening to exactly that sentence on 2026-09-10. With
+        // the right type and no body the browser says 404, which is what happened.
+        response.writeHead(404, { 'content-type': known }).end();
+        return;
+      }
+      // A path a person typed, rather than one a browser fetched. Those get the friendly page.
       response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
         .end(`not here: ${url.pathname}\n\nthe player is at http://localhost:${port}/src/\n`);
       return;

@@ -415,6 +415,37 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C29. ~~A missing file wore a MIME disguise, and the server's root followed the caller~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10, from the browser at work: the QR button did nothing, and Firefox said* "Loading
+module from …app.js was blocked because of a disallowed MIME type (text/plain)".
+
+**That sentence is about the wrong thing, and it is our fault.** `text/javascript` is what
+`serve-web.mjs` sends for a `.js` file that exists — measured. `text/plain` is what it sent for one
+that **does not**: the friendly 404 page. So a missing file was reported by the browser as a MIME
+problem in a server that does not have one, and the obvious place to look was the obvious wrong
+place.
+
+It also explains the symptom exactly. With `app.js` blocked the page still *looks* right — every
+piece of that markup is static — and every control is inert. "The QR icon does not work" is what a
+dead `app.js` looks like from the outside.
+
+**Two things changed, and only the first is a fix for what he met:**
+
+- **A missing asset now answers with its own content type and no body**, so the browser says 404.
+  A path with no known extension — what a person types — keeps the friendly page. And every 404 is
+  logged, because the one place this gets diagnosed is a log file on a machine in another room.
+- **`root` comes from the script's own location** rather than `path.resolve('web')`, which followed
+  the caller's working directory. `run.sh` and `serve-web.sh` both `cd` first, so this worked — as
+  long as nobody ever started it any other way. A systemd unit with the wrong `WorkingDirectory`
+  makes every request 404, and that failure is now impossible rather than merely unlikely. Verified
+  by starting the server from `/tmp`.
+
+**What it does not settle.** Whether his own 404 was a missing file, a stale tunnel hostname, or
+something at his workplace between him and the Pi. `curl -sS -D - -o /dev/null <base>/src/app.js`
+answers it in one line, and `~/server.log` on the Pi now names the path if the request ever got
+there.
+
 ### C28. ~~A line about one track stayed under the next~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10: **"podpis 'Tune 2 of 2' zostaje podczas odtwarzania kolejnych tracków"**.*
