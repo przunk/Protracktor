@@ -15,6 +15,30 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A32. Whether ZXTune goes into the browser's engine — **the owner's decision**
+
+*Raised by `GOAL.md` round 8 on 2026-09-11, which was told to record it rather than decide it.*
+
+The web engine is built with `-DPROTRACKTOR_WITH_ZXTUNE=OFF` (`scripts/build-web-engine.sh`), and
+since round 8 item 1 the page indexes only what it can play, so the absence is now a number on the
+screen: **26,537 of Modland's tunes play on the phone and not in the browser** — `pt3` 7,376,
+`pt2` 6,284, `ym` 4,977, `stc` 3,639 and the rest of the Spectrum's formats.
+
+Why it is off, from the comment it replaced in `web/src/app.js`: ZXTune does not build under
+Emscripten as it stands, and making it build means patching a library `docs/ARCHITECTURE.md` §3
+says this project does not fork (`docs/PLAN_WEB.md` §14).
+
+So the question is not "switch it on" but **one of**:
+
+- keep it off, and the browser stays a player for everything but the Spectrum — said plainly in
+  Browse, which is what item 1 delivers;
+- carry a patch to ZXTune for the wasm build, against the no-fork rule, and measure what it adds to
+  the engine's 2.6 MB;
+- find the smaller piece — `ym` and `vtx` are register dumps rather than trackers, 5,856 tunes
+  between them, and their decoder may be separable from the rest.
+
+Nothing is built until he chooses.
+
 ## A31. Haptics on the seven places he named — DONE 2026-09-10
 
 *Owner, 2026-09-10, after feeling what A8 had built and finding it too sparse.* Four asked for

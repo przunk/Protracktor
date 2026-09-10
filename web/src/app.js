@@ -203,14 +203,31 @@ let engineReady = false;
 /** Which decoders this build carries. An index is only as good as the set that filtered it. */
 let engineFingerprint = '';
 
+/**
+ * Resolves once the engine has said which decoders it has.
+ *
+ * **Downloading the index needs that answer**, and `start()` does not wait for it: it builds the
+ * worklet and returns, and the hello arrives later. Filtering before it arrived would keep every
+ * Spectrum row, because nothing would yet say ZXTune is missing. Bounded, because an engine that
+ * never compiles would otherwise leave the download waiting in silence.
+ */
+const readyWaiters = [];
+function whenEngineReady(ms = 30000) {
+  if (engineReady) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('the engine did not start')), ms);
+    readyWaiters.push(() => { clearTimeout(timer); resolve(); });
+  });
+}
+
 function onWorklet(message) {
   switch (message.type) {
     case 'ready':
       engineReady = true;
       // Recorded when an index is built and compared when one is read, exactly as the phone does.
       engineFingerprint = message.backends;
-      engineHasZxTune = !message.backends.includes('zxtune:none');
       status(`engine ready — ${message.backends}`);
+      readyWaiters.splice(0).forEach((resolve) => resolve());
       break;
     case 'opened': {
       loading = null;
@@ -335,25 +352,40 @@ function describeLine(fields) {
 const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher', 'album', 'comment'];
 
 /**
- * The ZX Spectrum formats, which the browser build does not carry.
+ * `web/src/formats.tsv`: every name a catalogue index keeps, and which decoders open it.
  *
- * **ZXTune is compiled out of the web engine and that is deliberate**: it does not build under
- * Emscripten, and patching it means forking a library `ARCHITECTURE` §3 says we do not fork
- * (`docs/PLAN_WEB.md` §14). The cost is 3,639 Modland files of 516,107 — and a refusal that says
- * "no decoder claimed the file", which is true and useless when the phone plays it perfectly.
+ * **The same list the phone indexes by** (`SupportedFormatsFileTest` holds the two together), read
+ * once and kept. It replaced a hand-kept set of Spectrum extensions that had drifted -- it lacked
+ * `ym` and `vtx`, listed `psm`, which libopenmpt plays, and put the cost at 3,639 files where the
+ * measurement says 26,537 (`GOAL.md` round 8, item 1).
  */
-const ZX_FORMATS = new Set(['pt3', 'pt2', 'pt1', 'stc', 'st1', 'st3', 'asc', 'as0', 'sqt', 'stp', 'psm', 'ftc', 'gtr']);
+let formatTable = null;
+let formatTableLoading = null;
+
+function formatsReady() {
+  formatTableLoading ??= fetch('./formats.tsv')
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.text();
+    })
+    .then((text) => (formatTable = archive.parseFormats(text)))
+    // Forgotten on failure, so the next caller asks again instead of inheriting a rejection for ever.
+    .catch((error) => { formatTableLoading = null; throw error; });
+  return formatTableLoading;
+}
+
+/** What the engine in hand cannot open, from its own fingerprint. */
+function absentHere() { return archive.absentDecoders(engineFingerprint); }
 
 function explainFailure(reason, entry) {
-  const extension = (entry?.name ?? '').toLowerCase().split('.').pop();
-  if (ZX_FORMATS.has(extension) && !engineHasZxTune) {
-    return `${entry.name}: the ZX Spectrum decoder is not in the browser build — this one plays on the phone`;
+  // A name the phone keeps and this engine cannot open: say so, rather than the decoder's own
+  // "nothing claimed it", which is true and useless when the phone plays the file perfectly.
+  if (formatTable && entry?.name && archive.onPhone(formatTable)(entry.name)
+      && !archive.playable(formatTable, absentHere())(entry.name)) {
+    return `${entry.name}: this browser build has no decoder for this format — it plays on the phone`;
   }
   return reason;
 }
-
-/** Read from the engine's own fingerprint rather than assumed, so a future build that has it is believed. */
-let engineHasZxTune = false;
 
 /**
  * Now Playing, before anything has played.
@@ -1082,13 +1114,19 @@ async function renderBrowse() {
       row('Download the Modland index', null, downloadIndex);
       return;
     }
-    // An index is filtered by what the decoders could play when it was built, so one built by an
-    // older set is missing files and looks empty rather than out of date -- the phone learnt this
-    // by losing 60,572 C64 tunes.
-    if (held.fingerprint && engineFingerprint && held.fingerprint !== engineFingerprint) {
-      note.textContent = 'This index was built by a different set of decoders, so it is missing '
-        + 'whatever arrived since. Downloading it again will find them.';
-    }
+    // An index is filtered by the list and the decoders it was built with, so one built by another
+    // set holds the wrong rows and looks current -- the phone learnt this by losing 60,572 C64
+    // tunes. One built before the page filtered at all has no `total`, and holds every row Modland
+    // lists, including a third this browser cannot open.
+    const table = await formatsReady().catch(() => null);
+    const stale = held.total === undefined
+      || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
+    note.textContent = [
+      stale ? 'This index was built for a different set of formats than this page now plays. '
+        + 'Downloading it again (5.76 MB) brings it in line: it keeps what this browser can play '
+        + 'and leaves out what it cannot.' : '',
+      holding(held),
+    ].filter(Boolean).join(' ');
     row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
       browsePath = ['modland'];
       await renderBrowse();
@@ -1148,21 +1186,45 @@ function playFromBrowse(tracks, at) {
   playAt(at);
 }
 
+/**
+ * How much of Modland this browser holds, and why the rest is not here, in one sentence.
+ *
+ * *"Trzeba to będzie jawnie napisać w wyszukiwaniu/browse"* (owner, 2026-09-10) -- the condition
+ * on which leaving anything out was agreed at all. Silent for an index that predates the counts.
+ */
+function holding({ tracks, total, phoneOnly } = {}) {
+  if (!total || !tracks) return '';
+  const rest = total - tracks;
+  if (rest <= 0) return `This browser holds all ${total.toLocaleString()} of Modland's tunes.`;
+  return `This browser holds ${tracks.toLocaleString()} of Modland's ${total.toLocaleString()} tunes. `
+    + `The other ${rest.toLocaleString()} are in formats it cannot play`
+    + (phoneOnly ? ` — ${phoneOnly.toLocaleString()} of them play on the phone.` : '.');
+}
+
 async function downloadIndex() {
   const note = $('browsenote');
   $('browselist').replaceChildren();
   try {
+    // Which formats to keep depends on which decoders this engine has, and only the engine can say.
+    // Started here if nothing has played yet -- this is a click, so a browser allows the audio.
+    if (!engineReady) {
+      note.textContent = 'starting the engine, to ask which formats this browser can play…';
+      await start();
+      await whenEngineReady();
+    }
+    const table = await formatsReady();
     const result = await archive.downloadModland({
-      fingerprint: engineFingerprint,
-      // The same question the phone's index asks of every name, so the two hold the same rows.
-      keep: () => true,
+      fingerprint: archive.indexFingerprint(engineFingerprint, table),
+      // The phone's own list, less what this engine cannot open (`web/src/formats.tsv`).
+      keep: archive.playable(table, absentHere()),
+      phone: archive.onPhone(table),
       onProgress: (p) => {
         note.textContent = p.stage === 'storing'
           ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
           : `${p.stage}…`;
       },
     });
-    note.textContent = `${result.tracks.toLocaleString()} tracks in ${result.formats} formats.`;
+    note.textContent = `${result.formats} formats. ${holding(result)}`;
     browsePath = [];
     await renderBrowse();
   } catch (e) {
@@ -1182,7 +1244,8 @@ async function runSearch(query) {
   const list = $('browselist');
   const note = $('browsenote');
   if (query.trim().length < 2) { browsePath = []; await renderBrowse(); return; }
-  if (!(await archive.meta())?.tracks) { note.textContent = 'Download the index first.'; return; }
+  const held = await archive.meta();
+  if (!held?.tracks) { note.textContent = 'Download the index first.'; return; }
 
   note.textContent = 'searching…';
   const started = performance.now();
@@ -1215,9 +1278,13 @@ async function runSearch(query) {
                                  () => playFromBrowse(hits, i)));
 
   const ms = Math.round(performance.now() - started);
+  // Where it looked, every time, so "nothing matched" cannot be read as "Modland has no such tune"
+  // when the tune is in a format this browser does not index.
+  const among = `among the ${held.tracks.toLocaleString()} tunes this browser can play`;
   note.textContent = (people.length + hits.length)
-    ? `${people.length} authors and ${hits.length}${capped ? '+' : ''} tunes, in ${ms} ms.`
-    : `nothing matched, in ${ms} ms.`;
+    ? `${people.length} authors and ${hits.length}${capped ? '+' : ''} tunes ${among}, in ${ms} ms.`
+    : `nothing matched ${among}, in ${ms} ms.`
+      + (held.phoneOnly ? ' Formats it cannot play are not indexed — the phone may have it.' : '');
 }
 
 $('browsesearch').oninput = () => {
@@ -1688,6 +1755,10 @@ pair();
  * what they were doing yesterday, and yesterday must not win. So the restore runs first and the
  * fragment, if there is one, replaces it.
  */
+// Read early so a refusal can be explained with it, and never fatal: without it the page still
+// plays; it only cannot filter an index or say why a file will not open.
+formatsReady().catch(() => {});
+
 (async () => {
   try {
     await makePersistent();

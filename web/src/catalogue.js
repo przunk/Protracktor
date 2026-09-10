@@ -31,6 +31,115 @@ const key = {
   titles: (two) => `${MODLAND}:titles:${two}`,
 };
 
+/**
+ * `web/src/formats.tsv`, read into two maps of name to decoders.
+ *
+ * The file is the list the phone indexes by too (`SupportedFormatsFileTest` holds the two
+ * together), so a page that keeps what this says keeps what the phone keeps -- minus whatever the
+ * engine in hand cannot open.
+ */
+export function parseFormats(text) {
+  const extensions = new Map();
+  const prefixes = new Map();
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const [kind, name, decoders] = line.split('\t');
+    if (!name || !decoders) continue;
+    (kind === 'prefix' ? prefixes : extensions).set(name, decoders.split(','));
+  }
+  return { extensions, prefixes };
+}
+
+/**
+ * The decoders the engine says it does not have.
+ *
+ * **Only what it says.** `pt_backends` appends `zxtune:none` when that decoder is compiled out and
+ * mentions nothing else as missing -- HivelyTracker is in every build and never named. So absence is
+ * read from the fingerprint and never inferred from a name not being there.
+ */
+export function absentDecoders(engineFingerprint) {
+  const absent = new Set();
+  for (const part of String(engineFingerprint ?? '').split(';')) {
+    const [name, version] = part.split(':');
+    if (name && version === 'none') absent.add(name);
+  }
+  return absent;
+}
+
+/**
+ * Which listed name a file is filed under, the phone's way: its extension, or failing that an
+ * Amiga-style prefix (`mod.title`). Mirrors `SupportedFormats.inCatalogueIndex` exactly.
+ */
+function listedAs(table, fileName) {
+  const name = String(fileName).toLowerCase();
+  const dot = name.lastIndexOf('.');
+  const extension = dot >= 0 ? name.slice(dot + 1) : '';
+  if (extension && table.extensions.has(extension)) return table.extensions.get(extension);
+  const first = name.indexOf('.');
+  const prefix = first > 0 ? name.slice(0, first) : '';
+  if (prefix && table.prefixes.has(prefix)) return table.prefixes.get(prefix);
+  return null;
+}
+
+/** Whether the phone would index a name. The page's own question is [playable]. */
+export function onPhone(table) {
+  return (fileName) => listedAs(table, fileName) !== null;
+}
+
+/**
+ * Whether **this** engine can open a name: listed, and at least one of its decoders present.
+ *
+ * *"Nie indeksujmy utworów, których nie zagramy"* (owner, 2026-09-10). The browser build has no
+ * ZXTune, so `pt3`, `ym` and the rest of the Spectrum's formats fall out here -- 26,559 of the rows
+ * the phone keeps.
+ */
+export function playable(table, absent) {
+  return (fileName) => {
+    const decoders = listedAs(table, fileName);
+    return decoders !== null && decoders.some((decoder) => !absent.has(decoder));
+  };
+}
+
+/**
+ * What an index records about the set that filtered it.
+ *
+ * **The engine and the list together**, which is the phone's lesson: recording only the decoders
+ * was half the truth, and on 2026-09-04 five names added to the list left every stored index
+ * missing 5,558 files while it reported itself current. Order-independent; it only has to differ
+ * when either half does.
+ */
+export function indexFingerprint(engineFingerprint, table) {
+  const names = [...table.extensions].map(([n, d]) => `e:${n}=${d.join('+')}`)
+    .concat([...table.prefixes].map(([n, d]) => `p:${n}=${d.join('+')}`))
+    .sort().join(',');
+  let hash = 0;
+  for (let i = 0; i < names.length; i++) hash = (Math.imul(hash, 31) + names.charCodeAt(i)) | 0;
+  return `${engineFingerprint}|names:${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+/**
+ * The index lines worth keeping, and a count of what was left out and why.
+ *
+ * [total] is every tune Modland lists; [phoneOnly] is the part the phone keeps and this engine
+ * cannot open. Both are what lets Browse say plainly how much of Modland is here and why the rest
+ * is not -- the owner's condition for leaving anything out at all.
+ */
+export function filterIndex(text, keep, phone = () => true) {
+  const kept = [];
+  let total = 0;
+  let phoneOnly = 0;
+  for (const line of text.split('\n')) {
+    const tab = line.indexOf('\t');
+    if (tab <= 0) continue;
+    total++;
+    const fileName = line.slice(line.lastIndexOf('/') + 1);
+    if (keep(fileName)) kept.push(line);
+    else if (phone(fileName)) phoneOnly++;
+  }
+  return { text: kept.join('\n'), total, phoneOnly };
+}
+
 /** The shard a title belongs to. Lower-cased and padded, so every title has exactly one. */
 function shardOf(title) { return title.toLowerCase().slice(0, 2).padEnd(2, ' '); }
 
@@ -170,7 +279,9 @@ export function toRecords(text) {
  * one built by an older set is missing files and **looks empty rather than out of date**. The owner
  * lost 60,572 C64 tunes to exactly that once.
  */
-export async function downloadModland({ fingerprint = '', keep = () => true, onProgress = null } = {}) {
+export async function downloadModland({
+  fingerprint = '', keep = () => true, phone = () => true, onProgress = null,
+} = {}) {
   onProgress?.({ stage: 'fetching' });
   const response = await fetch(INDEX_URL);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -180,16 +291,16 @@ export async function downloadModland({ fingerprint = '', keep = () => true, onP
   const text = await unzipOnly(bytes);
 
   onProgress?.({ stage: 'sorting' });
-  const kept = keep === null ? text : text.split('\n')
-    .filter((line) => { const tab = line.indexOf('\t'); return tab > 0 && keep(line.slice(line.lastIndexOf('/') + 1)); })
-    .join('\n');
+  const { text: kept, total, phoneOnly } = filterIndex(text, keep, phone);
   const { records, tracks, buckets, formats } = toRecords(kept);
 
   await catalogue.clear(`${MODLAND}:`);
   await catalogue.putAll(records, 2000, (done, total) => onProgress?.({ stage: 'storing', done, total }));
-  await catalogue.putAll([{ key: key.meta, tracks, buckets, formats, fingerprint, at: Date.now() }]);
-  onProgress?.({ stage: 'done', tracks, buckets, formats });
-  return { tracks, buckets, formats };
+  await catalogue.putAll([{
+    key: key.meta, tracks, total, phoneOnly, buckets, formats, fingerprint, at: Date.now(),
+  }]);
+  onProgress?.({ stage: 'done', tracks, total, phoneOnly, buckets, formats });
+  return { tracks, total, phoneOnly, buckets, formats };
 }
 
 /**

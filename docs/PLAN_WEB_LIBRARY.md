@@ -285,6 +285,49 @@ compared when one is read, and a mismatch says so rather than showing a short li
 - **Still to be checked by him:** the download itself, on the Pi.
 - **Not built yet:** ASMA, whose index *is* its 20 MB archive.
 
+### S3a. Only what the browser can play — **built 2026-09-11**
+
+*The owner, 2026-09-10: "nie indeksujmy utworów, których nie zagramy. Trzeba to będzie jawnie
+napisać w wyszukiwaniu/browse."* `GOAL.md` round 8, item 1.
+
+**The list is one file now**, `web/src/formats.tsv`: every name the phone's index keeps, with the
+decoders that open it. `SupportedFormatsFileTest` fails the moment it and `SupportedFormats`
+disagree. The page keeps a name only if at least one of its decoders is in the engine it is running
+on — and "absent" is read from the engine's fingerprint (`zxtune:none`), never inferred, because
+HivelyTracker is in every build and is never named there.
+
+It replaced a hand-kept set of Spectrum extensions in `app.js` that had drifted: no `ym`, no `vtx`,
+`psm` wrongly included (libopenmpt plays it), and a cost stated as 3,639 files.
+
+Measured with the page's own functions on the real `allmods.txt`, 2026-09-11:
+
+| | kept | dropped, plays on the phone | buckets | formats | records, JSON |
+|---|---|---|---|---|---|
+| before — everything | 516,107 | — | 43,721 | 339 | ~55.6 MB |
+| the phone's engine | 341,831 | 0 | 33,940 | 94 | ~34.5 MB |
+| **the browser's engine** | **315,294** | **26,537** | **32,212** | **90** | **~32.0 MB** |
+
+`toRecords` took 450 ms against 917 ms before, in node. The JSON size is a proxy for bytes on disk,
+not a measurement of them; IndexedDB's own figure and its write time need a browser, and the owner's
+last were 18 MB and 2.6 s for the unfiltered index. **The index should shrink by about two fifths.**
+
+After filtering, the buckets Random draws from (S5): 32,212, median 2, largest 3,615, 41% holding
+one track — a little more skewed than before, which does not change the decision to draw uniformly
+over tracks.
+
+**The fingerprint is the engine's and the list's together**, the phone's lesson from 2026-09-04,
+when five names added to the list left every index missing 5,558 files while it reported itself
+current. An index from before this change has no counts and is treated as stale on sight; Browse
+says why and what a re-download costs before one is started.
+
+**Browse and search say it.** Browse: *"This browser holds 315,294 of Modland's 516,107 tunes. The
+other 200,813 are in formats it cannot play — 26,537 of them play on the phone."* Search reports
+every result as found *among the tunes this browser can play*, so "nothing matched" cannot be read
+as Modland not having it.
+
+Downloading the index now starts the engine first if nothing has played yet, and waits for it to
+say which decoders it has — filtering before that answer would keep every Spectrum row.
+
 ### S4. Search — **built 2026-09-10**
 
 A field at the top of Browse, matching **authors and tunes together**, because a person typing a

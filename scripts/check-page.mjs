@@ -84,6 +84,8 @@ window.fetch = async (url, options) => {
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  // The real list, off disk: the page reads it at load, and a stub of it would test nothing.
+  if (u.endsWith('formats.tsv')) return { ok: true, text: async () => fs.readFileSync('web/src/formats.tsv', 'utf8') };
   posted.push(u);
   if (holdTrackFetch) {
     // A download that never finishes, so the press that calls one off can be tested at all.
@@ -125,7 +127,8 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^import .*$/gm, '')
       .replace(/^export function (\w+)/gm, 'function $1')
       .replace(/^export async function (\w+)/gm, 'async function $1')
-    + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor }; })();')
+    + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
+    + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -779,6 +782,70 @@ if (window.__api) {
     'a pasted address leaves the phone\'s queue alone too');
   check($('pastenote').textContent.includes('Switch to one of your own'), 'and says so');
   $('urls').value = '';
+}
+
+// --- only what this browser can play (GOAL.md round 8, item 1) -----------------------------------
+//
+// The list is the phone's (`SupportedFormatsFileTest` holds them together); what these check is the
+// page's half: that it reads the real file, drops exactly what the engine says it lacks, counts what
+// it drops, and **says so** -- the owner's condition for leaving anything out at all.
+{
+  console.log('\nonly what this browser can play:');
+  const archive = await import(path.resolve('web/src/catalogue.js'));
+  const table = archive.parseFormats(fs.readFileSync('web/src/formats.tsv', 'utf8'));
+  const browser = 'openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;zxtune:none';
+  const phone = browser.replace(';zxtune:none', '');
+
+  check(table.extensions.size > 100 && table.prefixes.size > 10, 'the real list is read, extensions and prefixes');
+  check([...archive.absentDecoders(browser)].join() === 'zxtune', 'the browser engine lacks exactly ZXTune');
+  check(archive.absentDecoders(phone).size === 0 && archive.absentDecoders('').size === 0,
+    'and absence is only ever what the engine says, never inferred from silence');
+
+  const here = archive.playable(table, archive.absentDecoders(browser));
+  const there = archive.playable(table, archive.absentDecoders(phone));
+  check(!here('bomb.pt3') && there('bomb.pt3'), 'a Spectrum tune is dropped without ZXTune and kept with it');
+  check(!here('warhawk remix.ym'), 'and so is a YM, which the old hand-kept list missed');
+  check(here('epic.psm'), 'psm is kept: libopenmpt plays it, whatever ZXTune does');
+  check(here('fast.ahx'), 'ahx is kept: HivelyTracker is never named in the fingerprint and is always there');
+  check(here('mod.title') && here('ELYSIUM.MOD'), 'an Amiga prefix name and an upper-case extension are both kept');
+  check(!here('holiday.jpg') && !archive.onPhone(table)('holiday.jpg'), 'and a photograph is kept by neither');
+  check(archive.onPhone(table)('bomb.pt3'), 'the phone would keep the Spectrum tune the browser drops');
+
+  const f = archive.filterIndex([
+    '1\tProtracker/4-Mat/elysium.mod', '2\tSpectrum/PT3/x/bomb.pt3', '3\tYM/Hippel/zynaps.ym',
+    '4\tPictures/me/holiday.jpg', '', 'no tab here',
+  ].join('\n'), here, archive.onPhone(table));
+  check(f.total === 4, 'every listed tune is counted, and blank or malformed lines are not');
+  check(f.phoneOnly === 2, 'the phone-only ones are counted separately from the unplayable ones');
+  check(f.text === '1\tProtracker/4-Mat/elysium.mod', 'and only what plays is kept');
+
+  check(archive.indexFingerprint(browser, table) !== archive.indexFingerprint(phone, table),
+    'an index built by another engine reads as another index');
+  const grown = archive.parseFormats(fs.readFileSync('web/src/formats.tsv', 'utf8') + '\nextension\tnew\topenmpt\n');
+  check(archive.indexFingerprint(browser, table) !== archive.indexFingerprint(browser, grown),
+    'and so does one built by another list — the phone lost 5,558 files to that once');
+
+  if (window.__api) {
+    const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+    await window.__api.switchTo('p-test');
+
+    await store.putAll([{ key: 'modland:meta', tracks: 315294, total: 516107, phoneOnly: 26537,
+                          formats: 90, buckets: 32212, fingerprint: 'x' }]);
+    await window.__api.renderBrowse();
+    check($('browsenote').textContent.includes("holds 315,294 of Modland's 516,107"),
+      'Browse says how much of Modland this browser holds');
+    check($('browsenote').textContent.includes('26,537 of them play on the phone'),
+      'and that the rest is formats it cannot play, many of which the phone can');
+
+    // An index from before the page filtered at all: no counts, every row.
+    await store.putAll([{ key: 'modland:meta', tracks: 516107, formats: 339, buckets: 43721, fingerprint: 'x' }]);
+    await window.__api.renderBrowse();
+    check($('browsenote').textContent.includes('Downloading it again (5.76 MB)'),
+      'an index built before the filter says why it should be downloaded again, before it is');
+
+    await store.clear('modland:');
+    await window.__api.switchTo('phone');
+  }
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------

@@ -1,0 +1,158 @@
+# SPDX-FileCopyrightText: 2026 Przunk
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The names a catalogue index keeps, and which decoders open each one.
+#
+# **One list, read by both runtimes** (`GOAL.md` round 8, item 1). The phone's copy is
+# `SupportedFormats.extensions` and `SupportedFormats.prefixes`; `SupportedFormatsFileTest` fails the
+# moment the two disagree, so a name added on one side and not the other cannot ship. The page reads
+# this file at run time and keeps a name only if **at least one of its decoders is in the engine it
+# is running on** -- which is how the browser, whose build has no ZXTune, comes to index 61% of
+# Modland rather than all of it.
+#
+# A decoder is judged absent only when the engine says so: `pt_backends` ends in `zxtune:none` when
+# that decoder is compiled out, and names nothing else as missing. HivelyTracker is in every build
+# and is not in the fingerprint at all, so "not mentioned" must mean "present" -- the rule is the
+# engine's absence, never this file's guess.
+#
+# Two names have two decoders, and that is not a mistake: `fc` is the Amiga Future Composer to
+# libopenmpt and an Atari 8-bit format to ASAP; `psm` is Epic MegaGames to libopenmpt and Pro Sound
+# Maker to ZXTune. Either decoder being present keeps the name.
+#
+# kind	name	decoders
+
+# The mainstream trackers
+extension	mod	openmpt
+extension	xm	openmpt
+extension	s3m	openmpt
+extension	it	openmpt
+extension	mptm	openmpt
+
+# Amiga and Atari lineage
+extension	ahx	hively
+extension	hvl	hively
+extension	med	openmpt
+extension	okt	openmpt
+extension	dbm	openmpt
+extension	digi	openmpt
+extension	stk	openmpt
+extension	sfx	openmpt
+extension	ice	openmpt
+extension	gmc	openmpt
+extension	unic	openmpt
+extension	kris	openmpt
+extension	puma	openmpt
+extension	tcb	openmpt
+extension	fc	openmpt,asap
+extension	fc13	openmpt
+extension	fc14	openmpt
+extension	smod	openmpt
+extension	dsym	openmpt
+extension	symmod	openmpt
+extension	ftm	openmpt
+extension	etx	openmpt
+extension	mmd0	openmpt
+extension	mmd1	openmpt
+extension	mmd2	openmpt
+extension	mmd3	openmpt
+extension	okta	openmpt
+extension	gtk	openmpt
+extension	mms	openmpt
+
+# PC and console lineage
+extension	far	openmpt
+extension	gdm	openmpt
+extension	imf	openmpt
+extension	mdl	openmpt
+extension	mtm	openmpt
+extension	ptm	openmpt
+extension	stm	openmpt
+extension	ult	openmpt
+extension	669	openmpt
+extension	amf	openmpt
+extension	ams	openmpt
+extension	dmf	openmpt
+extension	dsm	openmpt
+extension	dtm	openmpt
+extension	j2b	openmpt
+extension	mt2	openmpt
+extension	psm	openmpt,zxtune
+extension	plm	openmpt
+extension	rtm	openmpt
+extension	c67	openmpt
+extension	cba	openmpt
+extension	gt2	openmpt
+extension	mo3	openmpt
+extension	xmf	openmpt
+
+# Atari ST
+extension	sndh	sc68
+extension	sc68	sc68
+
+# Atari 8-bit
+extension	sap	asap
+extension	cmc	asap
+extension	cm3	asap
+extension	cmr	asap
+extension	cms	asap
+extension	dmc	asap
+extension	dlt	asap
+extension	mpt	asap
+extension	mpd	asap
+extension	rmt	asap
+extension	tmc	asap
+extension	tm2	asap
+extension	tm8	asap
+
+# Consoles
+extension	nsf	gme
+extension	nsfe	gme
+extension	spc	gme
+extension	gbs	gme
+extension	vgm	gme
+extension	vgz	gme
+extension	hes	gme
+extension	ay	gme
+extension	kss	gme
+
+# ZX Spectrum -- the rows the browser build cannot open
+extension	pt3	zxtune
+extension	pt2	zxtune
+extension	pt1	zxtune
+extension	stc	zxtune
+extension	st1	zxtune
+extension	st3	zxtune
+extension	asc	zxtune
+extension	as0	zxtune
+extension	sqt	zxtune
+extension	stp	zxtune
+extension	ftc	zxtune
+extension	gtr	zxtune
+extension	ym	zxtune
+extension	vtx	zxtune
+
+# Commodore 64
+extension	sid	sidplayfp
+extension	psid	sidplayfp
+extension	rsid	sidplayfp
+
+# Containers libopenmpt unpacks itself
+extension	mmcmp	openmpt
+extension	pp20	openmpt
+extension	xpk	openmpt
+extension	umx	openmpt
+
+# Filename prefixes, the Amiga way: `mod.title` rather than `title.mod`
+prefix	ahx	hively
+prefix	hvl	hively
+prefix	mod	openmpt
+prefix	med	openmpt
+prefix	okt	openmpt
+prefix	dbm	openmpt
+prefix	digi	openmpt
+prefix	stk	openmpt
+prefix	sfx	openmpt
+prefix	ice	openmpt
+prefix	fc	openmpt,asap
+prefix	smod	openmpt
+prefix	sndh	sc68
