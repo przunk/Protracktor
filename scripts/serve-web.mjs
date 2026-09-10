@@ -69,6 +69,8 @@ const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json',
+  // The list of formats the page indexes (`web/src/formats.tsv`), read by the page at run time.
+  '.tsv': 'text/tab-separated-values; charset=utf-8',
 };
 
 /**

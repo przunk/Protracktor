@@ -588,7 +588,9 @@ Browse shut while "From the phone" is showing (S4a).
 
 ## The list
 
-- [ ] **1. Index only what the browser can play, and say so**
+- [x] **1. Index only what the browser can play, and say so** *(done 2026-09-11: 315,294 of
+      516,107 kept, 26,537 phone-only; list in `web/src/formats.tsv`, held to the phone by
+      `SupportedFormatsFileTest`; not yet seen in a browser)*
       *The owner, 2026-09-10: "nie indeksujmy utworów, których nie zagramy. Trzeba to będzie jawnie
       napisać w wyszukiwaniu/browse."*
 

@@ -72,6 +72,14 @@ try {
         (script.headers.get('content-type') ?? '').startsWith('text/javascript'),
     'and its module as JavaScript');
 
+  // The page reads its format list at load and filters the whole index through it, so a server
+  // that answered it with the wrong type -- or not at all -- would leave every format "unplayable".
+  const list = await fetch(`${base}/src/formats.tsv`);
+  check(list.status === 200
+        && (list.headers.get('content-type') ?? '').startsWith('text/tab-separated-values')
+        && (await list.text()).includes('extension\tmod\topenmpt'),
+    'the format list is served, as text, with the phone\'s names in it');
+
   // A missing asset must say "missing", not "wrong type" -- the browser's MIME sentence is what
   // sent the diagnosis into the wrong server.
   const gone = await fetch(`${base}/src/nothing-here.js`);
