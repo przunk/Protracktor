@@ -436,6 +436,9 @@
   #browselist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
   #browselist .bname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #browselist .bcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
+  /* The tune that is playing, marked the way the playlist marks it: one list, one look. */
+  #browselist li.playing { background: color-mix(in srgb, var(--primary) 16%, transparent); }
+  #browselist li.playing .bname { color: var(--primary); }
 
   /* The playlist sheet: a list of names, what is in each, and what may be done to it. */
   #playlistlist { list-style: none; margin: 0 0 16px; padding: 0; max-height: 46vh; overflow-y: auto; }
