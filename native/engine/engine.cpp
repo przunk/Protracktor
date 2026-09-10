@@ -119,6 +119,12 @@ public:
 
     int subsongCount() const override { return static_cast<int>(module_->get_num_subsongs()); }
 
+    // **Answered rather than defaulted**, which is `docs/STATUS.md` C30. `Backend::currentSubsong`
+    // returns 0 unless a backend says otherwise, and only two of eight did -- so the web player,
+    // which trusts this to know where it is, thought every file was on its first tune for ever and
+    // `next` played the second one again on every press.
+    int currentSubsong() const override { return static_cast<int>(module_->get_selected_subsong()); }
+
     bool selectSubsong(int index) override {
         if (index < 0 || index >= subsongCount()) return false;
         // Throws for an out-of-range subsong, which the check above prevents -- but a corrupted
@@ -359,6 +365,11 @@ public:
         return info_.tracks > 0 ? info_.tracks : 1;
     }
 
+    /** sc68 counts from one and the interface from zero, so this is the same conversion back. */
+    int currentSubsong() const override {
+        return std::max(0, current_.load(std::memory_order_acquire) - 1);
+    }
+
     /** sc68 counts its tracks from one; the interface counts from zero. Converted here, once. */
     bool selectSubsong(int index) override {
         if (index < 0 || index >= subsongCount()) return false;
@@ -582,6 +593,10 @@ public:
     int preferredSampleRate() const override { return kSampleRate; }
 
     int subsongCount() const override { return ASAPInfo_GetSongs(info_); }
+
+    // Not always zero even before anything is chosen: a SAP names its own default song and this
+    // opens there.
+    int currentSubsong() const override { return song_; }
 
     bool selectSubsong(int index) override {
         if (index < 0 || index >= subsongCount()) return false;
@@ -930,6 +945,8 @@ public:
 
     int subsongCount() const override { return info_ ? static_cast<int>(info_->songs()) : 1; }
 
+    int currentSubsong() const override { return song_; }
+
     /**
      * libsidplayfp selects on the *tune* and the engine has to be handed it again.
      *
@@ -944,6 +961,7 @@ public:
         if (!engine_.load(&tune_)) return false;
         engine_.initMixer(false);
         info_ = tune_.getInfo();
+        song_ = index;
         spare_.clear();
         spareRead_ = 0;
         rendered_ = 0;
@@ -987,6 +1005,7 @@ private:
     SIDLiteBuilder builder_;
     sidplayfp engine_;
     const SidTuneInfo *info_ = nullptr;
+    int song_ = 0;
     std::vector<short> scratch_;
     std::vector<short> spare_;
     std::size_t spareRead_ = 0;

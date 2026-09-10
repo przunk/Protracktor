@@ -415,6 +415,58 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C31. ~~Back left the file, and a long press meant the opposite of the phone's~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10: **"back nie cofa podutworu tylko plik na web"**.*
+
+**Half the job, done in C23.** `next` was taught to walk the tunes inside a file before moving the
+queue; `previous` was not, so on a `.sndh` back left the file whatever the switch said. The phone has
+done both since subsongs existed — `PlaybackController.previous()` steps back a subsong when
+`playAllSubsongs` and there is one behind.
+
+**And the long press was backwards, which is worse.** On the phone `ui/PlayerDock.kt` binds a long
+click to `onNextFile` and `onPreviousFile`: **past the file**, skipping whatever is left inside it.
+This page had a long press step *within* the file — the opposite gesture for the opposite meaning.
+Found while fixing the first half, not reported, and it would have been maddening to hit.
+
+Both now mirror the phone exactly, forwards and backwards:
+
+| | short press | long press |
+|---|---|---|
+| switch on | the next or previous **tune**, then the file | past the file |
+| switch off | the next or previous **file** | past the file |
+
+`previous` is also live now while the *file* has somewhere to go, which it was not — the button was
+greyed at the top of the queue even sitting on a file's fourth tune.
+
+### C30. ~~Six backends never said which tune they were on~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10, on the web player: **"nie podświetla subtracka (cały czas pali się pierwszy), a
+next przechodzi tylko z 1 do 2, a potem next odtwarza 2 ciągle od nowa"**.*
+
+`Backend::currentSubsong()` returns 0 unless a backend says otherwise, and **only two of eight said
+otherwise** — game-music-emu, which had to because a HES opens at a track with sound in it, and
+HivelyTracker. libopenmpt, sc68, ASAP and libsidplayfp all answered zero for ever, whatever was
+playing.
+
+Nothing noticed until C23 gave the page a reason to ask. The web player takes its position from the
+worklet's answer rather than from its own request — deliberately, so the chips cannot disagree with
+the audio — so it believed every file was on its first tune. `next` then asked for tune 2 on every
+press, and got it, from the beginning, for ever. Both halves of his report are one line of missing
+code.
+
+**The phone was never affected**: it tracks the index itself in `selectSubsong`, which is why this
+survived a year of subsong work.
+
+Fixed in the four that were silent: libopenmpt has `get_selected_subsong`, sc68 keeps the track it
+was told and converts back from its own one-based numbering, ASAP keeps `song_` — and it is not
+always zero even at open, because a SAP names its own default song — and libsidplayfp now remembers
+what it reselected. MP3 and ZXTune hold one tune and the default is the truth for them.
+
+**Measured** on real multi-tune files, one per backend that was broken: a 7-tune ProTracker module,
+two SNDH files of 6 and 4 tunes, and a 2-song SID. Asked for tune 1, all four now say 1. Before the
+fix the interface's own default was the only answer any of them could give.
+
 ### C29. ~~The page opened without a trailing slash and every relative URL missed~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, from the browser at work: the QR button did nothing, and Firefox said* "Loading

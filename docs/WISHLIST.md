@@ -10,6 +10,37 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B30. ASMA ships a STIL, and we do not read it
+
+*Owner, 2026-09-10, as a curiosity: `asma.atari.org/asma/Docs/STIL.txt`.*
+
+**266 KB, and it is exactly the thing this app keeps having to go elsewhere for.** 1,973 entries
+keyed by the same path our ASMA index already holds — `/Composers/Aki/Robots.sap` — carrying what
+the file itself cannot say:
+
+```
+/Composers/Aki/Robots.sap
+  TITLE: Die Roboter (The Robots) [from The Man Machine (Die Mensch-Maschine)]
+ ARTIST: Kraftwerk
+```
+
+Three shapes in it. **`TITLE`/`ARTIST` name what a tune is a cover *of*** — the SAP says "Robots" by
+Aki, and the truth is that Aki arranged Kraftwerk. **`COMMENT`** is provenance a listener would
+actually want: *"1st place at Forever 16 music compo"*. And some entries point at another file as
+the same tune in another form, which is the beginnings of a duplicate map.
+
+**Why it is cheap.** It joins on a path, not a hash, so it needs none of `SongDbMetadata`'s
+machinery — the same shape as `modland_favourites.tsv`, which was a day's work. And ASMA is already
+downloaded whole, so the file arrives with everything else rather than being a new thing to fetch.
+
+**Why it is not obvious.** The fields do not mean what the same words mean everywhere else in this
+app: `ARTIST` here is the *original* artist, not the person who made the file. Putting Kraftwerk in
+the artist column of a tune by Aki would be wrong in the one place the app states who wrote
+something. It probably wants a line of its own — "after Kraftwerk" — which is a UI decision before
+it is a parsing one.
+
+Counted 2026-09-10: 883 lines carry one of those field names across 1,973 entries.
+
 ## B29. The documents need a list a person can read at a glance
 
 *Owner, 2026-09-10: **"muszę mieć czytelne dla człowieka checkboxy na początku pliku wishlist/status
