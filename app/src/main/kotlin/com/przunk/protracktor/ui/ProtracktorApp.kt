@@ -170,6 +170,25 @@ fun ProtracktorApp(
     var scanning by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) { viewModel.scan.collect { scanning = true } }
 
+    // **Where you are, felt when it becomes somewhere else** (owner, 2026-09-10).
+    //
+    // Keyed on the destination rather than called from the buttons, because there are a dozen ways
+    // to change it — three buttons, two Back handlers, a link arriving, a scan finishing, a random
+    // tune starting — and a call at each is a list that goes one short the moment somebody adds a
+    // route. The destination is the fact; the taps are only ways of reaching it.
+    //
+    // The scanner gets the firmer `press()`: opening a camera takes a visible moment to warm up,
+    // and it is the one destination that asks for a permission, so an answer to the tap is worth
+    // more there than anywhere else. Everything else gets the lightest effect there is.
+    HapticOnChange(
+        when {
+            scanning -> "scanner"
+            showSettings -> "settings"
+            showBrowse -> "browse"
+            else -> "player"
+        }
+    ) { if (scanning) press() else transition() }
+
     val undoLabel = stringResource(R.string.action_undo)
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     var pendingSwitch by remember { mutableStateOf<Long?>(null) }
@@ -281,6 +300,9 @@ fun ProtracktorApp(
                                 icon = PlayerIcons.Cloud,
                                 label = stringResource(R.string.action_browse),
                                 onClick = openBrowse,
+                                // Arriving at Browse buzzes; pressing the way in as well would be
+                                // two buzzes for one press.
+                                haptic = null,
                                 // The seam across the title/actions boundary, which the two slots
                                 // do not otherwise share -- so it is the one gap on this bar that
                                 // cannot be derived and had to be looked at.
@@ -301,6 +323,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
                             onClick = { showBrowse = false },
+                            haptic = null,
                             modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }
@@ -339,6 +362,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Settings,
                             label = stringResource(R.string.settings_title),
                             onClick = { showSettings = true },
+                            haptic = null,
                             modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }

@@ -15,6 +15,67 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A31. Haptics on the seven places he named — DONE 2026-09-10
+
+*Owner, 2026-09-10, after feeling what A8 had built and finding it too sparse.* Four asked for
+plainly, three offered as an "accent" — his word — and all seven built.
+
+**This overturns A8's closing rule**, which forbade haptics on anything with a visible result. What
+survives of that rule is its reason: haptics everywhere is noise, and noise is what makes somebody
+turn the setting off system-wide, at which point the useful ones go too. So the answer is not "no",
+it is **weight** — the buzzes that carry information a finger cannot otherwise get keep the firm
+effects, and the ones he asked for as accents get the lightest the platform has.
+
+The vocabulary in `ui/Haptics.kt` grew from three to eight, each with a fallback because `minSdk`
+is 29 and the interesting constants arrived in API 30 and 34:
+
+| | effect (API 34 / 30 / 29) | where |
+|---|---|---|
+| `press()` | `CONFIRM` / `CONFIRM` / `KEYBOARD_TAP` | indexing arrows, the replay row, the pairing camera, play-pause, next, previous |
+| `toggle(on)` | `TOGGLE_ON`,`TOGGLE_OFF` / `CONTEXT_CLICK` | shuffle, repeat, the two Settings switches, the segmented pickers, the selection checkboxes |
+| `grab()` | `DRAG_START` / `GESTURE_START` / `LONG_PRESS` | taking hold of the seek thumb |
+| `scrub()` | `SEGMENT_FREQUENT_TICK` / `CLOCK_TICK` | each notch while dragging it |
+| `transition()` | `CLOCK_TICK` | arriving at another view, another folder |
+| `tick()` | `SEGMENT_TICK` / `CONTEXT_CLICK` | a row that actually changed places *(fallback strengthened from `CLOCK_TICK`: this says a thing happened, and on an older phone the old one was faint enough to be missed under a moving thumb)* |
+| `pick()` | `SEGMENT_TICK` / `CLOCK_TICK` | a subsong chosen from the strip |
+
+**Four more the same day, after he felt the first seven.** *"Delikatnie na subsong, mocniej na
+przyciski funkcyjne save revert…, track song"*, and a question about the list:
+
+- **Function buttons** — `LabelledAction` is the shape every one of them wears, so the press lives
+  there and reaches Save, Discard, the five track actions in Now Playing, and the two bulk actions
+  in the playlist at once. **The three that navigate pass `haptic = null`**: arriving already
+  buzzes, and two buzzes for one press reads as a stutter rather than as emphasis. Its long press
+  gained `gestureEnd()`, which closes the loose end A8 left open — a long press with no answer
+  feels like a press that missed.
+- **Choosing a tune** — `press()`, the firm one, on the tap this whole screen exists for. The same
+  tap while selecting is a tick in a box instead, so it feels like the checkbox beside it.
+- **Long press that starts a selection** — `gestureEnd()`. A8 owed this since 2026-09-01.
+- **Subsongs** — `pick()`, and nothing at all for the one already playing.
+
+### A31a. ~~A notch per row while a list is dragged~~ — BUILT AND REMOVED, same day
+
+*His question:* "czy na przesuwanie listy też sugerujesz dać coś super delikatnego ale «rzadko» po
+przewinięciu 1 wiersza". *His answer, once he had felt it:* **"wywal to przewijanie bo nie jest
+fajne."**
+
+Built as `HapticOnRowScroll`: one `scrub()` per row, and only while the finger was down, so a fling
+across fifty rows would not fire fifty times. The care went into the right problem and the thing
+was still wrong — a list is a surface you read, and giving it a texture makes reading it feel like
+operating it.
+
+**Kept here rather than deleted** because the idea is an obvious one to have twice. It was tried, it
+worked as designed, and as designed it was not nice. The divisor this entry once proposed as the
+fix would not have saved it; less of something unpleasant is not pleasant.
+
+### A31b. The follow-track button had none
+
+*Owner, 2026-09-10: "dodaj też do «follow current track» bo dalej nie ma".*
+
+`toggle(on = true)` on the press, and deliberately **nothing when following switches off** — that
+happens because the user dragged the list, and a buzz mid-scroll would be answering a gesture
+nobody aimed at the button. On is a press; off is a side effect of looking somewhere else.
+
 ## A1. ~~Search results need the path too, and a way to hear a track first~~ — DONE 2026-09-02
 
 
@@ -242,8 +303,13 @@ would have been useful. So the list is short on purpose:
   that failed.
 - **Swipe past the snackbar's dismiss threshold** — it already fades; a tick says "let go now".
 
-And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
-result. The screen already answered.
+~~And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
+result. The screen already answered.~~
+
+**The owner reversed this on 2026-09-10 — see A31.** He asked for haptics on the transport, on
+moving between views and folders, and on holding the seek bar: exactly the list this paragraph
+ruled out. He is the one holding the phone; this was written from the armchair. The reasoning
+behind the rule survives as *weight* rather than as a ban, which A31 sets out.
 
 **Implementation notes.** Compose's `LocalHapticFeedback` offers only `LongPress` and
 `TextHandleMove`, which is thin. The richer constants live on `View.performHapticFeedback` —

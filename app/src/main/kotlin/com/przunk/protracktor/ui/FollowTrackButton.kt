@@ -42,6 +42,8 @@ internal fun FollowTrackButton(
     following: Boolean,
     onFollowingChange: (Boolean) -> Unit,
 ) {
+    val haptics = rememberHaptics()
+
     // A real drag from the user, not our own scrolling. isScrollInProgress cannot tell those apart,
     // and mistaking one for the other would switch following off the instant it was switched on.
     LaunchedEffect(listState) {
@@ -64,7 +66,10 @@ internal fun FollowTrackButton(
         // owner has now seen it -- so the trade goes the other way. Its content description still
         // says what it does, which is where discoverability belongs once you know the button exists.
         SmallFloatingActionButton(
-            onClick = { onFollowingChange(true) },
+            // **Only on the way on.** Following is switched off by the user's own drag, and a buzz
+            // in the middle of a scroll would be answering a gesture nobody aimed at this button.
+            // On is a press; off is a side effect of looking somewhere else.
+            onClick = { haptics.toggle(on = true); onFollowingChange(true) },
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp),
         ) {
