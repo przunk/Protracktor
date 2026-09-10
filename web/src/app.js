@@ -4,7 +4,7 @@
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
 import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick } from './rules.js';
-import { PHONE, playlists, settings, makePersistent, estimate } from './store.js';
+import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
 const $ = (id) => document.getElementById(id);
@@ -240,6 +240,11 @@ function onWorklet(message) {
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
       const fields = describeFields(message.describe);
+      // **Recorded here and only here.** The playlist's plays, Browse's, Random's and History's
+      // own replays all arrive at this one message, so there is one recording path rather than one
+      // per list (`GOAL.md` round 8, item 4) -- and it is after the engine opened the file, so what
+      // is recorded is a tune that played, under the name it gives itself.
+      recordPlay(queue[index], fields);
       if (fields.title) $('title').textContent = fields.title;
       renderNowPlaying(fields, subsongCount, currentSubsong);
       publishToSystem(queue[index], fields);
@@ -731,6 +736,7 @@ function render() {
     ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
     : 'nothing yet';
   if (random) $('count').textContent = `${queue.length} played at random`;
+  if (away) $('count').textContent = `${queue.length} from your history`;
 }
 
 /**
@@ -913,9 +919,9 @@ addEventListener('scroll', closeRowMenu, true);
 let saveTimer = null;
 function remember() {
   // **The dice's record is never a playlist**, "From the phone" least of all (`GOAL.md` round 8).
-  if (random) return;
+  if (random || away) return;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { saveTimer = null; if (!random) saveQueue(); }, 500);
+  saveTimer = setTimeout(() => { saveTimer = null; if (!random && !away) saveQueue(); }, 500);
 }
 
 /**
@@ -979,14 +985,25 @@ const RANDOM_DRAWS = 4;   // the phone's OVERDRAW: drawn wide, repeats dropped
 /** Replaceable so the checks can roll a known sequence; the page always uses `Math.random`. */
 let randomSource = Math.random;
 
-function showRandomView(on) {
-  $('randomhead').hidden = !on;
+/**
+ * The heading over a list the page is playing from without it being a playlist -- Random's record,
+ * or History (item 4). One heading for both, because they are one idea: music playing from
+ * somewhere the playlist is not, and a way back to it.
+ */
+function showSessionView(kind) {
+  $('randomhead').hidden = !kind;
   $('randomfilter').hidden = true;
   $('randomnote').hidden = true;
+  $('sessiontitle').textContent = kind === 'history' ? 'Playing from your history' : 'Playing at random';
+  // What the dice picks from means nothing for History, and neither does its Filter.
+  $('randomscope').hidden = kind !== 'random';
+  $('random-filter').hidden = kind !== 'random';
   // The chip would offer to switch a playlist nothing is playing from, as on the phone.
-  $('playlistchip').disabled = on;
-  if (on) $('playlistname').textContent = 'Random';
+  $('playlistchip').disabled = !!kind;
+  if (kind) $('playlistname').textContent = kind === 'history' ? 'History' : 'Random';
 }
+
+function showRandomView(on) { showSessionView(on ? 'random' : null); }
 
 /** Browse → Random. Closes the panel first, and starts the session inside the same click. */
 function enterRandomFromBrowse() {
@@ -1005,7 +1022,8 @@ async function openRandom() {
   // A change the playlist was still waiting to save is its own; written now, before the swap.
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
   // Entering again starts a new record but goes back to the same playlist when it ends.
-  const stash = random?.stash ?? { queue, index, history, order, name: $('playlistname').textContent };
+  const stash = random?.stash ?? away?.stash ?? { queue, index, history, order, name: $('playlistname').textContent };
+  away = null;
   loading?.abort();
   loading = null;
   random = { stash, ahead: [], table: null, filling: null, advancing: false, bytes: new Map() };
@@ -1094,22 +1112,73 @@ function removeRandomAt(at) {
 }
 
 /**
- * Leaves the session: **playback stops**, the record goes -- what played is in the history -- and
- * the playlist is exactly where it was left, because nothing ever wrote to it.
+ * Writes one play into the history. Never fatal: a page that cannot keep a history still plays.
+ *
+ * A tune the phone handed over as bytes cannot be played again after a reload -- the bytes are
+ * never kept (`saveQueue` says why). It is recorded anyway, so "what was that" still has an answer,
+ * and marked, so History does not offer a replay it cannot deliver.
  */
-function endRandom() {
-  if (!random) return;
-  const { stash } = random;
+function recordPlay(entry, fields) {
+  if (!entry?.url) return;
+  played.record({
+    url: entry.url,
+    name: fields.title || entry.name,
+    meta: entry.meta ?? sourceOf(entry.url),
+    file: entry.file ?? entry.name,
+    replayable: !entry.data && !entry.local && /^https?:\/\//.test(entry.url),
+  }).catch(() => {});
+}
+
+/**
+ * Playing from History (`GOAL.md` round 8, item 4): **transient, like Random, and for the same
+ * reason** -- it writes into no playlist. The goal asked for History to play "without writing into
+ * the playlist", the way the phone's Browse lists play; the page's other Browse lists do write into
+ * the playlist showing, and whether they should stop is the owner's question (`docs/BACKLOG.md` A33).
+ */
+let away = null;
+
+/** Browse → History → a tune. Closes the panel and starts inside the same click. */
+function openAwayFromBrowse(tracks, at) {
+  showPanel(null);
+  openAway(tracks, at);
+}
+
+function openAway(tracks, at) {
+  if (!tracks.length) return;
+  // A change the playlist was still waiting to save is its own; written before the swap.
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
+  const stash = random?.stash ?? away?.stash ?? { queue, index, history, order, name: $('playlistname').textContent };
   random = null;
+  loading?.abort();
+  loading = null;
+  away = { stash };
+  queue = tracks.slice();
+  index = Math.min(Math.max(at, 0), queue.length - 1);
+  history = [index];
+  order = [];
+  if (shuffle) reshuffle(index);
+  rowState = 'selected';
+  showSessionView('history');
+  render();
+  // Called inside the click, so the `start()` inside it may make sound.
+  playAt(index);
+}
+
+/** Stops what is playing on the way out of a session: nothing it chose should outlive it. */
+function stopForLeaving() {
   loading?.abort();
   loading = null;
   clearTimeout(openWatchdog);
   node?.port.postMessage({ type: 'close' });
   delete $('seek').dataset.opened;
   finished = false;
+}
+
+/** The playlist exactly where it was left -- nothing ever wrote to it. */
+function restoreStash(stash) {
   ({ queue, index, history, order } = stash);
   rowState = 'selected';
-  showRandomView(false);
+  showSessionView(null);
   $('playlistname').textContent = stash.name;
   render();
   setPlaying(false);
@@ -1119,14 +1188,39 @@ function endRandom() {
   nameTheTab(entry);
 }
 
-/** Ends a session because a queue arrived from elsewhere: nothing to restore, the new queue wins. */
-function dropRandom() {
+/**
+ * Leaves Random: **playback stops**, the record goes -- what played is in the history -- and the
+ * playlist is exactly where it was left.
+ */
+function endRandom() {
   if (!random) return;
   const { stash } = random;
   random = null;
-  showRandomView(false);
-  $('playlistname').textContent = stash.name;
+  stopForLeaving();
+  restoreStash(stash);
 }
+
+function endAway() {
+  if (!away) return;
+  const { stash } = away;
+  away = null;
+  stopForLeaving();
+  restoreStash(stash);
+}
+
+/** The heading's way back, whichever session it is heading. */
+function endSession() { if (random) endRandom(); else endAway(); }
+
+/** A queue arrived from elsewhere: nothing to restore, the new queue wins. */
+function dropSession() {
+  const session = random ?? away;
+  if (!session) return;
+  random = null;
+  away = null;
+  showSessionView(null);
+  $('playlistname').textContent = session.stash.name;
+}
+
 
 /**
  * What `next` should play, or null at the end.
@@ -1180,7 +1274,7 @@ function beforeCurrent() {
 function setQueue(urls, at = 0) {
   // A queue arriving -- a playlist switched to, the phone's handoff, a tune played from Browse --
   // replaces whatever was showing, and that includes the dice's record.
-  if (random) dropRandom();
+  dropSession();
   delete $('seek').dataset.opened;
   // Selected, not playing: the queue points here and nothing has started. A list with no mark at
   // all leaves the dock naming a track the list does not admit to.
@@ -1311,11 +1405,28 @@ async function renderBrowse() {
   note.textContent = '';
   $('browsesearch').hidden = false;
 
+  // **Declared before anything uses it.** It sat below the "From the phone" branch, which calls it
+  // since round 8 item 3 -- a `const` read before its declaration, so opening Browse on the phone's
+  // list with an index downloaded threw. jsdom never met that state; `docs/STATUS.md` C37.
+  const row = (name, count, onclick) => {
+    const li = document.createElement('li');
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = name;
+    const number = document.createElement('div');
+    number.className = 'bcount';
+    number.textContent = count == null ? '' : count.toLocaleString();
+    li.append(label, number);
+    li.onclick = onclick;
+    list.append(li);
+  };
+
   // **Shut before it is walked into, not after** (owner, 2026-09-10). Telling somebody they cannot
   // play this three levels down and one chosen tune later is telling them late. Browsing writes
   // into the playlist that is showing, "From the phone" is not one to write into, so the whole
   // panel says so and offers the one thing that unblocks it.
-  if (activePlaylist === PHONE) {
+  // History plays into no playlist, so it stays open whichever one is showing.
+  if (activePlaylist === PHONE && browsePath[0] !== 'history') {
     $('browsetitle').textContent = 'Browse';
     $('browseback').hidden = true;
     $('browsesearch').hidden = true;
@@ -1332,21 +1443,10 @@ async function renderBrowse() {
     // **Random is offered even here**, because it writes into no playlist at all -- the rule that
     // shuts Browse is about rewriting what the phone sent, and the dice never does.
     if ((await archive.meta())?.tracks) row('Random', null, enterRandomFromBrowse);
+    row('History', null, openHistory);
     return;
   }
 
-  const row = (name, count, onclick) => {
-    const li = document.createElement('li');
-    const label = document.createElement('div');
-    label.className = 'bname';
-    label.textContent = name;
-    const number = document.createElement('div');
-    number.className = 'bcount';
-    number.textContent = count == null ? '' : count.toLocaleString();
-    li.append(label, number);
-    li.onclick = onclick;
-    list.append(li);
-  };
 
   if (browsePath.length === 0) {
     $('browsetitle').textContent = 'Browse';
@@ -1357,6 +1457,7 @@ async function renderBrowse() {
       note.textContent = 'Modland is half a million tunes. The index is a 5.76 MB download, kept in '
         + 'this browser, and browsing is then offline.';
       row('Download the Modland index', null, downloadIndex);
+      row('History', null, openHistory);
       return;
     }
     // An index is filtered by the list and the decoders it was built with, so one built by another
@@ -1373,11 +1474,37 @@ async function renderBrowse() {
       holding(held),
     ].filter(Boolean).join(' ');
     row('Random', null, enterRandomFromBrowse);
+    row('History', null, openHistory);
     row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
       browsePath = ['modland'];
       await renderBrowse();
     });
     row('Download the index again', null, downloadIndex);
+    return;
+  }
+
+  if (browsePath[0] === 'history') {
+    $('browsetitle').textContent = 'History';
+    const rows = await played.recent();
+    if (!rows.length) {
+      note.textContent = 'Nothing played yet. What the page plays is kept here — the last 500 tunes, one row each.';
+      return;
+    }
+    note.textContent = `${rows.length} tune${rows.length === 1 ? '' : 's'}, most recent first.`;
+    const tracks = rows.filter((r) => r.replayable)
+      .map(({ url, name, meta, file }) => ({ url, name, meta, file }));
+    for (const r of rows) {
+      const at = tracks.findIndex((t) => t.url === r.url);
+      row(r.name, r.playCount > 1 ? `×${r.playCount}` : '', at >= 0 ? () => openAwayFromBrowse(tracks, at) : null);
+      const li = list.lastElementChild;
+      li.dataset.url = r.url;
+      if (at < 0) {
+        li.classList.add('gone');
+        li.title = "Played from the phone's copy — the page does not keep those";
+      }
+    }
+    markPlayingIn(list);
+    row('Clear the history', null, async () => { await played.clear(); await renderBrowse(); });
     return;
   }
 
@@ -1411,6 +1538,12 @@ async function renderBrowse() {
     list.lastElementChild.dataset.url = track.url;
   });
   markPlayingIn(list);
+}
+
+/** Browse → History. */
+async function openHistory() {
+  browsePath = ['history'];
+  await renderBrowse();
 }
 
 /**
@@ -1694,7 +1827,7 @@ function previousFile() {
 }
 
 $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
-$('random-leave').onclick = () => endRandom();
+$('random-leave').onclick = () => endSession();
 
 $('next').onclick = () => {
   if (playAllSubsongs && hasNextSubsong()) { goToSubsong(currentSubsong + 1); return; }

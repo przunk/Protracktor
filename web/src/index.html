@@ -456,6 +456,8 @@
   /* The tune that is playing, marked the way the playlist marks it: one list, one look. */
   #browselist li.playing { background: color-mix(in srgb, var(--primary) 16%, transparent); }
   #browselist li.playing .bname { color: var(--primary); }
+  /* A history row the page cannot play again -- bytes the phone handed over are never kept. */
+  #browselist li.gone { opacity: .5; cursor: default; }
 
   /* The playlist sheet: a list of names, what is in each, and what may be done to it. */
   #playlistlist { list-style: none; margin: 0 0 16px; padding: 0; max-height: 46vh; overflow-y: auto; }
@@ -539,7 +541,7 @@
     <div id="randomhead" class="randomhead" hidden>
       <svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z"/></svg>
       <div class="text">
-        <div class="title">Playing at random</div>
+        <div class="title" id="sessiontitle">Playing at random</div>
         <div class="meta" id="randomscope">Everything</div>
       </div>
       <button class="action" id="random-filter">

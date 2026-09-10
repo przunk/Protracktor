@@ -15,6 +15,31 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A33. Whether the page's Browse lists should stop writing into the playlist — **the owner's decision**
+
+*Raised by `GOAL.md` round 8 on 2026-09-11, while building item 4.*
+
+On the phone, playing from any Browse list — a folder, a search, History — plays through a queue of
+its own and leaves the playlist exactly as it was; the playlist goes behind glass until you come
+back. **On the page, a folder or a search result replaces the playlist that is showing** — which is
+why Browse is shut while "From the phone" is up (`docs/PLAN_WEB_LIBRARY.md` S4a), the rule the owner
+asked for when he first used it.
+
+Round 8 asked for History to play "without writing into the playlist", and it does: it uses the
+transient session Random built (item 3), with a heading and a way back. So the page now has both
+behaviours at once — History and Random leave the playlist alone; a folder and a search result
+replace it.
+
+**Which he wants for the rest is his to choose:**
+
+- **Leave it.** Browse fills a playlist on the page, which is a way of *building* one; History and
+  Random are listening, not building.
+- **Make the page match the phone.** Every Browse list plays transiently, the way History now does,
+  and filling a playlist becomes an explicit "add". The S4a block would then have nothing left to
+  block.
+
+The machinery for the second exists since item 3; the decision is about what Browse is *for*.
+
 ## A32. Whether ZXTune goes into the browser's engine — **the owner's decision**
 
 *Raised by `GOAL.md` round 8 on 2026-09-11, which was told to record it rather than decide it.*

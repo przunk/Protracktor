@@ -135,7 +135,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -754,8 +754,15 @@ if (window.__api) {
   check($('browsenote').textContent.includes('will not rewrite it'),
     'opening Browse says why, before anything is chosen');
   check($('browsesearch').hidden, 'and offers no search into a list it cannot fill');
-  check($('browselist').children.length === 1,
-    'the only row is the way out, not an archive to walk into');
+  // **What it means, not how many.** This counted one row, which was true until round 8 put
+  // History here (and Random, once an index is held): both write into no playlist, so shutting them
+  // away from "From the phone" would protect nothing. What must stay true is the point -- the way out
+  // comes first, and there is no archive to walk into.
+  const offered = [...$('browselist').children].map((li) => li.textContent);
+  check(offered[0]?.includes('Make an empty playlist') && !offered.some((t) => t.includes('Modland')),
+    'the first row is the way out, and there is no archive to walk into');
+  check(offered.slice(1).every((t) => t.includes('Random') || t.includes('History')),
+    'and anything else offered is a list that writes into no playlist');
   check($('browselist').textContent.includes('Make an empty playlist'), 'which is what it says');
 
   window.__api.playFromBrowse(
@@ -1018,6 +1025,94 @@ if (window.__api) {
 
   window.__api.useRandomSource(Math.random);
   await store.clear('modland:');
+}
+
+// --- History, the same stream kept (GOAL.md round 8, item 4) -------------------------------------
+if (window.__api) {
+  console.log('\nhistory:');
+  const { catalogue: store, playlists, played } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+
+  await played.clear();
+  const entry = (n, name = `Tune ${n}`) => ({ url: `https://example.test/h${n}.mod`, name, meta: 'm',
+                                              file: `h${n}.mod`, replayable: true });
+  await played.record(entry(1));
+  await played.record(entry(2));
+  await played.record(entry(1, 'What it calls itself'));
+  let rows = await played.recent();
+  check(rows.length === 2, 'one row per tune, not per play');
+  check(rows[0].url.endsWith('h1.mod') && rows[0].playCount === 2 && rows[0].name === 'What it calls itself',
+    'a replay moves to the top, is counted, and takes the better title');
+
+  await played.record(entry(3), { limit: 2 });
+  rows = await played.recent();
+  check(rows.length === 2 && !rows.some((r) => r.url.endsWith('h2.mod')), 'past the limit the oldest is forgotten');
+
+  await played.clear();
+  check((await played.recent()).length === 0, 'and clearing empties it');
+
+  // Recorded at the one place every play arrives, under the name the tune gives itself.
+  await window.__api.switchTo('p-history');
+  const h1 = 'https://example.test/list1.mod';
+  const h2 = 'https://example.test/list2.mod';
+  window.__api.setQueue([h1, h2], 0);
+  await settle(700);
+  const before = JSON.stringify((await playlists.get('p-history'))?.tracks);
+  await window.__api.playAt(1);
+  window.__api.onWorklet({ type: 'opened', duration: 10, subsongs: 1, current: 0,
+                           describe: 'title\tThe Name It Gives Itself\n', canSeek: true });
+  await settle();
+  rows = await played.recent();
+  check(rows[0]?.url === h2 && rows[0].name === 'The Name It Gives Itself',
+    'a play is recorded once the engine has opened it, under its own name');
+
+  window.__api.showPanel('browse');
+  await window.__api.browseTo(['history']);
+  const first = $('browselist').children[0];
+  check(first?.textContent.includes('The Name It Gives Itself'), 'Browse → History lists it');
+  check(first?.classList.contains('playing'), 'and marks it, by the same rule as every list');
+
+  first.click();
+  await settle();
+  check(window.__api.awayState() != null && $('sessiontitle').textContent === 'Playing from your history',
+    'playing from History says where it is playing from');
+  await settle(700);
+  check(JSON.stringify((await playlists.get('p-history'))?.tracks) === before,
+    'playing from History leaves the playlist alone');
+  window.__api.endSession();
+  check(window.__api.awayState() == null && window.__api.queueNow().join() === `${h1},${h2}`,
+    'and the way back puts the playlist back as it was');
+
+  // A tune the phone handed over as bytes: kept in History, not offered for a replay it cannot keep.
+  await played.record({ url: 'content://phone/owned.mod', name: 'Owned', meta: 'from the phone',
+                        file: 'owned.mod', replayable: false });
+  window.__api.showPanel('browse');
+  await window.__api.browseTo(['history']);
+  const gone = [...$('browselist').children].find((li) => li.textContent.includes('Owned'));
+  check(gone?.classList.contains('gone') && gone.onclick == null,
+    'a tune the page cannot play again is listed, and not offered');
+
+  const clear = [...$('browselist').children].find((li) => li.textContent.includes('Clear the history'));
+  clear.click();
+  await settle();
+  check((await played.recent()).length === 0, 'Clear the history empties it');
+
+  // C37: Browse on "From the phone" with an index downloaded threw, because a helper was read
+  // before its declaration. This is that state.
+  await window.__api.switchTo('phone');
+  await store.putAll([{ key: 'modland:meta', tracks: 3, total: 3, phoneOnly: 0, formats: 1, buckets: 1,
+                        fingerprint: 'x' }]);
+  let threw = null;
+  try { await window.__api.browseTo([]); } catch (error) { threw = error; }
+  const labels = [...$('browselist').children].map((li) => li.textContent);
+  check(!threw, `Browse on the phone's list with an index held does not throw${threw ? ` (${threw.message})` : ''}`);
+  check(labels.some((t) => t.includes('Random')) && labels.some((t) => t.includes('History')),
+    'and still offers Random and History, which write into no playlist');
+  await window.__api.browseTo(['history']);
+  check($('browsetitle').textContent === 'History', 'History opens even there');
+
+  await store.clear('modland:');
+  window.__api.showPanel(null);
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------

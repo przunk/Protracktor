@@ -13,7 +13,7 @@
 // callbacks in the page.
 
 const DB = 'protracktor';
-const VERSION = 2;
+const VERSION = 3;
 
 /** The playlist that is not a document: replaced wholesale by every handoff, never deleted. */
 export const PHONE = 'phone';
@@ -39,6 +39,10 @@ function open() {
       // because the key *is* the lookup.
       if (!db.objectStoreNames.contains('catalogue')) {
         db.createObjectStore('catalogue', { keyPath: 'key' });
+      }
+      // Version 3: what has been played, one row per tune, keyed by its address.
+      if (!db.objectStoreNames.contains('played')) {
+        db.createObjectStore('played', { keyPath: 'url' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -172,6 +176,49 @@ export const catalogue = {
       transaction.onerror = () => reject(transaction.error);
     });
   },
+};
+
+/** The phone's `PLAY_HISTORY_LIMIT`: the last 500 tunes, the oldest forgotten. */
+export const PLAYED_LIMIT = 500;
+
+/**
+ * Strictly increasing within a session, so two plays in one millisecond still have an order -- the
+ * oldest is what the limit forgets, and a tie would make which one goes a coin toss.
+ */
+let lastStamp = 0;
+
+/**
+ * What has been played (`GOAL.md` round 8, item 4), with the phone's rules (`data/HistoryStore.kt`).
+ *
+ * **One row per tune rather than per play**, moved to the top and counted when it is played again:
+ * the question it answers is "that tune two days ago, what was it", not "audit this page". The
+ * title is written every time, because it improves -- a tune is filed under its file name until
+ * it has been opened, and afterwards under the name it gives itself.
+ */
+export const played = {
+  async record(entry, { limit = PLAYED_LIMIT } = {}) {
+    lastStamp = Math.max(Date.now(), lastStamp + 1);
+    const before = await tx('played', 'readonly', (s) => s.get(entry.url));
+    await tx('played', 'readwrite', (s) => s.put({
+      ...before, ...entry, playedAt: lastStamp, playCount: (before?.playCount ?? 0) + 1,
+    }));
+    // The oldest forgotten once the list is over its limit -- read whole only then, which for 500
+    // rows is nothing and on most plays does not happen at all.
+    if ((await tx('played', 'readonly', (s) => s.count())) > limit) {
+      const all = (await tx('played', 'readonly', (s) => s.getAll())) ?? [];
+      all.sort((a, b) => b.playedAt - a.playedAt);
+      const drop = all.slice(limit).map((row) => row.url);
+      await tx('played', 'readwrite', (s) => { drop.forEach((url) => s.delete(url)); return null; });
+    }
+  },
+
+  /** Most recently played first. */
+  async recent() {
+    const all = (await tx('played', 'readonly', (s) => s.getAll())) ?? [];
+    return all.sort((a, b) => b.playedAt - a.playedAt);
+  },
+
+  clear() { return tx('played', 'readwrite', (s) => s.clear()); },
 };
 
 export const settings = {
