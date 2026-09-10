@@ -128,6 +128,25 @@ data class PlayerUiState(
     val resultsQueue: PlayQueue? = null,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
+    /**
+     * What the dice has actually given this session, oldest first.
+     *
+     * **Only what has played.** `READ_AHEAD` picks stand past the cursor at all times so a tune can
+     * be fetched before it is wanted, and those are a fetching strategy rather than a promise —
+     * showing them would turn a record into a schedule, and a schedule the dice is free to discard
+     * whenever the scope changes (`docs/PLAN_RANDOM.md`).
+     */
+    val randomPicks: List<TrackRef> = emptyList(),
+    /** Which of [randomPicks] is playing, or -1. */
+    val randomIndex: Int = -1,
+    /**
+     * True when the dice looked and found nothing to pick from.
+     *
+     * The message says why — nothing indexed, or nothing indexed for that platform — but a message
+     * is a snackbar and goes. Without this the Random view would sit on "Rolling…" for ever, which
+     * is a screen lying about what it is doing.
+     */
+    val randomExhausted: Boolean = false,
     val playlists: List<SavedPlaylist> = emptyList(),
     val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
@@ -623,6 +642,19 @@ class PlaybackController private constructor(private val context: Context) {
     private var randomCursor = -1
 
     /**
+     * Copies the played part of the history into the state, for the Random view to draw.
+     *
+     * Called from every place that moves the cursor or edits the record. A single writer would be
+     * better; there is no single place the history changes, and inventing one would mean routing
+     * `advanceRandom`, `randomPrevious` and the list's own edits through a funnel that does nothing
+     * else.
+     */
+    private fun publishRandomPicks() {
+        val played = randomHistory.take(randomPlayed + 1)
+        _state.update { it.copy(randomPicks = played, randomIndex = randomCursor) }
+    }
+
+    /**
      * How far into [randomHistory] has actually been played. Anything past it was picked ahead and
      * never heard -- which is the difference between history and speculation, and the dice needs it.
      */
@@ -758,6 +790,8 @@ class PlaybackController private constructor(private val context: Context) {
                     restored = true,
                 )
             }
+            // The dice's scope, kept between runs now that the Random view shows what is set.
+            _browse.update { it.copy(randomScope = storedRandomScope(saved?.randomScope)) }
             resolveMetadataInBackground()
         }
     }
@@ -816,6 +850,7 @@ class PlaybackController private constructor(private val context: Context) {
                 shuffle = snapshot.queue.shuffle,
                 repeat = snapshot.queue.repeat,
                 playAllSubsongs = snapshot.playAllSubsongs,
+                randomScope = _browse.value.randomScope.stored(),
             )
         )
     }
@@ -2276,6 +2311,55 @@ class PlaybackController private constructor(private val context: Context) {
      * into the queue as it should. The old code truncated at the cursor and so threw away real
      * history; keeping [randomPlayed] is what lets it throw away only the guesses.
      */
+    /**
+     * Opens a Random session: a fresh record, and a tune playing without a second press.
+     *
+     * **A new list every time**, which the owner chose knowing the alternative: *"odtworzone są w
+     * historii, więc nic nie ginie"*. What this throws away is the record, not the tunes.
+     *
+     * Separate from [playRandom] because the dice button inside a running session means "re-roll,
+     * keeping what I have heard", and entering the view means "start".
+     */
+    fun openRandom() {
+        scope.launch {
+            randomHistory.clear()
+            randomCursor = -1
+            randomPlayed = -1
+            failedRandomPicks = 0
+            _state.update { it.copy(randomPicks = emptyList(), randomIndex = -1, randomExhausted = false) }
+            advanceRandom()
+        }
+    }
+
+    /**
+     * Plays one of the picks already made, chosen by hand from the list.
+     *
+     * Only backwards into the record — [randomPlayed] is the edge of what has been heard, and the
+     * picks past it are speculation nobody has been shown.
+     */
+    fun playRandomAt(index: Int) {
+        if (index < 0 || index > randomPlayed || index > randomHistory.lastIndex) return
+        randomCursor = index
+        playTransient(randomHistory[index])
+        publishRandomPicks()
+    }
+
+    /**
+     * Drops a pick from the record.
+     *
+     * Not a queue edit — the order is the dice's and there is nothing past the cursor to disturb.
+     * It is pruning what you are looking at before keeping the rest. Removing the one playing is
+     * allowed and leaves it playing: stopping the music because a row was tidied away would be a
+     * surprise, and the dock still says what it is.
+     */
+    fun removeRandomAt(index: Int) {
+        if (index < 0 || index > randomPlayed || index > randomHistory.lastIndex) return
+        randomHistory.removeAt(index)
+        if (index <= randomCursor) randomCursor--
+        randomPlayed--
+        publishRandomPicks()
+    }
+
     fun playRandom() {
         scope.launch {
             while (randomHistory.lastIndex > randomPlayed) {
@@ -2318,6 +2402,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (randomCursor <= 0) return
         randomCursor--
         playTransient(randomHistory[randomCursor])
+        publishRandomPicks()
     }
 
     /**
@@ -2339,12 +2424,14 @@ class PlaybackController private constructor(private val context: Context) {
                 is RandomScope.OnPlatform -> "Nothing indexed for that platform."
                 is RandomScope.Favourites -> "None of the favourites are in your Modland index."
             }
-            _state.update { it.copy(message = Message(empty)) }
+            _state.update { it.copy(message = Message(empty), randomExhausted = true) }
             return
         }
 
         randomCursor++
         randomPlayed = maxOf(randomPlayed, randomCursor)
+        _state.update { it.copy(randomExhausted = false) }
+        publishRandomPicks()
         // Topped up before playing rather than after: `load` reads ahead when it finishes, and it
         // can only read what has already been decided.
         fillRandomQueue()
@@ -2380,6 +2467,8 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun setRandomScope(scope: RandomScope) {
         _browse.update { it.copy(randomScope = scope) }
+        // A setting, so it is written like one.
+        scheduleSave()
         if (_state.value.randomMode) {
             randomHistory.subList(randomCursor + 1, randomHistory.size).clear()
         }
@@ -2457,6 +2546,9 @@ class PlaybackController private constructor(private val context: Context) {
                 externalOpen = false,
                 resultsQueue = null,
                 randomHasPrevious = false,
+                randomPicks = emptyList(),
+                randomIndex = -1,
+                randomExhausted = false,
                 playing = false,
                 metadata = emptyMap(),
                 positionSeconds = 0.0,

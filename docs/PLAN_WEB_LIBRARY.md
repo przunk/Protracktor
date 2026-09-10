@@ -336,19 +336,96 @@ while every playlist arrived full from the phone. Make an empty one, reload, and
 to "From the phone", with the tab he had just unblocked shut again. An empty playlist is now
 restored like any other.
 
-### S5. Random
+### S5. Random — **decided 2026-09-10, not yet built**
+
+**The shape of the screen is in `docs/PLAN_RANDOM.md`**, agreed the same day and written for
+the APK and the browser together because he wants the two as alike as they can be. What
+follows here is the web-specific half: what the dice picks from, and the measurements behind
+it.
 
 The phone asks SQLite for `ORDER BY RANDOM() LIMIT n`, which `docs/review-round-8.md` R7 already
 records as unmeasured and probably wasteful. IndexedDB cannot do it at all.
 
-The browser's shape is better and the phone may want to borrow it: **pick a random key and take the
-next record from a cursor.** With a filter (a platform, favourites) it needs a count per bucket,
-which the browse tree needs anyway.
+#### What the measurement changed
 
-Read-ahead is the phone's rule (`READ_AHEAD = 3`) and the reason is the same in a browser: a tune
-that has not been fetched is a gap between tracks.
+Three numbers were taken before proposing anything, and the first one reframed the rest.
 
-### S6. History
+**The browser's index holds everything, including what nothing here can play.** `toRecords` takes
+every line of `allmods.txt` with no extension filter; the phone indexes only what
+`SupportedFormats` lists. And ZXTune is built *off* for wasm
+(`scripts/build-web-engine.sh -DPROTRACKTOR_WITH_ZXTUNE=OFF`), so the browser loses formats the
+phone keeps.
+
+| | |
+|---|---|
+| lines in Modland | 516,107 |
+| the APK indexes | 342,169 (66%) |
+| of those, ZXTune-only | 26,559 — `pt3` 7,376, `pt2` 6,284, `ym` 4,977, `stc` 3,639 leading |
+| **the browser can actually open** | ~315,610, or **61% of what it has indexed** |
+
+So an unfiltered dice would hand back something that cannot open **close to four times in ten**.
+The phone's answer to a pick that will not open is `skipFailedRandomPick`, which walks up to eight
+times; at a 39% failure rate that is not a safety net, it is the mechanism, and the dice becomes a
+machine for cycling past things.
+
+**Filter before picking, not after.**
+
+**And the distribution is skewed enough that "random" has to be defined.** 43,721 buckets over
+516,107 tracks: **median 3, mean 11.8, largest 3,615** (`Protracker/- unknown`), and **35% of
+buckets hold exactly one track**. Uniform over tracks gives the largest bucket 0.70% of rolls;
+uniform over buckets gives every bucket 0.0023%, which would make a one-tune author exactly as
+likely as Richard Bayliss with 1,298.
+
+#### What was decided
+
+**1. Uniform over tracks.** *"Mnie interesują utwory, nie autorzy"* (owner). The per-author
+alternative was a real option — it is the shape that favours discovery — and it was declined on
+its merits rather than on cost, since both are free: the counts already sit in the
+`authors(format)` records, 339 lists that the author search already sweeps in full. A cumulative
+table over them is built once and kept in memory; a roll is one random number and a binary search.
+
+**2. Transient, with its own history.** The dice does not write into the playlist that is showing,
+the same rule Browse and the paste box grew on 2026-09-10 and for a stronger reason: you roll it
+repeatedly. `Previous` walks back through what the dice gave, not through the playlist. *The owner
+wants to talk about this part further before it is built.*
+
+**3. `Everything` first.** The web has only Modland indexed. `OnPlatform` needs the format →
+platform table that lives in `Platforms.kt`, which would have to become a shared file the way
+`docs/rules/queue-cases.tsv` did; `Favourites` needs a second download of Modland's 991. Both are
+later steps, not part of this one.
+
+**4. Read-ahead, as on the phone.** `READ_AHEAD = 3`. The reason is stronger in a browser, where
+every tune comes over the network and a pick that has not been fetched is an audible gap.
+
+#### And a decision that reaches past Random
+
+**Stop indexing what we cannot play.** *"Nie indeksujmy utworów, których nie zagramy"* (owner).
+This makes the dice's filter unnecessary, and it fixes browse and search at the same time — today
+they list tunes the browser will refuse.
+
+Two things it costs, and both must be handled rather than absorbed:
+
+- **A re-download of the index.** Changing what is stored changes what a stored index means, so
+  every browser holding one has to fetch Modland again. He has done that twice already today.
+- **The absence has to be said out loud.** *"Trzeba to będzie jawnie napisać w wyszukiwaniu/browse"*
+  — a catalogue that quietly holds 61% of what its name promises is worse than one that says which
+  61%. The phone has the same gap and does not say so either.
+
+The filter is not simply the phone's `SupportedFormats.extensions`: the browser's set is that minus
+what ZXTune claims, so the two builds disagree and the disagreement is a fact about the build, not
+about the format. That means the list has to be derived from the engine rather than copied beside
+it, or it will drift the first time a backend moves.
+
+### S6. History — **the same list as Random's**
+
+Settled in the same conversation: the Random view *is* the session's history, so this and S5
+are one mechanism rather than two that resemble each other. See `docs/PLAN_RANDOM.md`. The
+only differences either of us could name are which actions a row offers — no reorder in the
+Random view — and whatever a later one adds. **The plan had two of these in it, and that
+would have been waste.**
+
+What follows is what was written before that was noticed, kept because the storage question
+it asks is still the storage question.
 
 `HistoryStore`'s shape, in IndexedDB. It is the smallest of these and the one with the least to
 decide, which is why it is last rather than first.

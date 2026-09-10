@@ -9,6 +9,9 @@
     <string name="random_playing_title">Odtwarzanie losowe</string>
     <string name="random_playing_body">Nic z tej playlisty nie gra. Następny losuje kolejny.\nPlus zachowuje ten.</string>
     <string name="random_back_to_playlist">Wróć do playlisty</string>
+    <string name="random_filter">Filtr</string>
+    <string name="random_rolling">Losuję…</string>
+    <string name="random_nothing_to_pick">Nie ma z czego losować. Zaindeksuj katalog albo poszerz filtr.</string>
 
     <string name="playlist_default_name">Playlista</string>
     <string name="playlist_empty_title">Jeszcze tu pusto</string>

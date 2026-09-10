@@ -89,11 +89,12 @@ fun PlaylistScreen(
     // Random and a search both play something that is not in this list, so the list goes behind
     // glass: visible, clearly not what you are listening to, and not touchable by accident. Cheaper
     // and more portable than a blur, which needs API 31 and this app runs from 29.
-    if (state.awayFromPlaylist) {
+    // Random has a screen of its own now (`docs/PLAN_RANDOM.md`); the glass is for the two that
+    // still have nothing to show — a file another app handed us, and a search result playing.
+    if (state.awayFromPlaylist && !state.randomMode) {
         Box(modifier = modifier.fillMaxSize()) {
             PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
-                randomMode = state.randomMode,
                 externalMode = state.externalMode,
                 onReturnToPlaylist = onReturnToPlaylist,
                 contentPadding = contentPadding,
@@ -127,7 +128,7 @@ fun PlaylistScreen(
 }
 
 @Composable
-private fun PlaylistBody(
+internal fun PlaylistBody(
     // **The track list, not the whole player state.** `positionSeconds` ticks every 200 ms while
     // anything plays, so taking `PlayerUiState` here recomposed every row five times a second --
     // which is what "as if the FPS were low" was. Browse takes `BrowseState`, which does not tick,
@@ -148,6 +149,14 @@ private fun PlaylistBody(
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    /**
+     * Whether rows may be dragged into another order.
+     *
+     * False for the Random view, which shows a record rather than an arrangement. Shared with the
+     * playlist rather than copied for it: two lists of tracks that drift apart in what a row offers
+     * is exactly the defect `docs/STATUS.md` C23, C30 and C31 each were.
+     */
+    reorderable: Boolean = true,
 ) {
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
@@ -206,7 +215,7 @@ private fun PlaylistBody(
                 // Absent for a local file, which has no address anyone else could open.
                 onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { { onShareLink(it) } },
-                dragHandleModifier = Modifier.dragToReorder(
+                dragHandleModifier = if (!reorderable) null else Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
                     indexOf = indexOfTrack,
@@ -378,7 +387,14 @@ private fun TrackRow(
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareLink: (() -> Unit)?,
-    dragHandleModifier: Modifier,
+    /**
+     * How the handle takes a drag, or **null where there is nothing to reorder**.
+     *
+     * The Random view is a record of what the dice gave, in the order it gave it. There is no
+     * arrangement to express, so the handle is not drawn rather than drawn dead — a control that
+     * answers nothing is worse than one that is not there (`docs/PLAN_RANDOM.md`).
+     */
+    dragHandleModifier: Modifier?,
 ) {
     val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
@@ -474,12 +490,14 @@ private fun TrackRow(
                     }
                     // Delete used to sit here, one thumb-width from the row you tap to play. Behind
                     // the menu it needs a deliberate second press.
-                    Icon(
-                        imageVector = PlayerIcons.DragHandle,
-                        contentDescription = stringResource(R.string.a11y_reorder, track.title),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = dragHandleModifier.padding(horizontal = 8.dp),
-                    )
+                    dragHandleModifier?.let { handle ->
+                        Icon(
+                            imageVector = PlayerIcons.DragHandle,
+                            contentDescription = stringResource(R.string.a11y_reorder, track.title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = handle.padding(horizontal = 8.dp),
+                        )
+                    }
                 }
             }
         },
@@ -595,7 +613,6 @@ private fun EmptyPlaylist(
  */
 @Composable
 private fun AwayScrim(
-    randomMode: Boolean,
     externalMode: Boolean,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
@@ -613,36 +630,26 @@ private fun AwayScrim(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Three ways to be away from the playlist now, and the third does not behave like the
-            // other two: a file handed to us by another app has no next and no previous, so the
-            // scrim must not promise one.
+            // Two ways left, since Random took a screen of its own. They differ in what next
+            // means: a file handed to us by another app has none at all, so the scrim must not
+            // promise one.
             Icon(
-                imageVector = when {
-                    externalMode -> PlayerIcons.Folder
-                    randomMode -> PlayerIcons.Dice
-                    else -> PlayerIcons.Search
-                },
+                imageVector = if (externalMode) PlayerIcons.Folder else PlayerIcons.Search,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
                 text = stringResource(
-                    when {
-                        externalMode -> R.string.external_playing_title
-                        randomMode -> R.string.random_playing_title
-                        else -> R.string.search_playing_title
-                    }
+                    if (externalMode) R.string.external_playing_title
+                    else R.string.search_playing_title
                 ),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
                 text = stringResource(
-                    when {
-                        externalMode -> R.string.external_playing_body
-                        randomMode -> R.string.random_playing_body
-                        else -> R.string.search_playing_body
-                    }
+                    if (externalMode) R.string.external_playing_body
+                    else R.string.search_playing_body
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

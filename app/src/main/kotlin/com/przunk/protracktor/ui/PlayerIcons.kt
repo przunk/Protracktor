@@ -282,6 +282,12 @@ object PlayerIcons {
      */
     val Stop: ImageVector by lazy { icon("Stop", "M6 6h12v12H6z") }
 
+    // Three bars narrowing downwards -- the shape everything else in the world uses for a
+    // filter, which is the whole argument for drawing it rather than inventing one.
+    val Filter: ImageVector by lazy {
+        icon("Filter", "M3 6h18v2H3zm3 5h12v2H6zm4 5h4v2h-4z")
+    }
+
     val Pause: ImageVector by lazy {
         icon("Pause", "M6 19h4V5H6v14zm8-14v14h4V5h-4z")
     }
