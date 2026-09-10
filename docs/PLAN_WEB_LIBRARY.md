@@ -54,24 +54,34 @@ not fine on a phone browser — and the page is opened on a phone often enough (
 pairing code is for). **Nothing may hold the whole index in memory at once**; it has to stream from
 the zip into storage in batches.
 
-### Measured by the owner, 2026-09-10, in Firefox at work
+### Measured by the owner, 2026-09-10, on two machines
 
 `web/tools/storage-check.html`, 60,000 records of Modland's real shape:
 
-| batch | | rows/s | all 516,107 would take |
+| batch | | at work | at home |
 |---|---|---|---|
-| 1,000 | | 8,966 | 57 s |
-| 5,000 | | 9,878 | 52 s |
-| 20,000 | | **12,552** | **41 s** |
-| 5,000 | **with the `(format, author)` index** | 7,176 | 71 s |
+| 1,000 | | 8,966 rows/s | 16,741 rows/s |
+| 5,000 | | 9,878 | 17,616 |
+| 20,000 | | **12,552** → 41 s | **18,916** → **27 s** |
+| 5,000 | **with the `(format, author)` index** | 7,176 | 13,387 |
 
-**Forty-one seconds is workable and the fourth row is the interesting one:** carrying the index the
-browse tree would query costs **43% of the throughput**. Paying nearly half of a one-minute wait for
-a lookup structure is the kind of price worth refusing — and refusing it turned out to change the
-design rather than merely trim it. See S3.
+**The index costs about a quarter of the throughput** — 27% at work, 24% at home, comparing the two
+runs that share a batch size.
 
-*One browser on one machine. A second reading at home would say how much of this is Firefox and how
-much is the disk — but with the shape S3 settles on, the answer stops being sensitive to either.*
+*An earlier version of this table said 43%, which was wrong: it compared the indexed run against the
+fastest unindexed one rather than against the same batch size. The number was a quarter of the way
+to being nonsense and the conclusion below survives it, but a measurement compared against the wrong
+baseline is the third time in two days that a comparison, not the thing measured, was the fault.*
+
+**Between the machines it is 1.5×, and both agree on the direction.** Twenty-seven seconds is
+workable and forty-one is a wait; either way the structure below removes the question rather than
+answering it.
+
+**Still unmeasured, and it is now the only number that matters:** the design in S3 does not write
+half a million small records at all. It writes 43,715 large ones — the same 30 MB in an eleventh of
+the transactions, which is a completely different balance between per-record overhead and payload.
+Extrapolating one from the other would be the guess this page exists to avoid, so the page writes
+the real thing and reports it.
 
 ---
 
@@ -150,7 +160,7 @@ Stream `allmods.zip` through `DecompressionStream('gzip'/'deflate')` — already
 link — and write in batches with a progress count. **Never materialise the whole thing.**
 
 **Not a row per track, and the owner's measurement is why.** An index on `(format, author)` costs
-43% of the write throughput, and it exists only to answer "which tracks are under this author" — a
+about a quarter of the write throughput, and it exists only to answer "which tracks are under this author" — a
 question with a fixed, tiny answer set. Counted in Modland, 2026-09-10:
 
 | | |
@@ -162,9 +172,13 @@ question with a fixed, tiny answer set. Counted in Modland, 2026-09-10:
 | median bucket | **3 tracks** |
 
 So store **a record per bucket**, holding its tracks, keyed by `format/author`. That is **11.8×
-fewer writes and no index at all** — his 12,552 rows/s puts the whole of Modland at about **three and
-a half seconds** instead of forty-one. The key *is* the lookup, which is the structure an index
-would have built anyway.
+fewer writes and no index at all** — the key *is* the lookup, which is the structure an index would
+have built anyway.
+
+**How much that is worth is being measured rather than divided.** 43,715 records at his per-track
+rate would be three or four seconds, but those records are eleven times larger and IndexedDB is not
+priced per row alone. The tool writes the real buckets — median 3 tracks, the four biggest holding
+3,600 — and reports the seconds and the megabytes on disk.
 
 Two more things fall out of it rather than being designed:
 
