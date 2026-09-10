@@ -118,6 +118,14 @@ const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
   .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
+  // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
+  // and the rest is spliced in under the name `app.js` uses for it.
+  .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
+    'const archive = (() => {' + fs.readFileSync('web/src/catalogue.js', 'utf8')
+      .replace(/^import .*$/gm, '')
+      .replace(/^export function (\w+)/gm, 'function $1')
+      .replace(/^export async function (\w+)/gm, 'async function $1')
+    + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -608,6 +616,42 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
   await store.settings.set('active', 'p-alpha');
   check((await store.settings.get('active')) === 'p-alpha', 'the page remembers which one was showing');
   check((await store.settings.get('nothing', 'fallback')) === 'fallback', 'and answers for what it has never been told');
+}
+
+// --- the index, as buckets (PLAN_WEB_LIBRARY S3) ------------------------------------------------
+{
+  console.log('\ncatalogue:');
+  const archive = await import(path.resolve('web/src/catalogue.js'));
+
+  // A slice of Modland's real shape, including the two things that make its paths awkward: an
+  // author with a slash in it, and a name that is nothing but punctuation.
+  const index = [
+    '20000\tProtracker/4-Mat/elysium.mod',
+    '30000\tProtracker/4-Mat/another.mod',
+    '40000\tProtracker/Jester (Volker Tripp)/elysium.mod',
+    '50000\tImpulsetracker/Wayfinder/!!uu !! !!.it',
+    '60000\tCoop/Alice & Bob/together.mod',
+    '70000\tOctamed/Unknown/x.med',
+  ].join('\n');
+
+  const { records, tracks, buckets, formats } = archive.toRecords(index);
+  check(tracks === 6, 'every row becomes a track');
+  check(buckets === 5, 'and rows sharing a format and author share a bucket');
+  check(formats === 4, 'with the formats counted');
+  // 5 buckets + 4 author lists + 1 format list.
+  check(records.length === 10, 'stored as buckets and the three lists that index them, nothing else');
+
+  const formatList = records.find((r) => r.key === 'modland:formats').formats.map((f) => f.name);
+  check(formatList.join(',') === 'Coop,Impulsetracker,Octamed,Protracker', 'formats come out sorted');
+  const fourMat = records.find((r) => r.key === 'modland:tracks:Protracker/4-Mat');
+  check(fourMat.tracks.length === 2, 'a bucket holds its own tracks');
+  check(fourMat.tracks[0].s === 20000, 'with the size the index gave');
+
+  // The whole point of the shape: no track ever needs a second lookup to become playable.
+  await archive.downloadModland; // referenced so an unused-export change is noticed here too
+  check(archive.urlFor('Coop', 'Alice & Bob', 'together.mod')
+        === 'https://modland.com/pub/modules/Coop/Alice%20%26%20Bob/together.mod',
+    'and an author with a space and an ampersand still addresses');
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------

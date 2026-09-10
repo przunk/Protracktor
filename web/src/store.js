@@ -13,7 +13,7 @@
 // callbacks in the page.
 
 const DB = 'protracktor';
-const VERSION = 1;
+const VERSION = 2;
 
 /** The playlist that is not a document: replaced wholesale by every handoff, never deleted. */
 export const PHONE = 'phone';
@@ -33,6 +33,12 @@ function open() {
       }
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'key' });
+      }
+      // The archives' indexes, as buckets rather than as rows. `docs/PLAN_WEB_LIBRARY.md` S3 has
+      // the measurement: 43,715 records instead of 515,509, 2.6 s instead of 41, and no index --
+      // because the key *is* the lookup.
+      if (!db.objectStoreNames.contains('catalogue')) {
+        db.createObjectStore('catalogue', { keyPath: 'key' });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -99,6 +105,48 @@ export const playlists = {
   remove(id) {
     if (id === PHONE) return Promise.resolve();
     return tx('playlists', 'readwrite', (s) => s.delete(id));
+  },
+};
+
+export const catalogue = {
+  get(key) { return tx('catalogue', 'readonly', (s) => s.get(key)); },
+
+  /**
+   * Writes many at once, in one transaction per batch.
+   *
+   * **Batched because that is what the measurement rewarded.** His two machines both went fastest
+   * at the largest batch tried, and the whole index landed in 2.6 s and 1.9 s written this way.
+   */
+  async putAll(records, batch = 2000, onProgress = null) {
+    const db = await open();
+    for (let i = 0; i < records.length; i += batch) {
+      await new Promise((resolve, reject) => {
+        const transaction = db.transaction('catalogue', 'readwrite');
+        const store = transaction.objectStore('catalogue');
+        for (let j = i; j < Math.min(i + batch, records.length); j++) store.put(records[j]);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+      });
+      onProgress?.(Math.min(i + batch, records.length), records.length);
+    }
+  },
+
+  /** Everything belonging to one archive, for a re-index or a delete. */
+  async clear(prefix) {
+    const db = await open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('catalogue', 'readwrite');
+      const store = transaction.objectStore('catalogue');
+      const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`);
+      store.openCursor(range).onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) return;
+        cursor.delete();
+        cursor.continue();
+      };
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
   },
 };
 

@@ -5,6 +5,7 @@
 
 import { nextIndex, previousIndex, nextSubsong, shouldRestart } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate } from './store.js';
+import * as archive from './catalogue.js';
 
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
@@ -199,10 +200,15 @@ async function begin() {
  */
 let engineReady = false;
 
+/** Which decoders this build carries. An index is only as good as the set that filtered it. */
+let engineFingerprint = '';
+
 function onWorklet(message) {
   switch (message.type) {
     case 'ready':
       engineReady = true;
+      // Recorded when an index is built and compared when one is read, exactly as the phone does.
+      engineFingerprint = message.backends;
       engineHasZxTune = !message.backends.includes('zxtune:none');
       status(`engine ready — ${message.backends}`);
       break;
@@ -932,6 +938,8 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which) {
+  $('browse').hidden = which !== 'browse';
+  $('tab-browse').setAttribute('aria-pressed', String(which === 'browse'));
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
   $('playlists').hidden = which !== 'playlists';
@@ -995,6 +1003,126 @@ async function switchTo(id) {
   setQueue(playlist?.tracks ?? [], playlist?.index ?? 0);
   await settings.set('active', id);
 }
+
+/*
+  Browsing an archive.
+
+  **Four levels and one way through them**, so the state is a stack rather than a router: `[]` is
+  the catalogue, `[format]` its authors, `[format, author]` its tracks. Back pops. The phone's
+  `BrowseNavigation.kt` is the same three fields and the same reason -- what a person walks down
+  they expect to walk back up.
+*/
+let browsePath = [];
+
+async function renderBrowse() {
+  const list = $('browselist');
+  const note = $('browsenote');
+  list.replaceChildren();
+  $('browseback').hidden = browsePath.length === 0;
+  note.textContent = '';
+
+  const row = (name, count, onclick) => {
+    const li = document.createElement('li');
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = name;
+    const number = document.createElement('div');
+    number.className = 'bcount';
+    number.textContent = count == null ? '' : count.toLocaleString();
+    li.append(label, number);
+    li.onclick = onclick;
+    list.append(li);
+  };
+
+  if (browsePath.length === 0) {
+    $('browsetitle').textContent = 'Browse';
+    const held = await archive.meta();
+    if (!held?.tracks) {
+      // **Offered, not assumed.** It is 5.76 MB off somebody else's server, and this page has until
+      // now cost nothing to open.
+      note.textContent = 'Modland is half a million tunes. The index is a 5.76 MB download, kept in '
+        + 'this browser, and browsing is then offline.';
+      row('Download the Modland index', null, downloadIndex);
+      return;
+    }
+    // An index is filtered by what the decoders could play when it was built, so one built by an
+    // older set is missing files and looks empty rather than out of date -- the phone learnt this
+    // by losing 60,572 C64 tunes.
+    if (held.fingerprint && engineFingerprint && held.fingerprint !== engineFingerprint) {
+      note.textContent = 'This index was built by a different set of decoders, so it is missing '
+        + 'whatever arrived since. Downloading it again will find them.';
+    }
+    row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
+      browsePath = ['modland'];
+      await renderBrowse();
+    });
+    row('Download the index again', null, downloadIndex);
+    return;
+  }
+
+  if (browsePath.length === 1) {
+    $('browsetitle').textContent = 'Modland';
+    for (const { name, count } of await archive.formats()) {
+      row(name, count, async () => { browsePath = ['modland', name]; await renderBrowse(); });
+    }
+    return;
+  }
+
+  if (browsePath.length === 2) {
+    const format = browsePath[1];
+    $('browsetitle').textContent = format;
+    for (const { name, count } of await archive.authors(format)) {
+      row(name || '(no author)', count, async () => {
+        browsePath = ['modland', format, name];
+        await renderBrowse();
+      });
+    }
+    return;
+  }
+
+  const [, format, author] = browsePath;
+  $('browsetitle').textContent = `${format} / ${author || '(no author)'}`;
+  const tracks = await archive.tracksIn(format, author);
+  tracks.forEach((track, i) => {
+    // **The whole author becomes the queue**, which is what the phone does: a person who opened a
+    // folder and pressed a tune meant that folder, not that one file.
+    row(track.name, Math.round(track.size / 1024), () => {
+      setQueue(tracks, i);
+      showPanel(null);
+      playAt(i);
+    });
+  });
+}
+
+async function downloadIndex() {
+  const note = $('browsenote');
+  $('browselist').replaceChildren();
+  try {
+    const result = await archive.downloadModland({
+      fingerprint: engineFingerprint,
+      // The same question the phone's index asks of every name, so the two hold the same rows.
+      keep: () => true,
+      onProgress: (p) => {
+        note.textContent = p.stage === 'storing'
+          ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
+          : `${p.stage}…`;
+      },
+    });
+    note.textContent = `${result.tracks.toLocaleString()} tracks in ${result.formats} formats.`;
+    browsePath = [];
+    await renderBrowse();
+  } catch (e) {
+    note.textContent = `the index could not be downloaded: ${e.message}`;
+  }
+}
+
+$('tab-browse').onclick = async () => {
+  if (!$('browse').hidden) { showPanel(null); return; }
+  browsePath = [];
+  showPanel('browse');
+  await renderBrowse();
+};
+$('browseback').onclick = async () => { browsePath = browsePath.slice(0, -1); await renderBrowse(); };
 
 $('playlistchip').onclick = () => {
   renderPlaylists();

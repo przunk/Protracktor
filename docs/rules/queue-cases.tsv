@@ -51,3 +51,16 @@ no	181	180	yes	past it counts too
 no	30	180	no	a track paused in the middle resumes
 no	0	0	no	a duration of zero means nobody knows the length, not zero seconds long
 no	95	0	no	and it still means that after a while
+
+# Modland's address rule. Two runtimes, two encoders, and they disagreed until this group existed:
+# Java's URLEncoder escapes everything outside A-Za-z0-9.-*_ while encodeURIComponent keeps seven
+# more characters. Both URLs fetch the same file, which is why it would have gone unnoticed until
+# something compared them as strings.
+[modlandUrl]
+format	author	title	expect	why
+Protracker	4-Mat	elysium.mod	Protracker/4-Mat/elysium.mod	the ordinary case needs no escaping
+Protracker	Jester (Volker Tripp)	elysium.mod	Protracker/Jester%20%28Volker%20Tripp%29/elysium.mod	brackets and spaces, which Modland is full of
+Impulsetracker	Wayfinder	!!uu !! !!.it	Impulsetracker/Wayfinder/%21%21uu%20%21%21%20%21%21.it	the file the owner played, and every one of those is escaped
+Ad Lib	Unknown	a+b.sng	Ad%20Lib/Unknown/a%2Bb.sng	a literal plus, which a space must not become
+Protracker	Ko%C5%82o	x.mod	Protracker/Ko%25C5%2582o/x.mod	a percent sign in a name is a percent sign
+Octamed	Mr.Man	tune~1.med	Octamed/Mr.Man/tune%7E1.med	dot and hyphen survive, tilde does not

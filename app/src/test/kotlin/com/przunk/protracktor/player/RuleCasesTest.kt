@@ -138,6 +138,25 @@ class RuleCasesTest {
         )
     }
 
+    /**
+     * Modland's address rule, from the same file the page checks itself against.
+     *
+     * **Two runtimes, two encoders, and they disagreed.** Java's `URLEncoder` escapes everything
+     * outside `A-Za-z0-9.-*_`; `encodeURIComponent` keeps seven more characters. Both URLs fetch the
+     * same file — which is why it would have gone unnoticed until something compared them as
+     * strings, and a queue decided the phone's copy of a track and its own were two tracks.
+     */
+    @Test
+    fun `the Modland address agrees with the shared cases`() = each("modlandUrl") { case ->
+        val path = listOf(case.getValue("format"), case.getValue("author"), case.getValue("title"))
+            .joinToString("/")
+        assertEquals(
+            case.why(),
+            "https://modland.com/pub/modules/" + case.getValue("expect"),
+            com.przunk.protracktor.net.Modland.urlFor(path),
+        )
+    }
+
     private companion object {
         const val RULES = "docs/rules/queue-cases.tsv"
     }

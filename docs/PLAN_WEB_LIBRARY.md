@@ -254,10 +254,31 @@ and looks empty rather than out of date, which cost the owner 60,572 C64 tunes o
 ASMA is the same shape with a different trade: its "index" **is** the archive, 20 MB, and once it is
 in the browser its tracks need no network at all.
 
-- **Deliverable:** Browse → Modland → format → author → tracks, offline after the first download.
-- **Checked by:** the numbers. 516,107 rows in, and the same counts per format the phone shows.
-- **Needs him:** whether a 5.76 MB download and a progress bar on first use is acceptable in the
-  browser, or whether the page should offer it rather than assume it.
+**Built 2026-09-10.** A Browse button beside Pair and Paste, a four-level stack — catalogue,
+format, author, tracks — and `web/src/catalogue.js` behind it. Opening an author and pressing a tune
+makes **that author the queue**, which is what the phone does: somebody who opened a folder and
+pressed a tune meant the folder.
+
+**The download is offered, not assumed.** It is 5.76 MB off somebody else's server and this page has
+until now cost nothing to open, so the first screen says what it is and waits.
+
+**Two things measured before they were designed.** The file is *not* grouped — 3,727 buckets come
+back after a gap — so flushing a bucket when the author changes would mean merging. Holding all of
+them instead costs **55 MB** against 218 for a row per track, on a machine that offered 473 GB. And
+building the records from the real index takes **554 ms**.
+
+**And the shared cases caught a real disagreement within the hour.** Java's `URLEncoder` escapes
+everything outside `A-Za-z0-9.-*_`; `encodeURIComponent` keeps seven more characters, `!`, `~`, `'`,
+`(` and `)` among them. Both URLs fetch the same file, so it would have gone unnoticed until
+something compared them as strings — and a queue decided the phone's copy of a track and the page's
+were two different tracks. `[modlandUrl]` in `docs/rules/queue-cases.tsv` now holds six cases,
+including `!!uu !! !!.it` because the owner played it, and both sides are checked against them.
+
+The staleness rule is the phone's: the engine's fingerprint is recorded when an index is built and
+compared when one is read, and a mismatch says so rather than showing a short list.
+
+- **Still to be checked by him:** the download itself, on the Pi.
+- **Not built yet:** ASMA, whose index *is* its 20 MB archive.
 
 ### S4. Search
 
