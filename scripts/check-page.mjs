@@ -634,6 +634,49 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
     '70000\tOctamed/Unknown/x.med',
   ].join('\n');
 
+  // --- the zip, whose tail is what Firefox refused (C33) ----------------------------------------
+  //
+  // Node's DecompressionStream ignores what follows a deflate stream and Firefox does not, so the
+  // owner's failure could not be reproduced by asking node -- which is exactly what had been done.
+  // What *can* be checked anywhere is that the member's bounds are computed rather than guessed.
+  {
+    const zlib = await import('zlib');
+    const payload = Buffer.from('12345\tProtracker/4-Mat/elysium.mod\n');
+    const deflated = zlib.deflateRawSync(payload);
+    const name = Buffer.from('allmods.txt');
+
+    const build = (sizeInLocalHeader) => {
+      const local = Buffer.alloc(30);
+      local.writeUInt32LE(0x04034b50, 0);
+      local.writeUInt16LE(sizeInLocalHeader ? 0 : 0x08, 6);      // bit 3: "the size is elsewhere"
+      local.writeUInt32LE(sizeInLocalHeader ? deflated.length : 0, 18);
+      local.writeUInt32LE(payload.length, 22);
+      local.writeUInt16LE(name.length, 26);
+      const central = Buffer.alloc(46);
+      central.writeUInt32LE(0x02014b50, 0);
+      central.writeUInt32LE(deflated.length, 20);
+      central.writeUInt32LE(payload.length, 24);
+      central.writeUInt16LE(name.length, 28);
+      const eocd = Buffer.alloc(22);
+      eocd.writeUInt32LE(0x06054b50, 0);
+      eocd.writeUInt16LE(1, 8);
+      eocd.writeUInt16LE(1, 10);
+      eocd.writeUInt32LE(central.length + name.length, 12);
+      eocd.writeUInt32LE(30 + name.length + deflated.length, 16);
+      return Buffer.concat([local, name, deflated, central, name, eocd]);
+    };
+
+    for (const [where, zip] of [['in the local header', build(true)], ['only in the central directory', build(false)]]) {
+      const buffer = zip.buffer.slice(zip.byteOffset, zip.byteOffset + zip.byteLength);
+      const { start, end } = archive.memberBounds(buffer);
+      const got = zlib.inflateRawSync(Buffer.from(buffer.slice(start, end))).toString();
+      check(end === start + deflated.length && got === payload.toString(),
+        `the member's bytes are found when its length is ${where}`);
+      check(end < zip.byteLength,
+        `and the ${zip.byteLength - end} bytes of zip after it are not fed to the decompressor`);
+    }
+  }
+
   const { records, tracks, buckets, formats } = archive.toRecords(index);
   check(tracks === 6, 'every row becomes a track');
   check(buckets === 5, 'and rows sharing a format and author share a bucket');

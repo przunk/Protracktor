@@ -24,22 +24,51 @@ const key = {
 };
 
 /**
+ * Where the one member's compressed bytes begin and end.
+ *
+ * **Exactly, and that is the whole of `docs/STATUS.md` C33.** A zip is not a gzip: after the deflate
+ * stream come a data descriptor, a central directory and an end record. Node's `DecompressionStream`
+ * ignores those; **Firefox refuses them** — *"unexpected input after the end of stream"*, which is
+ * what the owner got and what could not be reproduced here, because node had been asked instead.
+ *
+ * The compressed size is in the local header, unless bit 3 of the general-purpose flags says the
+ * writer did not know it yet — then it is in the central directory, which is found from the end
+ * record at the tail of the file. `allmods.zip` fills in the local header today; the fallback is
+ * there because a zip writer is allowed not to and this one costs fifteen lines.
+ */
+export function memberBounds(bytes) {
+  const view = new DataView(bytes);
+  if (view.getUint32(0, true) !== 0x04034b50) throw new Error('not a zip');
+  const start = 30 + view.getUint16(26, true) + view.getUint16(28, true);
+  const flags = view.getUint16(6, true);
+  let compressed = view.getUint32(18, true);
+
+  if (compressed === 0 || (flags & 0x08) !== 0) {
+    // The end-of-central-directory record, scanned back from the tail: its signature, then the
+    // directory's own offset twelve bytes later. A comment may follow it, so it is a search rather
+    // than a fixed position — bounded to the 64 KB a comment may be.
+    let eocd = -1;
+    for (let i = bytes.byteLength - 22; i >= Math.max(0, bytes.byteLength - 65558); i--) {
+      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('no central directory');
+    const directory = view.getUint32(eocd + 16, true);
+    if (view.getUint32(directory, true) !== 0x02014b50) throw new Error('central directory is not there');
+    compressed = view.getUint32(directory + 20, true);
+  }
+  if (!compressed) throw new Error('the archive does not say how long its member is');
+  return { start, end: start + compressed };
+}
+
+/**
  * The one member of `allmods.zip`, decompressed.
  *
- * A zip is not a gzip: the bytes after the local header are a raw deflate stream, so the header has
- * to be stepped over by hand — thirty bytes plus two lengths it carries. `DecompressionStream` does
- * the rest and never holds more than a chunk.
- *
- * The member is written with a data descriptor, so the compressed size in the local header is zero
- * and cannot be used. Feeding the decompressor the rest of the file is correct: it stops at the end
- * of its own stream.
+ * Fed exactly the member's bytes and nothing after them — see `memberBounds`. `DecompressionStream`
+ * does the rest and never holds more than a chunk.
  */
 async function unzipOnly(bytes) {
-  const view = new DataView(bytes);
-  const nameLength = view.getUint16(26, true);
-  const extraLength = view.getUint16(28, true);
-  const start = 30 + nameLength + extraLength;
-  const stream = new Blob([bytes.slice(start)]).stream()
+  const { start, end } = memberBounds(bytes);
+  const stream = new Blob([bytes.slice(start, end)]).stream()
     .pipeThrough(new DecompressionStream('deflate-raw'));
   return new Response(stream).text();
 }

@@ -415,6 +415,28 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C33. ~~The index download choked on the zip's own tail~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10, on the first try at the Modland index:* "unexpected input after the end of
+stream".
+
+A zip is not a gzip. After the member's deflate stream come a data descriptor, a central directory
+and an end record — **103 bytes** in `allmods.zip` — and the page was handing the decompressor the
+whole rest of the file.
+
+**Node ignores those bytes and Firefox refuses them**, which is why this shipped: it was checked by
+asking node, and node is not what he runs. The same code, the same file, the same
+`DecompressionStream` API, and one of them says nothing.
+
+Fixed by feeding exactly the member: its compressed length from the local header, or — when bit 3
+of the flags says the writer did not know it yet — from the central directory, found by scanning
+back for the end record. `allmods.zip` fills in the local header today; the fallback is fifteen lines
+and a zip writer is allowed not to.
+
+**And the checks now build a zip rather than trusting one.** Two of them, one with the length in
+each place, asserting the bounds are computed and that the bytes after the member are not passed on.
+That is the part that could be checked anywhere; the leniency that hid it could not.
+
 ### C32. ~~MP3 stole an Impulse Tracker module~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, on a list sent from the phone:
