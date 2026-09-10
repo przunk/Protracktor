@@ -29,16 +29,32 @@ Modland, and it describes exactly one tree. Checked, rather than assumed:
 real and reachable — 146,324 bytes, HTTP 200, `Access-Control-Allow-Origin: *`, so a browser may
 read it directly — it is simply not in anything we download.
 
-**What indexing it would take.** There is no index file for this tree, so it means walking Apache
-directory listings: `<a href>` per level, recursing on the ones ending in `/`. That is a different
-kind of work from "fetch one file and parse it", and it is the reason this is a wish rather than
-a task:
+**What indexing it would take — measured, and the measurement is the argument.** There is no index
+file for this tree, so it means walking Apache directory listings: `<a href>` per level, recursing
+on the ones ending in `/`. A crawl capped at 600 directory requests was run once, breadth-first:
+
+- **600 requests, 389.7 s** — about 0.65 s each, and it **hit its cap rather than the end**;
+- it had found **23,880 files** and still had **4,997 directories queued**, having reached only
+  depth 3 and 4. So it saw something like a tenth of the tree, and every number here is a floor;
+- five areas, by files seen: `delivery bay` 11,825, `warehouse` 7,315, `laboratory` 3,306,
+  `vault` 1,002, `workshop` 431;
+- by extension: `.spc` 8,907, `.orc` 3,451, `.xm` 3,073, `.it` 2,818, **`.zip` 2,793**, `.s3m`
+  1,386, `.rar` 113. The archives are a second problem — Modland's own tree has none, so nothing
+  in the app unpacks one.
+
+**Finishing that crawl would be roughly an hour of continuous requests against somebody else's
+server, as a lower bound, with nothing to say when it needs doing again.** Against `allmods.zip`:
+one request, 5.7 MB, 516,107 tracks, versioned. That is the whole comparison, and it is why this
+stays a wish:
 
 - the shape is not `Format/Author/file`, so it does not fit the catalogue's three-level browse —
   `warehouse/MOD/games/<Game>/<file>` is closer to how UnExoticA is filed than to Modland;
-- a scrape has no version and no size column, so nothing tells us it went stale;
+- a scrape has no version and no size column, so nothing tells us it went stale, and the only way
+  to find out is to do the whole hour again;
 - it is one request per directory against somebody else's server, which is the sort of thing the
   letter to ExoticA was written to avoid doing thoughtlessly. See `docs/PLAN_WEB_LIBRARY.md` S7.
+  The bounded crawl above was run once, to answer the cost question, and should not be repeated
+  casually.
 
 **Cheaper first step, and possibly enough**: a way to type or paste an address into the APK. The
 web page already has one (and now obeys the playlist rule when using it); the phone has no such
