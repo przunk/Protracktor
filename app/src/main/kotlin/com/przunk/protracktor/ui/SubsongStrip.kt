@@ -57,6 +57,7 @@ internal fun SubsongStrip(
 ) {
     if (count <= 1) return
 
+    val haptics = rememberHaptics()
     val listState = rememberLazyListState()
 
     // Which tune the strip last moved for. Reset per file, because a new file's strip starts
@@ -97,6 +98,9 @@ internal fun SubsongStrip(
                     if (playAll) R.string.subsongs_all else R.string.subsongs_first_only
                 ),
                 onClick = onTogglePlayAll,
+                // A function button by shape, a toggle by meaning — and the label changes with it,
+                // so the finger may as well be told which way it went.
+                haptic = { toggle(!playAll) },
             )
         }
 
@@ -119,7 +123,12 @@ internal fun SubsongStrip(
                             },
                             CircleShape,
                         )
-                        .clickable { onSelect(index) },
+                        .clickable {
+                            // *"Delikatnie na subsong."* And nothing at all for the one already
+                            // playing: pressing it changes nothing, and a buzz would say it had.
+                            if (!selected) haptics.pick()
+                            onSelect(index)
+                        },
                 ) {
                     Text(
                         text = "${index + 1}",

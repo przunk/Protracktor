@@ -591,6 +591,8 @@ private fun OnlineDomain(
             } else {
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
+                // A notch per row while the finger is on the list, silence while it coasts.
+                HapticOnRowScroll(listState)
                 RestorePosition(scroll, key, listState, browse.groups.map { it.name }, browse.loading)
 
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -619,6 +621,8 @@ private fun OnlineDomain(
         else -> {
         val key = browse.levelKey()
         val listState = scroll.stateFor(key)
+        // A notch per row while the finger is on the list, silence while it coasts.
+        HapticOnRowScroll(listState)
         RestorePosition(scroll, key, listState, browse.catalogues.map { it.id }, browse.loading)
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             items(browse.catalogues, key = { it.id }) { catalogue ->
@@ -1160,6 +1164,8 @@ private fun Selectable(
                 }
                 val key = browse.levelKey()
                 val listState = scroll.stateFor(key)
+                // A notch per row while the finger is on the list, silence while it coasts.
+                HapticOnRowScroll(listState)
                 RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
                 Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -1370,8 +1376,27 @@ private fun BrowseTrackRow(
             // the owner's complaint about another player is a long press firing at a twentieth of a
             // second mid-scroll, after which back throws him out of the list entirely.
             .combinedClickable(
-                onClick = { if (selecting) onToggle() else onPlay() },
-                onLongClick = { if (!selecting) onStartSelecting() },
+                // **Choosing a tune is the firm one** (owner, 2026-09-10) — it is the press this
+                // whole screen exists for. While selecting, the same tap is a tick in a box, so it
+                // feels like the checkbox beside it rather than like starting a tune.
+                onClick = {
+                    if (selecting) {
+                        haptics.toggle(!ticked)
+                        onToggle()
+                    } else {
+                        haptics.press()
+                        onPlay()
+                    }
+                },
+                // The loose end `docs/BACKLOG.md` A8 left open: a long press with no answer feels
+                // like a press that missed, and this one silently changes what every other tap on
+                // the screen will do.
+                onLongClick = {
+                    if (!selecting) {
+                        haptics.gestureEnd()
+                        onStartSelecting()
+                    }
+                },
             ),
     )
 }

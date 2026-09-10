@@ -37,6 +37,39 @@ is 29 and the interesting constants arrived in API 30 and 34:
 | `scrub()` | `SEGMENT_FREQUENT_TICK` / `CLOCK_TICK` | each notch while dragging it |
 | `transition()` | `CLOCK_TICK` | arriving at another view, another folder |
 | `tick()` | `SEGMENT_TICK` / `CONTEXT_CLICK` | a row that actually changed places *(fallback strengthened from `CLOCK_TICK`: this says a thing happened, and on an older phone the old one was faint enough to be missed under a moving thumb)* |
+| `pick()` | `SEGMENT_TICK` / `CLOCK_TICK` | a subsong chosen from the strip |
+
+**Four more the same day, after he felt the first seven.** *"Delikatnie na subsong, mocniej na
+przyciski funkcyjne save revert…, track song"*, and a question about the list:
+
+- **Function buttons** — `LabelledAction` is the shape every one of them wears, so the press lives
+  there and reaches Save, Discard, the five track actions in Now Playing, and the two bulk actions
+  in the playlist at once. **The three that navigate pass `haptic = null`**: arriving already
+  buzzes, and two buzzes for one press reads as a stutter rather than as emphasis. Its long press
+  gained `gestureEnd()`, which closes the loose end A8 left open — a long press with no answer
+  feels like a press that missed.
+- **Choosing a tune** — `press()`, the firm one, on the tap this whole screen exists for. The same
+  tap while selecting is a tick in a box instead, so it feels like the checkbox beside it.
+- **Long press that starts a selection** — `gestureEnd()`. A8 owed this since 2026-09-01.
+- **Subsongs** — `pick()`, and nothing at all for the one already playing.
+
+### A31a. A notch per row while a list is dragged
+
+*His question, and worth writing down because the answer has a condition:* "czy na przesuwanie listy
+też sugerujesz dać coś super delikatnego ale «rzadko» po przewinięciu 1 wiersza".
+
+Yes — **but only while the finger is down**. A fling across fifty rows would fire fifty times, and
+fifty of anything inside a second is not texture, it is a phone going off in your hand. So
+`HapticOnRowScroll` watches the drag as well as the position: rows clicking past under the thumb,
+then silence while the list coasts. That is also what the hand expects, since a list nobody is
+touching is not a thing you should be able to feel.
+
+On the three long lists in Browse and on the playlist. Not on the sheets — a switcher with four
+rows in it does not scroll far enough to have a texture.
+
+**This is the one most likely to be wrong**, and it is wrong in a way that only a thumb can settle:
+a notch per row may be too often on a fast drag through six hundred authors. If so the fix is a
+divisor, not a deletion.
 
 **Three decisions worth keeping.**
 

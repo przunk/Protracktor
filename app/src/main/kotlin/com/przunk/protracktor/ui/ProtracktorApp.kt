@@ -300,6 +300,9 @@ fun ProtracktorApp(
                                 icon = PlayerIcons.Cloud,
                                 label = stringResource(R.string.action_browse),
                                 onClick = openBrowse,
+                                // Arriving at Browse buzzes; pressing the way in as well would be
+                                // two buzzes for one press.
+                                haptic = null,
                                 // The seam across the title/actions boundary, which the two slots
                                 // do not otherwise share -- so it is the one gap on this bar that
                                 // cannot be derived and had to be looked at.
@@ -320,6 +323,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
                             onClick = { showBrowse = false },
+                            haptic = null,
                             modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }
@@ -358,6 +362,7 @@ fun ProtracktorApp(
                             icon = PlayerIcons.Settings,
                             label = stringResource(R.string.settings_title),
                             onClick = { showSettings = true },
+                            haptic = null,
                             modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
                     }

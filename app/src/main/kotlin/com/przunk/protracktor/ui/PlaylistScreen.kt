@@ -179,6 +179,9 @@ private fun PlaylistBody(
     val haptics = rememberHaptics()
 
     Box(modifier = modifier.fillMaxSize()) {
+    // A notch per row while the finger is on the list, silence while it coasts.
+    HapticOnRowScroll(listState)
+
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
             TrackRow(
@@ -504,8 +507,27 @@ private fun TrackRow(
             )
             .combinedClickable(
                 enabled = enabled,
-                onClick = { if (selecting) onToggle() else onPlay() },
-                onLongClick = { if (!selecting) onStartSelecting() },
+                // **Choosing a tune is the firm one** (owner, 2026-09-10) — it is the press this
+                // whole screen exists for. While selecting, the same tap is a tick in a box, so it
+                // feels like the checkbox beside it rather than like starting a tune.
+                onClick = {
+                    if (selecting) {
+                        haptics.toggle(!ticked)
+                        onToggle()
+                    } else {
+                        haptics.press()
+                        onPlay()
+                    }
+                },
+                // The loose end `docs/BACKLOG.md` A8 left open: a long press with no answer feels
+                // like a press that missed, and this one silently changes what every other tap on
+                // the screen will do.
+                onLongClick = {
+                    if (!selecting) {
+                        haptics.gestureEnd()
+                        onStartSelecting()
+                    }
+                },
             ),
     )
 }

@@ -58,12 +58,28 @@ internal fun LabelledAction(
      */
     onLongClick: (() -> Unit)? = null,
     longClickLabel: String? = null,
+    /**
+     * What the phone does when this is pressed, or nothing.
+     *
+     * **These are the app's function buttons**, and the owner asked for a firm answer from them —
+     * Save and Discard by name (2026-09-10). So a press is the default and the exceptions declare
+     * themselves: the three that change destination pass `null`, because the destination already
+     * buzzes on arrival and two buzzes for one press reads as a stutter, not as emphasis.
+     */
+    haptic: (Haptics.() -> Unit)? = { press() },
 ) {
+    val haptics = rememberHaptics()
     val currentClick by rememberUpdatedState(onClick)
     val currentLongClick by rememberUpdatedState(onLongClick)
-    val click = remember { { currentClick() } }
+    // Held stable like the callbacks around it, and for the same reason (`docs/STATUS.md` C17): a
+    // lambda rebuilt each recomposition restarts the gesture detector, and a hold in progress then
+    // fires again and again.
+    val currentHaptic by rememberUpdatedState(haptic)
+    val click = remember { { currentHaptic?.invoke(haptics); currentClick() } }
     val hasLongClick = onLongClick != null
-    val longClick = remember { { currentLongClick?.invoke(); Unit } }
+    // A long press with no answer feels like a press that missed — the reason `docs/BACKLOG.md` A8
+    // put haptics on long presses in the first place.
+    val longClick = remember { { haptics.gestureEnd(); currentLongClick?.invoke(); Unit } }
 
     // **`combinedClickable` on a plain Surface**, rather than the clickable Surface overload, which
     // takes an `onClick` and nothing else. The shape has to be clipped explicitly then, or the
