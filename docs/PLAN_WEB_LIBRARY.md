@@ -338,6 +338,11 @@ restored like any other.
 
 ### S5. Random — **decided 2026-09-10, not yet built**
 
+**The shape of the screen is in `docs/PLAN_RANDOM.md`**, agreed the same day and written for
+the APK and the browser together because he wants the two as alike as they can be. What
+follows here is the web-specific half: what the dice picks from, and the measurements behind
+it.
+
 The phone asks SQLite for `ORDER BY RANDOM() LIMIT n`, which `docs/review-round-8.md` R7 already
 records as unmeasured and probably wasteful. IndexedDB cannot do it at all.
 
@@ -411,7 +416,16 @@ what ZXTune claims, so the two builds disagree and the disagreement is a fact ab
 about the format. That means the list has to be derived from the engine rather than copied beside
 it, or it will drift the first time a backend moves.
 
-### S6. History
+### S6. History — **the same list as Random's**
+
+Settled in the same conversation: the Random view *is* the session's history, so this and S5
+are one mechanism rather than two that resemble each other. See `docs/PLAN_RANDOM.md`. The
+only differences either of us could name are which actions a row offers — no reorder in the
+Random view — and whatever a later one adds. **The plan had two of these in it, and that
+would have been waste.**
+
+What follows is what was written before that was noticed, kept because the storage question
+it asks is still the storage question.
 
 `HistoryStore`'s shape, in IndexedDB. It is the smallest of these and the one with the least to
 decide, which is why it is last rather than first.
