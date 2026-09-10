@@ -873,11 +873,32 @@ private:
 class Mp3Backend : public Backend {
 public:
     /**
+     * Whether the *name* says MP3, which for this format is the reliable signal.
+     *
+     * **The content test is not**, and that is `docs/STATUS.md` C32. An MP3 has no magic worth the
+     * name, so `mp3dec_detect_buf` walks the file looking for something that parses as a frame —
+     * and a tracker module is megabytes of sample data in which something eventually will. It
+     * claimed `!!uu !! !!.it`, a file whose first four bytes are `IMPM`.
+     *
+     * So the name is asked first and the content only as a last resort, the same shape ASAP has
+     * for its fourteen extension-told-apart formats.
+     */
+    static bool claimsName(const std::string &name) {
+        const auto dot = name.find_last_of('.');
+        if (dot == std::string::npos) return false;
+        std::string extension = name.substr(dot + 1);
+        for (auto &c : extension) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        return extension == "mp3";
+    }
+
+    /**
      * minimp3's own detector, which walks for a frame header rather than trusting four bytes.
      *
-     * An ID3 tag, a stray `\xff\xfb` in a tracker module's sample data, a WAV with an MP3 inside —
-     * this is exactly the judgement a magic-number test gets wrong, so it is left to the library.
-     * Asked late in `openBackend` regardless, after everything that identifies by a real header.
+     * **A guess, and it is asked last for that reason.** It is right about a file that really is an
+     * MP3 under any name, and wrong about anything whose bytes happen to contain a plausible frame
+     * — see `claimsName`. Every decoder that can *prove* what it is holding gets asked before this.
      */
     static bool recognises(const std::vector<char> &bytes) {
         if (bytes.size() < 16) return false;
@@ -1605,6 +1626,17 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
                                      std::string &error) {
     error.clear();
 
+    // MP3 first when the name says so. It shares the reason ASAP goes early -- the name is the
+    // only reliable thing about this format -- and nothing else here claims `.mp3`.
+    if (Mp3Backend::claimsName(name)) {
+        try {
+            return std::make_unique<Mp3Backend>(bytes);
+        } catch (const std::exception &e) {
+            LOGE("minimp3 claimed the name but refused: %s", e.what());
+            error = e.what();
+        }
+    }
+
     // ASAP first when the name is one of its fourteen: several of its formats are told apart by
     // extension rather than by any header, so nothing else can make that call.
     if (AsapBackend::claimsName(name)) {
@@ -1664,19 +1696,6 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
     }
 #endif
 
-    // MP3, and **after everything that reads a real header**. minimp3's detector walks the file
-    // looking for a frame that parses, which is the right test for a format with no magic worth the
-    // name -- and exactly the test that will eventually say yes to somebody else's sample data. It
-    // gets asked once the formats that *can* prove what they are have said no.
-    if (Mp3Backend::recognises(bytes)) {
-        try {
-            return std::make_unique<Mp3Backend>(bytes);
-        } catch (const std::exception &e) {
-            LOGE("minimp3 recognised the header but refused: %s", e.what());
-            error = e.what();
-        }
-    }
-
     // sc68 asked first. Its answer is the load succeeding, not a verify -- see worthTrying. If it
     // refuses, we fall through to libopenmpt, whose format net is wide enough that letting it go
     // first would risk a stray claim on something sc68 should have had.
@@ -1692,6 +1711,20 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
         return std::make_unique<OpenmptBackend>(bytes);
     } catch (const std::exception &e) {
         LOGE("libopenmpt refused: %s", e.what());
+
+        // **MP3 by content, and only here.** Everything above can prove what it is holding, and
+        // libopenmpt's net is the widest of them -- so a file that has got this far is one nothing
+        // recognised, and minimp3's guess costs nothing to try. Asked earlier it stole an Impulse
+        // Tracker module from libopenmpt on the strength of a byte pattern in its samples
+        // (`docs/STATUS.md` C32).
+        if (Mp3Backend::recognises(bytes)) {
+            try {
+                return std::make_unique<Mp3Backend>(bytes);
+            } catch (const std::exception &mp3) {
+                LOGE("minimp3 thought it was an MP3 and refused: %s", mp3.what());
+            }
+        }
+
         if (error.empty()) {
             // The last backend's reason, given the same shape as the other five. libopenmpt throws
             // its own exception, so unlike them the sentence cannot be written at the throw site --

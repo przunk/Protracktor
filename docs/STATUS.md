@@ -415,6 +415,38 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C32. ~~MP3 stole an Impulse Tracker module~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10, on a list sent from the phone:
+`Impulsetracker/Wayfinder/!!uu !! !!.it` played as MP3 and played wrongly.*
+
+Reproduced first, which took a minute: the file's first four bytes are `IMPM` and the engine
+answered `format MP3 (minimp3) … peak 10.36` — clipping noise, no duration.
+
+**The comment on the dispatch predicted this and the code did nothing about it.** It said minimp3's
+detector "walks the file looking for a frame that parses, which is … exactly the test that will
+eventually say yes to somebody else's sample data", and then placed that test **before**
+libopenmpt. An Impulse Tracker module is tens of kilobytes of sample data; something in it parses.
+
+**MP3 is now claimed by name first and by content only last.**
+
+- `Mp3Backend::claimsName` takes `.mp3`, early, the same shape ASAP has for the fourteen formats it
+  tells apart by extension. Nothing else here claims that name.
+- `Mp3Backend::recognises` is asked **after libopenmpt has refused** — so a file that reaches it is
+  one that nothing which can *prove* what it holds recognised, and a guess costs nothing.
+
+Measured after:
+
+| | |
+|---|---|
+| `!!uu !! !!.it` | **Impulse Tracker 2.14**, `!!uu !! !!`, 72 s, peak 0.41 |
+| 83 MPEG conformance streams, named `.mp3` | 70 played, 10 silent, 3 refused — unchanged |
+| 3 of them with **no extension at all** | 3 played — the last resort still does its job |
+| 195 console, SID, SNDH, SAP and module files | 169 played, unchanged |
+
+**The lesson is not "guess later".** It is that a comment naming a risk is not a guard against it,
+and this one had the risk written down in the same commit that shipped it.
+
 ### C31. ~~Back left the file, and a long press meant the opposite of the phone's~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10: **"back nie cofa podutworu tylko plik na web"**.*
