@@ -625,7 +625,9 @@ Browse shut while "From the phone" is showing (S4a).
       - Page checks: a ZXTune-only row dropped when the engine has no ZXTune and kept when it has; a
         changed fingerprint marks the index stale; the sentence is on screen.
 
-- [ ] **2. Every list behaves like the phone's**
+- [x] **2. Every list behaves like the phone's** *(done 2026-09-11: one `revealRow`, Browse marks
+      and follows the playing tune, the dock is a sibling so the phone's defect cannot occur;
+      geometry not seen)*
       *The owner: "pamiętaj też, żeby listy działały tak jak w apk (nasze ostatnie poprawki)."* Before
       Random and History, because both are new lists and should be born obeying this.
 

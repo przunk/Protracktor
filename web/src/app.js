@@ -601,8 +601,47 @@ const STOP_GLYPH = 'M6 6h12v12H6z';
  * playing row three screens up is the same complaint in a different medium.
  */
 function followPlaying() {
-  const row = $('queue').children[index];
+  revealRow($('queue').children[index]);
+  // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
+  // folder somebody is reading while the music moves on is the list that most needs it.
+  if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), queue[index]?.url));
+}
+
+/**
+ * Puts a row on screen by the least scroll that shows it, and does nothing if it is already there.
+ *
+ * **The phone's `KeepRowInView`, which a browser has natively.** `block: 'nearest'` is exactly the
+ * rule the phone reached in five builds on 2026-09-10: never while the row is visible, one row's
+ * worth when it is not, off the top to the top edge and off the bottom to the bottom edge. One
+ * function for every list, because the phone's lesson was that a second copy has to find all five
+ * again (`GOAL.md` round 8, item 2).
+ *
+ * The phone's worst defect cannot happen here: its dock was drawn over the list, so a row behind it
+ * counted as visible. The page's dock is `main`'s sibling in the column, not a layer over it, so
+ * nothing a list considers on screen can be covered.
+ */
+function revealRow(row) {
   if (row?.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+}
+
+/** The address of what is playing, or null. A tune only *selected* by the phone is not playing. */
+function playingUrl() {
+  return index >= 0 && rowState && rowState !== 'selected' ? queue[index]?.url ?? null : null;
+}
+
+/**
+ * Marks the row of [url] in a list of tracks and answers it. **Marks only** — arriving at a list
+ * never scrolls it, which on the phone was a decision rather than a default: every return to a list
+ * would otherwise throw you back to the playing row and lose the place you were reading.
+ */
+function markPlayingIn(list, url = playingUrl()) {
+  let found = null;
+  for (const row of list.children) {
+    const playing = !!url && row.dataset.url === url;
+    row.classList.toggle('playing', playing);
+    if (playing && !found) found = row;
+  }
+  return found;
 }
 
 function setPlaying(on) {
@@ -1162,7 +1201,9 @@ async function renderBrowse() {
     // **The whole author becomes the queue**, which is what the phone does: a person who opened a
     // folder and pressed a tune meant that folder, not that one file.
     row(track.name, Math.round(track.size / 1024), () => playFromBrowse(tracks, i));
+    list.lastElementChild.dataset.url = track.url;
   });
+  markPlayingIn(list);
 }
 
 /**
@@ -1274,8 +1315,11 @@ async function runSearch(query) {
       await renderBrowse();
     });
   }
-  hits.forEach((track, i) => row(track.name, track.meta.replace('Modland/', ''),
-                                 () => playFromBrowse(hits, i)));
+  hits.forEach((track, i) => {
+    row(track.name, track.meta.replace('Modland/', ''), () => playFromBrowse(hits, i));
+    list.lastElementChild.dataset.url = track.url;
+  });
+  markPlayingIn(list);
 
   const ms = Math.round(performance.now() - started);
   // Where it looked, every time, so "nothing matched" cannot be read as "Modland has no such tune"

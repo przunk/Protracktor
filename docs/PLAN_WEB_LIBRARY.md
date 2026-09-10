@@ -379,6 +379,38 @@ while every playlist arrived full from the phone. Make an empty one, reload, and
 to "From the phone", with the tab he had just unblocked shut again. An empty playlist is now
 restored like any other.
 
+### S4b. Every list behaves like the phone's — **built 2026-09-11**
+
+*The owner: "pamiętaj też, żeby listy działały tak jak w apk (nasze ostatnie poprawki)."* `GOAL.md`
+round 8, item 2 — before Random and History, so both are born obeying it.
+
+The phone reached its rule in five builds on 2026-09-10 (`ui/ListScrolling.kt`): keep the playing
+row in view, **one row at a time and only when it would leave**, and **never on arrival**. The page
+already had most of it without knowing — and that is worth saying, because it means the page was
+not wrong, only incomplete:
+
+- `scrollIntoView({ block: 'nearest' })` *is* the phone's rule, natively. It is now one function,
+  `revealRow`, shared by every list.
+- The page called it only from `playAt`, so arriving at a list, drawing it again, adding or
+  removing rows never scrolled — the phone's "never on arrival", already true.
+- **The phone's worst defect cannot happen here.** Its dock was a layer over the list, so a row
+  behind it counted as visible and was left there. The page's dock is `main`'s sibling in the
+  column, not a layer, so nothing a list considers on screen can be covered. Read from the
+  markup, not seen in a browser.
+
+What was missing was Browse. Its track lists — an author's folder and search results — now **mark
+the tune that is playing** the way the playlist does, **without scrolling when opened**, and **follow
+it by the same rule when the tune changes while Browse is open**. Rows carry their address so the
+mark can be found; a tune merely *selected* by the phone is not marked as playing.
+
+No selection mode exists on the page, so the phone's "not while ticking rows" has nothing to apply
+to. No follow button, as on the phone since the same evening; "Show in playlist" stays as the
+deliberate jump.
+
+jsdom lays nothing out: the checks prove *whether* the page asks to scroll and with what options —
+once on a new playing row, never on arrival or redraw, Browse only while open — and cannot prove
+where the row lands. That is the owner's to judge.
+
 ### S5. Random — **decided 2026-09-10, not yet built**
 
 **The shape of the screen is in `docs/PLAN_RANDOM.md`**, agreed the same day and written for

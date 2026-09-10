@@ -134,7 +134,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -843,6 +843,69 @@ if (window.__api) {
     check($('browsenote').textContent.includes('Downloading it again (5.76 MB)'),
       'an index built before the filter says why it should be downloaded again, before it is');
 
+    await store.clear('modland:');
+    await window.__api.switchTo('phone');
+  }
+}
+
+// --- every list behaves like the phone's (GOAL.md round 8, item 2) -------------------------------
+//
+// jsdom lays nothing out, so where a row ends up cannot be checked here; **whether the page asks to
+// scroll, and how**, can. Each call is recorded by a stand-in for `scrollIntoView`.
+if (window.__api) {
+  console.log('\nlists keep the playing row in view:');
+  const scrolls = [];
+  const original = window.HTMLElement.prototype.scrollIntoView;
+  // **Where the row was, recorded when it is asked for.** `playAt` draws the playlist again once the
+  // tune opens, replacing every row -- so an element kept for later is detached by the time it is
+  // looked at, and its list reads as none. The first version of this check failed on exactly that.
+  window.HTMLElement.prototype.scrollIntoView = function (options) {
+    const list = this.parentElement;
+    scrolls.push({ list: list?.id, at: list ? [...list.children].indexOf(this) : -1, options });
+  };
+  const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+  try {
+    await window.__api.switchTo('p-lists');
+    const name = (n) => `t${n}.mod`;
+    const url = (n) => `https://modland.com/pub/modules/Protracker/Lister/${name(n)}`;
+    window.__api.setQueue([1, 2, 3, 4].map((n) => ({ url: url(n), name: name(n), file: name(n),
+                                                     meta: 'Modland/Protracker/Lister' })), 0);
+    window.__api.render();
+    check(scrolls.length === 0, 'arriving at a list does not scroll it');
+
+    await window.__api.playAt(2);
+    const inQueue = scrolls.filter((s) => s.list === 'queue');
+    check(inQueue.length === 1 && inQueue[0].at === 2 && inQueue[0].options?.block === 'nearest',
+      'a new playing row is revealed once, by the least scroll that shows it');
+
+    scrolls.length = 0;
+    window.__api.render();
+    check(scrolls.length === 0, 'drawing the list again does not scroll it');
+
+    await store.putAll([{ key: 'modland:tracks:Protracker/Lister',
+                          tracks: [1, 2, 3, 4].map((n) => ({ t: name(n), s: 1000 })) }]);
+    window.__api.showPanel('browse');
+    await window.__api.browseTo(['modland', 'Protracker', 'Lister']);
+    const marked = [...$('browselist').children].filter((r) => r.classList.contains('playing'));
+    check(marked.length === 1 && marked[0] === $('browselist').children[2],
+      'Browse marks the tune that is playing, and only that one');
+    check(scrolls.length === 0, 'and opening it does not scroll to it');
+
+    await window.__api.playAt(3);
+    const inBrowse = scrolls.filter((s) => s.list === 'browselist');
+    check(inBrowse.length === 1 && inBrowse[0].at === 3
+          && $('browselist').children[3].classList.contains('playing')
+          && !$('browselist').children[2].classList.contains('playing'),
+      'when the tune changes with Browse open, Browse moves the mark and follows it by the same rule');
+
+    window.__api.showPanel(null);
+    scrolls.length = 0;
+    await window.__api.playAt(1);
+    check(!scrolls.some((s) => s.list === 'browselist'),
+      'and a closed Browse is left alone');
+  } finally {
+    if (original) window.HTMLElement.prototype.scrollIntoView = original;
+    else delete window.HTMLElement.prototype.scrollIntoView;
     await store.clear('modland:');
     await window.__api.switchTo('phone');
   }
