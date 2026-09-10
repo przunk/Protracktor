@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
@@ -119,24 +121,15 @@ fun BrowseScreen(
     val scroll = rememberBrowseScroll()
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-        if (browse.indexing.isNotEmpty()) {
-            // An index download is minutes of work on a slow connection. Saying which catalogue and
-            // showing movement is the difference between "working" and "hung".
-            //
-            // **One line each, since 2026-09-09.** Several can run at once, and a banner that named
-            // only the most recent was how the owner came to believe a second tap cancelled the
-            // first. The row itself now carries its own spinner too; this stays because it is the
-            // only thing that says *how far* the replay download has got.
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                browse.indexing.values.sorted().forEach { label ->
-                    Text(
-                        text = stringResource(R.string.browse_indexing, label),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-            }
-        }
+        // **The banner that used to live here is gone** (owner, 2026-09-10): "jest to redundantne
+        // i psuje UI (przeskakuje na czas istnienia paska)". It named the running downloads and
+        // drew an indeterminate bar above the list, so starting one pushed the whole list down and
+        // finishing it pulled the list back up -- while the row he had just tapped was already
+        // saying the same thing with its own spinner.
+        //
+        // Both things it carried moved into the rows: `DownloadAction` says "indexing…" under its
+        // spinner, and the replay row -- the one download that counts its files -- shows the count
+        // in its own supporting line.
 
         when (browse.domain) {
             BrowseDomain.ROOT -> DomainChooser(
@@ -783,8 +776,13 @@ private fun OnlineDomain(
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.replays_title)) },
                         supportingContent = {
+                            // **The one download that counts its files**, so while it runs this
+                            // line carries the count rather than the invitation. It used to be in
+                            // the banner at the top of the screen, which is gone; nothing else on
+                            // this row could say how far ninety-eight small files had got.
                             Text(
-                                stringResource(R.string.replays_none),
+                                browse.indexing[DownloadKeys.REPLAYS]
+                                    ?: stringResource(R.string.replays_none),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         },
@@ -1354,7 +1352,7 @@ private fun BrowseTrackRow(
 }
 
 /**
- * The arrow that starts a download, and the spinner it becomes while one is running.
+ * The arrow that starts a download, and the spinner-with-a-word it becomes while one is running.
  *
  * **In the row rather than only in the banner.** Several of these can run at once — they always
  * could, being independent coroutines — but the screen only ever showed the most recent one, so
@@ -1362,17 +1360,38 @@ private fun BrowseTrackRow(
  * shows its own state cannot lie about it, and the same spinner is what says "this one is already
  * going" when a second tap would otherwise do nothing visible.
  *
- * The same size as the icon it replaces, so nothing in the list moves when it appears.
+ * **A bare spinner is a shape, not a sentence** (owner, 2026-09-10), so it now carries the word
+ * under it. Both states sit in a box of one fixed size, centred, which is the whole point: the
+ * banner this replaced changed the layout when it appeared and again when it left, and a caption
+ * that made the row grow would be the same mistake one level down. The box is as wide as the
+ * longest of the two languages needs — Polish "indeksowanie…" is half again the English — and as
+ * tall as the icon already was, so the spinner and its word fit inside what the arrow occupied.
  */
 @Composable
 private fun DownloadAction(downloading: Boolean, description: String, onClick: () -> Unit) {
-    if (downloading) {
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-        }
-    } else {
-        IconButton(onClick = onClick) {
-            Icon(PlayerIcons.Download, description)
+    Box(
+        modifier = Modifier.width(84.dp).height(48.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (downloading) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(
+                    text = stringResource(R.string.browse_indexing_short),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        } else {
+            IconButton(onClick = onClick) {
+                Icon(PlayerIcons.Download, description)
+            }
         }
     }
 }
