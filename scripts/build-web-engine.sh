@@ -58,13 +58,20 @@ emcc "$ROOT/native/engine/engine.cpp" "$ROOT/native/engine/player_wasm.cpp" \
     -o "$OUT/engine.mjs" \
     -std=gnu++20 -fexceptions -frtti -O3 \
     -DFMT_CONSTEVAL= -DHAVE_ZLIB_H -DPROTRACKTOR_WITH_ZXTUNE=0 \
+    `# **MINIMP3_FLOAT_OUTPUT, and it must be here.** CMake gives it to the minimp3 target as a
+     # PUBLIC definition, which reaches everything CMake compiles -- and this line is not one of
+     # those: the engine is linked by hand here because it needs Emscripten flags that mean nothing
+     # to the Android build. Without it, engine.cpp thinks mp3d_sample_t is a short while the
+     # library knows it is a float. That links without a word and then reads every sample as half
+     # of two.` \
+    -DMINIMP3_FLOAT_OUTPUT \
     -I"$V/libopenmpt" -I"$V/libopenmpt/src" -I"$V/libopenmpt/common" \
     -I"$B/sc68/generated" -I"$B/sc68/generated/sc68" -I"$V/sc68-3" -I"$V/sc68-3/libsc68" \
     -I"$V/sc68-3/libsc68/sc68" -I"$V/sc68-3/libsc68/emu68" -I"$V/sc68-3/libsc68/io68" \
     -I"$V/sc68-3/file68" -I"$V/sc68-3/file68/sc68" -I"$V/sc68-3/unice68" \
     -I"$V/asap" -I"$V/gme" -I"$V/gme/gme" \
     -I"$V/sidplayfp/src" -I"$V/sidplayfp/src/builders/sidlite-builder" -I"$B/sidplayfp/public" \
-    -I"$V/hively/hvl2wav" \
+    -I"$V/hively/hvl2wav" -I"$V/minimp3" \
     $(find "$BUILD" -name '*.a' | sort) \
     -sUSE_ZLIB=1 \
     -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web,worker,node \

@@ -22,6 +22,7 @@ add_subdirectory(backends/asap)
 add_subdirectory(backends/gme)
 add_subdirectory(backends/sidplayfp)
 add_subdirectory(backends/hively)
+add_subdirectory(backends/minimp3)
 # ZXTune is the one optional decoder, and only because it is the one that does not compile
 # everywhere: Emscripten's libc++ rejects `lexic_analysis.cpp`, and patching it means forking a
 # library §3 of docs/ARCHITECTURE.md says we do not fork. On by default, so Android is unchanged.

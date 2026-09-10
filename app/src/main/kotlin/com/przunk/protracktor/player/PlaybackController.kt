@@ -1477,6 +1477,10 @@ class PlaybackController private constructor(private val context: Context) {
         var left = 0
         var used = 0
         for (track in tracks) {
+            // **An MP3 never travels**, by the owner's rule and by arithmetic: the budget for a
+            // whole queue is eight megabytes and one four-minute recording is more than that. It is
+            // marked instead, and arrives as a greyed row naming the file (`docs/BACKLOG.md` A29).
+            if (QueueLink.isMp3(track)) continue
             // **Skipped only when the browser can fetch it for itself.** Modland serves every file
             // over HTTP, so its rows travel as a URL and cost nothing here. ASMA and UnExoticA do
             // not publish one: `asma://` and `unexotica://` mean something on this phone and
@@ -1983,7 +1987,10 @@ class PlaybackController private constructor(private val context: Context) {
                 // list of filenames on somebody else's server; deciding by content would mean
                 // downloading half a million files to find out. The local library is the opposite
                 // case and is scanned by opening (`docs/BACKLOG.md` A6).
-                catalogue.parseIndex(bytes) { name -> SupportedFormats.looksPlayable(name) }
+                // **`inCatalogueIndex`, not `looksPlayable`.** The wider question includes names
+                // this build plays only as local files -- MP3 -- and no archive here holds one, so
+                // asking it would put rows in an index that can never be fetched.
+                catalogue.parseIndex(bytes) { name -> SupportedFormats.inCatalogueIndex(name) }
             }
             catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             endDownload(catalogue.id)

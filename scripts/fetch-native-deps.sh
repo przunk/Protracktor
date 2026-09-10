@@ -127,6 +127,25 @@ fetch hively \
       "a3c6d8a041fe9952f0a72a31953461254b497d3bfbf3d07301d1bf4e9e8fb65d" \
       1
 
+# minimp3 -- CC0-1.0, a public domain dedication (verified 2026-09-10: `LICENSE` is the CC0 text and
+# both headers repeat "the author(s) have dedicated all copyright and related and neighboring rights
+# to this software to the public domain worldwide"). MP3, and nothing else.
+#
+# **Two headers, no library.** `minimp3.h` is the decoder and `minimp3_ex.h` adds the part that
+# matters here -- a duration for a variable-bitrate file and an index to seek with, neither of which
+# a plain frame decoder can give. `docs/BACKLOG.md` A29 chose this over Android's own MediaCodec: the
+# engine is native from the file to the speaker, and routing one format through the platform would
+# mean two playback paths to keep in step and nothing at all for the browser.
+#
+# Pinned to a commit, because there are no releases. GitHub generates these tarballs rather than
+# storing them, so the checksum can in principle move without the commit moving -- the same caveat
+# HivelyTracker's tag tarball carries above, and pinned anyway for the same reason.
+fetch minimp3 \
+      "ea99364" \
+      "https://codeload.github.com/lieff/minimp3/tar.gz/ea99364f61c14656440e8d77e9c233ccf3124633" \
+      "5628166eb82a9bb581317918a334c317a2c0a30278bb14a20381307976768f34" \
+      1
+
 # lhasa -- ISC (verified 2026-09-09: COPYING.md is the ISC text, Copyright (c) 2011-2025 Simon
 # Howard, and all 35 sources and headers under lib/ repeat the grant per file). An LHA/LZH
 # decompressor, and the only one here that decodes no music at all.
