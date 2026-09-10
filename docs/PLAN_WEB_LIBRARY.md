@@ -54,9 +54,24 @@ not fine on a phone browser — and the page is opened on a phone often enough (
 pairing code is for). **Nothing may hold the whole index in memory at once**; it has to stream from
 the zip into storage in batches.
 
-**Unmeasured, and it is the number that decides S2:** how fast IndexedDB actually writes half a
-million small records in a real browser. Reported figures vary by an order of magnitude and none of
-them are ours. That measurement is a one-page throwaway and it comes *before* the code.
+### Measured by the owner, 2026-09-10, in Firefox at work
+
+`web/tools/storage-check.html`, 60,000 records of Modland's real shape:
+
+| batch | | rows/s | all 516,107 would take |
+|---|---|---|---|
+| 1,000 | | 8,966 | 57 s |
+| 5,000 | | 9,878 | 52 s |
+| 20,000 | | **12,552** | **41 s** |
+| 5,000 | **with the `(format, author)` index** | 7,176 | 71 s |
+
+**Forty-one seconds is workable and the fourth row is the interesting one:** carrying the index the
+browse tree would query costs **43% of the throughput**. Paying nearly half of a one-minute wait for
+a lookup structure is the kind of price worth refusing — and refusing it turned out to change the
+design rather than merely trim it. See S3.
+
+*One browser on one machine. A second reading at home would say how much of this is Firefox and how
+much is the disk — but with the shape S3 settles on, the answer stops being sensitive to either.*
 
 ---
 
@@ -132,10 +147,36 @@ changes" and the page must answer it the same way.
 Modland first, because it is the one that matters and the one whose numbers are above.
 
 Stream `allmods.zip` through `DecompressionStream('gzip'/'deflate')` — already used for the queue
-link — and write in batches with a progress count. **Never materialise the whole thing.** Store
-enough to browse without a second pass: the phone's three levels are format → author → title, so an
-index on `(format, author)` is what the browse tree reads and a `path` key is what a track resolves
-through.
+link — and write in batches with a progress count. **Never materialise the whole thing.**
+
+**Not a row per track, and the owner's measurement is why.** An index on `(format, author)` costs
+43% of the write throughput, and it exists only to answer "which tracks are under this author" — a
+question with a fixed, tiny answer set. Counted in Modland, 2026-09-10:
+
+| | |
+|---|---|
+| tracks | 515,509 |
+| formats | 339 |
+| **`format` + `author` buckets** | **43,715** |
+| largest bucket | 3,617 tracks |
+| median bucket | **3 tracks** |
+
+So store **a record per bucket**, holding its tracks, keyed by `format/author`. That is **11.8×
+fewer writes and no index at all** — his 12,552 rows/s puts the whole of Modland at about **three and
+a half seconds** instead of forty-one. The key *is* the lookup, which is the structure an index
+would have built anyway.
+
+Two more things fall out of it rather than being designed:
+
+- **Browsing is three reads, not three queries.** One record for the format list, one per format for
+  its authors, one per bucket for its tracks — computed once while writing.
+- **Random gets better than the phone's.** Pick a bucket weighted by its count, then a track inside
+  it. `docs/review-round-8.md` R7 says the phone's `ORDER BY RANDOM()` over half a million rows is
+  unmeasured and probably wasteful; this is the shape it may want to borrow.
+
+**What it costs is search**, and S4 has to answer for it: matching an author or a format reads
+43,715 keys and is cheap, but matching a *title* means reading every bucket — 30 MB of records.
+That belongs in a worker and it belongs behind a measurement before it is promised.
 
 The staleness rule is the phone's and is not optional: `SupportedFormats.fingerprint` decides
 whether a stored index is still current, and the page must record and check the same string — the
