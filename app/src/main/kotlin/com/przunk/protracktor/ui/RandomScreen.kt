@@ -16,8 +16,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,7 +27,6 @@ import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.Platforms
 import com.przunk.protracktor.player.RandomScope
 import com.przunk.protracktor.player.TrackRef
-import kotlinx.coroutines.flow.first
 
 /**
  * What the dice has given this session.
@@ -64,65 +61,6 @@ fun RandomScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    // **Always show the row that is playing** (owner, 2026-09-10: "przesuwanie next/prev powinno
-    // zawsze pokazywać na widoku zaznaczony track, niezależnie czy idę w lewo czy prawo").
-    //
-    // Keyed on the cursor, which covers both things it has to do: a new pick moves the cursor to
-    // the end, so the record follows itself downwards, and stepping back moves it up, so previous
-    // shows what it is playing instead of leaving you looking at the bottom of the list.
-    //
-    // I first keyed this on the *length*, reasoning that pressing a row should not yank the view.
-    // The reasoning was wrong: a row you can press is a row you can see, so scrolling to it moves
-    // nothing. It only ever cost the case he is describing.
-    LaunchedEffect(state.randomIndex, state.randomPicks.size) {
-        val index = state.randomIndex
-        if (index !in state.randomPicks.indices) return@LaunchedEffect
-
-        // **Measured after the row exists, not before.** This effect restarts the moment the cursor
-        // moves, which is the same moment the record grows — and on that pass the list has been
-        // composed but not laid out, so `layoutInfo` still describes the list without the new row.
-        // Deciding from that is deciding from the previous screen, and it was out by about the
-        // height of the dock.
-        snapshotFlow { listState.layoutInfo }.first { it.totalItemsCount > index }
-        val layout = listState.layoutInfo
-        val row = layout.visibleItemsInfo.firstOrNull { it.index == index }
-
-        // **The part of the list you can actually see**, which is not the viewport. The viewport
-        // runs under the content padding, and the bottom padding here is the dock -- several rows
-        // tall. A row sitting behind it was inside `viewportEndOffset`, passed as "fully visible",
-        // and was left there; that is the lag the owner counted, four presses of it.
-        val top = layout.viewportStartOffset + layout.beforeContentPadding
-        val bottom = layout.viewportEndOffset - layout.afterContentPadding
-        val fullyVisible = row != null && row.offset >= top && row.offset + row.size <= bottom
-        if (fullyVisible) return@LaunchedEffect
-
-        // **Absolute, never relative.** `animateScrollBy` was the obvious way to move by exactly
-        // the overhang and the wrong one: pressing next again cancels the animation part-way, so
-        // each unfinished nudge left the list a little further behind and four presses went by
-        // before the row caught up. Scrolling *to* an index cannot accumulate an error, because it
-        // says where to end up rather than how far to travel.
-        // The unobstructed height, for the same reason: landing the row at the bottom of the raw
-        // viewport would land it behind the dock again.
-        val viewport = bottom - top
-        val height = row?.size ?: layout.visibleItemsInfo.firstOrNull()?.size ?: 0
-        // **Which side it left by is decided from the index, not from whether the row was found.**
-        // A row missing from `visibleItemsInfo` is missing whichever way it went: appended below
-        // the last row, or scrolled off above the first by Previous. Treating "not found" as
-        // "below" made Previous land the row at the *bottom* of the screen -- a whole page of
-        // travel for a move of one row, and the opposite of what Next does going the other way
-        // (owner, 2026-09-10).
-        val first = layout.visibleItemsInfo.firstOrNull()?.index ?: 0
-        val above = if (row != null) row.offset < top else index < first
-        if (above) {
-            // Off the top: the row goes to the top edge, which for a step of one is a scroll of one.
-            listState.animateScrollToItem(index)
-        } else {
-            // Off the bottom, or appended: the row goes to the bottom edge. A negative offset is
-            // what puts it there rather than at the top -- the smallest move that reveals it.
-            listState.animateScrollToItem(index, -(viewport - height).coerceAtLeast(0))
-        }
-    }
-
     Column(modifier = modifier.fillMaxSize()) {
         RandomHeader(browse = browse, onFilter = onFilter, contentPadding = contentPadding)
 
@@ -166,6 +104,10 @@ fun RandomScreen(
             // By position, because the dice may legitimately give the same tune twice out of a
             // small pool and two rows with one key is a crash, not a blemish.
             keyOf = { index, track -> "$index:${track.id}" },
+            // The cursor, not the track: the record can hold one tune twice, and moving between
+            // the two copies must still count as moving. Keeping the row on screen lives in
+            // `PlaylistBody` now, shared with every other list (`KeepRowInView`).
+            followKey = state.randomIndex,
         )
     }
 }

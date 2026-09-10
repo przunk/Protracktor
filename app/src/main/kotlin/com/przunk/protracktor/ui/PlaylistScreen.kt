@@ -171,6 +171,12 @@ internal fun PlaylistBody(
      * nothing to reorder.
      */
     keyOf: (Int, TrackRef) -> Any = { _, track -> track.id },
+    /**
+     * What counts as the playing row *changing*, for [KeepRowInView]. The track's id by default,
+     * so reordering or removing rows around it does not move the list; the Random view passes its
+     * cursor, because its record can hold the same tune twice.
+     */
+    followKey: Any? = currentIndex?.let { tracks.getOrNull(it)?.id },
 ) {
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
@@ -189,7 +195,6 @@ internal fun PlaylistBody(
     val trackCount = remember { { liveTracks.size } }
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
 
-    var following by remember { mutableStateOf(false) }
     // Selection lives here and dies with the screen, the same as in Browse: a tick that survives a
     // reload would act on a row the user never saw (`docs/ARCHITECTURE.md` §17).
     var selected by remember { mutableStateOf(emptySet<String>()) }
@@ -306,17 +311,16 @@ internal fun PlaylistBody(
         }
     }
 
-    // Not while selecting: it floats over the bottom-right corner, which is where the actions are,
-    // and following the playing track is not what you are doing when you are choosing rows.
-    if (enabled && !selecting) {
-        FollowTrackButton(
-            listState = listState,
-            currentIndex = currentIndex,
-            contentPadding = contentPadding,
-            following = following,
-            onFollowingChange = { following = it },
-        )
-    }
+    // **The follow-track button used to be here** -- a small FAB you switched on and the first drag
+    // switched off again. Replaced by a list that simply keeps the playing row on screen, one row at
+    // a time and only when it would leave (owner, 2026-09-10). Still, not while ticking rows or
+    // dragging one: a list that moves under a working finger fights it.
+    KeepRowInView(
+        listState = listState,
+        index = currentIndex,
+        key = followKey,
+        active = enabled && !selecting && draggingId == null,
+    )
 
     showingInfo?.let { track ->
         TrackInfoDialog(track = track, onDismiss = { showingInfo = null })

@@ -1057,11 +1057,6 @@ private fun Selectable(
         mutableStateOf(emptySet<String>())
     }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
-    // Reset when the list underneath changes: following a row in a folder you have just left is
-    // following nothing.
-    var following by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
-        mutableStateOf(false)
-    }
     LaunchedEffect(browse.tracks) {
         selected = selected.intersect(browse.tracks.map { it.id }.toSet())
     }
@@ -1194,27 +1189,16 @@ private fun Selectable(
                     modifier = Modifier.align(Alignment.CenterEnd),
                 )
 
-                // The same button the playlist has. These are the lists you scroll a long way down
-                // while something plays -- a folder, a search, an author's other tunes -- so losing
-                // the playing row here costs more than it does on the playlist, not less.
-                //
-                // **After the list, not before it.** Children of a `Box` draw in order, so put
-                // above the `LazyColumn` it was painted and then covered by every row -- present,
-                // correct and invisible, which is how the owner found it.
-                //
-                // Hidden while selecting for the reason it is hidden on the playlist: it floats
-                // over the bottom-right corner, which is where the actions are, and following the
-                // music is not what you are doing when you are ticking rows.
-                if (!selecting) {
-                    FollowTrackButton(
-                        listState = listState,
-                        currentIndex = browse.tracks.indexOfFirst { it.id == playingId }
-                            .takeIf { it >= 0 },
-                        contentPadding = PaddingValues(0.dp),
-                        following = following,
-                        onFollowingChange = { following = it },
-                    )
-                }
+                // The playing row kept on screen as next and previous move it, the same as the playlist
+                // and the Random record. These are the lists you scroll a long way down while
+                // something plays -- a folder, a search, an author's other tunes -- which is why the
+                // follow-track button was added here too, and why its replacement is here as well.
+                KeepRowInView(
+                    listState = listState,
+                    index = browse.tracks.indexOfFirst { it.id == playingId }.takeIf { it >= 0 },
+                    key = playingId,
+                    active = !selecting,
+                )
             }
             }
         }

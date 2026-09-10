@@ -26,7 +26,6 @@
     <string name="dock_loading">Loading…</string>
     <string name="dock_idle_subtitle">Tap to browse</string>
 
-    <string name="action_follow_track">Follow track</string>
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
     <string name="replays_title">Atari ST replay routines</string>
