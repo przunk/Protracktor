@@ -524,7 +524,9 @@ else.
 # Round 8 — set 2026-09-10, the web learns Random
 
 *The owner, late on 2026-09-10, after a day spent getting Random right on the phone: "zrobisz jako
-goal pkt 1-3? zapisz do pliku i odpalę ci." Points 1–3 of the web list he was given that evening.*
+goal pkt 1-3? zapisz do pliku i odpalę ci." Points 1–3 of the web list he was given that evening —
+and then: "pamiętaj też, żeby listy działały tak jak w apk (nasze ostatnie poprawki)", which is
+item 2.*
 
 ## Where this starts
 
@@ -621,7 +623,38 @@ Browse shut while "From the phone" is showing (S4a).
       - Page checks: a ZXTune-only row dropped when the engine has no ZXTune and kept when it has; a
         changed fingerprint marks the index stale; the sentence is on screen.
 
-- [ ] **2. Random, in the shape the phone has**
+- [ ] **2. Every list behaves like the phone's**
+      *The owner: "pamiętaj też, żeby listy działały tak jak w apk (nasze ostatnie poprawki)."* Before
+      Random and History, because both are new lists and should be born obeying this.
+
+      The phone's rules, from `ui/ListScrolling.kt` (`KeepRowInView`, `revealRow`) and the commits
+      that grew them in the Random view and then moved them to every list:
+
+      - **Every list that can hold the playing track keeps it in view** — the playlist (`#queue`),
+        Browse's track lists (a folder or author, search results), and the lists items 3 and 4 add.
+        Today the page does this for `#queue` only, through `followPlaying()`; Browse does not.
+      - **One row at a time, and only when the row would leave.** `scrollIntoView({ block:
+        'nearest' })` is exactly that rule natively, which is why the page got it right first time
+        where the phone took five builds. Keep it; share it across lists rather than copying it.
+      - **Never on arrival.** `followPlaying()` is called from `playAt` alone, so returning to a list,
+        re-rendering it, adding or removing rows does not scroll. Keep it that way — on the phone
+        that was a deliberate decision, not a default.
+      - **Measured against what is visible.** The phone's version counted a row hidden under the dock
+        as visible and left it there. Check the page's layout: if the dock or the top bar can cover
+        a row that `nearest` thinks is on screen, `scroll-padding` on the scrolling element is the
+        browser's own answer — `scrollIntoView` honours it.
+      - **Not while rows are being ticked**, if the page has a selection mode: a list that moves under
+        a working finger fights it.
+      - **No follow button.** The phone removed its FAB the same evening; the page never had one.
+        **"Show in playlist"** (`showInPlaylist`, centred) stays as the deliberate jump, as it did
+        on the phone.
+      - jsdom has no layout, which is why the code guards `row?.scrollIntoView`. The page checks can
+        prove **whether** the page asks to scroll and with what options — on a new playing row yes,
+        on arrival, re-render, add and remove no — and cannot prove the geometry. Say so; the
+        geometry is the owner's to judge.
+      - Naming trap: `history` in `app.js` is the stack behind the Previous button, not item 4's.
+
+- [ ] **3. Random, in the shape the phone has**
 
       - **Browse → Random opens the view and plays**, with no second press. Resume the `AudioContext`
         **inside the click, before the first `await`** — a browser refuses sound started later.
@@ -642,10 +675,9 @@ Browse shut while "From the phone" is showing (S4a).
       - **Shuffle greyed** while Random runs — it reorders the playlist and Random uses neither. Grey
         that is visibly grey: on the phone a hard-coded tint hid the disabled state for one build.
         Repeat-one is honoured.
-      - **The playing row stays in view**, one row at a time and only when it would leave. The page
-        uses `scrollIntoView({ block: 'nearest' })`, which may already do exactly that — verify it,
-        including a row under the dock (the phone's version counted such a row as visible and left
-        it there). Change it only if it is wrong.
+      - **The playing row stays in view by item 2's rule**, the same function as every other list.
+        The phone's record keyed this on its cursor rather than the track, because a tune can occur
+        twice in it; the page must not lose that distinction.
       - **The C35 lesson, because it will be met again.** On the phone, a track's end could be acted
         on once per poll tick while the next pick was being chosen, and five picks went by in a
         second. Here the gap is IndexedDB and a fetch. **Mark the advance synchronously, before the
@@ -658,7 +690,7 @@ Browse shut while "From the phone" is showing (S4a).
       - Page checks: entering plays; the record grows one row per track played; next walks then rolls;
         previous walks back; delete; a repeat avoided; **two "ended" in a row advance once.**
 
-- [ ] **3. History — the same stream, kept**
+- [ ] **4. History — the same stream, kept**
 
       On the phone, `data/HistoryStore.kt`: one row per track rather than per play, moved to the top
       and counted when replayed, the oldest forgotten past a limit; shown in Browse → History and
@@ -668,7 +700,7 @@ Browse shut while "From the phone" is showing (S4a).
         session's slice of the same stream (`docs/PLAN_WEB_LIBRARY.md` S6). Only the history is
         persisted, in IndexedDB; the Random record is not.
       - Browse → History lists it, plays from it the way every Browse list plays — without writing
-        into the playlist — and can be cleared.
+        into the playlist — keeps the playing row in view by item 2's rule, and can be cleared.
       - Tracks that exist only as bytes — a `phone:` ghost, a `data:` entry — cannot be replayed after
         a reload. Record them marked as such, or skip them: yours to choose, stated in the commit.
       - Page checks: a play is recorded; a replay moves to the top and counts; the limit holds;
@@ -686,6 +718,7 @@ bundle in `dist/` from `./scripts/package-web.sh` and name it.
   Measure before and after; say the numbers.
 - **"From the phone" is never written into** — by Browse, the paste box, and now by Random.
 - **The queue rules agree between the runtimes** — the whole point of S1.
+- **The lists behave the same in both** — item 2, and the evening of work on the phone behind it.
 
 ---
 
