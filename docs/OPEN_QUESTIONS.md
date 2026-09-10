@@ -281,3 +281,49 @@ removal too. When an edit is already unsaved the add joins it and one Save cover
 **Related:** `docs/ARCHITECTURE.md` §17 records why adding to another playlist writes immediately
 while the active one drafts — the reasoning is sound and it is also exactly the inconsistency a user
 cannot see.
+
+---
+
+## Q10 — How a release is built, and from which branch
+
+*Raised 2026-09-10, when the owner asked whether `scripts/build-bundle.sh` builds from `master` or
+from the current branch. Added to the decisions at his request; nothing is changed until he chooses.*
+
+### What the script does today
+
+It builds **whatever is checked out**. There is no `git checkout` in it; the versionCode is
+`git rev-list --count HEAD`, the same expression `app/build.gradle.kts` uses. Standing on `develop`
+it builds `develop`.
+
+### Why the branch matters more than it looks
+
+The two branches count differently. `master` carries three merge commits `develop` does not have,
+so the same content numbers higher there. Measured 2026-09-10:
+
+| | versionCode |
+|---|---|
+| `develop` as it stands | 531 |
+| `master` after merging `develop` in | 535 |
+
+Play rejects any upload not higher than the last. **Upload 535 from `master` once and a later build
+from `develop` at, say, 533 is refused** — so releasing from both is not an option, only choosing.
+
+### Two defects in the script, found while answering
+
+1. **No check for uncommitted changes.** Anything dirty in the tree goes into the bundle, under a
+   versionCode that names a commit which does not contain it — a Play build no state in the history
+   describes. Recommendation: refuse to build on a dirty tree.
+2. **A stale message.** When a bundle for the same code already exists it says "bump it in
+   `app/build.gradle.kts` first". Nothing has been typed there for a long time — the code is counted.
+   And the check looks only at a file in `dist/`, not at what Play has actually received.
+
+### Options
+
+- **A. Release from `master`**, always: merge `develop` into it, check it out, build. Matches the
+  history (`Merge develop into master — release 0.2.0`) and keeps `master` meaning "what shipped".
+- **B. Release from `develop`**, and let `master` lag or retire it. Fewer steps; `master` stops
+  meaning anything.
+- **C. Let the script do A itself** — refuse unless on `master`, clean, and level with `develop`.
+
+**Recommendation: C**, which is A made impossible to get wrong, plus the dirty-tree refusal either
+way. It is the one step in this project that cannot be undone once it has happened.
