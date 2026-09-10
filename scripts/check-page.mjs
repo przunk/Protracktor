@@ -470,6 +470,18 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 20));
   check(window.__toWorklet.some((m) => m.type === 'subsong' && m.index === 2),
     'and the end of a tune moves to the next one inside the file');
+
+  // **The loop that made next play the second tune for ever** (`docs/STATUS.md` C30). The page
+  // takes its position from the worklet's answer, and a backend that always answered zero left it
+  // asking for tune 2 on every press. The answer is what is checked here, not the request.
+  window.__api.onWorklet({ type: 'subsong', index: 2, duration: 30, describe: 'title\tThird' });
+  await new Promise((r) => setTimeout(r, 20));
+  check(window.document.querySelectorAll('.subsong')[2]?.getAttribute('aria-pressed') === 'true',
+    'the chip follows the answer, so the third tune is lit while it plays');
+  window.__toWorklet.length = 0;
+  $('next').click();
+  check(!window.__toWorklet.some((m) => m.type === 'subsong'),
+    'and next off the last tune leaves the file rather than replaying it');
   $('allsubsongs').click();
 
   // --- the sliders fill in behind the handle (C21) ------------------------------------------------
