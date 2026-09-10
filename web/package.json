@@ -1,5 +1,8 @@
 {
   "dependencies": {
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1"
-  }
+  },
+  "type": "module",
+  "//": "ES modules, because web/src is ES modules and node otherwise reparses every one of them and says so."
 }

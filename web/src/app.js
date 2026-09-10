@@ -4,6 +4,7 @@
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
 import { nextIndex, previousIndex, nextSubsong, shouldRestart } from './rules.js';
+import { PHONE, playlists, settings, makePersistent, estimate } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
@@ -51,6 +52,15 @@ let order = [];                   // the permutation `next` walks when shuffle i
 let duration = 0;
 let playing = false;
 let seeking = false;
+/**
+ * Which playlist the queue on screen belongs to.
+ *
+ * **`PHONE` is not a document.** It is a view of the last thing the phone sent, replaced whole by
+ * every handoff and never deleted — the same bargain the phone's own default playlist has, from the
+ * other end. Everything else here was made in this browser and is the browser's to keep.
+ */
+let activePlaylist = PHONE;
+
 /** How many tunes are inside the open file, and which one is sounding. */
 let subsongCount = 1;
 let currentSubsong = 0;
@@ -442,6 +452,7 @@ async function playAt(next) {
   }
   index = next;
   if (history[history.length - 1] !== next) history.push(next);
+  remember();
   const entry = queue[index];
   render();
   followPlaying();
@@ -794,6 +805,35 @@ addEventListener('click', (event) => {
 addEventListener('keydown', (event) => { if (event.key === 'Escape') closeRowMenu(); });
 addEventListener('scroll', closeRowMenu, true);
 
+/**
+ * Writes the queue on screen into whichever playlist it belongs to.
+ *
+ * **Debounced, because the things that call it are the transport.** Moving to the next track is a
+ * write, and a listening session is hundreds of them; a playlist is a few hundred rows and writing
+ * it on every one would be work nobody asked for. Half a second is under a person's notice and far
+ * above a button press.
+ */
+let saveTimer = null;
+function remember() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await playlists.save({
+        id: activePlaylist,
+        name: activePlaylist === PHONE ? 'From the phone' : (await playlists.get(activePlaylist))?.name ?? 'Playlist',
+        // The bytes a phone sent are deliberately **not** kept. They are a copy of a file that
+        // lives somewhere else, they are the largest thing in the queue by far, and a page that
+        // quietly hoards somebody's music is not what this is.
+        tracks: queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file })),
+        index,
+      });
+      await settings.set('active', activePlaylist);
+    } catch (e) {
+      status(`could not save the playlist: ${e.message}`);
+    }
+  }, 500);
+}
+
 /** A fresh permutation. A new lap is a new shuffle; replaying one order forever is not shuffle. */
 function reshuffle(keep) {
   // Rows that cannot play are not in the permutation at all, which is simpler and stricter than
@@ -876,6 +916,7 @@ function setQueue(urls, at = 0) {
   if (shuffle) reshuffle(index >= 0 ? index : null);
   render();
   setPlaying(false);
+  remember();
   const entry = queue[index];
   if (entry) {
     $('title').textContent = entry.name;
@@ -893,12 +934,86 @@ function setQueue(urls, at = 0) {
 function showPanel(which) {
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
+  $('playlists').hidden = which !== 'playlists';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
   if (which === 'paste') $('urls').focus();
 }
+/**
+ * The playlist sheet: what there is, which one is showing, and what may be done to it.
+ *
+ * Drawn fresh each time it opens rather than kept in step, because it is a dialog somebody opens
+ * for a moment and the alternative is a second copy of the truth.
+ */
+async function renderPlaylists() {
+  const list = $('playlistlist');
+  list.replaceChildren();
+  for (const playlist of await playlists.all()) {
+    const li = document.createElement('li');
+    li.setAttribute('aria-current', String(playlist.id === activePlaylist));
+
+    const name = document.createElement('div');
+    name.className = 'pname';
+    name.textContent = playlist.name;
+    const count = document.createElement('div');
+    count.className = 'pcount';
+    const n = playlist.tracks?.length ?? 0;
+    count.textContent = n === 1 ? '1 track' : `${n} tracks`;
+    li.append(name, count);
+
+    // The phone's has no delete: it is not something anybody made.
+    if (playlist.id !== PHONE) {
+      const drop = document.createElement('button');
+      drop.className = 'pdrop';
+      drop.textContent = 'Delete';
+      drop.onclick = async (event) => {
+        event.stopPropagation();
+        await playlists.remove(playlist.id);
+        if (activePlaylist === playlist.id) await switchTo(PHONE);
+        renderPlaylists();
+      };
+      li.append(drop);
+    }
+
+    li.onclick = () => { switchTo(playlist.id); showPanel(null); };
+    list.append(li);
+  }
+
+  const { usage, quota } = await estimate();
+  $('storageline').textContent = usage
+    ? `This browser is holding ${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB it offered.`
+    : 'Nothing stored yet.';
+}
+
+/** Loads a playlist into the queue. Selected, not started — a switch is not a press of play. */
+async function switchTo(id) {
+  const playlist = await playlists.get(id);
+  activePlaylist = id;
+  $('playlistname').textContent = playlist?.name ?? (id === PHONE ? 'From the phone' : 'Playlist');
+  setQueue(playlist?.tracks ?? [], playlist?.index ?? 0);
+  await settings.set('active', id);
+}
+
+$('playlistchip').onclick = () => {
+  renderPlaylists();
+  showPanel($('playlists').hidden ? 'playlists' : null);
+};
+
+$('saveas').onclick = async () => {
+  if (!queue.length) { status('there is nothing in the queue to save'); return; }
+  const name = prompt('Call it what?', 'My playlist');
+  if (!name) return;
+  const id = `p${Date.now().toString(36)}`;
+  await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
+  activePlaylist = id;
+  $('playlistname').textContent = name;
+  await settings.set('active', id);
+  renderPlaylists();
+  status(`Saved as ${name}`);
+};
+
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
@@ -1142,6 +1257,8 @@ async function fromFragment() {
       const entry = entryFor(url);
       return title ? { ...entry, name: title } : entry;
     }));
+    activePlaylist = PHONE;
+    $('playlistname').textContent = 'From the phone';
     const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
     status(`${lines.length - ghosts} tracks from the link` +
            (ghosts ? `, and ${ghosts} that stayed on the phone` : ''));
@@ -1244,6 +1361,9 @@ function receive(message) {
     }),
     message.index ?? 0,
   );
+  // A handoff is always the phone's playlist, whatever was showing. It replaces it whole.
+  activePlaylist = PHONE;
+  $('playlistname').textContent = 'From the phone';
   const stranded = message.queue.filter((row) => row.local).length;
   status(`${message.queue.length - stranded} tracks from the phone — press play` +
          (stranded ? `, and ${stranded} that stayed on it` : ''));
@@ -1283,7 +1403,34 @@ showPanel('pair');
 
 status('ready — press Play or load some URLs');
 pair();
-fromFragment();
+
+/**
+ * What was showing last time.
+ *
+ * **After `pair()` and before `fromFragment()`, and the order is the whole of it.** A link in the
+ * address bar is somebody asking for *that* queue right now; anything restored from storage is
+ * what they were doing yesterday, and yesterday must not win. So the restore runs first and the
+ * fragment, if there is one, replaces it.
+ */
+(async () => {
+  try {
+    await makePersistent();
+    const id = await settings.get('active', PHONE);
+    const playlist = await playlists.get(id);
+    if (playlist?.tracks?.length) {
+      activePlaylist = id;
+      $('playlistname').textContent = playlist.name;
+      setQueue(playlist.tracks, playlist.index ?? 0);
+      showPanel(null);
+      status(`${playlist.name} — where you left it`);
+    }
+  } catch (e) {
+    // A private window, storage turned off, a second tab holding an old version. The page works
+    // without any of this and saying so is better than a dialog nobody can act on.
+    status(`this browser is not keeping playlists: ${e.message}`);
+  }
+  fromFragment();
+})();
 
 // **A link opened in a tab that already has this page does not reload it.** Only the fragment
 // changes, and the browser fires `hashchange` instead -- so without this, sending a second queue

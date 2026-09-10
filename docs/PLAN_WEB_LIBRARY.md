@@ -185,11 +185,27 @@ The switcher is the phone's (`ui/PlaylistSwitcher.kt`) and the model is `Playlis
 worth reading first: the phone already answers "what happens to the current track when the playlist
 changes" and the page must answer it the same way.
 
-- **Deliverable:** a playlist chip that opens a list, "save this queue as…", and a page that comes
-  back after a reload with what was playing.
-- **Checked by:** him, on the Pi, across a browser restart.
-- **Open:** how big may the browser's own copy get? A cap and an eviction rule, or an honest number
-  on a storage screen — the phone has one and the page has nothing.
+**Built 2026-09-10.** `web/src/store.js` — IndexedDB behind promises, two stores, and
+`makePersistent()` asked once. The chip in the top bar is a button now, as it is on the phone; it
+opens a sheet listing what there is, marks which is showing, offers *Save this queue as…*, and shows
+one honest line of what the browser is holding against what it offered.
+
+**The phone's playlist is not a document and the code says so in three places**: it sorts first
+whatever it is called, `remove()` refuses it, and every handoff — link or pairing — takes the queue
+back to it whatever was showing.
+
+**A saved track carries no audio.** The bytes a phone sends are somebody else's music, they are the
+largest thing in a queue by far, and a page that hoards them quietly is not what this is. A checked
+property, not a comment.
+
+**The restore runs before `fromFragment()` and the order is the whole of it.** A link in the address
+bar is somebody asking for *that* queue now; storage is what they were doing yesterday, and
+yesterday must not win.
+
+Checked against a real IndexedDB — `fake-indexeddb` is a dependency of `web/` for the same reason
+jsdom is, because a stub of storage would let a broken store pass.
+
+- **Still to be checked by him:** on the Pi, across a browser restart.
 
 ### S3. The index, and browsing it
 

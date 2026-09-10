@@ -102,9 +102,22 @@ window.fetch = async (url, options) => {
 // business, but the rules are the page's own code -- dropping the import would leave the functions
 // undefined and the checks would test a page that cannot run, which is the failure this harness has
 // already shipped once (the worklet stub that ignored transfers, `docs/review-round-8.md` R1).
+// A real IndexedDB, because jsdom has none and the page's playlists are the point of S2. The
+// package is a dependency of `web/`, like jsdom, and for the same reason: a stub of storage would
+// let a broken store pass.
+// By path, the way jsdom is imported above: the package lives in `web/node_modules` and this
+// script runs from the repository root.
+await import('./../web/node_modules/fake-indexeddb/auto/index.mjs');
+globalThis.indexedDB = indexedDB;
+window.indexedDB = indexedDB;
+window.navigator.storage ??= { persist: async () => true, persisted: async () => true,
+                               estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
+
 const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
+const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
+  .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -557,6 +570,44 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
   check(wanted.size > 0, `${wanted.size} engine functions are called`);
   check(missing.length === 0,
     missing.length ? `the built engine is missing: ${missing.join(', ')}` : 'and the built engine exports all of them');
+}
+
+// --- playlists that survive a reload (PLAN_WEB_LIBRARY S2) --------------------------------------
+//
+// Driven through the page's own store rather than through the DOM, because what S2 promises is not
+// a dialog -- it is that the queue comes back. A real IndexedDB is behind it (fake-indexeddb), so a
+// broken store fails here rather than on his machine.
+{
+  console.log('\nplaylists:');
+  const store = await import(path.resolve('web/src/store.js'));
+
+  // A handoff writes the phone's playlist, and it is the one that cannot be deleted.
+  await store.playlists.save({ id: store.PHONE, name: 'From the phone', tracks: [{ url: 'a', name: 'A' }], index: 0 });
+  await store.playlists.remove(store.PHONE);
+  check((await store.playlists.get(store.PHONE))?.tracks.length === 1,
+    'the phone\'s playlist cannot be deleted — it is a view, not a document');
+
+  await store.playlists.save({ id: 'p-zebra', name: 'Zebra', tracks: [], index: 0 });
+  await store.playlists.save({ id: 'p-alpha', name: 'Alpha', tracks: [], index: 0 });
+  const names = (await store.playlists.all()).map((p) => p.name);
+  check(names[0] === 'From the phone', 'and it sorts first, whatever it is called');
+  check(names.slice(1).join(',') === 'Alpha,Zebra', 'with the rest by name');
+
+  await store.playlists.remove('p-zebra');
+  check((await store.playlists.all()).length === 2, 'a playlist somebody made can be deleted');
+
+  // The bytes a phone sent are deliberately not kept: they are somebody else's music, they are the
+  // largest thing in a queue by far, and a page that hoards them quietly is not what this is.
+  await store.playlists.save({
+    id: 'p-bytes', name: 'With bytes', index: 0,
+    tracks: [{ url: 'x', name: 'X', file: 'x.mod' }],
+  });
+  const back = await store.playlists.get('p-bytes');
+  check(back.tracks[0].data === undefined, 'and a saved track carries no audio with it');
+
+  await store.settings.set('active', 'p-alpha');
+  check((await store.settings.get('active')) === 'p-alpha', 'the page remembers which one was showing');
+  check((await store.settings.get('nothing', 'fallback')) === 'fallback', 'and answers for what it has never been told');
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
