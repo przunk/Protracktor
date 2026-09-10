@@ -242,7 +242,23 @@ http.createServer((request, response) => {
   }
   let file = path.join(root, decodeURIComponent(url.pathname));
   if (!file.startsWith(root)) { response.writeHead(403).end(); return; }
-  if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
+  if (fs.existsSync(file) && fs.statSync(file).isDirectory()) {
+    // **A directory without a trailing slash is a redirect, not a page**, and this is the whole of
+    // `docs/STATUS.md` C29. Serving `web/src/index.html` at the URL `/src` looks like it works --
+    // the page arrives and renders, because all of that markup is static -- and then every relative
+    // URL in it resolves one level too high: `./app.js` becomes `/app.js`, which is not there. The
+    // page is inert and the browser blames a MIME type.
+    //
+    // Every static server does this redirect and this is the reason they all do it. 301, because it
+    // is a property of the path rather than of the moment, and the query and fragment ride along --
+    // the fragment never reaches here at all, but a browser carries it across a redirect itself,
+    // which is what keeps a shared queue link working.
+    if (!url.pathname.endsWith('/')) {
+      response.writeHead(301, { location: `${url.pathname}/${url.search}` }).end();
+      return;
+    }
+    file = path.join(file, 'index.html');
+  }
   fs.readFile(file, (error, data) => {
     if (error) {
       // **Said out loud**, because the one place this gets diagnosed is a log file on a machine in

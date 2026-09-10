@@ -415,36 +415,46 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C29. ~~A missing file wore a MIME disguise, and the server's root followed the caller~~ — FIXED 2026-09-10
+### C29. ~~The page opened without a trailing slash and every relative URL missed~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, from the browser at work: the QR button did nothing, and Firefox said* "Loading
 module from …app.js was blocked because of a disallowed MIME type (text/plain)".
 
-**That sentence is about the wrong thing, and it is our fault.** `text/javascript` is what
-`serve-web.mjs` sends for a `.js` file that exists — measured. `text/plain` is what it sent for one
-that **does not**: the friendly 404 page. So a missing file was reported by the browser as a MIME
-problem in a server that does not have one, and the obvious place to look was the obvious wrong
-place.
+**The cause is `/src` against `/src/`, and it is ours.** Ask this server for a directory without a
+trailing slash and it served `index.html` at that URL and said nothing. The page arrives and renders
+— all of that markup is static — and then every relative URL in it resolves one level too high:
+`./app.js` becomes `/app.js`, which is not there.
 
-It also explains the symptom exactly. With `app.js` blocked the page still *looks* right — every
-piece of that markup is static — and every control is inert. "The QR icon does not work" is what a
-dead `app.js` looks like from the outside.
+Reproduced exactly:
 
-**Two things changed, and only the first is a fix for what he met:**
+```
+GET /src        200  text/html          ← the page, at the wrong address
+GET /app.js     404                     ← what "./app.js" then means
+```
 
-- **A missing asset now answers with its own content type and no body**, so the browser says 404.
-  A path with no known extension — what a person types — keeps the friendly page. And every 404 is
-  logged, because the one place this gets diagnosed is a log file on a machine in another room.
-- **`root` comes from the script's own location** rather than `path.resolve('web')`, which followed
-  the caller's working directory. `run.sh` and `serve-web.sh` both `cd` first, so this worked — as
-  long as nobody ever started it any other way. A systemd unit with the wrong `WorkingDirectory`
-  makes every request 404, and that failure is now impossible rather than merely unlikely. Verified
-  by starting the server from `/tmp`.
+And `../lib/qrcode.js` still resolves, from `/src` and from `/src/` alike — so **the QR library
+loaded and only `app.js` died**, which is why the page looked right and every control was inert.
+"The QR icon does not work" is what a dead `app.js` looks like from outside.
 
-**What it does not settle.** Whether his own 404 was a missing file, a stale tunnel hostname, or
-something at his workplace between him and the Pi. `curl -sS -D - -o /dev/null <base>/src/app.js`
-answers it in one line, and `~/server.log` on the Pi now names the path if the request ever got
-there.
+**Fixed** with the redirect every static server does: a directory without a trailing slash answers
+301 to the slash form. The fragment rides along because the browser carries it across a redirect
+itself, so a shared queue link still works.
+
+### The two things found while chasing it, and kept
+
+**A missing asset was reported as a MIME problem.** `text/javascript` is what this server sends for
+a `.js` file that exists — measured. `text/plain` was what it sent for one that does not: the
+friendly 404 page. So the browser's sentence pointed at a MIME bug in a server that does not have
+one, and cost an evening. A missing asset now answers with its own content type and no body, so the
+browser says 404; a path with no known extension — what a person types — keeps the friendly page.
+
+**Every 404 is logged**, because the one place this gets diagnosed is a log file on a machine in
+another room. `404 /app.js` in `~/server.log` would have named the cause in one line.
+
+**And `root` no longer follows the caller's working directory** — it comes from the script's own
+location. `run.sh` and `serve-web.sh` both `cd` first, so this worked as long as nobody started the
+server any other way; a systemd unit with the wrong `WorkingDirectory` made every request 404.
+Verified by serving from `/tmp`.
 
 ### C28. ~~A line about one track stayed under the next~~ — FIXED 2026-09-10
 
