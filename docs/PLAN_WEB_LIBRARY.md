@@ -58,15 +58,20 @@ the zip into storage in batches.
 
 `web/tools/storage-check.html`, 60,000 records of Modland's real shape:
 
-| batch | | at work (Firefox 155, Windows) | at home |
-|---|---|---|---|
-| 1,000 | | 10,573 rows/s | 16,741 rows/s |
-| 5,000 | | 11,019 | 17,616 |
-| 20,000 | | **12,544** → 41 s | **18,916** → **27 s** |
-| 5,000 | **with the `(format, author)` index** | 7,855 | 13,387 |
+Both machines are **Firefox 155 on Windows**, so what separates them is the disk rather than the
+engine.
 
-**The index costs about a quarter of the throughput** — 29% at work, 24% at home, comparing the two
-runs that share a batch size.
+| batch | | at work | at home |
+|---|---|---|---|
+| 1,000 | | 10,573 rows/s | 14,134 rows/s |
+| 5,000 | | 11,019 | 12,840 |
+| 20,000 | | **12,544** → 41 s | **17,720** → **29 s** |
+| 5,000 | **with the `(format, author)` index** | 7,855 | 11,519 |
+
+**The index costs about a quarter of the throughput** — 29% at work, 10% at home, comparing the two
+runs that share a batch size. *The batch curve is noisy — home's 5,000 came in under its own 1,000 —
+so the only claims worth making from this table are that bigger batches win and that the index is
+never free.*
 
 *An earlier version of this table said 43%, which was wrong: it compared the indexed run against the
 fastest unindexed one rather than against the same batch size. The number was a quarter of the way
@@ -83,13 +88,13 @@ The design in S3 does not write half a million small records at all. It writes 4
 the same 30 MB in an eleventh of the transactions. The tool writes those, all of them, with
 Modland's real spread:
 
-| | at work, the slower machine |
-|---|---|
-| a record per track | **41 s** |
-| **a record per bucket** | **2.6 s** |
-| **the whole index, on disk** | **18 MB** |
+| | at work | at home |
+|---|---|---|
+| a record per track | 41 s | 29 s |
+| **a record per bucket** | **2.6 s** | **1.9 s** |
+| **the whole index, on disk** | **18 MB** | **18 MB** |
 
-**Sixteen times faster, and better than the arithmetic said.** Dividing the per-track rate by 11.8
+**Fifteen times faster on both machines, and better than the arithmetic said.** Dividing the per-track rate by 11.8
 predicted three and a half seconds; the real answer is 2.6, because a larger record amortises the
 per-transaction cost that dominates the small ones. That gap is the whole reason this was measured
 rather than divided.
@@ -97,8 +102,8 @@ rather than divided.
 **So the question in the next section is settled: the index belongs in the browser.** Two and a half
 seconds is not a progress bar, it is a pause — and it is once.
 
-**And it answers a second question without being asked.** The browser offered **473 GB** and granted
-`persist()`. Eighteen megabytes against that is not a budget worth writing code for: the storage
+**And it answers a second question without being asked.** The browser offered **473 GB** at work and
+**256 GB** at home, and granted `persist()` on both. Eighteen megabytes against that is not a budget worth writing code for: the storage
 screen should *report* what the page holds, and there is no eviction rule to design. A hand-built
 playlist is also safe from being swept, which was the only real risk in S2.
 
@@ -283,8 +288,8 @@ desk.
 
 1. **The relay, and therefore UnExoticA and The Mod Archive in the browser** — it changes who
    fetches from ExoticA, and they have not answered the first letter yet.
-2. ~~How much storage the page may take~~ — **answered by the measurement**: 18 MB held, 473 GB
-   offered, persistence granted. The page reports; it does not ration. Whether it *asks* before the
+2. ~~How much storage the page may take~~ — **answered by the measurement**: 18 MB held against
+   256–473 GB offered, persistence granted on both machines. The page reports; it does not ration. Whether it *asks* before the
    first 5.76 MB download is still worth a word, and the answer is probably yes, once.
 3. **Whether "From the phone" is one playlist or the newest of several.** Replacing it wholesale is
    simplest and is what he described; keeping the last few would let him go back to yesterday's
