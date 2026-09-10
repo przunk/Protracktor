@@ -1,0 +1,120 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Przunk
+  SPDX-License-Identifier: GPL-3.0-or-later
+
+  The one number `docs/PLAN_WEB_LIBRARY.md` needs and nobody here can measure.
+
+  How fast a real browser writes half a million small records to IndexedDB decides whether Modland's
+  index belongs in the page at all. Reported figures for this vary by an order of magnitude and none
+  of them are ours -- and the browser that matters is the one the owner actually uses, on the machine
+  he actually uses it on.
+
+  A throwaway, kept because the measurement comes before the code and this is the measurement.
+  Open it, press the button, send the numbers.
+-->
+<title>Protracktor — storage check</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 24px; background: #180523; color: #F5DDFD;
+         font: 15px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  p.sub { color: #BCA0C7; margin: 0 0 20px; }
+  button { background: #EE83ED; color: #2D133C; border: 0; border-radius: 20px;
+           padding: 12px 24px; font: inherit; font-weight: 500; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  pre { background: #2D133C; border-radius: 12px; padding: 16px; margin-top: 20px;
+        white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+  .verdict { margin-top: 16px; font-size: 16px; }
+</style>
+
+<h1>Storage check</h1>
+<p class="sub">Writes records shaped like Modland's index and times it. Nothing is kept — the
+database is deleted at the end.</p>
+
+<button id="go">Measure</button>
+<div class="verdict" id="verdict"></div>
+<pre id="out">ready</pre>
+
+<script>
+const out = document.getElementById('out');
+const say = (line) => { out.textContent += '\n' + line; };
+
+// Modland's real shape and its real scale, so the answer is about this app rather than about
+// IndexedDB in the abstract.
+const ROWS = 516107;
+const SAMPLE = 60000;          // enough to measure, short enough to sit through
+const row = (i) => ({
+  path: `Protracker/Some Artist ${i % 4000}/a tune called something ${i}.mod`,
+  format: 'Protracker',
+  author: `Some Artist ${i % 4000}`,
+  title: `a tune called something ${i}.mod`,
+  size: 20000 + (i % 5000),
+});
+
+function open(name, batchIndexed) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, 1);
+    request.onupgradeneeded = () => {
+      const store = request.result.createObjectStore('tracks', { keyPath: 'path' });
+      // The browse tree reads format then author, so that is the index the real thing would carry.
+      if (batchIndexed) store.createIndex('by_place', ['format', 'author']);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function writeBatch(db, from, count) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('tracks', 'readwrite');
+    const store = tx.objectStore('tracks');
+    for (let i = from; i < from + count; i++) store.put(row(i));
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function run(batch, indexed) {
+  const name = `protracktor-check-${batch}-${indexed}`;
+  await new Promise((r) => { const d = indexedDB.deleteDatabase(name); d.onsuccess = r; d.onerror = r; d.onblocked = r; });
+  const db = await open(name, indexed);
+  const started = performance.now();
+  for (let i = 0; i < SAMPLE; i += batch) await writeBatch(db, i, Math.min(batch, SAMPLE - i));
+  const ms = performance.now() - started;
+  db.close();
+  await new Promise((r) => { const d = indexedDB.deleteDatabase(name); d.onsuccess = r; d.onerror = r; d.onblocked = r; });
+  const perSecond = Math.round(SAMPLE / (ms / 1000));
+  say(`  batch ${String(batch).padStart(5)}${indexed ? ', with the browse index' : ', no index    '}`
+    + `  →  ${perSecond.toLocaleString()} rows/s   ·   all ${ROWS.toLocaleString()} would take `
+    + `${(ROWS / perSecond).toFixed(1)} s`);
+  return perSecond;
+}
+
+document.getElementById('go').onclick = async () => {
+  const button = document.getElementById('go');
+  button.disabled = true;
+  out.textContent = navigator.userAgent;
+
+  const quota = await navigator.storage?.estimate?.() ?? {};
+  say(`\nquota offered: ${quota.quota ? (quota.quota / 1e9).toFixed(1) + ' GB' : 'not reported'}`
+    + `   ·   already used: ${quota.usage ? (quota.usage / 1e6).toFixed(1) + ' MB' : '0'}`);
+  const persisted = await navigator.storage?.persisted?.();
+  const granted = persisted || await navigator.storage?.persist?.();
+  say(`storage marked persistent: ${granted ? 'yes' : 'NO — a browser may evict a hand-built playlist'}`);
+
+  say(`\nwriting ${SAMPLE.toLocaleString()} records of Modland's shape:`);
+  const rates = [];
+  for (const batch of [1000, 5000, 20000]) rates.push(await run(batch, false));
+  rates.push(await run(5000, true));
+
+  const best = Math.max(...rates);
+  const seconds = ROWS / best;
+  document.getElementById('verdict').textContent = seconds < 20
+    ? `✅ about ${seconds.toFixed(0)} s for the whole of Modland — the index belongs in the browser.`
+    : seconds < 90
+      ? `🤔 about ${seconds.toFixed(0)} s for the whole of Modland — workable behind a progress bar, once.`
+      : `❌ about ${seconds.toFixed(0)} s for the whole of Modland — too slow; the index belongs on the server.`;
+  say('\ndone — nothing was kept.');
+  button.disabled = false;
+};
+</script>
