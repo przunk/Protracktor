@@ -521,6 +521,174 @@ else.
 
 ---
 
+# Round 8 — set 2026-09-10, the web learns Random
+
+*The owner, late on 2026-09-10, after a day spent getting Random right on the phone: "zrobisz jako
+goal pkt 1-3? zapisz do pliku i odpalę ci." Points 1–3 of the web list he was given that evening.*
+
+## Where this starts
+
+The phone's Random became a screen today, and was then corrected across eleven builds (519–532) by
+the owner using it. **That correction history is the specification.** Read it before writing a line:
+
+- `docs/PLAN_RANDOM.md` — the shape, agreed in conversation, for APK and web together.
+- `docs/PLAN_WEB_LIBRARY.md` S5 and S6 — the web-specific half, and the measurements behind it.
+- The APK code as it now stands: `ui/RandomScreen.kt`; in `player/PlaybackController.kt`,
+  `openRandom`, `advanceRandom`, `playRandomAt`, `removeRandomAt`, `fillRandomQueue` (with `OVERDRAW`)
+  and the Random branch of `handleTrackEnded`; `ui/ListScrolling.kt` (`KeepRowInView`, `revealRow`).
+- `docs/STATUS.md` C35, and the commits `0f46546` → `19f2cea` — one over-correction and its reversal,
+  so the same mistake is not made twice.
+
+The page already has: its own playlists (S2), Modland indexed in IndexedDB (S3), search (S4), and
+Browse shut while "From the phone" is showing (S4a).
+
+## The rules
+
+`AGENTS.md` and `/mnt/workspace/AGENTS.md` as always. Restated where this round leans on them:
+
+1. **One item, one branch, one merge**, off `develop`, merged back when the item is green. That is
+   this file's convention for an unattended run and the one exception to "merge only after the
+   owner has tested"; he tests the bundle afterwards. **Never `master`.**
+2. **Every item ends with `./scripts/test-protracktor.sh --really` green** — the Kotlin tests, the
+   page checks and the server checks together — **and `./scripts/package-web.sh` building.** No APK
+   unless Kotlin changed; if one is built at all, it is the release build.
+3. **Nothing in this round is seen by the agent doing it.** The page checks run in jsdom; the judge
+   is the owner in a real browser. Say what was verified and by what, and what was not.
+4. **A decision the owner has not made is not yours.** Write it into `docs/BACKLOG.md` and go on.
+   Implementation choices are yours — say so in the commit.
+5. **Measure rather than divide.** Numbers go into the plan documents, with how they were taken.
+6. Update `docs/PLAN_WEB_LIBRARY.md` and `docs/STATUS.md` as you go; tick items off here.
+7. Nothing outside this repository. English in git and in the documents.
+
+## Explicitly out of scope
+
+- **The relay** (S7). It would make the Pi fetch from ExoticA on a listener's behalf, contrary to the
+  letter sent them. Blocked on their answer.
+- **ASMA and HVSC in the browser.** Modland only, this round.
+- **Drag a file onto the page** (`docs/WISHLIST.md` B31).
+- **Random scopes other than Everything.** A platform needs `Platforms.kt` shared the way the queue
+  rules are; Favourites needs a second download. The Filter button exists and says what is set.
+- **A ceiling on the Random record or the history.** Recorded as important and not urgent. Do not
+  solve it; do not make it worse.
+- **Any change to the APK's behaviour.** Kotlin may change only to read a shared data file or to
+  drive new shared test cases.
+- **Persisting the Random list** — decided against. **The release script** (`docs/OPEN_QUESTIONS.md`
+  Q10). **`master`.**
+
+## Decisions that are not yours, if you meet them
+
+- Whether "From the phone" is one playlist or the newest of several.
+- Whether the page asks before the first 5.76 MB download — and now before a re-download too.
+- **Whether ZXTune goes into the wasm build.** It is off (`-DPROTRACKTOR_WITH_ZXTUNE=OFF` in
+  `scripts/build-web-engine.sh`), which is why the browser plays less than the phone: 26,559 of the
+  phone's rows. Turning it on is a size and build question, and item 1 makes its absence visible.
+  Record the question with that number; do not change the build.
+
+## The list
+
+- [ ] **1. Index only what the browser can play, and say so**
+      *The owner, 2026-09-10: "nie indeksujmy utworów, których nie zagramy. Trzeba to będzie jawnie
+      napisać w wyszukiwaniu/browse."*
+
+      Measured that evening against Modland's `allmods.txt`:
+
+      | | rows |
+      |---|---|
+      | Modland | 516,107 |
+      | what the phone indexes (`SupportedFormats`) | 342,169 — 66% |
+      | of those, ZXTune-only | 26,559 — `pt3` 7,376, `pt2` 6,284, `ym` 4,977, `stc` 3,639 … |
+      | **what the browser can open** | **~315,610 — 61% of what it holds today** |
+
+      Half of this exists already. `downloadModland({ fingerprint, keep })` in `web/src/catalogue.js`
+      takes a `keep` predicate that today keeps everything; `app.js` reads `engineFingerprint` and
+      `engineHasZxTune` from the engine's `pt_backends`, and already marks a stored index stale when
+      the fingerprint differs.
+
+      - **The playable set is the phone's list minus what only ZXTune opens, when the engine reports
+        `zxtune:none`.** Matched the way the phone matches: by extension, or by a `mod.title`-style
+        prefix. Two traps from the measurement: `psm` is listed twice in `SupportedFormats.kt` and
+        libopenmpt takes it, so it is not ZXTune-only; `ay` stays with game-music-emu.
+      - **Do not retype the phone's list beside it.** Make it one file both runtimes read, the way
+        `docs/rules/queue-cases.tsv` settled the queue rules (S1), with a Kotlin test proving
+        `SupportedFormats` and the file agree. How is yours to choose; a second hand-kept copy is not.
+      - **The fingerprint must change with the playable set**, so every stored index goes stale.
+        **The page says why before it downloads again** — it will be his third Modland download.
+      - **Rebuild the title shards and the author counts from the kept rows.** Item 2's table is built
+        from those counts and must only ever land on something that plays.
+      - **Say it plainly in Browse and in search**: how much of Modland this browser holds, and that
+        the rest are formats this browser cannot play — many of which the phone can.
+      - Measure after: rows kept, bytes on disk, time to index — against 18 MB and 2.6 s.
+      - Page checks: a ZXTune-only row dropped when the engine has no ZXTune and kept when it has; a
+        changed fingerprint marks the index stale; the sentence is on screen.
+
+- [ ] **2. Random, in the shape the phone has**
+
+      - **Browse → Random opens the view and plays**, with no second press. Resume the `AudioContext`
+        **inside the click, before the first `await`** — a browser refuses sound started later.
+      - **Uniform over tracks, not authors** (his decision). A cumulative table over the playable
+        per-author counts, built once and held in memory; a roll is a random number, a binary search,
+        and an index into that author's bucket. 43,721 buckets, median 3, largest 3,615, 35% holding
+        one track — the two definitions of "random" differ enough to matter.
+      - **The record is what has played.** Three picks are drawn and fetched ahead (`READ_AHEAD`) and
+        not shown: a fetching strategy, not a promise.
+      - **Next walks the record and rolls only at its end.** Previous walks back. The phone was
+        briefly made to always roll and the owner sent it back.
+      - **No repeats within a session**: draw wide, drop what the session holds; allow a repeat only
+        when the pool is exhausted. So **rows are keyed by position**, not by track.
+      - Rows carry the ordinary track actions, **delete yes, reorder no**.
+      - **"Playing at random"** over the list; a **Filter** button with the scope in words beneath;
+        a way back to the playlist in the corner. Leaving ends the session; a new entry is a new list.
+      - **Transient**: it never writes into a playlist, "From the phone" included.
+      - **Shuffle greyed** while Random runs — it reorders the playlist and Random uses neither. Grey
+        that is visibly grey: on the phone a hard-coded tint hid the disabled state for one build.
+        Repeat-one is honoured.
+      - **The playing row stays in view**, one row at a time and only when it would leave. The page
+        uses `scrollIntoView({ block: 'nearest' })`, which may already do exactly that — verify it,
+        including a row under the dock (the phone's version counted such a row as visible and left
+        it there). Change it only if it is wrong.
+      - **The C35 lesson, because it will be met again.** On the phone, a track's end could be acted
+        on once per poll tick while the next pick was being chosen, and five picks went by in a
+        second. Here the gap is IndexedDB and a fetch. **Mark the advance synchronously, before the
+        first `await`**, so a second "ended" finds it already under way.
+      - **Shared rules.** Walk-then-roll, previous, and no-repeat-until-exhausted belong in
+        `docs/rules/queue-cases.tsv` as a new group, driven by `RuleCasesTest.kt` *and*
+        `check-page.mjs`, so the two Randoms cannot drift apart. If a case cannot be expressed on the
+        Kotlin side without refactoring the controller, keep it web-only and say why; do not
+        refactor the APK for it.
+      - Page checks: entering plays; the record grows one row per track played; next walks then rolls;
+        previous walks back; delete; a repeat avoided; **two "ended" in a row advance once.**
+
+- [ ] **3. History — the same stream, kept**
+
+      On the phone, `data/HistoryStore.kt`: one row per track rather than per play, moved to the top
+      and counted when replayed, the oldest forgotten past a limit; shown in Browse → History and
+      clearable. Read it for the fields and the limit, and match them.
+
+      - **One recording path, not two.** Every play is recorded; the Random view shows the current
+        session's slice of the same stream (`docs/PLAN_WEB_LIBRARY.md` S6). Only the history is
+        persisted, in IndexedDB; the Random record is not.
+      - Browse → History lists it, plays from it the way every Browse list plays — without writing
+        into the playlist — and can be cleared.
+      - Tracks that exist only as bytes — a `phone:` ghost, a `data:` entry — cannot be replayed after
+        a reload. Record them marked as such, or skip them: yours to choose, stated in the commit.
+      - Page checks: a play is recorded; a replay moves to the top and counts; the limit holds;
+        clearing empties it; playing from history leaves the playlist alone.
+
+## When the list is done
+
+Close the round below this line, the way the others are closed: what landed, what the measurements
+said, what changed the plan on the way, and **what nobody has done — run it in a browser.** Leave a
+bundle in `dist/` from `./scripts/package-web.sh` and name it.
+
+## What this round is not allowed to lose
+
+- **The page's weight.** Round 7 set the bar at a tenth of the engine and came in at a twentieth.
+  Measure before and after; say the numbers.
+- **"From the phone" is never written into** — by Browse, the paste box, and now by Random.
+- **The queue rules agree between the runtimes** — the whole point of S1.
+
+---
+
 # Round 7 — set 2026-09-09, the web player's face
 
 *The owner, at half past midnight: "przerobienie GUI webowego. Musi wyglądać prawie tak, jak
