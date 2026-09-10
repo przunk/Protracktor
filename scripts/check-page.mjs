@@ -131,7 +131,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -724,6 +724,11 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
 }
 
 // --- browsing must not rewrite what the phone sent (owner, 2026-09-10) --------------------------
+//
+// **Shut, and saying so before it is walked into.** The first version of this refused after the
+// press: three levels down, a tune chosen, and only then a paragraph explaining that none of it
+// counted. He asked for the caption up front, so that is what is checked -- the refusal underneath
+// stays, and is checked too, but it is now the second line of defence rather than the first.
 if (window.__api) {
   console.log('\nbrowsing and the phone\'s playlist:');
   // The phone's list is showing, which is where a fresh page starts.
@@ -734,12 +739,31 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 20));
   const before = $('title').textContent;
 
+  check($('tab-browse').getAttribute('aria-disabled') === 'true',
+    'the Browse button shows as shut while the phone\'s list is up');
+  check(($('tab-browse').title || '').includes('Switch to a playlist of your own'),
+    'and its tooltip says what to do about it');
+
+  await window.__api.renderBrowse();
+  check($('browsenote').textContent.includes('will not rewrite it'),
+    'opening Browse says why, before anything is chosen');
+  check($('browsesearch').hidden, 'and offers no search into a list it cannot fill');
+  check($('browselist').children.length === 1,
+    'the only row is the way out, not an archive to walk into');
+  check($('browselist').textContent.includes('Make an empty playlist'), 'which is what it says');
+
   window.__api.playFromBrowse(
     [{ url: 'https://modland.com/pub/modules/Protracker/Other/x.mod', name: 'X' }], 0);
   await new Promise((r) => setTimeout(r, 20));
-  check($('title').textContent === before, 'playing from Browse leaves the phone\'s queue alone');
-  check($('browsenote').textContent.includes('Switch to one of your own'),
-    'and says what to do instead of doing nothing');
+  check($('title').textContent === before, 'and reached anyway, it leaves the queue alone');
+
+  // A playlist of his own, and the same button opens.
+  await window.__api.switchTo('p-test');
+  check($('tab-browse').getAttribute('aria-disabled') === 'false',
+    'switching to a playlist of his own opens Browse again');
+  await window.__api.renderBrowse();
+  check(!$('browsesearch').hidden, 'search comes back with it');
+  await window.__api.switchTo('phone');
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------

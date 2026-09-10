@@ -995,11 +995,26 @@ async function renderPlaylists() {
     : 'Nothing stored yet.';
 }
 
+/**
+ * Repaints the Browse button for the playlist that is showing.
+ *
+ * `aria-disabled` rather than `disabled`: a disabled button cannot be pressed, so it cannot say
+ * why it is shut, and "nothing happens" is the worst of the three answers.
+ */
+function markBrowsable() {
+  const blocked = activePlaylist === PHONE;
+  $('tab-browse').setAttribute('aria-disabled', String(blocked));
+  $('tab-browse').title = blocked
+    ? 'Switch to a playlist of your own first — browsing will not rewrite what the phone sent'
+    : 'Browse the archives';
+}
+
 /** Loads a playlist into the queue. Selected, not started — a switch is not a press of play. */
 async function switchTo(id) {
   const playlist = await playlists.get(id);
   activePlaylist = id;
   $('playlistname').textContent = playlist?.name ?? (id === PHONE ? 'From the phone' : 'Playlist');
+  markBrowsable();
   setQueue(playlist?.tracks ?? [], playlist?.index ?? 0);
   await settings.set('active', id);
 }
@@ -1020,6 +1035,28 @@ async function renderBrowse() {
   list.replaceChildren();
   $('browseback').hidden = browsePath.length === 0;
   note.textContent = '';
+  $('browsesearch').hidden = false;
+
+  // **Shut before it is walked into, not after** (owner, 2026-09-10). Telling somebody they cannot
+  // play this three levels down and one chosen tune later is telling them late. Browsing writes
+  // into the playlist that is showing, "From the phone" is not one to write into, so the whole
+  // panel says so and offers the one thing that unblocks it.
+  if (activePlaylist === PHONE) {
+    $('browsetitle').textContent = 'Browse';
+    $('browseback').hidden = true;
+    $('browsesearch').hidden = true;
+    note.textContent = 'Browsing plays into the playlist that is showing, and "From the phone" is '
+      + 'what the phone sent — the page will not rewrite it. Switch to one of your own, or make an '
+      + 'empty one.';
+    const li = document.createElement('li');
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = 'Make an empty playlist and browse into it';
+    li.append(label);
+    li.onclick = async () => { if (await newPlaylist()) await renderBrowse(); };
+    list.append(li);
+    return;
+  }
 
   const row = (name, count, onclick) => {
     const li = document.createElement('li');
@@ -1098,6 +1135,8 @@ async function renderBrowse() {
  * built. So browsing asks him to switch or make one, once, rather than deciding for him.
  */
 function playFromBrowse(tracks, at) {
+  // Belt and braces: `renderBrowse` shuts the panel when the phone's list is showing, so this
+  // should be unreachable — and it is one comparison against a queue rewritten behind his back.
   if (activePlaylist === PHONE) {
     $('browsenote').textContent =
       'This would replace what the phone sent. Switch to one of your own playlists first, or make '
@@ -1200,20 +1239,29 @@ $('playlistchip').onclick = () => {
   showPanel($('playlists').hidden ? 'playlists' : null);
 };
 
-$('newlist').onclick = async () => {
+/**
+ * Makes an empty playlist and switches to it. Answers whether one was made.
+ *
+ * One function because two buttons want it: the sheet's, and the one the blocked Browse panel
+ * offers — and a second copy of "what a new playlist is" would drift.
+ */
+async function newPlaylist() {
   const name = prompt('Call it what?', 'New playlist');
-  if (!name) return;
+  if (!name) return false;
   const id = `p${Date.now().toString(36)}`;
   await playlists.save({ id, name, tracks: [], index: 0 });
   activePlaylist = id;
   $('playlistname').textContent = name;
+  markBrowsable();
   await settings.set('active', id);
   // Emptied on purpose: the point of a new list is to put something in it, and leaving the previous
   // queue on screen under a new name is the opposite of empty.
   setQueue([], 0);
-  renderPlaylists();
   status(`${name} — empty. Browse for something to put in it.`);
-};
+  return true;
+}
+
+$('newlist').onclick = async () => { if (await newPlaylist()) renderPlaylists(); };
 
 $('saveas').onclick = async () => {
   if (!queue.length) { status('there is nothing in the queue to save'); return; }
@@ -1223,6 +1271,7 @@ $('saveas').onclick = async () => {
   await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
   activePlaylist = id;
   $('playlistname').textContent = name;
+  markBrowsable();
   await settings.set('active', id);
   renderPlaylists();
   status(`Saved as ${name}`);
@@ -1473,6 +1522,7 @@ async function fromFragment() {
     }));
     activePlaylist = PHONE;
     $('playlistname').textContent = 'From the phone';
+    markBrowsable();
     const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
     status(`${lines.length - ghosts} tracks from the link` +
            (ghosts ? `, and ${ghosts} that stayed on the phone` : ''));
@@ -1578,6 +1628,7 @@ function receive(message) {
   // A handoff is always the phone's playlist, whatever was showing. It replaces it whole.
   activePlaylist = PHONE;
   $('playlistname').textContent = 'From the phone';
+  markBrowsable();
   const stranded = message.queue.filter((row) => row.local).length;
   status(`${message.queue.length - stranded} tracks from the phone — press play` +
          (stranded ? `, and ${stranded} that stayed on it` : ''));
@@ -1631,13 +1682,20 @@ pair();
     await makePersistent();
     const id = await settings.get('active', PHONE);
     const playlist = await playlists.get(id);
-    if (playlist?.tracks?.length) {
+    // **An empty playlist is restored too.** It used to need tracks to be worth coming back to,
+    // which was true while every playlist arrived full from the phone. Now that one can be made
+    // empty on purpose, dropping it on reload puts "From the phone" back in front of him -- and
+    // that is the one list Browse will not write into, so the tab he just unblocked shuts again.
+    if (playlist && id !== PHONE) {
       activePlaylist = id;
       $('playlistname').textContent = playlist.name;
-      setQueue(playlist.tracks, playlist.index ?? 0);
+      setQueue(playlist.tracks ?? [], playlist.index ?? 0);
       showPanel(null);
-      status(`${playlist.name} — where you left it`);
+      status(playlist.tracks?.length
+        ? `${playlist.name} — where you left it`
+        : `${playlist.name} — empty. Browse for something to put in it.`);
     }
+    markBrowsable();
   } catch (e) {
     // A private window, storage turned off, a second tab holding an old version. The page works
     // without any of this and saying so is better than a dialog nobody can act on.

@@ -307,6 +307,32 @@ and cost nothing.
 *`SearchResults.kt`'s rules — scope, per-source caps — are not shared yet. There is one source here,
 so there is nothing to scope; when ASMA arrives that changes and the cases file is where it goes.*
 
+### S4a. Browse is shut while "From the phone" is showing — **built 2026-09-10**
+
+*Asked for by the owner in two goes, and the second one is the interesting half.*
+
+Browse plays into the playlist that is showing. "From the phone" is replaced wholesale by each
+handoff (S2), so writing into it means the next scan silently throws the writing away — and worse,
+the queue he is looking at is not the queue the phone thinks he has.
+
+The first version refused **after the press**: he walked three levels down, chose a tune, and got a
+paragraph. *"browse powinno byc zablokowane z podpisem dla phone playlist"* — shut it before it is
+walked into. So now:
+
+- the Browse button carries `aria-disabled` and a tooltip saying which way out;
+- opening it shows the caption and **no archives at all** — one row, which offers to make an empty
+  playlist and drops him into Browse with it;
+- the search field is gone, there being nothing it could usefully fill;
+- `playFromBrowse` keeps its refusal as the second line of defence, and a check still drives it.
+
+`aria-disabled` rather than `disabled`, because a disabled button cannot be pressed and therefore
+cannot say why it is shut. "Nothing happens" is the worst of the three answers.
+
+**One bug fell out of it.** Boot restored a stored playlist only when it had tracks, which was true
+while every playlist arrived full from the phone. Make an empty one, reload, and it was gone — back
+to "From the phone", with the tab he had just unblocked shut again. An empty playlist is now
+restored like any other.
+
 ### S5. Random
 
 The phone asks SQLite for `ORDER BY RANDOM() LIMIT n`, which `docs/review-round-8.md` R7 already

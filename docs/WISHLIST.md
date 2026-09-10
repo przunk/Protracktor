@@ -10,6 +10,31 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B31. Drag a file onto the web player to add it
+
+*Owner, 2026-09-10.*
+
+**The one way of getting a file into a page that everybody already knows.** The page takes music
+from a phone link, a pasted address and Browse; a file sitting on the desk of the machine the page
+is open on has no way in at all short of that machine being the phone.
+
+What it would be: a drop target over the whole page (`dragover` / `drop`, `DataTransfer.files`),
+each dropped file read once into an `ArrayBuffer` and appended to the playlist that is showing —
+which means the same rule Browse just grew, that "From the phone" is not a list the page writes
+into. A folder dropped from a desktop browser arrives as `webkitGetAsEntry`, so recursing into it
+is a second, larger step and should not hold up the first.
+
+Two things to settle before writing it:
+
+- **Where the bytes live.** A dropped file is a local file with no address, so it is the same shape
+  as the phone's `data:` entries — kept in the queue as bytes, gone on reload unless the playlist
+  stores them. Storing them means playlists in IndexedDB stop being a few kilobytes of URLs.
+- **MP3 stays info-only when it arrives by QR** (`docs/STATUS.md` C33), but a file dropped on the
+  page by the person sitting at it is not the QR path, and there is no reason it should not play.
+
+Cheap, obvious, and the sort of thing whose absence gets noticed on the first day somebody else
+uses the page.
+
 ## B30. ASMA ships a STIL, and we do not read it
 
 *Owner, 2026-09-10, as a curiosity: `asma.atari.org/asma/Docs/STIL.txt`.*

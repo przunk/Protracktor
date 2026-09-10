@@ -127,6 +127,9 @@
     cursor: pointer;
   }
   .action:hover { filter: brightness(1.12); }
+  /* Shut, and looking it. `aria-disabled` rather than `disabled`, because the button still has to
+     answer a press -- with the reason, which a disabled button cannot give. */
+  .action[aria-disabled="true"] { opacity: .45; }
   .action[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
   .action svg { width: 22px; height: 22px; fill: currentColor; }
 
