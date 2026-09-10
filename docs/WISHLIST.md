@@ -759,9 +759,26 @@ mechanism with B14 and with `docs/BACKLOG.md` A3.
 
 **Built** as the locate button in Now Playing. Not confirmed on a device.
 
-## B14. ~~A follow-the-playing-track toggle~~ — DONE 2026-09-02
+## B14. ~~A follow-the-playing-track toggle~~ — DONE 2026-09-02, **REPLACED 2026-09-10**
 
 *owner asked the question 2026-09-01, and settled it himself 2026-09-02.*
+
+**Replaced by `KeepRowInView`, and the button is gone** (owner, 2026-09-10: "usunąć funkcję follow
+current track … bo on już nie będzie potrzebny"). It came out of the Random view: there the playing
+row is kept on screen as next and previous move it — one row at a time, and only when the row would
+otherwise leave — and he asked for that on every list. Once every list does it unasked, a button to
+switch it on has nothing left to do.
+
+**This reverses the principle the entry below was built on**, and that should be said rather than
+left for the next reader to notice. The FAB's whole argument was *"nothing ever steals the view"*:
+following was opt-in, and the first drag switched it off. The replacement does move the view when
+the track changes. What keeps it from being the thing that argument feared is how little it moves:
+never while the row is visible, one row when it is not, and **never on arrival** — coming back to the
+playlist from Browse leaves you where you were reading, and "Show in playlist" in Now Playing stays
+as the deliberate jump.
+
+What follows is the entry as it was, kept because the two problems it names are real and the second
+of them is exactly what `KeepRowInView` had to solve again.
 
 The wish: press next on shuffle and the playing track is somewhere off screen.
 

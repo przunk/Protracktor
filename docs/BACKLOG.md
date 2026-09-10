@@ -70,6 +70,10 @@ fix would not have saved it; less of something unpleasant is not pleasant.
 
 ### A31b. The follow-track button had none
 
+*Moot since the evening of 2026-09-10: the button itself was removed, replaced by lists that keep
+the playing row in view on their own (`docs/WISHLIST.md` B14). Kept so the haptics table above
+does not appear to have lost a row without a reason.*
+
 *Owner, 2026-09-10: "dodaj też do «follow current track» bo dalej nie ma".*
 
 `toggle(on = true)` on the press, and deliberately **nothing when following switches off** — that
