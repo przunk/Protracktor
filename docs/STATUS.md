@@ -415,6 +415,21 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C37. ~~Browse threw on "From the phone" once an index was held~~ — FIXED 2026-09-11, same round
+
+*Found by `GOAL.md` round 8 while building item 4; introduced by item 3 of the same round.*
+
+Item 3 added a Random row to Browse's "From the phone" branch, calling the `row` helper — which was
+declared with `const` further down the function. Reading a `const` before its declaration throws, so
+**opening Browse on the phone's list with an index downloaded failed outright**. The page checks
+never reached that state: when they opened that branch no index record existed, so the call was
+skipped. A check now builds exactly that state and asserts it does not throw.
+
+jsdom reads attributes and runs code, but it had never been put in this state, which is how the
+fault passed 195 checks. A related suspicion from the same pass — that the Random heading's
+`display: flex` would outrank `hidden` — was checked against the page and was unfounded: it already
+carries `[hidden] { display: none !important }`.
+
 ### C36. A next from the keyboard or a media key can be swallowed after a long press — **OPEN**
 
 *Found 2026-09-11 by `GOAL.md` round 8, while a page check was being written, not by a listener.*

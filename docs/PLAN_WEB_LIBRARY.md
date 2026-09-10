@@ -529,7 +529,35 @@ what ZXTune claims, so the two builds disagree and the disagreement is a fact ab
 about the format. That means the list has to be derived from the engine rather than copied beside
 it, or it will drift the first time a backend moves.
 
-### S6. History — **the same list as Random's**
+### S6. History — **built 2026-09-11**
+
+*`GOAL.md` round 8, item 4.* The phone's rules (`data/HistoryStore.kt`), kept in IndexedDB at
+database version 3 in a store keyed by address: **one row per tune**, moved to the top and counted
+when played again, the title written every time because it improves, **the last 500** kept and the
+oldest forgotten. A stamp that only increases orders two plays in one millisecond.
+
+- **One recording path.** Every play is recorded in the `opened` handler — the one message every
+  play reaches, whether it came from the playlist, Browse, Random or History itself — so it is a
+  tune the engine actually opened, filed under the name it gives itself.
+- **Browse → History** lists them, marks the one playing by S4b's rule, plays from them, and clears.
+  It is open even while "From the phone" is showing, like Random, because it writes into nothing.
+- **It plays transiently**, through the session Random built, with a heading that says *Playing from
+  your history* and a way back. The goal asked for that, and it is how the phone's Browse lists
+  play — but the page's folder and search lists still replace the playlist showing. The mismatch is
+  the owner's to settle: `docs/BACKLOG.md` A33.
+- A tune the phone handed over as **bytes is recorded and marked**, not offered for a replay the
+  page cannot give — the bytes are never kept.
+- The Random record stays its own list for the session and is not persisted; the plays that fill it
+  go into History by the same path as every other play.
+
+**A fault from item 3 was found while building this, invisible to jsdom:** Browse on "From the
+phone" with an index held threw — a helper read before its `const` (`docs/STATUS.md` C37). Fixed
+here, with a check that builds that state. A second suspicion — that the Random heading's
+`display: flex` would beat `hidden` — was checked against the page and was wrong: it already has
+`[hidden] { display: none !important }`.
+
+What follows is what was written before it was built.
+
 
 Settled in the same conversation: the Random view *is* the session's history, so this and S5
 are one mechanism rather than two that resemble each other. See `docs/PLAN_RANDOM.md`. The

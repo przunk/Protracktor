@@ -696,7 +696,9 @@ Browse shut while "From the phone" is showing (S4a).
       - Page checks: entering plays; the record grows one row per track played; next walks then rolls;
         previous walks back; delete; a repeat avoided; **two "ended" in a row advance once.**
 
-- [ ] **4. History — the same stream, kept**
+- [x] **4. History — the same stream, kept** *(done 2026-09-11: one recording path in `opened`, the
+      phone's rules at database version 3, plays transiently; found and fixed C37 from item 3;
+      raised A33; not seen in a browser)*
 
       On the phone, `data/HistoryStore.kt`: one row per track rather than per play, moved to the top
       and counted when replayed, the oldest forgotten past a limit; shown in Browse → History and
@@ -717,6 +719,66 @@ Browse shut while "From the phone" is showing (S4a).
 Close the round below this line, the way the others are closed: what landed, what the measurements
 said, what changed the plan on the way, and **what nobody has done — run it in a browser.** Leave a
 bundle in `dist/` from `./scripts/package-web.sh` and name it.
+
+## Round 8 — closed 2026-09-11
+
+All four items landed in one unattended run, each on its own branch and merged on green tests, as
+this file allows. **Nobody has run any of it in a browser**, and that is the only judgement that
+counts for three of the four.
+
+**What landed.**
+
+1. **The browser indexes only what it plays, and says so.** 315,294 of Modland's 516,107 kept;
+   26,537 left out that play on the phone, because the web engine has no ZXTune. One list for both
+   runtimes, `web/src/formats.tsv`, held to the phone's by `SupportedFormatsFileTest`. The index's
+   fingerprint is the engine's and the list's together, so every index stored before today is stale
+   on sight — **the owner will be asked for a third Modland download**, and told why first.
+2. **Every list behaves like the phone's.** The page already had the rule — `scrollIntoView` with
+   `nearest` is what the phone took five builds to reach — and only lacked it in Browse, which now
+   marks and follows the playing tune. The phone's dock defect cannot occur here: the page's dock is
+   the list's sibling, not a layer over it.
+3. **Random, in the phone's shape.** A transient record, uniform over tunes, three picks fetched
+   ahead (the page had no prefetch at all), next walking the record and rolling only at its end, the
+   C35 guard in the first line of the roll. Its rules are in `docs/rules/queue-cases.tsv`, driven by
+   the page only, with the reason written beside them.
+4. **History**, with the phone's rules at database version 3, recorded at the one place every play
+   arrives, and playing without touching the playlist.
+
+**What changed the plan on the way.**
+
+The round's own text was wrong once. It asked History to play "the way every Browse list plays —
+without writing into the playlist", and on the page those are opposites: its folder and search lists
+replace the playlist showing. History was built the way the goal and the phone both mean, and the
+rest is the owner's to decide — `docs/BACKLOG.md` A33.
+
+Saving read the queue after an `await`, harmless while there was one queue and a hole the moment
+Random made a second. Closed before Random could write a pick into a playlist.
+
+**What the checks found that nobody asked about.**
+
+- **C36, open.** A next from the arrow keys or a media key is swallowed after a long press that ended
+  without a click. Recorded rather than fixed: the obvious repair is wrong on touch.
+- **C37, fixed.** Browse on "From the phone" threw once an index was held — introduced by item 3,
+  found by item 4, and invisible to 195 checks until one was written to build that exact state.
+
+**Decisions raised and not taken.** A32: whether ZXTune goes into the wasm build, now that its
+absence is a number on the screen. A33: whether the page's Browse lists should stop writing into the
+playlist, as the phone's do. Still waiting from before: whether "From the phone" is one playlist or
+several, and whether the page asks before the first download.
+
+**Measured.** Front end 140,415 → 177,228 bytes, 6.7% of the 2.64 MB engine against round 7's bar of
+a tenth. Checks: page 146 → 211, server 7 → 8, Kotlin 218 → 222.
+
+**What only a browser can answer**, in the order worth looking:
+
+- the re-download prompt, and Browse's sentence about what it holds;
+- sound starting on Browse → Random, which depends on the click reaching the engine before any
+  `await` — Firefox is the stricter of his two browsers;
+- where rows land as next and previous move them — jsdom has no layout;
+- the picks read ahead arriving without a gap.
+
+**The bundle is `dist/protracktor-web-20260911-004649.tar.gz`.** The Pi runs its own copy of the
+server, so it needs updating there by the owner, as before.
 
 ## What this round is not allowed to lose
 
