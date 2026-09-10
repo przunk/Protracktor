@@ -323,7 +323,10 @@ walked into. So now:
 - opening it shows the caption and **no archives at all** — one row, which offers to make an empty
   playlist and drops him into Browse with it;
 - the search field is gone, there being nothing it could usefully fill;
-- `playFromBrowse` keeps its refusal as the second line of defence, and a check still drives it.
+- `playFromBrowse` keeps its refusal as the second line of defence, and a check still drives it;
+- **and the paste box does the same** — it went through the other door, writing straight into the
+  queue. *"te funkcje powinny dzialac tylko jak przelacze liste"* is plural, and this is one of
+  them. Found while answering a question about a missing file, which turned out to be unrelated.
 
 `aria-disabled` rather than `disabled`, because a disabled button cannot be pressed and therefore
 cannot say why it is shut. "Nothing happens" is the worst of the three answers.

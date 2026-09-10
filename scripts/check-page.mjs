@@ -259,7 +259,9 @@ if (window.__api) {
   check(posted.length === before, 'and nothing is fetched for it');
   check($('error').textContent === '', 'and it does not fail');
 
-  // Last, because it replaces the queue everything above was reading.
+  // Last, because it replaces the queue everything above was reading -- and into a playlist of
+  // his own, because pasting no longer writes into "From the phone" either.
+  await window.__api.switchTo('p-paste');
   window.__api.showPanel('paste');
   $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';
   $('load').click();
@@ -764,6 +766,19 @@ if (window.__api) {
   await window.__api.renderBrowse();
   check(!$('browsesearch').hidden, 'search comes back with it');
   await window.__api.switchTo('phone');
+
+  // Pasting is the same act by another door, and it went through it. Found while answering "why
+  // can I not find this file", which turned out to be about the index and not about this at all.
+  // Re-read rather than reusing `before`: switching away and back reloads the phone's list from
+  // storage, which in this harness is empty, so the title has legitimately moved on.
+  const beforePaste = $('title').textContent;
+  $('urls').value = 'https://modland.com/pub/modules/Protracker/Other/y.mod';
+  $('load').click();
+  await new Promise((r) => setTimeout(r, 20));
+  check($('title').textContent === beforePaste,
+    'a pasted address leaves the phone\'s queue alone too');
+  check($('pastenote').textContent.includes('Switch to one of your own'), 'and says so');
+  $('urls').value = '';
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------

@@ -1294,7 +1294,18 @@ addEventListener('keydown', (event) => {
 
 $('load').onclick = () => {
   const urls = $('urls').value.split('\n').map((s) => s.trim()).filter(Boolean);
-  if (urls.length) setQueue(urls);
+  if (!urls.length) { showPanel(null); return; }
+  // **The same rule as Browse**, and for the same reason: this writes into the playlist that is
+  // showing, and the next handoff replaces "From the phone" wholesale -- so the paste would be
+  // thrown away, silently, and until then he would be looking at a queue the phone does not have.
+  // *"te funkcje powinny dzialac tylko jak przelacze liste"* -- plural, and this is one of them.
+  if (activePlaylist === PHONE) {
+    $('pastenote').textContent = 'This would replace what the phone sent. Switch to one of your '
+      + 'own playlists first, or make an empty one — the name at the top left opens them.';
+    return;
+  }
+  $('pastenote').textContent = '';
+  setQueue(urls);
   showPanel(null);
 };
 $('playpause').onclick = async () => {
