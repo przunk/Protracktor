@@ -136,6 +136,19 @@
   /* --- the list ----------------------------------------------------------------------------- */
 
   main { flex: 1; overflow-y: auto; padding: 4px 0 8px; scrollbar-color: var(--outline) transparent; }
+  /* Random's heading: what this list is, what the dice picks from, and the way back. */
+  .randomhead { display: flex; align-items: center; gap: 12px; padding: 8px 16px 10px; }
+  .randomhead > svg { width: 28px; height: 28px; fill: var(--primary); flex: none; }
+  .randomhead .text { flex: 1; min-width: 0; }
+  .randomhead .title { font-size: var(--title-medium); font-weight: 500; }
+  .randomhead .meta { font-size: var(--body-small); color: var(--on-surface-variant); }
+  .randomfilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 0 16px 10px;
+                  font-size: var(--body-small); color: var(--on-surface-variant); }
+  .randomfilter .chip { border: 1px solid var(--outline); border-radius: 8px; padding: 4px 12px;
+                        font-size: var(--body-medium); color: var(--on-surface); }
+  .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container);
+                           border-color: transparent; }
+  #randomnote { padding: 0 16px; }
   ol { list-style: none; margin: 0; padding: 0; }
   li.track {
     display: flex;
@@ -346,6 +359,10 @@
   .tbutton.play:hover { filter: brightness(1.06); background: var(--primary); }
   .tbutton.play svg { width: 34px; height: 34px; }
   .tbutton.on { color: var(--primary); }
+  /* **Disabled wins over "on".** The rule above comes later at the same specificity, so a shuffle
+     that was on and is shut -- as it is while the dice runs -- still showed as lit. The phone had
+     the same defect for one build, through a tint that hid its own disabled state. */
+  .tbutton.on:disabled { color: color-mix(in srgb, var(--on-surface) 38%, transparent); }
 
   #nowplaying .statusline {
     padding: 14px 0 0;
@@ -514,6 +531,32 @@
   </header>
 
   <main>
+    <!--
+      Random, as a screen (docs/PLAN_RANDOM.md): what this list is, what the dice picks from, and
+      the way back. The list under it is the queue itself, holding the record rather than a
+      playlist -- so every row keeps the actions and the marking every other row has.
+    -->
+    <div id="randomhead" class="randomhead" hidden>
+      <svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z"/></svg>
+      <div class="text">
+        <div class="title">Playing at random</div>
+        <div class="meta" id="randomscope">Everything</div>
+      </div>
+      <button class="action" id="random-filter">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zm3 5h12v2H6zm4 5h4v2h-4z"/></svg>
+        Filter
+      </button>
+      <button class="action" id="random-leave">
+        <svg viewBox="0 0 24 24"><path d="M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z"/></svg>
+        Playlist
+      </button>
+    </div>
+    <div id="randomfilter" class="randomfilter" hidden>
+      <span class="chip on">Everything</span>
+      <span class="meta">The phone can narrow this to one machine or to Modland's favourites. The browser
+        picks from everything it can play, for now.</span>
+    </div>
+    <p id="randomnote" class="note" hidden></p>
     <ol id="queue"></ol>
 
 

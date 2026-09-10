@@ -361,6 +361,52 @@ export async function meta() { return catalogue.get(key.meta); }
 export async function formats() { return (await catalogue.get(key.formats))?.formats ?? []; }
 export async function authors(format) { return (await catalogue.get(key.authors(format)))?.authors ?? []; }
 
+/**
+ * Every tune this browser holds, as a running count over the buckets it is filed in.
+ *
+ * **Uniform over tunes, not over authors** -- the owner's decision, 2026-09-10: *"mnie interesują
+ * utwory, nie autorzy"*. The two differ enough to matter: after item 1's filter there are 32,212
+ * buckets, median 2, the largest 3,615, and 41% hold one tune. Drawing an author first would make a
+ * one-tune author as likely as Bayliss with 1,298.
+ *
+ * Built from the author lists, which already carry each bucket's count, so it costs one read per
+ * format and none per bucket. Held by the caller for the session; a roll is then a random number
+ * and a binary search.
+ */
+export async function buildRandomTable() {
+  const entries = [];
+  let total = 0;
+  for (const { name: format } of await formats()) {
+    for (const { name: author, count } of await authors(format)) {
+      if (!count) continue;
+      total += count;
+      entries.push({ format, author, end: total });
+    }
+  }
+  return { entries, total };
+}
+
+/**
+ * One tune, every tune in [table] equally likely.
+ *
+ * One random number does both jobs: it picks the bucket by where it falls in the running count, and
+ * its distance past the bucket's start picks the tune inside it.
+ */
+export async function drawTrack(table, random = Math.random) {
+  if (!table?.total) return null;
+  const r = Math.min(table.total - 1, Math.floor(random() * table.total));
+  let lo = 0;
+  let hi = table.entries.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (table.entries[mid].end > r) hi = mid; else lo = mid + 1;
+  }
+  const bucket = table.entries[lo];
+  const start = lo ? table.entries[lo - 1].end : 0;
+  const tracks = await tracksIn(bucket.format, bucket.author);
+  return tracks[r - start] ?? tracks[0] ?? null;
+}
+
 /** One bucket, as tracks the queue understands. */
 export async function tracksIn(format, author) {
   const found = await catalogue.get(key.tracks(format, author));

@@ -64,3 +64,30 @@ Impulsetracker	Wayfinder	!!uu !! !!.it	Impulsetracker/Wayfinder/%21%21uu%20%21%2
 Ad Lib	Unknown	a+b.sng	Ad%20Lib/Unknown/a%2Bb.sng	a literal plus, which a space must not become
 Protracker	Ko%C5%82o	x.mod	Protracker/Ko%25C5%2582o/x.mod	a percent sign in a name is a percent sign
 Octamed	Mr.Man	tune~1.med	Octamed/Mr.Man/tune%7E1.med	dot and hyphen survive, tilde does not
+
+# Random -- driven by check-page.mjs only, and the reason is worth keeping next to the cases. The
+# phone's version of these rules is not a function of its own: it lives inside PlaybackController
+# (advanceRandom, fillRandomQueue), and GOAL.md round 8 forbids refactoring the APK to reach it.
+# RuleCasesTest parses these groups and does not drive them. Extract the phone's rule one day and
+# these become shared like the rest; until then they are the web's half, written down.
+
+[randomNext]
+length	at	expect	why
+3	0	1	walks the record while there is a row ahead
+3	1	2	still a row ahead, still a walk
+3	2	roll	at the end of the record, and only there, the dice rolls
+1	0	roll	one tune played: the next is a new one
+0	-1	roll	an empty record rolls, which is what entering does
+
+[randomPrevious]
+at	expect	why
+2	1	back one row
+1	0	back to the first pick
+0	-	nothing before the first pick
+
+[randomFresh]
+drawn	seen	expect	why
+a,b,c	-	a	nothing heard yet: the first draw
+a,b,c	a	b	a tune the session has had is passed over
+a,b,c	a,b	c	and so is every other one it has had
+a,a,a	a	a	every draw repeats: a small pool has run out, and the dice repeats rather than stops

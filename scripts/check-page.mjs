@@ -128,13 +128,14 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export function (\w+)/gm, 'function $1')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
-    + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex }; })();')
+    + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex, '
+    + 'buildRandomTable, drawTrack }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -911,6 +912,114 @@ if (window.__api) {
   }
 }
 
+// --- Random, in the shape the phone has (GOAL.md round 8, item 3) --------------------------------
+if (window.__api) {
+  console.log('\nrandom:');
+  const archive = await import(path.resolve('web/src/catalogue.js'));
+  const { catalogue: store, playlists } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+
+  // One author with one tune, another with three: "uniform over tunes" and "uniform over authors"
+  // give the lone author one draw in four and one in two, so the difference is visible.
+  const sample = ['1\tProtracker/Solo/only.mod', '1\tProtracker/Trio/a.mod',
+                  '1\tProtracker/Trio/b.mod', '1\tProtracker/Trio/c.mod'].join('\n');
+  const built = archive.toRecords(sample);
+  await store.clear('modland:');
+  await store.putAll(built.records, 100);
+  await store.putAll([{ key: 'modland:meta', tracks: built.tracks, total: built.tracks, phoneOnly: 0,
+                        buckets: built.buckets, formats: built.formats, fingerprint: 'x' }]);
+  const table = await archive.buildRandomTable();
+  check(table.total === 4, 'the table counts every tune once');
+  const draw = async (r) => (await archive.drawTrack(table, () => r))?.name;
+  check(await draw(0) === 'only.mod' && await draw(0.3) === 'a.mod' && await draw(0.99) === 'c.mod',
+    'a roll is uniform over tunes: the lone author gets one draw in four, not one in two');
+
+  // A known sequence, so the record is predictable: only, a, b, c, only, a, …
+  let step = 0;
+  const cycle = [0, 0.3, 0.55, 0.8];
+  window.__api.useRandomSource(() => cycle[step++ % cycle.length]);
+
+  const one = 'https://example.test/one.mod';
+  const two = 'https://example.test/two.mod';
+  await window.__api.switchTo('p-random');
+  window.__api.setQueue([one, two], 1);
+  await settle(700);   // let the playlist's own save land first
+  const before = JSON.stringify((await playlists.get('p-random'))?.tracks);
+
+  await window.__api.openRandom();
+  await settle();
+  check(window.__api.randomState() != null && !$('randomhead').hidden, 'Browse → Random opens the record, with its heading');
+  check(window.__api.queueNow().length === 1 && window.__api.indexNow() === 0,
+    'and entering plays one, with no second press');
+  check($('shuffle').disabled, 'shuffle is shut while the dice runs');
+  check($('playlistname').textContent === 'Random' && $('playlistchip').disabled,
+    'and the playlist chip does not offer a playlist nothing is playing from');
+
+  window.__api.onWorklet({ type: 'ended' });
+  window.__api.onWorklet({ type: 'ended' });
+  await settle();
+  check(window.__api.queueNow().length === 2, 'two "ended" in a row advance once — the C35 lesson');
+
+  // Each file the engine opens reports how many tunes it holds. Nothing here opens files, so a
+  // count left by an earlier check would stand -- and with "play every tune" on, next would move
+  // inside that phantom file instead of along the record.
+  window.__api.onWorklet({ type: 'opened', duration: 60, subsongs: 1, current: 0, describe: '' });
+  // **A tap, not a bare `.click()`.** `holdToSkipFile` swallows the click that follows a long press
+  // and only forgets it on the next `pointerdown` -- so a bare click after an earlier check's long
+  // press on the same button is eaten, which is what this check first ran into. A finger always
+  // sends `pointerdown` first; the keyboard's arrow and a media key do not, which is `docs/STATUS.md`
+  // C36.
+  const tap = (button) => {
+    button.dispatchEvent(new window.Event('pointerdown'));
+    button.dispatchEvent(new window.Event('pointerup'));
+    button.click();
+  };
+  tap($('prev'));
+  await settle();
+  check(window.__api.indexNow() === 0, 'previous walks back through the record');
+  tap($('next'));
+  await settle();
+  check(window.__api.indexNow() === 1 && window.__api.queueNow().length === 2,
+    'next walks the record while there is a row ahead');
+  tap($('next'));
+  await settle();
+  check(window.__api.queueNow().length === 3 && window.__api.indexNow() === 2, 'and rolls only at its end');
+  check(new Set(window.__api.queueNow()).size === 3, 'no tune repeats while the pool has others');
+
+  window.__api.removeRandomAt(0);
+  check(window.__api.queueNow().length === 2 && window.__api.indexNow() === 1,
+    'a row can be removed from the record, and the cursor keeps its tune');
+
+  await settle(700);   // any save a mistake had queued would have landed by now
+  check(JSON.stringify((await playlists.get('p-random'))?.tracks) === before,
+    'nothing the dice did was written into the playlist');
+
+  window.__api.endRandom();
+  await settle();
+  check(window.__api.randomState() == null && $('randomhead').hidden, 'leaving ends the session');
+  check(window.__api.queueNow().join() === `${one},${two}` && window.__api.indexNow() === 1,
+    'and the playlist is exactly where it was left');
+  check(!$('shuffle').disabled && !$('playlistchip').disabled, 'and the transport is the playlist\'s again');
+
+  // "From the phone" is never written into -- by Browse, the paste box, and now by the dice.
+  await window.__api.switchTo('phone');
+  const phoneBefore = JSON.stringify((await playlists.get('phone'))?.tracks);
+  await window.__api.openRandom();
+  window.__api.onWorklet({ type: 'ended' });
+  await settle(700);
+  check(JSON.stringify((await playlists.get('phone'))?.tracks) === phoneBefore,
+    '"From the phone" is left alone while the dice runs over it');
+
+  // A queue arriving from elsewhere ends the session rather than landing in the record.
+  window.__api.receive({ queue: [{ url: one, title: 'One' }], index: 0 });
+  await settle();
+  check(window.__api.randomState() == null && window.__api.queueNow().join() === one,
+    'a queue from the phone ends the session and becomes what is showing');
+
+  window.__api.useRandomSource(Math.random);
+  await store.clear('modland:');
+}
+
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
 //
 // **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`
@@ -956,6 +1065,12 @@ if (window.__api) {
   each('playFromEnd', (c) =>
     rules.shouldRestart({ engineFinished: yes(c.engineFinished), position: +c.position,
                           duration: +c.duration }) === yes(c.expect));
+  // Random's three: the web's half only, for the reason the file gives next to them.
+  each('randomNext', (c) =>
+    rules.randomNext({ length: +c.length, at: +c.at }) === (c.expect === 'roll' ? 'roll' : number(c.expect)));
+  each('randomPrevious', (c) => rules.randomPrevious({ at: +c.at }) === number(c.expect));
+  each('randomFresh', (c) =>
+    rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

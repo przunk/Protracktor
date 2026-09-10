@@ -658,7 +658,9 @@ Browse shut while "From the phone" is showing (S4a).
         geometry is the owner's to judge.
       - Naming trap: `history` in `app.js` is the stack behind the Previous button, not item 4's.
 
-- [ ] **3. Random, in the shape the phone has**
+- [x] **3. Random, in the shape the phone has** *(done 2026-09-11: transient record, uniform over
+      tunes, three fetched ahead, walk-then-roll, the C35 guard, shuffle shut; rules web-only in the
+      shared file with the reason; found C36 on the way; not seen in a browser)*
 
       - **Browse → Random opens the view and plays**, with no second press. Resume the `AudioContext`
         **inside the click, before the first `await`** — a browser refuses sound started later.

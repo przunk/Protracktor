@@ -55,3 +55,30 @@ export function shouldRestart({ engineFinished, position, duration }) {
   if (engineFinished) return true;
   return duration > 0 && position >= duration;
 }
+
+/**
+ * Random: where next goes in the record the dice has made -- **the next row while there is one, and
+ * a new pick (`'roll'`) only at the end** (`docs/PLAN_RANDOM.md`).
+ *
+ * The phone was briefly made to roll on every press and the owner sent it back: with the record on
+ * screen, next means the next row. Repeat is the caller's -- the end of a tune checks repeat-one
+ * first and the button does not, exactly as the phone does it.
+ */
+export function randomNext({ length, at }) {
+  return at + 1 < length ? at + 1 : 'roll';
+}
+
+/** Random: previous walks back through the record, and has nothing before the first pick. */
+export function randomPrevious({ at }) {
+  return at > 0 ? at - 1 : null;
+}
+
+/**
+ * The first drawn tune the session has not had -- or, when every draw repeats, the first draw
+ * anyway. A small pool forces that, and a dice that repeats beats one that stops dead.
+ */
+export function freshPick({ drawn, seen }) {
+  const had = seen instanceof Set ? seen : new Set(seen);
+  for (const url of drawn) if (!had.has(url)) return url;
+  return drawn[0] ?? null;
+}
