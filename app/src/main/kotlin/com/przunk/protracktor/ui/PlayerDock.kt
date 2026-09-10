@@ -328,7 +328,15 @@ private fun ToggleControl(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            // **The disabled tint has to be spelled out.** `IconButton` dims a disabled child
+            // through `LocalContentColor`, and naming a tint here overrides exactly that -- so
+            // `enabled = false` was doing nothing visible and the owner reported a shuffle button
+            // that looked as alive as the rest of the row while doing nothing.
+            tint = when {
+                !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f)
+                active -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
             modifier = Modifier.size(TRANSPORT_GLYPH),
         )
     }

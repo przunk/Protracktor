@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -73,8 +74,23 @@ fun RandomScreen(
     // The reasoning was wrong: a row you can press is a row you can see, so scrolling to it moves
     // nothing. It only ever cost the case he is describing.
     LaunchedEffect(state.randomIndex) {
-        if (state.randomIndex in state.randomPicks.indices) {
-            listState.animateScrollToItem(state.randomIndex)
+        val index = state.randomIndex
+        if (index !in state.randomPicks.indices) return@LaunchedEffect
+
+        val layout = listState.layoutInfo
+        val row = layout.visibleItemsInfo.firstOrNull { it.index == index }
+        val below = row != null && row.offset + row.size > layout.viewportEndOffset
+        when {
+            // Fully on screen: **leave it alone**. Scrolling a list that already shows what you
+            // asked for is the list moving for its own reasons, which is what he objected to.
+            row != null && row.offset >= layout.viewportStartOffset && !below -> Unit
+            // Off the bottom, or hanging over it: down by exactly the overhang, so the row it was
+            // showing stays where it was and one more appears under it.
+            below -> listState.animateScrollBy((row.offset + row.size - layout.viewportEndOffset).toFloat())
+            // Off the top, or not laid out at all -- which is what a freshly appended row looks
+            // like on this pass. Top-aligning is right for the first and harmless for the second,
+            // since the last row cannot be scrolled past the end of the list.
+            else -> listState.animateScrollToItem(index)
         }
     }
 
