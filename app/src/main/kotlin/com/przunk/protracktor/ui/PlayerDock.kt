@@ -215,13 +215,21 @@ fun PlayerDock(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // **Dead while the dice is running, and drawn dead** (owner, 2026-09-10: "opcja
+                // shuffle chyba jest bezużyteczna"). He is right, and it is not a matter of taste:
+                // shuffle reorders the *playlist's* queue, and Random plays from neither the
+                // playlist nor its order. Nothing at all happened when it was pressed.
+                //
+                // Greyed rather than hidden. A transport that loses a button when the mode changes
+                // is a transport whose other buttons move under the thumb, and this row is the one
+                // the owner uses while driving.
                 ToggleControl(
                     icon = PlayerIcons.Shuffle,
                     active = state.queue.shuffle,
                     description = stringResource(
                         if (state.queue.shuffle) R.string.a11y_shuffle_on else R.string.a11y_shuffle_off
                     ),
-                    enabled = state.queue.tracks.isNotEmpty(),
+                    enabled = state.queue.tracks.isNotEmpty() && !state.randomMode,
                     onClick = onShuffle,
                 )
 

@@ -62,14 +62,19 @@ fun RandomScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    // **Always to the bottom when a new one lands** (owner, 2026-09-10). The newest pick is the
-    // one playing, and a record that grows off the bottom of the screen is a record you have to
-    // chase. Keyed on the size rather than on the list: pressing a row earlier in it moves the
-    // cursor, not the length, and dragging the view back to what is playing would take away the
-    // only reason to press a row at all.
-    LaunchedEffect(state.randomPicks.size) {
-        if (state.randomPicks.isNotEmpty()) {
-            listState.animateScrollToItem(state.randomPicks.lastIndex)
+    // **Always show the row that is playing** (owner, 2026-09-10: "przesuwanie next/prev powinno
+    // zawsze pokazywać na widoku zaznaczony track, niezależnie czy idę w lewo czy prawo").
+    //
+    // Keyed on the cursor, which covers both things it has to do: a new pick moves the cursor to
+    // the end, so the record follows itself downwards, and stepping back moves it up, so previous
+    // shows what it is playing instead of leaving you looking at the bottom of the list.
+    //
+    // I first keyed this on the *length*, reasoning that pressing a row should not yank the view.
+    // The reasoning was wrong: a row you can press is a row you can see, so scrolling to it moves
+    // nothing. It only ever cost the case he is describing.
+    LaunchedEffect(state.randomIndex) {
+        if (state.randomIndex in state.randomPicks.indices) {
+            listState.animateScrollToItem(state.randomIndex)
         }
     }
 
