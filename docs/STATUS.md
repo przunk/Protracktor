@@ -415,6 +415,26 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C36. A next from the keyboard or a media key can be swallowed after a long press — **OPEN**
+
+*Found 2026-09-11 by `GOAL.md` round 8, while a page check was being written, not by a listener.*
+
+`holdToSkipFile` (`web/src/app.js`) swallows the click that follows a long press on next or
+previous, so the press does not count twice. It remembers that it owes a swallow in `held`, and
+forgets only on the next `pointerdown`. A finger always sends `pointerdown` first. **The arrow keys
+and the media keys do not** — they press the button with `$('next').click()` — so after a long press
+that ended without a click (the finger slid off the button before lifting), the next arrow or media
+key press is eaten silently.
+
+Narrow, and reproduced only in jsdom: an earlier check holds next and lifts without a click, and a
+later bare `.click()` on the same button did nothing. The Random checks now tap the way a finger does
+(`pointerdown`, `pointerup`, `click`) rather than clicking bare.
+
+**Not fixed, deliberately.** The obvious repair — forget the owed swallow on `pointerleave` — is
+wrong on touch, where `pointerleave` arrives *after* `pointerup` and *before* the click it was meant
+to swallow, so a long press would then skip a file and step a track both. The event order has to be
+settled on a real touch device before this changes. Recorded so it is not rediscovered as a mystery.
+
 ### C35. ~~A Random tune ending skipped several picks at once~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, Random on Atari ST:* "jak skończyło grać enchanted land, to od razu przeskoczyło

@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate } from './store.js';
 import * as archive from './catalogue.js';
 
@@ -311,6 +311,14 @@ function onWorklet(message) {
         node?.port.postMessage({ type: 'subsong', index: inside });
         break;
       }
+      if (random) {
+        // Repeat-one first, as on the phone: the end of a tune under it plays the tune again. The
+        // next *button* does not ask -- on the phone it rolls on regardless.
+        if (repeat === 'one' && index >= 0) { playAt(index); break; }
+        const step = randomNext({ length: queue.length, at: index });
+        if (step === 'roll') rollRandom(); else playAt(step);
+        break;
+      }
       // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
       // takes the next of the permutation, repeat-all wraps, and off stops.
       const next = afterCurrent();
@@ -520,10 +528,17 @@ async function playAt(next) {
       $('sub').textContent = 'from the phone…';
       bytes = entry.data.slice(0);
     } else {
-      $('sub').textContent = 'fetching…';
-      const response = await fetch(entry.url, { signal: abort.signal });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      bytes = await response.arrayBuffer();
+      // A Random pick read ahead was fetched while the tune before it played, which is the point of
+      // reading ahead: a pick that has not been fetched is a gap between tracks. Used once.
+      const ready = random?.bytes.get(entry.url);
+      if (ready) random.bytes.delete(entry.url);
+      bytes = ready ? await ready : null;
+      if (!bytes) {
+        $('sub').textContent = 'fetching…';
+        const response = await fetch(entry.url, { signal: abort.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        bytes = await response.arrayBuffer();
+      }
     }
   } catch (e) {
     // **Only the load that is still current clears the flag.** Two quick track changes overlap:
@@ -658,7 +673,8 @@ function setPlaying(on) {
   // Available while the *file* has more in it too, not only the queue: with the switch on, that is
   // what the button will do.
   $('next').disabled = afterCurrent() == null && !(playAllSubsongs && hasNextSubsong());
-  $('shuffle').disabled = queue.length === 0;
+  // Shut while the dice runs: shuffle reorders the playlist, and Random plays from neither.
+  $('shuffle').disabled = queue.length === 0 || !!random;
   $('repeat').disabled = queue.length === 0;
   $('shuffle').classList.toggle('on', shuffle);
   $('repeat').classList.toggle('on', repeat !== 'off');
@@ -714,6 +730,7 @@ function render() {
   $('count').textContent = queue.length
     ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
     : 'nothing yet';
+  if (random) $('count').textContent = `${queue.length} played at random`;
 }
 
 /**
@@ -859,6 +876,9 @@ function openRowMenu(entry, anchor) {
     ['Copy a link', () => copyLink(entry), !!entry.url],
     ['Information', () => informAbout(entry), !entry.local],
   ];
+  // Pruning the record before keeping the rest: the phone's rows have it, and "if it is there you
+  // need not use it; if it is not you cannot" (owner, 2026-09-10).
+  if (random) items.push(['Remove from this list', () => removeRandomAt(queue.indexOf(entry)), true]);
   for (const [label, act, enabled] of items) {
     const button = document.createElement('button');
     button.textContent = label;
@@ -892,23 +912,33 @@ addEventListener('scroll', closeRowMenu, true);
  */
 let saveTimer = null;
 function remember() {
+  // **The dice's record is never a playlist**, "From the phone" least of all (`GOAL.md` round 8).
+  if (random) return;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    try {
-      await playlists.save({
-        id: activePlaylist,
-        name: activePlaylist === PHONE ? 'From the phone' : (await playlists.get(activePlaylist))?.name ?? 'Playlist',
-        // The bytes a phone sent are deliberately **not** kept. They are a copy of a file that
-        // lives somewhere else, they are the largest thing in the queue by far, and a page that
-        // quietly hoards somebody's music is not what this is.
-        tracks: queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file })),
-        index,
-      });
-      await settings.set('active', activePlaylist);
-    } catch (e) {
-      status(`could not save the playlist: ${e.message}`);
-    }
-  }, 500);
+  saveTimer = setTimeout(() => { saveTimer = null; if (!random) saveQueue(); }, 500);
+}
+
+/**
+ * Writes the queue into its playlist, **reading everything before the first `await`**.
+ *
+ * It used to read the name first and the tracks after awaiting it -- harmless while the queue only
+ * ever held one playlist, and a hole the moment Random swaps it: a save still pending when the dice
+ * took over would have written the dice's picks into the playlist it had just left.
+ */
+async function saveQueue() {
+  const id = activePlaylist;
+  // The bytes a phone sent are deliberately **not** kept. They are a copy of a file that lives
+  // somewhere else, they are the largest thing in the queue by far, and a page that quietly hoards
+  // somebody's music is not what this is.
+  const tracks = queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file }));
+  const at = index;
+  try {
+    const name = id === PHONE ? 'From the phone' : (await playlists.get(id))?.name ?? 'Playlist';
+    await playlists.save({ id, name, tracks, index: at });
+    await settings.set('active', id);
+  } catch (e) {
+    status(`could not save the playlist: ${e.message}`);
+  }
 }
 
 /** A fresh permutation. A new lap is a new shuffle; replaying one order forever is not shuffle. */
@@ -933,6 +963,172 @@ function seek(from, step) {
 }
 
 /**
+ * Random, as the phone has it (`docs/PLAN_RANDOM.md`, `GOAL.md` round 8 item 3).
+ *
+ * **A second queue, explicitly transient.** The page plays from `queue`, so while the dice runs
+ * `queue` *is* the record -- which lets every row keep the actions, the marking and item 2's
+ * scrolling that the playlist has -- and the playlist that was showing waits in `stash` until the
+ * session ends. `remember()` refuses to write while this is set, so no playlist ever receives a pick.
+ *
+ * The record is what has played. Three picks are decided and fetched ahead of it and not shown: a
+ * fetching strategy, not a promise.
+ */
+let random = null;
+const RANDOM_AHEAD = 3;   // the phone's READ_AHEAD
+const RANDOM_DRAWS = 4;   // the phone's OVERDRAW: drawn wide, repeats dropped
+/** Replaceable so the checks can roll a known sequence; the page always uses `Math.random`. */
+let randomSource = Math.random;
+
+function showRandomView(on) {
+  $('randomhead').hidden = !on;
+  $('randomfilter').hidden = true;
+  $('randomnote').hidden = true;
+  // The chip would offer to switch a playlist nothing is playing from, as on the phone.
+  $('playlistchip').disabled = on;
+  if (on) $('playlistname').textContent = 'Random';
+}
+
+/** Browse → Random. Closes the panel first, and starts the session inside the same click. */
+function enterRandomFromBrowse() {
+  showPanel(null);
+  openRandom();
+}
+
+/**
+ * Opens a session: a new record, and a tune playing with no second press.
+ *
+ * **The engine is started before anything is awaited**, because a browser allows sound only from
+ * inside a click -- and a pick has to be read from IndexedDB and fetched before it can play.
+ */
+async function openRandom() {
+  const engine = start().catch(() => null);
+  // A change the playlist was still waiting to save is its own; written now, before the swap.
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
+  // Entering again starts a new record but goes back to the same playlist when it ends.
+  const stash = random?.stash ?? { queue, index, history, order, name: $('playlistname').textContent };
+  loading?.abort();
+  loading = null;
+  random = { stash, ahead: [], table: null, filling: null, advancing: false, bytes: new Map() };
+  queue = [];
+  index = -1;
+  history = [];
+  order = [];
+  rowState = null;
+  showRandomView(true);
+  render();
+  await engine;
+  await rollRandom();
+}
+
+/**
+ * Tops the picks read ahead up to three: drawn uniformly over tunes, a tune the session has had
+ * passed over unless the pool has run out, and each one's bytes fetched as soon as it is decided.
+ */
+function fillAhead() {
+  const r = random;
+  if (!r) return Promise.resolve();
+  r.filling ??= (async () => {
+    r.table ??= await archive.buildRandomTable();
+    while (random === r && r.ahead.length < RANDOM_AHEAD && r.table.total > 0) {
+      const seen = new Set([...queue, ...r.ahead].map((entry) => entry.url));
+      const drawn = [];
+      for (let i = 0; i < RANDOM_DRAWS; i++) {
+        const track = await archive.drawTrack(r.table, randomSource);
+        if (track) drawn.push(track);
+      }
+      if (!drawn.length) break;
+      const url = freshPick({ drawn: drawn.map((track) => track.url), seen });
+      const pick = drawn.find((track) => track.url === url);
+      r.ahead.push(pick);
+      r.bytes.set(pick.url, fetch(pick.url)
+        .then((response) => (response.ok ? response.arrayBuffer() : null))
+        .catch(() => null));
+    }
+  })().finally(() => { r.filling = null; });
+  return r.filling;
+}
+
+/**
+ * Adds a pick to the end of the record and plays it.
+ *
+ * **The C35 lesson, in the first line.** On the phone a track's end could be acted on once per poll
+ * tick while the next pick was being chosen, and five picks went by in a second. Here the gap is
+ * IndexedDB and a fetch. The flag is raised before the first `await`, so a second "ended" -- or a
+ * second press of next -- finds a roll already under way and does nothing.
+ */
+async function rollRandom() {
+  const r = random;
+  if (!r || r.advancing) return;
+  r.advancing = true;
+  let pick;
+  try {
+    await fillAhead();
+    pick = r.ahead.shift();
+  } finally {
+    r.advancing = false;
+  }
+  if (random !== r) return;   // left while it was deciding
+  if (!pick) {
+    $('randomnote').textContent = 'Nothing to pick from. Download the Modland index in Browse first.';
+    $('randomnote').hidden = false;
+    return;
+  }
+  queue.push(pick);
+  // The next picks are decided while this one plays.
+  fillAhead().catch(() => {});
+  await playAt(queue.length - 1);
+}
+
+/**
+ * Drops a row from the record. Not a queue edit -- pruning what you are looking at before keeping
+ * the rest. The one playing may go and goes on playing; the cursor row then says "selected" rather
+ * than claim a tune that is no longer in the list.
+ */
+function removeRandomAt(at) {
+  if (!random || at < 0 || at >= queue.length) return;
+  const wasPlaying = at === index;
+  queue.splice(at, 1);
+  if (at <= index) index--;
+  if (wasPlaying) rowState = 'selected';
+  render();
+}
+
+/**
+ * Leaves the session: **playback stops**, the record goes -- what played is in the history -- and
+ * the playlist is exactly where it was left, because nothing ever wrote to it.
+ */
+function endRandom() {
+  if (!random) return;
+  const { stash } = random;
+  random = null;
+  loading?.abort();
+  loading = null;
+  clearTimeout(openWatchdog);
+  node?.port.postMessage({ type: 'close' });
+  delete $('seek').dataset.opened;
+  finished = false;
+  ({ queue, index, history, order } = stash);
+  rowState = 'selected';
+  showRandomView(false);
+  $('playlistname').textContent = stash.name;
+  render();
+  setPlaying(false);
+  const entry = queue[index];
+  $('title').textContent = entry?.name ?? 'Nothing playing';
+  $('sub').textContent = entry ? 'press play' : '—';
+  nameTheTab(entry);
+}
+
+/** Ends a session because a queue arrived from elsewhere: nothing to restore, the new queue wins. */
+function dropRandom() {
+  if (!random) return;
+  const { stash } = random;
+  random = null;
+  showRandomView(false);
+  $('playlistname').textContent = stash.name;
+}
+
+/**
  * What `next` should play, or null at the end.
  *
  * **The rule comes from `rules.js`, which `docs/rules/queue-cases.tsv` checks against the phone's.**
@@ -941,6 +1137,9 @@ function seek(from, step) {
  * which only this side has.
  */
 function afterCurrent() {
+  // Random answers with the next row or a roll, and ignores repeat and shuffle: repeat-one is checked
+  // where a tune *ends*, not here, and shuffle reorders a playlist the dice does not play from.
+  if (random) return randomNext({ length: queue.length, at: index });
   if (repeat === 'one' && index >= 0) return index;
   if (shuffle) {
     const at = order.indexOf(index);
@@ -956,6 +1155,7 @@ function afterCurrent() {
 
 /** What `previous` should play, or null. */
 function beforeCurrent() {
+  if (random) return randomPrevious({ at: index });
   if (shuffle) {
     // The history holds what was really played; the cursor is its end because the page only ever
     // walks backwards from now.
@@ -978,6 +1178,9 @@ function beforeCurrent() {
  * @param at which track to select, if the sender knows. Selected, not played.
  */
 function setQueue(urls, at = 0) {
+  // A queue arriving -- a playlist switched to, the phone's handoff, a tune played from Browse --
+  // replaces whatever was showing, and that includes the dice's record.
+  if (random) dropRandom();
   delete $('seek').dataset.opened;
   // Selected, not playing: the queue points here and nothing has started. A list with no mark at
   // all leaves the dock naming a track the list does not admit to.
@@ -1126,6 +1329,9 @@ async function renderBrowse() {
     li.append(label);
     li.onclick = async () => { if (await newPlaylist()) await renderBrowse(); };
     list.append(li);
+    // **Random is offered even here**, because it writes into no playlist at all -- the rule that
+    // shuts Browse is about rewriting what the phone sent, and the dice never does.
+    if ((await archive.meta())?.tracks) row('Random', null, enterRandomFromBrowse);
     return;
   }
 
@@ -1166,6 +1372,7 @@ async function renderBrowse() {
         + 'and leaves out what it cannot.' : '',
       holding(held),
     ].filter(Boolean).join(' ');
+    row('Random', null, enterRandomFromBrowse);
     row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
       browsePath = ['modland'];
       await renderBrowse();
@@ -1477,13 +1684,17 @@ function goToSubsong(index) {
 /** The next file, past whatever is left inside this one. What a long press means. */
 function nextFile() {
   const n = afterCurrent();
-  if (n != null) playAt(n);
+  if (n === 'roll') rollRandom();
+  else if (n != null) playAt(n);
 }
 
 function previousFile() {
   const p = beforeCurrent();
   if (p != null) playAt(p);
 }
+
+$('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
+$('random-leave').onclick = () => endRandom();
 
 $('next').onclick = () => {
   if (playAllSubsongs && hasNextSubsong()) { goToSubsong(currentSubsong + 1); return; }

@@ -411,7 +411,45 @@ jsdom lays nothing out: the checks prove *whether* the page asks to scroll and w
 once on a new playing row, never on arrival or redraw, Browse only while open — and cannot prove
 where the row lands. That is the owner's to judge.
 
-### S5. Random — **decided 2026-09-10, not yet built**
+### S5. Random — **built 2026-09-11**
+
+*`GOAL.md` round 8, item 3.* The shape is `docs/PLAN_RANDOM.md`; the phone's corrected behaviour,
+builds 519–532, is the specification. What the page does, and where it had to differ:
+
+- **Browse → Random** opens the record and plays at once. The engine is started before the first
+  `await`, because a browser allows sound only from inside the click. **Offered even while "From
+  the phone" is showing**, where the rest of Browse is shut: that rule is about rewriting what the
+  phone sent, and the dice writes into nothing.
+- **A second queue, explicitly transient.** While the dice runs, `queue` *is* the record, so every
+  row keeps the playlist's actions, marking and scrolling (S4b); the playlist that was showing waits
+  in a stash. `remember()` refuses to write, and **saving now reads the queue before it awaits** —
+  it used to read the name first and the tracks after, which would have written the dice's picks
+  into the playlist it had just left if a save was pending at the swap. A pending save is flushed
+  before the swap.
+- **Uniform over tunes**: a running count over the author lists (item 1's, so only playable tunes),
+  built once per session; one random number picks the bucket and the tune in it.
+- **The record is what played.** Three picks are decided and **fetched** ahead and not shown. The
+  page had no prefetch at all; `playAt` now uses the fetched bytes of a pick read ahead, once.
+- **Next walks the record and rolls only at its end**; previous walks back; the end of a tune checks
+  repeat-one first and the button does not — the phone's exact split. No repeats while the pool has
+  others: drawn four wide, the session's tunes passed over (`freshPick`).
+- **The C35 lesson is the first line of `rollRandom`**: the roll is marked before the first await, so
+  two "ended" in a row — or two presses — advance once. A page check does exactly that.
+- Rows gain **Remove from this list**; the one playing may go and goes on playing.
+- **Shuffle is shut, and looks it.** The page had the phone's defect in CSS: `.tbutton.on` came after
+  `.tbutton:disabled` at the same specificity, so a shut shuffle that had been on stayed lit.
+- **Leaving stops playback** and puts the playlist back exactly as it was; a queue arriving from
+  elsewhere — the phone, a playlist, Browse — ends the session and becomes what is showing.
+- The **Filter** button is there and says *Everything*; the chips the phone has need `Platforms.kt`
+  shared and a favourites download, both out of this round.
+
+**The rules are in `docs/rules/queue-cases.tsv` as three groups driven by the page only**, with the
+reason beside them: the phone's rule lives inside `PlaybackController` rather than in a function,
+and this round may not refactor the APK to reach it. `RuleCasesTest` parses and ignores them.
+
+What follows is the decision record from before it was built.
+
+#### What was decided on 2026-09-10
 
 **The shape of the screen is in `docs/PLAN_RANDOM.md`**, agreed the same day and written for
 the APK and the browser together because he wants the two as alike as they can be. What
