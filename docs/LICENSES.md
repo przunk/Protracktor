@@ -168,6 +168,20 @@ its twelve player headers carry an author credit and no terms, and the same GPL-
 inside it referenced by five of its eight sources. Reading a repository's licence file, or trusting
 GitHub's summary of it, would have got both libraries wrong in opposite directions.
 
+**minimp3**, commit `ea99364`, checked 2026-09-10. `LICENSE` is the CC0 1.0 text and both headers
+repeat the dedication in their own words:
+
+> To the extent possible under law, the author(s) have dedicated all copyright and related and
+> neighboring rights to this software to the public domain worldwide.
+
+**A public domain dedication, so there is nothing to comply with** — not even attribution. It is
+credited here and will be on the licences screen anyway, because a list of what this app is built
+from that quietly omits the parts nobody obliges us to name is a worse list.
+
+Pinned to a commit rather than a release, because there are no releases. GitHub generates these
+tarballs rather than storing them, so the checksum can in principle move without the commit moving —
+the same caveat HivelyTracker's tag tarball carries, and pinned anyway for the same reason.
+
 **lhasa 0.6.0**, checked 2026-09-09 — fetched by `scripts/fetch-native-deps.sh` against a
 SHA-256, like every other tarball here. `COPYING.md` is the ISC text:
 

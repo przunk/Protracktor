@@ -84,6 +84,22 @@ object SupportedFormats {
         "mmcmp", "pp20", "xpk", "umx",
     )
 
+    /**
+     * Names this build can play that **no catalogue carries**.
+     *
+     * **A separate set, and the separation is the whole point.** `extensions` is what a catalogue
+     * index is filtered through *and* what `fingerprint` is computed from, so a name added there
+     * marks every stored index stale — the owner re-downloads Modland's 40 MB. Modland, ASMA, The
+     * Mod Archive and UnExoticA hold no MP3 between them, so putting `.mp3` in that list would cost
+     * a re-index to gain nothing (`docs/BACKLOG.md` A29).
+     *
+     * A folder scan does not consult either list: it opens every file and lets the decoder answer
+     * (`MediaScanner.listFiles`), which is why an MP3 in a scanned folder needs nothing here at all.
+     * This set exists for the one place a *name* still has to be judged — deciding whether a
+     * failure means "this app cannot play this format" or "this file is broken".
+     */
+    val localOnlyExtensions: Set<String> = setOf("mp3")
+
     /** Filename prefixes used instead of extensions by several Amiga trackers. */
     val prefixes: Set<String> = setOf(
         // "ahx" and "hvl" are listed for symmetry with the extensions, though Modland files all
@@ -129,7 +145,23 @@ object SupportedFormats {
             (extensions.sorted() + "|" + prefixes.sorted()).joinToString(",").hashCode()
         )
 
-    fun looksPlayable(fileName: String): Boolean {
+    /**
+     * Whether a name is one this build claims **anywhere** — a catalogue or a local file.
+     *
+     * Used where the question is "should this have worked?": an MP3 that fails to open is a broken
+     * file, not an unsupported format, and the app should say so.
+     */
+    fun looksPlayable(fileName: String): Boolean =
+        inCatalogueIndex(fileName) ||
+            fileName.lowercase().substringAfterLast('.', "") in localOnlyExtensions
+
+    /**
+     * Whether a name earns a row in a downloaded catalogue index.
+     *
+     * **The narrower question, and the one `fingerprint` is about.** Half a million Modland paths
+     * are filtered through this; a name that no archive carries only costs disk and a re-index.
+     */
+    fun inCatalogueIndex(fileName: String): Boolean {
         val name = fileName.lowercase()
         val extension = name.substringAfterLast('.', "")
         if (extension.isNotEmpty() && extension in extensions) return true

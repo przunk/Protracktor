@@ -24,6 +24,12 @@ extern "C" {
  * otherwise have to live with them. */
 #include <types.h>
 #include <replay.h>
+/* minimp3. Declarations only -- the implementation is compiled once, as C, in
+ * `native/backends/minimp3/minimp3.c`. `MINIMP3_FLOAT_OUTPUT` arrives from that target as a PUBLIC
+ * definition rather than being written here, because it decides what `mp3d_sample_t` is and a
+ * define that reaches one translation unit and not the other links cleanly and then reads
+ * nonsense. */
+#include <minimp3_ex.h>
 /* `hvl_play_irq` is the sequencer half of `hvl_DecodeFrame` and upstream does not declare it in
  * `replay.h`, though it exports it. `HivelyBackend` uses it to measure a tune's length without
  * mixing a note -- 1ms instead of 30ms, and the same answer. Declared here rather than patched into
@@ -849,6 +855,123 @@ private:
 };
 
 /**
+ * MP3, through minimp3 — and it is the one format here that is not a chiptune.
+ *
+ * **Why it is in a chiptune player at all** is `docs/BACKLOG.md` A29: the owner keeps rips and
+ * recordings among his own files and had no way to hear them without leaving the app. It is
+ * deliberately a *local file* format — no catalogue here holds an MP3, and `SupportedFormats` keeps
+ * it out of the list an online index is filtered through so that adding it costs nobody a re-index.
+ *
+ * **`mp3dec_ex` rather than the plain frame decoder**, and the difference is the two things a
+ * player needs and a frame loop cannot give: a length for a variable-bitrate file, and an index to
+ * seek with. Both come from a scan at open, which is the cost — measured before it was chosen.
+ *
+ * It renders at the file's own rate. An MP3 is 44,100 nearly always and 48,000 sometimes, and
+ * saying which is the difference between a recording that plays and one that plays sharp — the
+ * defect the web build shipped with in September, from the other direction.
+ */
+class Mp3Backend : public Backend {
+public:
+    /**
+     * minimp3's own detector, which walks for a frame header rather than trusting four bytes.
+     *
+     * An ID3 tag, a stray `\xff\xfb` in a tracker module's sample data, a WAV with an MP3 inside —
+     * this is exactly the judgement a magic-number test gets wrong, so it is left to the library.
+     * Asked late in `openBackend` regardless, after everything that identifies by a real header.
+     */
+    static bool recognises(const std::vector<char> &bytes) {
+        if (bytes.size() < 16) return false;
+        return mp3dec_detect_buf(reinterpret_cast<const uint8_t *>(bytes.data()), bytes.size()) == 0;
+    }
+
+    explicit Mp3Backend(const std::vector<char> &bytes) : bytes_(bytes) {
+        // **The bytes are kept, and they have to be.** `mp3dec_ex_open_buf` does not copy: it holds
+        // the pointer and reads from it for the life of the decoder, including on every seek. The
+        // caller's vector is a parameter and goes away.
+        std::memset(&dec_, 0, sizeof(dec_));
+        if (mp3dec_ex_open_buf(&dec_, reinterpret_cast<const uint8_t *>(bytes_.data()),
+                               bytes_.size(), MP3D_SEEK_TO_SAMPLE) != 0) {
+            throw std::runtime_error("the MP3 decoder (minimp3) could not open it");
+        }
+        opened_ = true;
+        if (dec_.info.hz <= 0 || dec_.info.channels <= 0) {
+            mp3dec_ex_close(&dec_);
+            opened_ = false;
+            throw std::runtime_error("the MP3 decoder (minimp3) found no audio in it");
+        }
+    }
+
+    ~Mp3Backend() override {
+        if (opened_) mp3dec_ex_close(&dec_);
+    }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        const int channels = dec_.info.channels;
+        if (channels == 2) {
+            // Already interleaved stereo floats, which is what the caller wants. No copy.
+            const std::size_t got = mp3dec_ex_read(&dec_, out, frames * 2);
+            return got / 2;
+        }
+        // Mono, duplicated into both ears for the same reason ASAP's is: half a signal in one ear
+        // is a choice nobody made.
+        if (scratch_.size() < frames) scratch_.resize(frames);
+        const std::size_t got = mp3dec_ex_read(&dec_, scratch_.data(), frames);
+        for (std::size_t i = 0; i < got; ++i) {
+            out[i * 2] = scratch_[i];
+            out[i * 2 + 1] = scratch_[i];
+        }
+        return got;
+    }
+
+    bool canSeek() const override { return dec_.samples > 0; }
+
+    void seek(double seconds) override {
+        const auto sample = static_cast<std::uint64_t>(
+            std::max(0.0, seconds) * dec_.info.hz) * static_cast<std::uint64_t>(dec_.info.channels);
+        mp3dec_ex_seek(&dec_, sample);
+    }
+
+    void rewind() override { mp3dec_ex_seek(&dec_, 0); }
+
+    // `cur_sample` counts channels in, like `samples` does. Both are divided by the same thing.
+    double positionSeconds() const override {
+        return static_cast<double>(dec_.cur_sample) /
+               (static_cast<double>(dec_.info.hz) * dec_.info.channels);
+    }
+
+    double durationSeconds() const override {
+        return static_cast<double>(dec_.samples) /
+               (static_cast<double>(dec_.info.hz) * dec_.info.channels);
+    }
+
+    std::string describe() const override {
+        std::ostringstream o;
+        // **No title, no artist, and that is not an omission.** minimp3 decodes; it does not read
+        // ID3, and inventing a tag reader for one format would be a second metadata path to keep in
+        // step with the one `SongDbMetadata` already fills. The file's name is what names it, which
+        // is what the rest of the app does for every format that says nothing about itself.
+        o << "format\tMP3 (minimp3)" << '\n'
+          << "channels\t" << dec_.info.channels << '\n'
+          << "rate\t" << dec_.info.hz << " Hz" << '\n'
+          // `dec_.info` is the *last frame decoded*, so this is that frame's rate rather than the
+          // file's average -- which for a variable-bitrate file is a different number every time it
+          // is asked. Honest label, rather than a wrong word over a right number.
+          << "bitrate\t" << dec_.info.bitrate_kbps << " kbps" << '\n'
+          << "seekable\t" << (canSeek() ? 1 : 0);
+        return o.str();
+    }
+
+    int preferredSampleRate() const override { return dec_.info.hz; }
+
+private:
+    // A copy of the file, because the decoder reads from it for as long as it lives.
+    std::vector<char> bytes_;
+    mp3dec_ex_t dec_{};
+    bool opened_ = false;
+    std::vector<float> scratch_;
+};
+
+/**
  * Commodore 64, through libsidplayfp.
  *
  * The largest single body of music left after trackers: roughly 72,000 files in Modland alone.
@@ -1463,7 +1586,10 @@ std::string backendsFingerprint() {
                  << (GME_VERSION & 0xff)
       << ";sidplayfp:" << LIBSIDPLAYFP_VERSION_MAJ << '.'
                        << LIBSIDPLAYFP_VERSION_MIN << '.'
-                       << LIBSIDPLAYFP_VERSION_LEV;
+                       << LIBSIDPLAYFP_VERSION_LEV
+      // minimp3 publishes no version at all -- no macro, no function, no releases. The pin in
+      // `scripts/fetch-native-deps.sh` is the version, so that is what this says.
+      << ";minimp3:ea99364";
 #if !PROTRACKTOR_WITH_ZXTUNE
     // Appended only when the decoder is absent, and that asymmetry is deliberate: this string is
     // what tells a stored index it was built by a different set, so adding anything to the Android
@@ -1537,6 +1663,19 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
         }
     }
 #endif
+
+    // MP3, and **after everything that reads a real header**. minimp3's detector walks the file
+    // looking for a frame that parses, which is the right test for a format with no magic worth the
+    // name -- and exactly the test that will eventually say yes to somebody else's sample data. It
+    // gets asked once the formats that *can* prove what they are have said no.
+    if (Mp3Backend::recognises(bytes)) {
+        try {
+            return std::make_unique<Mp3Backend>(bytes);
+        } catch (const std::exception &e) {
+            LOGE("minimp3 recognised the header but refused: %s", e.what());
+            error = e.what();
+        }
+    }
 
     // sc68 asked first. Its answer is the load succeeding, not a verify -- see worthTrying. If it
     // refuses, we fall through to libopenmpt, whose format net is wide enough that letting it go

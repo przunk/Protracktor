@@ -131,4 +131,32 @@ class SupportedFormatsTest {
         assertFalse(SupportedFormats.looksPlayable("README"))
         assertFalse(SupportedFormats.looksPlayable("mod"))
     }
+    /**
+     * The two questions the list answers, and why they are two.
+     *
+     * `extensions` is what a catalogue index is filtered through **and** what `fingerprint` is
+     * computed from, so a name added there marks every stored index stale — the owner re-downloads
+     * Modland's 40 MB. No archive here holds an MP3, so `.mp3` earns its place in one question and
+     * not the other (`docs/BACKLOG.md` A29).
+     */
+    @Test
+    fun `mp3 is playable but never earns a row in a catalogue index`() {
+        assertTrue(SupportedFormats.looksPlayable("a recording.mp3"))
+        assertTrue(SupportedFormats.looksPlayable("A RECORDING.MP3"))
+        assertFalse(SupportedFormats.inCatalogueIndex("a recording.mp3"))
+
+        // And everything a catalogue does carry is still both.
+        assertTrue(SupportedFormats.inCatalogueIndex("elysium.mod"))
+        assertTrue(SupportedFormats.looksPlayable("elysium.mod"))
+    }
+
+    @Test
+    fun `adding mp3 did not change what a stored index is measured against`() {
+        // The fingerprint is the promise that an index is still current. It is computed from
+        // `extensions` and `prefixes`, and `.mp3` is in neither — so every index on every device
+        // stayed valid on the day MP3 arrived. If this ever fails, somebody moved the name and owes
+        // the owner a 40 MB download.
+        assertFalse("mp3" in SupportedFormats.extensions)
+        assertFalse("mp3" in SupportedFormats.prefixes)
+    }
 }

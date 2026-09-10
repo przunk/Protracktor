@@ -684,42 +684,64 @@ sentence about where something is going.
 *Forget the paired browser*, and the sentence under the web player address all describe the machine
 at the other end, which is a browser and is the right word for it. Only the button is a name.
 
-## A29. Play MP3 too
+## A29. ~~Play MP3 too~~ — DONE 2026-09-10
 
-*Owner, 2026-09-01 as `docs/WISHLIST.md` B4, and moved here by him on 2026-09-09: **"ma być w todo
-(to nie życzenie)"**. Agreed work, not an idea.*
+*Owner, 2026-09-01 as `docs/WISHLIST.md` B4, promoted to work on 2026-09-09, built on 2026-09-10
+with one rule of his attached: **"wysyłanie mp3 w kodzie QR ma zawsze dawać tylko info o pliku i
+niedostępne odtwarzanie"**.*
 
-**The decoder is the small part.** `minimp3` is a single public-domain header, so this is a
-backend of about fifty lines rather than a vendored library — the smallest one here would still be
-HivelyTracker's three files, and this is smaller. Android's own `MediaCodec` is *not* the easy
-answer: the engine is native from the file to the speaker, and routing one format through the
-platform would mean two playback paths to keep in step, two places for a seek to behave
-differently, and nothing at all for the browser.
+**minimp3**, CC0-1.0 — two headers, one object, and the smallest vendored decoder here. `mp3dec_ex`
+rather than the plain frame loop, for the two things a player needs and a frame loop cannot give: a
+length for a variable-bitrate file, and an index to seek with.
 
-**It goes to the browser for free**, which was not true when this was written. The wasm build links
-the same `engine.cpp`, so a backend added there arrives in both.
+### Measured 2026-09-10, against the conformance suite minimp3 ships
 
-### The two decisions it actually needs
+83 MPEG conformance bitstreams through the engine:
 
-**1. Does `.mp3` go in `SupportedFormats.extensions`?** That list is what a folder scan *and* a
-catalogue index are filtered through, and it feeds `fingerprint` — so adding a name marks every
-stored index stale and re-downloads Modland's 40 MB. No archive here holds an MP3, so that
-re-index would buy nothing. The honest shape is probably **two sets**: what a local folder scan
-picks up, and what a catalogue index keeps. They have been the same list until now because there
-was never a format that belonged to one and not the other.
+| | |
+|---|---|
+| played | **70** |
+| silent | 10 — every one an `l3-nonstandard-*`: a stream that is an ID3 tag and no audio, a corrupted VBR tag, a truncated side info |
+| refused | 3 — a tag-only file, a file too small to hold a frame, and a deliberate over-allocation |
 
-**2. Does it appear in Browse at all?** B4's own reservation still stands and is worth keeping in
-front: *this app is a retro chiptune player, and MP3 is the format its whole point is not.* Handy
-for a rip of something, out of place in a browse tree. "Open this file" and a folder the user
-pointed at, yes; a first-class citizen of the library, ask first.
+**So everything that contains audio played, and everything that did not is a stream designed not
+to.** Layer 1, Layer 2, Layer 3, MPEG-2 LSF and free-format among them.
 
-### What is not a decision
+**And it decodes correctly, not merely audibly.** Eleven Layer 3 vectors compared sample by sample
+against the reference PCM shipped beside them: **worst RMS 0.04 out of 32,768, worst single sample
+off by one.** That is rounding, not decoding.
 
-Duration and seeking. A tracker module states its length and MP3 does not, so a VBR file needs
-either a full scan or the Xing header — `minimp3` gives neither for free. Whatever is chosen must
-answer `canSeek()` honestly, because `docs/ARCHITECTURE.md` §5 is that a UI offering a control the
-backend cannot honour is a UI that lies.
+*The first run of that comparison showed two vectors "wrong" with an RMS of 6,000. The comparison was
+wrong, not the decoder — it read a stereo reference as if it were mono. The same lesson as the
+worklet stub in `docs/review-round-8.md` R1, twice in one day: a measurement that reads the wrong
+thing is evidence of the wrong conclusion.*
 
+### The two decisions, answered
+
+**`.mp3` is not in `SupportedFormats.extensions`, and that was the whole question.** That list is
+what a catalogue index is filtered through *and* what `fingerprint` is computed from, so a name
+added there marks every stored index stale and costs the owner a 40 MB re-download. No archive here
+holds an MP3. It lives in `localOnlyExtensions` instead, and a test asserts that it is in neither of
+the two sets the fingerprint is made of — if that ever fails, somebody owes him a download.
+
+**A folder scan needed nothing at all.** It lists every file and lets a decoder answer
+(`MediaScanner.listFiles`), so an MP3 in a scanned folder simply plays. The name only had to be
+judged in one place: deciding whether a failure means "this app cannot play this format" or "this
+file is broken", which is what `looksPlayable` now answers and `inCatalogueIndex` does not.
+
+### And it never travels to the browser
+
+By the owner's rule, and the rule is arithmetic before it is a preference: this whole handoff rests
+on a tracker module being kilobytes — Modland's median is 20 KB and the budget for a *whole queue*
+is eight megabytes — and one four-minute MP3 is more than that budget by itself. So an MP3 goes as a
+name in its own place, in the link and in the paired message alike, and the page draws it greyed and
+unplayable exactly as A28 draws a file that stayed on the phone.
+
+A rule rather than a size check, so a short MP3 cannot surprise anybody by behaving differently.
+
+**Not a tag reader.** minimp3 decodes and does not read ID3, and inventing one for a single format
+would be a second metadata path to keep in step with `SongDbMetadata`. An MP3 is named by its
+filename, which is what this app already does for every format that says nothing about itself.
 ## A28. ~~The web player carries the local files it cannot play~~ — DONE 2026-09-10
 
 *Owner, 2026-09-09, after an external listener opened a shared link: **"nasze listy nie są zgodne"**.*

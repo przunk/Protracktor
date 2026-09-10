@@ -71,6 +71,14 @@ object QueueLink {
             val catalogue = Catalogue.owning(track.id)
             val path = catalogue?.pathFrom(track.id)
             when {
+                // **An MP3 never travels, whatever it is and wherever it came from.** The owner's
+                // rule, 2026-09-10: *"wysyłanie mp3 w kodzie QR ma zawsze dawać tylko info o pliku
+                // i niedostępne odtwarzanie"*. The reason is arithmetic -- this whole handoff rests
+                // on a tracker module being kilobytes, and one four-minute MP3 is more than the
+                // eight-megabyte budget for a *whole queue* (`docs/PLAN_WEB.md` §8). A rule rather
+                // than a size check, so it cannot surprise anybody with a short one.
+                isMp3(track) ->
+                    lines += PHONE_PREFIX + (track.title.trim().ifBlank { track.fileNameOrTitle })
                 catalogue == null || path == null ->
                     lines += PHONE_PREFIX + (track.title.trim().ifBlank { track.fileNameOrTitle })
                 // Modland is most of any real queue, so its rows lose the 38-byte prefix. Compression
@@ -126,6 +134,17 @@ object QueueLink {
         return if (title.isBlank() || title.equals(fileName, ignoreCase = true)) address
         else "$address\t$title"
     }
+
+    /**
+     * Whether this is an MP3, by name, from either half of what a track calls itself.
+     *
+     * By name and not by content, because the bytes are not here: `pack` is given a queue, not
+     * files. A name is what the phone has and it is what the decoder itself goes on for four of the
+     * other formats.
+     */
+    fun isMp3(track: TrackRef): Boolean =
+        track.fileNameOrTitle.lowercase().endsWith(".mp3") ||
+            track.title.lowercase().endsWith(".mp3")
 
     /** The whole address, given where the page is served from. */
     fun linkTo(base: String, fragment: String): String =

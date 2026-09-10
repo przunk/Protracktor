@@ -73,6 +73,33 @@ class QueueLinkTest {
         )
     }
 
+    /**
+     * The owner's rule, 2026-09-10, and it is arithmetic before it is a preference.
+     *
+     * The whole handoff rests on a tracker module being kilobytes: Modland's median is 20 KB and the
+     * budget for a *whole queue* is eight megabytes. One four-minute MP3 is more than that budget by
+     * itself. So an MP3 never travels -- it goes as a name, in its own place, and the page draws it
+     * greyed and unplayable, exactly as a file that stayed on the phone does.
+     */
+    @Test
+    fun `an mp3 never travels, wherever it came from`() {
+        val packed = QueueLink.pack(
+            listOf(
+                track("content://x/1", "a recording.mp3"),
+                // Even with a perfectly good HTTP address, which no catalogue here would give one --
+                // the rule is "always" rather than "when we cannot fetch it".
+                track("https://example.org/music/live set.mp3", "live set.mp3"),
+                track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod", "hi there.mod"),
+            )
+        )
+        assertEquals(1, packed.sent)
+        assertEquals(0, packed.left)
+        assertEquals(
+            listOf("phone:a recording.mp3", "phone:live set.mp3", "Protracker/4-Mat/hi there.mod"),
+            unpack(packed.fragment),
+        )
+    }
+
     @Test
     fun `a queue with nothing portable packs nothing`() {
         // Every row a ghost is a list with no music in it. There is no link worth sending, and the

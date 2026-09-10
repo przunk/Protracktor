@@ -17,4 +17,4 @@ add_library(protracktor_engine SHARED engine.cpp player_oboe.cpp lha_jni.cpp)
 target_compile_options(protracktor_engine PRIVATE -Wall -Wextra -fexceptions -frtti)
 set_target_properties(protracktor_engine PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(protracktor_engine PRIVATE openmpt sc68 asap gme::gme sidplayfp hively zxtune lhasa oboe::oboe android log)
+target_link_libraries(protracktor_engine PRIVATE openmpt sc68 asap gme::gme sidplayfp hively minimp3 zxtune lhasa oboe::oboe android log)
