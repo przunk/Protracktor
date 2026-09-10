@@ -218,8 +218,15 @@ class RemoteFiles(private val context: Context) {
             Attempt(
                 body = connection.inputStream.use { it.readBytes() },
                 contentType = connection.contentType,
-                cookie = connection.headerFields["Set-Cookie"]
-                    ?.firstOrNull()?.substringBefore(';')?.takeIf { it.isNotBlank() },
+                // **Found without caring about case**, because HTTP header names do not have one and
+                // this map's ordering is somebody else's implementation detail. It very likely works
+                // either way on Android -- `HttpURLConnection` is OkHttp underneath and its map is
+                // case-insensitive -- but the failure would be silent: the retry never fires and a
+                // "verifying your browser" page is stored as if it were a module
+                // (`docs/review-round-8.md` R6).
+                cookie = connection.headerFields.entries
+                    .firstOrNull { it.key != null && it.key.equals("Set-Cookie", ignoreCase = true) }
+                    ?.value?.firstOrNull()?.substringBefore(';')?.takeIf { it.isNotBlank() },
             )
         } finally {
             connection.disconnect()

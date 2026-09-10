@@ -16,6 +16,7 @@
 #include <oboe/Oboe.h>
 
 #include <atomic>
+#include <mutex>
 #include <cstdint>
 #include <memory>
 #include <cstdio>
@@ -39,9 +40,20 @@ public:
     explicit Player(std::unique_ptr<Backend> backend) : backend_(std::move(backend)) {
         publishPosition();
         publishDuration();
+        publishSubsongs();
+        publishDescribe();
     }
 
-    int subsongCount() const { return backend_->subsongCount(); }
+    /**
+     * How many tunes are in the file, from a value the backend published rather than by asking it.
+     *
+     * **`docs/review-round-8.md` R2, and it is `docs/review.md` R6 with one case missed.** This used
+     * to call straight through, and Kotlin calls it three lines after `start()` -- so
+     * `get_num_subsongs()` and `gme_track_count()` ran on an object the audio callback was reading,
+     * which is the exact thing libopenmpt's header forbids. The count cannot change for the life of
+     * a file, so publishing it once in the constructor is the whole fix.
+     */
+    int subsongCount() const { return subsongs_.load(std::memory_order_acquire); }
 
     /**
      * Switches tune.
@@ -68,6 +80,7 @@ public:
             // Stopped, so this thread owns the backend and may ask it directly.
             publishPosition();
             publishDuration();
+            publishDescribe();
             start();
         }
     }
@@ -95,8 +108,10 @@ public:
         const int subsong = pendingSubsong_.exchange(-1, std::memory_order_acq_rel);
         if (subsong >= 0 && backend_->selectSubsong(subsong)) {
             finished_.store(false, std::memory_order_release);
-            // A different tune is a different length, and this is the thread allowed to ask.
+            // A different tune is a different length **and a different name**, and this is the
+            // thread allowed to ask for either.
             publishDuration();
+            publishDescribe();
         }
 
         const double seekTo = pendingSeek_.exchange(NO_SEEK, std::memory_order_acq_rel);
@@ -141,6 +156,25 @@ public:
     /** Reads the backend's own numbers. **Audio thread only**, or at open before it starts. */
     void publishPosition() { position_.store(backend_->positionSeconds(), std::memory_order_release); }
     void publishDuration() { duration_.store(backend_->durationSeconds(), std::memory_order_release); }
+    void publishSubsongs() { subsongs_.store(backend_->subsongCount(), std::memory_order_release); }
+
+    /**
+     * Takes the backend's description and keeps it, so nobody else has to ask the backend.
+     *
+     * **A mutex, and it is taken on the audio thread** -- but only when a tune actually changes,
+     * never per buffer. The alternative was leaving `describe()` calling through and relying on
+     * every caller to ask before the stream starts, which is what convention was doing and what
+     * `docs/review-round-8.md` R3 is about. A lock held for one string copy, a few times a
+     * listening session, is a smaller price than a rule nobody can see from the call site.
+     *
+     * It is also what makes a subsong's own title reach the screen: a GBS names each of its tunes
+     * and the phone was showing the first one's for all of them (R4).
+     */
+    void publishDescribe() {
+        std::string text = backend_->describe();
+        const std::lock_guard<std::mutex> held(describeGuard_);
+        describe_ = std::move(text);
+    }
 
     /** 1.0 is untouched. Used for ducking under a transient interruption. */
     void setGain(float gain) { gain_.store(gain, std::memory_order_relaxed); }
@@ -272,7 +306,11 @@ public:
      * cheap accessor and has no business running once per buffer.
      */
     double durationSeconds() const { return duration_.load(std::memory_order_acquire); }
-    std::string describe() const { return backend_->describe(); }
+    /** The description as it was last published. Never reaches the backend; see `publishDescribe`. */
+    std::string describe() const {
+        const std::lock_guard<std::mutex> held(describeGuard_);
+        return describe_;
+    }
 
     /**
      * Empty unless Oboe opened the stream at a rate the backend did not ask for.
@@ -285,6 +323,10 @@ public:
 private:
     std::unique_ptr<Backend> backend_;
     std::string rateNote_;
+    /** Fixed for the life of a file, so published once and read by anybody. */
+    std::atomic<int> subsongs_{1};
+    mutable std::mutex describeGuard_;
+    std::string describe_;
     std::shared_ptr<oboe::AudioStream> stream_;
     std::atomic<bool> finished_{false};
     std::atomic<float> gain_{1.0f};

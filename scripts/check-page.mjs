@@ -48,7 +48,19 @@ window.AudioContext = class {
 // which is the only observable a page has for a decision it made.
 window.__toWorklet = [];
 window.AudioWorkletNode = class {
-  constructor() { this.port = { onmessage: null, postMessage: (m) => window.__toWorklet.push(m) }; }
+  constructor() {
+    this.port = {
+      onmessage: null,
+      // **`structuredClone` with the transfer list, not a push.** A real `MessagePort` detaches
+      // everything it is handed, and a stub that quietly does not is a stub that cannot see the
+      // defect in `docs/review-round-8.md` R1 -- the page handing away the queue's own bytes. The
+      // first version of this check passed with and without the fix, which is the play-glyph
+      // lesson again: a check that reads the wrong thing is worse than no check.
+      postMessage: (message, transfer) => window.__toWorklet.push(
+        transfer ? structuredClone(message, { transfer }) : message,
+      ),
+    };
+  }
   connect() {}
 };
 // jsdom serves this page from http://localhost, which the real page treats as secure; the flag is
@@ -313,6 +325,28 @@ if (window.__api) {
     'and opening a track replaces it rather than leaving it standing');
   check($('status').textContent.includes('44100'), 'with what the engine said about this file');
   $('shuffle').click();
+
+  // --- a track from the phone plays more than once (review-round-8 R1) ----------------------------
+  //
+  // The page transfers the bytes to the worklet, and a transfer detaches the buffer it was given.
+  // Handing over the queue's own copy therefore emptied it: the second play sent nothing.
+  console.log('\nbytes from the phone:');
+  const module16k = Buffer.alloc(16 * 1024, 7).toString('base64');
+  window.__api.receive({
+    queue: [{ url: 'content://x/1', title: 'From The Phone', file: 'a.mod', data: module16k }],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  window.__toWorklet.length = 0;
+  await window.__api.playAt(0);
+  const first = window.__toWorklet.find((m) => m.type === 'open');
+  check(first?.bytes?.byteLength === 16 * 1024, 'the first play hands over sixteen kilobytes');
+
+  window.__toWorklet.length = 0;
+  await window.__api.playAt(0);
+  const second = window.__toWorklet.find((m) => m.type === 'open');
+  check(second?.bytes?.byteLength === 16 * 1024,
+    'and so does the second, because the queue kept its own copy');
 
   // --- what a row and the panel can do with a track (A27) -----------------------------------------
   console.log('\nactions:');
