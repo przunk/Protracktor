@@ -3,6 +3,10 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
+import { nextIndex, previousIndex, nextSubsong, shouldRestart } from './rules.js';
+import { PHONE, playlists, settings, makePersistent, estimate } from './store.js';
+import * as archive from './catalogue.js';
+
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -49,6 +53,15 @@ let order = [];                   // the permutation `next` walks when shuffle i
 let duration = 0;
 let playing = false;
 let seeking = false;
+/**
+ * Which playlist the queue on screen belongs to.
+ *
+ * **`PHONE` is not a document.** It is a view of the last thing the phone sent, replaced whole by
+ * every handoff and never deleted — the same bargain the phone's own default playlist has, from the
+ * other end. Everything else here was made in this browser and is the browser's to keep.
+ */
+let activePlaylist = PHONE;
+
 /** How many tunes are inside the open file, and which one is sounding. */
 let subsongCount = 1;
 let currentSubsong = 0;
@@ -187,10 +200,15 @@ async function begin() {
  */
 let engineReady = false;
 
+/** Which decoders this build carries. An index is only as good as the set that filtered it. */
+let engineFingerprint = '';
+
 function onWorklet(message) {
   switch (message.type) {
     case 'ready':
       engineReady = true;
+      // Recorded when an index is built and compared when one is read, exactly as the phone does.
+      engineFingerprint = message.backends;
       engineHasZxTune = !message.backends.includes('zxtune:none');
       status(`engine ready — ${message.backends}`);
       break;
@@ -268,8 +286,12 @@ function onWorklet(message) {
     case 'ended': {
       // **The file before the queue**, when the listener asked for that. Repeat-one is checked
       // first and deliberately: it means "this tune again", and a file's other tunes are not it.
-      if (repeat !== 'one' && playAllSubsongs && currentSubsong + 1 < subsongCount) {
-        node?.port.postMessage({ type: 'subsong', index: currentSubsong + 1 });
+      const inside = nextSubsong({
+        playAll: playAllSubsongs, subsong: currentSubsong,
+        count: subsongCount, repeatOne: repeat === 'one',
+      });
+      if (inside != null) {
+        node?.port.postMessage({ type: 'subsong', index: inside });
         break;
       }
       // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
@@ -436,6 +458,7 @@ async function playAt(next) {
   }
   index = next;
   if (history[history.length - 1] !== next) history.push(next);
+  remember();
   const entry = queue[index];
   render();
   followPlaying();
@@ -788,6 +811,35 @@ addEventListener('click', (event) => {
 addEventListener('keydown', (event) => { if (event.key === 'Escape') closeRowMenu(); });
 addEventListener('scroll', closeRowMenu, true);
 
+/**
+ * Writes the queue on screen into whichever playlist it belongs to.
+ *
+ * **Debounced, because the things that call it are the transport.** Moving to the next track is a
+ * write, and a listening session is hundreds of them; a playlist is a few hundred rows and writing
+ * it on every one would be work nobody asked for. Half a second is under a person's notice and far
+ * above a button press.
+ */
+let saveTimer = null;
+function remember() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await playlists.save({
+        id: activePlaylist,
+        name: activePlaylist === PHONE ? 'From the phone' : (await playlists.get(activePlaylist))?.name ?? 'Playlist',
+        // The bytes a phone sent are deliberately **not** kept. They are a copy of a file that
+        // lives somewhere else, they are the largest thing in the queue by far, and a page that
+        // quietly hoards somebody's music is not what this is.
+        tracks: queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file })),
+        index,
+      });
+      await settings.set('active', activePlaylist);
+    } catch (e) {
+      status(`could not save the playlist: ${e.message}`);
+    }
+  }, 500);
+}
+
 /** A fresh permutation. A new lap is a new shuffle; replaying one order forever is not shuffle. */
 function reshuffle(keep) {
   // Rows that cannot play are not in the permutation at all, which is simpler and stricter than
@@ -809,7 +861,14 @@ function seek(from, step) {
   return null;
 }
 
-/** What `next` should play, or null at the end. */
+/**
+ * What `next` should play, or null at the end.
+ *
+ * **The rule comes from `rules.js`, which `docs/rules/queue-cases.tsv` checks against the phone's.**
+ * What is left here is the two things that cannot be shared: the shuffled order, whose permutation
+ * differs between the two runtimes by construction, and stepping over rows that stayed on the phone,
+ * which only this side has.
+ */
 function afterCurrent() {
   if (repeat === 'one' && index >= 0) return index;
   if (shuffle) {
@@ -818,9 +877,10 @@ function afterCurrent() {
     if (repeat === 'all') { reshuffle(null); return order[0] ?? null; }
     return null;
   }
-  const ahead = seek(index + 1, 1);
-  if (ahead != null) return ahead;
-  return repeat === 'all' ? seek(0, 1) : null;
+  const candidate = nextIndex({ tracks: queue.length, at: index, repeat });
+  if (candidate == null) return null;
+  const ahead = seek(candidate, 1);
+  return ahead ?? (repeat === 'all' ? seek(0, 1) : null);
 }
 
 /** What `previous` should play, or null. */
@@ -831,9 +891,10 @@ function beforeCurrent() {
     const at = history.lastIndexOf(index);
     return at > 0 ? history[at - 1] : null;
   }
-  const back = seek(index - 1, -1);
-  if (back != null) return back;
-  return repeat === 'all' && queue.length ? seek(queue.length - 1, -1) : null;
+  const candidate = previousIndex({ tracks: queue.length, at: index, repeat });
+  if (candidate == null) return null;
+  const back = seek(candidate, -1);
+  return back ?? (repeat === 'all' && queue.length ? seek(queue.length - 1, -1) : null);
 }
 
 /**
@@ -861,6 +922,7 @@ function setQueue(urls, at = 0) {
   if (shuffle) reshuffle(index >= 0 ? index : null);
   render();
   setPlaying(false);
+  remember();
   const entry = queue[index];
   if (entry) {
     $('title').textContent = entry.name;
@@ -876,14 +938,345 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which) {
+  $('browse').hidden = which !== 'browse';
+  $('tab-browse').setAttribute('aria-pressed', String(which === 'browse'));
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
+  $('playlists').hidden = which !== 'playlists';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
   if (which === 'paste') $('urls').focus();
 }
+/**
+ * The playlist sheet: what there is, which one is showing, and what may be done to it.
+ *
+ * Drawn fresh each time it opens rather than kept in step, because it is a dialog somebody opens
+ * for a moment and the alternative is a second copy of the truth.
+ */
+async function renderPlaylists() {
+  const list = $('playlistlist');
+  list.replaceChildren();
+  for (const playlist of await playlists.all()) {
+    const li = document.createElement('li');
+    li.setAttribute('aria-current', String(playlist.id === activePlaylist));
+
+    const name = document.createElement('div');
+    name.className = 'pname';
+    name.textContent = playlist.name;
+    const count = document.createElement('div');
+    count.className = 'pcount';
+    const n = playlist.tracks?.length ?? 0;
+    count.textContent = n === 1 ? '1 track' : `${n} tracks`;
+    li.append(name, count);
+
+    // The phone's has no delete: it is not something anybody made.
+    if (playlist.id !== PHONE) {
+      const drop = document.createElement('button');
+      drop.className = 'pdrop';
+      drop.textContent = 'Delete';
+      drop.onclick = async (event) => {
+        event.stopPropagation();
+        await playlists.remove(playlist.id);
+        if (activePlaylist === playlist.id) await switchTo(PHONE);
+        renderPlaylists();
+      };
+      li.append(drop);
+    }
+
+    li.onclick = () => { switchTo(playlist.id); showPanel(null); };
+    list.append(li);
+  }
+
+  const { usage, quota } = await estimate();
+  $('storageline').textContent = usage
+    ? `This browser is holding ${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB it offered.`
+    : 'Nothing stored yet.';
+}
+
+/**
+ * Repaints the Browse button for the playlist that is showing.
+ *
+ * `aria-disabled` rather than `disabled`: a disabled button cannot be pressed, so it cannot say
+ * why it is shut, and "nothing happens" is the worst of the three answers.
+ */
+function markBrowsable() {
+  const blocked = activePlaylist === PHONE;
+  $('tab-browse').setAttribute('aria-disabled', String(blocked));
+  $('tab-browse').title = blocked
+    ? 'Switch to a playlist of your own first — browsing will not rewrite what the phone sent'
+    : 'Browse the archives';
+}
+
+/** Loads a playlist into the queue. Selected, not started — a switch is not a press of play. */
+async function switchTo(id) {
+  const playlist = await playlists.get(id);
+  activePlaylist = id;
+  $('playlistname').textContent = playlist?.name ?? (id === PHONE ? 'From the phone' : 'Playlist');
+  markBrowsable();
+  setQueue(playlist?.tracks ?? [], playlist?.index ?? 0);
+  await settings.set('active', id);
+}
+
+/*
+  Browsing an archive.
+
+  **Four levels and one way through them**, so the state is a stack rather than a router: `[]` is
+  the catalogue, `[format]` its authors, `[format, author]` its tracks. Back pops. The phone's
+  `BrowseNavigation.kt` is the same three fields and the same reason -- what a person walks down
+  they expect to walk back up.
+*/
+let browsePath = [];
+
+async function renderBrowse() {
+  const list = $('browselist');
+  const note = $('browsenote');
+  list.replaceChildren();
+  $('browseback').hidden = browsePath.length === 0;
+  note.textContent = '';
+  $('browsesearch').hidden = false;
+
+  // **Shut before it is walked into, not after** (owner, 2026-09-10). Telling somebody they cannot
+  // play this three levels down and one chosen tune later is telling them late. Browsing writes
+  // into the playlist that is showing, "From the phone" is not one to write into, so the whole
+  // panel says so and offers the one thing that unblocks it.
+  if (activePlaylist === PHONE) {
+    $('browsetitle').textContent = 'Browse';
+    $('browseback').hidden = true;
+    $('browsesearch').hidden = true;
+    note.textContent = 'Browsing plays into the playlist that is showing, and "From the phone" is '
+      + 'what the phone sent — the page will not rewrite it. Switch to one of your own, or make an '
+      + 'empty one.';
+    const li = document.createElement('li');
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = 'Make an empty playlist and browse into it';
+    li.append(label);
+    li.onclick = async () => { if (await newPlaylist()) await renderBrowse(); };
+    list.append(li);
+    return;
+  }
+
+  const row = (name, count, onclick) => {
+    const li = document.createElement('li');
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = name;
+    const number = document.createElement('div');
+    number.className = 'bcount';
+    number.textContent = count == null ? '' : count.toLocaleString();
+    li.append(label, number);
+    li.onclick = onclick;
+    list.append(li);
+  };
+
+  if (browsePath.length === 0) {
+    $('browsetitle').textContent = 'Browse';
+    const held = await archive.meta();
+    if (!held?.tracks) {
+      // **Offered, not assumed.** It is 5.76 MB off somebody else's server, and this page has until
+      // now cost nothing to open.
+      note.textContent = 'Modland is half a million tunes. The index is a 5.76 MB download, kept in '
+        + 'this browser, and browsing is then offline.';
+      row('Download the Modland index', null, downloadIndex);
+      return;
+    }
+    // An index is filtered by what the decoders could play when it was built, so one built by an
+    // older set is missing files and looks empty rather than out of date -- the phone learnt this
+    // by losing 60,572 C64 tunes.
+    if (held.fingerprint && engineFingerprint && held.fingerprint !== engineFingerprint) {
+      note.textContent = 'This index was built by a different set of decoders, so it is missing '
+        + 'whatever arrived since. Downloading it again will find them.';
+    }
+    row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
+      browsePath = ['modland'];
+      await renderBrowse();
+    });
+    row('Download the index again', null, downloadIndex);
+    return;
+  }
+
+  if (browsePath.length === 1) {
+    $('browsetitle').textContent = 'Modland';
+    for (const { name, count } of await archive.formats()) {
+      row(name, count, async () => { browsePath = ['modland', name]; await renderBrowse(); });
+    }
+    return;
+  }
+
+  if (browsePath.length === 2) {
+    const format = browsePath[1];
+    $('browsetitle').textContent = format;
+    for (const { name, count } of await archive.authors(format)) {
+      row(name || '(no author)', count, async () => {
+        browsePath = ['modland', format, name];
+        await renderBrowse();
+      });
+    }
+    return;
+  }
+
+  const [, format, author] = browsePath;
+  $('browsetitle').textContent = `${format} / ${author || '(no author)'}`;
+  const tracks = await archive.tracksIn(format, author);
+  tracks.forEach((track, i) => {
+    // **The whole author becomes the queue**, which is what the phone does: a person who opened a
+    // folder and pressed a tune meant that folder, not that one file.
+    row(track.name, Math.round(track.size / 1024), () => playFromBrowse(tracks, i));
+  });
+}
+
+/**
+ * Plays something found by browsing — into a playlist of the browser's own.
+ *
+ * **Never into "From the phone"** (owner, 2026-09-10). That one is a view of the last thing the
+ * phone sent, and a page that quietly rewrites it makes the two devices disagree about what he
+ * built. So browsing asks him to switch or make one, once, rather than deciding for him.
+ */
+function playFromBrowse(tracks, at) {
+  // Belt and braces: `renderBrowse` shuts the panel when the phone's list is showing, so this
+  // should be unreachable — and it is one comparison against a queue rewritten behind his back.
+  if (activePlaylist === PHONE) {
+    $('browsenote').textContent =
+      'This would replace what the phone sent. Switch to one of your own playlists first, or make '
+      + 'an empty one — the name at the top left opens them.';
+    return;
+  }
+  setQueue(tracks, at);
+  showPanel(null);
+  playAt(at);
+}
+
+async function downloadIndex() {
+  const note = $('browsenote');
+  $('browselist').replaceChildren();
+  try {
+    const result = await archive.downloadModland({
+      fingerprint: engineFingerprint,
+      // The same question the phone's index asks of every name, so the two hold the same rows.
+      keep: () => true,
+      onProgress: (p) => {
+        note.textContent = p.stage === 'storing'
+          ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
+          : `${p.stage}…`;
+      },
+    });
+    note.textContent = `${result.tracks.toLocaleString()} tracks in ${result.formats} formats.`;
+    browsePath = [];
+    await renderBrowse();
+  } catch (e) {
+    note.textContent = `the index could not be downloaded: ${e.message}`;
+  }
+}
+
+/**
+ * Searching the index.
+ *
+ * Authors and tunes together, because a person typing a name does not know which they are after.
+ * Debounced, and it says how long it took: reading 1,663 title shards is a real amount of work and
+ * a number is more honest than a spinner.
+ */
+let searchTimer = null;
+async function runSearch(query) {
+  const list = $('browselist');
+  const note = $('browsenote');
+  if (query.trim().length < 2) { browsePath = []; await renderBrowse(); return; }
+  if (!(await archive.meta())?.tracks) { note.textContent = 'Download the index first.'; return; }
+
+  note.textContent = 'searching…';
+  const started = performance.now();
+  const [people, { hits, capped }] = await Promise.all([
+    archive.searchAuthors(query), archive.searchTitles(query),
+  ]);
+  list.replaceChildren();
+
+  const row = (name, right, onclick) => {
+    const li = document.createElement('li');
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = name;
+    const side = document.createElement('div');
+    side.className = 'bcount';
+    side.textContent = right;
+    li.append(label, side);
+    li.onclick = onclick;
+    list.append(li);
+  };
+
+  for (const { format, author, count } of people) {
+    row(`${author}`, `${format} · ${count}`, async () => {
+      browsePath = ['modland', format, author];
+      $('browsesearch').value = '';
+      await renderBrowse();
+    });
+  }
+  hits.forEach((track, i) => row(track.name, track.meta.replace('Modland/', ''),
+                                 () => playFromBrowse(hits, i)));
+
+  const ms = Math.round(performance.now() - started);
+  note.textContent = (people.length + hits.length)
+    ? `${people.length} authors and ${hits.length}${capped ? '+' : ''} tunes, in ${ms} ms.`
+    : `nothing matched, in ${ms} ms.`;
+}
+
+$('browsesearch').oninput = () => {
+  clearTimeout(searchTimer);
+  const query = $('browsesearch').value;
+  searchTimer = setTimeout(() => runSearch(query), 250);
+};
+
+$('tab-browse').onclick = async () => {
+  if (!$('browse').hidden) { showPanel(null); return; }
+  browsePath = [];
+  showPanel('browse');
+  await renderBrowse();
+};
+$('browseback').onclick = async () => { browsePath = browsePath.slice(0, -1); await renderBrowse(); };
+
+$('playlistchip').onclick = () => {
+  renderPlaylists();
+  showPanel($('playlists').hidden ? 'playlists' : null);
+};
+
+/**
+ * Makes an empty playlist and switches to it. Answers whether one was made.
+ *
+ * One function because two buttons want it: the sheet's, and the one the blocked Browse panel
+ * offers — and a second copy of "what a new playlist is" would drift.
+ */
+async function newPlaylist() {
+  const name = prompt('Call it what?', 'New playlist');
+  if (!name) return false;
+  const id = `p${Date.now().toString(36)}`;
+  await playlists.save({ id, name, tracks: [], index: 0 });
+  activePlaylist = id;
+  $('playlistname').textContent = name;
+  markBrowsable();
+  await settings.set('active', id);
+  // Emptied on purpose: the point of a new list is to put something in it, and leaving the previous
+  // queue on screen under a new name is the opposite of empty.
+  setQueue([], 0);
+  status(`${name} — empty. Browse for something to put in it.`);
+  return true;
+}
+
+$('newlist').onclick = async () => { if (await newPlaylist()) renderPlaylists(); };
+
+$('saveas').onclick = async () => {
+  if (!queue.length) { status('there is nothing in the queue to save'); return; }
+  const name = prompt('Call it what?', 'My playlist');
+  if (!name) return;
+  const id = `p${Date.now().toString(36)}`;
+  await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
+  activePlaylist = id;
+  $('playlistname').textContent = name;
+  markBrowsable();
+  await settings.set('active', id);
+  renderPlaylists();
+  status(`Saved as ${name}`);
+};
+
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
@@ -901,7 +1294,18 @@ addEventListener('keydown', (event) => {
 
 $('load').onclick = () => {
   const urls = $('urls').value.split('\n').map((s) => s.trim()).filter(Boolean);
-  if (urls.length) setQueue(urls);
+  if (!urls.length) { showPanel(null); return; }
+  // **The same rule as Browse**, and for the same reason: this writes into the playlist that is
+  // showing, and the next handoff replaces "From the phone" wholesale -- so the paste would be
+  // thrown away, silently, and until then he would be looking at a queue the phone does not have.
+  // *"te funkcje powinny dzialac tylko jak przelacze liste"* -- plural, and this is one of them.
+  if (activePlaylist === PHONE) {
+    $('pastenote').textContent = 'This would replace what the phone sent. Switch to one of your '
+      + 'own playlists first, or make an empty one — the name at the top left opens them.';
+    return;
+  }
+  $('pastenote').textContent = '';
+  setQueue(urls);
   showPanel(null);
 };
 $('playpause').onclick = async () => {
@@ -913,7 +1317,7 @@ $('playpause').onclick = async () => {
   }
   // **It reached the end and nothing followed, so this press means "again".** The bytes are still
   // in the worklet, so it rewinds rather than fetching them a second time.
-  if (finished) {
+  if (shouldRestart({ engineFinished: finished, position: 0, duration: 0 })) {
     finished = false;
     if (context?.state === 'suspended') await context.resume();
     node?.port.postMessage({ type: 'rewind' });
@@ -1127,6 +1531,9 @@ async function fromFragment() {
       const entry = entryFor(url);
       return title ? { ...entry, name: title } : entry;
     }));
+    activePlaylist = PHONE;
+    $('playlistname').textContent = 'From the phone';
+    markBrowsable();
     const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
     status(`${lines.length - ghosts} tracks from the link` +
            (ghosts ? `, and ${ghosts} that stayed on the phone` : ''));
@@ -1229,6 +1636,10 @@ function receive(message) {
     }),
     message.index ?? 0,
   );
+  // A handoff is always the phone's playlist, whatever was showing. It replaces it whole.
+  activePlaylist = PHONE;
+  $('playlistname').textContent = 'From the phone';
+  markBrowsable();
   const stranded = message.queue.filter((row) => row.local).length;
   status(`${message.queue.length - stranded} tracks from the phone — press play` +
          (stranded ? `, and ${stranded} that stayed on it` : ''));
@@ -1268,7 +1679,41 @@ showPanel('pair');
 
 status('ready — press Play or load some URLs');
 pair();
-fromFragment();
+
+/**
+ * What was showing last time.
+ *
+ * **After `pair()` and before `fromFragment()`, and the order is the whole of it.** A link in the
+ * address bar is somebody asking for *that* queue right now; anything restored from storage is
+ * what they were doing yesterday, and yesterday must not win. So the restore runs first and the
+ * fragment, if there is one, replaces it.
+ */
+(async () => {
+  try {
+    await makePersistent();
+    const id = await settings.get('active', PHONE);
+    const playlist = await playlists.get(id);
+    // **An empty playlist is restored too.** It used to need tracks to be worth coming back to,
+    // which was true while every playlist arrived full from the phone. Now that one can be made
+    // empty on purpose, dropping it on reload puts "From the phone" back in front of him -- and
+    // that is the one list Browse will not write into, so the tab he just unblocked shuts again.
+    if (playlist && id !== PHONE) {
+      activePlaylist = id;
+      $('playlistname').textContent = playlist.name;
+      setQueue(playlist.tracks ?? [], playlist.index ?? 0);
+      showPanel(null);
+      status(playlist.tracks?.length
+        ? `${playlist.name} — where you left it`
+        : `${playlist.name} — empty. Browse for something to put in it.`);
+    }
+    markBrowsable();
+  } catch (e) {
+    // A private window, storage turned off, a second tab holding an old version. The page works
+    // without any of this and saying so is better than a dialog nobody can act on.
+    status(`this browser is not keeping playlists: ${e.message}`);
+  }
+  fromFragment();
+})();
 
 // **A link opened in a tab that already has this page does not reload it.** Only the fragment
 // changes, and the browser fires `hashchange` instead -- so without this, sending a second queue

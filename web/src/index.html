@@ -94,11 +94,16 @@
     border-radius: var(--shape-m);
     padding: 10px 16px;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    gap: 6px;
     min-width: 0;
+    border: 0; font: inherit; color: inherit; cursor: pointer; text-align: left;
   }
-  .playlist .name { font-size: var(--headline-small); font-weight: 400; letter-spacing: 0; }
+  .playlist:hover { filter: brightness(1.12); }
+  .playlist .text { min-width: 0; }
+  .playlist .chev { width: 20px; height: 20px; fill: var(--on-surface-variant); flex: none; }
+  .playlist .name { font-size: var(--headline-small); font-weight: 400; letter-spacing: 0;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .playlist .count { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 1px; }
   .spacer { flex: 1; }
 
@@ -122,6 +127,9 @@
     cursor: pointer;
   }
   .action:hover { filter: brightness(1.12); }
+  /* Shut, and looking it. `aria-disabled` rather than `disabled`, because the button still has to
+     answer a press -- with the reason, which a disabled button cannot give. */
+  .action[aria-disabled="true"] { opacity: .45; }
   .action[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
   .action svg { width: 22px; height: 22px; fill: currentColor; }
 
@@ -410,6 +418,48 @@
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
+  /* Browsing: one list, four levels, and a head that says where you are. */
+  #browsesearch {
+    width: 100%; box-sizing: border-box; margin: 6px 0 8px;
+    background: var(--surface-container); color: var(--on-surface);
+    border: 1px solid var(--surface-variant); border-radius: var(--shape-xl);
+    padding: 10px 16px; font: inherit;
+  }
+  .browsehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #browselist { list-style: none; margin: 0; padding: 0; max-height: 56vh; overflow-y: auto; }
+  #browselist li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px; border-radius: var(--shape-s); cursor: pointer;
+  }
+  #browselist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #browselist .bname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #browselist .bcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
+
+  /* The playlist sheet: a list of names, what is in each, and what may be done to it. */
+  #playlistlist { list-style: none; margin: 0 0 16px; padding: 0; max-height: 46vh; overflow-y: auto; }
+  #playlistlist li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--shape-s); cursor: pointer;
+  }
+  #playlistlist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #playlistlist li[aria-current="true"] { background: var(--secondary-container); }
+  #playlistlist .pname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #playlistlist .pcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
+  #playlistlist .pdrop {
+    background: none; border: 0; padding: 4px 8px; cursor: pointer;
+    color: var(--on-surface-variant); font: inherit; border-radius: var(--shape-s); flex: none;
+  }
+  #playlistlist .pdrop:hover { background: color-mix(in srgb, var(--error) 22%, transparent); color: var(--on-surface); }
+  .sheet .row { display: flex; gap: 10px; justify-content: flex-end; }
+  .sheet .plain {
+    background: none; color: var(--on-surface-variant); border: 0;
+    padding: 10px 18px; font: inherit; border-radius: var(--shape-xl); cursor: pointer;
+  }
+  /* What the page is holding. The phone has a storage screen; this is the honest one line of it. */
+  .storage { color: var(--on-surface-variant); font-size: var(--body-small); margin: 14px 0 0; text-align: left; }
+
   .subsongbar { margin-top: 14px; }
   .subsongbar[hidden] { display: none; }
   .toggle {
@@ -434,11 +484,22 @@
 <div class="app">
 
   <header>
-    <div class="playlist">
-      <div class="name">From the phone</div>
-      <div class="count" id="count">nothing yet</div>
-    </div>
+    <!--
+      The playlist chip is a button now, as it is on the phone: what is showing, how much is in it,
+      and a way to the others. `ui/PlaylistSwitcher.kt` is the shape being copied.
+    -->
+    <button class="playlist" id="playlistchip">
+      <div class="text">
+        <div class="name" id="playlistname">From the phone</div>
+        <div class="count" id="count">nothing yet</div>
+      </div>
+      <svg viewBox="0 0 24 24" class="chev"><path d="m7 10 5 5 5-5z"/></svg>
+    </button>
     <div class="spacer"></div>
+    <button class="action" id="tab-browse" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4a7.48 7.48 0 0 0-6.63 4.03A5.99 5.99 0 0 0 6 20h13a5 5 0 0 0 .35-9.96z"/></svg>
+      Browse
+    </button>
     <button class="action" id="tab-pair" aria-pressed="true">
       <svg viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 16h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm0 10h2v2h-2v-2zm-6-6h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm0-4h2v2h-2v-2zm2 2h2v2h-2v-2z"/></svg>
       Pair
@@ -558,6 +619,42 @@
   <div id="menu" hidden role="menu"></div>
 
   <!--
+    The playlists, over the page like the other two dialogs. "From the phone" is always the first
+    row and has no delete: it is a view of the last thing the phone sent rather than something
+    somebody made.
+  -->
+  <!--
+    Browsing an archive, as the phone browses one: catalogue, then format, then author, then tracks.
+    A stack rather than a router — there are four levels and one way through them, and the back
+    button is the only navigation.
+  -->
+  <div class="overlay" id="browse" hidden>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <button class="plain" id="browseback" hidden>← Back</button>
+        <h2 id="browsetitle">Browse</h2>
+        <button class="plain" data-close>Close</button>
+      </div>
+      <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
+      <p class="note" id="browsenote"></p>
+      <ol id="browselist"></ol>
+    </div>
+  </div>
+
+  <div class="overlay" id="playlists" hidden>
+    <div class="sheet">
+      <h2>Playlists</h2>
+      <ol id="playlistlist"></ol>
+      <div class="row">
+        <button class="filled" id="newlist">New empty playlist</button>
+        <button class="filled" id="saveas">Save this queue as…</button>
+        <button class="plain" data-close>Close</button>
+      </div>
+      <p class="storage" id="storageline"></p>
+    </div>
+  </div>
+
+  <!--
     Two things that interrupt: a code to scan and a box to paste into. **Over the page rather than
     under the list**, which is where the owner found them and correctly did not like it: a code you
     have to scroll to is a code you have to look for, and the whole point of it is that it is the
@@ -579,6 +676,7 @@
     <div class="sheet wide">
       <p class="note">One URL per line. Modland, ASMA and HVSC all allow a browser to read them directly.</p>
       <textarea id="urls" spellcheck="false"></textarea>
+      <p class="note" id="pastenote"></p>
       <div class="sheet-actions">
         <button class="text-button" data-close>Cancel</button>
         <button class="filled" id="load">Load these</button>

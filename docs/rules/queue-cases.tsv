@@ -1,0 +1,66 @@
+# The queue rules, as cases rather than as code.
+#
+# docs/PLAN_WEB_LIBRARY.md S1. The rules live twice -- PlayQueue.kt and web/src/rules.js -- because
+# a browser cannot run Kotlin, and they will go on living twice. What must not happen twice is
+# DECIDING what they are. C23, C30 and C31 were each one screen doing what the other did not, all
+# three found by the owner rather than by a test, all three inside a week.
+#
+# Neither implementation is the reference. THIS FILE IS. A rule changed on one side and not the
+# other fails on the side that did not change, which is the entire mechanism.
+#
+# Tab-separated, because that is what everything else in this project reads -- songdb, Modland's
+# favourites, the engine's own `describe`. Five lines to parse on each side and no dependency, which
+# `org.json` would have been in a unit test that only has a stub of it.
+#
+# Shuffle is deliberately absent: the two sides shuffle with different generators, and agreeing on a
+# permutation would mean sharing an implementation, which is the thing that cannot be done.
+# PlayQueueTest covers it on the Kotlin side.
+#
+# A group is [name] followed by a header row and then its cases. `-` means null.
+
+[next]
+tracks	at	repeat	expect	why
+3	0	off	1	the ordinary case
+3	2	off	-	the last track, with repeat off, is the end
+3	2	all	0	repeat-all wraps
+3	1	one	1	repeat-one stays put
+3	2	one	2	repeat-one on the last track does not wrap either
+1	0	off	-	one track, repeat off, goes nowhere
+1	0	all	0	one track, repeat all, is itself
+
+[previous]
+tracks	at	repeat	expect	why
+3	1	off	0	the ordinary case
+3	0	off	-	the first track, with repeat off, has nothing behind it
+3	0	all	2	repeat-all wraps backwards to the end
+3	1	one	0	repeat-one does not trap previous -- a listener who presses back means back
+
+[subsong]
+playAll	subsong	count	repeatOne	expect	why
+no	0	5	no	-	with play-all off, a file with tunes in it behaves like any other track
+yes	0	5	no	1	with it on, the file is walked first
+yes	4	5	no	-	and the queue moves once the file runs out
+yes	0	5	yes	-	repeat-one means THIS tune again, and a file's other tunes are not it
+yes	0	1	no	-	a file holding one tune never has a next one
+
+[playFromEnd]
+engineFinished	position	duration	expect	why
+yes	0	0	yes	the engine saying so is enough
+no	180	180	yes	and so is reaching a length something else supplied -- how most SIDs end
+no	181	180	yes	past it counts too
+no	30	180	no	a track paused in the middle resumes
+no	0	0	no	a duration of zero means nobody knows the length, not zero seconds long
+no	95	0	no	and it still means that after a while
+
+# Modland's address rule. Two runtimes, two encoders, and they disagreed until this group existed:
+# Java's URLEncoder escapes everything outside A-Za-z0-9.-*_ while encodeURIComponent keeps seven
+# more characters. Both URLs fetch the same file, which is why it would have gone unnoticed until
+# something compared them as strings.
+[modlandUrl]
+format	author	title	expect	why
+Protracker	4-Mat	elysium.mod	Protracker/4-Mat/elysium.mod	the ordinary case needs no escaping
+Protracker	Jester (Volker Tripp)	elysium.mod	Protracker/Jester%20%28Volker%20Tripp%29/elysium.mod	brackets and spaces, which Modland is full of
+Impulsetracker	Wayfinder	!!uu !! !!.it	Impulsetracker/Wayfinder/%21%21uu%20%21%21%20%21%21.it	the file the owner played, and every one of those is escaped
+Ad Lib	Unknown	a+b.sng	Ad%20Lib/Unknown/a%2Bb.sng	a literal plus, which a space must not become
+Protracker	Ko%C5%82o	x.mod	Protracker/Ko%25C5%2582o/x.mod	a percent sign in a name is a percent sign
+Octamed	Mr.Man	tune~1.med	Octamed/Mr.Man/tune%7E1.med	dot and hyphen survive, tilde does not

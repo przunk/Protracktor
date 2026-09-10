@@ -10,6 +10,67 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B32. Modland's `/incoming/` is not in `allmods.zip`, and neither app can see it
+
+*Owner, 2026-09-10, by finding a file we could not find:*
+`ftp.modland.com/incoming/warehouse/MOD/games/Top Gear 2 (OCS & AGA)/topgear2.mod`
+
+**Not a search defect — a data one.** `allmods.zip` is the whole of what both apps know about
+Modland, and it describes exactly one tree. Checked, rather than assumed:
+
+- 516,107 lines, each `size ⇥ Format/Author/path`;
+- **339 top-level names, every one of them a format** (AHX, Ace Tracker, Ad Lib…). None is
+  `incoming`, none is `pub`;
+- every path is relative to `https://modland.com/pub/modules/`;
+- "incoming" appears 12 times in the index and "warehouse" 29 — all of them **tune titles**
+  (`Fasttracker 2/Cons/warehouse.xm`), never path segments.
+
+`/incoming/` is Modland's staging area: uploaded, not yet filed into the collection. The file is
+real and reachable — 146,324 bytes, HTTP 200, `Access-Control-Allow-Origin: *`, so a browser may
+read it directly — it is simply not in anything we download.
+
+**What indexing it would take.** There is no index file for this tree, so it means walking Apache
+directory listings: `<a href>` per level, recursing on the ones ending in `/`. That is a different
+kind of work from "fetch one file and parse it", and it is the reason this is a wish rather than
+a task:
+
+- the shape is not `Format/Author/file`, so it does not fit the catalogue's three-level browse —
+  `warehouse/MOD/games/<Game>/<file>` is closer to how UnExoticA is filed than to Modland;
+- a scrape has no version and no size column, so nothing tells us it went stale;
+- it is one request per directory against somebody else's server, which is the sort of thing the
+  letter to ExoticA was written to avoid doing thoughtlessly. See `docs/PLAN_WEB_LIBRARY.md` S7.
+
+**Cheaper first step, and possibly enough**: a way to type or paste an address into the APK. The
+web page already has one (and now obeys the playlist rule when using it); the phone has no such
+field at all, only the `http(s)` + `*.mod` intent filter in the manifest, which works but requires
+starting from a browser. One field would make every unindexed corner of every archive reachable
+without indexing any of them.
+
+## B31. Drag a file onto the web player to add it
+
+*Owner, 2026-09-10.*
+
+**The one way of getting a file into a page that everybody already knows.** The page takes music
+from a phone link, a pasted address and Browse; a file sitting on the desk of the machine the page
+is open on has no way in at all short of that machine being the phone.
+
+What it would be: a drop target over the whole page (`dragover` / `drop`, `DataTransfer.files`),
+each dropped file read once into an `ArrayBuffer` and appended to the playlist that is showing —
+which means the same rule Browse just grew, that "From the phone" is not a list the page writes
+into. A folder dropped from a desktop browser arrives as `webkitGetAsEntry`, so recursing into it
+is a second, larger step and should not hold up the first.
+
+Two things to settle before writing it:
+
+- **Where the bytes live.** A dropped file is a local file with no address, so it is the same shape
+  as the phone's `data:` entries — kept in the queue as bytes, gone on reload unless the playlist
+  stores them. Storing them means playlists in IndexedDB stop being a few kilobytes of URLs.
+- **MP3 stays info-only when it arrives by QR** (`docs/STATUS.md` C33), but a file dropped on the
+  page by the person sitting at it is not the QR path, and there is no reason it should not play.
+
+Cheap, obvious, and the sort of thing whose absence gets noticed on the first day somebody else
+uses the page.
+
 ## B30. ASMA ships a STIL, and we do not read it
 
 *Owner, 2026-09-10, as a curiosity: `asma.atari.org/asma/Docs/STIL.txt`.*

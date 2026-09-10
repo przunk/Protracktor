@@ -98,13 +98,40 @@ window.fetch = async (url, options) => {
   return { ok: true, arrayBuffer: async () => new ArrayBuffer(64) };
 };
 
+// **`rules.js` is inlined rather than stripped.** Everything else the page imports is a browser's
+// business, but the rules are the page's own code -- dropping the import would leave the functions
+// undefined and the checks would test a page that cannot run, which is the failure this harness has
+// already shipped once (the worklet stub that ignored transfers, `docs/review-round-8.md` R1).
+// A real IndexedDB, because jsdom has none and the page's playlists are the point of S2. The
+// package is a dependency of `web/`, like jsdom, and for the same reason: a stub of storage would
+// let a broken store pass.
+// By path, the way jsdom is imported above: the package lives in `web/node_modules` and this
+// script runs from the repository root.
+await import('./../web/node_modules/fake-indexeddb/auto/index.mjs');
+globalThis.indexedDB = indexedDB;
+window.indexedDB = indexedDB;
+window.navigator.storage ??= { persist: async () => true, persisted: async () => true,
+                               estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
+
+const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
+const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
+  .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
+  .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
+  // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
+  // and the rest is spliced in under the name `app.js` uses for it.
+  .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
+    'const archive = (() => {' + fs.readFileSync('web/src/catalogue.js', 'utf8')
+      .replace(/^import .*$/gm, '')
+      .replace(/^export function (\w+)/gm, 'function $1')
+      .replace(/^export async function (\w+)/gm, 'async function $1')
+    + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -232,7 +259,9 @@ if (window.__api) {
   check(posted.length === before, 'and nothing is fetched for it');
   check($('error').textContent === '', 'and it does not fail');
 
-  // Last, because it replaces the queue everything above was reading.
+  // Last, because it replaces the queue everything above was reading -- and into a playlist of
+  // his own, because pasting no longer writes into "From the phone" either.
+  await window.__api.switchTo('p-paste');
   window.__api.showPanel('paste');
   $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';
   $('load').click();
@@ -551,6 +580,252 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
   check(wanted.size > 0, `${wanted.size} engine functions are called`);
   check(missing.length === 0,
     missing.length ? `the built engine is missing: ${missing.join(', ')}` : 'and the built engine exports all of them');
+}
+
+// --- playlists that survive a reload (PLAN_WEB_LIBRARY S2) --------------------------------------
+//
+// Driven through the page's own store rather than through the DOM, because what S2 promises is not
+// a dialog -- it is that the queue comes back. A real IndexedDB is behind it (fake-indexeddb), so a
+// broken store fails here rather than on his machine.
+{
+  console.log('\nplaylists:');
+  const store = await import(path.resolve('web/src/store.js'));
+
+  // A handoff writes the phone's playlist, and it is the one that cannot be deleted.
+  await store.playlists.save({ id: store.PHONE, name: 'From the phone', tracks: [{ url: 'a', name: 'A' }], index: 0 });
+  await store.playlists.remove(store.PHONE);
+  check((await store.playlists.get(store.PHONE))?.tracks.length === 1,
+    'the phone\'s playlist cannot be deleted — it is a view, not a document');
+
+  await store.playlists.save({ id: 'p-zebra', name: 'Zebra', tracks: [], index: 0 });
+  await store.playlists.save({ id: 'p-alpha', name: 'Alpha', tracks: [], index: 0 });
+  const names = (await store.playlists.all()).map((p) => p.name);
+  check(names[0] === 'From the phone', 'and it sorts first, whatever it is called');
+  check(names.slice(1).join(',') === 'Alpha,Zebra', 'with the rest by name');
+
+  await store.playlists.remove('p-zebra');
+  check((await store.playlists.all()).length === 2, 'a playlist somebody made can be deleted');
+
+  // The bytes a phone sent are deliberately not kept: they are somebody else's music, they are the
+  // largest thing in a queue by far, and a page that hoards them quietly is not what this is.
+  await store.playlists.save({
+    id: 'p-bytes', name: 'With bytes', index: 0,
+    tracks: [{ url: 'x', name: 'X', file: 'x.mod' }],
+  });
+  const back = await store.playlists.get('p-bytes');
+  check(back.tracks[0].data === undefined, 'and a saved track carries no audio with it');
+
+  await store.settings.set('active', 'p-alpha');
+  check((await store.settings.get('active')) === 'p-alpha', 'the page remembers which one was showing');
+  check((await store.settings.get('nothing', 'fallback')) === 'fallback', 'and answers for what it has never been told');
+}
+
+// --- the index, as buckets (PLAN_WEB_LIBRARY S3) ------------------------------------------------
+{
+  console.log('\ncatalogue:');
+  const archive = await import(path.resolve('web/src/catalogue.js'));
+
+  // A slice of Modland's real shape, including the two things that make its paths awkward: an
+  // author with a slash in it, and a name that is nothing but punctuation.
+  const index = [
+    '20000\tProtracker/4-Mat/elysium.mod',
+    '30000\tProtracker/4-Mat/another.mod',
+    '40000\tProtracker/Jester (Volker Tripp)/elysium.mod',
+    '50000\tImpulsetracker/Wayfinder/!!uu !! !!.it',
+    '60000\tCoop/Alice & Bob/together.mod',
+    '70000\tOctamed/Unknown/x.med',
+  ].join('\n');
+
+  // --- the zip, whose tail is what Firefox refused (C33) ----------------------------------------
+  //
+  // Node's DecompressionStream ignores what follows a deflate stream and Firefox does not, so the
+  // owner's failure could not be reproduced by asking node -- which is exactly what had been done.
+  // What *can* be checked anywhere is that the member's bounds are computed rather than guessed.
+  {
+    const zlib = await import('zlib');
+    const payload = Buffer.from('12345\tProtracker/4-Mat/elysium.mod\n');
+    const deflated = zlib.deflateRawSync(payload);
+    const name = Buffer.from('allmods.txt');
+
+    const build = (sizeInLocalHeader) => {
+      const local = Buffer.alloc(30);
+      local.writeUInt32LE(0x04034b50, 0);
+      local.writeUInt16LE(sizeInLocalHeader ? 0 : 0x08, 6);      // bit 3: "the size is elsewhere"
+      local.writeUInt32LE(sizeInLocalHeader ? deflated.length : 0, 18);
+      local.writeUInt32LE(payload.length, 22);
+      local.writeUInt16LE(name.length, 26);
+      const central = Buffer.alloc(46);
+      central.writeUInt32LE(0x02014b50, 0);
+      central.writeUInt32LE(deflated.length, 20);
+      central.writeUInt32LE(payload.length, 24);
+      central.writeUInt16LE(name.length, 28);
+      const eocd = Buffer.alloc(22);
+      eocd.writeUInt32LE(0x06054b50, 0);
+      eocd.writeUInt16LE(1, 8);
+      eocd.writeUInt16LE(1, 10);
+      eocd.writeUInt32LE(central.length + name.length, 12);
+      eocd.writeUInt32LE(30 + name.length + deflated.length, 16);
+      return Buffer.concat([local, name, deflated, central, name, eocd]);
+    };
+
+    for (const [where, zip] of [['in the local header', build(true)], ['only in the central directory', build(false)]]) {
+      const buffer = zip.buffer.slice(zip.byteOffset, zip.byteOffset + zip.byteLength);
+      const { start, end } = archive.memberBounds(buffer);
+      const got = zlib.inflateRawSync(Buffer.from(buffer.slice(start, end))).toString();
+      check(end === start + deflated.length && got === payload.toString(),
+        `the member's bytes are found when its length is ${where}`);
+      check(end < zip.byteLength,
+        `and the ${zip.byteLength - end} bytes of zip after it are not fed to the decompressor`);
+    }
+  }
+
+  const { records, tracks, buckets, formats } = archive.toRecords(index);
+  // Stored, then searched, through a real IndexedDB -- because search reads by key range and a
+  // range query is the one thing a plain object could not have stood in for.
+  const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+  await store.clear('modland:');
+  await store.putAll(records, 100);
+  check(tracks === 6, 'every row becomes a track');
+  check(buckets === 5, 'and rows sharing a format and author share a bucket');
+  check(formats === 4, 'with the formats counted');
+  // 5 buckets + 4 author lists + 1 format list + the title shards, one per two-character start.
+  const titleShards = records.filter((r) => r.key.startsWith('modland:titles:'));
+  check(records.length === 10 + titleShards.length, 'stored as buckets, the lists, and nothing else');
+  check(titleShards.length === 5,
+    'titles are sharded by their first two characters — el, an, !!, to, x (one is a single letter, padded)');
+  const bang = titleShards.find((r) => r.key === 'modland:titles:!!');
+  check(bang?.entries[0][0] === '!!uu !! !!.it',
+    'and a shard carries the title, its format and its author — no second lookup to play a hit');
+
+  const formatList = records.find((r) => r.key === 'modland:formats').formats.map((f) => f.name);
+  check(formatList.join(',') === 'Coop,Impulsetracker,Octamed,Protracker', 'formats come out sorted');
+  const fourMat = records.find((r) => r.key === 'modland:tracks:Protracker/4-Mat');
+  check(fourMat.tracks.length === 2, 'a bucket holds its own tracks');
+  check(fourMat.tracks[0].s === 20000, 'with the size the index gave');
+
+  check(archive.urlFor('Coop', 'Alice & Bob', 'together.mod')
+        === 'https://modland.com/pub/modules/Coop/Alice%20%26%20Bob/together.mod',
+    'and an author with a space and an ampersand still addresses');
+
+  console.log('\nsearch:');
+  const { hits } = await archive.searchTitles('elysium');
+  check(hits.length === 2, 'a title is found wherever it lives');
+  check(hits.every((h) => h.url.startsWith('https://modland.com/')), 'and comes back playable');
+  // The reason every shard is read rather than one: a person typing a name means the middle of it
+  // as often as the start.
+  const inside = await archive.searchTitles('gether');
+  check(inside.hits[0]?.name === 'together.mod', 'including from the middle of a name');
+  check((await archive.searchTitles('!!uu')).hits[0]?.name === '!!uu !! !!.it',
+    'and a name that is mostly punctuation');
+  check((await archive.searchTitles('e')).hits.length === 0, 'one letter is not a search');
+
+  const people = await archive.searchAuthors('mat');
+  check(people.length === 1 && people[0].author === '4-Mat', 'an author is found by part of a name');
+  check(people[0].format === 'Protracker' && people[0].count === 2,
+    'with where they are filed and how much is there');
+}
+
+// --- browsing must not rewrite what the phone sent (owner, 2026-09-10) --------------------------
+//
+// **Shut, and saying so before it is walked into.** The first version of this refused after the
+// press: three levels down, a tune chosen, and only then a paragraph explaining that none of it
+// counted. He asked for the caption up front, so that is what is checked -- the refusal underneath
+// stays, and is checked too, but it is now the second line of defence rather than the first.
+if (window.__api) {
+  console.log('\nbrowsing and the phone\'s playlist:');
+  // The phone's list is showing, which is where a fresh page starts.
+  window.__api.receive({
+    queue: [{ url: 'https://modland.com/pub/modules/Protracker/4-Mat/one.mod', title: 'One' }],
+    index: 0,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  const before = $('title').textContent;
+
+  check($('tab-browse').getAttribute('aria-disabled') === 'true',
+    'the Browse button shows as shut while the phone\'s list is up');
+  check(($('tab-browse').title || '').includes('Switch to a playlist of your own'),
+    'and its tooltip says what to do about it');
+
+  await window.__api.renderBrowse();
+  check($('browsenote').textContent.includes('will not rewrite it'),
+    'opening Browse says why, before anything is chosen');
+  check($('browsesearch').hidden, 'and offers no search into a list it cannot fill');
+  check($('browselist').children.length === 1,
+    'the only row is the way out, not an archive to walk into');
+  check($('browselist').textContent.includes('Make an empty playlist'), 'which is what it says');
+
+  window.__api.playFromBrowse(
+    [{ url: 'https://modland.com/pub/modules/Protracker/Other/x.mod', name: 'X' }], 0);
+  await new Promise((r) => setTimeout(r, 20));
+  check($('title').textContent === before, 'and reached anyway, it leaves the queue alone');
+
+  // A playlist of his own, and the same button opens.
+  await window.__api.switchTo('p-test');
+  check($('tab-browse').getAttribute('aria-disabled') === 'false',
+    'switching to a playlist of his own opens Browse again');
+  await window.__api.renderBrowse();
+  check(!$('browsesearch').hidden, 'search comes back with it');
+  await window.__api.switchTo('phone');
+
+  // Pasting is the same act by another door, and it went through it. Found while answering "why
+  // can I not find this file", which turned out to be about the index and not about this at all.
+  // Re-read rather than reusing `before`: switching away and back reloads the phone's list from
+  // storage, which in this harness is empty, so the title has legitimately moved on.
+  const beforePaste = $('title').textContent;
+  $('urls').value = 'https://modland.com/pub/modules/Protracker/Other/y.mod';
+  $('load').click();
+  await new Promise((r) => setTimeout(r, 20));
+  check($('title').textContent === beforePaste,
+    'a pasted address leaves the phone\'s queue alone too');
+  check($('pastenote').textContent.includes('Switch to one of your own'), 'and says so');
+  $('urls').value = '';
+}
+
+// --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
+//
+// **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`
+// drives, so a rule changed on one side and not the other fails on the side that did not change.
+// C23, C30 and C31 were each one screen doing what the other did not, and all three were found by
+// the owner rather than here.
+{
+  console.log('\nshared rules:');
+  const rules = await import(path.resolve('web/src/rules.js'));
+  const text = fs.readFileSync('docs/rules/queue-cases.tsv', 'utf8');
+
+  const groups = {};
+  let group = null;
+  let header = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    if (line.startsWith('[') && line.endsWith(']')) { group = line.slice(1, -1); header = null; groups[group] = []; continue; }
+    const cells = raw.split('\t').map((c) => c.trim());
+    if (!header) { header = cells; continue; }
+    groups[group].push(Object.fromEntries(header.map((h, i) => [h, cells[i]])));
+  }
+
+  const number = (v) => (v === '-' ? null : Number(v));
+  const yes = (v) => v === 'yes';
+  // A group that is empty is an agreement that quietly stopped being one -- the failure this whole
+  // file exists to prevent, wearing a green tick.
+  const each = (name, run) => {
+    const list = groups[name] ?? [];
+    check(list.length > 0, `'${name}' has cases to check`);
+    let wrong = 0;
+    for (const c of list) if (!run(c)) { wrong++; console.log(`    ✗ ${c.why}`); }
+    check(wrong === 0, `${name}: ${list.length} cases from the shared file`);
+  };
+
+  each('next', (c) =>
+    rules.nextIndex({ tracks: +c.tracks, at: +c.at, repeat: c.repeat }) === number(c.expect));
+  each('previous', (c) =>
+    rules.previousIndex({ tracks: +c.tracks, at: +c.at, repeat: c.repeat }) === number(c.expect));
+  each('subsong', (c) =>
+    rules.nextSubsong({ playAll: yes(c.playAll), subsong: +c.subsong, count: +c.count,
+                        repeatOne: yes(c.repeatOne) }) === number(c.expect));
+  each('playFromEnd', (c) =>
+    rules.shouldRestart({ engineFinished: yes(c.engineFinished), position: +c.position,
+                          duration: +c.duration }) === yes(c.expect));
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
