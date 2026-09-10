@@ -482,6 +482,24 @@ if (window.__api) {
   $('next').click();
   check(!window.__toWorklet.some((m) => m.type === 'subsong'),
     'and next off the last tune leaves the file rather than replaying it');
+
+  // **Back walks the file too**, which it did not (`docs/STATUS.md` C31). The phone has done this
+  // since subsongs existed; the page only ever had the forward half.
+  window.__api.onWorklet({ type: 'subsong', index: 2, duration: 30, describe: 'title\tThird' });
+  window.__toWorklet.length = 0;
+  $('prev').click();
+  check(window.__toWorklet.some((m) => m.type === 'subsong' && m.index === 1),
+    'back steps to the tune before, not out of the file');
+
+  // And a long press means the opposite of a short one -- past the file -- exactly as
+  // `ui/PlayerDock.kt` binds it. This page had the two the wrong way round.
+  window.__toWorklet.length = 0;
+  $('next').dispatchEvent(new window.Event('pointerdown'));
+  await new Promise((r) => setTimeout(r, 600));
+  check(!window.__toWorklet.some((m) => m.type === 'subsong'),
+    'holding next leaves the file rather than stepping inside it');
+  $('next').dispatchEvent(new window.Event('pointerup'));
+
   $('allsubsongs').click();
 
   // --- the sliders fill in behind the handle (C21) ------------------------------------------------

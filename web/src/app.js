@@ -560,7 +560,7 @@ function setPlaying(on) {
   $('playpause').disabled = queue.length === 0;
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
-  $('prev').disabled = beforeCurrent() == null;
+  $('prev').disabled = beforeCurrent() == null && !(playAllSubsongs && hasPreviousSubsong());
   // Available while the *file* has more in it too, not only the queue: with the switch on, that is
   // what the button will do.
   $('next').disabled = afterCurrent() == null && !(playAllSubsongs && hasNextSubsong());
@@ -937,50 +937,71 @@ $('playpause').onclick = async () => {
   setPlaying(!playing);
   node.port.postMessage({ type: playing ? 'play' : 'pause' });
 };
-$('prev').onclick = () => { const p = beforeCurrent(); if (p != null) playAt(p); };
+/*
+  The transport, and **the phone is the specification** — both halves of it, which this did not have.
 
-/** Whether there is another tune inside the open file. */
+  Short press: with "play every tune in this file" on, the tunes inside are walked before the queue
+  moves, forwards *and backwards*. `previous` did not do that at all, so on a `.sndh` back left the
+  file (`docs/STATUS.md` C31).
+
+  Long press: **past the file**, to the next or previous one, whatever is left inside this one. This
+  page had it the other way round — a long press stepped *within* the file — which is the opposite
+  of `ui/PlayerDock.kt`, where the long click is `onNextFile` and `onPreviousFile`. A transport whose
+  gestures mean opposite things on the two screens is worse than one that is missing them.
+*/
+
+/** Whether there is another tune inside the open file, ahead or behind. */
 const hasNextSubsong = () => currentSubsong + 1 < subsongCount;
+const hasPreviousSubsong = () => currentSubsong > 0;
 
-function skipSubsong() {
-  if (!hasNextSubsong()) return false;
-  node?.port.postMessage({ type: 'subsong', index: currentSubsong + 1 });
-  status(`Tune ${currentSubsong + 2} of ${subsongCount}`);
-  return true;
+function goToSubsong(index) {
+  node?.port.postMessage({ type: 'subsong', index });
+  status(`Tune ${index + 1} of ${subsongCount}`);
 }
 
-/**
- * Next, and what it means depends on the switch — exactly as it does on the phone.
- *
- * With "play every tune in this file" on, the file is walked before the queue moves; with it off,
- * `next` is always the next file and the tunes inside are reached by their chips or by holding.
- */
-$('next').onclick = () => {
-  if (playAllSubsongs && skipSubsong()) return;
+/** The next file, past whatever is left inside this one. What a long press means. */
+function nextFile() {
   const n = afterCurrent();
   if (n != null) playAt(n);
+}
+
+function previousFile() {
+  const p = beforeCurrent();
+  if (p != null) playAt(p);
+}
+
+$('next').onclick = () => {
+  if (playAllSubsongs && hasNextSubsong()) { goToSubsong(currentSubsong + 1); return; }
+  nextFile();
+};
+
+$('prev').onclick = () => {
+  if (playAllSubsongs && hasPreviousSubsong()) { goToSubsong(currentSubsong - 1); return; }
+  previousFile();
 };
 
 /**
- * Holding next skips *within* the file, whatever the switch says.
+ * A long press on either skips the rest of the file.
  *
- * The phone's dock does this and the reason carries over: the chips are behind a panel, and
- * wanting the next tune of a `.sndh` is not a reason to open one. `pointerdown` rather than
- * `mousedown`, so a finger works; the click that follows is swallowed, or the press would count
- * twice.
+ * `pointerdown` rather than `mousedown`, so a finger works; the click that follows is swallowed, or
+ * the press would count twice. Half a second, which is what Android's own long-press timeout is.
  */
-let holdTimer = null;
-let held = false;
-$('next').addEventListener('pointerdown', () => {
-  held = false;
-  holdTimer = setTimeout(() => { held = skipSubsong(); }, 500);
-});
-for (const event of ['pointerup', 'pointercancel', 'pointerleave']) {
-  $('next').addEventListener(event, () => clearTimeout(holdTimer));
+function holdToSkipFile(button, act) {
+  let timer = null;
+  let held = false;
+  button.addEventListener('pointerdown', () => {
+    held = false;
+    timer = setTimeout(() => { held = true; act(); }, 500);
+  });
+  for (const event of ['pointerup', 'pointercancel', 'pointerleave']) {
+    button.addEventListener(event, () => clearTimeout(timer));
+  }
+  button.addEventListener('click', (event) => {
+    if (held) { event.stopImmediatePropagation(); event.preventDefault(); held = false; }
+  }, true);
 }
-$('next').addEventListener('click', (event) => {
-  if (held) { event.stopImmediatePropagation(); event.preventDefault(); held = false; }
-}, true);
+holdToSkipFile($('next'), nextFile);
+holdToSkipFile($('prev'), previousFile);
 
 $('allsubsongs').onclick = () => {
   playAllSubsongs = !playAllSubsongs;

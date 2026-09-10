@@ -415,6 +415,30 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C31. ~~Back left the file, and a long press meant the opposite of the phone's~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10: **"back nie cofa podutworu tylko plik na web"**.*
+
+**Half the job, done in C23.** `next` was taught to walk the tunes inside a file before moving the
+queue; `previous` was not, so on a `.sndh` back left the file whatever the switch said. The phone has
+done both since subsongs existed — `PlaybackController.previous()` steps back a subsong when
+`playAllSubsongs` and there is one behind.
+
+**And the long press was backwards, which is worse.** On the phone `ui/PlayerDock.kt` binds a long
+click to `onNextFile` and `onPreviousFile`: **past the file**, skipping whatever is left inside it.
+This page had a long press step *within* the file — the opposite gesture for the opposite meaning.
+Found while fixing the first half, not reported, and it would have been maddening to hit.
+
+Both now mirror the phone exactly, forwards and backwards:
+
+| | short press | long press |
+|---|---|---|
+| switch on | the next or previous **tune**, then the file | past the file |
+| switch off | the next or previous **file** | past the file |
+
+`previous` is also live now while the *file* has somewhere to go, which it was not — the button was
+greyed at the top of the queue even sitting on a file's fourth tune.
+
 ### C30. ~~Six backends never said which tune they were on~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, on the web player: **"nie podświetla subtracka (cały czas pali się pierwszy), a
