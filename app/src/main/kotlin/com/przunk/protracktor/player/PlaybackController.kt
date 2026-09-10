@@ -2413,6 +2413,16 @@ class PlaybackController private constructor(private val context: Context) {
      * because nothing had been decided for it to read. Deciding early is what makes the wait go.
      */
     private suspend fun advanceRandom() {
+        // **Forward always means a new tune** (owner, 2026-09-10: "następny utwór nie był
+        // wylosowany, tylko grał z historii i nie wskoczył na listę").
+        //
+        // Stepping back — with Previous, or by pressing a row in the record, which is new — leaves
+        // the cursor behind the end. Advancing from there used to walk *forward through what had
+        // already been heard*, which is ordinary playlist behaviour and wrong for a dice: the tune
+        // it produced was one he had just chosen to revisit, and the list did not grow, so the dice
+        // looked broken. Nothing is lost by skipping the walk, because everything behind the cursor
+        // is one press away in the list itself. That is what the list is for.
+        randomCursor = maxOf(randomCursor, randomPlayed)
         fillRandomQueue()
         if (randomCursor >= randomHistory.lastIndex) {
             // Which sentence depends on the scope, because "nothing is indexed" is only true of

@@ -16,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -61,6 +62,17 @@ fun RandomScreen(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
+    // **Always to the bottom when a new one lands** (owner, 2026-09-10). The newest pick is the
+    // one playing, and a record that grows off the bottom of the screen is a record you have to
+    // chase. Keyed on the size rather than on the list: pressing a row earlier in it moves the
+    // cursor, not the length, and dragging the view back to what is playing would take away the
+    // only reason to press a row at all.
+    LaunchedEffect(state.randomPicks.size) {
+        if (state.randomPicks.isNotEmpty()) {
+            listState.animateScrollToItem(state.randomPicks.lastIndex)
+        }
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         RandomHeader(browse = browse, onFilter = onFilter, contentPadding = contentPadding)
 
