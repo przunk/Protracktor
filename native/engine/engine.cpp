@@ -902,7 +902,31 @@ public:
      */
     static bool recognises(const std::vector<char> &bytes) {
         if (bytes.size() < 16) return false;
-        return mp3dec_detect_buf(reinterpret_cast<const uint8_t *>(bytes.data()), bytes.size()) == 0;
+        const auto *b = reinterpret_cast<const unsigned char *>(bytes.data());
+
+        // **A frame has to be where an MP3 keeps one**, and that is `docs/STATUS.md` C34.
+        // `mp3dec_detect_buf` searches for a frame sequence *anywhere* in its scan limit, which a
+        // 27 KB file of ZX Spectrum beeper data obligingly contains -- so `plastic galaxy.bbsong`
+        // came back as MP3 and played at peak 1.08, which is clipping. Requiring the frame at the
+        // start turns a coincidence back into evidence.
+        std::size_t at = 0;
+        if (bytes.size() > 10 && b[0] == 'I' && b[1] == 'D' && b[2] == '3') {
+            // ID3v2: three characters, two version bytes, flags, then a length in four bytes of
+            // seven bits each -- syncsafe, so that the length itself can never look like a frame.
+            const std::size_t tag = 10 + ((static_cast<std::size_t>(b[6] & 0x7f) << 21) |
+                                          (static_cast<std::size_t>(b[7] & 0x7f) << 14) |
+                                          (static_cast<std::size_t>(b[8] & 0x7f) << 7) |
+                                          static_cast<std::size_t>(b[9] & 0x7f));
+            if (tag + 4 > bytes.size()) return false;
+            at = tag;
+        }
+        // 0xFF then three set bits: the eleven-bit sync every MPEG audio frame opens with.
+        if (at + 4 > bytes.size() || b[at] != 0xff || (b[at + 1] & 0xe0) != 0xe0) return false;
+
+        // Strict enough to refuse a few real MP3s that keep junk before their first frame, and that
+        // is the right trade: a file called `.mp3` never reaches here at all -- `claimsName` takes
+        // it much earlier -- so this only judges files that arrived under some other name.
+        return mp3dec_detect_buf(b, bytes.size()) == 0;
     }
 
     explicit Mp3Backend(const std::vector<char> &bytes) : bytes_(bytes) {

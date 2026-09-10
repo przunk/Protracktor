@@ -415,6 +415,36 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C33. ~~A Beepola tune came back as MP3~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10: **"bbsong czyta jak mp3"**.*
+
+`Beepola/4mat/plastic galaxy.bbsong` — `BBSONG` at offset zero, 27 KB of ZX Spectrum beeper data.
+libopenmpt refuses it, correctly, and then minimp3's content guess claimed it and played at **peak
+1.08**, which is clipping.
+
+**C32 moved that guess to last and did not make it stricter**, which was half a fix.
+`mp3dec_detect_buf` searches for a frame sequence *anywhere* within its scan limit, and 27 KB of
+anything obligingly contains one.
+
+**A frame has to be where an MP3 keeps one**: at the start, or at the start after an ID3v2 tag whose
+length is read from its four syncsafe bytes. A sync eight kilobytes in is not evidence, it is a
+coincidence.
+
+Strict enough to refuse a real MP3 that keeps junk before its first frame, and that is the right
+trade: a file called `.mp3` never reaches this code at all, because `claimsName` takes it much
+earlier. This only ever judges files that arrived under some other name.
+
+| | |
+|---|---|
+| `plastic galaxy.bbsong` | refused, with libopenmpt's own reason |
+| 3 MPEG streams stripped of their extension | still play |
+| 83 conformance streams | 70 / 10 / 3, unchanged |
+| 198 console, SID, SNDH, SAP and module files | 172 played, unchanged |
+
+**`.bbsong` is not in `SupportedFormats`**, so Modland's 105 of them were never indexed — this only
+ever bit a file opened by hand or arriving in a link.
+
 ### C32. ~~MP3 stole an Impulse Tracker module~~ — FIXED 2026-09-10
 
 *Owner, 2026-09-10, on a list sent from the phone:
