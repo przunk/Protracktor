@@ -863,7 +863,10 @@ function render() {
     ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
     : 'nothing yet';
   if (random) $('count').textContent = `${queue.length} played at random`;
-  if (away) $('count').textContent = `${queue.length} from your history`;
+  // What the session is, not always History's words: a tune sent here said "1 from your history".
+  if (away) {
+    $('count').textContent = `${queue.length} ${{ history: 'from your history', browse: 'from Browse', link: 'sent to you' }[away.kind] ?? ''}`.trim();
+  }
 }
 
 /**
@@ -1847,7 +1850,12 @@ function showPanel(which) {
 async function renderPlaylists() {
   const list = $('playlistlist');
   list.replaceChildren();
-  for (const playlist of await playlists.all()) {
+  const all = await playlists.all();
+  // **"From the phone" is always a choice**, stored or not. It is written only once the phone sends
+  // something, so a fresh browser -- a phone opening a shared tune -- drew an empty sheet under a
+  // page whose own heading had just named that list (owner, 2026-09-11).
+  if (!all.some((p) => p.id === PHONE)) all.unshift({ id: PHONE, name: 'From the phone', tracks: [] });
+  for (const playlist of all) {
     const li = document.createElement('li');
     li.setAttribute('aria-current', String(playlist.id === activePlaylist));
 

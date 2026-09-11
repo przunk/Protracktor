@@ -1647,6 +1647,7 @@ if (window.__api) {
   // Folded, as the owner asked: the dock and the heading say what it is.
   check($('nowplaying').hidden && $('pair').hidden && $('title').textContent === 'zoolook',
     'nothing is drawn over it: Now Playing stays folded and the dock names the tune');
+  check($('count').textContent === '1 sent to you', 'the line under the name says the tune was sent, not that it came from history');
   check($('sessiontitle').textContent === 'Playing a tune sent to you' && $('playlistname').textContent === 'Sent'
         && $('sessionicon').querySelector('path'),
     'under a heading that says where it came from');
@@ -1861,6 +1862,32 @@ if (window.__api) {
   window.dispatchEvent(scroll);
   check(gesture.defaultPrevented && pinch.defaultPrevented && !scroll.defaultPrevented,
     'Safari\'s pinch and a touchpad\'s are refused, and an ordinary scroll is not');
+}
+
+// --- the playlist sheet on a fresh browser, and on a phone's width (owner, 2026-09-11) ----------
+if (window.__api) {
+  console.log('\nthe playlist sheet, as the owner saw it on his phone:');
+  // Straight out of the database: `playlists.remove` refuses "From the phone" on purpose, and the
+  // state wanted is a browser the phone has never sent anything to.
+  await new Promise((resolve, reject) => {
+    const open = window.indexedDB.open('protracktor');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction('playlists', 'readwrite');
+      tx.objectStore('playlists').delete('phone');
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+  $('playlistchip').click();
+  await new Promise((r) => setTimeout(r, 30));
+  const first = $('playlistlist').children[0];
+  check(first?.querySelector('.pname')?.textContent === 'From the phone' && first.querySelector('.pcount').textContent === '0',
+    'with nothing stored, "From the phone" is still a choice rather than an empty sheet');
+  check(window.getComputedStyle($('newlist').parentElement).flexWrap === 'wrap',
+    'and the two buttons under the list may take a line each, where one line is too narrow for both');
+  window.__api.showPanel(null);
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
