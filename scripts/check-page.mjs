@@ -135,7 +135,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -296,6 +296,9 @@ if (window.__api) {
   $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';
   $('load').click();
   check($('paste').hidden === true, 'loading closes the paste dialog');
+  // A paste is an edit of the list and waits for Save now, as on the phone. Saved here, so what
+  // follows starts from the state it always started from.
+  await window.__api.saveEdits();
   check(window.document.querySelectorAll('#queue li.track').length === 1, 'and loads what was in it');
   await new Promise((r) => setTimeout(r, 60));   // let that load finish before starting another
 
@@ -629,12 +632,19 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
 
   await store.playlists.save({ id: 'p-zebra', name: 'Zebra', tracks: [], index: 0 });
   await store.playlists.save({ id: 'p-alpha', name: 'Alpha', tracks: [], index: 0 });
+  // **Checked for what they are, not for what else is there.** These counted every playlist in the
+  // database and expected exactly their own, which held only while nothing earlier had saved one yet
+  // -- a timing the paste check's Save changed. The order and the deletion are the point.
   const names = (await store.playlists.all()).map((p) => p.name);
+  const rest = names.slice(1);
   check(names[0] === 'From the phone', 'and it sorts first, whatever it is called');
-  check(names.slice(1).join(',') === 'Alpha,Zebra', 'with the rest by name');
+  check(rest.join() === [...rest].sort((x, y) => x.localeCompare(y)).join() && rest.indexOf('Alpha') < rest.indexOf('Zebra'),
+    'with the rest by name');
 
+  const before = (await store.playlists.all()).length;
   await store.playlists.remove('p-zebra');
-  check((await store.playlists.all()).length === 2, 'a playlist somebody made can be deleted');
+  check(!(await store.playlists.get('p-zebra')) && (await store.playlists.all()).length === before - 1,
+    'a playlist somebody made can be deleted');
 
   // The bytes a phone sent are deliberately not kept: they are somebody else's music, they are the
   // largest thing in a queue by far, and a page that hoards them quietly is not what this is.
@@ -1269,15 +1279,65 @@ if (window.__api) {
   items.find((x) => x.textContent.includes('Remove')).click();
   await settle(700);
   check(window.__api.queueNow().join() === `${a},${c}`, 'removing takes the row out, with no question first');
-  check(await saved('p-edit') === `${a},${c}`, 'and the playlist keeps it out');
   check(!$('snackbar').hidden && $('snacktext').textContent.includes('Removed'), 'with the way back offered');
   check(!!$('snackundo').querySelector('svg'), 'which has an icon too');
 
+  // As on the phone: an edit waits for Save, and Save and Discard appear only while it waits.
+  check(await saved('p-edit') === `${a},${b},${c}`, 'nothing is written until Save');
+  check(!$('tab-save').hidden && !$('tab-discard').hidden, 'Save and Discard appear while an edit waits');
+  await window.__api.discardEdits();
+  await settle();
+  check(window.__api.queueNow().join() === `${a},${b},${c}` && $('tab-save').hidden,
+    'Discard reads the saved list back');
+
+  items = menuOf($('queue').children[1]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
   $('snackundo').click();
-  await settle(700);
+  await settle();
   check(window.__api.queueNow().join() === `${a},${b},${c}` && $('snackbar').hidden,
     'undo puts it back where it was');
-  check(await saved('p-edit') === `${a},${b},${c}`, 'and that is saved as well');
+  items = menuOf($('queue').children[1]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  $('tab-save').click();
+  await settle();
+  check(await saved('p-edit') === `${a},${c}` && $('tab-save').hidden, 'Save writes it, and Save goes away');
+
+  // A switch with an edit waiting asks first -- the phone's "Unsaved changes".
+  await playlists.save({ id: 'p-other', name: 'Other', tracks: [], index: 0 });
+  items = menuOf($('queue').children[0]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  const choosing = window.__api.choosePlaylist('p-other');
+  await settle();
+  check(!$('unsaved').hidden && window.__api.queueNow().join() === c,
+    'a switch with an edit waiting asks first, and has not switched');
+  check([...$('unsaved').querySelectorAll('button')].every((x) => x.querySelector('svg')), 'the question\'s buttons have icons');
+  window.__api.showPanel(null);
+  await choosing;
+  check($('unsaved').hidden && window.__api.dirtyNow() && window.__api.queueNow().join() === c,
+    'closing the question keeps editing, where it was');
+  const choosingAgain = window.__api.choosePlaylist('p-other');
+  await settle();
+  $('unsaved-save').click();
+  await choosingAgain;
+  await settle();
+  check(await saved('p-edit') === c && $('playlistname').textContent === 'Other',
+    'Save in the question writes the edit and then switches');
+
+  // Closing the tab with an edit waiting is the browser's question, the only one there is.
+  await window.__api.switchTo('p-edit');
+  window.__api.setQueue([a, b, c], 0);
+  await settle(700);
+  items = menuOf($('queue').children[1]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  const leaving = new window.Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(leaving);
+  check(leaving.defaultPrevented, 'closing the tab with an edit waiting asks the browser to ask');
+  await window.__api.discardEdits();
+  await settle();
 
   // Removing what is playing stops it, rather than starting something else.
   await window.__api.playAt(0);

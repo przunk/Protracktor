@@ -961,12 +961,18 @@ function remember() {
  * took over would have written the dice's picks into the playlist it had just left.
  */
 async function saveQueue() {
+  // **Edits wait for Save** (owner, 2026-09-11: "zapis zmian w playliście: zrób jak na telefonie").
+  // While the list differs from the one on disk nothing is written, the place in it included --
+  // it would be a place in a list that was never saved.
+  if (dirty) return;
   const id = activePlaylist;
+  // Inside Random or History the playlist waits in the stash, and that is what Save means.
+  const source = (random ?? away)?.stash ?? { queue, index };
   // The bytes a phone sent are deliberately **not** kept. They are a copy of a file that lives
   // somewhere else, they are the largest thing in the queue by far, and a page that quietly hoards
   // somebody's music is not what this is.
-  const tracks = queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file }));
-  const at = index;
+  const tracks = source.queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file }));
+  const at = source.index;
   try {
     const name = id === PHONE ? 'From the phone' : (await playlists.get(id))?.name ?? 'Playlist';
     await playlists.save({ id, name, tracks, index: at });
@@ -1032,6 +1038,7 @@ function showSessionView(kind) {
   // playlist"). The phone hides it here; the page lets it name where you are and choose where to go,
   // and choosing a playlist ends the session on the way (`choosePlaylist`).
   if (kind) $('playlistname').textContent = kind === 'history' ? 'History' : 'Random';
+  setDirty(dirty);
 }
 
 function showRandomView(on) { showSessionView(on ? 'random' : null); }
@@ -1128,6 +1135,62 @@ async function rollRandom() {
   await playAt(queue.length - 1);
 }
 
+/**
+ * Whether the list on screen differs from the one on disk -- the phone's `dirty`.
+ *
+ * *"Zapis zmian w playliście: zrób jak na telefonie"* (owner, 2026-09-11). Removing a row, or
+ * replacing the list from Browse or the paste box, changes what is on screen and not what is stored;
+ * **Save** writes it, **Discard** reads the stored one back, and a switch with edits still waiting
+ * asks which. Where playback has got to is the app's own business and is saved as it goes -- but
+ * only while the list is the saved one, because a place in an unsaved list means nothing on disk.
+ * "From the phone" is never edited, so it is never dirty.
+ */
+let dirty = false;
+let unsavedAnswer = null;
+
+function setDirty(value) {
+  dirty = value;
+  // The phone's rule: Save and Discard only while there is something to save, and not while the
+  // screen is showing a session rather than the playlist.
+  const show = dirty && !random && !away;
+  $('tab-save').hidden = !show;
+  $('tab-discard').hidden = !show;
+}
+
+async function saveEdits() {
+  setDirty(false);
+  await saveQueue();
+  status('Saved');
+}
+
+/** Reads the stored playlist back, throwing the edits away. */
+async function discardEdits() {
+  setDirty(false);
+  await switchTo(activePlaylist);
+  status('Changes discarded');
+}
+
+/**
+ * Asks about edits that a switch would throw away, and answers whether to go on.
+ *
+ * True at once when there is nothing unsaved. Otherwise the phone's dialog: Save them or Discard
+ * them, both of which go on; closing it keeps editing, which does not.
+ */
+function settleUnsaved() {
+  if (!dirty) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    unsavedAnswer = resolve;
+    $('unsaved').hidden = false;
+  });
+}
+
+function answerUnsaved(go) {
+  $('unsaved').hidden = true;
+  const resolve = unsavedAnswer;
+  unsavedAnswer = null;
+  resolve?.(go);
+}
+
 /** The phone's icons, the same paths, for controls the page builds rather than declares. */
 const ICON = {
   save: 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
@@ -1178,8 +1241,8 @@ function removeFromPlaylist(at) {
   history = index >= 0 ? [index] : [];
   if (shuffle) reshuffle(index >= 0 ? index : null);
   lastRemoval = { at, track, playlist: activePlaylist, wasCurrent };
+  setDirty(true);
   render();
-  remember();
   showUndo(`Removed ${track.name}`);
 }
 
@@ -1198,8 +1261,9 @@ function undoRemoval() {
   }
   history = index >= 0 ? [index] : [];
   if (shuffle) reshuffle(index >= 0 ? index : null);
+  // Still an edit, as on the phone: undo restores the row, not the saved state.
+  setDirty(true);
   render();
-  remember();
 }
 
 /** Six seconds, the length of a Material snackbar with an action. */
@@ -1457,6 +1521,7 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which) {
+  if (!$('unsaved').hidden) answerUnsaved(false);
   $('browse').hidden = which !== 'browse';
   $('tab-browse').setAttribute('aria-pressed', String(which === 'browse'));
   $('pair').hidden = which !== 'pair';
@@ -1539,7 +1604,8 @@ async function renamePlaylist(playlist) {
 async function deletePlaylist(playlist) {
   if (!confirm(`Delete “${playlist.name}”? Its ${playlist.tracks?.length ?? 0} tracks go with it.`)) return;
   await playlists.remove(playlist.id);
-  if (activePlaylist === playlist.id) choosePlaylist(PHONE);
+  // Its unsaved edits went with it; there is nothing left to ask about.
+  if (activePlaylist === playlist.id) { setDirty(false); choosePlaylist(PHONE); }
   renderPlaylists();
 }
 
@@ -1561,14 +1627,16 @@ function markBrowsable() {
  * The sheet's answer to a playlist being chosen. Out of Random or History first -- playback stops,
  * as leaving by the heading's button does -- and then the playlist chosen, not the one left behind.
  */
-function choosePlaylist(id) {
+async function choosePlaylist(id) {
   endSession();
+  if (!(await settleUnsaved())) return;
   switchTo(id);
   showPanel(null);
 }
 
 /** Loads a playlist into the queue. Selected, not started — a switch is not a press of play. */
 async function switchTo(id) {
+  setDirty(false);
   const playlist = await playlists.get(id);
   activePlaylist = id;
   $('playlistname').textContent = playlist?.name ?? (id === PHONE ? 'From the phone' : 'Playlist');
@@ -1754,6 +1822,8 @@ function playFromBrowse(tracks, at) {
       + 'an empty one — the name at the top left opens them.';
     return;
   }
+  // Replacing the list from Browse is an edit of it, waiting for Save like any other.
+  setDirty(true);
   setQueue(tracks, at);
   showPanel(null);
   playAt(at);
@@ -1907,6 +1977,7 @@ $('playlistchip').onclick = () => {
  * offers — and a second copy of "what a new playlist is" would drift.
  */
 async function newPlaylist() {
+  if (!(await settleUnsaved())) return false;
   const name = prompt('Call it what?', 'New playlist');
   if (!name) return false;
   const id = `p${Date.now().toString(36)}`;
@@ -1930,6 +2001,8 @@ $('saveas').onclick = async () => {
   if (!name) return;
   const id = `p${Date.now().toString(36)}`;
   await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
+  // The edits went into the new playlist; the old one stays as it was saved.
+  setDirty(false);
   // **Saved out of Random or History, the list becomes the playlist**, and the session is over:
   // leaving it would otherwise put back the playlist that was showing before, under this one's name.
   dropSession();
@@ -1969,6 +2042,7 @@ $('load').onclick = () => {
     return;
   }
   $('pastenote').textContent = '';
+  setDirty(true);
   setQueue(urls);
   showPanel(null);
 };
@@ -2041,6 +2115,17 @@ function previousFile() {
 
 $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
 $('snackundo').onclick = () => undoRemoval();
+$('tab-save').onclick = () => saveEdits();
+$('tab-discard').onclick = () => discardEdits();
+$('unsaved-save').onclick = async () => { await saveEdits(); answerUnsaved(true); };
+$('unsaved-discard').onclick = () => { setDirty(false); answerUnsaved(true); };
+// **Closing the tab** is the one switch the page cannot ask about in its own words; the browser's
+// question is the only one available, and losing edits silently is worse than a plain dialog.
+addEventListener('beforeunload', (event) => {
+  if (!dirty) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
 $('random-leave').onclick = () => endSession();
 
 $('next').onclick = () => {
@@ -2284,6 +2369,20 @@ async function pair() {
 /** A queue from the phone. */
 function receive(message) {
   if (!message.queue?.length) return;
+  // A queue from the phone replaces what is showing, so edits not yet written are asked about first,
+  // as a switch asks. Kept editing, the queue is not loaded -- and the page says so.
+  if (dirty) {
+    settleUnsaved().then((go) => {
+      if (go) applyReceive(message);
+      else status('A queue arrived from the phone and was not loaded, to keep your unsaved changes.');
+    });
+    return;
+  }
+  applyReceive(message);
+}
+
+function applyReceive(message) {
+  setDirty(false);
   // The code did its job, so it stops standing in front of the music.
   if (!$('pair').hidden) showPanel(null);
   // The phone says which one it was on, and that is where the list opens -- selected rather than
