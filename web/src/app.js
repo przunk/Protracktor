@@ -2952,6 +2952,12 @@ addEventListener('keydown', (event) => {
   act();
 });
 
+// **No pinch to zoom** (owner, 2026-09-11), in the two places the viewport and `touch-action` do not
+// reach: Safari's own gesture events, which ignore `user-scalable=no`, and a touchpad's pinch on a
+// computer, which a browser delivers as a wheel with Ctrl held.
+addEventListener('gesturestart', (event) => event.preventDefault());
+addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault(); }, { passive: false });
+
 // Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
 // itself the moment a queue arrives.
 //

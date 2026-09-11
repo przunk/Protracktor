@@ -17,7 +17,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- No pinch to zoom (owner, 2026-09-11): a player laid out as an app, not a document to magnify. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Protracktor</title>
 <style>
   :root {
@@ -62,6 +63,9 @@
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
+  /* Scrolling stays, pinching does not: the browsers that honour `touch-action` stop the zoom here
+     even where they ignore the viewport's `user-scalable=no`. */
+  html { touch-action: pan-x pan-y; }
   body {
     margin: 0;
     background: var(--bg);

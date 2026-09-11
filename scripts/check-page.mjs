@@ -1845,6 +1845,24 @@ if (window.__api) {
   window.__api.showPanel(null);
 }
 
+// --- no pinch to zoom (owner, 2026-09-11) ---------------------------------------------------------
+if (window.__api) {
+  console.log('\nno pinch to zoom:');
+  const viewport = window.document.querySelector('meta[name="viewport"]').content;
+  check(viewport.includes('maximum-scale=1') && viewport.includes('user-scalable=no'),
+    'the viewport does not let the page be zoomed');
+  check([...window.document.querySelectorAll('style')].some((s) => /html\s*{\s*touch-action:\s*pan-x pan-y;/.test(s.textContent)),
+    'and touch keeps scrolling but not pinching');
+  const gesture = new window.Event('gesturestart', { cancelable: true });
+  window.dispatchEvent(gesture);
+  const pinch = new window.WheelEvent('wheel', { ctrlKey: true, cancelable: true, deltaY: -10 });
+  window.dispatchEvent(pinch);
+  const scroll = new window.WheelEvent('wheel', { cancelable: true, deltaY: -10 });
+  window.dispatchEvent(scroll);
+  check(gesture.defaultPrevented && pinch.defaultPrevented && !scroll.defaultPrevented,
+    'Safari\'s pinch and a touchpad\'s are refused, and an ordinary scroll is not');
+}
+
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
 //
 // **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`
