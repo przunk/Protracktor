@@ -157,6 +157,16 @@ class RuleCasesTest {
         )
     }
 
+    /** ASMA's file address, the same way: the zip entry's path, escaped by the rule Modland uses. */
+    @Test
+    fun `the ASMA address agrees with the shared cases`() = each("asmaUrl") { case ->
+        assertEquals(
+            case.why(),
+            "https://asma.atari.org/" + case.getValue("expect"),
+            com.przunk.protracktor.net.Asma.fileUrlFor(case.getValue("path")),
+        )
+    }
+
     private companion object {
         const val RULES = "docs/rules/queue-cases.tsv"
     }

@@ -88,6 +88,24 @@ window.fetch = async (url, options) => {
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
   // The real list, off disk: the page reads it at load, and a stub of it would test nothing.
   if (u.endsWith('formats.tsv')) return { ok: true, text: async () => fs.readFileSync('web/src/formats.tsv', 'utf8') };
+  // ASMA's archive, answering ranges as asma.atari.org does -- or ignoring them, as a server may.
+  if (u === 'https://asma.atari.org/asmadb/asma.zip') {
+    const zip = window.__asmaZip;
+    const range = options?.headers?.Range;
+    const copy = (b) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+    const headers = { get: (name) => (name.toLowerCase() === 'content-length' ? String(zip.length) : null) };
+    if (options?.method === 'HEAD') return { ok: true, status: 200, headers };
+    // **What the real server does to a browser**: a range the browser must ask about first -- the
+    // suffix form, or any range where it safelists none -- is refused, because asma.atari.org
+    // answers the question without `Access-Control-Allow-Headers`. curl never asks, which is why it
+    // passed there and failed for the owner.
+    if (range && (range.startsWith('bytes=-') || window.__asmaNoSafeRange)) throw new TypeError('Failed to fetch');
+    if (!range || window.__asmaIgnoreRange) return { ok: true, status: 200, headers, arrayBuffer: async () => copy(zip) };
+    window.__asmaRanges.push(range);
+    const [, from, to] = /^bytes=(\d*)-(\d*)$/.exec(range);
+    const slice = from === '' ? zip.subarray(Math.max(0, zip.length - Number(to))) : zip.subarray(Number(from), Number(to) + 1);
+    return { ok: true, status: 206, arrayBuffer: async () => copy(slice) };
+  }
   posted.push(u);
   if (holdTrackFetch) {
     // A download that never finishes, so the press that calls one off can be tested at all.
@@ -118,6 +136,8 @@ window.indexedDB = indexedDB;
 window.IDBKeyRange = IDBKeyRange;
 // And a Modland address escapes a name byte by byte, as the phone's URLEncoder does.
 window.TextEncoder ??= TextEncoder;
+// And ASMA's list names its files in bytes, read back with a decoder.
+window.TextDecoder ??= TextDecoder;
 // Links are deflated and inflated through streams, as a browser does it.
 window.CompressionStream ??= CompressionStream;
 window.DecompressionStream ??= DecompressionStream;
@@ -139,13 +159,13 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex, '
-    + 'buildRandomTable, drawTrack, platformOf }; })();')
+    + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -465,9 +485,9 @@ if (window.__api) {
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
   // Select stands first since 2026-09-11 -- the way into ticking rows, which he asked for; the three
-  // he asked for before are still exactly these, in this order, with Send to Protracktor web (asked
+  // he asked for before are still exactly these, in this order, with Share with Protracktor (asked
   // for the same day) beside the other link.
-  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Send to Protracktor web,Information',
+  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Share with Protracktor,Information',
     'with the three the owner asked for, after Select');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
@@ -890,7 +910,7 @@ if (window.__api) {
   button(rows()[0], 'bmore').click();
   const menu = [...$('menu').children];
   check(menu.map((b) => b.textContent).join('|')
-        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link|Send to Protracktor web",
+        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link|Share with Protracktor",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
   // The icon beside its word, centred on it: a later rule once made every item a block and left the
@@ -1575,13 +1595,13 @@ if (window.__api) {
   $('menu').hidden = true;
 }
 
-// --- Send to Protracktor web (owner, 2026-09-11) -------------------------------------------------
+// --- Share with Protracktor (owner, 2026-09-11) -------------------------------------------------
 //
 // One tune, from any list, as a link that opens this page playing it. **The phone makes the link
 // too**, so the page must open what `QueueLink.trackLink` packs -- checked by packing the same line
 // the way the JVM does (zlib deflate, URL-safe base64) and handing it over as the address.
 if (window.__api) {
-  console.log('\nSend to Protracktor web:');
+  console.log('\nShare with Protracktor:');
   const api = window.__api;
   const settle = () => new Promise((r) => setTimeout(r, 30));
   const zlib = await import('zlib');
@@ -1627,6 +1647,7 @@ if (window.__api) {
   // Folded, as the owner asked: the dock and the heading say what it is.
   check($('nowplaying').hidden && $('pair').hidden && $('title').textContent === 'zoolook',
     'nothing is drawn over it: Now Playing stays folded and the dock names the tune');
+  check($('count').textContent === '1 sent to you', 'the line under the name says the tune was sent, not that it came from history');
   check($('sessiontitle').textContent === 'Playing a tune sent to you' && $('playlistname').textContent === 'Sent'
         && $('sessionicon').querySelector('path'),
     'under a heading that says where it came from');
@@ -1684,7 +1705,7 @@ if (window.__api) {
 
   // Offered on every list: the queue's row menu here, Browse's in its own checks above.
   window.document.querySelector('#queue li .rowmenu').click();
-  const item = [...$('menu').children].find((b) => b.textContent === 'Send to Protracktor web');
+  const item = [...$('menu').children].find((b) => b.textContent === 'Share with Protracktor');
   check(item && !item.disabled && item.querySelector('svg'), 'a row\'s menu offers it, with its icon');
   // Copy a link says so the same way.
   [...$('menu').children].find((b) => b.textContent === 'Copy a link').click();
@@ -1708,6 +1729,165 @@ if (window.__api) {
   window.history.replaceState(null, '', window.location.pathname);
   await saved.remove('p-send');
   await api.switchTo('phone');
+}
+
+// --- ASMA in the browser (owner, 2026-09-11) ------------------------------------------------------
+//
+// **The list, not the archive.** ASMA publishes a 20 MB zip; the page reads its central directory
+// with two ranged requests and fetches each tune from its own address. Checked against a zip built
+// here, served by a stand-in that answers ranges the way asma.atari.org does -- and once more by one
+// that ignores them, which a server is allowed to do.
+if (window.__api) {
+  console.log('\nASMA:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 30));
+  const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+  const entry = (name, size) => {
+    const bytes = Buffer.from(name);
+    const head = Buffer.alloc(46);
+    head.writeUInt32LE(0x02014b50, 0);
+    head.writeUInt32LE(size, 24);
+    head.writeUInt16LE(bytes.length, 28);
+    return Buffer.concat([head, bytes]);
+  };
+  const names = [['asma/', 0], ['asma/Composers/', 0], ['asma/Composers/Aki/Robots.sap', 1922],
+                 ['asma/Composers/Aki/Atari_Style.sap', 7291], ['asma/Games/Boulder Dash (Tune 1).sap', 1000],
+                 ['asma/Docs/STIL.txt', 272641]];
+  const directory = Buffer.concat(names.map(([n, s]) => entry(n, s)));
+  const body = Buffer.alloc(70000, 7);          // what stands for the compressed tunes
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(names.length, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(body.length, 16);
+  window.__asmaZip = Buffer.concat([body, directory, end]);
+  window.__asmaRanges = [];
+  // The engine says hello, as the worklet does once it has compiled: the list is filtered by what
+  // it can open, and a download waits for it to say (`whenEngineReady`).
+  api.onWorklet({ type: 'ready', backends: 'openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;zxtune:none' });
+
+  await api.downloadAsmaIndex();
+  await settle();
+  const asked = window.__asmaRanges.splice(0);
+  // A directory this small sits inside the tail, so one ordinary range brings both.
+  const size = window.__asmaZip.length;
+  check(asked.length === 1 && asked[0] === `bytes=${size - 65557}-${size - 1}`,
+    'the list is read with a size from HEAD and an ordinary range — never the suffix form a browser must ask about');
+  const held = await api.archiveMeta('asma');
+  check(held?.tracks === 3 && held.formats === 2, 'every .sap is listed and nothing else, under its section');
+  check([...$('browselist').children].some((li) => li.textContent.startsWith('ASMA — 3 tunes')),
+    'Browse offers ASMA beside Modland');
+
+  await api.browseTo(['asma']);
+  check([...$('browselist').children].map((li) => li.querySelector('.bname').textContent).join() === 'Composers,Games',
+    'its sections are the first level');
+  await api.browseTo(['asma', 'Composers', 'Aki']);
+  const rows = [...$('browselist').children];
+  check(rows.length === 2 && rows.every((li) => li.classList.contains('btrack')), 'an author\'s tunes are tunes, with Add and the menu');
+  const robots = rows.find((li) => li.querySelector('.bname').textContent === 'Robots.sap');
+  check(robots?.dataset.url === 'https://asma.atari.org/asma/Composers/Aki/Robots.sap',
+    'and each plays from its own address on asma.atari.org');
+
+  $('browsesearch').value = 'aki';
+  await api.runSearch('aki');
+  const hits = [...$('browselist').children];
+  check(hits.some((li) => li.dataset.url === 'https://asma.atari.org/asma/Composers/Aki/Robots.sap'
+                         && li.querySelector('.bmeta').textContent === 'ASMA/Composers/Aki'),
+    'search finds ASMA\'s tunes by author, saying which archive they are from');
+  await api.runSearch('boulder');
+  check([...$('browselist').children][0]?.dataset.url === 'https://asma.atari.org/asma/Games/Boulder%20Dash%20%28Tune%201%29.sap',
+    'and by title, a tune filed with no author included');
+  check($('browsenote').textContent.includes('(Modland and ASMA)') || $('browsenote').textContent.includes('(ASMA)'),
+    'the note says which archives it looked in');
+  $('browsesearch').value = '';
+
+  const table = await api.randomTable();
+  check(table.entries.some((e) => e.source === 'asma'), 'the dice picks from ASMA too');
+
+  // A server that ignores the range sends everything, and the same reading still works.
+  window.__asmaIgnoreRange = true;
+  await store.clear('asma:');
+  await api.downloadAsmaIndex();
+  await settle();
+  window.__asmaIgnoreRange = false;
+  window.__asmaRanges.length = 0;
+  check((await api.archiveMeta('asma'))?.tracks === 3, 'and a server that ignores the range gives the same list');
+
+  // A browser that asks about every range is refused by this server: it gets the whole archive.
+  window.__asmaNoSafeRange = true;
+  await store.clear('asma:');
+  await api.downloadAsmaIndex();
+  await settle();
+  window.__asmaNoSafeRange = false;
+  window.__asmaRanges.length = 0;
+  check((await api.archiveMeta('asma'))?.tracks === 3, 'and a browser whose range is refused falls back to the whole archive');
+
+  // ASMA's real directory is 849 KB, far more than one tail: then it takes a second ordinary range.
+  // Padded here past the tail with entries the filter drops, so only the three tunes remain.
+  const padding = Array.from({ length: 1500 }, (_, i) => entry(`asma/Docs/padding-${String(i).padStart(5, '0')}.txt`, 1));
+  const bigDirectory = Buffer.concat([directory, ...padding]);
+  const bigEnd = Buffer.from(end);
+  bigEnd.writeUInt16LE(names.length + padding.length, 10);
+  bigEnd.writeUInt32LE(bigDirectory.length, 12);
+  bigEnd.writeUInt32LE(200000, 16);
+  window.__asmaZip = Buffer.concat([Buffer.alloc(200000, 7), bigDirectory, bigEnd]);
+  await store.clear('asma:');
+  await api.downloadAsmaIndex();
+  await settle();
+  const big = window.__asmaZip.length;
+  const two = window.__asmaRanges.splice(0);
+  check(bigDirectory.length > 65557 && two.length === 2 && two[0] === `bytes=${big - 65557}-${big - 1}`
+        && two[1] === `bytes=200000-${200000 + bigDirectory.length - 1}`
+        && (await api.archiveMeta('asma'))?.tracks === 3,
+    'a real-sized archive is read as the tail and then the directory, both ordinary ranges');
+
+  await store.clear('asma:');
+  await api.browseTo([]);
+  window.__api.showPanel(null);
+}
+
+// --- no pinch to zoom (owner, 2026-09-11) ---------------------------------------------------------
+if (window.__api) {
+  console.log('\nno pinch to zoom:');
+  const viewport = window.document.querySelector('meta[name="viewport"]').content;
+  check(viewport.includes('maximum-scale=1') && viewport.includes('user-scalable=no'),
+    'the viewport does not let the page be zoomed');
+  check([...window.document.querySelectorAll('style')].some((s) => /html\s*{\s*touch-action:\s*pan-x pan-y;/.test(s.textContent)),
+    'and touch keeps scrolling but not pinching');
+  const gesture = new window.Event('gesturestart', { cancelable: true });
+  window.dispatchEvent(gesture);
+  const pinch = new window.WheelEvent('wheel', { ctrlKey: true, cancelable: true, deltaY: -10 });
+  window.dispatchEvent(pinch);
+  const scroll = new window.WheelEvent('wheel', { cancelable: true, deltaY: -10 });
+  window.dispatchEvent(scroll);
+  check(gesture.defaultPrevented && pinch.defaultPrevented && !scroll.defaultPrevented,
+    'Safari\'s pinch and a touchpad\'s are refused, and an ordinary scroll is not');
+}
+
+// --- the playlist sheet on a fresh browser, and on a phone's width (owner, 2026-09-11) ----------
+if (window.__api) {
+  console.log('\nthe playlist sheet, as the owner saw it on his phone:');
+  // Straight out of the database: `playlists.remove` refuses "From the phone" on purpose, and the
+  // state wanted is a browser the phone has never sent anything to.
+  await new Promise((resolve, reject) => {
+    const open = window.indexedDB.open('protracktor');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction('playlists', 'readwrite');
+      tx.objectStore('playlists').delete('phone');
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+  $('playlistchip').click();
+  await new Promise((r) => setTimeout(r, 30));
+  const first = $('playlistlist').children[0];
+  check(first?.querySelector('.pname')?.textContent === 'From the phone' && first.querySelector('.pcount').textContent === '0',
+    'with nothing stored, "From the phone" is still a choice rather than an empty sheet');
+  check(window.getComputedStyle($('newlist').parentElement).flexWrap === 'wrap',
+    'and the two buttons under the list may take a line each, where one line is too narrow for both');
+  window.__api.showPanel(null);
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
@@ -1759,6 +1939,13 @@ if (window.__api) {
   each('randomNext', (c) =>
     rules.randomNext({ length: +c.length, at: +c.at }) === (c.expect === 'roll' ? 'roll' : number(c.expect)));
   each('randomPrevious', (c) => rules.randomPrevious({ at: +c.at }) === number(c.expect));
+  // ASMA's address, from the zip entry's path, by the page's own rule (`catalogue.js` urlFor).
+  const catalogueModule = await import(path.resolve('web/src/catalogue.js'));
+  each('asmaUrl', (c) => {
+    const [, format, ...rest] = c.path.split('/');
+    const title = rest.pop();
+    return catalogueModule.urlFor(format, rest.join('/'), title, 'asma') === `https://asma.atari.org/${c.expect}`;
+  });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
 }

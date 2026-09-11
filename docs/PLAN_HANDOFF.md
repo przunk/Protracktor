@@ -346,7 +346,10 @@ silence.
 
 **Weight:** 48 KB of markup and script against 760 KB of engine.
 
-## 5e. Built 2026-09-11: Send to Protracktor web — one tune, as a link that plays it
+## 5e. Built 2026-09-11: Share with Protracktor — one tune, as a link that plays it
+
+*Built as "Send to Protracktor web"; the owner renamed it "Share with Protracktor" the same
+night, which says what it is for — handing a tune to somebody — rather than where it lands.*
 
 *Owner, 2026-09-11: an option on a track, on any list, on the phone and on the page, that sends a
 link to the web player which opens straight onto that one tune playing.*
@@ -366,9 +369,10 @@ two want opposite things at the far end:
 **Where it is offered.** Every track menu: on the phone the playlist's, Random's and every Browse
 list's; on the page the queue's rows (playlist, Random, History, a Browse session) and Browse's.
 **Only for a tune another browser can fetch**: not a file on the phone, not an MP3 (the rule of
-2026-09-10), and not ASMA, whose `asma://` is read out of the archive stored on the phone. A queue
-link carries such rows as greyed places; a one-tune link to one would be a dead link, so the item
-is absent (phone) or greyed (page) instead.
+2026-09-10), and not a tune inside an UnExoticA archive. A queue link carries such rows as greyed
+places; a one-tune link to one would be a dead link, so the item is absent (phone) or greyed (page)
+instead. **ASMA was on that list for one evening** and came off it the same night, when its files
+turned out to have addresses of their own (`docs/PLAN_WEB_LIBRARY.md` S7).
 
 **How it leaves.** The phone uses the share sheet, like the queue's link: where it goes is the
 person's call. The page shares where the browser can (`navigator.share`, phones mostly) and copies

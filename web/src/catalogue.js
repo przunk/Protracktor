@@ -8,19 +8,35 @@
 // machine; a record per **bucket** — one per format and author — means 43,715 writes, no index at
 // all, and 2.6 seconds. The key *is* the lookup, which is the structure an index would have built.
 //
-// Modland only, so far. It is the one that matters and the only one whose numbers these are.
+// Two archives: Modland, and since 2026-09-11 ASMA. Both are stored in the same shape under their
+// own prefix -- a group (Modland's format, ASMA's section), an author, the tunes -- so browsing,
+// search and the dice treat them alike.
 
 import { catalogue } from './store.js';
 
 const MODLAND = 'modland';
+const ASMA = 'asma';
 const INDEX_URL = 'https://modland.com/allmods.zip';
-const FILE_BASE = 'https://modland.com/pub/modules/';
+const ASMA_INDEX_URL = 'https://asma.atari.org/asmadb/asma.zip';
 
-const key = {
-  meta: `${MODLAND}:meta`,
-  formats: `${MODLAND}:formats`,
-  authors: (format) => `${MODLAND}:authors:${format}`,
-  tracks: (format, author) => `${MODLAND}:tracks:${format}/${author}`,
+/** What each archive is called on screen, and where its files are served. */
+const SOURCES = {
+  [MODLAND]: { name: 'Modland', files: 'https://modland.com/pub/modules/' },
+  // ASMA serves every file at its zip entry's own path (measured 2026-09-11), which is what lets a
+  // browser play it without the 20 MB archive -- `docs/rules/queue-cases.tsv` [asmaUrl].
+  [ASMA]: { name: 'ASMA', files: 'https://asma.atari.org/asma/' },
+};
+
+/** Every archive this page can hold, in the order they are listed. */
+export function sources() { return Object.keys(SOURCES); }
+
+export function sourceName(source) { return SOURCES[source]?.name ?? source; }
+
+const keyFor = (source) => ({
+  meta: `${source}:meta`,
+  formats: `${source}:formats`,
+  authors: (format) => `${source}:authors:${format}`,
+  tracks: (format, author) => `${source}:tracks:${format}/${author}`,
   /**
    * Titles, sharded by their first two characters.
    *
@@ -28,8 +44,8 @@ const key = {
    * shards costs 433 ms and about 29 MB, against 473 GB offered — and it is what turns "find a tune
    * by name" from reading the whole index into reading a twenty-sixth of it.
    */
-  titles: (two) => `${MODLAND}:titles:${two}`,
-};
+  titles: (two) => `${source}:titles:${two}`,
+});
 
 /**
  * `web/src/formats.tsv`, read into two maps of name to decoders, and one of name to machine.
@@ -215,7 +231,8 @@ async function unzipOnly(bytes) {
  * flushing on change would mean merging, and merging 3,727 records to save 55 MB is the wrong
  * trade on a machine that offered 473 GB.
  */
-export function toRecords(text) {
+export function toRecords(text, source = MODLAND) {
+  const key = keyFor(source);
   const buckets = new Map();
   const formats = new Map();
   let tracks = 0;
@@ -307,6 +324,7 @@ export async function downloadModland({
   onProgress?.({ stage: 'sorting' });
   const { text: kept, total, phoneOnly } = filterIndex(text, keep, phone);
   const { records, tracks, buckets, formats } = toRecords(kept);
+  const key = keyFor(MODLAND);
 
   await catalogue.clear(`${MODLAND}:`);
   await catalogue.putAll(records, 2000, (done, total) => onProgress?.({ stage: 'storing', done, total }));
@@ -315,6 +333,89 @@ export async function downloadModland({
   }]);
   onProgress?.({ stage: 'done', tracks, total, phoneOnly, buckets, formats });
   return { tracks, total, phoneOnly, buckets, formats };
+}
+
+/**
+ * ASMA's list, **read out of its archive without downloading the archive**.
+ *
+ * ASMA publishes one 20 MB zip and no separate index; the phone downloads the lot, which is what
+ * makes it work offline. A browser needs only the list, and a zip keeps its list at the end: the
+ * end record says where the central directory is, and the directory names every file and its
+ * size. Two ranged requests -- the tail, then the directory -- come to 0.85 MB (measured
+ * 2026-09-11: 6,780 entries, 6,335 of them `.sap`), and each tune is then fetched from its own
+ * address when it plays.
+ *
+ * A server that ignores `Range` answers 200 with the whole file; the same reading works on that,
+ * because the offsets are the file's own.
+ *
+ * **Never the suffix form, `bytes=-N`** (owner, 2026-09-11: "Failed to fetch"). Only a range with
+ * a start is CORS-safelisted; any other makes the browser ask first, and asma.atari.org answers that
+ * question without `Access-Control-Allow-Headers`, so the request was refused before it left. The
+ * size comes from a HEAD instead, which needs no asking, and the tail is then an ordinary range. A
+ * browser too old to safelist even that gets the whole archive, which is slow and always allowed.
+ */
+export async function downloadAsma({ fingerprint = '', keep = () => true, onProgress = null } = {}) {
+  onProgress?.({ stage: 'fetching the list' });
+  // The end record is 22 bytes and may be followed by a comment of up to 64 KB.
+  let tail;
+  try {
+    const head = await fetch(ASMA_INDEX_URL, { method: 'HEAD' });
+    const length = Number(head.headers.get('content-length'));
+    if (!head.ok || !length) throw new Error('no size');
+    tail = await ranged(ASMA_INDEX_URL, `bytes=${Math.max(0, length - 65557)}-${length - 1}`);
+    tail.start = Math.max(0, length - 65557);
+  } catch {
+    onProgress?.({ stage: 'fetching the whole archive (20 MB), this browser will not ask for part of it' });
+    const response = await fetch(ASMA_INDEX_URL);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    tail = { bytes: await response.arrayBuffer(), whole: true };
+  }
+  const view = new DataView(tail.bytes);
+  let end = -1;
+  for (let i = tail.bytes.byteLength - 22; i >= 0; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) { end = i; break; }
+  }
+  if (end < 0) throw new Error('no end record in the archive');
+  const size = view.getUint32(end + 12, true);
+  const offset = view.getUint32(end + 16, true);
+  // Already in hand when the tail reached back far enough -- or was the whole file.
+  const from = tail.whole ? 0 : tail.start;
+  const directory = offset >= from
+    ? new DataView(tail.bytes, offset - from, size)
+    : new DataView((await ranged(ASMA_INDEX_URL, `bytes=${offset}-${offset + size - 1}`)).bytes);
+
+  onProgress?.({ stage: 'reading' });
+  const names = new TextDecoder();
+  const lines = [];
+  for (let at = 0; at + 46 <= directory.byteLength && directory.getUint32(at, true) === 0x02014b50;) {
+    const bytes = directory.getUint32(at + 24, true);
+    const nameLength = directory.getUint16(at + 28, true);
+    const extra = directory.getUint16(at + 30, true);
+    const comment = directory.getUint16(at + 32, true);
+    const name = names.decode(new Uint8Array(directory.buffer, directory.byteOffset + at + 46, nameLength));
+    at += 46 + nameLength + extra + comment;
+    // `asma/<section>/<author>/<title>.sap`; directories end in a slash and hold nothing.
+    if (!name.startsWith('asma/') || name.endsWith('/')) continue;
+    lines.push(`${bytes}\t${name.slice('asma/'.length)}`);
+  }
+
+  onProgress?.({ stage: 'sorting' });
+  const { text: kept, total } = filterIndex(lines.join('\n'), keep);
+  const { records, tracks, buckets, formats } = toRecords(kept, ASMA);
+  await catalogue.clear(`${ASMA}:`);
+  await catalogue.putAll(records, 2000, (done, all) => onProgress?.({ stage: 'storing', done, total: all }));
+  await catalogue.putAll([{
+    key: keyFor(ASMA).meta, tracks, total, phoneOnly: 0, buckets, formats, fingerprint, at: Date.now(),
+  }]);
+  onProgress?.({ stage: 'done', tracks, total, buckets, formats });
+  return { tracks, total, buckets, formats };
+}
+
+/** One ranged request, and whether the server ignored the range and sent everything. */
+async function ranged(url, range) {
+  const response = await fetch(url, { headers: { Range: range } });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return { bytes: await response.arrayBuffer(), whole: response.status === 200, start: 0 };
 }
 
 /**
@@ -327,18 +428,18 @@ export async function downloadModland({
  *
  * Capped, because a query of one letter matches tens of thousands and nobody reads those.
  */
-export async function searchTitles(query, limit = 200) {
+export async function searchTitles(query, limit = 200, source = MODLAND) {
   const needle = query.trim().toLowerCase();
   if (needle.length < 2) return { hits: [], scanned: 0, capped: false };
   const found = [];
   let scanned = 0;
-  for (const shard of await allTitleShards()) {
+  for (const shard of await allTitleShards(source)) {
     for (const [title, format, author] of shard.entries) {
       scanned++;
       if (!title.toLowerCase().includes(needle)) continue;
       if (found.length < limit) {
-        found.push({ url: urlFor(format, author, title), name: title, file: title,
-                     meta: `Modland/${format}/${author}` });
+        found.push({ url: urlFor(format, author, title, source), name: title, file: title,
+                     meta: metaFor(source, format, author) });
       } else {
         return { hits: found, scanned, capped: true };
       }
@@ -348,14 +449,14 @@ export async function searchTitles(query, limit = 200) {
 }
 
 /** Authors whose name contains [query], with the format they are filed under. */
-export async function searchAuthors(query, limit = 100) {
+export async function searchAuthors(query, limit = 100, source = MODLAND) {
   const needle = query.trim().toLowerCase();
   if (needle.length < 2) return [];
   const found = [];
-  for (const { name: format } of await formats()) {
-    for (const { name, count } of await authors(format)) {
+  for (const { name: format } of await formats(source)) {
+    for (const { name, count } of await authors(format, source)) {
       if (!name.toLowerCase().includes(needle)) continue;
-      found.push({ format, author: name, count });
+      found.push({ source, format, author: name, count });
       if (found.length >= limit) return found;
     }
   }
@@ -369,11 +470,13 @@ export async function searchAuthors(query, limit = 100) {
  * marks, digits, Cyrillic and things nobody would think to list, and a guessed alphabet loses tunes
  * silently.
  */
-function allTitleShards() { return catalogue.byPrefix(`${MODLAND}:titles:`); }
+function allTitleShards(source = MODLAND) { return catalogue.byPrefix(`${source}:titles:`); }
 
-export async function meta() { return catalogue.get(key.meta); }
-export async function formats() { return (await catalogue.get(key.formats))?.formats ?? []; }
-export async function authors(format) { return (await catalogue.get(key.authors(format)))?.authors ?? []; }
+export async function meta(source = MODLAND) { return catalogue.get(keyFor(source).meta); }
+export async function formats(source = MODLAND) { return (await catalogue.get(keyFor(source).formats))?.formats ?? []; }
+export async function authors(format, source = MODLAND) {
+  return (await catalogue.get(keyFor(source).authors(format)))?.authors ?? [];
+}
 
 /**
  * Every tune this browser holds, as a running count over the buckets it is filed in.
@@ -390,11 +493,14 @@ export async function authors(format) { return (await catalogue.get(key.authors(
 export async function buildRandomTable() {
   const entries = [];
   let total = 0;
-  for (const { name: format } of await formats()) {
-    for (const { name: author, count } of await authors(format)) {
-      if (!count) continue;
-      total += count;
-      entries.push({ format, author, end: total });
+  // Every archive held, one pool: a tune from ASMA is as likely as any tune from Modland.
+  for (const source of sources()) {
+    for (const { name: format } of await formats(source)) {
+      for (const { name: author, count } of await authors(format, source)) {
+        if (!count) continue;
+        total += count;
+        entries.push({ source, format, author, end: total });
+      }
     }
   }
   return { entries, total };
@@ -417,20 +523,25 @@ export async function drawTrack(table, random = Math.random) {
   }
   const bucket = table.entries[lo];
   const start = lo ? table.entries[lo - 1].end : 0;
-  const tracks = await tracksIn(bucket.format, bucket.author);
+  const tracks = await tracksIn(bucket.format, bucket.author, bucket.source);
   return tracks[r - start] ?? tracks[0] ?? null;
 }
 
 /** One bucket, as tracks the queue understands. */
-export async function tracksIn(format, author) {
-  const found = await catalogue.get(key.tracks(format, author));
+export async function tracksIn(format, author, source = MODLAND) {
+  const found = await catalogue.get(keyFor(source).tracks(format, author));
   return (found?.tracks ?? []).map(({ t, s }) => ({
-    url: urlFor(format, author, t),
+    url: urlFor(format, author, t, source),
     name: t,
     file: t,
-    meta: `Modland/${format}/${author}`,
+    meta: metaFor(source, format, author),
     size: s,
   }));
+}
+
+/** Where a tune lives, as the row's second line says it: `Modland/Protracker/4-Mat`. */
+function metaFor(source, format, author) {
+  return [sourceName(source), format, author].filter(Boolean).join('/');
 }
 
 /**
@@ -446,8 +557,11 @@ export async function tracksIn(format, author) {
  * `docs/rules/queue-cases.tsv` has the cases, and `Modland` in `CatalogueTest` checks the other end
  * against the same ones. `!!uu !! !!.it` is in there because the owner played it.
  */
-export function urlFor(format, author, title) {
-  return FILE_BASE + [format, ...author.split('/'), title].map(encodeSegment).join('/');
+export function urlFor(format, author, title, source = MODLAND) {
+  // An empty author is a file filed straight under its group (ASMA's `Games/Title.sap`), not an
+  // empty folder: splitting "" gives one empty segment, and the address a double slash.
+  return SOURCES[source].files
+    + [format, ...(author ? author.split('/') : []), title].map(encodeSegment).join('/');
 }
 
 function encodeSegment(segment) {

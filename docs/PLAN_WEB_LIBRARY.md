@@ -305,7 +305,7 @@ The staleness rule is the phone's: the engine's fingerprint is recorded when an 
 compared when one is read, and a mismatch says so rather than showing a short list.
 
 - **Still to be checked by him:** the download itself, on the Pi.
-- **Not built yet:** ASMA, whose index *is* its 20 MB archive.
+- **ASMA:** built 2026-09-11, without its 20 MB archive — S7.
 
 ### S3a. Only what the browser can play — **built 2026-09-11**
 
@@ -676,3 +676,41 @@ desk.
 Accounts, sync, and a server that holds his music — `docs/WISHLIST.md` B5 raised that in September
 and it is a different project. Everything above works with a static page, a browser's own storage,
 and archives that already say a browser may read them.
+
+### S7. ASMA — **built 2026-09-11**
+
+*Owner, 2026-09-11: "proponuję dodać obsługę ASMA do web". Agreed with two answers from him: the
+list only, not the archive, and the phone's half at the same time.*
+
+**The premise everything here rested on was wrong, and a curl said so.** The phone was built
+believing ASMA publishes one 20 MB zip and no per-file address — `Catalogue.webUrlFor` returned null
+for it, its share link named "the collection and the path", and Share with Protracktor left its
+tunes out. Measured that evening:
+
+| | answer |
+|---|---|
+| `https://asma.atari.org/asma/Composers/Aki/Robots.sap` | 200, 1,922 bytes, `Access-Control-Allow-Origin: *` |
+| `asma.zip`, a ranged request | 206, `Accept-Ranges: bytes`, CORS on the 206 too |
+| its end record → central directory | 849,030 bytes: 6,780 entries, 6,335 `.sap` |
+
+So every tune has an address — the zip entry's own path under `https://asma.atari.org/` — and the
+list of them costs **0.85 MB instead of 20**.
+
+**The page.** `archive.downloadAsma` asks for the zip's tail, finds the end record, asks for the
+central directory, and stores what it names in Modland's shape under an `asma:` prefix: section
+(Composers 5,305 · Unknown 386 · Games 380 · Misc 196 · Groups 68), author, tunes. A server that
+ignores `Range` answers 200 with everything and the same reading works on that. Each tune is
+fetched from its own address when it plays. Browse lists ASMA beside Modland, search looks in both
+and says which it looked in, the dice draws from both as one pool, and a row's second line names the
+archive: `ASMA/Composers/Aki`.
+
+**The phone.** `Catalogue.fileUrlFor` — the address a *browser* can fetch — is new, and ASMA answers
+it. The phone still plays from the zip, which is what makes it work offline; the address is for
+everybody else: Share a link gives the file, a queue link and Share with Protracktor carry it, and
+the paired send no longer spends its byte budget on ASMA rows.
+
+**One rule, two runtimes.** The address is escaped by Modland's rule (`URLEncoder`, space as
+`%20`), and `[asmaUrl]` in `docs/rules/queue-cases.tsv` holds both sides to four cases.
+
+Not built: ASMA's STIL (`docs/WISHLIST.md` B30), and the 20 MB archive in the browser for offline
+play — declined for now as not worth the download.

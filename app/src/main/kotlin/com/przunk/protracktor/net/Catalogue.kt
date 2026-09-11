@@ -48,13 +48,21 @@ sealed class Catalogue(
      * An address for one tune that a person receiving it could actually open, or null if this
      * catalogue publishes none.
      *
-     * Modland serves every file over HTTP, so its track URL **is** the shareable link. An archive
-     * catalogue has no per-file address at all — what it publishes is one zip — so it answers null,
-     * and the share falls back to naming the collection and the path inside it. That is a real
-     * thing to act on, and it is the reason this returns null rather than the app quietly offering
-     * a link that would mean nothing anywhere but this phone.
+     * Modland serves every file over HTTP, so its track URL **is** the shareable link. A catalogue
+     * with no per-file address answers null, and the share falls back to naming the collection and
+     * the path inside it rather than offering a link that would mean nothing anywhere but here.
      */
     open fun webUrlFor(path: String): String? = urlFor(path)
+
+    /**
+     * The address a **browser** can fetch this one file from itself, or null when there is none.
+     *
+     * What a link to the web player carries, and what spares the paired send from packing bytes.
+     * [urlFor] is where *this app* reads a track from, which for an archive catalogue is a path
+     * inside a zip on this phone -- so it is the answer only when it is already an address.
+     */
+    open fun fileUrlFor(path: String): String? =
+        urlFor(path).takeIf { it.startsWith("https://") || it.startsWith("http://") }
 
     /**
      * Whether the thing at [indexUrl] is the whole archive rather than a list of what is in it.
@@ -122,10 +130,7 @@ object Modland : Catalogue(
 
     override val homeUrl: String = "https://modland.com/"
 
-    override fun urlFor(path: String): String =
-        FILE_BASE + path.split('/').joinToString("/") { segment ->
-            java.net.URLEncoder.encode(segment, "UTF-8").replace("+", "%20")
-        }
+    override fun urlFor(path: String): String = FILE_BASE + encodePath(path)
 
     override fun pathFrom(id: String): String? {
         if (!id.startsWith(FILE_BASE)) return null
@@ -169,11 +174,26 @@ object Modland : Catalogue(
 
 
 /**
+ * Java's `URLEncoder`, segment by segment, with its `+` for a space turned into `%20` -- the address
+ * rule `docs/rules/queue-cases.tsv` holds both runtimes to, for Modland and for ASMA alike.
+ */
+private fun encodePath(path: String): String =
+    path.split('/').joinToString("/") { segment ->
+        java.net.URLEncoder.encode(segment, "UTF-8").replace("+", "%20")
+    }
+
+/**
  * ASMA — the Atari SAP Music Archive, and the reason ASAP was worth integrating.
  *
  * A different shape from Modland: the whole collection arrives as one zip of about 20 MB holding
  * 6,335 `.sap` files, so there is no index to parse separately — **the archive's own entry list is
  * the index**. Downloading it once makes browsing *and* playing work with no network at all.
+ *
+ * **And every file has an address of its own as well**, which this code believed it had not.
+ * Measured 2026-09-11: `https://asma.atari.org/asma/Composers/Aki/Robots.sap` answers 200 with
+ * `Access-Control-Allow-Origin: *`, at the zip entry's own path. The phone keeps reading from the
+ * zip, which is what makes it work offline; the address is for everybody else -- a shared link, the
+ * web player -- which is [fileUrlFor].
  *
  * `asma/Docs/Asma.txt` looked like it might be a metadata index and is not: it is four lines of
  * version banner. The structure is in the paths, which run
@@ -189,8 +209,12 @@ object Asma : Catalogue(
 
     override val homeUrl: String = "https://asma.atari.org/"
 
-    // No per-file address exists: ASMA publishes one archive, not a file tree.
-    override fun webUrlFor(path: String): String? = null
+    /** The zip entry's path, served as a file of its own (measured 2026-09-11, see above). */
+    override fun fileUrlFor(path: String): String = FILE_BASE + encodePath(path)
+
+    override fun webUrlFor(path: String): String = fileUrlFor(path)
+
+    private const val FILE_BASE = "https://asma.atari.org/"
 
     override fun pathFrom(id: String): String? = id.removePrefix("asma://").takeIf { it != id }
 

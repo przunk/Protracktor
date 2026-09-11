@@ -85,7 +85,9 @@ object QueueLink {
                 // would have removed most of that anyway; this makes the untruncated link shorter for
                 // the small queues where the limit actually bites.
                 catalogue.id == "modland" -> { lines += withTitle(path, track); playable++ }
-                else -> { lines += withTitle(track.id, track); playable++ }
+                // The address a browser can fetch -- ASMA's own file, not the `asma://` this phone
+                // reads it by -- and the reference as it stands where there is none.
+                else -> { lines += withTitle(catalogue.fileUrlFor(path) ?: track.id, track); playable++ }
             }
         }
         if (playable == 0) return Packed("", 0, lines.size)
@@ -149,7 +151,7 @@ object QueueLink {
     /**
      * Marks a link as **one tune to play** rather than a queue to take over.
      *
-     * Send to Protracktor web (owner, 2026-09-11): a tune from any list, as a link that opens the page
+     * Share with Protracktor (owner, 2026-09-11): a tune from any list, as a link that opens the page
      * playing it. A queue link replaces the list the page shows under "From the phone"; this one
      * must not — it is somebody being shown a tune, possibly somebody else entirely — so the page
      * plays it the way it plays a Browse result, beside whatever list is there. `:` because it is
@@ -160,13 +162,11 @@ object QueueLink {
     /**
      * Whether [track] can go as a one-tune link: [pack]'s two refusals, and one more. A queue link
      * carries rows the page cannot play as greyed places in the list; a one-tune link to such a row
-     * is a dead link. So only an address a browser can fetch: ASMA's `asma://` is read out of the
-     * archive stored on this phone and reaches nobody else.
+     * is a dead link. So only a tune with an address a browser can fetch ([Catalogue.fileUrlFor]):
+     * Modland's and ASMA's, not UnExoticA's, whose tunes sit inside archives.
      */
     fun canSend(track: TrackRef): Boolean =
-        !isMp3(track) &&
-            (track.id.startsWith("https://") || track.id.startsWith("http://")) &&
-            Catalogue.owning(track.id)?.pathFrom(track.id) != null
+        !isMp3(track) && Catalogue.owning(track.id)?.let { c -> c.pathFrom(track.id)?.let(c::fileUrlFor) } != null
 
     /** The link that opens the page at [base] playing [track], or null when it cannot travel. */
     fun trackLink(base: String, track: TrackRef): String? {

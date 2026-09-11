@@ -16,18 +16,20 @@ class WebRemoteTest {
         val json = WebRemote.buildJson(
             listOf(
                 TrackRef(id = "https://modland.com/x.mod", title = "hi", subtitle = ""),
-                TrackRef(id = "asma://y.sap", title = "there", subtitle = ""),
+                TrackRef(id = "asma://asma/Games/y.sap", title = "there", subtitle = ""),
+                TrackRef(id = "unexotica://Game/Composer/Title.lha/Title/mod.z", title = "far", subtitle = ""),
             ),
             index = 1,
         )
         assertEquals(
             """{"queue":[{"url":"https://modland.com/x.mod","title":"hi","file":"hi"},""" +
-                // **`asma://` means something on this phone and nothing anywhere else**, and no
-                // bytes came with it — so it is marked, and the page draws it greyed in its own
+                // ASMA goes as its own file, which a browser fetches itself (measured 2026-09-11).
+                """{"url":"https://asma.atari.org/asma/Games/y.sap","title":"there","file":"there"},""" +
+                // **`unexotica://` means something on this phone and nothing anywhere else**, and
+                // no bytes came with it — so it is marked, and the page draws it greyed in its own
                 // place rather than as a row that fails the moment it is touched
-                // (`docs/BACKLOG.md` A28). Modland's own URL needs no such mark: a browser can
-                // fetch it itself.
-                """{"url":"asma://y.sap","title":"there","file":"there","local":true}],"index":1}""",
+                // (`docs/BACKLOG.md` A28).
+                """{"url":"unexotica://Game/Composer/Title.lha/Title/mod.z","title":"far","file":"far","local":true}],"index":1}""",
             json,
         )
     }

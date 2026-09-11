@@ -17,7 +17,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- No pinch to zoom (owner, 2026-09-11): a player laid out as an app, not a document to magnify. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Protracktor</title>
 <style>
   :root {
@@ -62,6 +63,9 @@
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
+  /* Scrolling stays, pinching does not: the browsers that honour `touch-action` stop the zoom here
+     even where they ignore the viewport's `user-scalable=no`. */
+  html { touch-action: pan-x pan-y; }
   body {
     margin: 0;
     background: var(--bg);
@@ -531,9 +535,11 @@
                          border-radius: 50%; flex: none; display: flex; }
   #playlistlist .pmenu:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
   #playlistlist .pmenu svg { width: 22px; height: 22px; fill: currentColor; }
-  /* Two ways to a new playlist, equal and on one line each -- the phone's pair of outlined buttons. */
-  .sheetbuttons { display: flex; gap: 8px; }
-  .outlined { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  /* Two ways to a new playlist, equal -- the phone's pair of outlined buttons. Side by side where they
+     fit, one above the other where they do not: on a phone "Save this queue as…" ran out of its own
+     outline and off the sheet (owner, 2026-09-11). */
+  .sheetbuttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .outlined { flex: 1 1 14em; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
               background: none; color: var(--primary); border: 1px solid var(--outline); border-radius: var(--shape-xl);
               padding: 9px 12px; font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; }
   .outlined:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }

@@ -199,7 +199,7 @@ object PlayerIcons {
         )
     }
 
-    /** A window with an arrow into it: "open this in the browser", for Send to Protracktor web. */
+    /** A window with an arrow into it: "open this in the browser", for Share with Protracktor. */
     val Web: ImageVector by lazy {
         icon(
             "Web",
