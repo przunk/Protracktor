@@ -284,7 +284,14 @@ cannot see.
 
 ---
 
-## Q10 — How a release is built, and from which branch
+## Q10 — How a release is built, and from which branch — **ANSWERED 2026-09-11**
+
+**The owner: "na razie z develop, ale jak wydamy 1 wersję, to będzie z mastera."** Releases are built
+from `develop` until version 1 ships; from then on, from `master`. The two defects found in the script
+while answering — no refusal on a dirty tree, and a stale message about bumping a versionCode that
+is counted, not typed — stand on their own and are worth fixing either way.
+
+### Original entry
 
 *Raised 2026-09-10, when the owner asked whether `scripts/build-bundle.sh` builds from `master` or
 from the current branch. Added to the decisions at his request; nothing is changed until he chooses.*

@@ -415,6 +415,28 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C39. ~~Round 8's web bundle, first look: four faults~~ — FIXED 2026-09-11
+
+*Owner, 2026-09-11, trying the round 8 bundle in a browser for the first time.*
+
+1. **Random played picks it could not open**, and stopped on them. The index keeps only formats the
+   engine plays, but a file can still be refused, packed or gone, and the page had no answer: the
+   phone has always walked past those (`skipFailedRandomPick`) and the page's Random was built
+   without it. Now it walks past up to eight in a row, as the phone does, and **the failed pick
+   leaves the record** — the record is what played, and it did not.
+2. **The seek bar hung on the last tune's position** — 1:07 — through the next download. It was only
+   ever set by the engine's position reports, which do not come until the new file opens; the phone
+   zeroes it the instant a track is chosen. So does the page now.
+3. **The playlist chip did nothing during Random.** Deliberately — the phone hides it there — and
+   the owner wanted the other thing: *"intuicyjnie wydaje się być możliwe wyjść do playlist"*. It now
+   opens the sheet, and choosing a playlist ends the session and shows that one.
+4. **The page never asked for the re-index it needed.** It did ask, on the root of Browse — but with
+   "From the phone" showing, Browse is a single panel that explains why it is shut, and the sentence
+   was not on it. It is now.
+
+A fifth report — text-only buttons where the app has icon and label — is a standing requirement the
+page did not meet, and is being done on its own branch.
+
 ### C38. ~~The Random heading showed over every panel~~ — FIXED 2026-09-11
 
 *Owner, 2026-09-11, on the round 8 bundle: "widok playing at random jest widoczny w każdym panelu".*

@@ -135,7 +135,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -974,8 +974,9 @@ if (window.__api) {
   check(window.__api.queueNow().length === 1 && window.__api.indexNow() === 0,
     'and entering plays one, with no second press');
   check($('shuffle').disabled, 'shuffle is shut while the dice runs');
-  check($('playlistname').textContent === 'Random' && $('playlistchip').disabled,
-    'and the playlist chip does not offer a playlist nothing is playing from');
+  // The phone hides the chip here; the owner asked for the page's to stay usable (2026-09-11).
+  check($('playlistname').textContent === 'Random' && !$('playlistchip').disabled,
+    'the playlist chip says where the music is coming from, and stays usable');
 
   window.__api.onWorklet({ type: 'ended' });
   window.__api.onWorklet({ type: 'ended' });
@@ -1016,12 +1017,45 @@ if (window.__api) {
   check(JSON.stringify((await playlists.get('p-random'))?.tracks) === before,
     'nothing the dice did was written into the playlist');
 
+  // A pick that will not open is walked past and leaves the record, as on the phone.
+  const beforeSkip = window.__api.queueNow();
+  const failedUrl = beforeSkip[beforeSkip.length - 1];
+  window.__api.onWorklet({ type: 'failed', reason: 'nothing claimed it' });
+  await settle();
+  const afterSkip = window.__api.queueNow();
+  check(!afterSkip.slice(0, -1).includes(failedUrl) && afterSkip.length === beforeSkip.length
+        && window.__api.indexNow() === afterSkip.length - 1,
+    'a pick that will not open is walked past, and leaves the record — it did not play');
+  check($('error').textContent === '', 'without leaving a red error behind the music that followed');
+
+  // The bar starts again with the tune, not when the engine first reports a position.
+  window.__api.onWorklet({ type: 'opened', duration: 120, subsongs: 1, current: 0, describe: '' });
+  window.__api.onWorklet({ type: 'position', seconds: 67 });
+  const wasAt = $('elapsed').textContent;
+  // A download that never finishes, so "before it is done" is something that can be looked at.
+  holdTrackFetch = true;
+  tap($('prev'));
+  await settle(20);
+  check(wasAt === '1:07' && $('elapsed').textContent === '0:00' && Number($('seek').value) === 0,
+    'choosing another tune puts the bar back to the start while it is still downloading');
+  holdTrackFetch = false;
+  $('playpause').click();   // "stop loading", so the held download is called off
+  await settle();
+
   window.__api.endRandom();
   await settle();
   check(window.__api.randomState() == null && $('randomhead').hidden, 'leaving ends the session');
   check(window.__api.queueNow().join() === `${one},${two}` && window.__api.indexNow() === 1,
     'and the playlist is exactly where it was left');
   check(!$('shuffle').disabled && !$('playlistchip').disabled, 'and the transport is the playlist\'s again');
+
+  // Choosing a playlist from the sheet in the middle of a session leaves it for that playlist.
+  await window.__api.openRandom();
+  await settle();
+  window.__api.choosePlaylist('p-random');
+  await settle();
+  check(window.__api.randomState() == null && window.__api.queueNow().join() === `${one},${two}`,
+    'choosing a playlist from the sheet while the dice runs ends the session and shows that playlist');
 
   // "From the phone" is never written into -- by Browse, the paste box, and now by the dice.
   await window.__api.switchTo('phone');
@@ -1121,6 +1155,12 @@ if (window.__api) {
   try { await window.__api.browseTo([]); } catch (error) { threw = error; }
   const labels = [...$('browselist').children].map((li) => li.textContent);
   check(!threw, `Browse on the phone's list with an index held does not throw${threw ? ` (${threw.message})` : ''}`);
+  // An index from before the filter: no counts, every row. The owner re-indexed without being asked
+  // because this panel -- all of Browse he gets while the phone's list shows -- never said so.
+  await store.putAll([{ key: 'modland:meta', tracks: 516107, formats: 339, buckets: 43721, fingerprint: 'x' }]);
+  await window.__api.browseTo([]);
+  check($('browsenote').textContent.includes('Downloading it again (5.76 MB)'),
+    'and an index from before the filter is called out there too, where the owner would see it');
   check(labels.some((t) => t.includes('Random')) && labels.some((t) => t.includes('History')),
     'and still offers Random and History, which write into no playlist');
   await window.__api.browseTo(['history']);

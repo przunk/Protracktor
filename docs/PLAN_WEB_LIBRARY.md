@@ -442,6 +442,9 @@ builds 519–532, is the specification. What the page does, and where it had to 
   elsewhere — the phone, a playlist, Browse — ends the session and becomes what is showing.
 - The **Filter** button is there and says *Everything*; the chips the phone has need `Platforms.kt`
   shared and a favourites download, both out of this round.
+- **Two differences from the phone, both the owner's after first use** (`docs/STATUS.md` C39): the
+  playlist chip stays usable during a session and choosing a playlist leaves it; and a pick that
+  will not open leaves the record instead of staying in it.
 
 **The rules are in `docs/rules/queue-cases.tsv` as three groups driven by the page only**, with the
 reason beside them: the phone's rule lives inside `PlaybackController` rather than in a function,

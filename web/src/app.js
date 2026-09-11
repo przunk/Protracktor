@@ -245,6 +245,7 @@ function onWorklet(message) {
       // per list (`GOAL.md` round 8, item 4) -- and it is after the engine opened the file, so what
       // is recorded is a tune that played, under the name it gives itself.
       recordPlay(queue[index], fields);
+      if (random) random.failures = 0;
       if (fields.title) $('title').textContent = fields.title;
       renderNowPlaying(fields, subsongCount, currentSubsong);
       publishToSystem(queue[index], fields);
@@ -269,6 +270,8 @@ function onWorklet(message) {
     case 'failed':
       loading = null;
       clearTimeout(openWatchdog);
+      // A fresh Random pick that will not open is walked past, as on the phone.
+      if (random && index === queue.length - 1 && skipFailedPick(message.reason)) break;
       rowState = 'failed';
       render();
       // Errors stay above the transport. The status line moved into Now Playing because it is the
@@ -507,6 +510,14 @@ async function playAt(next) {
   const entry = queue[index];
   render();
   followPlaying();
+  // **The bar starts again with the tune**, not when the engine first reports a position. The phone
+  // zeroes it the instant a track is chosen; left alone, the page's bar sat on the last tune's 1:07
+  // through the whole of the next download (owner, 2026-09-11).
+  duration = 0;
+  $('seek').value = 0;
+  paint($('seek'));
+  $('elapsed').textContent = clock(0);
+  $('remaining').textContent = clock(0);
   nameTheTab(entry);
   $('title').textContent = entry.name;
   $('sub').textContent = 'fetching…';
@@ -552,6 +563,7 @@ async function playAt(next) {
     // about what it will do.
     if (loading === abort) { loading = null; setPlaying(false); }
     if (e.name === 'AbortError') { $('sub').textContent = 'stopped'; return; }
+    if (random && index === queue.length - 1 && skipFailedPick(e.message)) return;
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
     // different problems from a file the decoders refuse. Say which.
     $('error').textContent = `could not fetch it: ${e.message}`;
@@ -982,6 +994,7 @@ function seek(from, step) {
 let random = null;
 const RANDOM_AHEAD = 3;   // the phone's READ_AHEAD
 const RANDOM_DRAWS = 4;   // the phone's OVERDRAW: drawn wide, repeats dropped
+const RANDOM_FAILURES = 8; // the phone's maxFailedRandomPicks
 /** Replaceable so the checks can roll a known sequence; the page always uses `Math.random`. */
 let randomSource = Math.random;
 
@@ -998,8 +1011,9 @@ function showSessionView(kind) {
   // What the dice picks from means nothing for History, and neither does its Filter.
   $('randomscope').hidden = kind !== 'random';
   $('random-filter').hidden = kind !== 'random';
-  // The chip would offer to switch a playlist nothing is playing from, as on the phone.
-  $('playlistchip').disabled = !!kind;
+  // **The chip stays usable** (owner, 2026-09-11: "intuicyjnie wydaje się być możliwe wyjść do
+  // playlist"). The phone hides it here; the page lets it name where you are and choose where to go,
+  // and choosing a playlist ends the session on the way (`choosePlaylist`).
   if (kind) $('playlistname').textContent = kind === 'history' ? 'History' : 'Random';
 }
 
@@ -1095,6 +1109,36 @@ async function rollRandom() {
   // The next picks are decided while this one plays.
   fillAhead().catch(() => {});
   await playAt(queue.length - 1);
+}
+
+/**
+ * Walks past a Random pick that would not open, and answers whether it did.
+ *
+ * *"Losuje utwory, których nie może zagrać"* (owner, 2026-09-11). The index keeps only formats this
+ * engine can play, but a file can still be refused, packed, or gone from the server -- and the phone
+ * has always walked past those (`skipFailedRandomPick`), because a pick nobody chose should not stop
+ * the music. **The pick leaves the record**: the record is what has played, and this did not.
+ *
+ * Bounded, as on the phone: eight in a row and it stops and says so, rather than spinning through an
+ * index that has somehow filled with things it cannot open.
+ */
+function skipFailedPick(reason) {
+  const r = random;
+  if (!r) return false;
+  r.failures = (r.failures ?? 0) + 1;
+  if (r.failures > RANDOM_FAILURES) {
+    r.failures = 0;
+    status('Several picks in a row would not open. Stopping here.');
+    return false;
+  }
+  const failed = queue.splice(index, 1)[0];
+  index--;
+  rowState = index >= 0 ? 'selected' : null;
+  render();
+  status(`skipped ${failed?.name ?? 'a pick'} — ${reason}`);
+  $('error').textContent = '';
+  rollRandom();
+  return true;
 }
 
 /**
@@ -1353,7 +1397,7 @@ async function renderPlaylists() {
       li.append(drop);
     }
 
-    li.onclick = () => { switchTo(playlist.id); showPanel(null); };
+    li.onclick = () => choosePlaylist(playlist.id);
     list.append(li);
   }
 
@@ -1375,6 +1419,16 @@ function markBrowsable() {
   $('tab-browse').title = blocked
     ? 'Switch to a playlist of your own first — browsing will not rewrite what the phone sent'
     : 'Browse the archives';
+}
+
+/**
+ * The sheet's answer to a playlist being chosen. Out of Random or History first -- playback stops,
+ * as leaving by the heading's button does -- and then the playlist chosen, not the one left behind.
+ */
+function choosePlaylist(id) {
+  endSession();
+  switchTo(id);
+  showPanel(null);
 }
 
 /** Loads a playlist into the queue. Selected, not started — a switch is not a press of play. */
@@ -1442,7 +1496,13 @@ async function renderBrowse() {
     list.append(li);
     // **Random is offered even here**, because it writes into no playlist at all -- the rule that
     // shuts Browse is about rewriting what the phone sent, and the dice never does.
-    if ((await archive.meta())?.tracks) row('Random', null, enterRandomFromBrowse);
+    const held = await archive.meta();
+    // **Said here too.** The owner re-indexed after round 8 and never saw the page ask him to: with
+    // "From the phone" showing, this panel is all of Browse he gets, and the sentence lived only on
+    // the other one.
+    const stale = held?.tracks ? await staleSentence(held) : '';
+    if (stale) note.textContent += ` ${stale}`;
+    if (held?.tracks) row('Random', null, enterRandomFromBrowse);
     row('History', null, openHistory);
     return;
   }
@@ -1464,15 +1524,7 @@ async function renderBrowse() {
     // set holds the wrong rows and looks current -- the phone learnt this by losing 60,572 C64
     // tunes. One built before the page filtered at all has no `total`, and holds every row Modland
     // lists, including a third this browser cannot open.
-    const table = await formatsReady().catch(() => null);
-    const stale = held.total === undefined
-      || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
-    note.textContent = [
-      stale ? 'This index was built for a different set of formats than this page now plays. '
-        + 'Downloading it again (5.76 MB) brings it in line: it keeps what this browser can play '
-        + 'and leaves out what it cannot.' : '',
-      holding(held),
-    ].filter(Boolean).join(' ');
+    note.textContent = [await staleSentence(held), holding(held)].filter(Boolean).join(' ');
     row('Random', null, enterRandomFromBrowse);
     row('History', null, openHistory);
     row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
@@ -1565,6 +1617,24 @@ function playFromBrowse(tracks, at) {
   setQueue(tracks, at);
   showPanel(null);
   playAt(at);
+}
+
+/**
+ * Why a stored index should be downloaded again, or nothing if it need not be.
+ *
+ * An index is filtered by the list and the decoders it was built with, so one built by another set
+ * holds the wrong rows and looks current -- the phone learnt this by losing 60,572 C64 tunes. One
+ * built before the page filtered at all has no `total`, and holds a third this browser cannot open.
+ */
+async function staleSentence(held) {
+  if (!held?.tracks) return '';
+  const table = await formatsReady().catch(() => null);
+  const stale = held.total === undefined
+    || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
+  return stale
+    ? 'This index was built for a different set of formats than this page now plays. Downloading it '
+      + 'again (5.76 MB) brings it in line: it keeps what this browser can play and leaves out what it cannot.'
+    : '';
 }
 
 /**
