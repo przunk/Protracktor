@@ -222,9 +222,15 @@ nothing of the kind, being what the phone sent. The phone's rules (`removeTracks
 first, and removing what is playing stops it rather than starting something else. An **Undo**
 snackbar puts it back where it was, for six seconds.
 
-**One difference, and it is the owner's to settle:** the phone holds edits as unsaved until Save or
-Discard; the page saves as it goes, so Undo is the whole of its safety net. Bulk selection, which the
-phone has, is not here yet.
+**Edits wait for Save, as on the phone** — his decision the same day. Removing rows, or replacing
+the list from Browse or the paste box, changes what is on screen and not what is stored; Save and
+Discard appear in the top bar only while an edit waits, and a switch, a new playlist or a queue from
+the phone asks the phone's *Unsaved changes* first. Closing the tab asks the browser to ask. Where
+playback has got to is saved as it goes, but only while the list is the saved one.
+
+**Ticking many rows, as on the phone** — also his decision the same day. A long press, or Select in
+the row menu, starts it; a bar offers Add to playlist and, in a playlist of his own, Delete, which is
+one edit with one undo. Adding writes another playlist at once and skips what it already holds.
 
 Every item of the row menu has its icon now, the phone's paths — the page's menu was text alone.
 
