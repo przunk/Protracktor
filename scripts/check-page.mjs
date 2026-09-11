@@ -426,8 +426,10 @@ if (window.__api) {
   menus[0].click();
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
-  check(open.map((b) => b.textContent).join(',') === 'Save the file,Copy a link,Information',
-    'with the three the owner asked for');
+  // Select stands first since 2026-09-11 -- the way into ticking rows, which he asked for; the three
+  // he asked for before are still exactly these, in this order.
+  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Information',
+    'with the three the owner asked for, after Select');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
   menus[1].click();
@@ -1355,6 +1357,83 @@ if (window.__api) {
   await settle();
   const phoneItems = menuOf($('queue').children[0]).map((x) => x.textContent.trim());
   check(!phoneItems.some((t) => t.includes('Remove')), '"From the phone" offers no removal');
+  $('menu').hidden = true;
+}
+
+// --- ticking rows, as on the phone (owner, 2026-09-11) ---------------------------------------------
+if (window.__api) {
+  console.log('\nticking rows:');
+  const { playlists } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const urls = [1, 2, 3, 4].map((n) => `https://example.test/sel${n}.mod`);
+  const menuItem = (row, label) => {
+    row.querySelector('.rowmenu').click();
+    return [...$('menu').querySelectorAll('button')].find((b) => b.textContent.trim() === label);
+  };
+  window.prompt = () => 'Picked';
+
+  await playlists.save({ id: 'p-target', name: 'Target', tracks: [{ url: urls[3], name: 'already' }], index: 0 });
+  await window.__api.switchTo('p-sel');
+  window.__api.setQueue(urls, 0);
+  await settle(700);
+
+  menuItem($('queue').children[0], 'Select').click();
+  await settle();
+  check(!$('selectbar').hidden && $('selectcount').textContent === '1 selected', 'Select in the row menu starts ticking');
+  check($('queue').children[0].querySelector('.tick')?.checked, 'and the row shows its box, where its number was');
+  $('queue').children[2].click();
+  await settle();
+  check($('selectcount').textContent === '2 selected' && window.__api.indexNow() === 0,
+    'a tap then ticks a row rather than playing it');
+
+  check(!$('sel-delete').hidden, 'Delete is offered in a playlist of his own');
+  $('sel-delete').click();
+  await settle();
+  check(window.__api.queueNow().join() === `${urls[1]},${urls[3]}` && $('selectbar').hidden,
+    'Delete takes every ticked row out, as one edit');
+  check($('snacktext').textContent === 'Removed 2 tracks' && window.__api.dirtyNow(), 'waiting for Save, with one undo for both');
+  $('snackundo').click();
+  await settle();
+  check(window.__api.queueNow().join() === urls.join(), 'undo brings them all back, each where it was');
+  await window.__api.discardEdits();
+  await settle();
+
+  menuItem($('queue').children[1], 'Select').click();
+  $('queue').children[3].click();
+  await settle();
+  $('sel-add').click();
+  await settle();
+  const targets = [...$('addtolist').children].map((li) => li.textContent);
+  check(!$('addto').hidden && targets.some((t) => t.includes('Target')) && !targets.some((t) => t.includes('From the phone')),
+    'Add to playlist offers his other playlists, never the phone\'s');
+  [...$('addtolist').children].find((li) => li.textContent.includes('Target')).click();
+  await settle();
+  const target = (await playlists.get('p-target')).tracks.map((t) => t.url);
+  check(target.join() === `${urls[3]},${urls[1]}`, 'and adds what it did not already have, once');
+  check($('selectbar').hidden && $('addto').hidden, 'then the ticks and the sheet go');
+
+  // A long press starts ticking, and the click that ends it does not tick the row off again.
+  const row = $('queue').children[2];
+  row.dispatchEvent(new window.Event('pointerdown'));
+  await settle(560);
+  row.dispatchEvent(new window.Event('pointerup'));
+  $('queue').children[2].click();
+  await settle();
+  check($('selectcount').textContent === '1 selected' && $('queue').children[2].classList.contains('ticked'),
+    'a long press starts ticking, and the click at its end is not counted twice');
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+  await settle();
+  check($('selectbar').hidden, 'Escape leaves the ticking');
+
+  // On "From the phone" the ticked rows can be copied elsewhere, and nothing else.
+  await window.__api.switchTo('phone');
+  window.__api.receive({ queue: [{ url: urls[0], title: 'A' }], index: 0 });
+  await settle();
+  menuItem($('queue').children[0], 'Select').click();
+  await settle();
+  check($('sel-delete').hidden && !$('sel-add').hidden, 'on the phone\'s list only Add is offered');
+  $('sel-cancel').click();
+  await settle();
   $('menu').hidden = true;
 }
 

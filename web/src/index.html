@@ -425,6 +425,19 @@
   /* Every item an icon and its name, as the phone's row menu has them. */
   #menu button { display: flex; align-items: center; gap: 12px; }
   #menu button svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+  /* Ticking rows: the box stands where the row's number was, so nothing moves when selection starts. */
+  li.track .tick { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); pointer-events: none; }
+  li.track.ticked { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+  .selectbar { display: flex; align-items: center; gap: 6px; margin: 0 12px 6px; padding: 4px 6px 4px 14px;
+               background: var(--surface-container); border: 1px solid var(--outline); border-radius: var(--shape-s); }
+  .selectbar span { flex: 1; min-width: 0; font-size: var(--body-medium); }
+  #addtolist { list-style: none; margin: 4px 0 14px; padding: 0; max-height: 46vh; overflow-y: auto; }
+  #addtolist li { display: flex; align-items: center; gap: 12px; padding: 6px 8px; min-height: 44px;
+                  border-radius: var(--shape-s); cursor: pointer; }
+  #addtolist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #addtolist .pcount { width: 32px; flex: none; text-align: center; color: var(--on-surface-variant);
+                       font-size: var(--label-large); font-variant-numeric: tabular-nums; }
+  #addtolist .pname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .snackbar { display: flex; align-items: center; gap: 12px; margin: 0 12px 6px; padding: 4px 6px 4px 16px;
               background: var(--surface-container); border: 1px solid var(--outline); border-radius: var(--shape-s);
               font-size: var(--body-medium); color: var(--on-surface); }
@@ -660,6 +673,14 @@
       as on the phone: undo costs nothing when it was meant, and a question on every delete is a
       toll paid by the people who meant it.
     -->
+    <!-- What you can do with what you ticked -- the phone's selection bar, icon and name each. -->
+    <div id="selectbar" class="selectbar" hidden>
+      <span id="selectcount"></span>
+      <button class="action" id="sel-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>Add to playlist</button>
+      <button class="action" id="sel-delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Delete</button>
+      <button class="action" id="sel-cancel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Cancel</button>
+    </div>
+
     <div id="snackbar" class="snackbar" hidden>
       <span id="snacktext"></span>
       <button class="snackaction" id="snackundo">
@@ -762,6 +783,21 @@
         <button class="outlined" id="saveas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save this queue as…</button>
       </div>
       <p class="storage" id="storageline"></p>
+    </div>
+  </div>
+
+  <!-- Where ticked tracks go: another playlist of his own, or a new one (the phone's AddToPlaylistDialog). -->
+  <div class="overlay" id="addto" hidden>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <h2>Add to playlist</h2>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+      </div>
+      <p class="note" id="addtonote"></p>
+      <ol id="addtolist"></ol>
+      <div class="sheetbuttons">
+        <button class="outlined" id="addto-new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New playlist</button>
+      </div>
     </div>
   </div>
 

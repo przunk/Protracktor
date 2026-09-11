@@ -633,7 +633,8 @@ const STOP_GLYPH = 'M6 6h12v12H6z';
  * playing row three screens up is the same complaint in a different medium.
  */
 function followPlaying() {
-  revealRow($('queue').children[index]);
+  // Not while rows are being ticked: a list that moves under a working finger fights it.
+  if (!selected.size) revealRow($('queue').children[index]);
   // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
   // folder somebody is reading while the music moves on is the list that most needs it.
   if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), queue[index]?.url));
@@ -711,6 +712,7 @@ function setPlaying(on) {
  */
 function render() {
   const list = $('queue');
+  if (selected.size) selected = new Set([...selected].filter((entry) => queue.includes(entry)));
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
     li.className = i === index && rowState ? `track ${rowState}` : 'track';
@@ -721,6 +723,17 @@ function render() {
     const n = document.createElement('span');
     n.className = 'n';
     n.textContent = String(i + 1);
+    // **While ticking, the box stands where the number was** -- the same slot, so the row does not
+    // move when selection starts under the finger that started it (the phone's reason too).
+    if (selected.size && !entry.local) {
+      const tick = document.createElement('input');
+      tick.type = 'checkbox';
+      tick.className = 'tick';
+      tick.checked = selected.has(entry);
+      tick.setAttribute('aria-label', `Select ${entry.name}`);
+      n.replaceChildren(tick);
+    }
+    li.classList.toggle('ticked', selected.has(entry));
 
     const text = document.createElement('div');
     text.className = 'text';
@@ -741,9 +754,16 @@ function render() {
     menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu); };
 
     li.append(n, text, menu);
-    if (!entry.local) li.onclick = () => playAt(i);
+    if (!entry.local) {
+      li.onclick = () => {
+        if (swallowRowClick) { swallowRowClick = false; return; }
+        if (selected.size) toggleSelected(entry); else playAt(i);
+      };
+      holdToSelect(li, entry);
+    }
     return li;
   }));
+  updateSelectBar();
   $('count').textContent = queue.length
     ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
     : 'nothing yet';
@@ -890,6 +910,8 @@ function openRowMenu(entry, anchor) {
   const menu = $('menu');
   menu.replaceChildren();
   const items = [
+    // A mouse has no long press to discover, so the way into ticking rows is here as well.
+    ['Select', () => startSelecting(entry), !entry.local, ICON.check],
     ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
     ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
     ['Information', () => informAbout(entry), !entry.local, ICON.info],
@@ -1200,6 +1222,7 @@ const ICON = {
   add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
   rename: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
   more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  check: 'M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
   download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
   cloud: 'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z',
   // Hollow shapes on the phone, so they need the even-odd rule to keep their holes.
@@ -1223,47 +1246,163 @@ const iconSvg = (icon) => {
 let lastRemoval = null;
 let undoTimer = null;
 
-function removeFromPlaylist(at) {
-  if (random || away || activePlaylist === PHONE || at < 0 || at >= queue.length) return;
-  const wasCurrent = at === index;
-  const [track] = queue.splice(at, 1);
+function removeFromPlaylist(at) { removeRows([at]); }
+
+/**
+ * Takes any number of rows out as **one edit, with one undo** -- the phone's `removeTracks`: what
+ * changed for a group is that undo has to bring all of it back, each to where it was.
+ */
+function removeRows(ats) {
+  if (random || away || activePlaylist === PHONE) return;
+  const sorted = [...new Set(ats)].filter((at) => at >= 0 && at < queue.length).sort((x, y) => x - y);
+  if (!sorted.length) return;
+  const current = queue[index];
+  const removed = sorted.map((at) => ({ at, track: queue[at] }));
+  const wasCurrent = sorted.includes(index);
+  for (let k = sorted.length - 1; k >= 0; k--) queue.splice(sorted[k], 1);
   if (wasCurrent) {
     stopForLeaving();
-    index = Math.min(at, queue.length - 1);
+    index = Math.min(sorted[0], queue.length - 1);
     rowState = 'selected';
     setPlaying(false);
     $('title').textContent = queue[index]?.name ?? 'Nothing playing';
     $('sub').textContent = queue[index] ? 'press play' : '—';
-  } else if (at < index) {
-    index--;
+  } else {
+    index = queue.indexOf(current);
   }
-  // The shuffle and the back-stack both hold indices, and every one past the gap has moved.
+  // The shuffle and the back-stack both hold indices, and every one past a gap has moved.
   history = index >= 0 ? [index] : [];
   if (shuffle) reshuffle(index >= 0 ? index : null);
-  lastRemoval = { at, track, playlist: activePlaylist, wasCurrent };
+  lastRemoval = { removed, playlist: activePlaylist, wasCurrent, current };
   setDirty(true);
   render();
-  showUndo(`Removed ${track.name}`);
+  showUndo(removed.length === 1 ? `Removed ${removed[0].track.name}` : `Removed ${removed.length} tracks`);
 }
 
 function undoRemoval() {
   const removal = lastRemoval;
   hideUndo();
   if (!removal || removal.playlist !== activePlaylist || random || away) return;
-  queue.splice(Math.min(removal.at, queue.length), 0, removal.track);
+  const current = queue[index];
+  // In ascending order of where they were, so each lands where it stood before the others went.
+  for (const { at, track } of removal.removed) queue.splice(Math.min(at, queue.length), 0, track);
   if (removal.wasCurrent) {
-    index = removal.at;
+    index = queue.indexOf(removal.current);
     rowState = 'selected';
-    $('title').textContent = removal.track.name;
+    $('title').textContent = removal.current?.name ?? 'Nothing playing';
     $('sub').textContent = 'press play';
-  } else if (removal.at <= index) {
-    index++;
+  } else {
+    index = queue.indexOf(current);
   }
   history = index >= 0 ? [index] : [];
   if (shuffle) reshuffle(index >= 0 ? index : null);
-  // Still an edit, as on the phone: undo restores the row, not the saved state.
+  // Still an edit, as on the phone: undo restores the rows, not the saved state.
   setDirty(true);
   render();
+}
+
+/**
+ * Ticking rows, as the phone has it: a long press starts it, a tap then ticks rather than plays, and
+ * a bar says what can be done with what is ticked (`GOAL.md`-era request, 2026-09-11: "zaznaczanie
+ * wielu wierszy naraz: dorób w web"). Held by entry rather than by index, so a row that moves keeps
+ * its tick; a row that leaves the list takes its tick with it (`render`).
+ */
+let selected = new Set();
+let pendingAdd = null;
+/**
+ * The click that follows a long press, which must not also tick the row off again. **Kept outside
+ * the row**, because the press re-draws the list and the click lands on the new one; and forgotten
+ * at the next press, so an unfinished one cannot eat an unrelated click -- `docs/STATUS.md` C36's
+ * trap, avoided here.
+ */
+let swallowRowClick = false;
+
+function holdToSelect(row, entry) {
+  let timer = null;
+  row.addEventListener('pointerdown', () => {
+    swallowRowClick = false;
+    timer = setTimeout(() => { swallowRowClick = true; startSelecting(entry); }, 500);
+  });
+  for (const event of ['pointerup', 'pointercancel', 'pointerleave']) {
+    row.addEventListener(event, () => clearTimeout(timer));
+  }
+}
+
+function startSelecting(entry) {
+  selected.add(entry);
+  render();
+}
+
+function toggleSelected(entry) {
+  if (selected.has(entry)) selected.delete(entry); else selected.add(entry);
+  render();
+}
+
+function clearSelection() {
+  if (!selected.size) return;
+  selected = new Set();
+  render();
+}
+
+function updateSelectBar() {
+  $('selectbar').hidden = !selected.size;
+  $('selectcount').textContent = `${selected.size} selected`;
+  // Delete only where rows can go: a playlist of his own, not the phone's, not a session's list.
+  $('sel-delete').hidden = !!(random || away) || activePlaylist === PHONE;
+}
+
+/** The playlists ticked tracks can go to: his own, never the phone's, and not the one they are in. */
+async function openAddTo() {
+  const tracks = queue.filter((entry) => selected.has(entry) && !entry.local);
+  if (!tracks.length) return;
+  pendingAdd = tracks;
+  const inSession = !!(random || away);
+  const targets = (await playlists.all())
+    .filter((p) => p.id !== PHONE && (inSession || p.id !== activePlaylist));
+  const list = $('addtolist');
+  list.replaceChildren();
+  for (const target of targets) {
+    const li = document.createElement('li');
+    const count = document.createElement('div');
+    count.className = 'pcount';
+    count.textContent = String(target.tracks?.length ?? 0);
+    const name = document.createElement('div');
+    name.className = 'pname';
+    name.textContent = target.name;
+    li.append(count, name);
+    li.onclick = () => addTracksTo(target.id);
+    list.append(li);
+  }
+  $('addtonote').textContent = `${tracks.length} track${tracks.length === 1 ? '' : 's'} to add.`
+    + (targets.length ? '' : ' There is no other playlist yet — make one.');
+  showPanel('addto');
+}
+
+/**
+ * Appends the ticked tracks to a playlist, or to a new one. **What is already there is not added
+ * twice** -- the phone's `appendTracks` rule. Another playlist is written at once, as the phone
+ * writes it; the one a session was started from is an edit of it and waits for Save like any other.
+ */
+async function addTracksTo(id, newName = null) {
+  const tracks = pendingAdd ?? [];
+  pendingAdd = null;
+  const plain = ({ url, name, meta, local, file }) => ({ url, name, meta, local, file });
+  if (id && id === activePlaylist && (random || away)) {
+    const stash = (random ?? away).stash;
+    const have = new Set(stash.queue.map((t) => t.url));
+    const adding = tracks.filter((t) => !have.has(t.url));
+    stash.queue.push(...adding);
+    if (adding.length) setDirty(true);
+    status(`Added ${adding.length} to ${stash.name}` + (adding.length < tracks.length ? `, ${tracks.length - adding.length} already there` : ''));
+  } else {
+    const target = id ? await playlists.get(id) : { id: `p${Date.now().toString(36)}`, name: newName, tracks: [], index: 0 };
+    const have = new Set((target.tracks ?? []).map((t) => t.url));
+    const adding = tracks.filter((t) => !have.has(t.url)).map(plain);
+    await playlists.save({ ...target, tracks: [...(target.tracks ?? []), ...adding] });
+    status(`Added ${adding.length} to ${target.name}` + (adding.length < tracks.length ? `, ${tracks.length - adding.length} already there` : ''));
+  }
+  showPanel(null);
+  clearSelection();
 }
 
 /** Six seconds, the length of a Material snackbar with an action. */
@@ -1527,6 +1666,7 @@ function showPanel(which) {
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
   $('playlists').hidden = which !== 'playlists';
+  $('addto').hidden = which !== 'addto';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
@@ -2116,6 +2256,19 @@ function previousFile() {
 $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
 $('snackundo').onclick = () => undoRemoval();
 $('tab-save').onclick = () => saveEdits();
+$('sel-add').onclick = () => openAddTo();
+$('sel-delete').onclick = () => {
+  const ats = queue.map((entry, i) => (selected.has(entry) ? i : -1)).filter((i) => i >= 0);
+  selected = new Set();
+  removeRows(ats);
+};
+$('sel-cancel').onclick = () => clearSelection();
+$('addto-new').onclick = async () => {
+  const name = prompt('Call it what?', 'New playlist')?.trim();
+  if (name) addTracksTo(null, name);
+};
+// Escape leaves the ticking first, the way Back does on the phone -- before it closes anything else.
+addEventListener('keydown', (event) => { if (event.key === 'Escape' && selected.size) clearSelection(); });
 $('tab-discard').onclick = () => discardEdits();
 $('unsaved-save').onclick = async () => { await saveEdits(); answerUnsaved(true); };
 $('unsaved-discard').onclick = () => { setDirty(false); answerUnsaved(true); };
