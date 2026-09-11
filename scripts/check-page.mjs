@@ -858,6 +858,11 @@ if (window.__api) {
         === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
+  // The icon beside its word, centred on it: a later rule once made every item a block and left the
+  // icons floating above the text.
+  const item = window.getComputedStyle(menu[0]);
+  check(item.display === 'flex' && item.alignItems === 'center' && item.gap === '12px',
+    'laid out as a row, the icon centred beside its word');
   menu[2].click();
   await settle();
   check($('browsetitle').textContent === 'Protracker / 4-Mat' && !$('browsesearch').value,
