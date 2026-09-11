@@ -88,6 +88,17 @@ window.fetch = async (url, options) => {
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
   // The real list, off disk: the page reads it at load, and a stub of it would test nothing.
   if (u.endsWith('formats.tsv')) return { ok: true, text: async () => fs.readFileSync('web/src/formats.tsv', 'utf8') };
+  // ASMA's archive, answering ranges as asma.atari.org does -- or ignoring them, as a server may.
+  if (u === 'https://asma.atari.org/asmadb/asma.zip') {
+    const zip = window.__asmaZip;
+    const range = options?.headers?.Range;
+    const copy = (b) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+    if (!range || window.__asmaIgnoreRange) return { ok: true, status: 200, arrayBuffer: async () => copy(zip) };
+    window.__asmaRanges.push(range);
+    const [, from, to] = /^bytes=(\d*)-(\d*)$/.exec(range);
+    const slice = from === '' ? zip.subarray(Math.max(0, zip.length - Number(to))) : zip.subarray(Number(from), Number(to) + 1);
+    return { ok: true, status: 206, arrayBuffer: async () => copy(slice) };
+  }
   posted.push(u);
   if (holdTrackFetch) {
     // A download that never finishes, so the press that calls one off can be tested at all.
@@ -118,6 +129,8 @@ window.indexedDB = indexedDB;
 window.IDBKeyRange = IDBKeyRange;
 // And a Modland address escapes a name byte by byte, as the phone's URLEncoder does.
 window.TextEncoder ??= TextEncoder;
+// And ASMA's list names its files in bytes, read back with a decoder.
+window.TextDecoder ??= TextDecoder;
 // Links are deflated and inflated through streams, as a browser does it.
 window.CompressionStream ??= CompressionStream;
 window.DecompressionStream ??= DecompressionStream;
@@ -139,13 +152,13 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex, '
-    + 'buildRandomTable, drawTrack, platformOf }; })();')
+    + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -1710,6 +1723,91 @@ if (window.__api) {
   await api.switchTo('phone');
 }
 
+// --- ASMA in the browser (owner, 2026-09-11) ------------------------------------------------------
+//
+// **The list, not the archive.** ASMA publishes a 20 MB zip; the page reads its central directory
+// with two ranged requests and fetches each tune from its own address. Checked against a zip built
+// here, served by a stand-in that answers ranges the way asma.atari.org does -- and once more by one
+// that ignores them, which a server is allowed to do.
+if (window.__api) {
+  console.log('\nASMA:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 30));
+  const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+  const entry = (name, size) => {
+    const bytes = Buffer.from(name);
+    const head = Buffer.alloc(46);
+    head.writeUInt32LE(0x02014b50, 0);
+    head.writeUInt32LE(size, 24);
+    head.writeUInt16LE(bytes.length, 28);
+    return Buffer.concat([head, bytes]);
+  };
+  const names = [['asma/', 0], ['asma/Composers/', 0], ['asma/Composers/Aki/Robots.sap', 1922],
+                 ['asma/Composers/Aki/Atari_Style.sap', 7291], ['asma/Games/Boulder Dash (Tune 1).sap', 1000],
+                 ['asma/Docs/STIL.txt', 272641]];
+  const directory = Buffer.concat(names.map(([n, s]) => entry(n, s)));
+  const body = Buffer.alloc(70000, 7);          // what stands for the compressed tunes
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(names.length, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(body.length, 16);
+  window.__asmaZip = Buffer.concat([body, directory, end]);
+  window.__asmaRanges = [];
+  // The engine says hello, as the worklet does once it has compiled: the list is filtered by what
+  // it can open, and a download waits for it to say (`whenEngineReady`).
+  api.onWorklet({ type: 'ready', backends: 'openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;zxtune:none' });
+
+  await api.downloadAsmaIndex();
+  await settle();
+  const asked = window.__asmaRanges.splice(0);
+  check(asked.length === 2 && asked[0] === 'bytes=-65557' && asked[1] === `bytes=${body.length}-${body.length + directory.length - 1}`,
+    'the list is read with two ranged requests, the tail and then the directory — never the whole archive');
+  const held = await api.archiveMeta('asma');
+  check(held?.tracks === 3 && held.formats === 2, 'every .sap is listed and nothing else, under its section');
+  check([...$('browselist').children].some((li) => li.textContent.startsWith('ASMA — 3 tunes')),
+    'Browse offers ASMA beside Modland');
+
+  await api.browseTo(['asma']);
+  check([...$('browselist').children].map((li) => li.querySelector('.bname').textContent).join() === 'Composers,Games',
+    'its sections are the first level');
+  await api.browseTo(['asma', 'Composers', 'Aki']);
+  const rows = [...$('browselist').children];
+  check(rows.length === 2 && rows.every((li) => li.classList.contains('btrack')), 'an author\'s tunes are tunes, with Add and the menu');
+  const robots = rows.find((li) => li.querySelector('.bname').textContent === 'Robots.sap');
+  check(robots?.dataset.url === 'https://asma.atari.org/asma/Composers/Aki/Robots.sap',
+    'and each plays from its own address on asma.atari.org');
+
+  $('browsesearch').value = 'aki';
+  await api.runSearch('aki');
+  const hits = [...$('browselist').children];
+  check(hits.some((li) => li.dataset.url === 'https://asma.atari.org/asma/Composers/Aki/Robots.sap'
+                         && li.querySelector('.bmeta').textContent === 'ASMA/Composers/Aki'),
+    'search finds ASMA\'s tunes by author, saying which archive they are from');
+  await api.runSearch('boulder');
+  check([...$('browselist').children][0]?.dataset.url === 'https://asma.atari.org/asma/Games/Boulder%20Dash%20%28Tune%201%29.sap',
+    'and by title, a tune filed with no author included');
+  check($('browsenote').textContent.includes('(Modland and ASMA)') || $('browsenote').textContent.includes('(ASMA)'),
+    'the note says which archives it looked in');
+  $('browsesearch').value = '';
+
+  const table = await api.randomTable();
+  check(table.entries.some((e) => e.source === 'asma'), 'the dice picks from ASMA too');
+
+  // A server that ignores the range sends everything, and the same reading still works.
+  window.__asmaIgnoreRange = true;
+  await store.clear('asma:');
+  await api.downloadAsmaIndex();
+  await settle();
+  window.__asmaIgnoreRange = false;
+  window.__asmaRanges.length = 0;
+  check((await api.archiveMeta('asma'))?.tracks === 3, 'and a server that ignores the range gives the same list');
+
+  await store.clear('asma:');
+  await api.browseTo([]);
+  window.__api.showPanel(null);
+}
+
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
 //
 // **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`
@@ -1759,6 +1857,13 @@ if (window.__api) {
   each('randomNext', (c) =>
     rules.randomNext({ length: +c.length, at: +c.at }) === (c.expect === 'roll' ? 'roll' : number(c.expect)));
   each('randomPrevious', (c) => rules.randomPrevious({ at: +c.at }) === number(c.expect));
+  // ASMA's address, from the zip entry's path, by the page's own rule (`catalogue.js` urlFor).
+  const catalogueModule = await import(path.resolve('web/src/catalogue.js'));
+  each('asmaUrl', (c) => {
+    const [, format, ...rest] = c.path.split('/');
+    const title = rest.pop();
+    return catalogueModule.urlFor(format, rest.join('/'), title, 'asma') === `https://asma.atari.org/${c.expect}`;
+  });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
 }

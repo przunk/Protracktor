@@ -985,6 +985,10 @@ function sourceOf(url) {
       const path = decodeURIComponent(parsed.pathname.replace('/pub/modules/', ''));
       return `Modland/${path.split('/').slice(0, -1).join('/')}`;
     }
+    if (parsed.hostname === 'asma.atari.org' && parsed.pathname.startsWith('/asma/')) {
+      const path = decodeURIComponent(parsed.pathname.replace('/asma/', ''));
+      return ['ASMA', ...path.split('/').slice(0, -1)].join('/');
+    }
     if (parsed.hostname.endsWith('modarchive.org')) return 'The Mod Archive';
     return parsed.hostname;
   } catch {
@@ -1976,28 +1980,37 @@ async function renderBrowse() {
 
   if (browsePath.length === 0) {
     $('browsetitle').textContent = 'Browse';
-    const held = await archive.meta();
-    if (!held?.tracks) {
-      // **Offered, not assumed.** It is 5.76 MB off somebody else's server, and this page has until
-      // now cost nothing to open.
-      note.textContent = 'Modland is half a million tunes. The index is a 5.76 MB download, kept in '
-        + 'this browser, and browsing is then offline.';
-      row('Download the Modland index', null, downloadIndex, ICON.download);
-      row('History', null, openHistory, ICON.history);
-      return;
-    }
-    // An index is filtered by the list and the decoders it was built with, so one built by another
-    // set holds the wrong rows and looks current -- the phone learnt this by losing 60,572 C64
-    // tunes. One built before the page filtered at all has no `total`, and holds every row Modland
-    // lists, including a third this browser cannot open.
-    note.textContent = [await staleSentence(held), holding(held)].filter(Boolean).join(' ');
-    row('Random', null, enterRandomFromBrowse, ICON.dice);
+    const held = await archive.meta('modland');
+    const asma = await archive.meta('asma');
+    // **Offered, not assumed**, each of them: somebody else's server, on a page that until now cost
+    // nothing to open. An index is filtered by the list and the decoders it was built with, so one
+    // built by another set holds the wrong rows and looks current -- the phone learnt this by
+    // losing 60,572 C64 tunes -- and the sentence about that is Modland's, whose filter it is.
+    note.textContent = [
+      held?.tracks ? await staleSentence(held) : '',
+      held?.tracks ? holding(held)
+        : 'Modland is half a million tunes. The index is a 5.76 MB download, kept in this browser, '
+          + 'and browsing is then offline.',
+      asma?.tracks ? ''
+        : 'ASMA is 6,335 Atari 8-bit tunes. Its list is a 0.85 MB download, and each tune is fetched '
+          + 'from ASMA when it plays.',
+    ].filter(Boolean).join(' ');
+    if (held?.tracks || asma?.tracks) row('Random', null, enterRandomFromBrowse, ICON.dice);
     row('History', null, openHistory, ICON.history);
-    row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
-      browsePath = ['modland'];
-      await renderBrowse();
-    }, ICON.cloud);
-    row('Download the index again', null, downloadIndex, ICON.download);
+    if (held?.tracks) {
+      row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
+        browsePath = ['modland'];
+        await renderBrowse();
+      }, ICON.cloud);
+    }
+    if (asma?.tracks) {
+      row(`ASMA — ${asma.tracks.toLocaleString()} tunes`, asma.formats, async () => {
+        browsePath = ['asma'];
+        await renderBrowse();
+      }, ICON.cloud);
+    }
+    row(held?.tracks ? 'Download the index again' : 'Download the Modland index', null, downloadIndex, ICON.download);
+    row(asma?.tracks ? 'Download the ASMA list again' : 'Download the ASMA list', null, downloadAsmaIndex, ICON.download);
     return;
   }
 
@@ -2029,10 +2042,12 @@ async function renderBrowse() {
     return;
   }
 
+  // `[archive, group, author]`: Modland's groups are formats, ASMA's are its sections.
+  const source = browsePath[0];
   if (browsePath.length === 1) {
-    $('browsetitle').textContent = 'Modland';
-    for (const { name, count } of await archive.formats()) {
-      row(name, count, async () => { browsePath = ['modland', name]; await renderBrowse(); });
+    $('browsetitle').textContent = archive.sourceName(source);
+    for (const { name, count } of await archive.formats(source)) {
+      row(name, count, async () => { browsePath = [source, name]; await renderBrowse(); });
     }
     return;
   }
@@ -2040,9 +2055,9 @@ async function renderBrowse() {
   if (browsePath.length === 2) {
     const format = browsePath[1];
     $('browsetitle').textContent = format;
-    for (const { name, count } of await archive.authors(format)) {
+    for (const { name, count } of await archive.authors(format, source)) {
       row(name || '(no author)', count, async () => {
-        browsePath = ['modland', format, name];
+        browsePath = [source, format, name];
         await renderBrowse();
       });
     }
@@ -2051,7 +2066,7 @@ async function renderBrowse() {
 
   const [, format, author] = browsePath;
   $('browsetitle').textContent = `${format} / ${author || '(no author)'}`;
-  const tracks = await archive.tracksIn(format, author);
+  const tracks = await archive.tracksIn(format, author, source);
   tracks.forEach((track, i) => {
     // **The whole author is what next and previous walk**, which is what the phone does: a person
     // who opened a folder and pressed a tune meant that folder, not that one file.
@@ -2117,17 +2132,19 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
 
 /** A Browse tune's menu: the phone's, less sharing, which a page does as saving and copying. */
 function openBrowseMenu(track, anchor, folder) {
-  const [format, ...author] = (track.meta ?? '').replace(/^Modland\//, '').split('/');
+  // `Modland/Protracker/4-Mat` or `ASMA/Composers/Aki`: the archive, the group, the author.
+  const [label, format, ...author] = (track.meta ?? '').split('/');
+  const source = archive.sources().find((s) => archive.sourceName(s) === label);
   const items = [
     ['Add to another playlist', () => openAddTo([plain(track)], { browse: true }), true, ICON.playlistAdd],
     ['Information', () => informAbout(track), true, ICON.info],
   ];
   // Where the tune lives, and what else is there -- the phone's "Show neighbours". Pointless from
   // inside that very folder.
-  if (folder && format && author.length) {
+  if (folder && source && format && author.length) {
     items.push(['Show the author\'s tunes', async () => {
       $('browsesearch').value = '';
-      browsePath = ['modland', format, author.join('/')];
+      browsePath = [source, format, author.join('/')];
       await renderBrowse();
     }, true, ICON.folder]);
   }
@@ -2216,6 +2233,34 @@ async function downloadIndex() {
   }
 }
 
+/** Browse → Download the ASMA list: 0.85 MB of the archive's own directory (`archive.downloadAsma`). */
+async function downloadAsmaIndex() {
+  const note = $('browsenote');
+  $('browselist').replaceChildren();
+  try {
+    if (!engineReady) {
+      note.textContent = 'starting the engine, to ask which formats this browser can play…';
+      await start();
+      await whenEngineReady();
+    }
+    const table = await formatsReady();
+    const result = await archive.downloadAsma({
+      fingerprint: archive.indexFingerprint(engineFingerprint, table),
+      keep: archive.playable(table, absentHere()),
+      onProgress: (p) => {
+        note.textContent = p.stage === 'storing'
+          ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
+          : `${p.stage}…`;
+      },
+    });
+    browsePath = [];
+    await renderBrowse();
+    note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections. ${note.textContent}`;
+  } catch (e) {
+    note.textContent = `the ASMA list could not be downloaded: ${e.message}`;
+  }
+}
+
 /**
  * Searching the index.
  *
@@ -2230,20 +2275,26 @@ async function runSearch(query) {
   const note = $('browsenote');
   const asked = ++searchAsked;
   if (query.trim().length < 2) { browsePath = []; await renderBrowse(); return; }
-  const held = await archive.meta();
-  if (!held?.tracks) { note.textContent = 'Download the index first.'; return; }
+  // Every archive held, one list of results: somebody typing a name does not know which has it.
+  const held = [];
+  for (const source of archive.sources()) {
+    const known = await archive.meta(source);
+    if (known?.tracks) held.push({ source, ...known });
+  }
+  if (!held.length) { note.textContent = 'Download an index first.'; return; }
 
   note.textContent = 'searching…';
   const started = performance.now();
-  const [people, { hits, capped }] = await Promise.all([
-    archive.searchAuthors(query), archive.searchTitles(query),
-  ]);
-  const found = hits.slice();
+  const answers = await Promise.all(held.map(({ source }) => Promise.all([
+    archive.searchAuthors(query, 100, source), archive.searchTitles(query, 200, source),
+  ])));
+  const people = answers.flatMap(([authors]) => authors);
+  const found = answers.flatMap(([, { hits }]) => hits);
   const seen = new Set(found.map((t) => t.url));
-  let full = capped;
-  for (const { format, author } of people) {
+  let full = answers.some(([, { capped }]) => capped);
+  for (const { source, format, author } of people) {
     if (found.length >= SEARCH_LIMIT) { full = true; break; }
-    for (const track of await archive.tracksIn(format, author)) {
+    for (const track of await archive.tracksIn(format, author, source)) {
       if (seen.has(track.url)) continue;
       seen.add(track.url);
       found.push(track);
@@ -2263,11 +2314,13 @@ async function runSearch(query) {
   const ms = Math.round(performance.now() - started);
   // Where it looked, every time, so "nothing matched" cannot be read as "Modland has no such tune"
   // when the tune is in a format this browser does not index.
-  const among = `among the ${held.tracks.toLocaleString()} tunes this browser can play`;
+  const tunes = held.reduce((sum, { tracks }) => sum + tracks, 0);
+  const among = `among the ${tunes.toLocaleString()} tunes this browser can play`
+    + ` (${held.map(({ source }) => archive.sourceName(source)).join(' and ')})`;
   note.textContent = found.length
     ? `${found.length}${full ? '+' : ''} tunes by name or author ${among}, in ${ms} ms.`
     : `nothing matched ${among}, in ${ms} ms.`
-      + (held.phoneOnly ? ' Formats it cannot play are not indexed — the phone may have it.' : '');
+      + (held.some(({ phoneOnly }) => phoneOnly) ? ' Formats it cannot play are not indexed — the phone may have it.' : '');
 }
 
 $('browsesearch').oninput = () => {

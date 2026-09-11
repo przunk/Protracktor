@@ -366,9 +366,10 @@ two want opposite things at the far end:
 **Where it is offered.** Every track menu: on the phone the playlist's, Random's and every Browse
 list's; on the page the queue's rows (playlist, Random, History, a Browse session) and Browse's.
 **Only for a tune another browser can fetch**: not a file on the phone, not an MP3 (the rule of
-2026-09-10), and not ASMA, whose `asma://` is read out of the archive stored on the phone. A queue
-link carries such rows as greyed places; a one-tune link to one would be a dead link, so the item
-is absent (phone) or greyed (page) instead.
+2026-09-10), and not a tune inside an UnExoticA archive. A queue link carries such rows as greyed
+places; a one-tune link to one would be a dead link, so the item is absent (phone) or greyed (page)
+instead. **ASMA was on that list for one evening** and came off it the same night, when its files
+turned out to have addresses of their own (`docs/PLAN_WEB_LIBRARY.md` S7).
 
 **How it leaves.** The phone uses the share sheet, like the queue's link: where it goes is the
 person's call. The page shares where the browser can (`navigator.share`, phones mostly) and copies

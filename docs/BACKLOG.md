@@ -428,6 +428,11 @@ would be a list of URLs plus local files that cannot travel. Not in scope here.
 the reason ASMA cannot have one (it publishes an archive, not a file tree) is now the whole reason
 its share names the collection and the path instead.
 
+**Corrected 2026-09-11: ASMA does have one.** Every file is served at its zip entry's own path under
+`https://asma.atari.org/`, with CORS open — measured, not assumed, when the web player took ASMA on
+(`docs/PLAN_WEB_LIBRARY.md` S7). So ASMA's link is now the file, exactly like Modland's, and the
+"collection and path" fallback is left for a catalogue that really has no per-file address.
+
 ## A11. ~~Random should read ahead, the way the playlist does~~ — DONE 2026-09-02
 
 Raised 2026-09-02 by the owner: waiting for each random track to download is the wait R9 exists to
