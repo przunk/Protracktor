@@ -224,7 +224,7 @@ class QueueLinkTest {
     }
 
     /**
-     * Send to Protracktor web (owner, 2026-09-11): one tune, marked so the page plays it rather than
+     * Share with Protracktor (owner, 2026-09-11): one tune, marked so the page plays it rather than
      * taking it for a queue to replace its list with.
      */
     @Test

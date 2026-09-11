@@ -151,7 +151,7 @@ object QueueLink {
     /**
      * Marks a link as **one tune to play** rather than a queue to take over.
      *
-     * Send to Protracktor web (owner, 2026-09-11): a tune from any list, as a link that opens the page
+     * Share with Protracktor (owner, 2026-09-11): a tune from any list, as a link that opens the page
      * playing it. A queue link replaces the list the page shows under "From the phone"; this one
      * must not — it is somebody being shown a tune, possibly somebody else entirely — so the page
      * plays it the way it plays a Browse result, beside whatever list is there. `:` because it is

@@ -346,7 +346,10 @@ silence.
 
 **Weight:** 48 KB of markup and script against 760 KB of engine.
 
-## 5e. Built 2026-09-11: Send to Protracktor web — one tune, as a link that plays it
+## 5e. Built 2026-09-11: Share with Protracktor — one tune, as a link that plays it
+
+*Built as "Send to Protracktor web"; the owner renamed it "Share with Protracktor" the same
+night, which says what it is for — handing a tune to somebody — rather than where it lands.*
 
 *Owner, 2026-09-11: an option on a track, on any list, on the phone and on the page, that sends a
 link to the web player which opens straight onto that one tune playing.*

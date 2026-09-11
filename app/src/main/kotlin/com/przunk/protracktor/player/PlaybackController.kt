@@ -1646,7 +1646,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Send to Protracktor web: one tune as a link that opens the web player playing it.
+     * Share with Protracktor: one tune as a link that opens the web player playing it.
      *
      * Through the share sheet, like the queue's link, because where it goes is the person's choice
      * -- their own browser, a message to somebody else. It points at the page this phone knows

@@ -485,9 +485,9 @@ if (window.__api) {
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
   // Select stands first since 2026-09-11 -- the way into ticking rows, which he asked for; the three
-  // he asked for before are still exactly these, in this order, with Send to Protracktor web (asked
+  // he asked for before are still exactly these, in this order, with Share with Protracktor (asked
   // for the same day) beside the other link.
-  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Send to Protracktor web,Information',
+  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Share with Protracktor,Information',
     'with the three the owner asked for, after Select');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
@@ -910,7 +910,7 @@ if (window.__api) {
   button(rows()[0], 'bmore').click();
   const menu = [...$('menu').children];
   check(menu.map((b) => b.textContent).join('|')
-        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link|Send to Protracktor web",
+        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link|Share with Protracktor",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
   // The icon beside its word, centred on it: a later rule once made every item a block and left the
@@ -1595,13 +1595,13 @@ if (window.__api) {
   $('menu').hidden = true;
 }
 
-// --- Send to Protracktor web (owner, 2026-09-11) -------------------------------------------------
+// --- Share with Protracktor (owner, 2026-09-11) -------------------------------------------------
 //
 // One tune, from any list, as a link that opens this page playing it. **The phone makes the link
 // too**, so the page must open what `QueueLink.trackLink` packs -- checked by packing the same line
 // the way the JVM does (zlib deflate, URL-safe base64) and handing it over as the address.
 if (window.__api) {
-  console.log('\nSend to Protracktor web:');
+  console.log('\nShare with Protracktor:');
   const api = window.__api;
   const settle = () => new Promise((r) => setTimeout(r, 30));
   const zlib = await import('zlib');
@@ -1704,7 +1704,7 @@ if (window.__api) {
 
   // Offered on every list: the queue's row menu here, Browse's in its own checks above.
   window.document.querySelector('#queue li .rowmenu').click();
-  const item = [...$('menu').children].find((b) => b.textContent === 'Send to Protracktor web');
+  const item = [...$('menu').children].find((b) => b.textContent === 'Share with Protracktor');
   check(item && !item.disabled && item.querySelector('svg'), 'a row\'s menu offers it, with its icon');
   // Copy a link says so the same way.
   [...$('menu').children].find((b) => b.textContent === 'Copy a link').click();

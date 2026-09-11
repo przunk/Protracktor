@@ -1014,7 +1014,7 @@ function openRowMenu(entry, anchor) {
     ['Select', () => startSelecting(entry), !entry.local, ICON.check],
     ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
     ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
-    ['Send to Protracktor web', () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
+    ['Share with Protracktor', () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
     ['Information', () => informAbout(entry), !entry.local, ICON.info],
   ];
   // Pruning the record before keeping the rest: the phone's rows have it, and "if it is there you
@@ -1154,7 +1154,7 @@ const SESSION = {
   history: { title: 'Playing from your history', chip: 'History', icon: () => ICON.history },
   // The phone's "Playing from search", widened to every Browse list: a folder plays the same way.
   browse: { title: 'Playing from Browse', chip: 'Browse', icon: () => ICON.search },
-  // A tune sent here as a link (Send to Protracktor web): shown to you, not yet yours.
+  // A tune sent here as a link (Share with Protracktor): shown to you, not yet yours.
   link: { title: 'Playing a tune sent to you', chip: 'Sent', icon: () => ICON.web },
 };
 
@@ -2150,7 +2150,7 @@ function openBrowseMenu(track, anchor, folder) {
   }
   items.push(['Save the file', () => saveFile(track), true, ICON.save]);
   items.push(['Copy a link', () => copyLink(track), true, ICON.link]);
-  items.push(['Send to Protracktor web', () => sendToWeb(track), canSendToWeb(track), ICON.web]);
+  items.push(['Share with Protracktor', () => sendToWeb(track), canSendToWeb(track), ICON.web]);
   showMenu(items, anchor);
 }
 
@@ -2657,7 +2657,7 @@ $('seek').onchange = () => {
 async function fromFragment() {
   const raw = location.hash.slice(1);
   if (!raw) return;
-  // **One tune to play**, not a queue to take over: Send to Protracktor web (`QueueLink.PLAY_PREFIX`).
+  // **One tune to play**, not a queue to take over: Share with Protracktor (`QueueLink.PLAY_PREFIX`).
   const one = raw.startsWith(PLAY_PREFIX);
   try {
     const lines = (await inflateFragment(one ? raw.slice(PLAY_PREFIX.length) : raw))
@@ -2779,7 +2779,7 @@ function canSendToWeb(entry) {
 }
 
 /**
- * Send to Protracktor web: the link that opens this page playing [entry], shared where the browser
+ * Share with Protracktor: the link that opens this page playing [entry], shared where the browser
  * can share and copied where it cannot. **Packed exactly as the phone packs it**, so a link from
  * either side opens the same way (`QueueLink.withTitle`: Modland as a path, the title only when
  * the address does not already say it).

@@ -684,7 +684,7 @@ list only, not the archive, and the phone's half at the same time.*
 
 **The premise everything here rested on was wrong, and a curl said so.** The phone was built
 believing ASMA publishes one 20 MB zip and no per-file address — `Catalogue.webUrlFor` returned null
-for it, its share link named "the collection and the path", and Send to Protracktor web left its
+for it, its share link named "the collection and the path", and Share with Protracktor left its
 tunes out. Measured that evening:
 
 | | answer |
@@ -706,7 +706,7 @@ archive: `ASMA/Composers/Aki`.
 
 **The phone.** `Catalogue.fileUrlFor` — the address a *browser* can fetch — is new, and ASMA answers
 it. The phone still plays from the zip, which is what makes it work offline; the address is for
-everybody else: Share a link gives the file, a queue link and Send to Protracktor web carry it, and
+everybody else: Share a link gives the file, a queue link and Share with Protracktor carry it, and
 the paired send no longer spends its byte budget on ASMA rows.
 
 **One rule, two runtimes.** The address is escaped by Modland's rule (`URLEncoder`, space as
