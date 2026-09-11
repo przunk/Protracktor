@@ -222,6 +222,8 @@
     <string name="field_samples">Samples</string>
     <string name="field_subsongs">Subsongs</string>
     <string name="field_message">Message</string>
+    <string name="field_instrument_names">Instrument names</string>
+    <string name="field_sample_names">Sample names</string>
 
     <string name="a11y_remove_track">Remove %1$s from the playlist</string>
 

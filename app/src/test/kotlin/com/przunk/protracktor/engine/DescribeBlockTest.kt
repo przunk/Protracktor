@@ -36,6 +36,26 @@ class DescribeBlockTest {
         assertFalse("message" in fields)
     }
 
+    /** `docs/PLAN_INSTRUMENT_NAMES.md`: the names travel as one line each, before the message. */
+    @Test
+    fun `instrument and sample names stay one field each, before a message of several lines`() {
+        val us = Char(0x1F)
+        val fields = DescribeBlock.parse(
+            "title\tx\nsample_names\tgreetings${us}${us}  to all\ninstrument_names\tbass${us}lead\n" +
+                "message\tline one\nline two"
+        )
+        assertEquals(listOf("greetings", "", "  to all"), DescribeBlock.names(fields["sample_names"]))
+        assertEquals(listOf("bass", "lead"), DescribeBlock.names(fields["instrument_names"]))
+        assertEquals("line one\nline two", fields["message"])
+    }
+
+    @Test
+    fun `no names, or only blank ones, are no list at all`() {
+        val us = Char(0x1F)
+        assertEquals(emptyList<String>(), DescribeBlock.names(null))
+        assertEquals(emptyList<String>(), DescribeBlock.names(" $us $us"))
+    }
+
     @Test
     fun `a block with no message, or an empty one, reads as before`() {
         assertEquals(mapOf("title" to "a", "artist" to "b"), DescribeBlock.parse("title\ta\nartist\tb\n"))
