@@ -2599,6 +2599,9 @@ async function fromFragment() {
       return title ? { ...entry, name: title } : entry;
     });
     if (one) { playSentTune(entries.filter((e) => !e.local)); return; }
+    // The code steps aside for a queue that came by link, as it does for one that came by pairing
+    // (`applyReceive`) -- in a tab that was already open on it, `hashchange` brings us here.
+    if (!$('pair').hidden) showPanel(null);
     setQueue(entries);
     activePlaylist = PHONE;
     $('playlistname').textContent = 'From the phone';
@@ -2820,8 +2823,12 @@ addEventListener('keydown', (event) => {
 
 // Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
 // itself the moment a queue arrives.
+//
+// **Not when the page was opened by a link** (owner, 2026-09-11). A link is the queue already
+// arriving, and the code sat in the middle of the screen while it did -- read after an await, so the
+// first thing anybody opening a tune somebody sent them saw was a QR code meant for somebody else.
 renderNothingPlaying();
-showPanel('pair');
+if (!location.hash.slice(1)) showPanel('pair');
 
 status('ready — press Play or load some URLs');
 pair();

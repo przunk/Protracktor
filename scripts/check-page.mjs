@@ -1640,6 +1640,14 @@ if (window.__api) {
   api.endSession();
   await settle();
   check(api.queueNow().join() === kept, 'leaving puts the playlist back');
+
+  // A queue's link, into a tab showing the code: the code steps aside, as it does for pairing
+  // (owner, 2026-09-11: he opened a link and the QR stood in the middle of the screen).
+  api.showPanel('pair');
+  window.location.hash = zlib.deflateSync(Buffer.from('Protracker/4-Mat/hi there.mod')).toString('base64url');
+  await settle();
+  check($('pair').hidden && api.queueNow().join() === 'https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod',
+    'a queue that comes by link closes the pairing code');
   window.history.replaceState(null, '', window.location.pathname);
   await saved.remove('p-send');
   await api.switchTo('phone');
