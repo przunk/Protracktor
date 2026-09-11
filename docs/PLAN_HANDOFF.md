@@ -346,6 +346,48 @@ silence.
 
 **Weight:** 48 KB of markup and script against 760 KB of engine.
 
+## 5e. Built 2026-09-11: Send to Protracktor web — one tune, as a link that plays it
+
+*Owner, 2026-09-11: an option on a track, on any list, on the phone and on the page, that sends a
+link to the web player which opens straight onto that one tune playing.*
+
+**H1's link, with a mark on it.** A queue link is `<page>/#<packed>`; this one is
+`<page>/#play:<packed>`, the packing unchanged (`QueueLink.trackLink`) and holding one line. `:` is
+not a base64url character, so no queue link can be mistaken for one. The mark matters because the
+two want opposite things at the far end:
+
+- **a queue link takes over** — it becomes "From the phone";
+- **a tune link is shown, not filed.** It may come from somebody else entirely, so the page plays
+  it the way a Browse result plays — a session beside whatever list is showing, which it leaves
+  alone. Add keeps it; the heading's Playlist button goes back. **Nothing is drawn over it**: Now
+  Playing stays folded and the pairing code is not shown (owner, the same evening), since the dock
+  and the heading already say what is playing and from where.
+
+**Where it is offered.** Every track menu: on the phone the playlist's, Random's and every Browse
+list's; on the page the queue's rows (playlist, Random, History, a Browse session) and Browse's.
+**Only for a tune another browser can fetch**: not a file on the phone, not an MP3 (the rule of
+2026-09-10), and not ASMA, whose `asma://` is read out of the archive stored on the phone. A queue
+link carries such rows as greyed places; a one-tune link to one would be a dead link, so the item
+is absent (phone) or greyed (page) instead.
+
+**How it leaves.** The phone uses the share sheet, like the queue's link: where it goes is the
+person's call. The page shares where the browser can (`navigator.share`, phones mostly) and copies
+it where it cannot. The address is the page's own on the page, and `Appearance.webPlayer` on the
+phone: the stored address, else the page beside the pairing, else `localhost` — which is right for
+the machine running the browser and useless to anybody else. **A link meant for another person
+needs the page served somewhere they can reach.**
+
+**It starts at once where the browser allows it, and at the first touch where it does not.** A
+link opened from another app gives the page no click, and a browser keeps audio suspended until it
+has one — unless the site is allowed to autoplay (Firefox: the site's permissions, "Autoplay: Allow
+Audio and Video"), in which case the tune simply plays. Otherwise the tune is fetched and opened
+anyway, the dock says "Tap anywhere to play" and the button offers play (not pause, not stop),
+and **the first touch or key anywhere on the page** starts it. Chrome runs no worklet until the
+context does, so there the tune only opens at that touch; the dock says so from the moment the
+context is born suspended rather than sitting on "fetching…", as it did the first time the owner
+tried it on his phone — not only Play, which the owner asked for as "startuje od razu". Play and the
+space bar are left to start it themselves, or their click would be a second press that paused it.
+
 ## 6. Order of work
 
 1. **W1** — `PLAN_WEB.md`'s throwaway: a page you drop a file onto. The byte count is now known

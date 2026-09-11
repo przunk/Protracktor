@@ -1644,6 +1644,35 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
+     * Send to Protracktor web: one tune as a link that opens the web player playing it.
+     *
+     * Through the share sheet, like the queue's link, because where it goes is the person's choice
+     * -- their own browser, a message to somebody else. It points at the page this phone knows
+     * ([Appearance.webPlayer]), so it opens only where that address can be reached from.
+     */
+    fun sendToWeb(track: TrackRef) {
+        val link = QueueLink.trackLink(Appearance.webPlayer(context), track)
+        if (link == null) {
+            _state.update {
+                it.copy(
+                    message = Message(
+                        if (QueueLink.isMp3(track)) "An MP3 is never sent to the browser: it is too big to travel."
+                        else "This one cannot be sent: a file on this phone has no address a browser could open."
+                    )
+                )
+            }
+            return
+        }
+        _share.tryEmit(
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, link)
+                putExtra(Intent.EXTRA_SUBJECT, "${track.title} — Protracktor web")
+            }
+        )
+    }
+
+    /**
      * Opens Browse where a track came from: the author's folder in its catalogue.
      *
      * "Something played at random, it was good, what else did they write" -- and until now the only

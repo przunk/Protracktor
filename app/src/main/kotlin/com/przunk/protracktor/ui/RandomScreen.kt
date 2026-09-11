@@ -56,6 +56,7 @@ fun RandomScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
     contentPadding: PaddingValues,
@@ -93,6 +94,7 @@ fun RandomScreen(
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareLink = onShareLink,
+            onSendToWeb = onSendToWeb,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onAddSelectedToPlaylist = onAddSelectedToPlaylist,
             // Removing many at once is the playlist's; here the whole list goes when you leave.

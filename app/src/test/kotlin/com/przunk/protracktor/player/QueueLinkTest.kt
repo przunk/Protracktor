@@ -211,4 +211,32 @@ class QueueLinkTest {
         val packed = QueueLink.pack(listOf(track("asma://asma/Games/Rob_Hubbard/tune.sap", "tune.sap")))
         assertEquals(listOf("asma://asma/Games/Rob_Hubbard/tune.sap"), unpack(packed.fragment))
     }
+
+    /**
+     * Send to Protracktor web (owner, 2026-09-11): one tune, marked so the page plays it rather than
+     * taking it for a queue to replace its list with.
+     */
+    @Test
+    fun `one tune goes as a link the page plays`() {
+        val tune = track("https://modland.com/pub/modules/Protracker/Jogeir%20Liljedahl/zoolook.mod", "zoolook")
+        val link = QueueLink.trackLink("https://pi.example/src/", tune)!!
+        assertTrue(link, link.startsWith("https://pi.example/src/#play:"))
+        assertEquals(
+            listOf("Protracker/Jogeir Liljedahl/zoolook.mod\tzoolook"),
+            unpack(link.substringAfter("#play:")),
+        )
+    }
+
+    @Test
+    fun `a tune the page could not fetch makes no link`() {
+        // A file on this phone, an MP3 with an address, and ASMA, which is read out of storage here.
+        listOf(
+            track("content://x/1", "mine.mod"),
+            track("https://example.org/music/live set.mp3", "live set.mp3"),
+            track("asma://asma/Games/Rob_Hubbard/tune.sap", "tune.sap"),
+        ).forEach { tune ->
+            assertEquals(tune.id, null, QueueLink.trackLink("https://pi.example/src/", tune))
+            assertTrue(tune.id, !QueueLink.canSend(tune))
+        }
+    }
 }

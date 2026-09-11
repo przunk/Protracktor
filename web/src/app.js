@@ -173,6 +173,10 @@ async function begin() {
   // told Oboe, which resamples; this is the same answer by the only route a page has.
   context = new AudioContext({ sampleRate: 44100 });
   status('loading the engine…');
+  // Born suspended: no click has reached this page yet -- a link opened from another app. Chrome
+  // does not even run the worklet until the context does, so this is said now rather than when a
+  // tune opens, which there it would not do (owner, 2026-09-11: "widzę fetching i koniec").
+  if (context.state === 'suspended') waitForTouch();
 
   const wasm = await fetch('../vendor/engine.wasm').then((r) => r.arrayBuffer());
   await context.audioWorklet.addModule('./processor.js');
@@ -240,6 +244,7 @@ function onWorklet(message) {
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
       const fields = describeFields(message.describe);
+      dockFields = fields;
       // **Recorded here and only here.** The playlist's plays, Browse's, Random's and History's
       // own replays all arrive at this one message, so there is one recording path rather than one
       // per list (`GOAL.md` round 8, item 4) -- and it is after the engine opened the file, so what
@@ -264,6 +269,15 @@ function onWorklet(message) {
       $('sub').textContent = describeLine(fields);
       $('seek').disabled = !message.canSeek;
       $('error').textContent = '';
+      // **Open, and silent until the page is touched.** A link opened from another app starts the
+      // tune with no click on this page, and a browser keeps the audio suspended until there is one
+      // -- so the button says play, which is the press that makes the sound, rather than pause,
+      // which would have stopped a tune nobody could hear yet.
+      if (context?.state === 'suspended') {
+        setPlaying(false);
+        waitForTouch();
+        break;
+      }
       setPlaying(true);
       break;
     }
@@ -666,8 +680,10 @@ async function playAt(next) {
   // did not load at all -- and both times the screen simply sat there. Ten seconds is far past any
   // honest open; after that the page says so rather than waiting for ever.
   clearTimeout(openWatchdog);
-  openWatchdog = setTimeout(() => {
+  openWatchdog = setTimeout(function expire() {
     if (loading !== abort) return;
+    // Waiting for a touch is not a worklet that never answered: Chrome runs none until then.
+    if (context?.state === 'suspended') { openWatchdog = setTimeout(expire, 10_000); return; }
     loading = null;
     setPlaying(false);
     $('error').textContent = engineReady
@@ -693,9 +709,7 @@ async function announceGesture() {
   if (context.state === 'suspended') {
     try { await context.resume(); } catch { /* needs a gesture; the message below is the answer */ }
   }
-  if (context.state === 'suspended') {
-    status('Press play — a browser will not start audio until this page is clicked.');
-  }
+  if (context.state === 'suspended') waitForTouch();
 }
 
 const PLAY_GLYPH = 'M8 5v14l11-7z';
@@ -759,8 +773,10 @@ function setPlaying(on) {
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
-  $('playglyph').setAttribute('d', loading ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
-  $('playpause').title = loading ? 'Stop loading' : on ? 'Pause' : 'Play';
+  // Play, not stop, while the page waits for a touch: the press it wants is the one that plays.
+  const stopping = loading && !firstTouch;
+  $('playglyph').setAttribute('d', stopping ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
+  $('playpause').title = stopping ? 'Stop loading' : on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
@@ -904,10 +920,11 @@ async function copyLink(entry) {
   if (!entry.url) { status('that one stayed on the phone — it has no address'); return; }
   try {
     await navigator.clipboard.writeText(entry.url);
-    status('Link copied');
+    showNote('Link copied');
   } catch {
     // A browser that refuses the clipboard without a gesture it recognises, or an insecure context.
     // Showing the address is worse than copying it and much better than silence.
+    showNote('The browser would not copy it — the address is in Now Playing');
     status(entry.url);
   }
 }
@@ -993,6 +1010,7 @@ function openRowMenu(entry, anchor) {
     ['Select', () => startSelecting(entry), !entry.local, ICON.check],
     ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
     ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
+    ['Send to Protracktor web', () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
     ['Information', () => informAbout(entry), !entry.local, ICON.info],
   ];
   // Pruning the record before keeping the rest: the phone's rows have it, and "if it is there you
@@ -1132,6 +1150,8 @@ const SESSION = {
   history: { title: 'Playing from your history', chip: 'History', icon: () => ICON.history },
   // The phone's "Playing from search", widened to every Browse list: a folder plays the same way.
   browse: { title: 'Playing from Browse', chip: 'Browse', icon: () => ICON.search },
+  // A tune sent here as a link (Send to Protracktor web): shown to you, not yet yours.
+  link: { title: 'Playing a tune sent to you', chip: 'Sent', icon: () => ICON.web },
 };
 
 function showSessionView(kind) {
@@ -1311,6 +1331,7 @@ const ICON = {
   remove: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
   add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
   rename: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  web: 'M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z',
   playlistAdd: 'M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z',
   search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
@@ -1536,9 +1557,24 @@ function showingHas(url) {
 /** Six seconds, the length of a Material snackbar with an action. */
 function showUndo(text) {
   $('snacktext').textContent = text;
+  $('snackundo').hidden = false;
   $('snackbar').hidden = false;
   clearTimeout(undoTimer);
   undoTimer = setTimeout(hideUndo, 6000);
+}
+
+/**
+ * A snackbar with nothing to press, for a moment's confirmation -- "Link copied" (owner,
+ * 2026-09-11). **The status line cannot carry these**: it lives in Now Playing, which is usually
+ * folded, so what it said about a copy was said to nobody. Two and a half seconds: long enough to
+ * read three words, short enough not to sit over the dock.
+ */
+function showNote(text) {
+  $('snacktext').textContent = text;
+  $('snackundo').hidden = true;
+  $('snackbar').hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, 2500);
 }
 
 function hideUndo() {
@@ -2097,6 +2133,7 @@ function openBrowseMenu(track, anchor, folder) {
   }
   items.push(['Save the file', () => saveFile(track), true, ICON.save]);
   items.push(['Copy a link', () => copyLink(track), true, ICON.link]);
+  items.push(['Send to Protracktor web', () => sendToWeb(track), canSendToWeb(track), ICON.web]);
   showMenu(items, anchor);
 }
 
@@ -2334,6 +2371,9 @@ $('load').onclick = () => {
   showPanel(null);
 };
 $('playpause').onclick = async () => {
+  // Waiting for the page's first use: this press is it, whatever the tune is doing meanwhile --
+  // while it is still loading, the button would otherwise mean "stop".
+  if (firstTouch) { await firstTouch({ target: document.body }); return; }
   // Nothing loaded yet, but a track is selected: this press is the one that starts it. That is the
   // gesture a browser insists on, and it is why a queue arriving does not play by itself.
   if (!loading && !$('seek').dataset.opened && index >= 0 && !playing) {
@@ -2564,16 +2604,15 @@ $('seek').onchange = () => {
 async function fromFragment() {
   const raw = location.hash.slice(1);
   if (!raw) return;
+  // **One tune to play**, not a queue to take over: Send to Protracktor web (`QueueLink.PLAY_PREFIX`).
+  const one = raw.startsWith(PLAY_PREFIX);
   try {
-    const packed = Uint8Array.from(atob(raw.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
-    const stream = new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate'));
-    const text = await new Response(stream).text();
-    const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
-    const base = 'https://modland.com/pub/modules/';
+    const lines = (await inflateFragment(one ? raw.slice(PLAY_PREFIX.length) : raw))
+      .split('\n').map((s) => s.trim()).filter(Boolean);
     // `address` or `address<tab>title`. The title is sent only when the address does not already
     // carry it -- which is most of Modland and none of The Mod Archive, whose URLs are a script and
     // a number (`QueueLink.withTitle`).
-    setQueue(lines.map((line) => {
+    const entries = lines.map((line) => {
       // **A file that stayed on the phone**, sent as a name so its place in the list survives.
       // Its bytes are a storage grant to one app on one device and could never have come; the
       // *position* could, and two people cannot talk about a list that numbers itself differently
@@ -2581,10 +2620,15 @@ async function fromFragment() {
       if (line.startsWith('phone:')) return ghost(line.slice('phone:'.length));
       const [address, title] = line.split('\t');
       const url = address.includes('://') ? address
-        : base + address.split('/').map(encodeURIComponent).join('/');
+        : MODLAND_FILES + address.split('/').map(encodeURIComponent).join('/');
       const entry = entryFor(url);
       return title ? { ...entry, name: title } : entry;
-    }));
+    });
+    if (one) { playSentTune(entries.filter((e) => !e.local)); return; }
+    // The code steps aside for a queue that came by link, as it does for one that came by pairing
+    // (`applyReceive`) -- in a tab that was already open on it, `hashchange` brings us here.
+    if (!$('pair').hidden) showPanel(null);
+    setQueue(entries);
     activePlaylist = PHONE;
     $('playlistname').textContent = 'From the phone';
     const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
@@ -2594,6 +2638,123 @@ async function fromFragment() {
     status(`the link could not be read: ${e.message}`);
   }
 }
+
+const PLAY_PREFIX = 'play:';
+const MODLAND_FILES = 'https://modland.com/pub/modules/';
+
+/** URL-safe base64 of zlib deflate, back to text -- `QueueLink.encode`, from the other side. */
+async function inflateFragment(fragment) {
+  const packed = Uint8Array.from(atob(fragment.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+  return new Response(new Response(packed).body.pipeThrough(new DecompressionStream('deflate'))).text();
+}
+
+async function deflateFragment(text) {
+  const bytes = new Uint8Array(await new Response(
+    new Response(new TextEncoder().encode(text)).body.pipeThrough(new CompressionStream('deflate'))
+  ).arrayBuffer());
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * A tune somebody sent here to be played (`QueueLink.trackLink`): **played, not filed**. It goes
+ * through the session a Browse result plays through, so whatever list this page was showing is
+ * left alone -- the link may well have come from somebody else, and a tune shown to you is not
+ * one you asked to keep. **Now Playing stays folded** (owner, 2026-09-11): the dock names the tune
+ * and the heading says where it came from, and a panel over both was one more thing to close.
+ */
+function playSentTune(tracks) {
+  if (!tracks.length) { status('the link names nothing this page can play'); return; }
+  openAway(tracks.slice(0, 1), 0, 'link');
+  showPanel(null);
+  status(`${tracks[0].name} — sent to this player`);
+}
+
+/**
+ * Starts the tune waiting on a suspended context at the first touch or key **anywhere** on the page
+ * (owner, 2026-09-11: "niech startuje od razu z odtwarzaniem"). Straight away is the browser's to
+ * allow, not the page's: it keeps audio suspended until the page is used, and a site given leave to
+ * autoplay never gets here. What the page can do is make any use of it count, not just Play.
+ *
+ * **Play itself and the space bar are left alone**, because they already start it: taking the
+ * pointerdown first would make their click the second press, and pause what had just begun.
+ */
+let firstTouch = null;
+let dockFields = null;
+const TAP_HINT = 'Tap anywhere to play';
+
+/**
+ * Waiting for the page to be used, **said in the dock**: the status line lives in Now Playing,
+ * which is folded, so a sentence there was one nobody read while the dock sat on "fetching…".
+ */
+function waitForTouch() {
+  startOnFirstTouch();
+  $('sub').textContent = TAP_HINT;
+  status('A browser starts no sound until the page is touched.');
+  setPlaying(playing);
+}
+
+function startOnFirstTouch() {
+  if (firstTouch) return;
+  const events = ['pointerdown', 'keydown', 'click'];
+  firstTouch = async (event) => {
+    if ($('playpause').contains(event.target) || event.key === ' ') return;
+    try { await context.resume(); } catch { return; }
+    if (context.state !== 'running' || !firstTouch) return;
+    for (const type of events) removeEventListener(type, firstTouch, true);
+    firstTouch = null;
+    const opened = !!$('seek').dataset.opened && !loading;
+    // Opened already (Firefox runs the worklet while suspended): this touch is the play. Not yet
+    // (Chrome does not): the open waiting in the worklet now runs, and `opened` starts it.
+    if (opened && !playing) {
+      setPlaying(true);
+      node.port.postMessage({ type: 'play' });
+    } else {
+      setPlaying(playing);
+    }
+    if ($('sub').textContent === TAP_HINT) {
+      $('sub').textContent = opened && dockFields ? describeLine(dockFields) : 'opening…';
+    }
+    status('Playing');
+  };
+  for (const type of events) addEventListener(type, firstTouch, true);
+}
+
+/** Whether a row can go as a one-tune link: `QueueLink.canSend`, the page's side of it. */
+function canSendToWeb(entry) {
+  return !!entry?.url && !entry.local && /^https?:\/\//.test(entry.url)
+    && !/\.mp3$/i.test(fileOf(entry)) && !/\.mp3$/i.test(entry.name ?? '');
+}
+
+/**
+ * Send to Protracktor web: the link that opens this page playing [entry], shared where the browser
+ * can share and copied where it cannot. **Packed exactly as the phone packs it**, so a link from
+ * either side opens the same way (`QueueLink.withTitle`: Modland as a path, the title only when
+ * the address does not already say it).
+ */
+async function sendToWeb(entry) {
+  if (!canSendToWeb(entry)) { status('that one has no address another browser could open'); return; }
+  const address = entry.url.startsWith(MODLAND_FILES)
+    ? entry.url.slice(MODLAND_FILES.length).split('/').map(decodeURIComponent).join('/')
+    : entry.url;
+  const file = address.slice(address.lastIndexOf('/') + 1).split('#')[0].split('?')[0];
+  const title = entry.name?.trim() ?? '';
+  const line = !title || title.toLowerCase() === file.toLowerCase() ? address : `${address}\t${title}`;
+  const link = `${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(line)}`;
+  lastSentLink = link;
+  try {
+    if (navigator.share) { await navigator.share({ title: `${entry.name} — Protracktor web`, url: link }); return; }
+  } catch (error) {
+    if (error?.name === 'AbortError') return;   // the share sheet was closed; nothing to say
+  }
+  try {
+    await navigator.clipboard.writeText(link);
+    showNote('Link copied');
+  } catch {
+    showNote('The browser would not copy it — the link is in Now Playing');
+    status(link);
+  }
+}
+let lastSentLink = null;
 
 /**
  * The pairing panel: a code that is always there, and a loop that is always asking.
@@ -2740,8 +2901,12 @@ addEventListener('keydown', (event) => {
 
 // Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
 // itself the moment a queue arrives.
+//
+// **Not when the page was opened by a link** (owner, 2026-09-11). A link is the queue already
+// arriving, and the code sat in the middle of the screen while it did -- read after an await, so the
+// first thing anybody opening a tune somebody sent them saw was a QR code meant for somebody else.
 renderNothingPlaying();
-showPanel('pair');
+if (!location.hash.slice(1)) showPanel('pair');
 
 status('ready — press Play or load some URLs');
 pair();

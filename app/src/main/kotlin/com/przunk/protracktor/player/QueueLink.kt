@@ -146,6 +146,35 @@ object QueueLink {
         track.fileNameOrTitle.lowercase().endsWith(".mp3") ||
             track.title.lowercase().endsWith(".mp3")
 
+    /**
+     * Marks a link as **one tune to play** rather than a queue to take over.
+     *
+     * Send to Protracktor web (owner, 2026-09-11): a tune from any list, as a link that opens the page
+     * playing it. A queue link replaces the list the page shows under "From the phone"; this one
+     * must not — it is somebody being shown a tune, possibly somebody else entirely — so the page
+     * plays it the way it plays a Browse result, beside whatever list is there. `:` because it is
+     * not a base64url character, so no packed queue can ever start with it.
+     */
+    const val PLAY_PREFIX = "play:"
+
+    /**
+     * Whether [track] can go as a one-tune link: [pack]'s two refusals, and one more. A queue link
+     * carries rows the page cannot play as greyed places in the list; a one-tune link to such a row
+     * is a dead link. So only an address a browser can fetch: ASMA's `asma://` is read out of the
+     * archive stored on this phone and reaches nobody else.
+     */
+    fun canSend(track: TrackRef): Boolean =
+        !isMp3(track) &&
+            (track.id.startsWith("https://") || track.id.startsWith("http://")) &&
+            Catalogue.owning(track.id)?.pathFrom(track.id) != null
+
+    /** The link that opens the page at [base] playing [track], or null when it cannot travel. */
+    fun trackLink(base: String, track: TrackRef): String? {
+        if (!canSend(track)) return null
+        val packed = pack(listOf(track))
+        return if (packed.sent == 0) null else linkTo(base, PLAY_PREFIX + packed.fragment)
+    }
+
     /** The whole address, given where the page is served from. */
     fun linkTo(base: String, fragment: String): String =
         base.trimEnd('/') + "/#" + fragment

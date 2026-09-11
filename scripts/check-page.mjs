@@ -37,7 +37,9 @@ const { window } = dom;
 window.qrcode = () => ({ addData() {}, make() {}, createTableTag: () => '<table></table>' });
 window.AudioContext = class {
   constructor() { this.state = 'suspended'; this.audioWorklet = { addModule: async () => {} }; }
-  async resume() { this.state = 'running'; }
+  // Refused while `__audioBlocked` is set: a browser will not resume audio without a click on the
+  // page, and a link opened from another app has had none.
+  async resume() { if (!window.__audioBlocked) this.state = 'running'; }
   get destination() { return {}; }
   get currentTime() { return 0; }
   // The page routes the worklet through a gain for its volume slider. Stubbed far enough to be
@@ -116,6 +118,10 @@ window.indexedDB = indexedDB;
 window.IDBKeyRange = IDBKeyRange;
 // And a Modland address escapes a name byte by byte, as the phone's URLEncoder does.
 window.TextEncoder ??= TextEncoder;
+// Links are deflated and inflated through streams, as a browser does it.
+window.CompressionStream ??= CompressionStream;
+window.DecompressionStream ??= DecompressionStream;
+window.Response ??= Response;
 window.navigator.storage ??= { persist: async () => true, persisted: async () => true,
                                estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
 
@@ -139,7 +145,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -459,8 +465,9 @@ if (window.__api) {
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
   // Select stands first since 2026-09-11 -- the way into ticking rows, which he asked for; the three
-  // he asked for before are still exactly these, in this order.
-  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Information',
+  // he asked for before are still exactly these, in this order, with Send to Protracktor web (asked
+  // for the same day) beside the other link.
+  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Send to Protracktor web,Information',
     'with the three the owner asked for, after Select');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
@@ -883,7 +890,7 @@ if (window.__api) {
   button(rows()[0], 'bmore').click();
   const menu = [...$('menu').children];
   check(menu.map((b) => b.textContent).join('|')
-        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link",
+        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link|Send to Protracktor web",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
   // The icon beside its word, centred on it: a later rule once made every item a block and left the
@@ -1566,6 +1573,141 @@ if (window.__api) {
   $('sel-cancel').click();
   await settle();
   $('menu').hidden = true;
+}
+
+// --- Send to Protracktor web (owner, 2026-09-11) -------------------------------------------------
+//
+// One tune, from any list, as a link that opens this page playing it. **The phone makes the link
+// too**, so the page must open what `QueueLink.trackLink` packs -- checked by packing the same line
+// the way the JVM does (zlib deflate, URL-safe base64) and handing it over as the address.
+if (window.__api) {
+  console.log('\nSend to Protracktor web:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 30));
+  const zlib = await import('zlib');
+  const { playlists: saved } = await import(path.resolve('web/src/store.js'));
+  const kept = 'https://modland.com/pub/modules/Coop/Alice%20%26%20Bob/together.mod';
+  await saved.save({ id: 'p-send', name: 'Kept', tracks: [{ url: kept, name: 'together.mod' }], index: 0 });
+  await api.switchTo('p-send');
+  const tune = { url: 'https://modland.com/pub/modules/Protracker/Jogeir%20Liljedahl/zoolook.mod',
+                 name: 'zoolook', file: 'zoolook.mod', meta: 'Modland/Protracker/Jogeir Liljedahl' };
+
+  // A clipboard that accepts, as a browser's does after a click; jsdom has none.
+  const copied = [];
+  Object.defineProperty(window.navigator, 'clipboard',
+    { value: { writeText: async (text) => { copied.push(text); } }, configurable: true });
+  await api.sendToWeb(tune);
+  const link = api.lastSentLink();
+  check(copied.at(-1) === link && !$('snackbar').hidden && $('snacktext').textContent === 'Link copied'
+        && $('snackundo').hidden,
+    'the link is copied, and a snackbar says so, with nothing to press');
+  await new Promise((r) => setTimeout(r, 2600));
+  check($('snackbar').hidden, 'and goes by itself after two and a half seconds');
+  check(link?.startsWith(`${window.location.origin}${window.location.pathname}#play:`),
+    'the link points at this page, marked as one tune to play');
+  const line = 'Protracker/Jogeir Liljedahl/zoolook.mod\tzoolook';
+  check(await api.inflateFragment(link.split('#play:')[1]) === line,
+    'and carries the tune the way the phone packs it: a Modland path, and the title the path lacks');
+  check(!api.canSendToWeb({ url: null, local: true, name: 'mine.mod' })
+        && !api.canSendToWeb({ url: 'https://example.org/live set.mp3', name: 'live set.mp3' })
+        && !api.canSendToWeb({ url: 'asma://asma/Games/tune.sap', name: 'tune.sap' }),
+    'a file on the phone, an MP3 and an address no browser can fetch make no link');
+
+  // The phone's link, as the address of this page. A browser keeps its audio suspended until the
+  // page is touched, which is what a link opened from another app is.
+  api.contextNow().state = 'suspended';
+  window.__audioBlocked = true;
+  window.location.hash = `play:${zlib.deflateSync(Buffer.from(line)).toString('base64url')}`;
+  await settle();
+  const session = api.awayState();
+  check(session?.kind === 'link' && api.queueNow().join() === tune.url,
+    'a link sent here plays that one tune');
+  check(session.stash.queue.map((t) => t.url).join() === kept && !api.dirtyNow(),
+    'and leaves the playlist that was showing exactly as it was');
+  // Folded, as the owner asked: the dock and the heading say what it is.
+  check($('nowplaying').hidden && $('pair').hidden && $('title').textContent === 'zoolook',
+    'nothing is drawn over it: Now Playing stays folded and the dock names the tune');
+  check($('sessiontitle').textContent === 'Playing a tune sent to you' && $('playlistname').textContent === 'Sent'
+        && $('sessionicon').querySelector('path'),
+    'under a heading that says where it came from');
+
+  api.onWorklet({ type: 'opened', describe: 'title\tzoolook\nformat\tProTracker MOD\n', duration: 200,
+                  subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
+  await settle();
+  check($('playpause').title === 'Play' && $('sub').textContent === 'Tap anywhere to play',
+    'opened with no click on the page, the dock asks for a tap, rather than showing pause for a silent tune');
+  // **Any touch starts it** (owner, 2026-09-11), not only Play: the first use of the page is the
+  // permission the browser was waiting for.
+  window.__audioBlocked = false;
+  const sent = window.__toWorklet.length;
+  $('title').dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  await settle();
+  check(api.contextNow().state === 'running' && $('playpause').title === 'Pause'
+        && window.__toWorklet.slice(sent).map((m) => m.type).join() === 'play',
+    'and the first touch anywhere on the page starts it, once');
+  check($('sub').textContent !== 'Tap anywhere to play', 'after which the dock says what is playing again');
+
+  // Play itself, as that first touch: its own click starts the tune, and must not be the second
+  // press that pauses what the touch began.
+  api.contextNow().state = 'suspended';
+  window.__audioBlocked = true;
+  api.onWorklet({ type: 'opened', describe: 'title\tzoolook\n', duration: 200,
+                  subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
+  await settle();
+  window.__audioBlocked = false;
+  const before = window.__toWorklet.length;
+  $('playpause').dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  $('playpause').dispatchEvent(new window.Event('pointerup', { bubbles: true }));
+  $('playpause').click();
+  await settle();
+  check($('playpause').title === 'Pause' && window.__toWorklet.slice(before).map((m) => m.type).join() === 'play',
+    'and Play pressed as that touch starts it, rather than starting and pausing it');
+
+  // **Chrome's order** (owner, 2026-09-11: "widzę fetching i koniec"): it runs no worklet while the
+  // context is suspended, so the tune is not opened until the touch -- the dock must ask for one
+  // while it is still loading, and the button must not offer to stop.
+  api.contextNow().state = 'suspended';
+  window.__audioBlocked = true;
+  await api.playAt(0);
+  await settle();
+  check($('sub').textContent === 'Tap anywhere to play' && $('playpause').title === 'Play',
+    'with the tune not yet opened, the dock asks for a tap and Play is offered, not Stop');
+  window.__audioBlocked = false;
+  $('title').dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  await settle();
+  check(api.contextNow().state === 'running' && $('playpause').title === 'Stop loading',
+    'the touch lets the worklet run, and the load it was holding carries on');
+  api.onWorklet({ type: 'opened', describe: 'title\tzoolook\n', duration: 200,
+                  subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
+  await settle();
+  check($('playpause').title === 'Pause', 'and the tune plays the moment it opens');
+
+  // Offered on every list: the queue's row menu here, Browse's in its own checks above.
+  window.document.querySelector('#queue li .rowmenu').click();
+  const item = [...$('menu').children].find((b) => b.textContent === 'Send to Protracktor web');
+  check(item && !item.disabled && item.querySelector('svg'), 'a row\'s menu offers it, with its icon');
+  // Copy a link says so the same way.
+  [...$('menu').children].find((b) => b.textContent === 'Copy a link').click();
+  await settle();
+  check(copied.at(-1) === tune.url && $('snacktext').textContent === 'Link copied' && !$('snackbar').hidden,
+    'Copy a link confirms itself in the same snackbar');
+  $('menu').hidden = true;
+  delete window.navigator.clipboard;
+
+  api.endSession();
+  await settle();
+  check(api.queueNow().join() === kept, 'leaving puts the playlist back');
+
+  // A queue's link, into a tab showing the code: the code steps aside, as it does for pairing
+  // (owner, 2026-09-11: he opened a link and the QR stood in the middle of the screen).
+  api.showPanel('pair');
+  window.location.hash = zlib.deflateSync(Buffer.from('Protracker/4-Mat/hi there.mod')).toString('base64url');
+  await settle();
+  check($('pair').hidden && api.queueNow().join() === 'https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod',
+    'a queue that comes by link closes the pairing code');
+  window.history.replaceState(null, '', window.location.pathname);
+  await saved.remove('p-send');
+  await api.switchTo('phone');
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
