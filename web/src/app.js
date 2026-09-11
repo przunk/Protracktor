@@ -920,10 +920,11 @@ async function copyLink(entry) {
   if (!entry.url) { status('that one stayed on the phone — it has no address'); return; }
   try {
     await navigator.clipboard.writeText(entry.url);
-    status('Link copied');
+    showNote('Link copied');
   } catch {
     // A browser that refuses the clipboard without a gesture it recognises, or an insecure context.
     // Showing the address is worse than copying it and much better than silence.
+    showNote('The browser would not copy it — the address is in Now Playing');
     status(entry.url);
   }
 }
@@ -1556,9 +1557,24 @@ function showingHas(url) {
 /** Six seconds, the length of a Material snackbar with an action. */
 function showUndo(text) {
   $('snacktext').textContent = text;
+  $('snackundo').hidden = false;
   $('snackbar').hidden = false;
   clearTimeout(undoTimer);
   undoTimer = setTimeout(hideUndo, 6000);
+}
+
+/**
+ * A snackbar with nothing to press, for a moment's confirmation -- "Link copied" (owner,
+ * 2026-09-11). **The status line cannot carry these**: it lives in Now Playing, which is usually
+ * folded, so what it said about a copy was said to nobody. Two and a half seconds: long enough to
+ * read three words, short enough not to sit over the dock.
+ */
+function showNote(text) {
+  $('snacktext').textContent = text;
+  $('snackundo').hidden = true;
+  $('snackbar').hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, 2500);
 }
 
 function hideUndo() {
@@ -2732,8 +2748,9 @@ async function sendToWeb(entry) {
   }
   try {
     await navigator.clipboard.writeText(link);
-    status('Link copied — it opens Protracktor web playing this tune');
+    showNote('Link copied');
   } catch {
+    showNote('The browser would not copy it — the link is in Now Playing');
     status(link);
   }
 }

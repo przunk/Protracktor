@@ -1592,8 +1592,17 @@ if (window.__api) {
   const tune = { url: 'https://modland.com/pub/modules/Protracker/Jogeir%20Liljedahl/zoolook.mod',
                  name: 'zoolook', file: 'zoolook.mod', meta: 'Modland/Protracker/Jogeir Liljedahl' };
 
+  // A clipboard that accepts, as a browser's does after a click; jsdom has none.
+  const copied = [];
+  Object.defineProperty(window.navigator, 'clipboard',
+    { value: { writeText: async (text) => { copied.push(text); } }, configurable: true });
   await api.sendToWeb(tune);
   const link = api.lastSentLink();
+  check(copied.at(-1) === link && !$('snackbar').hidden && $('snacktext').textContent === 'Link copied'
+        && $('snackundo').hidden,
+    'the link is copied, and a snackbar says so, with nothing to press');
+  await new Promise((r) => setTimeout(r, 2600));
+  check($('snackbar').hidden, 'and goes by itself after two and a half seconds');
   check(link?.startsWith(`${window.location.origin}${window.location.pathname}#play:`),
     'the link points at this page, marked as one tune to play');
   const line = 'Protracker/Jogeir Liljedahl/zoolook.mod\tzoolook';
@@ -1677,7 +1686,13 @@ if (window.__api) {
   window.document.querySelector('#queue li .rowmenu').click();
   const item = [...$('menu').children].find((b) => b.textContent === 'Send to Protracktor web');
   check(item && !item.disabled && item.querySelector('svg'), 'a row\'s menu offers it, with its icon');
+  // Copy a link says so the same way.
+  [...$('menu').children].find((b) => b.textContent === 'Copy a link').click();
+  await settle();
+  check(copied.at(-1) === tune.url && $('snacktext').textContent === 'Link copied' && !$('snackbar').hidden,
+    'Copy a link confirms itself in the same snackbar');
   $('menu').hidden = true;
+  delete window.navigator.clipboard;
 
   api.endSession();
   await settle();
