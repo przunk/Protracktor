@@ -415,7 +415,7 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C40. The phone's Now Playing shows only the first line of a module's message — **OPEN**
+### C40. ~~The phone's Now Playing shows only the first line of a module's message~~ — FIXED 2026-09-11
 
 *Found 2026-09-11 while giving the page the phone's Now Playing, not by a listener.*
 
@@ -430,6 +430,11 @@ The page had the other half of the fault: it read every line as a key, and asked
 which no backend writes, so it showed no message at all. **Fixed on the page on 2026-09-11**
 (`describeFields` takes everything after `message<TAB>`); the phone is left for its own branch, the
 fix being the same few lines in `NativeEngine.describe()`.
+
+**Fixed the same night** on `fix/module-message`: the parsing moved out of `NativeEngine`, which
+loads the native library when touched, into `DescribeBlock`, where a JVM test can reach it — and it
+reads the block by the page's rule. `DescribeBlockTest` holds it to a message of several lines with
+its spacing, a line of it holding a tab, and the word `message` appearing inside another value.
 
 ### C39. ~~Round 8's web bundle, first look: four faults~~ — FIXED 2026-09-11
 

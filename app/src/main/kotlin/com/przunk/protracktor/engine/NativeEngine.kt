@@ -86,14 +86,8 @@ object NativeEngine {
     class Track internal constructor(private val handle: Long) : AutoCloseable {
         private var closed = false
 
-        /** Metadata as `key\tvalue` lines. Parsed by [describe]. */
-        fun describe(): Map<String, String> = nativeDescribe(handle())
-            .lineSequence()
-            .mapNotNull { line ->
-                val tab = line.indexOf('\t')
-                if (tab <= 0) null else line.substring(0, tab) to line.substring(tab + 1)
-            }
-            .toMap()
+        /** Metadata as `key\tvalue` lines, the module's message whole ([DescribeBlock]). */
+        fun describe(): Map<String, String> = DescribeBlock.parse(nativeDescribe(handle()))
 
         fun start(): Boolean = nativeStart(handle())
 
