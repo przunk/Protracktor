@@ -553,8 +553,8 @@ oldest forgotten. A stamp that only increases orders two plays in one millisecon
 **A fault from item 3 was found while building this, invisible to jsdom:** Browse on "From the
 phone" with an index held threw — a helper read before its `const` (`docs/STATUS.md` C37). Fixed
 here, with a check that builds that state. A second suspicion — that the Random heading's
-`display: flex` would beat `hidden` — was checked against the page and was wrong: it already has
-`[hidden] { display: none !important }`.
+`display: flex` would beat `hidden` — was right and was dismissed on a check that matched a scoped
+rule; the owner found it on the first bundle (`docs/STATUS.md` C38).
 
 What follows is what was written before it was built.
 

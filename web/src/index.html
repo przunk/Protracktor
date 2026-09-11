@@ -500,6 +500,14 @@
     font-variant-numeric: tabular-nums;
   }
   .subsong[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+  /* **`hidden` wins, everywhere, and it is last on purpose.** The page used to restore it element
+     by element -- `.panel[hidden]`, `.overlay[hidden]` and so on, each beside a `display` of its
+     own. Round 8's Random heading (`display: flex`) got no such line and showed over every panel
+     whether or not Random was running (`docs/STATUS.md` C38). `!important` is what wins in a
+     browser; standing last is what wins in jsdom, whose cascade takes the last matching rule and
+     does not read `!important` -- so here both agree, and the page check can see what a browser
+     would show. */
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>

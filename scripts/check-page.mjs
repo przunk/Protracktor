@@ -145,6 +145,21 @@ await new Promise((r) => setTimeout(r, 200));
 const $ = (id) => window.document.getElementById(id);
 
 check($('status').textContent.length > 0, 'the status line says something');
+
+// **Hidden means not shown** (`docs/STATUS.md` C38). jsdom lays nothing out, but it does run the
+// page's own stylesheet through `getComputedStyle` -- which is enough to catch an element whose
+// `display: flex` outranks `hidden`. The Random heading did exactly that and showed over every panel,
+// through 211 checks that all read the attribute and never what it did.
+{
+  const leaking = [...window.document.querySelectorAll('[hidden]')]
+    .filter((el) => window.getComputedStyle(el).display !== 'none')
+    .map((el) => el.id || el.className || el.tagName);
+  check(leaking.length === 0, `every element marked hidden is not displayed${leaking.length ? ` (still showing: ${leaking.join(', ')})` : ''}`);
+  // And one that is only hidden later: History's heading hides Random's Filter.
+  $('random-filter').hidden = true;
+  check(window.getComputedStyle($('random-filter')).display === 'none', "and a button hidden later is too");
+  $('random-filter').hidden = false;
+}
 check(!!window.__api, 'the script finished loading');
 
 if (window.__api) {
