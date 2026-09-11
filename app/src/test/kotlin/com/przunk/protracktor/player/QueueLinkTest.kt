@@ -207,9 +207,20 @@ class QueueLinkTest {
     }
 
     @Test
-    fun `a non-Modland catalogue keeps its whole URL`() {
+    fun `a non-Modland catalogue goes as the address a browser can fetch`() {
+        // ASMA as its own file on asma.atari.org, not the `asma://` this phone reads it by.
         val packed = QueueLink.pack(listOf(track("asma://asma/Games/Rob_Hubbard/tune.sap", "tune.sap")))
-        assertEquals(listOf("asma://asma/Games/Rob_Hubbard/tune.sap"), unpack(packed.fragment))
+        assertEquals(listOf("https://asma.atari.org/asma/Games/Rob_Hubbard/tune.sap"), unpack(packed.fragment))
+    }
+
+    @Test
+    fun `an ASMA tune goes as a link the page plays`() {
+        val tune = track("asma://asma/Composers/Aki/Robots.sap", "Robots")
+        val link = QueueLink.trackLink("https://pi.example/src/", tune)!!
+        assertEquals(
+            listOf("https://asma.atari.org/asma/Composers/Aki/Robots.sap\tRobots"),
+            unpack(link.substringAfter("#play:")),
+        )
     }
 
     /**
@@ -229,11 +240,11 @@ class QueueLinkTest {
 
     @Test
     fun `a tune the page could not fetch makes no link`() {
-        // A file on this phone, an MP3 with an address, and ASMA, which is read out of storage here.
+        // A file on this phone, an MP3 with an address, and a tune inside an UnExoticA archive.
         listOf(
             track("content://x/1", "mine.mod"),
             track("https://example.org/music/live set.mp3", "live set.mp3"),
-            track("asma://asma/Games/Rob_Hubbard/tune.sap", "tune.sap"),
+            track("unexotica://Game/Composer/Title.lha/Title/mod.name", "mod.name"),
         ).forEach { tune ->
             assertEquals(tune.id, null, QueueLink.trackLink("https://pi.example/src/", tune))
             assertTrue(tune.id, !QueueLink.canSend(tune))

@@ -110,11 +110,15 @@ object WebRemote {
             // **And an MP3 whatever its address is.** `localBytesFor` never packs one, so this
             // would mark it anyway for a local file -- but the rule the owner gave is "always", and
             // a rule that happens to hold is not the same as one that is written down.
+            // **The address a browser can fetch**, where the catalogue has one: ASMA's rows go as
+            // their own files on asma.atari.org rather than as the `asma://` this phone reads.
+            val url = Catalogue.owning(track.id)?.let { c -> c.pathFrom(track.id)?.let(c::fileUrlFor) }
+                ?: track.id
             val stranded =
                 if (com.przunk.protracktor.player.QueueLink.isMp3(track) ||
-                    (bytes == null && !track.id.startsWith("http"))
+                    (bytes == null && !url.startsWith("http"))
                 ) ""","local":true""" else ""
-            """{"url":"${escape(track.id)}","title":"${escape(track.title)}",""" +
+            """{"url":"${escape(url)}","title":"${escape(track.title)}",""" +
                 """"file":"${escape(file)}"$stranded$data}"""
         }
         return """{"queue":[$rows],"index":$index}"""

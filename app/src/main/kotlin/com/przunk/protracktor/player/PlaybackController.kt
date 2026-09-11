@@ -1527,11 +1527,13 @@ class PlaybackController private constructor(private val context: Context) {
             // whole queue is eight megabytes and one four-minute recording is more than that. It is
             // marked instead, and arrives as a greyed row naming the file (`docs/BACKLOG.md` A29).
             if (QueueLink.isMp3(track)) continue
-            // **Skipped only when the browser can fetch it for itself.** Modland serves every file
-            // over HTTP, so its rows travel as a URL and cost nothing here. ASMA and UnExoticA do
-            // not publish one: `asma://` and `unexotica://` mean something on this phone and
-            // nothing anywhere else, so those tracks travel as bytes or they arrive dead.
-            if (Catalogue.owning(track.id) != null && track.id.startsWith("http")) continue
+            // **Skipped only when the browser can fetch it for itself.** Modland and ASMA serve
+            // every file over HTTP, so their rows travel as a URL and cost nothing here (ASMA's since
+            // 2026-09-11, when its per-file addresses were measured). UnExoticA's `unexotica://`
+            // means something on this phone and nothing anywhere else, so it travels as bytes or
+            // arrives dead.
+            val catalogue = Catalogue.owning(track.id)
+            if (catalogue?.pathFrom(track.id)?.let(catalogue::fileUrlFor) != null) continue
             if (used >= WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
             val bytes = loadBytes(track)
             if (bytes == null || used + bytes.size > WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
