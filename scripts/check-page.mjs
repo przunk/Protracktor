@@ -93,7 +93,14 @@ window.fetch = async (url, options) => {
     const zip = window.__asmaZip;
     const range = options?.headers?.Range;
     const copy = (b) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
-    if (!range || window.__asmaIgnoreRange) return { ok: true, status: 200, arrayBuffer: async () => copy(zip) };
+    const headers = { get: (name) => (name.toLowerCase() === 'content-length' ? String(zip.length) : null) };
+    if (options?.method === 'HEAD') return { ok: true, status: 200, headers };
+    // **What the real server does to a browser**: a range the browser must ask about first -- the
+    // suffix form, or any range where it safelists none -- is refused, because asma.atari.org
+    // answers the question without `Access-Control-Allow-Headers`. curl never asks, which is why it
+    // passed there and failed for the owner.
+    if (range && (range.startsWith('bytes=-') || window.__asmaNoSafeRange)) throw new TypeError('Failed to fetch');
+    if (!range || window.__asmaIgnoreRange) return { ok: true, status: 200, headers, arrayBuffer: async () => copy(zip) };
     window.__asmaRanges.push(range);
     const [, from, to] = /^bytes=(\d*)-(\d*)$/.exec(range);
     const slice = from === '' ? zip.subarray(Math.max(0, zip.length - Number(to))) : zip.subarray(Number(from), Number(to) + 1);
@@ -1761,8 +1768,10 @@ if (window.__api) {
   await api.downloadAsmaIndex();
   await settle();
   const asked = window.__asmaRanges.splice(0);
-  check(asked.length === 2 && asked[0] === 'bytes=-65557' && asked[1] === `bytes=${body.length}-${body.length + directory.length - 1}`,
-    'the list is read with two ranged requests, the tail and then the directory — never the whole archive');
+  // A directory this small sits inside the tail, so one ordinary range brings both.
+  const size = window.__asmaZip.length;
+  check(asked.length === 1 && asked[0] === `bytes=${size - 65557}-${size - 1}`,
+    'the list is read with a size from HEAD and an ordinary range — never the suffix form a browser must ask about');
   const held = await api.archiveMeta('asma');
   check(held?.tracks === 3 && held.formats === 2, 'every .sap is listed and nothing else, under its section');
   check([...$('browselist').children].some((li) => li.textContent.startsWith('ASMA — 3 tunes')),
@@ -1802,6 +1811,34 @@ if (window.__api) {
   window.__asmaIgnoreRange = false;
   window.__asmaRanges.length = 0;
   check((await api.archiveMeta('asma'))?.tracks === 3, 'and a server that ignores the range gives the same list');
+
+  // A browser that asks about every range is refused by this server: it gets the whole archive.
+  window.__asmaNoSafeRange = true;
+  await store.clear('asma:');
+  await api.downloadAsmaIndex();
+  await settle();
+  window.__asmaNoSafeRange = false;
+  window.__asmaRanges.length = 0;
+  check((await api.archiveMeta('asma'))?.tracks === 3, 'and a browser whose range is refused falls back to the whole archive');
+
+  // ASMA's real directory is 849 KB, far more than one tail: then it takes a second ordinary range.
+  // Padded here past the tail with entries the filter drops, so only the three tunes remain.
+  const padding = Array.from({ length: 1500 }, (_, i) => entry(`asma/Docs/padding-${String(i).padStart(5, '0')}.txt`, 1));
+  const bigDirectory = Buffer.concat([directory, ...padding]);
+  const bigEnd = Buffer.from(end);
+  bigEnd.writeUInt16LE(names.length + padding.length, 10);
+  bigEnd.writeUInt32LE(bigDirectory.length, 12);
+  bigEnd.writeUInt32LE(200000, 16);
+  window.__asmaZip = Buffer.concat([Buffer.alloc(200000, 7), bigDirectory, bigEnd]);
+  await store.clear('asma:');
+  await api.downloadAsmaIndex();
+  await settle();
+  const big = window.__asmaZip.length;
+  const two = window.__asmaRanges.splice(0);
+  check(bigDirectory.length > 65557 && two.length === 2 && two[0] === `bytes=${big - 65557}-${big - 1}`
+        && two[1] === `bytes=200000-${200000 + bigDirectory.length - 1}`
+        && (await api.archiveMeta('asma'))?.tracks === 3,
+    'a real-sized archive is read as the tail and then the directory, both ordinary ranges');
 
   await store.clear('asma:');
   await api.browseTo([]);

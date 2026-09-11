@@ -347,11 +347,29 @@ export async function downloadModland({
  *
  * A server that ignores `Range` answers 200 with the whole file; the same reading works on that,
  * because the offsets are the file's own.
+ *
+ * **Never the suffix form, `bytes=-N`** (owner, 2026-09-11: "Failed to fetch"). Only a range with
+ * a start is CORS-safelisted; any other makes the browser ask first, and asma.atari.org answers that
+ * question without `Access-Control-Allow-Headers`, so the request was refused before it left. The
+ * size comes from a HEAD instead, which needs no asking, and the tail is then an ordinary range. A
+ * browser too old to safelist even that gets the whole archive, which is slow and always allowed.
  */
 export async function downloadAsma({ fingerprint = '', keep = () => true, onProgress = null } = {}) {
   onProgress?.({ stage: 'fetching the list' });
   // The end record is 22 bytes and may be followed by a comment of up to 64 KB.
-  const tail = await ranged(ASMA_INDEX_URL, 'bytes=-65557');
+  let tail;
+  try {
+    const head = await fetch(ASMA_INDEX_URL, { method: 'HEAD' });
+    const length = Number(head.headers.get('content-length'));
+    if (!head.ok || !length) throw new Error('no size');
+    tail = await ranged(ASMA_INDEX_URL, `bytes=${Math.max(0, length - 65557)}-${length - 1}`);
+    tail.start = Math.max(0, length - 65557);
+  } catch {
+    onProgress?.({ stage: 'fetching the whole archive (20 MB), this browser will not ask for part of it' });
+    const response = await fetch(ASMA_INDEX_URL);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    tail = { bytes: await response.arrayBuffer(), whole: true };
+  }
   const view = new DataView(tail.bytes);
   let end = -1;
   for (let i = tail.bytes.byteLength - 22; i >= 0; i--) {
@@ -360,8 +378,10 @@ export async function downloadAsma({ fingerprint = '', keep = () => true, onProg
   if (end < 0) throw new Error('no end record in the archive');
   const size = view.getUint32(end + 12, true);
   const offset = view.getUint32(end + 16, true);
-  const directory = tail.whole
-    ? new DataView(tail.bytes, offset, size)
+  // Already in hand when the tail reached back far enough -- or was the whole file.
+  const from = tail.whole ? 0 : tail.start;
+  const directory = offset >= from
+    ? new DataView(tail.bytes, offset - from, size)
     : new DataView((await ranged(ASMA_INDEX_URL, `bytes=${offset}-${offset + size - 1}`)).bytes);
 
   onProgress?.({ stage: 'reading' });
@@ -395,7 +415,7 @@ export async function downloadAsma({ fingerprint = '', keep = () => true, onProg
 async function ranged(url, range) {
   const response = await fetch(url, { headers: { Range: range } });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return { bytes: await response.arrayBuffer(), whole: response.status === 200 };
+  return { bytes: await response.arrayBuffer(), whole: response.status === 200, start: 0 };
 }
 
 /**
