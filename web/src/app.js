@@ -1124,8 +1124,17 @@ const ICON = {
   link: 'M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z',
   info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
   remove: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+  add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
+  download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+  cloud: 'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z',
+  // Hollow shapes on the phone, so they need the even-odd rule to keep their holes.
+  dice: { d: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z', hollow: true },
+  history: { d: 'M5,4 L19,4 A2,2 0 0,1 21,6 L21,19 A2,2 0 0,1 19,21 L5,21 A2,2 0 0,1 3,19 L3,6 A2,2 0 0,1 5,4 Z M5.5,9.5 L18.5,9.5 L18.5,18.5 L5.5,18.5 Z M7,2 L9,2 L9,4 L7,4 Z M15,2 L17,2 L17,4 L15,4 Z M8,12 L11,12 L11,15 L8,15 Z', hollow: true },
 };
-const iconSvg = (path) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
+const iconSvg = (icon) => {
+  const { d, hollow } = typeof icon === 'string' ? { d: icon, hollow: false } : icon;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path${hollow ? ' fill-rule="evenodd"' : ''} d="${d}"/></svg>`;
+};
 
 /**
  * Takes a row out of a playlist of his own, with the way back offered (`GOAL.md`-era request of
@@ -1473,7 +1482,8 @@ async function renderPlaylists() {
     if (playlist.id !== PHONE) {
       const drop = document.createElement('button');
       drop.className = 'pdrop';
-      drop.textContent = 'Delete';
+      drop.innerHTML = iconSvg(ICON.remove);
+      drop.append('Delete');
       drop.onclick = async (event) => {
         event.stopPropagation();
         await playlists.remove(playlist.id);
@@ -1548,7 +1558,9 @@ async function renderBrowse() {
   // **Declared before anything uses it.** It sat below the "From the phone" branch, which calls it
   // since round 8 item 3 -- a `const` read before its declaration, so opening Browse on the phone's
   // list with an index downloaded threw. jsdom never met that state; `docs/STATUS.md` C37.
-  const row = (name, count, onclick) => {
+  // An icon for the rows that do something -- Random, History, a download -- as the phone's Browse
+  // rows have one; rows that are data (a format, an author, a tune) are drawn as the phone draws them.
+  const row = (name, count, onclick, icon = null) => {
     const li = document.createElement('li');
     const label = document.createElement('div');
     label.className = 'bname';
@@ -1557,6 +1569,7 @@ async function renderBrowse() {
     number.className = 'bcount';
     number.textContent = count == null ? '' : count.toLocaleString();
     li.append(label, number);
+    if (icon) li.insertAdjacentHTML('afterbegin', iconSvg(icon));
     li.onclick = onclick;
     list.append(li);
   };
@@ -1578,6 +1591,7 @@ async function renderBrowse() {
     label.className = 'bname';
     label.textContent = 'Make an empty playlist and browse into it';
     li.append(label);
+    li.insertAdjacentHTML('afterbegin', iconSvg(ICON.add));
     li.onclick = async () => { if (await newPlaylist()) await renderBrowse(); };
     list.append(li);
     // **Random is offered even here**, because it writes into no playlist at all -- the rule that
@@ -1588,8 +1602,8 @@ async function renderBrowse() {
     // the other one.
     const stale = held?.tracks ? await staleSentence(held) : '';
     if (stale) note.textContent += ` ${stale}`;
-    if (held?.tracks) row('Random', null, enterRandomFromBrowse);
-    row('History', null, openHistory);
+    if (held?.tracks) row('Random', null, enterRandomFromBrowse, ICON.dice);
+    row('History', null, openHistory, ICON.history);
     return;
   }
 
@@ -1602,8 +1616,8 @@ async function renderBrowse() {
       // now cost nothing to open.
       note.textContent = 'Modland is half a million tunes. The index is a 5.76 MB download, kept in '
         + 'this browser, and browsing is then offline.';
-      row('Download the Modland index', null, downloadIndex);
-      row('History', null, openHistory);
+      row('Download the Modland index', null, downloadIndex, ICON.download);
+      row('History', null, openHistory, ICON.history);
       return;
     }
     // An index is filtered by the list and the decoders it was built with, so one built by another
@@ -1611,13 +1625,13 @@ async function renderBrowse() {
     // tunes. One built before the page filtered at all has no `total`, and holds every row Modland
     // lists, including a third this browser cannot open.
     note.textContent = [await staleSentence(held), holding(held)].filter(Boolean).join(' ');
-    row('Random', null, enterRandomFromBrowse);
-    row('History', null, openHistory);
+    row('Random', null, enterRandomFromBrowse, ICON.dice);
+    row('History', null, openHistory, ICON.history);
     row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
       browsePath = ['modland'];
       await renderBrowse();
-    });
-    row('Download the index again', null, downloadIndex);
+    }, ICON.cloud);
+    row('Download the index again', null, downloadIndex, ICON.download);
     return;
   }
 
@@ -1642,7 +1656,7 @@ async function renderBrowse() {
       }
     }
     markPlayingIn(list);
-    row('Clear the history', null, async () => { await played.clear(); await renderBrowse(); });
+    row('Clear the history', null, async () => { await played.clear(); await renderBrowse(); }, ICON.remove);
     return;
   }
 

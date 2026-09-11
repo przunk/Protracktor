@@ -146,6 +146,17 @@ const $ = (id) => window.document.getElementById(id);
 
 check($('status').textContent.length > 0, 'the status line says something');
 
+// **Every button carries an icon and its name** -- the owner's standing rule, asked for on the phone
+// three times and again for this page on 2026-09-11 ("nie wiem ile razy jeszcze będę to wałkować").
+// Checked across the whole page so the next button cannot be added bare. The subsong chips are the
+// one exception, numbers in circles exactly as the phone draws them.
+{
+  const bare = [...window.document.querySelectorAll('button')]
+    .filter((b) => !b.classList.contains('subsong') && !b.querySelector('svg'))
+    .map((b) => b.id || b.textContent.trim() || b.className);
+  check(bare.length === 0, `every button on the page has an icon${bare.length ? ` (bare: ${bare.join(', ')})` : ''}`);
+}
+
 // **Hidden means not shown** (`docs/STATUS.md` C38). jsdom lays nothing out, but it does run the
 // page's own stylesheet through `getComputedStyle` -- which is enough to catch an element whose
 // `display: flex` outranks `hidden`. The Random heading did exactly that and showed over every panel,
@@ -1168,6 +1179,25 @@ if (window.__api) {
 
   await store.clear('modland:');
   window.__api.showPanel(null);
+}
+
+// --- the buttons the page builds as it goes also carry icons (owner, 2026-09-11) -------------------
+if (window.__api) {
+  console.log('\nicons on what the page builds:');
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  await window.__api.switchTo('p-icons');
+  $('playlistchip').click();
+  await settle();
+  const drops = [...$('playlistlist').querySelectorAll('button')];
+  check(drops.length > 0 && drops.every((b) => b.querySelector('svg')), 'the playlist sheet\'s Delete has an icon');
+  window.__api.showPanel(null);
+  const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+  await store.putAll([{ key: 'modland:meta', tracks: 3, total: 3, phoneOnly: 0, formats: 1, buckets: 1, fingerprint: 'x' }]);
+  await window.__api.browseTo([]);
+  const actions = [...$('browselist').children];
+  check(actions.length > 0 && actions.every((li) => li.querySelector('svg')),
+    'every row at the root of Browse does something, and has an icon');
+  await store.clear('modland:');
 }
 
 // --- editing a playlist of his own, as on the phone (owner, 2026-09-11) ---------------------------
