@@ -422,6 +422,16 @@
     min-width: 190px;
   }
   #menu[hidden] { display: none; }
+  /* Every item an icon and its name, as the phone's row menu has them. */
+  #menu button { display: flex; align-items: center; gap: 12px; }
+  #menu button svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+  .snackbar { display: flex; align-items: center; gap: 12px; margin: 0 12px 6px; padding: 4px 6px 4px 16px;
+              background: var(--surface-container); border: 1px solid var(--outline); border-radius: var(--shape-s);
+              font-size: var(--body-medium); color: var(--on-surface); }
+  .snackbar span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .snackaction { display: flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--primary);
+                 font: inherit; font-weight: 500; cursor: pointer; padding: 6px 8px; }
+  .snackaction svg { width: 20px; height: 20px; fill: currentColor; }
   #menu button {
     display: block; width: 100%; text-align: left;
     background: none; border: 0; padding: 10px 16px; font: inherit; color: inherit; cursor: pointer;
@@ -620,6 +630,19 @@
       -->
       <div class="statusline" id="status">starting…</div>
     </section>
+
+    <!--
+      What was just removed, and the way back -- the phone's snackbar. Removal asks nothing first,
+      as on the phone: undo costs nothing when it was meant, and a question on every delete is a
+      toll paid by the people who meant it.
+    -->
+    <div id="snackbar" class="snackbar" hidden>
+      <span id="snacktext"></span>
+      <button class="snackaction" id="snackundo">
+        <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        Undo
+      </button>
+    </div>
 
     <div class="statusline error" id="error"></div>
 

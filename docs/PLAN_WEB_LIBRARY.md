@@ -212,6 +212,22 @@ jsdom is, because a stub of storage would let a broken store pass.
 
 - **Still to be checked by him:** on the Pi, across a browser restart.
 
+### S2a. Editing a playlist of his own — **built 2026-09-11**
+
+*Owner, 2026-09-11: "w widoku mojej playlisty webowej nie mogę usuwać utworów. Powinno to działać tak
+jak na telefonie. Tylko lista from the phone powinna być niemodyfikowalna."*
+
+A row of one of his own playlists offers **Remove from this playlist**; "From the phone" offers
+nothing of the kind, being what the phone sent. The phone's rules (`removeTracks`): no question
+first, and removing what is playing stops it rather than starting something else. An **Undo**
+snackbar puts it back where it was, for six seconds.
+
+**One difference, and it is the owner's to settle:** the phone holds edits as unsaved until Save or
+Discard; the page saves as it goes, so Undo is the whole of its safety net. Bulk selection, which the
+phone has, is not here yet.
+
+Every item of the row menu has its icon now, the phone's paths — the page's menu was text alone.
+
 ### S3. The index, and browsing it
 
 Modland first, because it is the one that matters and the one whose numbers are above.

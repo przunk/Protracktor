@@ -890,16 +890,23 @@ function openRowMenu(entry, anchor) {
   const menu = $('menu');
   menu.replaceChildren();
   const items = [
-    ['Save the file', () => saveFile(entry), !entry.local],
-    ['Copy a link', () => copyLink(entry), !!entry.url],
-    ['Information', () => informAbout(entry), !entry.local],
+    ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
+    ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
+    ['Information', () => informAbout(entry), !entry.local, ICON.info],
   ];
   // Pruning the record before keeping the rest: the phone's rows have it, and "if it is there you
   // need not use it; if it is not you cannot" (owner, 2026-09-10).
-  if (random) items.push(['Remove from this list', () => removeRandomAt(queue.indexOf(entry)), true]);
-  for (const [label, act, enabled] of items) {
+  if (random) items.push(['Remove from this list', () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
+  // **A playlist of his own can lose a row**, as on the phone (owner, 2026-09-11). "From the phone"
+  // is what the phone sent and is never edited here; a session's list is not a playlist.
+  if (!random && !away && activePlaylist !== PHONE) {
+    items.push(['Remove from this playlist', () => removeFromPlaylist(queue.indexOf(entry)), true, ICON.remove]);
+  }
+  for (const [label, act, enabled, icon] of items) {
     const button = document.createElement('button');
-    button.textContent = label;
+    // An icon and its name, never the name alone -- the phone's menu has both, and so must this.
+    button.innerHTML = iconSvg(icon);
+    button.append(label);
     button.disabled = !enabled;
     button.onclick = () => { closeRowMenu(); act(); };
     menu.append(button);
@@ -1111,6 +1118,83 @@ async function rollRandom() {
   await playAt(queue.length - 1);
 }
 
+/** The phone's icons, the same paths, for controls the page builds rather than declares. */
+const ICON = {
+  save: 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
+  link: 'M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z',
+  info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
+  remove: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+};
+const iconSvg = (path) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
+
+/**
+ * Takes a row out of a playlist of his own, with the way back offered (`GOAL.md`-era request of
+ * 2026-09-11: "w widoku mojej playlisty webowej nie mogę usuwać utworów").
+ *
+ * The phone's rules (`PlaybackController.removeTracks`): **no question first** -- undo costs nothing
+ * when it was meant -- and **removing what is playing stops it** rather than starting something
+ * else, because no reading of "remove" asks for a different tune. The page saves as it goes where
+ * the phone waits for Save, so the undo is the whole of the safety net here.
+ */
+let lastRemoval = null;
+let undoTimer = null;
+
+function removeFromPlaylist(at) {
+  if (random || away || activePlaylist === PHONE || at < 0 || at >= queue.length) return;
+  const wasCurrent = at === index;
+  const [track] = queue.splice(at, 1);
+  if (wasCurrent) {
+    stopForLeaving();
+    index = Math.min(at, queue.length - 1);
+    rowState = 'selected';
+    setPlaying(false);
+    $('title').textContent = queue[index]?.name ?? 'Nothing playing';
+    $('sub').textContent = queue[index] ? 'press play' : '—';
+  } else if (at < index) {
+    index--;
+  }
+  // The shuffle and the back-stack both hold indices, and every one past the gap has moved.
+  history = index >= 0 ? [index] : [];
+  if (shuffle) reshuffle(index >= 0 ? index : null);
+  lastRemoval = { at, track, playlist: activePlaylist, wasCurrent };
+  render();
+  remember();
+  showUndo(`Removed ${track.name}`);
+}
+
+function undoRemoval() {
+  const removal = lastRemoval;
+  hideUndo();
+  if (!removal || removal.playlist !== activePlaylist || random || away) return;
+  queue.splice(Math.min(removal.at, queue.length), 0, removal.track);
+  if (removal.wasCurrent) {
+    index = removal.at;
+    rowState = 'selected';
+    $('title').textContent = removal.track.name;
+    $('sub').textContent = 'press play';
+  } else if (removal.at <= index) {
+    index++;
+  }
+  history = index >= 0 ? [index] : [];
+  if (shuffle) reshuffle(index >= 0 ? index : null);
+  render();
+  remember();
+}
+
+/** Six seconds, the length of a Material snackbar with an action. */
+function showUndo(text) {
+  $('snacktext').textContent = text;
+  $('snackbar').hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, 6000);
+}
+
+function hideUndo() {
+  clearTimeout(undoTimer);
+  lastRemoval = null;
+  $('snackbar').hidden = true;
+}
+
 /**
  * Walks past a Random pick that would not open, and answers whether it did.
  *
@@ -1319,6 +1403,8 @@ function setQueue(urls, at = 0) {
   // A queue arriving -- a playlist switched to, the phone's handoff, a tune played from Browse --
   // replaces whatever was showing, and that includes the dice's record.
   dropSession();
+  // Another list arriving makes an undo for the last one meaningless.
+  hideUndo();
   delete $('seek').dataset.opened;
   // Selected, not playing: the queue points here and nothing has started. A list with no mark at
   // all leaves the dock naming a track the list does not admit to.
@@ -1897,6 +1983,7 @@ function previousFile() {
 }
 
 $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
+$('snackundo').onclick = () => undoRemoval();
 $('random-leave').onclick = () => endSession();
 
 $('next').onclick = () => {

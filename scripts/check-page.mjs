@@ -1170,6 +1170,57 @@ if (window.__api) {
   window.__api.showPanel(null);
 }
 
+// --- editing a playlist of his own, as on the phone (owner, 2026-09-11) ---------------------------
+if (window.__api) {
+  console.log('\nediting a playlist:');
+  const { playlists } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const saved = async (id) => ((await playlists.get(id))?.tracks ?? []).map((t) => t.url).join();
+  const menuOf = (row) => { row.querySelector('.rowmenu').click(); return [...$('menu').querySelectorAll('button')]; };
+
+  const a = 'https://example.test/e1.mod';
+  const b = 'https://example.test/e2.mod';
+  const c = 'https://example.test/e3.mod';
+  await window.__api.switchTo('p-edit');
+  window.__api.setQueue([a, b, c], 0);
+  await settle(700);
+
+  let items = menuOf($('queue').children[1]);
+  check(items.some((x) => x.textContent.trim() === 'Remove from this playlist'),
+    'a row of a playlist of his own offers removal');
+  check(items.every((x) => x.querySelector('svg')), 'and every item in the row menu has an icon');
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle(700);
+  check(window.__api.queueNow().join() === `${a},${c}`, 'removing takes the row out, with no question first');
+  check(await saved('p-edit') === `${a},${c}`, 'and the playlist keeps it out');
+  check(!$('snackbar').hidden && $('snacktext').textContent.includes('Removed'), 'with the way back offered');
+  check(!!$('snackundo').querySelector('svg'), 'which has an icon too');
+
+  $('snackundo').click();
+  await settle(700);
+  check(window.__api.queueNow().join() === `${a},${b},${c}` && $('snackbar').hidden,
+    'undo puts it back where it was');
+  check(await saved('p-edit') === `${a},${b},${c}`, 'and that is saved as well');
+
+  // Removing what is playing stops it, rather than starting something else.
+  await window.__api.playAt(0);
+  items = menuOf($('queue').children[0]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  check($('playpause').title === 'Play' && window.__api.queueNow().join() === `${b},${c}`,
+    'removing the tune that is playing stops it, and starts nothing else');
+  $('snackundo').click();
+  await settle(700);
+
+  // "From the phone" is what the phone sent, and is never edited here.
+  await window.__api.switchTo('phone');
+  window.__api.receive({ queue: [{ url: a, title: 'A' }], index: 0 });
+  await settle();
+  const phoneItems = menuOf($('queue').children[0]).map((x) => x.textContent.trim());
+  check(!phoneItems.some((t) => t.includes('Remove')), '"From the phone" offers no removal');
+  $('menu').hidden = true;
+}
+
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
 //
 // **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`
