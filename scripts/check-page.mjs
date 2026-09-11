@@ -1625,8 +1625,8 @@ if (window.__api) {
   api.onWorklet({ type: 'opened', describe: 'title\tzoolook\nformat\tProTracker MOD\n', duration: 200,
                   subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
   await settle();
-  check($('playpause').title === 'Play' && $('status').textContent.startsWith('Touch the page'),
-    'opened with no click on the page, it offers play and says why, rather than a pause for a silent tune');
+  check($('playpause').title === 'Play' && $('sub').textContent === 'Tap anywhere to play',
+    'opened with no click on the page, the dock asks for a tap, rather than showing pause for a silent tune');
   // **Any touch starts it** (owner, 2026-09-11), not only Play: the first use of the page is the
   // permission the browser was waiting for.
   window.__audioBlocked = false;
@@ -1636,6 +1636,7 @@ if (window.__api) {
   check(api.contextNow().state === 'running' && $('playpause').title === 'Pause'
         && window.__toWorklet.slice(sent).map((m) => m.type).join() === 'play',
     'and the first touch anywhere on the page starts it, once');
+  check($('sub').textContent !== 'Tap anywhere to play', 'after which the dock says what is playing again');
 
   // Play itself, as that first touch: its own click starts the tune, and must not be the second
   // press that pauses what the touch began.
@@ -1652,6 +1653,25 @@ if (window.__api) {
   await settle();
   check($('playpause').title === 'Pause' && window.__toWorklet.slice(before).map((m) => m.type).join() === 'play',
     'and Play pressed as that touch starts it, rather than starting and pausing it');
+
+  // **Chrome's order** (owner, 2026-09-11: "widzę fetching i koniec"): it runs no worklet while the
+  // context is suspended, so the tune is not opened until the touch -- the dock must ask for one
+  // while it is still loading, and the button must not offer to stop.
+  api.contextNow().state = 'suspended';
+  window.__audioBlocked = true;
+  await api.playAt(0);
+  await settle();
+  check($('sub').textContent === 'Tap anywhere to play' && $('playpause').title === 'Play',
+    'with the tune not yet opened, the dock asks for a tap and Play is offered, not Stop');
+  window.__audioBlocked = false;
+  $('title').dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  await settle();
+  check(api.contextNow().state === 'running' && $('playpause').title === 'Stop loading',
+    'the touch lets the worklet run, and the load it was holding carries on');
+  api.onWorklet({ type: 'opened', describe: 'title\tzoolook\n', duration: 200,
+                  subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
+  await settle();
+  check($('playpause').title === 'Pause', 'and the tune plays the moment it opens');
 
   // Offered on every list: the queue's row menu here, Browse's in its own checks above.
   window.document.querySelector('#queue li .rowmenu').click();

@@ -173,6 +173,10 @@ async function begin() {
   // told Oboe, which resamples; this is the same answer by the only route a page has.
   context = new AudioContext({ sampleRate: 44100 });
   status('loading the engine…');
+  // Born suspended: no click has reached this page yet -- a link opened from another app. Chrome
+  // does not even run the worklet until the context does, so this is said now rather than when a
+  // tune opens, which there it would not do (owner, 2026-09-11: "widzę fetching i koniec").
+  if (context.state === 'suspended') waitForTouch();
 
   const wasm = await fetch('../vendor/engine.wasm').then((r) => r.arrayBuffer());
   await context.audioWorklet.addModule('./processor.js');
@@ -240,6 +244,7 @@ function onWorklet(message) {
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
       const fields = describeFields(message.describe);
+      dockFields = fields;
       // **Recorded here and only here.** The playlist's plays, Browse's, Random's and History's
       // own replays all arrive at this one message, so there is one recording path rather than one
       // per list (`GOAL.md` round 8, item 4) -- and it is after the engine opened the file, so what
@@ -270,8 +275,7 @@ function onWorklet(message) {
       // which would have stopped a tune nobody could hear yet.
       if (context?.state === 'suspended') {
         setPlaying(false);
-        status('Touch the page to hear it — a browser starts no sound until then.');
-        startOnFirstTouch();
+        waitForTouch();
         break;
       }
       setPlaying(true);
@@ -676,8 +680,10 @@ async function playAt(next) {
   // did not load at all -- and both times the screen simply sat there. Ten seconds is far past any
   // honest open; after that the page says so rather than waiting for ever.
   clearTimeout(openWatchdog);
-  openWatchdog = setTimeout(() => {
+  openWatchdog = setTimeout(function expire() {
     if (loading !== abort) return;
+    // Waiting for a touch is not a worklet that never answered: Chrome runs none until then.
+    if (context?.state === 'suspended') { openWatchdog = setTimeout(expire, 10_000); return; }
     loading = null;
     setPlaying(false);
     $('error').textContent = engineReady
@@ -703,9 +709,7 @@ async function announceGesture() {
   if (context.state === 'suspended') {
     try { await context.resume(); } catch { /* needs a gesture; the message below is the answer */ }
   }
-  if (context.state === 'suspended') {
-    status('Press play — a browser will not start audio until this page is clicked.');
-  }
+  if (context.state === 'suspended') waitForTouch();
 }
 
 const PLAY_GLYPH = 'M8 5v14l11-7z';
@@ -769,8 +773,10 @@ function setPlaying(on) {
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
-  $('playglyph').setAttribute('d', loading ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
-  $('playpause').title = loading ? 'Stop loading' : on ? 'Pause' : 'Play';
+  // Play, not stop, while the page waits for a touch: the press it wants is the one that plays.
+  const stopping = loading && !firstTouch;
+  $('playglyph').setAttribute('d', stopping ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
+  $('playpause').title = stopping ? 'Stop loading' : on ? 'Pause' : 'Play';
   $('playpause').disabled = queue.length === 0;
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
@@ -2349,6 +2355,9 @@ $('load').onclick = () => {
   showPanel(null);
 };
 $('playpause').onclick = async () => {
+  // Waiting for the page's first use: this press is it, whatever the tune is doing meanwhile --
+  // while it is still loading, the button would otherwise mean "stop".
+  if (firstTouch) { await firstTouch({ target: document.body }); return; }
   // Nothing loaded yet, but a track is selected: this press is the one that starts it. That is the
   // gesture a browser insists on, and it is why a queue arriving does not play by itself.
   if (!loading && !$('seek').dataset.opened && index >= 0 && !playing) {
@@ -2654,6 +2663,20 @@ function playSentTune(tracks) {
  * pointerdown first would make their click the second press, and pause what had just begun.
  */
 let firstTouch = null;
+let dockFields = null;
+const TAP_HINT = 'Tap anywhere to play';
+
+/**
+ * Waiting for the page to be used, **said in the dock**: the status line lives in Now Playing,
+ * which is folded, so a sentence there was one nobody read while the dock sat on "fetching…".
+ */
+function waitForTouch() {
+  startOnFirstTouch();
+  $('sub').textContent = TAP_HINT;
+  status('A browser starts no sound until the page is touched.');
+  setPlaying(playing);
+}
+
 function startOnFirstTouch() {
   if (firstTouch) return;
   const events = ['pointerdown', 'keydown', 'click'];
@@ -2663,9 +2686,18 @@ function startOnFirstTouch() {
     if (context.state !== 'running' || !firstTouch) return;
     for (const type of events) removeEventListener(type, firstTouch, true);
     firstTouch = null;
-    if (playing || !$('seek').dataset.opened) return;
-    setPlaying(true);
-    node.port.postMessage({ type: 'play' });
+    const opened = !!$('seek').dataset.opened && !loading;
+    // Opened already (Firefox runs the worklet while suspended): this touch is the play. Not yet
+    // (Chrome does not): the open waiting in the worklet now runs, and `opened` starts it.
+    if (opened && !playing) {
+      setPlaying(true);
+      node.port.postMessage({ type: 'play' });
+    } else {
+      setPlaying(playing);
+    }
+    if ($('sub').textContent === TAP_HINT) {
+      $('sub').textContent = opened && dockFields ? describeLine(dockFields) : 'opening…';
+    }
     status('Playing');
   };
   for (const type of events) addEventListener(type, firstTouch, true);

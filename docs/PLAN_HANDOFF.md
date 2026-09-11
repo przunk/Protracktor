@@ -381,8 +381,11 @@ needs the page served somewhere they can reach.**
 link opened from another app gives the page no click, and a browser keeps audio suspended until it
 has one — unless the site is allowed to autoplay (Firefox: the site's permissions, "Autoplay: Allow
 Audio and Video"), in which case the tune simply plays. Otherwise the tune is fetched and opened
-anyway, the button offers play rather than pause, and **the first touch or key anywhere on the
-page** starts it — not only Play, which the owner asked for as "startuje od razu". Play and the
+anyway, the dock says "Tap anywhere to play" and the button offers play (not pause, not stop),
+and **the first touch or key anywhere on the page** starts it. Chrome runs no worklet until the
+context does, so there the tune only opens at that touch; the dock says so from the moment the
+context is born suspended rather than sitting on "fetching…", as it did the first time the owner
+tried it on his phone — not only Play, which the owner asked for as "startuje od razu". Play and the
 space bar are left to start it themselves, or their click would be a second press that paused it.
 
 ## 6. Order of work
