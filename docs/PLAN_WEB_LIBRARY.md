@@ -350,11 +350,16 @@ as Modland not having it.
 Downloading the index now starts the engine first if nothing has played yet, and waits for it to
 say which decoders it has — filtering before that answer would keep every Spectrum row.
 
-### S4. Search — **built 2026-09-10**
+### S4. Search — **built 2026-09-10**, answering with tunes only since 2026-09-11
 
 A field at the top of Browse, matching **authors and tunes together**, because a person typing a
 name does not know which they are after. It says how long it took, in milliseconds, rather than
 showing a spinner.
+
+**It answers with tunes, never folders** (owner, 2026-09-11: *"pokazuje mi konkretne utwory (nie
+foldery!)"*). An author it finds brings their tunes into the results rather than a row to walk
+into — which is what the phone's `CatalogueStore.search` does, matching title or author and
+returning tracks either way. At most 300, and the note says when there were more.
 
 **Titles are sharded by their first two characters** — 1,663 records instead of 43,715 — and
 **every shard is read**. That is the design and not a shortcut: an index on the first characters
@@ -372,7 +377,13 @@ and cost nothing.
 *`SearchResults.kt`'s rules — scope, per-source caps — are not shared yet. There is one source here,
 so there is nothing to scope; when ASMA arrives that changes and the cases file is where it goes.*
 
-### S4a. Browse is shut while "From the phone" is showing — **built 2026-09-10**
+### S4a. Browse is shut while "From the phone" is showing — **built 2026-09-10, undone 2026-09-11**
+
+**Undone by S4c.** Browse no longer writes into any playlist, so there is nothing left for it to
+protect "From the phone" from: Browse opens whole whichever list is showing, and Add on the phone's
+list asks which of his own playlists to put the tune in. **The paste box keeps its refusal** —
+pasting still replaces the list on screen, and that list must not be the phone's. What follows is
+the section as it was built.
 
 *Asked for by the owner in two goes, and the second one is the interesting half.*
 
@@ -400,6 +411,27 @@ cannot say why it is shut. "Nothing happens" is the worst of the three answers.
 while every playlist arrived full from the phone. Make an empty one, reload, and it was gone — back
 to "From the phone", with the tab he had just unblocked shut again. An empty playlist is now
 restored like any other.
+
+### S4c. Browse plays without touching the playlist — **built 2026-09-11**
+
+*`docs/BACKLOG.md` A33, decided by the owner the day it was raised.* Until now a folder or a search
+result replaced the playlist that was showing, and the owner met it the way it reads: a search, one
+tune pressed, and the playlist he had built was gone under forty results. The phone never did that.
+
+- **Pressing a tune plays it through a session**, the one History and Random already use: the list
+  it came from (the folder, the results, History) is what next and previous walk, the playlist waits
+  in the stash untouched, and the heading reads "Playing from Browse" with the way back beside it.
+  Going back stops the music, as it does on the phone (`returnToPlaylist`).
+- **Browse stays open** after the press, so the next tune can be tried — which is why it stopped
+  being a dialog. It is a screen in the column now, standing where the list stands, with the dock
+  under it: pause, next and the seek bar in reach while browsing.
+- **Every tune row has Add beside it, icon and label, and its menu**: add to another playlist,
+  information, the author's other tunes (the phone's "Show neighbours"), save the file, copy a link.
+- **Add appends to the playlist that is showing, or waiting under a session, and waits for Save** —
+  the save model the owner asked for on 2026-09-11. A tune already there is not added twice, and its
+  row says "Added". On "From the phone", which is never written to, Add asks which playlist instead.
+
+Not built: ticking many Browse rows at once. The phone has it; the owner did not ask for it here.
 
 ### S4b. Every list behaves like the phone's — **built 2026-09-11**
 

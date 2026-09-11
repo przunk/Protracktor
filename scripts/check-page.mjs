@@ -112,6 +112,10 @@ window.fetch = async (url, options) => {
 await import('./../web/node_modules/fake-indexeddb/auto/index.mjs');
 globalThis.indexedDB = indexedDB;
 window.indexedDB = indexedDB;
+// Read by key range: the page's search asks for every title shard by prefix.
+window.IDBKeyRange = IDBKeyRange;
+// And a Modland address escapes a name byte by byte, as the phone's URLEncoder does.
+window.TextEncoder ??= TextEncoder;
 window.navigator.storage ??= { persist: async () => true, persisted: async () => true,
                                estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
 
@@ -129,13 +133,13 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex, '
-    + 'buildRandomTable, drawTrack }; })();')
+    + 'buildRandomTable, drawTrack, platformOf }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -224,12 +228,16 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 50));
   const labels = [...window.document.querySelectorAll('#fields dt')].map((n) => n.textContent);
   const values = [...window.document.querySelectorAll('#fields dd')].map((n) => n.textContent);
-  check(labels.join(',') === 'title,artist,format,year',
-    'Now Playing shows the fields in the phone\'s order');
+  // The phone's rows (`ui/NowPlaying.kt`): where the file is, the year, then the file's own fields.
+  check(labels.join(',') === 'File,Year,Format,Artist',
+    'Now Playing shows the fields in the phone\'s order, under the phone\'s names');
+  check(values[0] === 'Modland/Protracker/4-Mat/hi there.mod',
+    'starting with where the file lives, read off the address of a row the phone sent');
   check(values.includes('Rob Hubbard'), 'and their values');
   check(window.document.querySelectorAll('.subsong').length === 3,
     'a file with three tunes gets three subsong buttons');
-  check($('sub').textContent.includes('Commodore 64'), 'the dock card says what it is playing');
+  // Author · machine · year, the phone's dock line; the machine is the file's, from its name.
+  check($('sub').textContent === 'Rob Hubbard · Amiga · 1985', 'the dock card says who, for what, and when');
   check($('seek').disabled === true, 'a backend that cannot seek disables the slider');
 
   // The two modes, whose rules are PlayQueue.kt's rather than invented here.
@@ -257,7 +265,31 @@ if (window.__api) {
   // What the operating system is told, which is how a media key reaches a buried tab.
   check(metadata?.title === 'Crazy Comets', 'the system media controls learn the title');
   check(metadata?.artist === 'Rob Hubbard', 'and the artist');
-  check(metadata?.album.includes('Commodore 64'), 'and what it is');
+  check(metadata?.album === 'Amiga · 1985', 'and what it is for, and when');
+
+  // **The author where the file is silent** (owner, 2026-09-11: zoolook.mod "nie widzę autora"). A
+  // plain .mod has nowhere to record one; Modland files it under a folder that names them.
+  window.__api.onWorklet({
+    type: 'opened',
+    describe: 'title\tzoolook\nformat\tProTracker MOD (M.K.)\nartist\t\nchannels\t4\nmessage\tgreetings to\n  all  the scene\n',
+    duration: 0, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+  });
+  await new Promise((r) => setTimeout(r, 50));
+  check($('sub').textContent === '4-Mat · Amiga', 'a silent file is credited to the folder it is filed under');
+  const silent = [...window.document.querySelectorAll('#fields dt')].map((n) => n.textContent);
+  const said = [...window.document.querySelectorAll('#fields dd')].map((n) => n.textContent);
+  check(said[silent.indexOf('Artist')] === '4-Mat' && silent.includes('Channels'),
+    'and Now Playing says so too, with the rest of what the file holds');
+  check(!$('np-message').hidden && $('np-message-text').textContent === 'greetings to\n  all  the scene',
+    'the module\'s message is shown whole, every line and its spacing');
+  check(!silent.some((label) => label.includes('the scene')), 'and none of its lines is taken for a field');
+
+  // The year, by the phone's `ReleaseYear` rules.
+  const yearOf = (describe) => api.releaseYear(api.describeFields(describe));
+  check(yearOf('year\t0\ndate\t\ncopyright\t1987-1989 Rob Hubbard') === '1987\u20131989', 'a range is kept as a range');
+  check(yearOf('copyright\t1987 Rob Hubbard 1989') === '1987', 'two years in a sentence are not a range');
+  check(yearOf('copyright\tKMCA-1234') === '', 'and a catalogue number is not a year');
+  check(yearOf('date\t2004-05-01T10:00') === '2004', 'an ISO date gives its year');
   check(typeof handlers.play === 'function' && typeof handlers.nexttrack === 'function',
     'and the media keys are wired to the transport');
   // **Two playAt calls a millisecond apart**, which is what a queue arriving from the phone does.
@@ -767,67 +799,160 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
     'with where they are filed and how much is there');
 }
 
-// --- browsing must not rewrite what the phone sent (owner, 2026-09-10) --------------------------
+// --- Browse plays without touching the playlist (owner, 2026-09-11) ------------------------------
 //
-// **Shut, and saying so before it is walked into.** The first version of this refused after the
-// press: three levels down, a tune chosen, and only then a paragraph explaining that none of it
-// counted. He asked for the caption up front, so that is what is checked -- the refusal underneath
-// stays, and is checked too, but it is now the second line of defence rather than the first.
+// **The phone's model, which the page did not have.** He searched "zool", pressed one tune, and his
+// playlist became every result on the screen. On the phone a result plays with the playlist left
+// alone, and only what he adds stays -- so that is what is checked: search answers with tunes, a
+// press plays one from a list that is not the playlist, and Add is the only way in.
 if (window.__api) {
-  console.log('\nbrowsing and the phone\'s playlist:');
+  console.log('\nBrowse plays without touching the playlist:');
+  const { catalogue: store, playlists: saved } = await import(path.resolve('web/src/store.js'));
+  await store.putAll([{ key: 'modland:meta', tracks: 6, total: 6, formats: 4, buckets: 5, fingerprint: 'x' }]);
+  const settle = () => new Promise((r) => setTimeout(r, 20));
+  const rows = () => [...$('browselist').children];
+  const button = (li, cls) => li.querySelector(`.${cls}`);
+
   // The phone's list is showing, which is where a fresh page starts.
   window.__api.receive({
     queue: [{ url: 'https://modland.com/pub/modules/Protracker/4-Mat/one.mod', title: 'One' }],
     index: 0,
   });
-  await new Promise((r) => setTimeout(r, 20));
-  const before = $('title').textContent;
+  await settle();
 
-  check($('tab-browse').getAttribute('aria-disabled') === 'true',
-    'the Browse button shows as shut while the phone\'s list is up');
-  check(($('tab-browse').title || '').includes('Switch to a playlist of your own'),
-    'and its tooltip says what to do about it');
+  // Browsing writes into nothing now, so it is not shut on the phone's list.
+  window.__api.showPanel('browse');
+  await window.__api.browseTo([]);
+  check(!$('browsesearch').hidden && rows().some((li) => li.textContent.includes('Modland')),
+    'Browse opens whole on the phone\'s list, search and archive both');
+  check(!$('browse').hidden && window.document.querySelector('main').hidden && !window.document.querySelector('footer').hidden,
+    'and stands where the list stands, with the dock still under it');
 
-  await window.__api.renderBrowse();
-  check($('browsenote').textContent.includes('will not rewrite it'),
-    'opening Browse says why, before anything is chosen');
-  check($('browsesearch').hidden, 'and offers no search into a list it cannot fill');
-  // **What it means, not how many.** This counted one row, which was true until round 8 put
-  // History here (and Random, once an index is held): both write into no playlist, so shutting them
-  // away from "From the phone" would protect nothing. What must stay true is the point -- the way out
-  // comes first, and there is no archive to walk into.
-  const offered = [...$('browselist').children].map((li) => li.textContent);
-  check(offered[0]?.includes('Make an empty playlist') && !offered.some((t) => t.includes('Modland')),
-    'the first row is the way out, and there is no archive to walk into');
-  check(offered.slice(1).every((t) => t.includes('Random') || t.includes('History')),
-    'and anything else offered is a list that writes into no playlist');
-  check($('browselist').textContent.includes('Make an empty playlist'), 'which is what it says');
+  await window.__api.runSearch('mat');
+  check(rows().length === 2 && rows().every((li) => li.classList.contains('btrack') && li.dataset.url),
+    'a search answers with tunes, never with a folder');
+  check(rows().map((li) => li.querySelector('.bname').textContent).sort().join() === 'another.mod,elysium.mod',
+    'and an author found by name brings their tunes, the ones whose titles do not match included');
+  check(rows().every((li) => li.querySelector('.bmeta')?.textContent === 'Protracker/4-Mat'),
+    'each saying where it lives');
+  check(rows().every((li) => button(li, 'badd')?.querySelector('svg') && button(li, 'badd').textContent === 'Add'
+                             && button(li, 'bmore')?.querySelector('svg')),
+    'with Add, icon and label, and the tune\'s menu beside it');
 
-  window.__api.playFromBrowse(
-    [{ url: 'https://modland.com/pub/modules/Protracker/Other/x.mod', name: 'X' }], 0);
-  await new Promise((r) => setTimeout(r, 20));
-  check($('title').textContent === before, 'and reached anyway, it leaves the queue alone');
+  // Add on the phone's list asks where, and closing that goes back to Browse.
+  button(rows()[0], 'badd').click();
+  await settle();
+  check(!$('addto').hidden && $('browse').hidden, 'Add on the phone\'s list asks which playlist, since that one is never written');
+  $('addto').querySelector('[data-close]').click();
+  check($('addto').hidden && !$('browse').hidden, 'and closing the question goes back to Browse, results and all');
+  check(rows().length === 2, 'which kept its results');
+  const phoneBefore = window.__api.queueNow().join();
 
-  // A playlist of his own, and the same button opens.
-  await window.__api.switchTo('p-test');
-  check($('tab-browse').getAttribute('aria-disabled') === 'false',
-    'switching to a playlist of his own opens Browse again');
-  await window.__api.renderBrowse();
-  check(!$('browsesearch').hidden, 'search comes back with it');
+  // A playlist of his own, with one tune in it.
+  const mine = 'https://modland.com/pub/modules/Coop/Alice%20%26%20Bob/together.mod';
+  await saved.save({ id: 'p-browse', name: 'Mine', tracks: [{ url: mine, name: 'together.mod' }], index: 0 });
+  await window.__api.switchTo('p-browse');
+  window.__api.showPanel('browse');
+  await window.__api.runSearch('elysium');
+  check(rows().length === 2, 'searching again, from a playlist of his own');
+
+  rows()[0].click();
+  await settle();
+  const session = window.__api.awayState();
+  check(session?.kind === 'browse' && window.__api.queueNow().length === 2
+        && window.__api.queueNow().join() === rows().map((li) => li.dataset.url).join(),
+    'pressing a tune plays it from the results, which are what next and previous walk');
+  check(session.stash.queue.map((t) => t.url).join() === mine && !window.__api.dirtyNow(),
+    'and the playlist is untouched, with nothing waiting to be saved');
+  check(!$('browse').hidden && rows()[0].classList.contains('playing'),
+    'Browse stays open on the results, marking the one playing');
+  check($('playlistname').textContent === 'Browse', 'the name at the top says where the music comes from');
+  check(window.__api.queueNow().join() !== phoneBefore, 'nothing of this reached the phone\'s list either');
+
+  button(rows()[1], 'badd').click();
+  await settle();
+  check(session.stash.queue.map((t) => t.url).join() === `${mine},${rows()[1].dataset.url}`,
+    'Add appends the tune to the playlist waiting underneath');
+  check(window.__api.dirtyNow(), 'as an edit waiting for Save, the phone\'s rule');
+  check(button(rows()[1], 'badd').disabled && button(rows()[1], 'badd').textContent === 'Added'
+        && button(rows()[1], 'badd').querySelector('svg'),
+    'and the row says it is in there now');
+  check(window.__api.queueNow().length === 2, 'while the results playing are left as they were');
+
+  // The tune's menu.
+  button(rows()[0], 'bmore').click();
+  const menu = [...$('menu').children];
+  check(menu.map((b) => b.textContent).join('|')
+        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link",
+    'the tune\'s menu has the phone\'s actions');
+  check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
+  // The icon beside its word, centred on it: a later rule once made every item a block and left the
+  // icons floating above the text.
+  const item = window.getComputedStyle(menu[0]);
+  check(item.display === 'flex' && item.alignItems === 'center' && item.gap === '12px',
+    'laid out as a row, the icon centred beside its word');
+  menu[2].click();
+  await settle();
+  check($('browsetitle').textContent === 'Protracker / 4-Mat' && !$('browsesearch').value,
+    'Show the author\'s tunes walks to their folder, out of the search');
+  check(rows().every((li) => li.classList.contains('btrack')) && rows().length === 2,
+    'whose tunes are rows of the same kind');
+
+  // Out of Browse and back to the playlist: the added tune is there, and Save is offered.
+  window.__api.showPanel(null);
+  check(!window.document.querySelector('main').hidden && !$('randomhead').hidden,
+    'closing Browse leaves the music playing, under a heading that says where from');
+  window.__api.endSession();
+  await settle();
+  check(window.__api.awayState() == null && window.__api.queueNow().length === 2
+        && window.__api.queueNow()[0] === mine,
+    'the playlist comes back with what was added, and only that');
+  check(!$('tab-save').hidden, 'and Save offered for it');
+
+  // Adding with nothing played from Browse goes straight into the list on screen.
+  window.__api.showPanel('browse');
+  await window.__api.browseTo(['modland', 'Protracker', '4-Mat']);
+  const other = rows().find((li) => !button(li, 'badd').disabled);
+  const inList = rows().map((li) => window.__api.queueNow().includes(li.dataset.url));
+  check(rows().every((li, i) => button(li, 'badd').disabled === inList[i]) && other,
+    'a folder shows which of its tunes the playlist already has');
+  button(other, 'badd').click();
+  check(window.__api.queueNow().length === 3 && window.__api.queueNow()[2] === other.dataset.url,
+    'and Add with nothing from Browse playing appends to the list on screen');
+  await window.__api.discardEdits();
+  await settle();
+  check(window.__api.queueNow().join() === mine, 'Discard takes the added tunes back out');
+  check(rows().filter((li) => button(li, 'badd').disabled).length === 0,
+    'and Browse\'s rows stop saying they are in it');
+
+  $('browseback').click();
+  await settle();
+  check($('browsetitle').textContent === 'Protracker', 'Back goes up one level');
+  $('browsesearch').value = 'elysium';
+  await window.__api.runSearch('elysium');
+  check($('browsetitle').textContent === 'Search' && !$('browseback').hidden
+        && $('browsenote').textContent.startsWith('2 tunes by name or author'),
+    'a search says what it found, and offers Back');
+  $('browseback').click();
+  await settle();
+  check(!$('browsesearch').value && $('browsetitle').textContent === 'Protracker',
+    'which clears it and returns to where it was typed');
+  await window.__api.browseTo([]);
+  window.__api.showPanel(null);
+  await saved.remove('p-browse');
   await window.__api.switchTo('phone');
 
-  // Pasting is the same act by another door, and it went through it. Found while answering "why
-  // can I not find this file", which turned out to be about the index and not about this at all.
-  // Re-read rather than reusing `before`: switching away and back reloads the phone's list from
-  // storage, which in this harness is empty, so the title has legitimately moved on.
+  // Pasting still replaces the list on screen, so on the phone's list it is still refused.
   const beforePaste = $('title').textContent;
   $('urls').value = 'https://modland.com/pub/modules/Protracker/Other/y.mod';
   $('load').click();
-  await new Promise((r) => setTimeout(r, 20));
+  await settle();
   check($('title').textContent === beforePaste,
-    'a pasted address leaves the phone\'s queue alone too');
+    'a pasted address leaves the phone\'s queue alone');
   check($('pastenote').textContent.includes('Switch to one of your own'), 'and says so');
   $('urls').value = '';
+  window.__api.showPanel(null);
+  await store.clear('modland:meta');
 }
 
 // --- only what this browser can play (GOAL.md round 8, item 1) -----------------------------------
@@ -844,6 +969,12 @@ if (window.__api) {
 
   check(table.extensions.size > 100 && table.prefixes.size > 10, 'the real list is read, extensions and prefixes');
   check([...archive.absentDecoders(browser)].join() === 'zxtune', 'the browser engine lacks exactly ZXTune');
+  check(archive.platformOf(table, 'zoolook.mod') === 'Amiga' && archive.platformOf(table, 'mod.zoolook') === 'Amiga',
+    'a file\'s machine comes from its extension or its Amiga prefix');
+  check(archive.platformOf(table, 'Commando.sid') === 'Commodore 64' && archive.platformOf(table, 'a.pt3') === 'ZX Spectrum',
+    'for every machine the list names');
+  check(archive.platformOf(table, 'notes.txt') === null && archive.platformOf(table, 'README') === null,
+    'and nothing for a name no machine claims');
   check(archive.absentDecoders(phone).size === 0 && archive.absentDecoders('').size === 0,
     'and absence is only ever what the engine says, never inferred from silence');
 

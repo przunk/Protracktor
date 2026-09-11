@@ -423,7 +423,12 @@
   }
   #menu[hidden] { display: none; }
   /* Every item an icon and its name, as the phone's row menu has them. */
-  #menu button { display: flex; align-items: center; gap: 12px; }
+  /* One rule for the item, not two: a second `#menu button` further down said `display: block`,
+     won the cascade, and left every icon floating above its word with no gap (owner, 2026-09-11). */
+  #menu button {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    background: none; border: 0; padding: 10px 16px; font: inherit; color: inherit; cursor: pointer;
+  }
   #menu button svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
   /* Ticking rows: the box stands where the row's number was, so nothing moves when selection starts. */
   li.track .tick { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); pointer-events: none; }
@@ -445,10 +450,6 @@
   .snackaction { display: flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--primary);
                  font: inherit; font-weight: 500; cursor: pointer; padding: 6px 8px; }
   .snackaction svg { width: 20px; height: 20px; fill: currentColor; }
-  #menu button {
-    display: block; width: 100%; text-align: left;
-    background: none; border: 0; padding: 10px 16px; font: inherit; color: inherit; cursor: pointer;
-  }
   #menu button:hover:not(:disabled) { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
   #menu button:disabled { opacity: .38; cursor: default; }
   .np-title {
@@ -458,6 +459,10 @@
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
+  .np-message { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--surface-variant); }
+  .np-message-label { color: var(--on-surface-variant); font-size: var(--body-small); margin-bottom: 6px; }
+  .np-message pre { margin: 0; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+                    white-space: pre; overflow-x: auto; }
   /* Browsing: one list, four levels, and a head that says where you are. */
   #browsesearch {
     width: 100%; box-sizing: border-box; margin: 6px 0 8px;
@@ -468,7 +473,10 @@
   .browsehead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .browsehead h2 { flex: 1; margin: 0; font-size: var(--title-medium); font-weight: 500;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #browselist { list-style: none; margin: 0; padding: 0; max-height: 56vh; overflow-y: auto; }
+  .browseview { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 16px 6px; }
+  .browseview .browsehead .plain { background: none; color: var(--on-surface-variant); border: 0;
+                                   padding: 10px 14px; font: inherit; border-radius: var(--shape-xl); cursor: pointer; }
+  #browselist { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }
   #browselist li {
     display: flex; align-items: center; gap: 10px;
     padding: 11px 12px; border-radius: var(--shape-s); cursor: pointer;
@@ -476,6 +484,21 @@
   #browselist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
   #browselist .bname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #browselist .bcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
+  /* A tune: its name over where it lives, then what can be done with it without playing it. */
+  #browselist li.btrack { padding: 6px 4px 6px 12px; min-height: 48px; }
+  #browselist .btext { flex: 1; min-width: 0; }
+  #browselist .bmeta { color: var(--on-surface-variant); font-size: var(--body-small);
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #browselist .badd { display: inline-flex; align-items: center; gap: 4px; flex: none;
+                      background: var(--secondary-container); color: var(--on-secondary-container);
+                      border: 0; border-radius: var(--shape-xl); padding: 6px 12px 6px 8px;
+                      font: inherit; font-size: var(--label-large); font-weight: 500; cursor: pointer; }
+  #browselist .badd:disabled { background: none; color: var(--on-surface-variant); cursor: default; }
+  #browselist .badd svg { width: 18px; height: 18px; fill: currentColor; }
+  #browselist .bmore { background: none; border: 0; color: var(--on-surface-variant); cursor: pointer;
+                       padding: 8px; border-radius: 50%; flex: none; display: flex; }
+  #browselist .bmore:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
+  #browselist .bmore svg { width: 22px; height: 22px; fill: currentColor; }
   /* The rows that *do* something carry an icon, as the phone's Browse rows do; rows of data do not. */
   #browselist li > svg { width: 22px; height: 22px; fill: currentColor; flex: none; margin-right: 12px;
                          color: var(--on-surface-variant); }
@@ -594,7 +617,7 @@
       playlist -- so every row keeps the actions and the marking every other row has.
     -->
     <div id="randomhead" class="randomhead" hidden>
-      <svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z"/></svg>
+      <svg viewBox="0 0 24 24" id="sessionicon"><path fill-rule="evenodd" d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z"/></svg>
       <div class="text">
         <div class="title" id="sessiontitle">Playing at random</div>
         <div class="meta" id="randomscope">Everything</div>
@@ -620,6 +643,22 @@
 
 
   </main>
+
+  <!--
+    Browse, as a screen in the column rather than a dialog over it (owner, 2026-09-11): a tune
+    tapped here plays while the list stays put, so the dock under it -- pause, next, the seek bar --
+    has to stay in reach. The phone's Browse is a screen with the player under it for the same reason.
+  -->
+  <section id="browse" class="browseview" hidden>
+    <div class="browsehead">
+      <button class="plain" id="browseback" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>
+      <h2 id="browsetitle">Browse</h2>
+      <button class="plain" id="browseclose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+    </div>
+    <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
+    <p class="note" id="browsenote"></p>
+    <ol id="browselist"></ol>
+  </section>
 
   <footer>
     <!--
@@ -651,6 +690,11 @@
         </button>
       </div>
       <dl id="fields"></dl>
+      <!-- The module's message: where the scene put its greetings, and half the reason these files are kept. -->
+      <div id="np-message" class="np-message" hidden>
+        <div class="np-message-label">Message</div>
+        <pre id="np-message-text"></pre>
+      </div>
       <!--
         The phone's "play all subsongs" setting, in the one place it means something here. Hidden
         for a file that holds one tune, because a switch that governs nothing is a question the
@@ -752,18 +796,6 @@
     A stack rather than a router — there are four levels and one way through them, and the back
     button is the only navigation.
   -->
-  <div class="overlay" id="browse" hidden>
-    <div class="sheet wide">
-      <div class="browsehead">
-        <button class="plain" id="browseback" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>
-        <h2 id="browsetitle">Browse</h2>
-        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
-      </div>
-      <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
-      <p class="note" id="browsenote"></p>
-      <ol id="browselist"></ol>
-    </div>
-  </div>
 
   <!--
     Choosing, making and acting on playlists -- the phone's `PlaylistSwitcher`, in its shape: the

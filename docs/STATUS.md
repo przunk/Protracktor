@@ -415,6 +415,22 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C40. The phone's Now Playing shows only the first line of a module's message — **OPEN**
+
+*Found 2026-09-11 while giving the page the phone's Now Playing, not by a listener.*
+
+The engine's `describe` block is `key<TAB>value` lines, and `message` is written **last** because it
+is the one value with line breaks in it (`native/engine/engine.cpp`). `NativeEngine.describe()`
+splits the whole block into lines and keeps those with a tab: the message's first line survives as
+`message`, and every line after it — no tab — is dropped. A line of the message that happens to hold
+a tab becomes a bogus key instead. `NowPlaying.kt` draws the message monospaced "because the
+alignment is part of what they say", and gets one line of it.
+
+The page had the other half of the fault: it read every line as a key, and asked for `comment`,
+which no backend writes, so it showed no message at all. **Fixed on the page on 2026-09-11**
+(`describeFields` takes everything after `message<TAB>`); the phone is left for its own branch, the
+fix being the same few lines in `NativeEngine.describe()`.
+
 ### C39. ~~Round 8's web bundle, first look: four faults~~ — FIXED 2026-09-11
 
 *Owner, 2026-09-11, trying the round 8 bundle in a browser for the first time.*

@@ -152,6 +152,14 @@ android.sourceSets["main"].assets.srcDir(sc68Assets)
 
 tasks.named("preBuild") { dependsOn(copySc68Data) }
 
+// Two tests read files outside the source set: `RuleCasesTest` the shared queue rules and
+// `SupportedFormatsFileTest` the page's format list. Gradle cannot see that, so an edit to either
+// file alone left the test task "up to date" and the check that exists to catch drift never ran.
+tasks.withType<Test>().configureEach {
+    inputs.file(rootProject.file("docs/rules/queue-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("web/src/formats.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 dependencies {
     implementation(libs.oboe)
 

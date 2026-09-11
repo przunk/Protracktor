@@ -22,7 +22,7 @@ import org.junit.Test
  */
 class SupportedFormatsFileTest {
 
-    private data class Row(val kind: String, val name: String, val decoders: List<String>)
+    private data class Row(val kind: String, val name: String, val decoders: List<String>, val platform: String)
 
     /** Found by walking up, for `RuleCasesTest`'s reason: a test that finds nothing must fail. */
     private val rows: List<Row> by lazy {
@@ -35,8 +35,8 @@ class SupportedFormatsFileTest {
             .filter { it.isNotEmpty() && !it.startsWith("#") }
             .map { line ->
                 val cells = line.split('\t')
-                assertEquals("three tab-separated cells in \"$line\"", 3, cells.size)
-                Row(cells[0], cells[1], cells[2].split(','))
+                assertEquals("four tab-separated cells in \"$line\"", 4, cells.size)
+                Row(cells[0], cells[1], cells[2].split(','), cells[3])
             }
     }
 
@@ -60,6 +60,19 @@ class SupportedFormatsFileTest {
             row.decoders.forEach { decoder ->
                 assertTrue("unknown decoder \"$decoder\" in $row", decoder in DECODERS)
             }
+        }
+    }
+
+    /**
+     * The machine the page's dock names beside the author, as the phone's dock does. Asked of
+     * `Platforms.forFileName` the way a file would ask it -- by extension, or by the Amiga prefix.
+     */
+    @Test
+    fun `every row names the platform the phone gives that name`() {
+        rows.forEach { row ->
+            val probe = if (row.kind == "extension") "x.${row.name}" else "${row.name}.x"
+            val phone = Platforms.forFileName(probe)?.name ?: "-"
+            assertEquals("platform of $row", phone, row.platform)
         }
     }
 
