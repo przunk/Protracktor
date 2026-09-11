@@ -359,7 +359,9 @@ two want opposite things at the far end:
 - **a queue link takes over** — it becomes "From the phone";
 - **a tune link is shown, not filed.** It may come from somebody else entirely, so the page plays
   it the way a Browse result plays — a session beside whatever list is showing, which it leaves
-  alone — and opens Now Playing on it. Add keeps it; the heading's Playlist button goes back.
+  alone. Add keeps it; the heading's Playlist button goes back. **Nothing is drawn over it**: Now
+  Playing stays folded and the pairing code is not shown (owner, the same evening), since the dock
+  and the heading already say what is playing and from where.
 
 **Where it is offered.** Every track menu: on the phone the playlist's, Random's and every Browse
 list's; on the page the queue's rows (playlist, Random, History, a Browse session) and Browse's.
@@ -375,9 +377,13 @@ phone: the stored address, else the page beside the pairing, else `localhost` �
 the machine running the browser and useless to anybody else. **A link meant for another person
 needs the page served somewhere they can reach.**
 
-**It opens silent, and says so.** A link opened from another app gives the page no click, and a
-browser keeps audio suspended until it has one. The tune is fetched and opened anyway; the button
-then offers play rather than pause, and the status line says why. One press and it sounds.
+**It starts at once where the browser allows it, and at the first touch where it does not.** A
+link opened from another app gives the page no click, and a browser keeps audio suspended until it
+has one — unless the site is allowed to autoplay (Firefox: the site's permissions, "Autoplay: Allow
+Audio and Video"), in which case the tune simply plays. Otherwise the tune is fetched and opened
+anyway, the button offers play rather than pause, and **the first touch or key anywhere on the
+page** starts it — not only Play, which the owner asked for as "startuje od razu". Play and the
+space bar are left to start it themselves, or their click would be a second press that paused it.
 
 ## 6. Order of work
 

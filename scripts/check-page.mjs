@@ -1615,7 +1615,9 @@ if (window.__api) {
     'a link sent here plays that one tune');
   check(session.stash.queue.map((t) => t.url).join() === kept && !api.dirtyNow(),
     'and leaves the playlist that was showing exactly as it was');
-  check(!$('nowplaying').hidden, 'Now Playing opens on it — the view of one tune');
+  // Folded, as the owner asked: the dock and the heading say what it is.
+  check($('nowplaying').hidden && $('pair').hidden && $('title').textContent === 'zoolook',
+    'nothing is drawn over it: Now Playing stays folded and the dock names the tune');
   check($('sessiontitle').textContent === 'Playing a tune sent to you' && $('playlistname').textContent === 'Sent'
         && $('sessionicon').querySelector('path'),
     'under a heading that says where it came from');
@@ -1623,13 +1625,33 @@ if (window.__api) {
   api.onWorklet({ type: 'opened', describe: 'title\tzoolook\nformat\tProTracker MOD\n', duration: 200,
                   subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
   await settle();
-  check($('playpause').title === 'Play' && $('status').textContent.startsWith('Press play'),
+  check($('playpause').title === 'Play' && $('status').textContent.startsWith('Touch the page'),
     'opened with no click on the page, it offers play and says why, rather than a pause for a silent tune');
-  window.__audioBlocked = false;   // the press is the click the browser was waiting for
+  // **Any touch starts it** (owner, 2026-09-11), not only Play: the first use of the page is the
+  // permission the browser was waiting for.
+  window.__audioBlocked = false;
+  const sent = window.__toWorklet.length;
+  $('title').dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  await settle();
+  check(api.contextNow().state === 'running' && $('playpause').title === 'Pause'
+        && window.__toWorklet.slice(sent).map((m) => m.type).join() === 'play',
+    'and the first touch anywhere on the page starts it, once');
+
+  // Play itself, as that first touch: its own click starts the tune, and must not be the second
+  // press that pauses what the touch began.
+  api.contextNow().state = 'suspended';
+  window.__audioBlocked = true;
+  api.onWorklet({ type: 'opened', describe: 'title\tzoolook\n', duration: 200,
+                  subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100 });
+  await settle();
+  window.__audioBlocked = false;
+  const before = window.__toWorklet.length;
+  $('playpause').dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  $('playpause').dispatchEvent(new window.Event('pointerup', { bubbles: true }));
   $('playpause').click();
   await settle();
-  check(api.contextNow().state === 'running' && window.__toWorklet.at(-1)?.type === 'play',
-    'and one press starts it');
+  check($('playpause').title === 'Pause' && window.__toWorklet.slice(before).map((m) => m.type).join() === 'play',
+    'and Play pressed as that touch starts it, rather than starting and pausing it');
 
   // Offered on every list: the queue's row menu here, Browse's in its own checks above.
   window.document.querySelector('#queue li .rowmenu').click();

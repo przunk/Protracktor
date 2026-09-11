@@ -270,7 +270,8 @@ function onWorklet(message) {
       // which would have stopped a tune nobody could hear yet.
       if (context?.state === 'suspended') {
         setPlaying(false);
-        status('Press play — a browser starts no sound until the page is touched.');
+        status('Touch the page to hear it — a browser starts no sound until then.');
+        startOnFirstTouch();
         break;
       }
       setPlaying(true);
@@ -2633,13 +2634,41 @@ async function deflateFragment(text) {
  * A tune somebody sent here to be played (`QueueLink.trackLink`): **played, not filed**. It goes
  * through the session a Browse result plays through, so whatever list this page was showing is
  * left alone -- the link may well have come from somebody else, and a tune shown to you is not
- * one you asked to keep. Now Playing opens, because that is the view of one tune.
+ * one you asked to keep. **Now Playing stays folded** (owner, 2026-09-11): the dock names the tune
+ * and the heading says where it came from, and a panel over both was one more thing to close.
  */
 function playSentTune(tracks) {
   if (!tracks.length) { status('the link names nothing this page can play'); return; }
   openAway(tracks.slice(0, 1), 0, 'link');
-  showPanel('nowplaying');
+  showPanel(null);
   status(`${tracks[0].name} — sent to this player`);
+}
+
+/**
+ * Starts the tune waiting on a suspended context at the first touch or key **anywhere** on the page
+ * (owner, 2026-09-11: "niech startuje od razu z odtwarzaniem"). Straight away is the browser's to
+ * allow, not the page's: it keeps audio suspended until the page is used, and a site given leave to
+ * autoplay never gets here. What the page can do is make any use of it count, not just Play.
+ *
+ * **Play itself and the space bar are left alone**, because they already start it: taking the
+ * pointerdown first would make their click the second press, and pause what had just begun.
+ */
+let firstTouch = null;
+function startOnFirstTouch() {
+  if (firstTouch) return;
+  const events = ['pointerdown', 'keydown', 'click'];
+  firstTouch = async (event) => {
+    if ($('playpause').contains(event.target) || event.key === ' ') return;
+    try { await context.resume(); } catch { return; }
+    if (context.state !== 'running' || !firstTouch) return;
+    for (const type of events) removeEventListener(type, firstTouch, true);
+    firstTouch = null;
+    if (playing || !$('seek').dataset.opened) return;
+    setPlaying(true);
+    node.port.postMessage({ type: 'play' });
+    status('Playing');
+  };
+  for (const type of events) addEventListener(type, firstTouch, true);
 }
 
 /** Whether a row can go as a one-tune link: `QueueLink.canSend`, the page's side of it. */
