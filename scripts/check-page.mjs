@@ -309,6 +309,12 @@ if (window.__api) {
   check(!$('np-message').hidden && $('np-message-text').textContent === 'greetings to\n  all  the scene',
     'the module\'s message is shown whole, every line and its spacing');
   check(!silent.some((label) => label.includes('the scene')), 'and none of its lines is taken for a field');
+  // The phone's `DescribeBlockTest` cases, the same rule on this side.
+  const read = api.describeFields('comment\tmessage\there\nartist\tRob Hubbard\nmessage\tthe real one\n  second line');
+  check(read.comment === 'message\there' && read.artist === 'Rob Hubbard' && read.message === 'the real one\n  second line',
+    'the word message inside another value is only a word, and the real message after it is found');
+  check(api.describeFields('title\tx\nmessage\tname\tsize\nloop\t0012').loop === undefined,
+    'a line of the message holding a tab is not taken for a field');
 
   // The year, by the phone's `ReleaseYear` rules.
   const yearOf = (describe) => api.releaseYear(api.describeFields(describe));
