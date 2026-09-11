@@ -15,7 +15,18 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A33. Whether the page's Browse lists should stop writing into the playlist — **the owner's decision**
+## A33. Whether the page's Browse lists should stop writing into the playlist — DONE 2026-09-11, the phone's way
+
+**Decided by the owner on 2026-09-11, by using it.** He searched "zool", pressed `zoolook.mod`, and
+found the playlist he had made earlier replaced by every result on the screen: *"zupełnie nie tak
+działa to w APK."* What he expected, in his order: a search shows tunes, not folders; pressing one
+plays it, with Add and the other actions beside it; and when he is done browsing, the playlist holds
+what it held before plus exactly the tunes he added.
+
+**Built on `feature/web-browse-transient`** (`docs/PLAN_WEB_LIBRARY.md` S4c): every Browse list plays
+through the transient session History and Random use, Browse became a screen with the dock under it
+rather than a dialog over it, Add appends to the playlist and waits for Save, and S4a's block went
+with nothing left to block. The question as it was put is kept below.
 
 *Raised by `GOAL.md` round 8 on 2026-09-11, while building item 4.*
 
