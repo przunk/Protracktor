@@ -364,8 +364,12 @@ function describeFields(describe) {
   // **The message is the last field and the only one with lines in it** -- the engine writes it
   // last for that reason, and a module's message is its greetings, laid out for a tracker's screen.
   // Split with everything else, all but its first line became keys of their own and were lost.
-  const at = describe.indexOf('message\t');
-  const head = at >= 0 && (at === 0 || describe[at - 1] === '\n') ? describe.slice(0, at) : describe;
+  // At the start of a line only, and the first such line: the word inside another value -- a
+  // comment reading "message<TAB>…" -- is not the field, and must not hide the real one after it.
+  // The phone's `DescribeBlock` reads the block by the same rule.
+  const at = describe.startsWith('message\t') ? 0
+    : describe.indexOf('\nmessage\t') < 0 ? -1 : describe.indexOf('\nmessage\t') + 1;
+  const head = at >= 0 ? describe.slice(0, at) : describe;
   const fields = Object.fromEntries(
     head.split('\n').filter(Boolean).map((line) => {
       const tab = line.indexOf('\t');
