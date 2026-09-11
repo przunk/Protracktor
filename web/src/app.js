@@ -245,6 +245,7 @@ function onWorklet(message) {
       // per list (`GOAL.md` round 8, item 4) -- and it is after the engine opened the file, so what
       // is recorded is a tune that played, under the name it gives itself.
       recordPlay(queue[index], fields);
+      if (random) random.failures = 0;
       if (fields.title) $('title').textContent = fields.title;
       renderNowPlaying(fields, subsongCount, currentSubsong);
       publishToSystem(queue[index], fields);
@@ -269,6 +270,8 @@ function onWorklet(message) {
     case 'failed':
       loading = null;
       clearTimeout(openWatchdog);
+      // A fresh Random pick that will not open is walked past, as on the phone.
+      if (random && index === queue.length - 1 && skipFailedPick(message.reason)) break;
       rowState = 'failed';
       render();
       // Errors stay above the transport. The status line moved into Now Playing because it is the
@@ -507,6 +510,14 @@ async function playAt(next) {
   const entry = queue[index];
   render();
   followPlaying();
+  // **The bar starts again with the tune**, not when the engine first reports a position. The phone
+  // zeroes it the instant a track is chosen; left alone, the page's bar sat on the last tune's 1:07
+  // through the whole of the next download (owner, 2026-09-11).
+  duration = 0;
+  $('seek').value = 0;
+  paint($('seek'));
+  $('elapsed').textContent = clock(0);
+  $('remaining').textContent = clock(0);
   nameTheTab(entry);
   $('title').textContent = entry.name;
   $('sub').textContent = 'fetching…';
@@ -552,6 +563,7 @@ async function playAt(next) {
     // about what it will do.
     if (loading === abort) { loading = null; setPlaying(false); }
     if (e.name === 'AbortError') { $('sub').textContent = 'stopped'; return; }
+    if (random && index === queue.length - 1 && skipFailedPick(e.message)) return;
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
     // different problems from a file the decoders refuse. Say which.
     $('error').textContent = `could not fetch it: ${e.message}`;
@@ -621,7 +633,8 @@ const STOP_GLYPH = 'M6 6h12v12H6z';
  * playing row three screens up is the same complaint in a different medium.
  */
 function followPlaying() {
-  revealRow($('queue').children[index]);
+  // Not while rows are being ticked: a list that moves under a working finger fights it.
+  if (!selected.size) revealRow($('queue').children[index]);
   // Browse too, when it is open on the tune: the phone keeps every list of tracks in step, and a
   // folder somebody is reading while the music moves on is the list that most needs it.
   if (!$('browse').hidden) revealRow(markPlayingIn($('browselist'), queue[index]?.url));
@@ -699,6 +712,7 @@ function setPlaying(on) {
  */
 function render() {
   const list = $('queue');
+  if (selected.size) selected = new Set([...selected].filter((entry) => queue.includes(entry)));
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
     li.className = i === index && rowState ? `track ${rowState}` : 'track';
@@ -709,6 +723,17 @@ function render() {
     const n = document.createElement('span');
     n.className = 'n';
     n.textContent = String(i + 1);
+    // **While ticking, the box stands where the number was** -- the same slot, so the row does not
+    // move when selection starts under the finger that started it (the phone's reason too).
+    if (selected.size && !entry.local) {
+      const tick = document.createElement('input');
+      tick.type = 'checkbox';
+      tick.className = 'tick';
+      tick.checked = selected.has(entry);
+      tick.setAttribute('aria-label', `Select ${entry.name}`);
+      n.replaceChildren(tick);
+    }
+    li.classList.toggle('ticked', selected.has(entry));
 
     const text = document.createElement('div');
     text.className = 'text';
@@ -729,9 +754,16 @@ function render() {
     menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu); };
 
     li.append(n, text, menu);
-    if (!entry.local) li.onclick = () => playAt(i);
+    if (!entry.local) {
+      li.onclick = () => {
+        if (swallowRowClick) { swallowRowClick = false; return; }
+        if (selected.size) toggleSelected(entry); else playAt(i);
+      };
+      holdToSelect(li, entry);
+    }
     return li;
   }));
+  updateSelectBar();
   $('count').textContent = queue.length
     ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
     : 'nothing yet';
@@ -878,16 +910,35 @@ function openRowMenu(entry, anchor) {
   const menu = $('menu');
   menu.replaceChildren();
   const items = [
-    ['Save the file', () => saveFile(entry), !entry.local],
-    ['Copy a link', () => copyLink(entry), !!entry.url],
-    ['Information', () => informAbout(entry), !entry.local],
+    // A mouse has no long press to discover, so the way into ticking rows is here as well.
+    ['Select', () => startSelecting(entry), !entry.local, ICON.check],
+    ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
+    ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
+    ['Information', () => informAbout(entry), !entry.local, ICON.info],
   ];
   // Pruning the record before keeping the rest: the phone's rows have it, and "if it is there you
   // need not use it; if it is not you cannot" (owner, 2026-09-10).
-  if (random) items.push(['Remove from this list', () => removeRandomAt(queue.indexOf(entry)), true]);
-  for (const [label, act, enabled] of items) {
+  if (random) items.push(['Remove from this list', () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
+  // **A playlist of his own can lose a row**, as on the phone (owner, 2026-09-11). "From the phone"
+  // is what the phone sent and is never edited here; a session's list is not a playlist.
+  if (!random && !away && activePlaylist !== PHONE) {
+    items.push(['Remove from this playlist', () => removeFromPlaylist(queue.indexOf(entry)), true, ICON.remove]);
+  }
+  showMenu(items, anchor);
+}
+
+/**
+ * Draws a menu under [anchor] from `[label, act, enabled, icon]` rows. Shared by a track's three dots
+ * and a playlist's, so the two menus cannot come to look or behave differently.
+ */
+function showMenu(items, anchor) {
+  const menu = $('menu');
+  menu.replaceChildren();
+  for (const [label, act, enabled, icon] of items) {
     const button = document.createElement('button');
-    button.textContent = label;
+    // An icon and its name, never the name alone -- the phone's menu has both, and so must this.
+    button.innerHTML = iconSvg(icon);
+    button.append(label);
     button.disabled = !enabled;
     button.onclick = () => { closeRowMenu(); act(); };
     menu.append(button);
@@ -932,12 +983,18 @@ function remember() {
  * took over would have written the dice's picks into the playlist it had just left.
  */
 async function saveQueue() {
+  // **Edits wait for Save** (owner, 2026-09-11: "zapis zmian w playliście: zrób jak na telefonie").
+  // While the list differs from the one on disk nothing is written, the place in it included --
+  // it would be a place in a list that was never saved.
+  if (dirty) return;
   const id = activePlaylist;
+  // Inside Random or History the playlist waits in the stash, and that is what Save means.
+  const source = (random ?? away)?.stash ?? { queue, index };
   // The bytes a phone sent are deliberately **not** kept. They are a copy of a file that lives
   // somewhere else, they are the largest thing in the queue by far, and a page that quietly hoards
   // somebody's music is not what this is.
-  const tracks = queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file }));
-  const at = index;
+  const tracks = source.queue.map(({ url, name, meta, local, file }) => ({ url, name, meta, local, file }));
+  const at = source.index;
   try {
     const name = id === PHONE ? 'From the phone' : (await playlists.get(id))?.name ?? 'Playlist';
     await playlists.save({ id, name, tracks, index: at });
@@ -982,6 +1039,7 @@ function seek(from, step) {
 let random = null;
 const RANDOM_AHEAD = 3;   // the phone's READ_AHEAD
 const RANDOM_DRAWS = 4;   // the phone's OVERDRAW: drawn wide, repeats dropped
+const RANDOM_FAILURES = 8; // the phone's maxFailedRandomPicks
 /** Replaceable so the checks can roll a known sequence; the page always uses `Math.random`. */
 let randomSource = Math.random;
 
@@ -998,9 +1056,11 @@ function showSessionView(kind) {
   // What the dice picks from means nothing for History, and neither does its Filter.
   $('randomscope').hidden = kind !== 'random';
   $('random-filter').hidden = kind !== 'random';
-  // The chip would offer to switch a playlist nothing is playing from, as on the phone.
-  $('playlistchip').disabled = !!kind;
+  // **The chip stays usable** (owner, 2026-09-11: "intuicyjnie wydaje się być możliwe wyjść do
+  // playlist"). The phone hides it here; the page lets it name where you are and choose where to go,
+  // and choosing a playlist ends the session on the way (`choosePlaylist`).
   if (kind) $('playlistname').textContent = kind === 'history' ? 'History' : 'Random';
+  setDirty(dirty);
 }
 
 function showRandomView(on) { showSessionView(on ? 'random' : null); }
@@ -1095,6 +1155,298 @@ async function rollRandom() {
   // The next picks are decided while this one plays.
   fillAhead().catch(() => {});
   await playAt(queue.length - 1);
+}
+
+/**
+ * Whether the list on screen differs from the one on disk -- the phone's `dirty`.
+ *
+ * *"Zapis zmian w playliście: zrób jak na telefonie"* (owner, 2026-09-11). Removing a row, or
+ * replacing the list from Browse or the paste box, changes what is on screen and not what is stored;
+ * **Save** writes it, **Discard** reads the stored one back, and a switch with edits still waiting
+ * asks which. Where playback has got to is the app's own business and is saved as it goes -- but
+ * only while the list is the saved one, because a place in an unsaved list means nothing on disk.
+ * "From the phone" is never edited, so it is never dirty.
+ */
+let dirty = false;
+let unsavedAnswer = null;
+
+function setDirty(value) {
+  dirty = value;
+  // The phone's rule: Save and Discard only while there is something to save, and not while the
+  // screen is showing a session rather than the playlist.
+  const show = dirty && !random && !away;
+  $('tab-save').hidden = !show;
+  $('tab-discard').hidden = !show;
+}
+
+async function saveEdits() {
+  setDirty(false);
+  await saveQueue();
+  status('Saved');
+}
+
+/** Reads the stored playlist back, throwing the edits away. */
+async function discardEdits() {
+  setDirty(false);
+  await switchTo(activePlaylist);
+  status('Changes discarded');
+}
+
+/**
+ * Asks about edits that a switch would throw away, and answers whether to go on.
+ *
+ * True at once when there is nothing unsaved. Otherwise the phone's dialog: Save them or Discard
+ * them, both of which go on; closing it keeps editing, which does not.
+ */
+function settleUnsaved() {
+  if (!dirty) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    unsavedAnswer = resolve;
+    $('unsaved').hidden = false;
+  });
+}
+
+function answerUnsaved(go) {
+  $('unsaved').hidden = true;
+  const resolve = unsavedAnswer;
+  unsavedAnswer = null;
+  resolve?.(go);
+}
+
+/** The phone's icons, the same paths, for controls the page builds rather than declares. */
+const ICON = {
+  save: 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
+  link: 'M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z',
+  info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
+  remove: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+  add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
+  rename: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  check: 'M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+  download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+  cloud: 'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z',
+  // Hollow shapes on the phone, so they need the even-odd rule to keep their holes.
+  dice: { d: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z', hollow: true },
+  history: { d: 'M5,4 L19,4 A2,2 0 0,1 21,6 L21,19 A2,2 0 0,1 19,21 L5,21 A2,2 0 0,1 3,19 L3,6 A2,2 0 0,1 5,4 Z M5.5,9.5 L18.5,9.5 L18.5,18.5 L5.5,18.5 Z M7,2 L9,2 L9,4 L7,4 Z M15,2 L17,2 L17,4 L15,4 Z M8,12 L11,12 L11,15 L8,15 Z', hollow: true },
+};
+const iconSvg = (icon) => {
+  const { d, hollow } = typeof icon === 'string' ? { d: icon, hollow: false } : icon;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path${hollow ? ' fill-rule="evenodd"' : ''} d="${d}"/></svg>`;
+};
+
+/**
+ * Takes a row out of a playlist of his own, with the way back offered (`GOAL.md`-era request of
+ * 2026-09-11: "w widoku mojej playlisty webowej nie mogę usuwać utworów").
+ *
+ * The phone's rules (`PlaybackController.removeTracks`): **no question first** -- undo costs nothing
+ * when it was meant -- and **removing what is playing stops it** rather than starting something
+ * else, because no reading of "remove" asks for a different tune. The page saves as it goes where
+ * the phone waits for Save, so the undo is the whole of the safety net here.
+ */
+let lastRemoval = null;
+let undoTimer = null;
+
+function removeFromPlaylist(at) { removeRows([at]); }
+
+/**
+ * Takes any number of rows out as **one edit, with one undo** -- the phone's `removeTracks`: what
+ * changed for a group is that undo has to bring all of it back, each to where it was.
+ */
+function removeRows(ats) {
+  if (random || away || activePlaylist === PHONE) return;
+  const sorted = [...new Set(ats)].filter((at) => at >= 0 && at < queue.length).sort((x, y) => x - y);
+  if (!sorted.length) return;
+  const current = queue[index];
+  const removed = sorted.map((at) => ({ at, track: queue[at] }));
+  const wasCurrent = sorted.includes(index);
+  for (let k = sorted.length - 1; k >= 0; k--) queue.splice(sorted[k], 1);
+  if (wasCurrent) {
+    stopForLeaving();
+    index = Math.min(sorted[0], queue.length - 1);
+    rowState = 'selected';
+    setPlaying(false);
+    $('title').textContent = queue[index]?.name ?? 'Nothing playing';
+    $('sub').textContent = queue[index] ? 'press play' : '—';
+  } else {
+    index = queue.indexOf(current);
+  }
+  // The shuffle and the back-stack both hold indices, and every one past a gap has moved.
+  history = index >= 0 ? [index] : [];
+  if (shuffle) reshuffle(index >= 0 ? index : null);
+  lastRemoval = { removed, playlist: activePlaylist, wasCurrent, current };
+  setDirty(true);
+  render();
+  showUndo(removed.length === 1 ? `Removed ${removed[0].track.name}` : `Removed ${removed.length} tracks`);
+}
+
+function undoRemoval() {
+  const removal = lastRemoval;
+  hideUndo();
+  if (!removal || removal.playlist !== activePlaylist || random || away) return;
+  const current = queue[index];
+  // In ascending order of where they were, so each lands where it stood before the others went.
+  for (const { at, track } of removal.removed) queue.splice(Math.min(at, queue.length), 0, track);
+  if (removal.wasCurrent) {
+    index = queue.indexOf(removal.current);
+    rowState = 'selected';
+    $('title').textContent = removal.current?.name ?? 'Nothing playing';
+    $('sub').textContent = 'press play';
+  } else {
+    index = queue.indexOf(current);
+  }
+  history = index >= 0 ? [index] : [];
+  if (shuffle) reshuffle(index >= 0 ? index : null);
+  // Still an edit, as on the phone: undo restores the rows, not the saved state.
+  setDirty(true);
+  render();
+}
+
+/**
+ * Ticking rows, as the phone has it: a long press starts it, a tap then ticks rather than plays, and
+ * a bar says what can be done with what is ticked (`GOAL.md`-era request, 2026-09-11: "zaznaczanie
+ * wielu wierszy naraz: dorób w web"). Held by entry rather than by index, so a row that moves keeps
+ * its tick; a row that leaves the list takes its tick with it (`render`).
+ */
+let selected = new Set();
+let pendingAdd = null;
+/**
+ * The click that follows a long press, which must not also tick the row off again. **Kept outside
+ * the row**, because the press re-draws the list and the click lands on the new one; and forgotten
+ * at the next press, so an unfinished one cannot eat an unrelated click -- `docs/STATUS.md` C36's
+ * trap, avoided here.
+ */
+let swallowRowClick = false;
+
+function holdToSelect(row, entry) {
+  let timer = null;
+  row.addEventListener('pointerdown', () => {
+    swallowRowClick = false;
+    timer = setTimeout(() => { swallowRowClick = true; startSelecting(entry); }, 500);
+  });
+  for (const event of ['pointerup', 'pointercancel', 'pointerleave']) {
+    row.addEventListener(event, () => clearTimeout(timer));
+  }
+}
+
+function startSelecting(entry) {
+  selected.add(entry);
+  render();
+}
+
+function toggleSelected(entry) {
+  if (selected.has(entry)) selected.delete(entry); else selected.add(entry);
+  render();
+}
+
+function clearSelection() {
+  if (!selected.size) return;
+  selected = new Set();
+  render();
+}
+
+function updateSelectBar() {
+  $('selectbar').hidden = !selected.size;
+  $('selectcount').textContent = `${selected.size} selected`;
+  // Delete only where rows can go: a playlist of his own, not the phone's, not a session's list.
+  $('sel-delete').hidden = !!(random || away) || activePlaylist === PHONE;
+}
+
+/** The playlists ticked tracks can go to: his own, never the phone's, and not the one they are in. */
+async function openAddTo() {
+  const tracks = queue.filter((entry) => selected.has(entry) && !entry.local);
+  if (!tracks.length) return;
+  pendingAdd = tracks;
+  const inSession = !!(random || away);
+  const targets = (await playlists.all())
+    .filter((p) => p.id !== PHONE && (inSession || p.id !== activePlaylist));
+  const list = $('addtolist');
+  list.replaceChildren();
+  for (const target of targets) {
+    const li = document.createElement('li');
+    const count = document.createElement('div');
+    count.className = 'pcount';
+    count.textContent = String(target.tracks?.length ?? 0);
+    const name = document.createElement('div');
+    name.className = 'pname';
+    name.textContent = target.name;
+    li.append(count, name);
+    li.onclick = () => addTracksTo(target.id);
+    list.append(li);
+  }
+  $('addtonote').textContent = `${tracks.length} track${tracks.length === 1 ? '' : 's'} to add.`
+    + (targets.length ? '' : ' There is no other playlist yet — make one.');
+  showPanel('addto');
+}
+
+/**
+ * Appends the ticked tracks to a playlist, or to a new one. **What is already there is not added
+ * twice** -- the phone's `appendTracks` rule. Another playlist is written at once, as the phone
+ * writes it; the one a session was started from is an edit of it and waits for Save like any other.
+ */
+async function addTracksTo(id, newName = null) {
+  const tracks = pendingAdd ?? [];
+  pendingAdd = null;
+  const plain = ({ url, name, meta, local, file }) => ({ url, name, meta, local, file });
+  if (id && id === activePlaylist && (random || away)) {
+    const stash = (random ?? away).stash;
+    const have = new Set(stash.queue.map((t) => t.url));
+    const adding = tracks.filter((t) => !have.has(t.url));
+    stash.queue.push(...adding);
+    if (adding.length) setDirty(true);
+    status(`Added ${adding.length} to ${stash.name}` + (adding.length < tracks.length ? `, ${tracks.length - adding.length} already there` : ''));
+  } else {
+    const target = id ? await playlists.get(id) : { id: `p${Date.now().toString(36)}`, name: newName, tracks: [], index: 0 };
+    const have = new Set((target.tracks ?? []).map((t) => t.url));
+    const adding = tracks.filter((t) => !have.has(t.url)).map(plain);
+    await playlists.save({ ...target, tracks: [...(target.tracks ?? []), ...adding] });
+    status(`Added ${adding.length} to ${target.name}` + (adding.length < tracks.length ? `, ${tracks.length - adding.length} already there` : ''));
+  }
+  showPanel(null);
+  clearSelection();
+}
+
+/** Six seconds, the length of a Material snackbar with an action. */
+function showUndo(text) {
+  $('snacktext').textContent = text;
+  $('snackbar').hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, 6000);
+}
+
+function hideUndo() {
+  clearTimeout(undoTimer);
+  lastRemoval = null;
+  $('snackbar').hidden = true;
+}
+
+/**
+ * Walks past a Random pick that would not open, and answers whether it did.
+ *
+ * *"Losuje utwory, których nie może zagrać"* (owner, 2026-09-11). The index keeps only formats this
+ * engine can play, but a file can still be refused, packed, or gone from the server -- and the phone
+ * has always walked past those (`skipFailedRandomPick`), because a pick nobody chose should not stop
+ * the music. **The pick leaves the record**: the record is what has played, and this did not.
+ *
+ * Bounded, as on the phone: eight in a row and it stops and says so, rather than spinning through an
+ * index that has somehow filled with things it cannot open.
+ */
+function skipFailedPick(reason) {
+  const r = random;
+  if (!r) return false;
+  r.failures = (r.failures ?? 0) + 1;
+  if (r.failures > RANDOM_FAILURES) {
+    r.failures = 0;
+    status('Several picks in a row would not open. Stopping here.');
+    return false;
+  }
+  const failed = queue.splice(index, 1)[0];
+  index--;
+  rowState = index >= 0 ? 'selected' : null;
+  render();
+  status(`skipped ${failed?.name ?? 'a pick'} — ${reason}`);
+  $('error').textContent = '';
+  rollRandom();
+  return true;
 }
 
 /**
@@ -1275,6 +1627,8 @@ function setQueue(urls, at = 0) {
   // A queue arriving -- a playlist switched to, the phone's handoff, a tune played from Browse --
   // replaces whatever was showing, and that includes the dice's record.
   dropSession();
+  // Another list arriving makes an undo for the last one meaningless.
+  hideUndo();
   delete $('seek').dataset.opened;
   // Selected, not playing: the queue points here and nothing has started. A list with no mark at
   // all leaves the dock naming a track the list does not admit to.
@@ -1306,11 +1660,13 @@ function setQueue(urls, at = 0) {
  * something you read alongside the list rather than instead of it.
  */
 function showPanel(which) {
+  if (!$('unsaved').hidden) answerUnsaved(false);
   $('browse').hidden = which !== 'browse';
   $('tab-browse').setAttribute('aria-pressed', String(which === 'browse'));
   $('pair').hidden = which !== 'pair';
   $('paste').hidden = which !== 'paste';
   $('playlists').hidden = which !== 'playlists';
+  $('addto').hidden = which !== 'addto';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
@@ -1330,30 +1686,27 @@ async function renderPlaylists() {
     const li = document.createElement('li');
     li.setAttribute('aria-current', String(playlist.id === activePlaylist));
 
+    // The size first, as the phone has it: which of these has anything in it (BACKLOG A21).
+    const count = document.createElement('div');
+    count.className = 'pcount';
+    count.textContent = String(playlist.tracks?.length ?? 0);
     const name = document.createElement('div');
     name.className = 'pname';
     name.textContent = playlist.name;
-    const count = document.createElement('div');
-    count.className = 'pcount';
-    const n = playlist.tracks?.length ?? 0;
-    count.textContent = n === 1 ? '1 track' : `${n} tracks`;
-    li.append(name, count);
+    li.append(count, name);
 
-    // The phone's has no delete: it is not something anybody made.
+    // Everything that can be done *to* a playlist, behind the same three dots a track row uses.
+    // "From the phone" has none: it is not something anybody made, and it is not renamed or deleted.
     if (playlist.id !== PHONE) {
-      const drop = document.createElement('button');
-      drop.className = 'pdrop';
-      drop.textContent = 'Delete';
-      drop.onclick = async (event) => {
-        event.stopPropagation();
-        await playlists.remove(playlist.id);
-        if (activePlaylist === playlist.id) await switchTo(PHONE);
-        renderPlaylists();
-      };
-      li.append(drop);
+      const more = document.createElement('button');
+      more.className = 'pmenu';
+      more.innerHTML = iconSvg(ICON.more);
+      more.setAttribute('aria-label', `More for ${playlist.name}`);
+      more.onclick = (event) => { event.stopPropagation(); openPlaylistMenu(playlist, more); };
+      li.append(more);
     }
 
-    li.onclick = () => { switchTo(playlist.id); showPanel(null); };
+    li.onclick = () => choosePlaylist(playlist.id);
     list.append(li);
   }
 
@@ -1361,6 +1714,39 @@ async function renderPlaylists() {
   $('storageline').textContent = usage
     ? `This browser is holding ${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB it offered.`
     : 'Nothing stored yet.';
+}
+
+/** A playlist's own menu: the phone's Rename and Delete, with their icons. */
+function openPlaylistMenu(playlist, anchor) {
+  showMenu([
+    ['Rename', () => renamePlaylist(playlist), true, ICON.rename],
+    ['Delete', () => deletePlaylist(playlist), true, ICON.remove],
+  ], anchor);
+}
+
+async function renamePlaylist(playlist) {
+  const name = prompt('Call it what?', playlist.name)?.trim();
+  if (!name || name === playlist.name) return;
+  await playlists.save({ ...(await playlists.get(playlist.id)), name });
+  if (activePlaylist === playlist.id) {
+    // Inside Random or History the chip names the session; the name waits in the stash for later.
+    const session = random ?? away;
+    if (session) session.stash.name = name; else $('playlistname').textContent = name;
+  }
+  renderPlaylists();
+}
+
+/**
+ * Deletes a playlist -- **asking first**, where removing a track does not. The phone makes the same
+ * distinction on purpose: undoing a deleted playlist from a snackbar that lives six seconds is not
+ * an escape route, and asking is.
+ */
+async function deletePlaylist(playlist) {
+  if (!confirm(`Delete “${playlist.name}”? Its ${playlist.tracks?.length ?? 0} tracks go with it.`)) return;
+  await playlists.remove(playlist.id);
+  // Its unsaved edits went with it; there is nothing left to ask about.
+  if (activePlaylist === playlist.id) { setDirty(false); choosePlaylist(PHONE); }
+  renderPlaylists();
 }
 
 /**
@@ -1377,8 +1763,20 @@ function markBrowsable() {
     : 'Browse the archives';
 }
 
+/**
+ * The sheet's answer to a playlist being chosen. Out of Random or History first -- playback stops,
+ * as leaving by the heading's button does -- and then the playlist chosen, not the one left behind.
+ */
+async function choosePlaylist(id) {
+  endSession();
+  if (!(await settleUnsaved())) return;
+  switchTo(id);
+  showPanel(null);
+}
+
 /** Loads a playlist into the queue. Selected, not started — a switch is not a press of play. */
 async function switchTo(id) {
+  setDirty(false);
   const playlist = await playlists.get(id);
   activePlaylist = id;
   $('playlistname').textContent = playlist?.name ?? (id === PHONE ? 'From the phone' : 'Playlist');
@@ -1408,7 +1806,9 @@ async function renderBrowse() {
   // **Declared before anything uses it.** It sat below the "From the phone" branch, which calls it
   // since round 8 item 3 -- a `const` read before its declaration, so opening Browse on the phone's
   // list with an index downloaded threw. jsdom never met that state; `docs/STATUS.md` C37.
-  const row = (name, count, onclick) => {
+  // An icon for the rows that do something -- Random, History, a download -- as the phone's Browse
+  // rows have one; rows that are data (a format, an author, a tune) are drawn as the phone draws them.
+  const row = (name, count, onclick, icon = null) => {
     const li = document.createElement('li');
     const label = document.createElement('div');
     label.className = 'bname';
@@ -1417,6 +1817,7 @@ async function renderBrowse() {
     number.className = 'bcount';
     number.textContent = count == null ? '' : count.toLocaleString();
     li.append(label, number);
+    if (icon) li.insertAdjacentHTML('afterbegin', iconSvg(icon));
     li.onclick = onclick;
     list.append(li);
   };
@@ -1438,12 +1839,19 @@ async function renderBrowse() {
     label.className = 'bname';
     label.textContent = 'Make an empty playlist and browse into it';
     li.append(label);
+    li.insertAdjacentHTML('afterbegin', iconSvg(ICON.add));
     li.onclick = async () => { if (await newPlaylist()) await renderBrowse(); };
     list.append(li);
     // **Random is offered even here**, because it writes into no playlist at all -- the rule that
     // shuts Browse is about rewriting what the phone sent, and the dice never does.
-    if ((await archive.meta())?.tracks) row('Random', null, enterRandomFromBrowse);
-    row('History', null, openHistory);
+    const held = await archive.meta();
+    // **Said here too.** The owner re-indexed after round 8 and never saw the page ask him to: with
+    // "From the phone" showing, this panel is all of Browse he gets, and the sentence lived only on
+    // the other one.
+    const stale = held?.tracks ? await staleSentence(held) : '';
+    if (stale) note.textContent += ` ${stale}`;
+    if (held?.tracks) row('Random', null, enterRandomFromBrowse, ICON.dice);
+    row('History', null, openHistory, ICON.history);
     return;
   }
 
@@ -1456,30 +1864,22 @@ async function renderBrowse() {
       // now cost nothing to open.
       note.textContent = 'Modland is half a million tunes. The index is a 5.76 MB download, kept in '
         + 'this browser, and browsing is then offline.';
-      row('Download the Modland index', null, downloadIndex);
-      row('History', null, openHistory);
+      row('Download the Modland index', null, downloadIndex, ICON.download);
+      row('History', null, openHistory, ICON.history);
       return;
     }
     // An index is filtered by the list and the decoders it was built with, so one built by another
     // set holds the wrong rows and looks current -- the phone learnt this by losing 60,572 C64
     // tunes. One built before the page filtered at all has no `total`, and holds every row Modland
     // lists, including a third this browser cannot open.
-    const table = await formatsReady().catch(() => null);
-    const stale = held.total === undefined
-      || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
-    note.textContent = [
-      stale ? 'This index was built for a different set of formats than this page now plays. '
-        + 'Downloading it again (5.76 MB) brings it in line: it keeps what this browser can play '
-        + 'and leaves out what it cannot.' : '',
-      holding(held),
-    ].filter(Boolean).join(' ');
-    row('Random', null, enterRandomFromBrowse);
-    row('History', null, openHistory);
+    note.textContent = [await staleSentence(held), holding(held)].filter(Boolean).join(' ');
+    row('Random', null, enterRandomFromBrowse, ICON.dice);
+    row('History', null, openHistory, ICON.history);
     row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
       browsePath = ['modland'];
       await renderBrowse();
-    });
-    row('Download the index again', null, downloadIndex);
+    }, ICON.cloud);
+    row('Download the index again', null, downloadIndex, ICON.download);
     return;
   }
 
@@ -1504,7 +1904,7 @@ async function renderBrowse() {
       }
     }
     markPlayingIn(list);
-    row('Clear the history', null, async () => { await played.clear(); await renderBrowse(); });
+    row('Clear the history', null, async () => { await played.clear(); await renderBrowse(); }, ICON.remove);
     return;
   }
 
@@ -1562,9 +1962,29 @@ function playFromBrowse(tracks, at) {
       + 'an empty one — the name at the top left opens them.';
     return;
   }
+  // Replacing the list from Browse is an edit of it, waiting for Save like any other.
+  setDirty(true);
   setQueue(tracks, at);
   showPanel(null);
   playAt(at);
+}
+
+/**
+ * Why a stored index should be downloaded again, or nothing if it need not be.
+ *
+ * An index is filtered by the list and the decoders it was built with, so one built by another set
+ * holds the wrong rows and looks current -- the phone learnt this by losing 60,572 C64 tunes. One
+ * built before the page filtered at all has no `total`, and holds a third this browser cannot open.
+ */
+async function staleSentence(held) {
+  if (!held?.tracks) return '';
+  const table = await formatsReady().catch(() => null);
+  const stale = held.total === undefined
+    || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
+  return stale
+    ? 'This index was built for a different set of formats than this page now plays. Downloading it '
+      + 'again (5.76 MB) brings it in line: it keeps what this browser can play and leaves out what it cannot.'
+    : '';
 }
 
 /**
@@ -1697,6 +2117,7 @@ $('playlistchip').onclick = () => {
  * offers — and a second copy of "what a new playlist is" would drift.
  */
 async function newPlaylist() {
+  if (!(await settleUnsaved())) return false;
   const name = prompt('Call it what?', 'New playlist');
   if (!name) return false;
   const id = `p${Date.now().toString(36)}`;
@@ -1720,6 +2141,11 @@ $('saveas').onclick = async () => {
   if (!name) return;
   const id = `p${Date.now().toString(36)}`;
   await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
+  // The edits went into the new playlist; the old one stays as it was saved.
+  setDirty(false);
+  // **Saved out of Random or History, the list becomes the playlist**, and the session is over:
+  // leaving it would otherwise put back the playlist that was showing before, under this one's name.
+  dropSession();
   activePlaylist = id;
   $('playlistname').textContent = name;
   markBrowsable();
@@ -1756,6 +2182,7 @@ $('load').onclick = () => {
     return;
   }
   $('pastenote').textContent = '';
+  setDirty(true);
   setQueue(urls);
   showPanel(null);
 };
@@ -1827,6 +2254,31 @@ function previousFile() {
 }
 
 $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter').hidden; };
+$('snackundo').onclick = () => undoRemoval();
+$('tab-save').onclick = () => saveEdits();
+$('sel-add').onclick = () => openAddTo();
+$('sel-delete').onclick = () => {
+  const ats = queue.map((entry, i) => (selected.has(entry) ? i : -1)).filter((i) => i >= 0);
+  selected = new Set();
+  removeRows(ats);
+};
+$('sel-cancel').onclick = () => clearSelection();
+$('addto-new').onclick = async () => {
+  const name = prompt('Call it what?', 'New playlist')?.trim();
+  if (name) addTracksTo(null, name);
+};
+// Escape leaves the ticking first, the way Back does on the phone -- before it closes anything else.
+addEventListener('keydown', (event) => { if (event.key === 'Escape' && selected.size) clearSelection(); });
+$('tab-discard').onclick = () => discardEdits();
+$('unsaved-save').onclick = async () => { await saveEdits(); answerUnsaved(true); };
+$('unsaved-discard').onclick = () => { setDirty(false); answerUnsaved(true); };
+// **Closing the tab** is the one switch the page cannot ask about in its own words; the browser's
+// question is the only one available, and losing edits silently is worse than a plain dialog.
+addEventListener('beforeunload', (event) => {
+  if (!dirty) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
 $('random-leave').onclick = () => endSession();
 
 $('next').onclick = () => {
@@ -2070,6 +2522,20 @@ async function pair() {
 /** A queue from the phone. */
 function receive(message) {
   if (!message.queue?.length) return;
+  // A queue from the phone replaces what is showing, so edits not yet written are asked about first,
+  // as a switch asks. Kept editing, the queue is not loaded -- and the page says so.
+  if (dirty) {
+    settleUnsaved().then((go) => {
+      if (go) applyReceive(message);
+      else status('A queue arrived from the phone and was not loaded, to keep your unsaved changes.');
+    });
+    return;
+  }
+  applyReceive(message);
+}
+
+function applyReceive(message) {
+  setDirty(false);
   // The code did its job, so it stops standing in front of the music.
   if (!$('pair').hidden) showPanel(null);
   // The phone says which one it was on, and that is where the list opens -- selected rather than

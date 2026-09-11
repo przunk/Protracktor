@@ -135,7 +135,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, markBrowsable, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -145,6 +145,32 @@ await new Promise((r) => setTimeout(r, 200));
 const $ = (id) => window.document.getElementById(id);
 
 check($('status').textContent.length > 0, 'the status line says something');
+
+// **Every button carries an icon and its name** -- the owner's standing rule, asked for on the phone
+// three times and again for this page on 2026-09-11 ("nie wiem ile razy jeszcze będę to wałkować").
+// Checked across the whole page so the next button cannot be added bare. The subsong chips are the
+// one exception, numbers in circles exactly as the phone draws them.
+{
+  const bare = [...window.document.querySelectorAll('button')]
+    .filter((b) => !b.classList.contains('subsong') && !b.querySelector('svg'))
+    .map((b) => b.id || b.textContent.trim() || b.className);
+  check(bare.length === 0, `every button on the page has an icon${bare.length ? ` (bare: ${bare.join(', ')})` : ''}`);
+}
+
+// **Hidden means not shown** (`docs/STATUS.md` C38). jsdom lays nothing out, but it does run the
+// page's own stylesheet through `getComputedStyle` -- which is enough to catch an element whose
+// `display: flex` outranks `hidden`. The Random heading did exactly that and showed over every panel,
+// through 211 checks that all read the attribute and never what it did.
+{
+  const leaking = [...window.document.querySelectorAll('[hidden]')]
+    .filter((el) => window.getComputedStyle(el).display !== 'none')
+    .map((el) => el.id || el.className || el.tagName);
+  check(leaking.length === 0, `every element marked hidden is not displayed${leaking.length ? ` (still showing: ${leaking.join(', ')})` : ''}`);
+  // And one that is only hidden later: History's heading hides Random's Filter.
+  $('random-filter').hidden = true;
+  check(window.getComputedStyle($('random-filter')).display === 'none', "and a button hidden later is too");
+  $('random-filter').hidden = false;
+}
 check(!!window.__api, 'the script finished loading');
 
 if (window.__api) {
@@ -270,6 +296,9 @@ if (window.__api) {
   $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';
   $('load').click();
   check($('paste').hidden === true, 'loading closes the paste dialog');
+  // A paste is an edit of the list and waits for Save now, as on the phone. Saved here, so what
+  // follows starts from the state it always started from.
+  await window.__api.saveEdits();
   check(window.document.querySelectorAll('#queue li.track').length === 1, 'and loads what was in it');
   await new Promise((r) => setTimeout(r, 60));   // let that load finish before starting another
 
@@ -397,8 +426,10 @@ if (window.__api) {
   menus[0].click();
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
-  check(open.map((b) => b.textContent).join(',') === 'Save the file,Copy a link,Information',
-    'with the three the owner asked for');
+  // Select stands first since 2026-09-11 -- the way into ticking rows, which he asked for; the three
+  // he asked for before are still exactly these, in this order.
+  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Information',
+    'with the three the owner asked for, after Select');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
   menus[1].click();
@@ -603,12 +634,19 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
 
   await store.playlists.save({ id: 'p-zebra', name: 'Zebra', tracks: [], index: 0 });
   await store.playlists.save({ id: 'p-alpha', name: 'Alpha', tracks: [], index: 0 });
+  // **Checked for what they are, not for what else is there.** These counted every playlist in the
+  // database and expected exactly their own, which held only while nothing earlier had saved one yet
+  // -- a timing the paste check's Save changed. The order and the deletion are the point.
   const names = (await store.playlists.all()).map((p) => p.name);
+  const rest = names.slice(1);
   check(names[0] === 'From the phone', 'and it sorts first, whatever it is called');
-  check(names.slice(1).join(',') === 'Alpha,Zebra', 'with the rest by name');
+  check(rest.join() === [...rest].sort((x, y) => x.localeCompare(y)).join() && rest.indexOf('Alpha') < rest.indexOf('Zebra'),
+    'with the rest by name');
 
+  const before = (await store.playlists.all()).length;
   await store.playlists.remove('p-zebra');
-  check((await store.playlists.all()).length === 2, 'a playlist somebody made can be deleted');
+  check(!(await store.playlists.get('p-zebra')) && (await store.playlists.all()).length === before - 1,
+    'a playlist somebody made can be deleted');
 
   // The bytes a phone sent are deliberately not kept: they are somebody else's music, they are the
   // largest thing in a queue by far, and a page that hoards them quietly is not what this is.
@@ -959,8 +997,9 @@ if (window.__api) {
   check(window.__api.queueNow().length === 1 && window.__api.indexNow() === 0,
     'and entering plays one, with no second press');
   check($('shuffle').disabled, 'shuffle is shut while the dice runs');
-  check($('playlistname').textContent === 'Random' && $('playlistchip').disabled,
-    'and the playlist chip does not offer a playlist nothing is playing from');
+  // The phone hides the chip here; the owner asked for the page's to stay usable (2026-09-11).
+  check($('playlistname').textContent === 'Random' && !$('playlistchip').disabled,
+    'the playlist chip says where the music is coming from, and stays usable');
 
   window.__api.onWorklet({ type: 'ended' });
   window.__api.onWorklet({ type: 'ended' });
@@ -1001,12 +1040,45 @@ if (window.__api) {
   check(JSON.stringify((await playlists.get('p-random'))?.tracks) === before,
     'nothing the dice did was written into the playlist');
 
+  // A pick that will not open is walked past and leaves the record, as on the phone.
+  const beforeSkip = window.__api.queueNow();
+  const failedUrl = beforeSkip[beforeSkip.length - 1];
+  window.__api.onWorklet({ type: 'failed', reason: 'nothing claimed it' });
+  await settle();
+  const afterSkip = window.__api.queueNow();
+  check(!afterSkip.slice(0, -1).includes(failedUrl) && afterSkip.length === beforeSkip.length
+        && window.__api.indexNow() === afterSkip.length - 1,
+    'a pick that will not open is walked past, and leaves the record — it did not play');
+  check($('error').textContent === '', 'without leaving a red error behind the music that followed');
+
+  // The bar starts again with the tune, not when the engine first reports a position.
+  window.__api.onWorklet({ type: 'opened', duration: 120, subsongs: 1, current: 0, describe: '' });
+  window.__api.onWorklet({ type: 'position', seconds: 67 });
+  const wasAt = $('elapsed').textContent;
+  // A download that never finishes, so "before it is done" is something that can be looked at.
+  holdTrackFetch = true;
+  tap($('prev'));
+  await settle(20);
+  check(wasAt === '1:07' && $('elapsed').textContent === '0:00' && Number($('seek').value) === 0,
+    'choosing another tune puts the bar back to the start while it is still downloading');
+  holdTrackFetch = false;
+  $('playpause').click();   // "stop loading", so the held download is called off
+  await settle();
+
   window.__api.endRandom();
   await settle();
   check(window.__api.randomState() == null && $('randomhead').hidden, 'leaving ends the session');
   check(window.__api.queueNow().join() === `${one},${two}` && window.__api.indexNow() === 1,
     'and the playlist is exactly where it was left');
   check(!$('shuffle').disabled && !$('playlistchip').disabled, 'and the transport is the playlist\'s again');
+
+  // Choosing a playlist from the sheet in the middle of a session leaves it for that playlist.
+  await window.__api.openRandom();
+  await settle();
+  window.__api.choosePlaylist('p-random');
+  await settle();
+  check(window.__api.randomState() == null && window.__api.queueNow().join() === `${one},${two}`,
+    'choosing a playlist from the sheet while the dice runs ends the session and shows that playlist');
 
   // "From the phone" is never written into -- by Browse, the paste box, and now by the dice.
   await window.__api.switchTo('phone');
@@ -1106,6 +1178,12 @@ if (window.__api) {
   try { await window.__api.browseTo([]); } catch (error) { threw = error; }
   const labels = [...$('browselist').children].map((li) => li.textContent);
   check(!threw, `Browse on the phone's list with an index held does not throw${threw ? ` (${threw.message})` : ''}`);
+  // An index from before the filter: no counts, every row. The owner re-indexed without being asked
+  // because this panel -- all of Browse he gets while the phone's list shows -- never said so.
+  await store.putAll([{ key: 'modland:meta', tracks: 516107, formats: 339, buckets: 43721, fingerprint: 'x' }]);
+  await window.__api.browseTo([]);
+  check($('browsenote').textContent.includes('Downloading it again (5.76 MB)'),
+    'and an index from before the filter is called out there too, where the owner would see it');
   check(labels.some((t) => t.includes('Random')) && labels.some((t) => t.includes('History')),
     'and still offers Random and History, which write into no playlist');
   await window.__api.browseTo(['history']);
@@ -1113,6 +1191,250 @@ if (window.__api) {
 
   await store.clear('modland:');
   window.__api.showPanel(null);
+}
+
+// --- the buttons the page builds as it goes also carry icons (owner, 2026-09-11) -------------------
+if (window.__api) {
+  console.log('\nicons on what the page builds:');
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  await window.__api.switchTo('p-icons');
+  $('playlistchip').click();
+  await settle();
+  const drops = [...$('playlistlist').querySelectorAll('button')];
+  check(drops.length > 0 && drops.every((b) => b.querySelector('svg')), 'every button in the playlist sheet has an icon');
+  window.__api.showPanel(null);
+  const { catalogue: store } = await import(path.resolve('web/src/store.js'));
+  await store.putAll([{ key: 'modland:meta', tracks: 3, total: 3, phoneOnly: 0, formats: 1, buckets: 1, fingerprint: 'x' }]);
+  await window.__api.browseTo([]);
+  const actions = [...$('browselist').children];
+  check(actions.length > 0 && actions.every((li) => li.querySelector('svg')),
+    'every row at the root of Browse does something, and has an icon');
+  await store.clear('modland:');
+}
+
+// --- the playlist sheet, in the phone's shape (owner, 2026-09-11, from two screenshots) ------------
+if (window.__api) {
+  console.log('\nthe playlist sheet:');
+  const { playlists } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const answers = { prompt: null, confirm: false };
+  window.prompt = () => answers.prompt;
+  window.confirm = () => answers.confirm;
+
+  await playlists.save({ id: 'p-sheet', name: 'Sheet test', tracks: [{ url: 'https://example.test/s.mod', name: 's' }], index: 0 });
+  await window.__api.switchTo('p-sheet');
+  $('playlistchip').click();
+  await settle();
+  const rows = [...$('playlistlist').children];
+  const mine = rows.find((li) => li.textContent.includes('Sheet test'));
+  const phone = rows.find((li) => li.textContent.includes('From the phone'));
+  check(mine?.firstElementChild?.className === 'pcount' && mine.firstElementChild.textContent === '1',
+    'each row starts with its size, as the phone\'s does');
+  check(mine?.getAttribute('aria-current') === 'true', 'and the one showing is marked');
+  check(phone && !phone.querySelector('.pmenu'), '"From the phone" has nothing to rename or delete');
+
+  mine.querySelector('.pmenu').click();
+  const items = [...$('menu').querySelectorAll('button')].map((b) => b.textContent.trim());
+  check(items.join() === 'Rename,Delete' && [...$('menu').querySelectorAll('button')].every((b) => b.querySelector('svg')),
+    'its three dots hold Rename and Delete, each with its icon');
+
+  answers.prompt = 'Renamed';
+  [...$('menu').querySelectorAll('button')].find((b) => b.textContent.includes('Rename')).click();
+  await settle();
+  check((await playlists.get('p-sheet'))?.name === 'Renamed' && $('playlistname').textContent === 'Renamed',
+    'Rename renames it, and the chip follows');
+
+  [...$('playlistlist').children].find((li) => li.textContent.includes('Renamed')).querySelector('.pmenu').click();
+  answers.confirm = false;
+  [...$('menu').querySelectorAll('button')].find((b) => b.textContent.includes('Delete')).click();
+  await settle();
+  check(!!(await playlists.get('p-sheet')), 'Delete asks first, and a no keeps it');
+  [...$('playlistlist').children].find((li) => li.textContent.includes('Renamed')).querySelector('.pmenu').click();
+  answers.confirm = true;
+  [...$('menu').querySelectorAll('button')].find((b) => b.textContent.includes('Delete')).click();
+  await settle();
+  check(!(await playlists.get('p-sheet')) && $('playlistname').textContent === 'From the phone',
+    'and a yes deletes it, leaving the phone\'s list showing');
+  $('menu').hidden = true;
+  window.__api.showPanel(null);
+}
+
+// --- editing a playlist of his own, as on the phone (owner, 2026-09-11) ---------------------------
+if (window.__api) {
+  console.log('\nediting a playlist:');
+  const { playlists } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const saved = async (id) => ((await playlists.get(id))?.tracks ?? []).map((t) => t.url).join();
+  const menuOf = (row) => { row.querySelector('.rowmenu').click(); return [...$('menu').querySelectorAll('button')]; };
+
+  const a = 'https://example.test/e1.mod';
+  const b = 'https://example.test/e2.mod';
+  const c = 'https://example.test/e3.mod';
+  await window.__api.switchTo('p-edit');
+  window.__api.setQueue([a, b, c], 0);
+  await settle(700);
+
+  let items = menuOf($('queue').children[1]);
+  check(items.some((x) => x.textContent.trim() === 'Remove from this playlist'),
+    'a row of a playlist of his own offers removal');
+  check(items.every((x) => x.querySelector('svg')), 'and every item in the row menu has an icon');
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle(700);
+  check(window.__api.queueNow().join() === `${a},${c}`, 'removing takes the row out, with no question first');
+  check(!$('snackbar').hidden && $('snacktext').textContent.includes('Removed'), 'with the way back offered');
+  check(!!$('snackundo').querySelector('svg'), 'which has an icon too');
+
+  // As on the phone: an edit waits for Save, and Save and Discard appear only while it waits.
+  check(await saved('p-edit') === `${a},${b},${c}`, 'nothing is written until Save');
+  check(!$('tab-save').hidden && !$('tab-discard').hidden, 'Save and Discard appear while an edit waits');
+  await window.__api.discardEdits();
+  await settle();
+  check(window.__api.queueNow().join() === `${a},${b},${c}` && $('tab-save').hidden,
+    'Discard reads the saved list back');
+
+  items = menuOf($('queue').children[1]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  $('snackundo').click();
+  await settle();
+  check(window.__api.queueNow().join() === `${a},${b},${c}` && $('snackbar').hidden,
+    'undo puts it back where it was');
+  items = menuOf($('queue').children[1]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  $('tab-save').click();
+  await settle();
+  check(await saved('p-edit') === `${a},${c}` && $('tab-save').hidden, 'Save writes it, and Save goes away');
+
+  // A switch with an edit waiting asks first -- the phone's "Unsaved changes".
+  await playlists.save({ id: 'p-other', name: 'Other', tracks: [], index: 0 });
+  items = menuOf($('queue').children[0]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  const choosing = window.__api.choosePlaylist('p-other');
+  await settle();
+  check(!$('unsaved').hidden && window.__api.queueNow().join() === c,
+    'a switch with an edit waiting asks first, and has not switched');
+  check([...$('unsaved').querySelectorAll('button')].every((x) => x.querySelector('svg')), 'the question\'s buttons have icons');
+  window.__api.showPanel(null);
+  await choosing;
+  check($('unsaved').hidden && window.__api.dirtyNow() && window.__api.queueNow().join() === c,
+    'closing the question keeps editing, where it was');
+  const choosingAgain = window.__api.choosePlaylist('p-other');
+  await settle();
+  $('unsaved-save').click();
+  await choosingAgain;
+  await settle();
+  check(await saved('p-edit') === c && $('playlistname').textContent === 'Other',
+    'Save in the question writes the edit and then switches');
+
+  // Closing the tab with an edit waiting is the browser's question, the only one there is.
+  await window.__api.switchTo('p-edit');
+  window.__api.setQueue([a, b, c], 0);
+  await settle(700);
+  items = menuOf($('queue').children[1]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  const leaving = new window.Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(leaving);
+  check(leaving.defaultPrevented, 'closing the tab with an edit waiting asks the browser to ask');
+  await window.__api.discardEdits();
+  await settle();
+
+  // Removing what is playing stops it, rather than starting something else.
+  await window.__api.playAt(0);
+  items = menuOf($('queue').children[0]);
+  items.find((x) => x.textContent.includes('Remove')).click();
+  await settle();
+  check($('playpause').title === 'Play' && window.__api.queueNow().join() === `${b},${c}`,
+    'removing the tune that is playing stops it, and starts nothing else');
+  $('snackundo').click();
+  await settle(700);
+
+  // "From the phone" is what the phone sent, and is never edited here.
+  await window.__api.switchTo('phone');
+  window.__api.receive({ queue: [{ url: a, title: 'A' }], index: 0 });
+  await settle();
+  const phoneItems = menuOf($('queue').children[0]).map((x) => x.textContent.trim());
+  check(!phoneItems.some((t) => t.includes('Remove')), '"From the phone" offers no removal');
+  $('menu').hidden = true;
+}
+
+// --- ticking rows, as on the phone (owner, 2026-09-11) ---------------------------------------------
+if (window.__api) {
+  console.log('\nticking rows:');
+  const { playlists } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const urls = [1, 2, 3, 4].map((n) => `https://example.test/sel${n}.mod`);
+  const menuItem = (row, label) => {
+    row.querySelector('.rowmenu').click();
+    return [...$('menu').querySelectorAll('button')].find((b) => b.textContent.trim() === label);
+  };
+  window.prompt = () => 'Picked';
+
+  await playlists.save({ id: 'p-target', name: 'Target', tracks: [{ url: urls[3], name: 'already' }], index: 0 });
+  await window.__api.switchTo('p-sel');
+  window.__api.setQueue(urls, 0);
+  await settle(700);
+
+  menuItem($('queue').children[0], 'Select').click();
+  await settle();
+  check(!$('selectbar').hidden && $('selectcount').textContent === '1 selected', 'Select in the row menu starts ticking');
+  check($('queue').children[0].querySelector('.tick')?.checked, 'and the row shows its box, where its number was');
+  $('queue').children[2].click();
+  await settle();
+  check($('selectcount').textContent === '2 selected' && window.__api.indexNow() === 0,
+    'a tap then ticks a row rather than playing it');
+
+  check(!$('sel-delete').hidden, 'Delete is offered in a playlist of his own');
+  $('sel-delete').click();
+  await settle();
+  check(window.__api.queueNow().join() === `${urls[1]},${urls[3]}` && $('selectbar').hidden,
+    'Delete takes every ticked row out, as one edit');
+  check($('snacktext').textContent === 'Removed 2 tracks' && window.__api.dirtyNow(), 'waiting for Save, with one undo for both');
+  $('snackundo').click();
+  await settle();
+  check(window.__api.queueNow().join() === urls.join(), 'undo brings them all back, each where it was');
+  await window.__api.discardEdits();
+  await settle();
+
+  menuItem($('queue').children[1], 'Select').click();
+  $('queue').children[3].click();
+  await settle();
+  $('sel-add').click();
+  await settle();
+  const targets = [...$('addtolist').children].map((li) => li.textContent);
+  check(!$('addto').hidden && targets.some((t) => t.includes('Target')) && !targets.some((t) => t.includes('From the phone')),
+    'Add to playlist offers his other playlists, never the phone\'s');
+  [...$('addtolist').children].find((li) => li.textContent.includes('Target')).click();
+  await settle();
+  const target = (await playlists.get('p-target')).tracks.map((t) => t.url);
+  check(target.join() === `${urls[3]},${urls[1]}`, 'and adds what it did not already have, once');
+  check($('selectbar').hidden && $('addto').hidden, 'then the ticks and the sheet go');
+
+  // A long press starts ticking, and the click that ends it does not tick the row off again.
+  const row = $('queue').children[2];
+  row.dispatchEvent(new window.Event('pointerdown'));
+  await settle(560);
+  row.dispatchEvent(new window.Event('pointerup'));
+  $('queue').children[2].click();
+  await settle();
+  check($('selectcount').textContent === '1 selected' && $('queue').children[2].classList.contains('ticked'),
+    'a long press starts ticking, and the click at its end is not counted twice');
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+  await settle();
+  check($('selectbar').hidden, 'Escape leaves the ticking');
+
+  // On "From the phone" the ticked rows can be copied elsewhere, and nothing else.
+  await window.__api.switchTo('phone');
+  window.__api.receive({ queue: [{ url: urls[0], title: 'A' }], index: 0 });
+  await settle();
+  menuItem($('queue').children[0], 'Select').click();
+  await settle();
+  check($('sel-delete').hidden && !$('sel-add').hidden, 'on the phone\'s list only Add is offered');
+  $('sel-cancel').click();
+  await settle();
+  $('menu').hidden = true;
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------

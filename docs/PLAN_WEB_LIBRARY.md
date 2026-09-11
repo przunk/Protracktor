@@ -212,6 +212,28 @@ jsdom is, because a stub of storage would let a broken store pass.
 
 - **Still to be checked by him:** on the Pi, across a browser restart.
 
+### S2a. Editing a playlist of his own — **built 2026-09-11**
+
+*Owner, 2026-09-11: "w widoku mojej playlisty webowej nie mogę usuwać utworów. Powinno to działać tak
+jak na telefonie. Tylko lista from the phone powinna być niemodyfikowalna."*
+
+A row of one of his own playlists offers **Remove from this playlist**; "From the phone" offers
+nothing of the kind, being what the phone sent. The phone's rules (`removeTracks`): no question
+first, and removing what is playing stops it rather than starting something else. An **Undo**
+snackbar puts it back where it was, for six seconds.
+
+**Edits wait for Save, as on the phone** — his decision the same day. Removing rows, or replacing
+the list from Browse or the paste box, changes what is on screen and not what is stored; Save and
+Discard appear in the top bar only while an edit waits, and a switch, a new playlist or a queue from
+the phone asks the phone's *Unsaved changes* first. Closing the tab asks the browser to ask. Where
+playback has got to is saved as it goes, but only while the list is the saved one.
+
+**Ticking many rows, as on the phone** — also his decision the same day. A long press, or Select in
+the row menu, starts it; a bar offers Add to playlist and, in a playlist of his own, Delete, which is
+one edit with one undo. Adding writes another playlist at once and skips what it already holds.
+
+Every item of the row menu has its icon now, the phone's paths — the page's menu was text alone.
+
 ### S3. The index, and browsing it
 
 Modland first, because it is the one that matters and the one whose numbers are above.
@@ -442,6 +464,9 @@ builds 519–532, is the specification. What the page does, and where it had to 
   elsewhere — the phone, a playlist, Browse — ends the session and becomes what is showing.
 - The **Filter** button is there and says *Everything*; the chips the phone has need `Platforms.kt`
   shared and a favourites download, both out of this round.
+- **Two differences from the phone, both the owner's after first use** (`docs/STATUS.md` C39): the
+  playlist chip stays usable during a session and choosing a playlist leaves it; and a pick that
+  will not open leaves the record instead of staying in it.
 
 **The rules are in `docs/rules/queue-cases.tsv` as three groups driven by the page only**, with the
 reason beside them: the phone's rule lives inside `PlaybackController` rather than in a function,
@@ -553,8 +578,8 @@ oldest forgotten. A stamp that only increases orders two plays in one millisecon
 **A fault from item 3 was found while building this, invisible to jsdom:** Browse on "From the
 phone" with an index held threw — a helper read before its `const` (`docs/STATUS.md` C37). Fixed
 here, with a check that builds that state. A second suspicion — that the Random heading's
-`display: flex` would beat `hidden` — was checked against the page and was wrong: it already has
-`[hidden] { display: none !important }`.
+`display: flex` would beat `hidden` — was right and was dismissed on a check that matched a scoped
+rule; the owner found it on the first bundle (`docs/STATUS.md` C38).
 
 What follows is what was written before it was built.
 

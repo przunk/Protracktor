@@ -422,6 +422,29 @@
     min-width: 190px;
   }
   #menu[hidden] { display: none; }
+  /* Every item an icon and its name, as the phone's row menu has them. */
+  #menu button { display: flex; align-items: center; gap: 12px; }
+  #menu button svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+  /* Ticking rows: the box stands where the row's number was, so nothing moves when selection starts. */
+  li.track .tick { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); pointer-events: none; }
+  li.track.ticked { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+  .selectbar { display: flex; align-items: center; gap: 6px; margin: 0 12px 6px; padding: 4px 6px 4px 14px;
+               background: var(--surface-container); border: 1px solid var(--outline); border-radius: var(--shape-s); }
+  .selectbar span { flex: 1; min-width: 0; font-size: var(--body-medium); }
+  #addtolist { list-style: none; margin: 4px 0 14px; padding: 0; max-height: 46vh; overflow-y: auto; }
+  #addtolist li { display: flex; align-items: center; gap: 12px; padding: 6px 8px; min-height: 44px;
+                  border-radius: var(--shape-s); cursor: pointer; }
+  #addtolist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  #addtolist .pcount { width: 32px; flex: none; text-align: center; color: var(--on-surface-variant);
+                       font-size: var(--label-large); font-variant-numeric: tabular-nums; }
+  #addtolist .pname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .snackbar { display: flex; align-items: center; gap: 12px; margin: 0 12px 6px; padding: 4px 6px 4px 16px;
+              background: var(--surface-container); border: 1px solid var(--outline); border-radius: var(--shape-s);
+              font-size: var(--body-medium); color: var(--on-surface); }
+  .snackbar span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .snackaction { display: flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--primary);
+                 font: inherit; font-weight: 500; cursor: pointer; padding: 6px 8px; }
+  .snackaction svg { width: 20px; height: 20px; fill: currentColor; }
   #menu button {
     display: block; width: 100%; text-align: left;
     background: none; border: 0; padding: 10px 16px; font: inherit; color: inherit; cursor: pointer;
@@ -453,6 +476,14 @@
   #browselist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
   #browselist .bname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #browselist .bcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
+  /* The rows that *do* something carry an icon, as the phone's Browse rows do; rows of data do not. */
+  #browselist li > svg { width: 22px; height: 22px; fill: currentColor; flex: none; margin-right: 12px;
+                         color: var(--on-surface-variant); }
+  /* **An icon and its name on every button**, never the name alone -- asked for on the phone in A16,
+     A17 and A23, and again for this page on 2026-09-11. Inline, so no button's own layout changes. */
+  :is(.plain, .filled, .text-button, .toggle) > svg {
+    width: 18px; height: 18px; fill: currentColor; vertical-align: -4px; margin-right: 6px; flex: none;
+  }
   /* The tune that is playing, marked the way the playlist marks it: one list, one look. */
   #browselist li.playing { background: color-mix(in srgb, var(--primary) 16%, transparent); }
   #browselist li.playing .bname { color: var(--primary); }
@@ -460,20 +491,30 @@
   #browselist li.gone { opacity: .5; cursor: default; }
 
   /* The playlist sheet: a list of names, what is in each, and what may be done to it. */
-  #playlistlist { list-style: none; margin: 0 0 16px; padding: 0; max-height: 46vh; overflow-y: auto; }
+  #playlistlist { list-style: none; margin: 4px 0 14px; padding: 0; max-height: 46vh; overflow-y: auto; }
   #playlistlist li {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: var(--shape-s); cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 4px 6px 8px; border-radius: var(--shape-s); cursor: pointer; min-height: 44px;
   }
   #playlistlist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
-  #playlistlist li[aria-current="true"] { background: var(--secondary-container); }
+  /* The whole row, as the playing track is marked in the playlist: one convention for "this one". */
+  #playlistlist li[aria-current="true"] { background: var(--secondary-container); color: var(--on-secondary-container); }
+  /* The size first, where the phone puts it: which of these has anything in it (BACKLOG A21). */
+  #playlistlist .pcount { width: 32px; flex: none; text-align: center; font-size: var(--label-large);
+                          color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+  #playlistlist li[aria-current="true"] .pcount { color: inherit; }
   #playlistlist .pname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #playlistlist .pcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
-  #playlistlist .pdrop {
-    background: none; border: 0; padding: 4px 8px; cursor: pointer;
-    color: var(--on-surface-variant); font: inherit; border-radius: var(--shape-s); flex: none;
-  }
-  #playlistlist .pdrop:hover { background: color-mix(in srgb, var(--error) 22%, transparent); color: var(--on-surface); }
+  #playlistlist .pmenu { background: none; border: 0; color: inherit; cursor: pointer; padding: 8px;
+                         border-radius: 50%; flex: none; display: flex; }
+  #playlistlist .pmenu:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
+  #playlistlist .pmenu svg { width: 22px; height: 22px; fill: currentColor; }
+  /* Two ways to a new playlist, equal and on one line each -- the phone's pair of outlined buttons. */
+  .sheetbuttons { display: flex; gap: 8px; }
+  .outlined { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+              background: none; color: var(--primary); border: 1px solid var(--outline); border-radius: var(--shape-xl);
+              padding: 9px 12px; font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .outlined:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+  .outlined svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
   .sheet .row { display: flex; gap: 10px; justify-content: flex-end; }
   .sheet .plain {
     background: none; color: var(--on-surface-variant); border: 0;
@@ -500,6 +541,14 @@
     font-variant-numeric: tabular-nums;
   }
   .subsong[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+  /* **`hidden` wins, everywhere, and it is last on purpose.** The page used to restore it element
+     by element -- `.panel[hidden]`, `.overlay[hidden]` and so on, each beside a `display` of its
+     own. Round 8's Random heading (`display: flex`) got no such line and showed over every panel
+     whether or not Random was running (`docs/STATUS.md` C38). `!important` is what wins in a
+     browser; standing last is what wins in jsdom, whose cascade takes the last matching rule and
+     does not read `!important` -- so here both agree, and the page check can see what a browser
+     would show. */
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -518,6 +567,12 @@
       <svg viewBox="0 0 24 24" class="chev"><path d="m7 10 5 5 5-5z"/></svg>
     </button>
     <div class="spacer"></div>
+    <!--
+      Only while there is something to save -- the phone's rule: a permanently lit Save teaches
+      nothing about whether the list on screen is the list on disk.
+    -->
+    <button class="action" id="tab-discard" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Discard</button>
+    <button class="action" id="tab-save" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save</button>
     <button class="action" id="tab-browse" aria-pressed="false">
       <svg viewBox="0 0 24 24"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4a7.48 7.48 0 0 0-6.63 4.03A5.99 5.99 0 0 0 6 20h13a5 5 0 0 0 .35-9.96z"/></svg>
       Browse
@@ -602,7 +657,7 @@
         listener has to answer for no reason.
       -->
       <div id="subsongbar" class="subsongbar" hidden>
-        <button id="allsubsongs" class="toggle" role="switch" aria-checked="false">Play every tune in this file</button>
+        <button id="allsubsongs" class="toggle" role="switch" aria-checked="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 8l10 6 10-6-10-6zm0 13.5L4.2 10.7 2 12l10 6 10-6-2.2-1.3L12 15.5z"/></svg>Play every tune in this file</button>
       </div>
       <div id="subsongs" class="subsongs"></div>
       <!--
@@ -612,6 +667,27 @@
       -->
       <div class="statusline" id="status">starting…</div>
     </section>
+
+    <!--
+      What was just removed, and the way back -- the phone's snackbar. Removal asks nothing first,
+      as on the phone: undo costs nothing when it was meant, and a question on every delete is a
+      toll paid by the people who meant it.
+    -->
+    <!-- What you can do with what you ticked -- the phone's selection bar, icon and name each. -->
+    <div id="selectbar" class="selectbar" hidden>
+      <span id="selectcount"></span>
+      <button class="action" id="sel-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>Add to playlist</button>
+      <button class="action" id="sel-delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Delete</button>
+      <button class="action" id="sel-cancel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Cancel</button>
+    </div>
+
+    <div id="snackbar" class="snackbar" hidden>
+      <span id="snacktext"></span>
+      <button class="snackaction" id="snackundo">
+        <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        Undo
+      </button>
+    </div>
 
     <div class="statusline error" id="error"></div>
 
@@ -679,9 +755,9 @@
   <div class="overlay" id="browse" hidden>
     <div class="sheet wide">
       <div class="browsehead">
-        <button class="plain" id="browseback" hidden>← Back</button>
+        <button class="plain" id="browseback" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>
         <h2 id="browsetitle">Browse</h2>
-        <button class="plain" data-close>Close</button>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
       </div>
       <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
       <p class="note" id="browsenote"></p>
@@ -689,16 +765,57 @@
     </div>
   </div>
 
+  <!--
+    Choosing, making and acting on playlists -- the phone's `PlaylistSwitcher`, in its shape: the
+    title and the way out along the top as Browse has them, one row per playlist with its size first
+    and everything you can do *to* it behind three dots, and the two ways to end up with a new one
+    side by side at the bottom.
+  -->
   <div class="overlay" id="playlists" hidden>
-    <div class="sheet">
-      <h2>Playlists</h2>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <h2>Playlists</h2>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+      </div>
       <ol id="playlistlist"></ol>
-      <div class="row">
-        <button class="filled" id="newlist">New empty playlist</button>
-        <button class="filled" id="saveas">Save this queue as…</button>
-        <button class="plain" data-close>Close</button>
+      <div class="sheetbuttons">
+        <button class="outlined" id="newlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New playlist</button>
+        <button class="outlined" id="saveas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save this queue as…</button>
       </div>
       <p class="storage" id="storageline"></p>
+    </div>
+  </div>
+
+  <!-- Where ticked tracks go: another playlist of his own, or a new one (the phone's AddToPlaylistDialog). -->
+  <div class="overlay" id="addto" hidden>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <h2>Add to playlist</h2>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+      </div>
+      <p class="note" id="addtonote"></p>
+      <ol id="addtolist"></ol>
+      <div class="sheetbuttons">
+        <button class="outlined" id="addto-new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New playlist</button>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    The phone's "Unsaved changes": asked before a switch would throw away edits nobody has written.
+    Save them or discard them; closing it keeps editing.
+  -->
+  <div class="overlay" id="unsaved" hidden>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <h2>Unsaved changes</h2>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Keep editing</button>
+      </div>
+      <p class="note">This playlist has edits that are not written yet. Save them before switching, or throw them away.</p>
+      <div class="sheetbuttons">
+        <button class="outlined" id="unsaved-discard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Discard</button>
+        <button class="outlined" id="unsaved-save"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save</button>
+      </div>
     </div>
   </div>
 
@@ -716,7 +833,7 @@
       <p class="note" id="pairnote">Scan this with Protracktor on your phone to send it a playlist.</p>
       <div id="qr" class="qr"></div>
       <p class="note mono" id="pairurl"></p>
-      <button class="text-button" data-close>Close</button>
+      <button class="text-button" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
     </div>
   </div>
 
@@ -726,8 +843,8 @@
       <textarea id="urls" spellcheck="false"></textarea>
       <p class="note" id="pastenote"></p>
       <div class="sheet-actions">
-        <button class="text-button" data-close>Cancel</button>
-        <button class="filled" id="load">Load these</button>
+        <button class="text-button" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Cancel</button>
+        <button class="filled" id="load"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z"/></svg>Load these</button>
       </div>
     </div>
   </div>
