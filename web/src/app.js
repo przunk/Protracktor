@@ -902,6 +902,16 @@ function openRowMenu(entry, anchor) {
   if (!random && !away && activePlaylist !== PHONE) {
     items.push(['Remove from this playlist', () => removeFromPlaylist(queue.indexOf(entry)), true, ICON.remove]);
   }
+  showMenu(items, anchor);
+}
+
+/**
+ * Draws a menu under [anchor] from `[label, act, enabled, icon]` rows. Shared by a track's three dots
+ * and a playlist's, so the two menus cannot come to look or behave differently.
+ */
+function showMenu(items, anchor) {
+  const menu = $('menu');
+  menu.replaceChildren();
   for (const [label, act, enabled, icon] of items) {
     const button = document.createElement('button');
     // An icon and its name, never the name alone -- the phone's menu has both, and so must this.
@@ -1125,6 +1135,8 @@ const ICON = {
   info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
   remove: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
   add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
+  rename: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
   download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
   cloud: 'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z',
   // Hollow shapes on the phone, so they need the even-odd rule to keep their holes.
@@ -1469,28 +1481,24 @@ async function renderPlaylists() {
     const li = document.createElement('li');
     li.setAttribute('aria-current', String(playlist.id === activePlaylist));
 
+    // The size first, as the phone has it: which of these has anything in it (BACKLOG A21).
+    const count = document.createElement('div');
+    count.className = 'pcount';
+    count.textContent = String(playlist.tracks?.length ?? 0);
     const name = document.createElement('div');
     name.className = 'pname';
     name.textContent = playlist.name;
-    const count = document.createElement('div');
-    count.className = 'pcount';
-    const n = playlist.tracks?.length ?? 0;
-    count.textContent = n === 1 ? '1 track' : `${n} tracks`;
-    li.append(name, count);
+    li.append(count, name);
 
-    // The phone's has no delete: it is not something anybody made.
+    // Everything that can be done *to* a playlist, behind the same three dots a track row uses.
+    // "From the phone" has none: it is not something anybody made, and it is not renamed or deleted.
     if (playlist.id !== PHONE) {
-      const drop = document.createElement('button');
-      drop.className = 'pdrop';
-      drop.innerHTML = iconSvg(ICON.remove);
-      drop.append('Delete');
-      drop.onclick = async (event) => {
-        event.stopPropagation();
-        await playlists.remove(playlist.id);
-        if (activePlaylist === playlist.id) await switchTo(PHONE);
-        renderPlaylists();
-      };
-      li.append(drop);
+      const more = document.createElement('button');
+      more.className = 'pmenu';
+      more.innerHTML = iconSvg(ICON.more);
+      more.setAttribute('aria-label', `More for ${playlist.name}`);
+      more.onclick = (event) => { event.stopPropagation(); openPlaylistMenu(playlist, more); };
+      li.append(more);
     }
 
     li.onclick = () => choosePlaylist(playlist.id);
@@ -1501,6 +1509,38 @@ async function renderPlaylists() {
   $('storageline').textContent = usage
     ? `This browser is holding ${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB it offered.`
     : 'Nothing stored yet.';
+}
+
+/** A playlist's own menu: the phone's Rename and Delete, with their icons. */
+function openPlaylistMenu(playlist, anchor) {
+  showMenu([
+    ['Rename', () => renamePlaylist(playlist), true, ICON.rename],
+    ['Delete', () => deletePlaylist(playlist), true, ICON.remove],
+  ], anchor);
+}
+
+async function renamePlaylist(playlist) {
+  const name = prompt('Call it what?', playlist.name)?.trim();
+  if (!name || name === playlist.name) return;
+  await playlists.save({ ...(await playlists.get(playlist.id)), name });
+  if (activePlaylist === playlist.id) {
+    // Inside Random or History the chip names the session; the name waits in the stash for later.
+    const session = random ?? away;
+    if (session) session.stash.name = name; else $('playlistname').textContent = name;
+  }
+  renderPlaylists();
+}
+
+/**
+ * Deletes a playlist -- **asking first**, where removing a track does not. The phone makes the same
+ * distinction on purpose: undoing a deleted playlist from a snackbar that lives six seconds is not
+ * an escape route, and asking is.
+ */
+async function deletePlaylist(playlist) {
+  if (!confirm(`Delete “${playlist.name}”? Its ${playlist.tracks?.length ?? 0} tracks go with it.`)) return;
+  await playlists.remove(playlist.id);
+  if (activePlaylist === playlist.id) choosePlaylist(PHONE);
+  renderPlaylists();
 }
 
 /**
@@ -1890,6 +1930,9 @@ $('saveas').onclick = async () => {
   if (!name) return;
   const id = `p${Date.now().toString(36)}`;
   await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
+  // **Saved out of Random or History, the list becomes the playlist**, and the session is over:
+  // leaving it would otherwise put back the playlist that was showing before, under this one's name.
+  dropSession();
   activePlaylist = id;
   $('playlistname').textContent = name;
   markBrowsable();

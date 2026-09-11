@@ -468,7 +468,7 @@
                          color: var(--on-surface-variant); }
   /* **An icon and its name on every button**, never the name alone -- asked for on the phone in A16,
      A17 and A23, and again for this page on 2026-09-11. Inline, so no button's own layout changes. */
-  :is(.plain, .filled, .text-button, .toggle, .pdrop) > svg {
+  :is(.plain, .filled, .text-button, .toggle) > svg {
     width: 18px; height: 18px; fill: currentColor; vertical-align: -4px; margin-right: 6px; flex: none;
   }
   /* The tune that is playing, marked the way the playlist marks it: one list, one look. */
@@ -478,20 +478,30 @@
   #browselist li.gone { opacity: .5; cursor: default; }
 
   /* The playlist sheet: a list of names, what is in each, and what may be done to it. */
-  #playlistlist { list-style: none; margin: 0 0 16px; padding: 0; max-height: 46vh; overflow-y: auto; }
+  #playlistlist { list-style: none; margin: 4px 0 14px; padding: 0; max-height: 46vh; overflow-y: auto; }
   #playlistlist li {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: var(--shape-s); cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 4px 6px 8px; border-radius: var(--shape-s); cursor: pointer; min-height: 44px;
   }
   #playlistlist li:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
-  #playlistlist li[aria-current="true"] { background: var(--secondary-container); }
+  /* The whole row, as the playing track is marked in the playlist: one convention for "this one". */
+  #playlistlist li[aria-current="true"] { background: var(--secondary-container); color: var(--on-secondary-container); }
+  /* The size first, where the phone puts it: which of these has anything in it (BACKLOG A21). */
+  #playlistlist .pcount { width: 32px; flex: none; text-align: center; font-size: var(--label-large);
+                          color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+  #playlistlist li[aria-current="true"] .pcount { color: inherit; }
   #playlistlist .pname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #playlistlist .pcount { color: var(--on-surface-variant); font-size: var(--body-small); flex: none; }
-  #playlistlist .pdrop {
-    background: none; border: 0; padding: 4px 8px; cursor: pointer;
-    color: var(--on-surface-variant); font: inherit; border-radius: var(--shape-s); flex: none;
-  }
-  #playlistlist .pdrop:hover { background: color-mix(in srgb, var(--error) 22%, transparent); color: var(--on-surface); }
+  #playlistlist .pmenu { background: none; border: 0; color: inherit; cursor: pointer; padding: 8px;
+                         border-radius: 50%; flex: none; display: flex; }
+  #playlistlist .pmenu:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
+  #playlistlist .pmenu svg { width: 22px; height: 22px; fill: currentColor; }
+  /* Two ways to a new playlist, equal and on one line each -- the phone's pair of outlined buttons. */
+  .sheetbuttons { display: flex; gap: 8px; }
+  .outlined { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+              background: none; color: var(--primary); border: 1px solid var(--outline); border-radius: var(--shape-xl);
+              padding: 9px 12px; font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .outlined:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+  .outlined svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
   .sheet .row { display: flex; gap: 10px; justify-content: flex-end; }
   .sheet .plain {
     background: none; color: var(--on-surface-variant); border: 0;
@@ -728,14 +738,22 @@
     </div>
   </div>
 
+  <!--
+    Choosing, making and acting on playlists -- the phone's `PlaylistSwitcher`, in its shape: the
+    title and the way out along the top as Browse has them, one row per playlist with its size first
+    and everything you can do *to* it behind three dots, and the two ways to end up with a new one
+    side by side at the bottom.
+  -->
   <div class="overlay" id="playlists" hidden>
-    <div class="sheet">
-      <h2>Playlists</h2>
-      <ol id="playlistlist"></ol>
-      <div class="row">
-        <button class="filled" id="newlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New empty playlist</button>
-        <button class="filled" id="saveas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save this queue as…</button>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <h2>Playlists</h2>
         <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+      </div>
+      <ol id="playlistlist"></ol>
+      <div class="sheetbuttons">
+        <button class="outlined" id="newlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New playlist</button>
+        <button class="outlined" id="saveas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save this queue as…</button>
       </div>
       <p class="storage" id="storageline"></p>
     </div>

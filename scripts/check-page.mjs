@@ -1189,7 +1189,7 @@ if (window.__api) {
   $('playlistchip').click();
   await settle();
   const drops = [...$('playlistlist').querySelectorAll('button')];
-  check(drops.length > 0 && drops.every((b) => b.querySelector('svg')), 'the playlist sheet\'s Delete has an icon');
+  check(drops.length > 0 && drops.every((b) => b.querySelector('svg')), 'every button in the playlist sheet has an icon');
   window.__api.showPanel(null);
   const { catalogue: store } = await import(path.resolve('web/src/store.js'));
   await store.putAll([{ key: 'modland:meta', tracks: 3, total: 3, phoneOnly: 0, formats: 1, buckets: 1, fingerprint: 'x' }]);
@@ -1198,6 +1198,53 @@ if (window.__api) {
   check(actions.length > 0 && actions.every((li) => li.querySelector('svg')),
     'every row at the root of Browse does something, and has an icon');
   await store.clear('modland:');
+}
+
+// --- the playlist sheet, in the phone's shape (owner, 2026-09-11, from two screenshots) ------------
+if (window.__api) {
+  console.log('\nthe playlist sheet:');
+  const { playlists } = await import(path.resolve('web/src/store.js'));
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const answers = { prompt: null, confirm: false };
+  window.prompt = () => answers.prompt;
+  window.confirm = () => answers.confirm;
+
+  await playlists.save({ id: 'p-sheet', name: 'Sheet test', tracks: [{ url: 'https://example.test/s.mod', name: 's' }], index: 0 });
+  await window.__api.switchTo('p-sheet');
+  $('playlistchip').click();
+  await settle();
+  const rows = [...$('playlistlist').children];
+  const mine = rows.find((li) => li.textContent.includes('Sheet test'));
+  const phone = rows.find((li) => li.textContent.includes('From the phone'));
+  check(mine?.firstElementChild?.className === 'pcount' && mine.firstElementChild.textContent === '1',
+    'each row starts with its size, as the phone\'s does');
+  check(mine?.getAttribute('aria-current') === 'true', 'and the one showing is marked');
+  check(phone && !phone.querySelector('.pmenu'), '"From the phone" has nothing to rename or delete');
+
+  mine.querySelector('.pmenu').click();
+  const items = [...$('menu').querySelectorAll('button')].map((b) => b.textContent.trim());
+  check(items.join() === 'Rename,Delete' && [...$('menu').querySelectorAll('button')].every((b) => b.querySelector('svg')),
+    'its three dots hold Rename and Delete, each with its icon');
+
+  answers.prompt = 'Renamed';
+  [...$('menu').querySelectorAll('button')].find((b) => b.textContent.includes('Rename')).click();
+  await settle();
+  check((await playlists.get('p-sheet'))?.name === 'Renamed' && $('playlistname').textContent === 'Renamed',
+    'Rename renames it, and the chip follows');
+
+  [...$('playlistlist').children].find((li) => li.textContent.includes('Renamed')).querySelector('.pmenu').click();
+  answers.confirm = false;
+  [...$('menu').querySelectorAll('button')].find((b) => b.textContent.includes('Delete')).click();
+  await settle();
+  check(!!(await playlists.get('p-sheet')), 'Delete asks first, and a no keeps it');
+  [...$('playlistlist').children].find((li) => li.textContent.includes('Renamed')).querySelector('.pmenu').click();
+  answers.confirm = true;
+  [...$('menu').querySelectorAll('button')].find((b) => b.textContent.includes('Delete')).click();
+  await settle();
+  check(!(await playlists.get('p-sheet')) && $('playlistname').textContent === 'From the phone',
+    'and a yes deletes it, leaving the phone\'s list showing');
+  $('menu').hidden = true;
+  window.__api.showPanel(null);
 }
 
 // --- editing a playlist of his own, as on the phone (owner, 2026-09-11) ---------------------------
