@@ -347,25 +347,92 @@ function onWorklet(message) {
  * The dock's card wants one line of it; Now Playing wants all of it. Parsed once, used twice.
  */
 function describeFields(describe) {
-  return Object.fromEntries(
-    describe.split('\n').filter(Boolean).map((line) => {
+  // **The message is the last field and the only one with lines in it** -- the engine writes it
+  // last for that reason, and a module's message is its greetings, laid out for a tracker's screen.
+  // Split with everything else, all but its first line became keys of their own and were lost.
+  const at = describe.indexOf('message\t');
+  const head = at >= 0 && (at === 0 || describe[at - 1] === '\n') ? describe.slice(0, at) : describe;
+  const fields = Object.fromEntries(
+    head.split('\n').filter(Boolean).map((line) => {
       const tab = line.indexOf('\t');
       return tab < 0 ? [line, ''] : [line.slice(0, tab), line.slice(tab + 1)];
     })
   );
-}
-
-function describeLine(fields) {
-  return [fields.format, fields.artist, fields.tracker].filter(Boolean).join(' · ') || '—';
+  if (head !== describe) fields.message = describe.slice(at + 'message\t'.length).replace(/\s+$/, '');
+  return fields;
 }
 
 /**
- * Now Playing: the same fields the phone shows, in the same order.
- *
- * The order is not alphabetical and is not the engine's; it is `ui/NowPlaying.kt`'s — what a
- * listener asks first comes first, and the machine's own vocabulary comes last.
+ * Who wrote it: what the file says, or failing that the folder it is filed under -- the phone's
+ * `TrackRef.displayAuthor`. A plain `.mod` has nowhere to record an author, and Modland files it
+ * under one anyway: `Modland/Protracker/Jogeir Liljedahl`.
  */
-const FIELD_ORDER = ['title', 'artist', 'format', 'tracker', 'year', 'publisher', 'album', 'comment'];
+function authorOf(entry, fields) {
+  const said = fields.artist?.trim() || fields.composer?.trim();
+  if (said) return said;
+  const where = whereOf(entry);
+  // Only a path names a folder; "The Mod Archive" or a bare host name is a source, not a person.
+  if (!where.includes('/')) return '';
+  return where.slice(where.lastIndexOf('/') + 1).split(' · ').pop().trim();
+}
+
+/**
+ * The year a tune came out, from whichever field its format keeps it in -- the phone's
+ * `ReleaseYear`, rule for rule: `year`, then `date`, then `copyright`; a year is 1970..2099, so a
+ * catalogue number in a copyright line is not one; and two years joined by nothing but a dash are
+ * a range, kept as one.
+ */
+function releaseYear(fields) {
+  for (const key of ['year', 'date', 'copyright']) {
+    const value = fields[key]?.trim() ?? '';
+    if (!value || value === '0') continue;
+    const years = [...value.matchAll(/(?<!\d)(19[7-9]\d|20\d\d)(?!\d)/g)];
+    if (!years.length) continue;
+    const [first, second] = years;
+    if (second) {
+      const between = value.slice(first.index + 4, second.index).trim();
+      if (['-', '–', '—'].includes(between)) return `${first[0]}\u2013${second[0]}`;
+    }
+    return first[0];
+  }
+  return '';
+}
+
+/**
+ * Where a row came from and what its file is called. A row the phone sent, or one pasted, carries
+ * neither -- only an address and, from the phone, the tune's title -- so both are read off the
+ * address, the way the playlist row's second line already is.
+ */
+function whereOf(entry) { return entry?.meta ?? (entry?.url ? sourceOf(entry.url) : ''); }
+function fileOf(entry) { return entry?.file || (entry?.url ? entryFor(entry.url).name : entry?.name) || ''; }
+
+/** The machine the file is for, from its name, or '' -- the phone's `Platforms.forFileName`. */
+function machineOf(entry) {
+  return archive.platformOf(formatTable, fileOf(entry)) ?? '';
+}
+
+/**
+ * The dock's second line, the phone's: **author · machine · year**. With no author the machine
+ * stands in for it rather than joining it, and with no machine either the format does -- "MOD ·
+ * Amiga" would say one thing twice.
+ */
+function describeLine(fields, entry = queue[index]) {
+  const author = authorOf(entry, fields);
+  const machine = machineOf(entry);
+  return [author || machine || fields.format, author ? machine : '', releaseYear(fields)]
+    .filter(Boolean).join(' · ') || '—';
+}
+
+/**
+ * Now Playing: the phone's rows, in the phone's order (`ui/NowPlaying.kt`). The year first, being
+ * the one fact about the tune rather than about the file; the machine's own vocabulary last.
+ */
+const FIELD_ORDER = [
+  ['format', 'Format'], ['tracker', 'Tracker'], ['artist', 'Artist'], ['album', 'Album'],
+  ['publisher', 'Publisher'], ['composer', 'Composer'], ['hardware', 'Hardware'],
+  ['channels', 'Channels'], ['patterns', 'Patterns'], ['instruments', 'Instruments'],
+  ['samples', 'Samples'], ['subsongs', 'Subsongs'],
+];
 
 /**
  * `web/src/formats.tsv`: every name a catalogue index keeps, and which decoders open it.
@@ -411,6 +478,7 @@ function explainFailure(reason, entry) {
  */
 function renderNothingPlaying() {
   $('np-title').textContent = queue[index]?.name || 'Nothing playing';
+  $('np-message').hidden = true;
   const list = $('fields');
   list.replaceChildren();
   const dt = document.createElement('dt');
@@ -422,25 +490,34 @@ function renderNothingPlaying() {
   $('subsongbar').hidden = true;
 }
 
-function renderNowPlaying(fields, subsongs, current) {
-  $('np-title').textContent = fields.title || queue[index]?.name || 'Nothing playing';
+function renderNowPlaying(fields, subsongs, current, entry = queue[index]) {
+  $('np-title').textContent = fields.title || entry?.name || 'Nothing playing';
   const list = $('fields');
   list.replaceChildren();
-  const shown = FIELD_ORDER.filter((key) => fields[key]);
-  for (const key of shown) {
+  const rows = [];
+  // Where it came from and what the file is called, which the title stops showing once the tune's
+  // own name has been read out of it.
+  if (entry) rows.push(['File', [whereOf(entry), fileOf(entry)].filter(Boolean).join('/')]);
+  const year = releaseYear(fields);
+  if (year) rows.push(['Year', year]);
+  // The author where the file is silent, as the phone fills it from its song database: the folder
+  // Modland files the tune under. What the file says always wins.
+  const known = { ...fields, artist: authorOf(entry, fields) };
+  for (const [key, label] of FIELD_ORDER) {
+    const value = known[key]?.trim();
+    if (value && value !== '0') rows.push([label, value]);
+  }
+  for (const [label, value] of rows) {
     const dt = document.createElement('dt');
-    dt.textContent = key;
+    dt.textContent = label;
     const dd = document.createElement('dd');
-    dd.textContent = fields[key];
+    dd.textContent = value;
     list.append(dt, dd);
   }
-  if (!shown.length) {
-    const dt = document.createElement('dt');
-    dt.textContent = '—';
-    const dd = document.createElement('dd');
-    dd.textContent = 'the file says nothing about itself';
-    list.append(dt, dd);
-  }
+  // Monospaced, as on the phone: these were written for a tracker's fixed-width screen, and the
+  // alignment is part of what they say.
+  $('np-message').hidden = !fields.message?.trim();
+  $('np-message-text').textContent = fields.message ?? '';
 
   // **Subsongs are not decoration.** One `.kss` holds 256 tunes and one `.sndh` holds three; a
   // player that only ever plays the first is playing a fraction of the file (`docs/PLAN_FORMATS.md`).
@@ -480,8 +557,8 @@ function publishToSystem(entry, fields) {
   try {
     navigator.mediaSession.metadata = new window.MediaMetadata({
       title: fields?.title || entry?.name || 'Protracktor',
-      artist: fields?.artist || '',
-      album: [fields?.format, fields?.year].filter(Boolean).join(' · '),
+      artist: authorOf(entry, fields ?? {}),
+      album: [machineOf(entry) || fields?.format, releaseYear(fields ?? {})].filter(Boolean).join(' · '),
     });
     navigator.mediaSession.setActionHandler('play', () => $('playpause').click());
     navigator.mediaSession.setActionHandler('pause', () => $('playpause').click());
@@ -873,7 +950,7 @@ async function informAbout(entry) {
     const described = await answer;
     if (!described) { status('the decoder took the file and never answered'); return; }
     if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
-    renderNowPlaying(describeFields(described.describe), described.subsongs, -1);
+    renderNowPlaying(describeFields(described.describe), described.subsongs, -1, entry);
     $('np-title').textContent = describeFields(described.describe).title || entry.name;
     status(`${entry.name} — not playing, just described`);
   } catch (e) {

@@ -459,6 +459,10 @@
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
+  .np-message { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--surface-variant); }
+  .np-message-label { color: var(--on-surface-variant); font-size: var(--body-small); margin-bottom: 6px; }
+  .np-message pre { margin: 0; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+                    white-space: pre; overflow-x: auto; }
   /* Browsing: one list, four levels, and a head that says where you are. */
   #browsesearch {
     width: 100%; box-sizing: border-box; margin: 6px 0 8px;
@@ -686,6 +690,11 @@
         </button>
       </div>
       <dl id="fields"></dl>
+      <!-- The module's message: where the scene put its greetings, and half the reason these files are kept. -->
+      <div id="np-message" class="np-message" hidden>
+        <div class="np-message-label">Message</div>
+        <pre id="np-message-text"></pre>
+      </div>
       <!--
         The phone's "play all subsongs" setting, in the one place it means something here. Hidden
         for a file that holds one tune, because a switch that governs nothing is a question the

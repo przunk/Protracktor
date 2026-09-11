@@ -133,13 +133,13 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex, '
-    + 'buildRandomTable, drawTrack }; })();')
+    + 'buildRandomTable, drawTrack, platformOf }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -228,12 +228,16 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 50));
   const labels = [...window.document.querySelectorAll('#fields dt')].map((n) => n.textContent);
   const values = [...window.document.querySelectorAll('#fields dd')].map((n) => n.textContent);
-  check(labels.join(',') === 'title,artist,format,year',
-    'Now Playing shows the fields in the phone\'s order');
+  // The phone's rows (`ui/NowPlaying.kt`): where the file is, the year, then the file's own fields.
+  check(labels.join(',') === 'File,Year,Format,Artist',
+    'Now Playing shows the fields in the phone\'s order, under the phone\'s names');
+  check(values[0] === 'Modland/Protracker/4-Mat/hi there.mod',
+    'starting with where the file lives, read off the address of a row the phone sent');
   check(values.includes('Rob Hubbard'), 'and their values');
   check(window.document.querySelectorAll('.subsong').length === 3,
     'a file with three tunes gets three subsong buttons');
-  check($('sub').textContent.includes('Commodore 64'), 'the dock card says what it is playing');
+  // Author · machine · year, the phone's dock line; the machine is the file's, from its name.
+  check($('sub').textContent === 'Rob Hubbard · Amiga · 1985', 'the dock card says who, for what, and when');
   check($('seek').disabled === true, 'a backend that cannot seek disables the slider');
 
   // The two modes, whose rules are PlayQueue.kt's rather than invented here.
@@ -261,7 +265,31 @@ if (window.__api) {
   // What the operating system is told, which is how a media key reaches a buried tab.
   check(metadata?.title === 'Crazy Comets', 'the system media controls learn the title');
   check(metadata?.artist === 'Rob Hubbard', 'and the artist');
-  check(metadata?.album.includes('Commodore 64'), 'and what it is');
+  check(metadata?.album === 'Amiga · 1985', 'and what it is for, and when');
+
+  // **The author where the file is silent** (owner, 2026-09-11: zoolook.mod "nie widzę autora"). A
+  // plain .mod has nowhere to record one; Modland files it under a folder that names them.
+  window.__api.onWorklet({
+    type: 'opened',
+    describe: 'title\tzoolook\nformat\tProTracker MOD (M.K.)\nartist\t\nchannels\t4\nmessage\tgreetings to\n  all  the scene\n',
+    duration: 0, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+  });
+  await new Promise((r) => setTimeout(r, 50));
+  check($('sub').textContent === '4-Mat · Amiga', 'a silent file is credited to the folder it is filed under');
+  const silent = [...window.document.querySelectorAll('#fields dt')].map((n) => n.textContent);
+  const said = [...window.document.querySelectorAll('#fields dd')].map((n) => n.textContent);
+  check(said[silent.indexOf('Artist')] === '4-Mat' && silent.includes('Channels'),
+    'and Now Playing says so too, with the rest of what the file holds');
+  check(!$('np-message').hidden && $('np-message-text').textContent === 'greetings to\n  all  the scene',
+    'the module\'s message is shown whole, every line and its spacing');
+  check(!silent.some((label) => label.includes('the scene')), 'and none of its lines is taken for a field');
+
+  // The year, by the phone's `ReleaseYear` rules.
+  const yearOf = (describe) => api.releaseYear(api.describeFields(describe));
+  check(yearOf('year\t0\ndate\t\ncopyright\t1987-1989 Rob Hubbard') === '1987\u20131989', 'a range is kept as a range');
+  check(yearOf('copyright\t1987 Rob Hubbard 1989') === '1987', 'two years in a sentence are not a range');
+  check(yearOf('copyright\tKMCA-1234') === '', 'and a catalogue number is not a year');
+  check(yearOf('date\t2004-05-01T10:00') === '2004', 'an ISO date gives its year');
   check(typeof handlers.play === 'function' && typeof handlers.nexttrack === 'function',
     'and the media keys are wired to the transport');
   // **Two playAt calls a millisecond apart**, which is what a queue arriving from the phone does.
@@ -941,6 +969,12 @@ if (window.__api) {
 
   check(table.extensions.size > 100 && table.prefixes.size > 10, 'the real list is read, extensions and prefixes');
   check([...archive.absentDecoders(browser)].join() === 'zxtune', 'the browser engine lacks exactly ZXTune');
+  check(archive.platformOf(table, 'zoolook.mod') === 'Amiga' && archive.platformOf(table, 'mod.zoolook') === 'Amiga',
+    'a file\'s machine comes from its extension or its Amiga prefix');
+  check(archive.platformOf(table, 'Commando.sid') === 'Commodore 64' && archive.platformOf(table, 'a.pt3') === 'ZX Spectrum',
+    'for every machine the list names');
+  check(archive.platformOf(table, 'notes.txt') === null && archive.platformOf(table, 'README') === null,
+    'and nothing for a name no machine claims');
   check(archive.absentDecoders(phone).size === 0 && archive.absentDecoders('').size === 0,
     'and absence is only ever what the engine says, never inferred from silence');
 

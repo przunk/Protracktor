@@ -32,7 +32,7 @@ const key = {
 };
 
 /**
- * `web/src/formats.tsv`, read into two maps of name to decoders.
+ * `web/src/formats.tsv`, read into two maps of name to decoders, and one of name to machine.
  *
  * The file is the list the phone indexes by too (`SupportedFormatsFileTest` holds the two
  * together), so a page that keeps what this says keeps what the phone keeps -- minus whatever the
@@ -41,14 +41,28 @@ const key = {
 export function parseFormats(text) {
   const extensions = new Map();
   const prefixes = new Map();
+  const platforms = new Map();
   for (const raw of text.split('\n')) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    const [kind, name, decoders] = line.split('\t');
+    const [kind, name, decoders, platform] = line.split('\t');
     if (!name || !decoders) continue;
     (kind === 'prefix' ? prefixes : extensions).set(name, decoders.split(','));
+    if (platform && platform !== '-') platforms.set(name, platform);
   }
-  return { extensions, prefixes };
+  return { extensions, prefixes, platforms };
+}
+
+/**
+ * The machine a file belongs to, or null -- `Platforms.forFileName` on the phone, rule for rule: the
+ * extension, or failing that the part before the first dot, both asked of one table of names.
+ */
+export function platformOf(table, fileName) {
+  const name = String(fileName ?? '').toLowerCase();
+  if (!table?.platforms || !name.includes('.')) return null;
+  return table.platforms.get(name.slice(name.lastIndexOf('.') + 1))
+    ?? table.platforms.get(name.slice(0, name.indexOf('.')))
+    ?? null;
 }
 
 /**

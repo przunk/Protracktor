@@ -19,140 +19,144 @@
 # libopenmpt and an Atari 8-bit format to ASAP; `psm` is Epic MegaGames to libopenmpt and Pro Sound
 # Maker to ZXTune. Either decoder being present keeps the name.
 #
-# kind	name	decoders
+# The fourth column is the machine a name belongs to -- `Platforms.forFileName` on the phone, which
+# the dock names beside the author ("Jogeir Liljedahl · Amiga · 1994"). The same test holds it to the
+# phone's table; `-` is a name no platform claims.
+#
+# kind	name	decoders	platform
 
 # The mainstream trackers
-extension	mod	openmpt
-extension	xm	openmpt
-extension	s3m	openmpt
-extension	it	openmpt
-extension	mptm	openmpt
+extension	mod	openmpt	Amiga
+extension	xm	openmpt	PC
+extension	s3m	openmpt	PC
+extension	it	openmpt	PC
+extension	mptm	openmpt	PC
 
 # Amiga and Atari lineage
-extension	ahx	hively
-extension	hvl	hively
-extension	med	openmpt
-extension	okt	openmpt
-extension	dbm	openmpt
-extension	digi	openmpt
-extension	stk	openmpt
-extension	sfx	openmpt
-extension	ice	openmpt
-extension	gmc	openmpt
-extension	unic	openmpt
-extension	kris	openmpt
-extension	puma	openmpt
-extension	tcb	openmpt
-extension	fc	openmpt,asap
-extension	fc13	openmpt
-extension	fc14	openmpt
-extension	smod	openmpt
-extension	dsym	openmpt
-extension	symmod	openmpt
-extension	ftm	openmpt
-extension	etx	openmpt
-extension	mmd0	openmpt
-extension	mmd1	openmpt
-extension	mmd2	openmpt
-extension	mmd3	openmpt
-extension	okta	openmpt
-extension	gtk	openmpt
-extension	mms	openmpt
+extension	ahx	hively	Amiga
+extension	hvl	hively	Amiga
+extension	med	openmpt	Amiga
+extension	okt	openmpt	Amiga
+extension	dbm	openmpt	Amiga
+extension	digi	openmpt	Amiga
+extension	stk	openmpt	Amiga
+extension	sfx	openmpt	Amiga
+extension	ice	openmpt	Amiga
+extension	gmc	openmpt	Amiga
+extension	unic	openmpt	Amiga
+extension	kris	openmpt	Amiga
+extension	puma	openmpt	Amiga
+extension	tcb	openmpt	Amiga
+extension	fc	openmpt,asap	Amiga
+extension	fc13	openmpt	Amiga
+extension	fc14	openmpt	Amiga
+extension	smod	openmpt	Amiga
+extension	dsym	openmpt	Amiga
+extension	symmod	openmpt	Amiga
+extension	ftm	openmpt	Nintendo
+extension	etx	openmpt	Atari ST
+extension	mmd0	openmpt	Amiga
+extension	mmd1	openmpt	Amiga
+extension	mmd2	openmpt	Amiga
+extension	mmd3	openmpt	Amiga
+extension	okta	openmpt	Amiga
+extension	gtk	openmpt	Amiga
+extension	mms	openmpt	Amiga
 
 # PC and console lineage
-extension	far	openmpt
-extension	gdm	openmpt
-extension	imf	openmpt
-extension	mdl	openmpt
-extension	mtm	openmpt
-extension	ptm	openmpt
-extension	stm	openmpt
-extension	ult	openmpt
-extension	669	openmpt
-extension	amf	openmpt
-extension	ams	openmpt
-extension	dmf	openmpt
-extension	dsm	openmpt
-extension	dtm	openmpt
-extension	j2b	openmpt
-extension	mt2	openmpt
-extension	psm	openmpt,zxtune
-extension	plm	openmpt
-extension	rtm	openmpt
-extension	c67	openmpt
-extension	cba	openmpt
-extension	gt2	openmpt
-extension	mo3	openmpt
-extension	xmf	openmpt
+extension	far	openmpt	PC
+extension	gdm	openmpt	PC
+extension	imf	openmpt	PC
+extension	mdl	openmpt	PC
+extension	mtm	openmpt	PC
+extension	ptm	openmpt	PC
+extension	stm	openmpt	PC
+extension	ult	openmpt	PC
+extension	669	openmpt	PC
+extension	amf	openmpt	PC
+extension	ams	openmpt	PC
+extension	dmf	openmpt	PC
+extension	dsm	openmpt	PC
+extension	dtm	openmpt	PC
+extension	j2b	openmpt	PC
+extension	mt2	openmpt	PC
+extension	psm	openmpt,zxtune	PC
+extension	plm	openmpt	PC
+extension	rtm	openmpt	PC
+extension	c67	openmpt	PC
+extension	cba	openmpt	PC
+extension	gt2	openmpt	PC
+extension	mo3	openmpt	PC
+extension	xmf	openmpt	PC
 
 # Atari ST
-extension	sndh	sc68
-extension	sc68	sc68
+extension	sndh	sc68	Atari ST
+extension	sc68	sc68	Atari ST
 
 # Atari 8-bit
-extension	sap	asap
-extension	cmc	asap
-extension	cm3	asap
-extension	cmr	asap
-extension	cms	asap
-extension	dmc	asap
-extension	dlt	asap
-extension	mpt	asap
-extension	mpd	asap
-extension	rmt	asap
-extension	tmc	asap
-extension	tm2	asap
-extension	tm8	asap
+extension	sap	asap	Atari 8-bit
+extension	cmc	asap	Atari 8-bit
+extension	cm3	asap	Atari 8-bit
+extension	cmr	asap	Atari 8-bit
+extension	cms	asap	Atari 8-bit
+extension	dmc	asap	Atari 8-bit
+extension	dlt	asap	Atari 8-bit
+extension	mpt	asap	Atari 8-bit
+extension	mpd	asap	Atari 8-bit
+extension	rmt	asap	Atari 8-bit
+extension	tmc	asap	Atari 8-bit
+extension	tm2	asap	Atari 8-bit
+extension	tm8	asap	Atari 8-bit
 
 # Consoles
-extension	nsf	gme
-extension	nsfe	gme
-extension	spc	gme
-extension	gbs	gme
-extension	vgm	gme
-extension	vgz	gme
-extension	hes	gme
-extension	ay	gme
-extension	kss	gme
+extension	nsf	gme	Nintendo
+extension	nsfe	gme	Nintendo
+extension	spc	gme	Nintendo
+extension	gbs	gme	Nintendo
+extension	vgm	gme	Sega
+extension	vgz	gme	Sega
+extension	hes	gme	PC Engine
+extension	ay	gme	ZX Spectrum
+extension	kss	gme	MSX
 
 # ZX Spectrum -- the rows the browser build cannot open
-extension	pt3	zxtune
-extension	pt2	zxtune
-extension	pt1	zxtune
-extension	stc	zxtune
-extension	st1	zxtune
-extension	st3	zxtune
-extension	asc	zxtune
-extension	as0	zxtune
-extension	sqt	zxtune
-extension	stp	zxtune
-extension	ftc	zxtune
-extension	gtr	zxtune
-extension	ym	zxtune
-extension	vtx	zxtune
+extension	pt3	zxtune	ZX Spectrum
+extension	pt2	zxtune	ZX Spectrum
+extension	pt1	zxtune	ZX Spectrum
+extension	stc	zxtune	ZX Spectrum
+extension	st1	zxtune	ZX Spectrum
+extension	st3	zxtune	ZX Spectrum
+extension	asc	zxtune	ZX Spectrum
+extension	as0	zxtune	ZX Spectrum
+extension	sqt	zxtune	ZX Spectrum
+extension	stp	zxtune	ZX Spectrum
+extension	ftc	zxtune	ZX Spectrum
+extension	gtr	zxtune	ZX Spectrum
+extension	ym	zxtune	Atari ST
+extension	vtx	zxtune	ZX Spectrum
 
 # Commodore 64
-extension	sid	sidplayfp
-extension	psid	sidplayfp
-extension	rsid	sidplayfp
+extension	sid	sidplayfp	Commodore 64
+extension	psid	sidplayfp	Commodore 64
+extension	rsid	sidplayfp	Commodore 64
 
 # Containers libopenmpt unpacks itself
-extension	mmcmp	openmpt
-extension	pp20	openmpt
-extension	xpk	openmpt
-extension	umx	openmpt
+extension	mmcmp	openmpt	PC
+extension	pp20	openmpt	PC
+extension	xpk	openmpt	PC
+extension	umx	openmpt	PC
 
 # Filename prefixes, the Amiga way: `mod.title` rather than `title.mod`
-prefix	ahx	hively
-prefix	hvl	hively
-prefix	mod	openmpt
-prefix	med	openmpt
-prefix	okt	openmpt
-prefix	dbm	openmpt
-prefix	digi	openmpt
-prefix	stk	openmpt
-prefix	sfx	openmpt
-prefix	ice	openmpt
-prefix	fc	openmpt,asap
-prefix	smod	openmpt
-prefix	sndh	sc68
+prefix	ahx	hively	Amiga
+prefix	hvl	hively	Amiga
+prefix	mod	openmpt	Amiga
+prefix	med	openmpt	Amiga
+prefix	okt	openmpt	Amiga
+prefix	dbm	openmpt	Amiga
+prefix	digi	openmpt	Amiga
+prefix	stk	openmpt	Amiga
+prefix	sfx	openmpt	Amiga
+prefix	ice	openmpt	Amiga
+prefix	fc	openmpt,asap	Amiga
+prefix	smod	openmpt	Amiga
+prefix	sndh	sc68	Atari ST
