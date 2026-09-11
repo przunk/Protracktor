@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A34. Instrument and sample names in Now Playing — **agreed, not started**
+## A34. Instrument and sample names in Now Playing — **built, waiting for the owner's test**
 
 *Owner, 2026-09-11: "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach
 kodują treść".* The whole plan, with the owner's three worries and their answers, is in

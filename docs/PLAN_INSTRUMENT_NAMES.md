@@ -9,7 +9,15 @@ SPDX-License-Identifier: GPL-3.0-or-later
 "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach kodują treść".* Written
 down before any code, at his request, so it can be picked up cold by whoever builds it.
 
-**Status: agreed, not started.** Branch: `feature/instrument-names` (this file is its first commit).
+**Status: built 2026-09-11, waiting for the owner's test.** Branch: `feature/instrument-names` (this
+file is its first commit).
+
+**Checked on real files with the rebuilt web engine** before the phone: `zoolook.mod` (Modland,
+Jogeir Liljedahl) gives `sample_names` = "by jogeir liljedahl", two empty names, "original by
+j.m.jarre" -- and none of its 27 trailing empty names, and no `instrument_names` line, a MOD having
+no instruments. `aces high.ahx` (Modland, 451) gives 38 instrument names that are a whole letter,
+from "Put into tracker by (451) back in 2014" to ASCII art: the owner's point, in one file. The first
+name is "Put into tracker", so HivelyTracker's instruments are 1-based as the loader says.
 
 ---
 

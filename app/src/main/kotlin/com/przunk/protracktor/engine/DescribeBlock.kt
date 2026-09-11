@@ -35,4 +35,16 @@ object DescribeBlock {
         if (at >= 0) fields["message"] = text.substring(at + MESSAGE.length).trimEnd()
         return fields
     }
+
+    /**
+     * An `instrument_names` or `sample_names` value as its names, in order, empty ones inside kept;
+     * an empty list when there is no value or every name is blank (`docs/PLAN_INSTRUMENT_NAMES.md`).
+     * The engine joins them with the unit separator so the list stays one line.
+     */
+    fun names(value: String?): List<String> {
+        val names = value?.split(SEPARATOR) ?: return emptyList()
+        return if (names.any { it.isNotBlank() }) names else emptyList()
+    }
+
+    private val SEPARATOR = Char(0x1F)
 }

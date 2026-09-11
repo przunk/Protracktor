@@ -131,6 +131,8 @@
     <string name="field_samples">Sample</string>
     <string name="field_subsongs">Podutwory</string>
     <string name="field_message">Wiadomość</string>
+    <string name="field_instrument_names">Nazwy instrumentów</string>
+    <string name="field_sample_names">Nazwy sampli</string>
 
     <string name="a11y_remove_track">Usuń %1$s z playlisty</string>
 

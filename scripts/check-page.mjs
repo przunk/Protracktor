@@ -1896,6 +1896,43 @@ if (window.__api) {
   window.__api.showPanel(null);
 }
 
+// --- instrument and sample names (docs/PLAN_INSTRUMENT_NAMES.md) ------------------------------------
+if (window.__api) {
+  console.log('\ninstrument and sample names:');
+  const api = window.__api;
+  const us = String.fromCharCode(0x1f);
+  const open = (describe) => api.onWorklet({ type: 'opened', describe, duration: 100, subsongs: 1,
+                                             canSeek: true, preferredRate: 44100, rate: 44100 });
+  const sections = () => [...$('np-names').querySelectorAll('details')];
+
+  open(`title\tnames\nformat\tProTracker MOD\nsamples\t3\nsample_names\tgreetings${us}${us}  to all\nmessage\tline one\n  line two`);
+  await new Promise((r) => setTimeout(r, 30));
+  let found = sections();
+  check(found.length === 1 && found[0].querySelector('summary').textContent === 'Sample names (3)'
+        && found[0].querySelector('summary svg') && !found[0].open,
+    'a MOD\'s sample names are one folded section, with an icon and how many');
+  check(found[0].querySelector('pre').textContent === '01 greetings\n02 \n03   to all',
+    'numbered as a tracker numbers them, the empty one inside kept and the spacing intact');
+  check($('np-message-text').textContent === 'line one\n  line two', 'the message after them is still whole');
+  const labels = [...window.document.querySelectorAll('#fields dt')].map((n) => n.textContent);
+  check(labels.includes('Samples') && !labels.some((l) => l.toLowerCase().includes('names')),
+    'and the field list keeps its count of samples and gains no names');
+
+  open(`title\tx\ninstrument_names\tbass${us}lead\nsample_names\tbass${us}lead\nmessage\t`);
+  await new Promise((r) => setTimeout(r, 30));
+  check(sections().length === 1 && sections()[0].textContent.startsWith('Instrument names (2)'),
+    'one list where instruments and samples say the same');
+  open(`title\tx\ninstrument_names\tbass${us}lead\nsample_names\tkick${us}snare${us}hat\nmessage\t`);
+  await new Promise((r) => setTimeout(r, 30));
+  check(sections().map((d) => d.querySelector('summary').textContent).join() === 'Instrument names (2),Sample names (3)',
+    'both where they differ, instruments first');
+  open(`title\tsid\nformat\tPSID\nsample_names\t ${us} \nmessage\t`);
+  await new Promise((r) => setTimeout(r, 30));
+  check(sections().length === 0, 'and nothing at all where every name is blank or there are none');
+  api.onWorklet({ type: 'failed', reason: 'x' });
+  check(sections().length === 0, 'a refusal clears them with the rest of Now Playing');
+}
+
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
 //
 // **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`

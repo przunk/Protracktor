@@ -114,6 +114,37 @@ namespace {
 
 using protracktor::Backend;
 
+/**
+ * Instrument or sample names as one line of the describe block (`docs/PLAN_INSTRUMENT_NAMES.md`).
+ *
+ * **One line, because `message` must stay the only value with line breaks, and last**
+ * (`docs/STATUS.md` C40). So the names are joined by the unit separator, and a tab, a line break or
+ * a unit separator inside a name becomes a space. Empty names inside the list are kept -- the scene
+ * built text and pictures out of them -- and trailing empty ones are dropped. Empty when every name
+ * is, so the caller can leave the line out.
+ */
+std::string joinNames(const std::vector<std::string> &names) {
+    const char separator = static_cast<char>(0x1f);
+    std::vector<std::string> clean;
+    clean.reserve(names.size());
+    for (std::string name : names) {
+        for (char &c : name) {
+            if (c == '\t' || c == '\r' || c == '\n' || c == separator) c = ' ';
+        }
+        clean.push_back(std::move(name));
+    }
+    const auto blank = [](const std::string &text) {
+        return text.find_first_not_of(' ') == std::string::npos;
+    };
+    while (!clean.empty() && blank(clean.back())) clean.pop_back();
+    std::string out;
+    for (size_t i = 0; i < clean.size(); ++i) {
+        if (i) out += separator;
+        out += clean[i];
+    }
+    return out;
+}
+
 class OpenmptBackend : public Backend {
 public:
     explicit OpenmptBackend(const std::vector<char> &bytes)
@@ -164,8 +195,15 @@ public:
           << "instruments\t" << module_->get_num_instruments() << '\n'
           << "samples\t" << module_->get_num_samples() << '\n'
           << "subsongs\t" << module_->get_num_subsongs() << '\n'
-          << "seekable\t1" << '\n'
-          << "message\t" << module_->get_metadata("message_raw");
+          << "seekable\t1" << '\n';
+        // Where the scene wrote when the format had nowhere else: a MOD's 31 sample names are its
+        // only text. Before `message`, which must stay last. `message_raw` rather than `message`,
+        // which would fall back to these very names and mix the two.
+        const std::string samples = joinNames(module_->get_sample_names());
+        const std::string instruments = joinNames(module_->get_instrument_names());
+        if (!samples.empty()) o << "sample_names\t" << samples << '\n';
+        if (!instruments.empty()) o << "instrument_names\t" << instruments << '\n';
+        o << "message\t" << module_->get_metadata("message_raw");
         return o.str();
     }
 
@@ -1312,6 +1350,14 @@ public:
           << "channels\t" << ht_->ht_Channels << '\n'
           << "subsongs\t" << subsongCount() << '\n'
           << "seekable\t1";
+        // 1-based, as the tracker numbers them: `hvl_load_ahx` and `hvl_load_hvl` fill 1..N and never 0.
+        std::vector<std::string> names;
+        for (int i = 1; i <= ht_->ht_InstrumentNr; ++i) {
+            const auto &name = ht_->ht_Instruments[i].ins_Name;
+            names.emplace_back(name, strnlen(name, sizeof name));
+        }
+        const std::string instruments = joinNames(names);
+        if (!instruments.empty()) o << '\n' << "instrument_names\t" << instruments;
         return o.str();
     }
 

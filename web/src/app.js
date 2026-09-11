@@ -400,6 +400,44 @@ function authorOf(entry, fields) {
  * catalogue number in a copyright line is not one; and two years joined by nothing but a dash are
  * a range, kept as one.
  */
+/** The unit separator the engine joins names with, so a list stays one line of the block. */
+const NAME_SEPARATOR = String.fromCharCode(0x1f);
+
+/** A names value as its names, empty ones inside kept; none when every one is blank. */
+function namesOf(value) {
+  const names = (value ?? '').split(NAME_SEPARATOR);
+  return names.some((name) => name.trim()) ? names : [];
+}
+
+/**
+ * Instrument and sample names, **folded**, and only where there is something to read
+ * (`docs/PLAN_INSTRUMENT_NAMES.md`): a MOD's 31 sample names are where its author wrote, and a SID
+ * has none. One list where the two say the same. Numbered as a tracker numbers them; a fresh
+ * `<details>` for every tune, so each starts closed.
+ */
+function renderNames(fields) {
+  const box = $('np-names');
+  box.replaceChildren();
+  const instruments = namesOf(fields.instrument_names);
+  const samples = namesOf(fields.sample_names);
+  const lists = [];
+  if (instruments.length) lists.push(['Instrument names', instruments]);
+  if (samples.length && samples.join(NAME_SEPARATOR) !== instruments.join(NAME_SEPARATOR)) {
+    lists.push(['Sample names', samples]);
+  }
+  for (const [label, names] of lists) {
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.innerHTML = iconSvg(ICON.expand);
+    summary.append(`${label} (${names.length})`);
+    const digits = Math.max(2, String(names.length).length);
+    const pre = document.createElement('pre');
+    pre.textContent = names.map((name, i) => `${String(i + 1).padStart(digits, '0')} ${name}`).join('\n');
+    details.append(summary, pre);
+    box.append(details);
+  }
+}
+
 function releaseYear(fields) {
   for (const key of ['year', 'date', 'copyright']) {
     const value = fields[key]?.trim() ?? '';
@@ -497,6 +535,7 @@ function explainFailure(reason, entry) {
 function renderNothingPlaying() {
   $('np-title').textContent = queue[index]?.name || 'Nothing playing';
   $('np-message').hidden = true;
+  $('np-names').replaceChildren();
   const list = $('fields');
   list.replaceChildren();
   const dt = document.createElement('dt');
@@ -536,6 +575,7 @@ function renderNowPlaying(fields, subsongs, current, entry = queue[index]) {
   // alignment is part of what they say.
   $('np-message').hidden = !fields.message?.trim();
   $('np-message-text').textContent = fields.message ?? '';
+  renderNames(fields);
 
   // **Subsongs are not decoration.** One `.kss` holds 256 tunes and one `.sndh` holds three; a
   // player that only ever plays the first is playing a fraction of the file (`docs/PLAN_FORMATS.md`).
@@ -1342,6 +1382,7 @@ const ICON = {
   remove: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
   add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
   rename: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  expand: 'M12 8l-6 6 1.4 1.4L12 10.8l4.6 4.6L18 14z',
   web: 'M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z',
   playlistAdd: 'M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z',
   search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
