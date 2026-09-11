@@ -506,6 +506,7 @@ fun ProtracktorApp(
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
+                onSendToWeb = viewModel::sendToWeb,
                 onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
                 onAdd = { tracks ->
                     viewModel.addToPlaylist(tracks)
@@ -526,6 +527,7 @@ fun ProtracktorApp(
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
+                onSendToWeb = viewModel::sendToWeb,
                 onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
                 onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
                 contentPadding = insets,
@@ -540,6 +542,7 @@ fun ProtracktorApp(
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
+                onSendToWeb = viewModel::sendToWeb,
                 onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
                 onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
                 onRemoveMany = viewModel::removeTracks,

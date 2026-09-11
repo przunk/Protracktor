@@ -71,6 +71,7 @@ import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.DownloadKeys
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
 
@@ -112,6 +113,7 @@ fun BrowseScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
@@ -163,6 +165,7 @@ fun BrowseScreen(
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onPickFolder = onPickFolder,
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
@@ -180,6 +183,7 @@ fun BrowseScreen(
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onDownloadTrackMetadata = onDownloadTrackMetadata,
@@ -199,6 +203,7 @@ fun BrowseScreen(
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onClearHistory = onClearHistory,
                 onPlay = onPlay,
                 onAdd = onAdd,
@@ -212,6 +217,7 @@ fun BrowseScreen(
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onQueryChange = onQueryChange,
                 onScope = onScope,
                 onToggleCatalogue = onToggleCatalogue,
@@ -433,6 +439,7 @@ private fun LocalDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
@@ -498,6 +505,7 @@ private fun LocalDomain(
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
             )
         }
         return
@@ -559,6 +567,7 @@ private fun OnlineDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
@@ -583,6 +592,7 @@ private fun OnlineDomain(
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareLink = onShareLink,
+            onSendToWeb = onSendToWeb,
         )
 
         browse.openCatalogue != null -> {
@@ -852,6 +862,7 @@ private fun SearchDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onQueryChange: (String) -> Unit,
     onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
@@ -905,6 +916,7 @@ private fun SearchDomain(
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
             )
         }
     }
@@ -958,6 +970,7 @@ private fun HistoryDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onClearHistory: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -997,6 +1010,7 @@ private fun HistoryDomain(
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareLink = onShareLink,
+            onSendToWeb = onSendToWeb,
         )
     }
 }
@@ -1052,6 +1066,7 @@ private fun Selectable(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
 ) {
     var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
@@ -1180,6 +1195,8 @@ private fun Selectable(
                         onShareFile = { onShareFile(track) },
                         onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                             ?.let { { onShareLink(it) } },
+                        // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
+                        onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(it) } },
                     )
                 }
             }
@@ -1270,6 +1287,7 @@ private fun BrowseTrackRow(
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareLink: (() -> Unit)?,
+    onSendToWeb: (() -> Unit)?,
 ) {
     val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
@@ -1332,6 +1350,13 @@ private fun BrowseTrackRow(
                                 text = { Text(stringResource(R.string.action_share_link)) },
                                 leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
                                 onClick = { menuOpen = false; share() },
+                            )
+                        }
+                        onSendToWeb?.let { send ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_send_to_web)) },
+                                leadingIcon = { Icon(PlayerIcons.Web, contentDescription = null) },
+                                onClick = { menuOpen = false; send() },
                             )
                         }
                     }

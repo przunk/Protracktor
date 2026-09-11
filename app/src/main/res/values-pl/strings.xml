@@ -171,6 +171,7 @@
     <string name="action_show_neighbours">Więcej tego autora</string>
     <string name="action_share_file">Udostępnij plik</string>
     <string name="action_share_link">Udostępnij link</string>
+    <string name="action_send_to_web">Wyślij do Protracktor web</string>
     <string name="share_chooser">Udostępnij</string>
 
     <string name="replays_title">Procedury odtwarzające Atari ST</string>

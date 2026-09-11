@@ -59,6 +59,7 @@ import androidx.compose.ui.zIndex
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.PlayerUiState
+import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.TrackRef
 
@@ -78,6 +79,7 @@ fun PlaylistScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit = {},
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit = {},
     onRemoveMany: (List<Int>) -> Unit = {},
@@ -93,7 +95,7 @@ fun PlaylistScreen(
     // still have nothing to show — a file another app handed us, and a search result playing.
     if (state.awayFromPlaylist && !state.randomMode) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
+            PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
             AwayScrim(
                 externalMode = state.externalMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -118,6 +120,7 @@ fun PlaylistScreen(
         onShowNeighbours = onShowNeighbours,
         onShareFile = onShareFile,
         onShareLink = onShareLink,
+        onSendToWeb = onSendToWeb,
         onAddToOtherPlaylist = onAddToOtherPlaylist,
         onAddSelectedToPlaylist = onAddSelectedToPlaylist,
         onRemoveMany = onRemoveMany,
@@ -143,6 +146,7 @@ internal fun PlaylistBody(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (TrackRef) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
     onRemoveMany: (List<Int>) -> Unit,
@@ -234,6 +238,8 @@ internal fun PlaylistBody(
                 // Absent for a local file, which has no address anyone else could open.
                 onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { { onShareLink(it) } },
+                // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
+                onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(it) } },
                 dragHandleModifier = if (!reorderable) null else Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
@@ -405,6 +411,7 @@ private fun TrackRow(
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareLink: (() -> Unit)?,
+    onSendToWeb: (() -> Unit)?,
     /**
      * How the handle takes a drag, or **null where there is nothing to reorder**.
      *
@@ -497,6 +504,13 @@ private fun TrackRow(
                                     text = { Text(stringResource(R.string.action_share_link)) },
                                     leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
                                     onClick = { menuOpen = false; share() },
+                                )
+                            }
+                            onSendToWeb?.let { send ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_send_to_web)) },
+                                    leadingIcon = { Icon(PlayerIcons.Web, contentDescription = null) },
+                                    onClick = { menuOpen = false; send() },
                                 )
                             }
                             DropdownMenuItem(

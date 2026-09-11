@@ -175,6 +175,7 @@
     <string name="a11y_track_menu">Actions for %1$s</string>
     <string name="action_share_file">Share the file</string>
     <string name="action_share_link">Share a link</string>
+    <string name="action_send_to_web">Send to Protracktor web</string>
     <string name="share_chooser">Share</string>
     <string name="action_show_neighbours">More from this author</string>
     <string name="domain_history_title">History</string>
