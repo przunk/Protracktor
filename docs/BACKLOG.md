@@ -15,6 +15,13 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A34. Instrument and sample names in Now Playing — **agreed, not started**
+
+*Owner, 2026-09-11: "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach
+kodują treść".* The whole plan, with the owner's three worries and their answers, is in
+`docs/PLAN_INSTRUMENT_NAMES.md`, written first so it can be picked up cold. Branch:
+`feature/instrument-names`.
+
 ## A33. Whether the page's Browse lists should stop writing into the playlist — DONE 2026-09-11, the phone's way
 
 **Decided by the owner on 2026-09-11, by using it.** He searched "zool", pressed `zoolook.mod`, and
