@@ -435,10 +435,14 @@ any search result. The page has never had this: there a Browse tune ends the dic
 rozsuwają", and the chip read "Favo…".* The chip and five pills come to about 450dp on a screen some
 360dp wide, so something had to give and what gave was the name — the one thing the bar is about.
 
-A `TopAppBar` is one fixed-height row and cannot wrap, so the playlist screen no longer uses one:
-`PlaylistTopBar` lays the chip and the actions out in a `FlowRow`, which puts the actions on a
-second line when they do not fit and only while there is something to save. The chip has a floor as
-well as a cap, so its name is never the thing that is cut.
+A `TopAppBar` is one fixed-height row and cannot answer that, so the playlist screen no longer uses
+one. Wrapping was tried first and the owner saw what it costs: the bar changed height as Save and
+Discard came and went, and the list under it jumped. `PlaylistTopBar` is **two rows of fixed
+height** instead — the name across the whole width with its count beside it, and under it a slim row
+of actions with Browse at the left edge and Settings at the right. Save and Discard appear beside
+Settings, growing into the gap in the middle, so nothing that was on the bar moves. The pills in
+that row are a shorter variant with a smaller icon: five of them cross a phone with room to spare,
+which a pill wide enough for an icon beside its label could not do.
 
 ### C47. ~~Now Playing's buttons are not the same height~~ — FIXED 2026-09-14
 

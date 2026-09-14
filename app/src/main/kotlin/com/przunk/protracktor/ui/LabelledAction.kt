@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,17 @@ import androidx.compose.ui.unit.dp
  * changes nothing about the row it is in.
  */
 internal val ACTION_PILL_HEIGHT = 62.dp
+
+/**
+ * The same pill, for the top bar's row of actions.
+ *
+ * Shorter, and with a smaller icon: five of these stand across a phone with room to spare, which is
+ * what the top bar needs and what a pill wide enough for an icon *beside* its label could not do.
+ */
+internal val ACTION_PILL_HEIGHT_SLIM = 46.dp
+
+/** The icon in a slim pill. Material's default is 24dp, which leaves no room for the word under it. */
+private val SLIM_ICON = 20.dp
 
 /**
  * An action drawn as an icon with its name underneath.
@@ -78,6 +90,8 @@ internal fun LabelledAction(
      * buzzes on arrival and two buzzes for one press reads as a stutter, not as emphasis.
      */
     haptic: (Haptics.() -> Unit)? = { press() },
+    /** The top bar's row: shorter, with a smaller icon. Elsewhere the full-sized pill. */
+    slim: Boolean = false,
 ) {
     val haptics = rememberHaptics()
     val currentClick by rememberUpdatedState(onClick)
@@ -106,7 +120,7 @@ internal fun LabelledAction(
             // **One height for every pill, whatever its name** (`docs/STATUS.md` C47). Sizing to
             // the label made a one-word action shorter than a two-word one; two lines of label
             // forced on every pill fixed the heights and pushed the words to the edges instead.
-            .height(ACTION_PILL_HEIGHT)
+            .height(if (slim) ACTION_PILL_HEIGHT_SLIM else ACTION_PILL_HEIGHT)
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(
                 role = Role.Button,
@@ -129,6 +143,7 @@ internal fun LabelledAction(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = if (slim) Modifier.size(SLIM_ICON) else Modifier,
             )
             Text(
                 text = label,

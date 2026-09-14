@@ -10,8 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -644,7 +642,6 @@ private fun PlaylistSheet(
  * fixed-height row and cannot answer that, which is why this is not one. The actions flow onto a
  * second line instead, and only while there is something to save.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PlaylistTopBar(
     state: PlayerUiState,
@@ -659,125 +656,124 @@ private fun PlaylistTopBar(
 ) {
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
     Surface(color = MaterialTheme.colorScheme.surface) {
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(TOP_BAR_SEAM - LABELLED_ACTION_INSET),
+        Column(
             verticalArrangement = Arrangement.spacedBy(TOP_BAR_SEAM),
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = TOP_BAR_EDGE, vertical = TOP_BAR_SEAM),
         ) {
+            // The name across the whole width, so it is never the thing that gives way, and the
+            // count beside it rather than under it, which is what lets this row be short.
             Surface(
                 onClick = onChoosePlaylist,
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
-                    // A floor as well as a cap: the name is what the bar is about, and squeezing it
-                    // to three letters to fit one more button is the wrong thing to give up.
-                    .widthIn(min = PLAYLIST_PILL_MIN_WIDTH, max = PLAYLIST_PILL_MAX_WIDTH)
-                    .height(ACTION_PILL_HEIGHT)
+                    .fillMaxWidth()
+                    .height(PLAYLIST_CHIP_HEIGHT)
                     .semantics { contentDescription = choosePlaylistLabel },
             ) {
                 Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxHeight()
-                        .padding(start = 14.dp, end = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .padding(start = 14.dp, end = 10.dp),
                 ) {
-                    Column(modifier = Modifier.weight(1f, fill = false)) {
-                        Text(
-                            text = state.activePlaylistName ?: stringResource(R.string.playlist_default_name),
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (state.queue.tracks.isNotEmpty()) {
-                            Text(
-                                text = pluralStringResource(
-                                    R.plurals.track_count,
-                                    state.queue.tracks.size,
-                                    state.queue.tracks.size,
-                                ),
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = PlayerIcons.DropDown,
-                        contentDescription = null,
-                        modifier = Modifier.padding(start = 2.dp),
+                    Text(
+                        text = state.activePlaylistName ?: stringResource(R.string.playlist_default_name),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    if (state.queue.tracks.isNotEmpty()) {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.track_count,
+                                state.queue.tracks.size,
+                                state.queue.tracks.size,
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = 10.dp),
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(imageVector = PlayerIcons.DropDown, contentDescription = null)
                 }
             }
 
-            LabelledAction(
-                icon = PlayerIcons.Cloud,
-                label = stringResource(R.string.action_browse),
-                onClick = onBrowse,
-                // Arriving at Browse buzzes; pressing the way in as well would be two for one press.
-                haptic = null,
-            )
-            // Only while there is something to save. A permanently lit Save teaches nothing about
-            // whether the list on screen is the list on disk.
-            if (state.dirty) {
+            // **Sides, not a queue.** Browse is where you go for more music and it stays at the left
+            // edge; Settings is the app's own and stays at the right. Save and Discard appear beside
+            // them when there is something to save, growing into the gap in the middle so nothing
+            // that was already on the bar moves (`docs/STATUS.md` C48).
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 LabelledAction(
-                    icon = PlayerIcons.Discard,
-                    label = stringResource(R.string.action_discard),
-                    onClick = onDiscard,
+                    icon = PlayerIcons.Cloud,
+                    label = stringResource(R.string.action_browse),
+                    onClick = onBrowse,
+                    // Arriving at Browse buzzes; pressing the way in as well would be two for one.
+                    haptic = null,
+                    slim = true,
                 )
+                Spacer(Modifier.weight(1f))
+                // Only while there is something to save. A permanently lit Save teaches nothing
+                // about whether the list on screen is the list on disk.
+                if (state.dirty) {
+                    LabelledAction(
+                        icon = PlayerIcons.Discard,
+                        label = stringResource(R.string.action_discard),
+                        onClick = onDiscard,
+                        slim = true,
+                    )
+                    LabelledAction(
+                        icon = PlayerIcons.Save,
+                        label = stringResource(R.string.action_save),
+                        onClick = onSave,
+                        slim = true,
+                    )
+                }
+                // It acts on the whole playlist, so it sits with the app's own actions rather than
+                // in a row menu. Only while there is a list to send.
+                if (state.queue.tracks.isNotEmpty()) {
+                    LabelledAction(
+                        // **The icon says which of the two things a press will do.** With nobody
+                        // paired it opens the camera, so it is a code; paired, it sends, so it is a
+                        // link.
+                        icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
+                        label = stringResource(R.string.action_send_to_browser),
+                        onClick = onSendToBrowser,
+                        onLongClick = onRescan,
+                        longClickLabel = stringResource(R.string.action_pair_again),
+                        slim = true,
+                    )
+                }
                 LabelledAction(
-                    icon = PlayerIcons.Save,
-                    label = stringResource(R.string.action_save),
-                    onClick = onSave,
+                    icon = PlayerIcons.Settings,
+                    label = stringResource(R.string.settings_title),
+                    onClick = onSettings,
+                    haptic = null,
+                    slim = true,
                 )
             }
-            // Beside Save rather than in a row menu: it acts on the whole playlist, and the row
-            // menu's actions all act on one track. Only while there is a list to send.
-            if (state.queue.tracks.isNotEmpty()) {
-                LabelledAction(
-                    // **The icon says which of the two things a press will do.** With nobody paired
-                    // it opens the camera, so it is a code; paired, it sends, so it is a link.
-                    icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
-                    label = stringResource(R.string.action_send_to_browser),
-                    onClick = onSendToBrowser,
-                    onLongClick = onRescan,
-                    longClickLabel = stringResource(R.string.action_pair_again),
-                )
-            }
-            LabelledAction(
-                icon = PlayerIcons.Settings,
-                label = stringResource(R.string.settings_title),
-                onClick = onSettings,
-                haptic = null,
-            )
         }
     }
 }
 
 /**
- * How narrow the playlist chip may get before the actions wrap instead.
+ * The name's own row, which is shorter than the pill it replaced.
  *
- * The name is what this bar is about, so it is not what gives way when the row is full.
+ * The count moved beside the name instead of under it, so one line is enough — and the row the
+ * actions have to themselves is what stops them taking the name's width (`docs/STATUS.md` C48).
  */
-private val PLAYLIST_PILL_MIN_WIDTH = 150.dp
+private val PLAYLIST_CHIP_HEIGHT = 46.dp
 
-/**
- * The playlist chip matches the buttons beside it rather than its own contents.
- *
- * `LabelledAction` is 52dp at its smallest, and the chip's second line — the track count — is
- * absent on an empty playlist. Without a fixed height the top bar visibly changed shape as a
- * playlist filled and emptied, which the owner spotted.
- */
-private val PLAYLIST_PILL_HEIGHT = ACTION_PILL_HEIGHT
 
-/**
- * How wide the playlist chip may get before its name starts ellipsising.
- *
- * A cap rather than a fixed width: a short name should not be padded out to a slab. The reason it
- * needs one at all is that a long name pushed every button on the bar to the right, so where Browse
- * sat depended on what the playlist was called.
- */
-private val PLAYLIST_PILL_MAX_WIDTH = 220.dp
+
 
 /** The gap between any two controls on the top bar. */
 private val TOP_BAR_SEAM = 6.dp
