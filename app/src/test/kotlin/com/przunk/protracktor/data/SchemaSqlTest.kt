@@ -50,6 +50,68 @@ class SchemaSqlTest {
         }
     }
 
+    /**
+     * `docs/STATUS.md` C41: adding a track to another playlist took it out of the one it was in.
+     *
+     * **SQLite's REPLACE is a DELETE and an INSERT**, and `playlist_tracks.track_id` references
+     * `tracks(id)` `ON DELETE CASCADE` with foreign keys on. So re-writing the `tracks` row for a
+     * track already in a playlist deleted every `playlist_tracks` row that pointed at it -- and the
+     * write that followed put it back in one playlist only. A copy became a move.
+     */
+    @Test
+    fun `writing a track again leaves it in the playlists it is already in`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO playlists (id, name, position) VALUES (1, 'source', 0)",
+                    "INSERT INTO playlists (id, name, position) VALUES (2, 'target', 1)",
+                    "INSERT INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 'x', 0)",
+                )
+            )
+
+            // What `LibraryStore.replaceTracks` does for the target: the track's own row, then its
+            // place in that playlist.
+            connection.run(
+                listOf(
+                    "INSERT OR IGNORE INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "UPDATE tracks SET title = 'Tune', subtitle = 'where' WHERE id = 'x'",
+                    "INSERT OR REPLACE INTO playlist_tracks (playlist_id, track_id, position) VALUES (2, 'x', 0)",
+                )
+            )
+
+            assertEquals(setOf(1L, 2L), connection.playlistsHolding("x"))
+        }
+    }
+
+    /** The same write the old way, to show what the rule above is protecting against. */
+    @Test
+    fun `replacing the track row instead would empty the other playlists`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO playlists (id, name, position) VALUES (1, 'source', 0)",
+                    "INSERT INTO playlists (id, name, position) VALUES (2, 'target', 1)",
+                    "INSERT INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 'x', 0)",
+                    "INSERT OR REPLACE INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "INSERT OR REPLACE INTO playlist_tracks (playlist_id, track_id, position) VALUES (2, 'x', 0)",
+                )
+            )
+            assertEquals(setOf(2L), connection.playlistsHolding("x"))
+        }
+    }
+
+    private fun Connection.playlistsHolding(trackId: String): Set<Long> =
+        prepareStatement("SELECT playlist_id FROM playlist_tracks WHERE track_id = ?").use { statement ->
+            statement.setString(1, trackId)
+            statement.executeQuery().use { rows ->
+                buildSet { while (rows.next()) add(rows.getLong(1)) }
+            }
+        }
+
     @Test
     fun `player_state holds exactly one row and refuses a second`() {
         memoryDatabase().use { connection ->

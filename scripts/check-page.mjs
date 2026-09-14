@@ -494,8 +494,8 @@ if (window.__api) {
   // he asked for before are still exactly these, in this order, with Share with Protracktor (asked
   // for the same day) beside the other link.
   check(open.map((b) => b.textContent).join(',')
-        === 'Select,Save the file,Copy a link,Share with Protracktor,More from this author,Information',
-    'with the three the owner asked for, after Select, and the two he asked for later');
+        === 'Select,Add to playlist,Save the file,Copy a link,Share with Protracktor,More from this author,Information',
+    'with the three the owner asked for, after Select and Add to playlist, and the two he asked for later');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
   menus[1].click();
@@ -1932,6 +1932,60 @@ if (window.__api) {
   check(sections().length === 0, 'and nothing at all where every name is blank or there are none');
   api.onWorklet({ type: 'failed', reason: 'x' });
   check(sections().length === 0, 'a refusal clears them with the rest of Now Playing');
+}
+
+// --- the gear, left of shuffle (owner, 2026-09-14) ------------------------------------------------
+if (window.__api) {
+  console.log('\nthe page\'s settings:');
+  const gear = $('tab-settings');
+  check(gear && gear.nextElementSibling === $('shuffle') && gear.querySelector('svg') && gear.title === 'Settings',
+    'a gear stands left of shuffle, with its icon');
+  check(!gear.disabled, 'and answers whether or not anything is playing');
+  gear.click();
+  await new Promise((r) => setTimeout(r, 40));
+  check(!$('settings').hidden, 'pressing it opens the settings');
+  const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
+  check(labels[0] === 'Decoders in this build' && labels.includes('Modland') && labels.includes('ASMA')
+        && labels.includes('Stored here'),
+    'which say what this build plays, what is indexed, and what the browser is holding');
+  $('settings').querySelector('[data-close]').click();
+  check($('settings').hidden, 'and Close shuts them');
+}
+
+// --- add to playlist, from one row (owner, 2026-09-14) ---------------------------------------------
+//
+// The phone's row menu opens the picker for that one track; the page could only add by ticking rows
+// first, which is the gesture for many spent on one.
+if (window.__api) {
+  console.log('\nadd to playlist, from one row:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 30));
+  const { playlists: saved } = await import(path.resolve('web/src/store.js'));
+  await saved.save({ id: 'p-target-row', name: 'Elsewhere', tracks: [], index: 0 });
+  await saved.save({ id: 'p-source-row', name: 'Here', tracks: [], index: 0 });
+  await api.switchTo('p-source-row');
+  const url = 'https://modland.com/pub/modules/Protracker/4-Mat/one.mod';
+  api.setQueue([{ url, name: 'one.mod', file: 'one.mod', meta: 'Modland/Protracker/4-Mat' }], 0);
+  api.render();
+
+  window.document.querySelector('#queue li .rowmenu').click();
+  const add = [...$('menu').children].find((b) => b.textContent === 'Add to playlist');
+  check(add && !add.disabled && add.querySelector('svg'), 'a row offers it without ticking anything first');
+  add.click();
+  await settle();
+  check(!$('addto').hidden && $('addtonote').textContent.startsWith('1 track'),
+    'and the picker opens for that one track');
+  const target = [...$('addtolist').children].find((li) => li.textContent.includes('Elsewhere'));
+  check(target && ![...$('addtolist').children].some((li) => li.textContent.includes('Here')),
+    'offering his other playlists, never the one the row is already in');
+  target.click();
+  await settle();
+  check((await saved.get('p-target-row')).tracks.map((t) => t.url).join() === url,
+    'choosing one puts the track in it');
+  check(api.queueNow().join() === url, 'and leaves the playlist the row was in alone');
+  await saved.remove('p-target-row');
+  await saved.remove('p-source-row');
+  await api.switchTo('phone');
 }
 
 // --- more from this author (owner, 2026-09-12) ----------------------------------------------------

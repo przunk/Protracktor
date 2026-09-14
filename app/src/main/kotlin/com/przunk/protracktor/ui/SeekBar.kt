@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
@@ -111,16 +112,25 @@ fun SeekBar(
             // track is inset by the thumb's radius, so a thumb that changes size makes the line
             // itself widen at both ends the moment you touch it — which is what the owner saw. A
             // fixed circle keeps the bar still under the finger.
-            if (enabled) {
-                val size = if (compact) 14.dp else 20.dp
-                Box(
-                    modifier = Modifier
-                        .size(size)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                )
+            //
+            // **The same dot whether or not it can be dragged** (`docs/STATUS.md` C45). Drawing
+            // nothing at all was the earlier answer to "this is progress, not a control", and the
+            // owner met what it costs: with Material's disabled track colours the played part is
+            // grey on a dark surface and there is no mark on it, so where the tune had got to could
+            // not be read. A smaller dot was tried for one build and he sent it back -- the track is
+            // inset by the thumb's radius, so a smaller circle sits higher and the bar shifts with
+            // it. Same size, same place; the colours are what changed.
+            val size = if (compact) 14.dp else 20.dp
+            // Darker where it cannot be dragged, and darker by *mixing with the surface* rather
+            // than by going see-through: a translucent dot takes the colour of whatever is behind
+            // it, which here is the track it sits on, and then reads as a hole in the bar.
+            // [DIMMED] is the one number to turn.
+            val dot = if (enabled) {
+                MaterialTheme.colorScheme.primary
             } else {
-                Box(Modifier.size(0.dp))
+                lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surface, DIMMED)
             }
+            Box(modifier = Modifier.size(size).background(dot, CircleShape))
         },
         track = { state ->
             SliderDefaults.Track(
@@ -133,9 +143,25 @@ fun SeekBar(
         colors = SliderDefaults.colors(
             activeTrackColor = MaterialTheme.colorScheme.primary,
             inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            // **The same two, dimmed rather than greyed.** Material's disabled defaults are
+            // `onSurface` at a third, which on this dark surface is a line you cannot see -- and a
+            // tune that cannot be seeked is still a tune whose progress is worth reading (C45).
+            disabledActiveTrackColor = lerp(
+                MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.surface, DIMMED,
+            ),
+            disabledInactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
     )
 }
+
+/**
+ * How far the dot and the played line are taken towards the surface where the tune cannot be seeked.
+ *
+ * **The knob for the look of a bar you cannot drag** (owner, 2026-09-14: "daj kolor akcentowany
+ * nieco ciemniej"). 0 is the playing colour exactly; 1 disappears into the background. Raise it to
+ * push the bar further back, lower it to bring it forward.
+ */
+private const val DIMMED = 0.4f
 
 /**
  * How much finger the dock's seek bar answers to.

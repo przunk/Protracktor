@@ -15,6 +15,44 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A37. Comments cut back to implementation facts — **agreed, not started**
+
+*Owner, 2026-09-14: he does not want entries like "owner: quote" in the source — implementation
+facts, or no comment at all, since good names beat commentary. Clean code.*
+
+**What to strip.** Quoted requests, dates, who asked for what, the argument a decision won, "this
+used to be X and it was wrong", and anything restating what the line below already says.
+
+**What to keep.** What the code cannot say about itself: a constraint that is invisible locally
+(SQLite's REPLACE deletes and cascades, so the track row is never replaced), a platform rule (a
+foreground service has about five seconds to post its notification), a measurement the choice rests
+on (buckets: 43,715 writes against 515,509), and the licence headers. Keep them as plain statements
+— the fact, not its provenance.
+
+**Where the rest belongs, so nothing is lost by deleting it:** `docs/STATUS.md` for defects and what
+caused them, `docs/BACKLOG.md` and the plans for decisions and their reasons, and git history for
+who asked and when. Every quote now in the source already has a home there or can be given one in
+the same commit that removes it.
+
+**Names first.** Where a comment explains a name, rename instead: the comment goes and the reader
+is helped everywhere the name appears, not only here.
+
+**How to do it without a big risky sweep:** one area per commit — the engine, the store, the
+controller, the screens, the page, the checks — with the tests green after each, and no behaviour
+changed in the same commit as a comment change.
+
+## A36. A gear beside shuffle, opening the page's settings — DONE 2026-09-14
+
+*Owner, 2026-09-14: "możesz dodać koło zębate, które otworzy ustawienia WEB po lewej stronie od
+shuffle (w przyszłości użyjemy)".* A way in, to be filled later; the storage line and the engine's
+backends are what there already is to show. Last of the seven in `docs/PLAN_ROUND_9.md`.
+
+## A35. "Add to playlist" in the web's track menu — DONE 2026-09-14
+
+*Owner, 2026-09-14: "3 kropki (ustawienia) tracka nie mają opcji add to playlist jak w APK -> ma
+działać tak samo jak w APK".* The page can only add by ticking rows first; the phone's row menu
+opens the picker for that one track. Same item, same picker.
+
 ## A34. Instrument and sample names in Now Playing — **built, waiting for the owner's test**
 
 *Owner, 2026-09-11: "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach

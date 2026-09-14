@@ -415,6 +415,89 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C45. ~~The seek bar's position dot is nearly invisible~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "nieprzesuwalnego handla na pasku odtwarzania prawie nie widać (kropka, która
+wskazuje aktualny czas) - jest ciemna na ciemnym tle".* `ui/SeekBar.kt` draws the dot by hand
+instead of using `SliderDefaults.Thumb`, which grows while pressed; its colour does not carry on a
+dark background. Ordered sixth of seven in `docs/PLAN_ROUND_9.md`.
+
+**It was the tunes that cannot be seeked.** There the bar drew **no** dot at all -- a deliberate
+answer to "this is progress, not a control" -- and Material's disabled track colours are `onSurface`
+at a third, which on this surface is a line you cannot read. So where the tune had got to could not
+be seen. The dot is now drawn there too, and after one build at half size -- which the owner sent back,
+because the track is inset by the thumb's radius and a smaller circle sits higher, taking the bar
+with it -- it is the same size and in the same place as the one you can drag. The colours are the
+change: the dot in the playing colour, and the disabled track dimmed rather than greyed.
+
+### C44. ~~The playlist list keeps stale counts after "Add to playlist…"~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "dana lista w widoku playlist nie odświeża ilości tracków, dopóki się w nią nie
+wejdzie".* `PlayerUiState.playlists` is read once and nothing re-reads it when a playlist gains
+tracks, so the switcher shows yesterday's number until the playlist is opened.
+
+**Making, renaming and deleting a playlist already re-read the list; the writes that change only its
+contents did not.** `refreshPlaylists()` now follows every one of them: adding to another playlist,
+appending to the one showing, and the debounced write of the queue itself.
+
+### C43. The transport is sometimes missing from the notification — **ONE CAUSE REMOVED 2026-09-14, still watched**
+
+*Owner, 2026-09-14: "czasem z jakiegoś powodu nie widzę paska odtwarzania w notification (słyszę jak
+muza gra ale tego playera nie widać)".* No reproduction yet. `PlaybackService` builds the
+notification with MediaStyle and calls `ServiceCompat.startForeground`; what is not yet known is
+which path leaves playback running without it. First job is a way to tell the cases apart, not a
+guess.
+
+**One path was found and closed.** The service stopped itself whenever the state carried no current
+track — and that is not the end of playback: it happens while a queue is replaced and when Random or
+History hands the playlist back. Audio is the controller's, not the service's, so the music went on
+without a transport; and nothing brought the service back, because a track ending and the next one
+starting never passes through the buttons that ask for it. It now stops only when nothing is playing
+**and** nothing is loading.
+
+**Not proven to be the owner's case**, which was never reproduced. So `stopForegroundAndSelf` now
+logs. If it happens again, that line separates "the service stopped" from "the notification was
+never posted" — the second would be the permission or the channel, and a different repair.
+
+### C42. ~~One file the engine refuses by throwing ends the whole session (web)~~ — GUARDED 2026-09-14
+
+*Owner, 2026-09-14, from the browser console:* a Startrekker AM file (libopenmpt: "external
+synthesizes instruments … not supported"), then `uncaught exception: 1464664` from `___cxa_throw`
+in `engine.mjs` — and after it **no tune plays at all** until the tab is reloaded. A C++ exception
+escaping `pt_open` leaves the engine unusable, and the worklet with it. Second of seven in
+`docs/PLAN_ROUND_9.md`.
+
+**The file was never reproduced, and the hole was real anyway.** Eight Startrekker AM modules off
+Modland open and render with that same libopenmpt warning, and their `.nt` companions are refused
+cleanly — so the warning is not the failure and the throwing file is still unknown. What was found
+instead: **no entry point of the web engine caught anything**. `openBackend` guards the *choosing*
+of a decoder; describing the file (inside `pt_open`), rendering, seeking, asking a length and
+selecting a subsong were all unguarded, so any throw from any backend went straight out through
+`___cxa_throw` — which is what the owner saw, and why nothing played afterwards.
+
+Now every `pt_*` in `player_wasm.cpp` catches, remembers the reason for `pt_last_error`, and answers
+with a refusal or with silence; and `processor.js` catches whatever is left, answers `failed`, and
+keeps the worklet alive. Checked on one engine instance: a refused file, then a tune that opens and
+renders. **If it happens again, the page will now say what the decoder said** — which is the next
+piece of evidence.
+
+### C41. ~~"Add to playlist…" takes the track out of the playlist it was in~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "add to playlist.. przenosi tracka … w liście źródłowej już tego tracka nie ma!
+a powinien być".* Adding to another playlist must copy, never move.
+`PlaybackController.addToPlaylist(targetPlaylistId, tracks)` writes only the **target**, so the
+source is being rewritten somewhere else on that journey — the caller, the selection, or a stale
+copy written back afterwards. It looks like losing music, so it was first of the seven.
+
+**It was the `tracks` row, and SQLite's REPLACE.** `LibraryStore.replaceTracks` wrote each track
+with `CONFLICT_REPLACE`; a REPLACE is a DELETE and an INSERT; `playlist_tracks.track_id` references
+`tracks(id)` `ON DELETE CASCADE`; and `ProtracktorDatabase.onConfigure` turns foreign keys on. So
+writing the track for the target playlist deleted **every** row that put it in any playlist, and the
+write that followed gave it back to the target alone. A copy behaved as a move. The row is now
+inserted with `CONFLICT_IGNORE` and its fields updated, so it is never deleted. Two tests in
+`SchemaSqlTest` run both forms against a real SQLite: the safe one keeps the track in both
+playlists, the old one empties the source.
+
 ### C40. ~~The phone's Now Playing shows only the first line of a module's message~~ — FIXED 2026-09-11
 
 *Found 2026-09-11 while giving the page the phone's Now Playing, not by a listener.*
