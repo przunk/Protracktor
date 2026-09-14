@@ -111,16 +111,23 @@ fun SeekBar(
             // track is inset by the thumb's radius, so a thumb that changes size makes the line
             // itself widen at both ends the moment you touch it — which is what the owner saw. A
             // fixed circle keeps the bar still under the finger.
-            if (enabled) {
-                val size = if (compact) 14.dp else 20.dp
-                Box(
-                    modifier = Modifier
-                        .size(size)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                )
-            } else {
-                Box(Modifier.size(0.dp))
+            //
+            // **A smaller dot where it cannot be dragged** (`docs/STATUS.md` C45). Drawing nothing
+            // at all was the earlier answer to "this is progress, not a control", and the owner met
+            // what it costs: with Material's disabled track colours the played part is grey on a
+            // dark surface and there is no mark on it, so where the tune had got to could not be
+            // read. Half the size of the grab point says "not this one" without saying nothing.
+            val size = when {
+                enabled && compact -> 14.dp
+                enabled -> 20.dp
+                compact -> 8.dp
+                else -> 12.dp
             }
+            Box(
+                modifier = Modifier
+                    .size(size)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
         },
         track = { state ->
             SliderDefaults.Track(
@@ -133,6 +140,11 @@ fun SeekBar(
         colors = SliderDefaults.colors(
             activeTrackColor = MaterialTheme.colorScheme.primary,
             inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            // **The same two, dimmed rather than greyed.** Material's disabled defaults are
+            // `onSurface` at a third, which on this dark surface is a line you cannot see -- and a
+            // tune that cannot be seeked is still a tune whose progress is worth reading (C45).
+            disabledActiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            disabledInactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
     )
 }

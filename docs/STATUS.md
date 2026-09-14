@@ -415,12 +415,18 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C45. The seek bar's position dot is nearly invisible — **OPEN**
+### C45. ~~The seek bar's position dot is nearly invisible~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14: "nieprzesuwalnego handla na pasku odtwarzania prawie nie widać (kropka, która
 wskazuje aktualny czas) - jest ciemna na ciemnym tle".* `ui/SeekBar.kt` draws the dot by hand
 instead of using `SliderDefaults.Thumb`, which grows while pressed; its colour does not carry on a
 dark background. Ordered sixth of seven in `docs/PLAN_ROUND_9.md`.
+
+**It was the tunes that cannot be seeked.** There the bar drew **no** dot at all -- a deliberate
+answer to "this is progress, not a control" -- and Material's disabled track colours are `onSurface`
+at a third, which on this surface is a line you cannot read. So where the tune had got to could not
+be seen. The dot is now drawn at half the size of the grab point, in the same colour, and the
+disabled track keeps the playing colours dimmed rather than greyed.
 
 ### C44. ~~The playlist list keeps stale counts after "Add to playlist…"~~ — FIXED 2026-09-14
 
