@@ -48,6 +48,16 @@ internal val ACTION_PILL_HEIGHT_SLIM = 46.dp
 private val SLIM_ICON = 20.dp
 
 /**
+ * How narrow a slim pill may be, so a row of them reads as a row of equals.
+ *
+ * Width follows the label, and the labels are not the same length: "WEB" drew a button two thirds
+ * the width of "Settings" beside it. This is the widest of them plus its padding, which makes the
+ * short ones match rather than the long ones shrink — five at this width still cross a 320dp screen
+ * with the seams between them.
+ */
+private val SLIM_MIN_WIDTH = 56.dp
+
+/**
  * An action drawn as an icon with its name underneath.
  *
  * The owner's shape, asked for twice: once for the way out of Browse (`docs/BACKLOG.md` A16) and
@@ -116,7 +126,7 @@ internal fun LabelledAction(
         modifier = modifier
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = 3.dp)
-            .defaultMinSize(minWidth = 48.dp)
+            .defaultMinSize(minWidth = if (slim) SLIM_MIN_WIDTH else 48.dp)
             // **One height for every pill, whatever its name** (`docs/STATUS.md` C47). Sizing to
             // the label made a one-word action shorter than a two-word one; two lines of label
             // forced on every pill fixed the heights and pushed the words to the edges instead.
