@@ -9,6 +9,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
 ordered before any of it is built, at his request: "zapisz wszystkie problemy najpierw i posortuj
 sobie do realizacji". Branch: `feature/round-9`, all seven on it.*
 
+**All seven are built, in this order, one commit each.** Two carry a caveat the owner should know:
+C42's file was never reproduced (the hole it exposed was real and is closed), and C43 had one cause
+removed but no reproduction either, so it stays watched with a log line to catch it.
+
 The defects live in `docs/STATUS.md` (C41–C45) and the two new pieces of work in `docs/BACKLOG.md`
 (A35, A36); this file is the running order and the working notes.
 
