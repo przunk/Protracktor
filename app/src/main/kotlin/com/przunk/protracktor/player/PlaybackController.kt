@@ -826,7 +826,20 @@ class PlaybackController private constructor(private val context: Context) {
         trackWriteJob = scope.launch {
             delay(TRACK_WRITE_DEBOUNCE_MS)
             store.replaceTracks(playlistId, _state.value.queue.tracks)
+            refreshPlaylists()
         }
+    }
+
+    /**
+     * The switcher counts what each playlist holds, so every write that changes a count says so.
+     *
+     * `docs/STATUS.md` C44: making, renaming and deleting a playlist already re-read the list;
+     * the writes that change only its **contents** did not, so "Add to playlist…" wrote the track
+     * and left the number on screen as it was until the playlist was opened.
+     */
+    private suspend fun refreshPlaylists() {
+        val known = store.playlists()
+        _state.update { it.copy(playlists = known) }
     }
 
     /**
@@ -2895,6 +2908,7 @@ class PlaybackController private constructor(private val context: Context) {
             }
             if (added > 0) {
                 store.replaceTracks(targetPlaylistId, existing)
+                refreshPlaylists()
             }
             val message = when {
                 tracks.size == 1 && added == 1 ->
@@ -3013,7 +3027,10 @@ class PlaybackController private constructor(private val context: Context) {
         if (added > 0 && !hadPendingEdit) {
             // Written from the state rather than from `found`, so it stores exactly the list the
             // screen is showing -- including whatever the de-duplication above decided.
-            scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
+            scope.launch {
+                store.replaceTracks(playlistId, _state.value.queue.tracks)
+                refreshPlaylists()
+            }
         }
 
         // Adding appends to the end, so without this nothing visibly happens -- which matters more

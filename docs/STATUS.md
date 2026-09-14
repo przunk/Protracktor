@@ -422,11 +422,15 @@ wskazuje aktualny czas) - jest ciemna na ciemnym tle".* `ui/SeekBar.kt` draws th
 instead of using `SliderDefaults.Thumb`, which grows while pressed; its colour does not carry on a
 dark background. Ordered sixth of seven in `docs/PLAN_ROUND_9.md`.
 
-### C44. The playlist list keeps stale counts after "Add to playlist…" — **OPEN**
+### C44. ~~The playlist list keeps stale counts after "Add to playlist…"~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14: "dana lista w widoku playlist nie odświeża ilości tracków, dopóki się w nią nie
 wejdzie".* `PlayerUiState.playlists` is read once and nothing re-reads it when a playlist gains
 tracks, so the switcher shows yesterday's number until the playlist is opened.
+
+**Making, renaming and deleting a playlist already re-read the list; the writes that change only its
+contents did not.** `refreshPlaylists()` now follows every one of them: adding to another playlist,
+appending to the one showing, and the debounced write of the queue itself.
 
 ### C43. The transport is sometimes missing from the notification — **OPEN**
 
