@@ -436,13 +436,27 @@ notification with MediaStyle and calls `ServiceCompat.startForeground`; what is 
 which path leaves playback running without it. First job is a way to tell the cases apart, not a
 guess.
 
-### C42. One file the engine refuses by throwing ends the whole session (web) — **OPEN**
+### C42. ~~One file the engine refuses by throwing ends the whole session (web)~~ — GUARDED 2026-09-14
 
 *Owner, 2026-09-14, from the browser console:* a Startrekker AM file (libopenmpt: "external
 synthesizes instruments … not supported"), then `uncaught exception: 1464664` from `___cxa_throw`
 in `engine.mjs` — and after it **no tune plays at all** until the tab is reloaded. A C++ exception
 escaping `pt_open` leaves the engine unusable, and the worklet with it. Second of seven in
 `docs/PLAN_ROUND_9.md`.
+
+**The file was never reproduced, and the hole was real anyway.** Eight Startrekker AM modules off
+Modland open and render with that same libopenmpt warning, and their `.nt` companions are refused
+cleanly — so the warning is not the failure and the throwing file is still unknown. What was found
+instead: **no entry point of the web engine caught anything**. `openBackend` guards the *choosing*
+of a decoder; describing the file (inside `pt_open`), rendering, seeking, asking a length and
+selecting a subsong were all unguarded, so any throw from any backend went straight out through
+`___cxa_throw` — which is what the owner saw, and why nothing played afterwards.
+
+Now every `pt_*` in `player_wasm.cpp` catches, remembers the reason for `pt_last_error`, and answers
+with a refusal or with silence; and `processor.js` catches whatever is left, answers `failed`, and
+keeps the worklet alive. Checked on one engine instance: a refused file, then a tune that opens and
+renders. **If it happens again, the page will now say what the decoder said** — which is the next
+piece of evidence.
 
 ### C41. ~~"Add to playlist…" takes the track out of the playlist it was in~~ — FIXED 2026-09-14
 

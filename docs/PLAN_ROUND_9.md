@@ -58,6 +58,11 @@ route in `docs/PLAN_INSTRUMENT_NAMES.md`, then in the page.
 
 Done when: that file is refused with a sentence, and the tune after it plays.
 
+**Android has the same unguarded boundary** (`player_oboe.cpp`: `nativeOpen`, `nativeDescribe` and
+the rest call straight into a backend). There an escaping C++ exception ends the process rather than
+a session. Not part of this item -- the owner reported the browser -- but it is the same repair and
+belongs on a branch of its own.
+
 ### 3. C44 — the playlist list keeps stale counts
 
 *Owner: "dana lista w widoku playlist nie odświeża ilości tracków, dopóki się w nią nie wejdzie."*
