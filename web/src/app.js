@@ -1239,18 +1239,25 @@ function showSessionView(kind) {
   $('randomhead').hidden = !kind;
   $('randomfilter').hidden = true;
   $('randomnote').hidden = true;
+  // **A digression says whose folder it is**, in the shape the dice's own heading has (`docs/BACKLOG.md`
+  // A41): the dice is not over, it is waiting, and the way back is the button beside these words.
+  const digressing = kind === 'browse' && !!away?.dice;
   if (kind) {
     const { title, icon } = SESSION[kind];
-    $('sessiontitle').textContent = title;
-    $('sessionicon').innerHTML = iconSvg(icon()).replace(/^<svg[^>]*>|<\/svg>$/g, '');
+    $('sessiontitle').textContent = digressing ? `Browsing author — ${away.author}` : title;
+    $('sessionicon').innerHTML = iconSvg(digressing ? ICON.folder : icon())
+      .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
+  // Back to the dice rather than out to the playlist, while there is a dice to go back to.
+  $('random-leave').innerHTML = iconSvg(digressing ? ICON.dice : ICON.playlist)
+    + (digressing ? 'Random' : 'Playlist');
   // What the dice picks from means nothing for History, and neither does its Filter.
   $('randomscope').hidden = kind !== 'random';
   $('random-filter').hidden = kind !== 'random';
   // **The chip stays usable** (owner, 2026-09-11: "intuicyjnie wydaje się być możliwe wyjść do
   // playlist"). The phone hides it here; the page lets it name where you are and choose where to go,
   // and choosing a playlist ends the session on the way (`choosePlaylist`).
-  if (kind) $('playlistname').textContent = SESSION[kind].chip;
+  if (kind) $('playlistname').textContent = digressing ? 'Browsing' : SESSION[kind].chip;
   setDirty(dirty);
 }
 
@@ -1416,6 +1423,8 @@ const ICON = {
   web: 'M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z',
   playlistAdd: 'M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z',
   search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+  // The way back to the playlist, the same glyph the heading's button was drawn with.
+  playlist: 'M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z',
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
   more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
   check: 'M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
@@ -1770,10 +1779,15 @@ function openAway(tracks, at, kind = 'history') {
   // A change the playlist was still waiting to save is its own; written before the swap.
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
   const stash = random?.stash ?? away?.stash ?? { queue, index, history, order, name: $('playlistname').textContent };
+  // **The dice waits underneath** (`docs/BACKLOG.md` A41). Playing a tune from an author's folder
+  // used to end the session; it now keeps the record and the cursor, and the way back is the
+  // heading's button. A session opened from another session inherits whatever was already waiting.
+  const dice = random ? { session: random, queue, index, history, order } : away?.dice ?? null;
+  const author = dice ? (away?.author ?? browsePath[2] ?? '') : null;
   random = null;
   loading?.abort();
   loading = null;
-  away = { stash, kind };
+  away = { stash, kind, dice, author };
   queue = tracks.slice();
   index = Math.min(Math.max(at, 0), queue.length - 1);
   history = [index];
@@ -1832,6 +1846,31 @@ function endAway() {
 
 /** The heading's way back, whichever session it is heading. */
 function endSession() { if (random) endRandom(); else endAway(); }
+
+/**
+ * Back to the dice that was waiting (`docs/BACKLOG.md` A41).
+ *
+ * **Paused, on the pick it was on** -- the owner's decision, "bo inaczej operator dostanie szoku".
+ * Play resumes that tune; next rolls. What played during the digression is in the history, as
+ * everything played here is.
+ */
+function resumeDice() {
+  const dice = away?.dice;
+  if (!dice) return;
+  away = null;
+  stopForLeaving();
+  random = dice.session;
+  ({ queue, index, history, order } = dice);
+  rowState = 'selected';
+  showSessionView('random');
+  render();
+  setPlaying(false);
+  const entry = queue[index];
+  $('title').textContent = entry?.name ?? 'Nothing playing';
+  $('sub').textContent = entry ? 'press play' : '—';
+  nameTheTab(entry);
+  status('Back to the dice — press play for the tune it was on, or next for another.');
+}
 
 /** A queue arrived from elsewhere: nothing to restore, the new queue wins. */
 function dropSession() {
@@ -2441,8 +2480,16 @@ $('tab-browse').onclick = async () => {
   await renderBrowse();
 };
 $('browseback').onclick = async () => {
-  // Out of a search, back to where it was typed; otherwise one level up.
-  if ($('browsesearch').value) { $('browsesearch').value = ''; searchAsked++; } else browsePath = browsePath.slice(0, -1);
+  // Out of a search, back to where it was typed; otherwise one level up. **Except above the folder
+  // a digression came from** (`docs/BACKLOG.md` A41): there the way back is the dice, not the
+  // archive, which is what "one level of digression" means.
+  if ($('browsesearch').value) { $('browsesearch').value = ''; searchAsked++; } else if (
+    away?.dice && browsePath.length <= 3
+  ) {
+    resumeDice();
+    showPanel(null);
+    return;
+  } else browsePath = browsePath.slice(0, -1);
   await renderBrowse();
 };
 $('browseclose').onclick = () => showPanel(null);
@@ -2634,7 +2681,7 @@ addEventListener('beforeunload', (event) => {
   event.preventDefault();
   event.returnValue = '';
 });
-$('random-leave').onclick = () => endSession();
+$('random-leave').onclick = () => (away?.dice ? resumeDice() : endSession());
 
 $('next').onclick = () => {
   if (playAllSubsongs && hasNextSubsong()) { goToSubsong(currentSubsong + 1); return; }
