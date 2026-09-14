@@ -493,8 +493,9 @@ if (window.__api) {
   // Select stands first since 2026-09-11 -- the way into ticking rows, which he asked for; the three
   // he asked for before are still exactly these, in this order, with Share with Protracktor (asked
   // for the same day) beside the other link.
-  check(open.map((b) => b.textContent).join(',') === 'Select,Save the file,Copy a link,Share with Protracktor,Information',
-    'with the three the owner asked for, after Select');
+  check(open.map((b) => b.textContent).join(',')
+        === 'Select,Save the file,Copy a link,Share with Protracktor,More from this author,Information',
+    'with the three the owner asked for, after Select, and the two he asked for later');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
   menus[1].click();
@@ -916,7 +917,7 @@ if (window.__api) {
   button(rows()[0], 'bmore').click();
   const menu = [...$('menu').children];
   check(menu.map((b) => b.textContent).join('|')
-        === "Add to another playlist|Information|Show the author's tunes|Save the file|Copy a link|Share with Protracktor",
+        === "Add to another playlist|Information|More from this author|Save the file|Copy a link|Share with Protracktor",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
   // The icon beside its word, centred on it: a later rule once made every item a block and left the
@@ -927,7 +928,7 @@ if (window.__api) {
   menu[2].click();
   await settle();
   check($('browsetitle').textContent === 'Protracker / 4-Mat' && !$('browsesearch').value,
-    'Show the author\'s tunes walks to their folder, out of the search');
+    'More from this author walks to their folder, out of the search');
   check(rows().every((li) => li.classList.contains('btrack')) && rows().length === 2,
     'whose tunes are rows of the same kind');
 
@@ -1931,6 +1932,47 @@ if (window.__api) {
   check(sections().length === 0, 'and nothing at all where every name is blank or there are none');
   api.onWorklet({ type: 'failed', reason: 'x' });
   check(sections().length === 0, 'a refusal clears them with the rest of Now Playing');
+}
+
+// --- more from this author (owner, 2026-09-12) ----------------------------------------------------
+//
+// The phone offers it on every list; the page had it in Browse alone. From a row, and from the tune
+// playing, it opens the folder the tune came from -- read off where the row says it lives, which a
+// pasted Modland address gives as well.
+if (window.__api) {
+  console.log('\nmore from this author:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 30));
+  const item = () => [...$('menu').children].find((b) => b.textContent === 'More from this author');
+
+  api.setQueue([{ url: 'https://modland.com/pub/modules/Protracker/4-Mat/one.mod', name: 'one.mod',
+                  file: 'one.mod', meta: 'Modland/Protracker/4-Mat' }], 0);
+  api.render();
+  window.document.querySelector('#queue li .rowmenu').click();
+  check(item() && !item().disabled && item().querySelector('svg'),
+    'a row in the playlist offers it, with its icon');
+  check(!$('np-folder').disabled && $('np-folder').querySelector('svg') && $('np-folder').querySelector('span'),
+    'and so does Now Playing, for the tune it is describing');
+  item().click();
+  await settle();
+  check(!$('browse').hidden && $('browsetitle').textContent === 'Protracker / 4-Mat',
+    'pressing it opens Browse on that author, wherever the row was');
+  api.showPanel(null);
+
+  // A pasted Modland address carries no `meta`, and the folder comes out of the address instead.
+  api.setQueue(['https://modland.com/pub/modules/AHX/Pink/frog.ahx'], 0);
+  api.render();
+  window.document.querySelector('#queue li .rowmenu').click();
+  check(item() && !item().disabled, 'a pasted Modland address knows its folder too');
+  $('menu').hidden = true;
+
+  // Nothing to open for a file that stayed on the phone, or an address from anywhere else.
+  api.setQueue([{ url: 'https://example.org/tunes/x.mod', name: 'x.mod' }], 0);
+  api.render();
+  window.document.querySelector('#queue li .rowmenu').click();
+  check(item() && item().disabled && $('np-folder').disabled,
+    'and an address outside the archives offers it greyed, in the row and in Now Playing');
+  $('menu').hidden = true;
 }
 
 // --- the rules, from the file the Kotlin tests read (PLAN_WEB_LIBRARY S1) -----------------------
