@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -671,14 +672,16 @@ private fun PlaylistTopBar(
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(PLAYLIST_CHIP_HEIGHT)
+                    // A floor, not a fixed height: at a large system font two lines need more than
+                    // any number written here, and a fixed one would cut the second.
+                    .defaultMinSize(minHeight = PLAYLIST_CHIP_HEIGHT)
                     .semantics { contentDescription = choosePlaylistLabel },
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(start = 14.dp, end = 10.dp),
+                        .fillMaxWidth()
+                        .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
                 ) {
                     // **The text takes every pixel the chevron does not**, so the chevron is at the
                     // right edge whatever the name is. Giving the name a weight it need not fill
@@ -772,7 +775,7 @@ private fun PlaylistTopBar(
  * Two lines, which the full width affords — the row the actions have to themselves is what stops
  * them taking the name's space (`docs/STATUS.md` C48).
  */
-private val PLAYLIST_CHIP_HEIGHT = 58.dp
+private val PLAYLIST_CHIP_HEIGHT = 56.dp
 
 
 
