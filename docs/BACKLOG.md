@@ -15,6 +15,16 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A42. Line the Random screen's buttons up — **noted 2026-09-15**
+
+*Owner, 2026-09-15, as a note to himself after the session headings were levelled: "wyrównać
+przyciski na GUI random".*
+
+What is certain: the heading's Filter is now the slim pill and sits in a header of one fixed height,
+shared with a digression's. What he means beyond that — the row actions, the spacing between them,
+or Filter against the rows below — he will say when he gets to it. **Ask before building**, since
+the note is his shorthand rather than a description.
+
 ## A41. Digression mode: the dice waits while you browse an author — DONE 2026-09-14
 
 *Owner, 2026-09-14, after C49: "odtwarzam sobie random … nagle mi się jakiś spodoba. Wchodzę w more
