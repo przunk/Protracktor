@@ -238,6 +238,37 @@ class QueueLinkTest {
         )
     }
 
+    /** `docs/BACKLOG.md` A38: several ticked tunes, as one link that plays the lot. */
+    @Test
+    fun `several tunes go as one link the page plays`() {
+        val link = QueueLink.tracksLink(
+            "https://pi.example/src/",
+            listOf(
+                track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod", "hi there.mod"),
+                track("https://modland.com/pub/modules/AHX/Pink/frog.ahx", "frog.ahx"),
+            ),
+        )!!
+        assertTrue(link, link.startsWith("https://pi.example/src/#play:"))
+        assertEquals(
+            listOf("Protracker/4-Mat/hi there.mod", "AHX/Pink/frog.ahx"),
+            unpack(link.substringAfter("#play:")),
+        )
+    }
+
+    @Test
+    fun `the ones that cannot travel are left out of a link, not sent as placeholders`() {
+        val link = QueueLink.tracksLink(
+            "https://pi.example/src/",
+            listOf(
+                track("content://x/1", "mine.mod"),
+                track("https://modland.com/pub/modules/AHX/Pink/frog.ahx", "frog.ahx"),
+                track("https://example.org/music/live set.mp3", "live set.mp3"),
+            ),
+        )!!
+        assertEquals(listOf("AHX/Pink/frog.ahx"), unpack(link.substringAfter("#play:")))
+        assertEquals(null, QueueLink.tracksLink("https://pi.example/src/", listOf(track("content://x/1", "a.mod"))))
+    }
+
     @Test
     fun `a tune the page could not fetch makes no link`() {
         // A file on this phone, an MP3 with an address, and a tune inside an UnExoticA archive.

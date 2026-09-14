@@ -1665,26 +1665,49 @@ class PlaybackController private constructor(private val context: Context) {
      * -- their own browser, a message to somebody else. It points at the page this phone knows
      * ([Appearance.webPlayer]), so it opens only where that address can be reached from.
      */
-    fun sendToWeb(track: TrackRef) {
-        val link = QueueLink.trackLink(Appearance.webPlayer(context), track)
+    fun sendToWeb(tracks: List<TrackRef>) {
+        if (tracks.isEmpty()) return
+        val sendable = tracks.filter(QueueLink::canSend)
+        val link = QueueLink.tracksLink(Appearance.webPlayer(context), tracks)
         if (link == null) {
+            val one = tracks.singleOrNull()
             _state.update {
                 it.copy(
                     message = Message(
-                        if (QueueLink.isMp3(track)) "An MP3 is never sent to the browser: it is too big to travel."
-                        else "This one cannot be sent: a file on this phone has no address a browser could open."
+                        when {
+                            one != null && QueueLink.isMp3(one) ->
+                                "An MP3 is never sent to the browser: it is too big to travel."
+                            one != null ->
+                                "This one cannot be sent: a file on this phone has no address a browser could open."
+                            else ->
+                                "None of these can be sent: a browser has no address it could open them at."
+                        }
                     )
                 )
             }
             return
         }
+        val subject = sendable.singleOrNull()?.let { "${it.title} — Protracktor web" }
+            ?: "${sendable.size} tunes — Protracktor web"
         _share.tryEmit(
             Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, link)
-                putExtra(Intent.EXTRA_SUBJECT, "${track.title} — Protracktor web")
+                putExtra(Intent.EXTRA_SUBJECT, subject)
             }
         )
+        // Said only when some were left behind, and then it says how many: a link that quietly
+        // carries four of six tunes is the failure `docs/PLAN_WEB.md` §8 calls worse than refusing.
+        if (sendable.size < tracks.size) {
+            _state.update {
+                it.copy(
+                    message = Message(
+                        "Sending ${sendable.size}. The other ${tracks.size - sendable.size} have no " +
+                            "address a browser could open."
+                    )
+                )
+            }
+        }
     }
 
     /**

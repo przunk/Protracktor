@@ -15,6 +15,61 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A41. Digression mode: the dice waits while you browse an author — **agreed 2026-09-14**
+
+*Owner, 2026-09-14, after C49: "odtwarzam sobie random … nagle mi się jakiś spodoba. Wchodzę w more
+from this author i słucham sobie od niego cudeniek, wtedy robie wstecz … i wraca do random".*
+
+**Today a digression ends the session**: playing a tune from a Browse list moves playback to that
+list, and the dice is finished (C49 made the screen agree with that instead of lying about it).
+This makes the dice **wait** instead.
+
+- **Entered** by "More from this author" from a Random session.
+- **While digressing the heading says what is going on**, in the shape the dice's own heading has:
+  "Browsing author — <name>" where Random says "Playing at random — everything".
+- **Back returns to the dice**: the author's tune stops, the record comes back with the cursor where
+  it was, **paused** — "bo inaczej operator dostanie szoku". Play resumes that pick; next rolls.
+- **One level of digression.** Inside the author's folder, sub-folders may be opened and left again
+  up to that folder, and no higher: the way out above it is the way back to the dice.
+- **The page does the same and looks the same.** It currently ends the dice outright when a Browse
+  tune plays, so this changes both runtimes together.
+- **It ends for good** when something else takes the player: a playlist chosen, a file handed over by
+  another app, a link opened. A way back that leads nowhere is worse than none.
+
+The record and the cursor already survive a digression on the phone (`randomHistory`,
+`randomCursor`); what is missing is the way back and the heading. On the page the dice session is
+replaced by the Browse session, so there it needs a stash, the way the playlist already has one.
+
+## A40. Protracktor links open in the app — **parked 2026-09-14, waiting for a fixed address**
+
+*Owner, 2026-09-14: "rozpoznawanie linków do protracktora i jeśli jest APK, to otwierać w niej".*
+The fragment survives the trip into an app intact, so that is not the obstacle. The address is:
+Android binds an app to a **named** host, verified by a file served from it, and the page's tunnel
+takes a new random name every time it starts. The two shapes that work are a scheme of our own
+(`protracktor://…`), which an https link in a chat will never use, and App Links against one stable
+host with `assetlinks.json` on it. Worth doing when the page has a permanent home; brittle before
+that.
+
+## A39. An MP3's cover as a thumbnail — **parked 2026-09-14**
+
+*Owner, 2026-09-14: "okładka albumu MP3 jeśli istnieje jako miniaturka gdzieś widoku tracków".*
+Self-contained but not small: the engine reads no tags at all, so it needs an ID3v2 reader for the
+embedded picture, somewhere to cache what it decodes, and the picture shown in the rows, in Now
+Playing and in the notification. It reaches MP3s only, which is a thin slice of a library of
+modules — which is why it waits behind the three the owner chose.
+
+## A38. Share several tunes as one link — DONE 2026-09-14
+
+*Owner, 2026-09-14: "zaznaczyć kilka utworów i kliknąć share in protracktor, żeby wysłać link do
+grania tej listy".* The machinery is there: `QueueLink.pack` already packs a whole queue, and
+`play:` already marks a link as something to play rather than a queue to take over. What is missing
+is the three joins — the action on the selection bar (phone and page), a `play:` link that carries
+more than one tune, and the page playing the lot as a session beside the playlist rather than only
+the first of them.
+
+**The limit is arithmetic**: about 2,000 characters is what a link can be everywhere, which is some
+fifty tracks; past that `pack` already drops the names of files that cannot travel and says it did.
+
 ## A37. Comments cut back to implementation facts — **agreed, not started**
 
 *Owner, 2026-09-14: he does not want entries like "owner: quote" in the source — implementation

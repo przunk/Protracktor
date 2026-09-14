@@ -415,6 +415,54 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C49. ~~The Random view stayed up while something else was playing~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, from a session he described step by step:* in Random he pressed "more from this
+author", played one of that author's tunes, went back, pressed next on the Random list — and the
+next tune of the **author's folder** played. "Widok random przestał działać efektywnie."
+
+He was right about the cause. Playing from a Browse list moves playback to a results queue, and
+`PlayerUiState.randomMode` goes false with it — but the Random *screen* is a flag in the UI that
+nothing turned off. So the record of the dice stayed on screen while `next` walked the author's
+folder. A file handed over by another app already closed it; a tune played from a list did not.
+
+It closes now on both. Going back lands on the playlist, which says what is playing, as it does for
+any search result. The page has never had this: there a Browse tune ends the dice session outright.
+
+### C48. ~~The top bar squeezes the playlist's name to fit its buttons~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, with two screenshots: with Save and Discard showing, "nie mieszczą się i
+rozsuwają", and the chip read "Favo…".* The chip and five pills come to about 450dp on a screen some
+360dp wide, so something had to give and what gave was the name — the one thing the bar is about.
+
+A `TopAppBar` is one fixed-height row and cannot answer that, so the playlist screen no longer uses
+one. Wrapping was tried first and the owner saw what it costs: the bar changed height as Save and
+Discard came and went, and the list under it jumped. `PlaylistTopBar` is **two rows of fixed
+height** instead — the name across the whole width with its count beside it, and under it a slim row
+of actions with Browse at the left edge and Settings at the right. Save and Discard appear beside
+Settings, growing into the gap in the middle, so nothing that was on the bar moves. The pills in
+that row are a shorter variant with a smaller icon: five of them cross a phone with room to spare,
+which a pill wide enough for an icon beside its label could not do.
+
+### C47. ~~Now Playing's buttons are not the same height~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "funkcje/przyciski w now playing mogłyby mieć od razu dwa wiersze wysokości
+(niektóre pastylki są niższe i inne wyższe)".* `LabelledAction` sizes itself to its label, so a
+one-word action was shorter than a two-word one and the row read as ragged.
+
+**Two attempts.** Forcing two lines of label on every pill did make the heights equal and put the
+words against the top and bottom edges, which the owner sent back. What it is now: one height for
+every pill, whatever the name, with the icon and the label centred between real margins. A long name
+still wraps to two lines and changes nothing about the row.
+
+### C46. ~~Adding ticked tracks from search closes the search~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: after adding several ticked tracks to a playlist, the search is gone and the
+playlist is showing behind the glass.* `ProtracktorApp` sets `showBrowse = false` in the Browse
+screen's add action, so adding leaves Browse; what is left on screen is the playlist, covered by the
+scrim because what plays is a search result. Adding now keeps the list it was made from; the
+notice says what went in.
+
 ### C45. ~~The seek bar's position dot is nearly invisible~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14: "nieprzesuwalnego handla na pasku odtwarzania prawie nie widać (kropka, która

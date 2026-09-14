@@ -169,9 +169,19 @@ object QueueLink {
         !isMp3(track) && Catalogue.owning(track.id)?.let { c -> c.pathFrom(track.id)?.let(c::fileUrlFor) } != null
 
     /** The link that opens the page at [base] playing [track], or null when it cannot travel. */
-    fun trackLink(base: String, track: TrackRef): String? {
-        if (!canSend(track)) return null
-        val packed = pack(listOf(track))
+    fun trackLink(base: String, track: TrackRef): String? = tracksLink(base, listOf(track))
+
+    /**
+     * The link that opens the page playing [tracks], or null when none of them can travel.
+     *
+     * The ones that cannot are left out rather than sent as placeholders: a queue link carries them
+     * as greyed rows so the list numbers the same at both ends, and this is not a list anybody is
+     * comparing -- it is a few tunes to hear, and a row that cannot play is only a dead one.
+     */
+    fun tracksLink(base: String, tracks: List<TrackRef>): String? {
+        val sendable = tracks.filter(::canSend)
+        if (sendable.isEmpty()) return null
+        val packed = pack(sendable)
         return if (packed.sent == 0) null else linkTo(base, PLAY_PREFIX + packed.fragment)
     }
 
