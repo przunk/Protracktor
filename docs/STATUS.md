@@ -425,8 +425,10 @@ dark background. Ordered sixth of seven in `docs/PLAN_ROUND_9.md`.
 **It was the tunes that cannot be seeked.** There the bar drew **no** dot at all -- a deliberate
 answer to "this is progress, not a control" -- and Material's disabled track colours are `onSurface`
 at a third, which on this surface is a line you cannot read. So where the tune had got to could not
-be seen. The dot is now drawn at half the size of the grab point, in the same colour, and the
-disabled track keeps the playing colours dimmed rather than greyed.
+be seen. The dot is now drawn there too, and after one build at half size -- which the owner sent back,
+because the track is inset by the thumb's radius and a smaller circle sits higher, taking the bar
+with it -- it is the same size and in the same place as the one you can drag. The colours are the
+change: the dot in the playing colour, and the disabled track dimmed rather than greyed.
 
 ### C44. ~~The playlist list keeps stale counts after "Add to playlist…"~~ — FIXED 2026-09-14
 

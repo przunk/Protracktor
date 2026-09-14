@@ -112,17 +112,14 @@ fun SeekBar(
             // itself widen at both ends the moment you touch it — which is what the owner saw. A
             // fixed circle keeps the bar still under the finger.
             //
-            // **A smaller dot where it cannot be dragged** (`docs/STATUS.md` C45). Drawing nothing
-            // at all was the earlier answer to "this is progress, not a control", and the owner met
-            // what it costs: with Material's disabled track colours the played part is grey on a
-            // dark surface and there is no mark on it, so where the tune had got to could not be
-            // read. Half the size of the grab point says "not this one" without saying nothing.
-            val size = when {
-                enabled && compact -> 14.dp
-                enabled -> 20.dp
-                compact -> 8.dp
-                else -> 12.dp
-            }
+            // **The same dot whether or not it can be dragged** (`docs/STATUS.md` C45). Drawing
+            // nothing at all was the earlier answer to "this is progress, not a control", and the
+            // owner met what it costs: with Material's disabled track colours the played part is
+            // grey on a dark surface and there is no mark on it, so where the tune had got to could
+            // not be read. A smaller dot was tried for one build and he sent it back -- the track is
+            // inset by the thumb's radius, so a smaller circle sits higher and the bar shifts with
+            // it. Same size, same place; the colours are what changed.
+            val size = if (compact) 14.dp else 20.dp
             Box(
                 modifier = Modifier
                     .size(size)
