@@ -127,10 +127,16 @@ fun PlayerDock(
                     .padding(horizontal = 8.dp)
                     .semantics { contentDescription = expandLabel },
             ) {
+            // **A height of its own, not its tallest child's** (`docs/STATUS.md` C54). The keep
+            // button is an `IconButton` and carries Material's 48dp touch target; the chevron beside
+            // it is a bare icon. So the card grew by four pixels wherever keeping was offered — the
+            // dock was visibly taller in Random than over the playlist, which the owner saw at once
+            // with the two screens side by side.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .height(DOCK_CARD_HEIGHT)
+                    .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -377,6 +383,14 @@ internal fun formatTime(seconds: Double): String {
  * **Haptics on the hold**, because nothing else answers it. A press changes the title; a hold that
  * did nothing visible for a moment would read as a press that missed (`AGENTS.md` §8).
  */
+/**
+ * How tall the now-playing card stands, whatever is in it.
+ *
+ * Room for two lines of text and for the 48dp touch target a keep button brings with it, so the dock
+ * is the same height over every screen.
+ */
+private val DOCK_CARD_HEIGHT = 60.dp
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TransportButton(

@@ -415,6 +415,37 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C54. ~~The dock was taller over Random than over the playlist~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-15, with the two screens side by side: "widok random inaczej renderuje pasek dock …
+random jest wyższy jakimś cudem".*
+
+The now-playing card took its height from its tallest child, and over Random that is the keep
+button — an `IconButton`, which carries Material's 48dp touch target, next to a chevron that is a
+bare 24dp icon. The card has a height of its own now, with room for two lines and for that target,
+so the dock is the same over every screen.
+
+### C53. ~~Leaving Random kept playing the random tune~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-15: switching quickly from Random to the playlist, "dalej gra utwór z random, mimo
+że mam podświetlony mój z listy" — the bar, the title and the information all the playlist's, the
+music not.*
+
+`stopPlayback` cancelled the prefetch and closed what was open, but not the **open in flight**. A
+fetch already running finished after the switch and started its tune over a screen naming another.
+It is cancelled with the rest now.
+
+### C52. ~~A crash while Random advanced~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-15: `IndexOutOfBoundsException: Index -1 out of bounds for length 1`, on the main
+thread, during playback or a change of track.*
+
+`advanceRandom` reads the record by index, and it **suspends twice on the way there** — filling the
+queue asks the database. Start the dice again, or leave for the playlist, while it waits, and it
+resumes against a record that is not its own: the cursor back at -1 and the new session's first pick
+already in the list, which is the length of 1 in the message. A session counter is raised wherever a
+session begins or ends and checked after every wait, and the pick is read rather than indexed.
+
 ### C51. ~~Next rolled the dice while an author's folder was on screen~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14, testing the digression:* in the author's folder "przycisk next/previous powinien

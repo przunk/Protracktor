@@ -661,6 +661,17 @@ class PlaybackController private constructor(private val context: Context) {
     private var randomCursor = -1
 
     /**
+     * Which Random session the work in flight belongs to.
+     *
+     * **The record and the cursor are fields, and the work that reads them suspends** — filling the
+     * queue asks the database. Start a session again, or leave for the playlist, while an advance is
+     * waiting, and it resumes against a record that is not its own: the owner's crash was
+     * `Index -1 out of bounds for length 1`, the cursor reset to -1 and the new session's first pick
+     * already in the list. Raised wherever a session begins or ends; checked after every wait.
+     */
+    private var randomSession = 0
+
+    /**
      * Copies the played part of the history into the state, for the Random view to draw.
      *
      * Called from every place that moves the cursor or edits the record. A single writer would be
@@ -2420,6 +2431,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun openRandom() {
         scope.launch {
+            randomSession++
             randomHistory.clear()
             randomCursor = -1
             randomPlayed = -1
@@ -2513,6 +2525,7 @@ class PlaybackController private constructor(private val context: Context) {
      * because nothing had been decided for it to read. Deciding early is what makes the wait go.
      */
     private suspend fun advanceRandom() {
+        val session = randomSession
         // **Forward walks the record, and rolls only at its end** (owner, 2026-09-10: "next
         // powinien losować tylko gdy jesteśmy na końcu listy").
         //
@@ -2521,6 +2534,7 @@ class PlaybackController private constructor(private val context: Context) {
         // next row, and rolling from the middle of the record would leave a gap between what you
         // are hearing and what you are looking at.
         fillRandomQueue()
+        if (session != randomSession) return
         if (randomCursor >= randomHistory.lastIndex) {
             // Which sentence depends on the scope, because "nothing is indexed" is only true of
             // the unnarrowed dice. The chips are disabled when they would draw nothing, so a
@@ -2542,11 +2556,16 @@ class PlaybackController private constructor(private val context: Context) {
         // Topped up before playing rather than after: `load` reads ahead when it finishes, and it
         // can only read what has already been decided.
         fillRandomQueue()
-        playTransient(randomHistory[randomCursor])
+        if (session != randomSession) return
+        // Read rather than indexed: the checks above say this session is still the one running, and
+        // this says the record still has the row it is pointing at.
+        val pick = randomHistory.getOrNull(randomCursor) ?: return
+        playTransient(pick)
     }
 
     /** Tops the queue up so [READ_AHEAD] picks stand past the cursor. */
     private suspend fun fillRandomQueue() {
+        val session = randomSession
         val short = READ_AHEAD - (randomHistory.lastIndex - randomCursor)
         if (short <= 0) return
         // The scope is read here rather than captured when Random started, so changing it takes
@@ -2573,6 +2592,9 @@ class PlaybackController private constructor(private val context: Context) {
         // A pool smaller than the session can exhaust honestly — forty favourites cannot fill an
         // evening without repeating. Sooner than repeat silently or stop dead, the dice repeats,
         // which is what it did before any of this and what a small pool means.
+        // Drawing asked the database; by now the session may be another one, and these picks belong
+        // to nobody.
+        if (session != randomSession) return
         randomHistory += drawn.ifEmpty {
             catalogues.randomSample(
                 short,
@@ -2691,6 +2713,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun returnToPlaylist() {
         if (!_state.value.awayFromPlaylist) return
         stopPlayback()
+        randomSession++
         randomHistory.clear()
         randomCursor = -1
         randomPlayed = -1
@@ -3950,6 +3973,12 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun stopPlayback() {
+        // **The open in flight goes too** (owner, 2026-09-15: leaving Random for the playlist, "dalej
+        // gra utwór z random" while the list showed one of his own). Everything that calls this is
+        // the user moving on; a fetch that was already running finished afterwards and started the
+        // tune nobody was asking for any more, over a screen that named a different one.
+        openJob?.cancel()
+        openJob = null
         prefetchJob?.cancel()
         prefetched.clear()
         track?.close()
