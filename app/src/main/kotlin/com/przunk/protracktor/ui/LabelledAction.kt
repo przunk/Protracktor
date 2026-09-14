@@ -3,8 +3,11 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +26,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+
+/**
+ * How tall every action pill stands, one word or three.
+ *
+ * Tall enough for the icon, two lines of label and air above and below both, so a name that wraps
+ * changes nothing about the row it is in.
+ */
+internal val ACTION_PILL_HEIGHT = 62.dp
 
 /**
  * An action drawn as an icon with its name underneath.
@@ -91,7 +102,11 @@ internal fun LabelledAction(
         modifier = modifier
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = 3.dp)
-            .defaultMinSize(minWidth = 48.dp, minHeight = 52.dp)
+            .defaultMinSize(minWidth = 48.dp)
+            // **One height for every pill, whatever its name** (`docs/STATUS.md` C47). Sizing to
+            // the label made a one-word action shorter than a two-word one; two lines of label
+            // forced on every pill fixed the heights and pushed the words to the edges instead.
+            .height(ACTION_PILL_HEIGHT)
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(
                 role = Role.Button,
@@ -103,7 +118,10 @@ internal fun LabelledAction(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(horizontal = 6.dp, vertical = 6.dp),
         ) {
             // The same quieter pair as the follow-track navigation button. Using the named
             // content colour with its container keeps contrast intact for dynamic colour schemes.
@@ -117,9 +135,6 @@ internal fun LabelledAction(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 textAlign = TextAlign.Center,
-                // Two lines whatever the name is (`docs/STATUS.md` C47): a pill sized to its label
-                // made "Info" shorter than "Add to playlist", and a row of them read as ragged.
-                minLines = 2,
                 maxLines = 2,
                 modifier = Modifier.padding(top = 2.dp),
             )

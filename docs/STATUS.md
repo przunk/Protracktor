@@ -415,12 +415,27 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C48. ~~The top bar squeezes the playlist's name to fit its buttons~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, with two screenshots: with Save and Discard showing, "nie mieszczą się i
+rozsuwają", and the chip read "Favo…".* The chip and five pills come to about 450dp on a screen some
+360dp wide, so something had to give and what gave was the name — the one thing the bar is about.
+
+A `TopAppBar` is one fixed-height row and cannot wrap, so the playlist screen no longer uses one:
+`PlaylistTopBar` lays the chip and the actions out in a `FlowRow`, which puts the actions on a
+second line when they do not fit and only while there is something to save. The chip has a floor as
+well as a cap, so its name is never the thing that is cut.
+
 ### C47. ~~Now Playing's buttons are not the same height~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14: "funkcje/przyciski w now playing mogłyby mieć od razu dwa wiersze wysokości
 (niektóre pastylki są niższe i inne wyższe)".* `LabelledAction` sizes itself to its label, so a
-one-word action was shorter than a two-word one and the row read as ragged. Its label now takes two
-lines whatever the name is, so the row is a grid of equals.
+one-word action was shorter than a two-word one and the row read as ragged.
+
+**Two attempts.** Forcing two lines of label on every pill did make the heights equal and put the
+words against the top and bottom edges, which the owner sent back. What it is now: one height for
+every pill, whatever the name, with the icon and the label centred between real margins. A long name
+still wraps to two lines and changes nothing about the row.
 
 ### C46. ~~Adding ticked tracks from search closes the search~~ — FIXED 2026-09-14
 
