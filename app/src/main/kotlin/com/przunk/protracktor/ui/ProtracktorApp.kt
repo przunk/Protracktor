@@ -680,26 +680,28 @@ private fun PlaylistTopBar(
                         .fillMaxHeight()
                         .padding(start = 14.dp, end = 10.dp),
                 ) {
-                    Text(
-                        text = state.activePlaylistName ?: stringResource(R.string.playlist_default_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (state.queue.tracks.isNotEmpty()) {
+                    // **The text takes every pixel the chevron does not**, so the chevron is at the
+                    // right edge whatever the name is. Giving the name a weight it need not fill
+                    // left the slack unclaimed and the chevron floating in the middle of the bar.
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = pluralStringResource(
-                                R.plurals.track_count,
-                                state.queue.tracks.size,
-                                state.queue.tracks.size,
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
+                            text = state.activePlaylistName ?: stringResource(R.string.playlist_default_name),
+                            style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
-                            modifier = Modifier.padding(start = 10.dp),
+                            overflow = TextOverflow.Ellipsis,
                         )
+                        if (state.queue.tracks.isNotEmpty()) {
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.track_count,
+                                    state.queue.tracks.size,
+                                    state.queue.tracks.size,
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                            )
+                        }
                     }
-                    Spacer(Modifier.weight(1f))
                     Icon(imageVector = PlayerIcons.DropDown, contentDescription = null)
                 }
             }
@@ -765,12 +767,12 @@ private fun PlaylistTopBar(
 }
 
 /**
- * The name's own row, which is shorter than the pill it replaced.
+ * The name's own row: the name, and under it what the playlist holds.
  *
- * The count moved beside the name instead of under it, so one line is enough — and the row the
- * actions have to themselves is what stops them taking the name's width (`docs/STATUS.md` C48).
+ * Two lines, which the full width affords — the row the actions have to themselves is what stops
+ * them taking the name's space (`docs/STATUS.md` C48).
  */
-private val PLAYLIST_CHIP_HEIGHT = 46.dp
+private val PLAYLIST_CHIP_HEIGHT = 58.dp
 
 
 
