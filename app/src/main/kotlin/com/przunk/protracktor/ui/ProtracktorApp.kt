@@ -164,6 +164,19 @@ fun ProtracktorApp(
         viewModel.openDomain(BrowseDomain.ROOT)
         showBrowse = true
     }
+    // **Out of Browse, and back to whatever sent us there** (`docs/BACKLOG.md` A41). `browseBack`
+    // answers false when there is no level left to climb -- which for "More from this author" is
+    // straight away, since a jump is one step rather than a descent. That is where a digression
+    // ends: the dice is waiting, so Back returns to its record rather than to the playlist.
+    val leaveBrowse = {
+        if (!viewModel.browseBack()) {
+            if (state.diceWaiting) {
+                viewModel.resumeDice()
+                showRandom = true
+            }
+            showBrowse = false
+        }
+    }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
 
     // The chooser needs an activity; preparing what is shared needed a fetch. The controller does
@@ -256,7 +269,14 @@ fun ProtracktorApp(
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     } else if (showBrowse) {
-                        IconButton(onClick = { if (!viewModel.browseBack()) showBrowse = false }) {
+                        IconButton(onClick = leaveBrowse) {
+                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                        }
+                    } else if (showRandom) {
+                        // The same arrow Browse has (owner, 2026-09-14): the two screens sit side by
+                        // side and only one of them offered a way out of its bar, so their headings
+                        // did not line up either.
+                        IconButton(onClick = { viewModel.returnToPlaylist(); showRandom = false }) {
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     }
@@ -265,6 +285,8 @@ fun ProtracktorApp(
                     if (showSettings) {
                         Text(stringResource(R.string.settings_title))
                     } else if (showBrowse) {
+                        // The screen names itself; whose folder a digression is in is said by the
+                        // header under the bar, in the shape the dice's own heading has.
                         Text(stringResource(R.string.browse_title))
                     } else if (showRandom) {
                         // The screen says "Playing at random" over its own list, so the bar stays
@@ -282,7 +304,15 @@ fun ProtracktorApp(
                         LabelledAction(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
-                            onClick = { showBrowse = false },
+                            // **Out, not back** (owner, 2026-09-14). During a digression both
+                            // screens counted themselves showing and drew this button twice. There
+                            // is one: Back returns to whatever sent you here — the dice — and this
+                            // leaves for the playlist whatever is waiting.
+                            onClick = {
+                                viewModel.returnToPlaylist()
+                                showRandom = false
+                                showBrowse = false
+                            },
                             haptic = null,
                             modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
@@ -290,7 +320,7 @@ fun ProtracktorApp(
                     // **Leaving ends the session**, which is what it has always done -- the record
                     // goes, the tunes stay in the history, and the playlist is exactly where it was
                     // left because nothing ever wrote to it.
-                    if (showRandom) {
+                    if (showRandom && !showBrowse) {
                         LabelledAction(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
@@ -407,6 +437,12 @@ fun ProtracktorApp(
                 // Marks the row you are hearing. Browse plays through the results queue, so the
                 // current track is the queue's, not the playlist's.
                 playingId = state.current?.id,
+                // What is being fetched, so its row says so by breathing (`docs/WISHLIST.md` B32).
+                loadingId = state.current?.id?.takeIf { state.loadingTrack },
+                // Whose folder, while the dice waits under it — from the moment the jump lands, not
+                // only once something here is playing (owner, 2026-09-14).
+                digressionAuthor = browse.openAuthor
+                    ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting) },
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
@@ -469,7 +505,7 @@ fun ProtracktorApp(
     }
 
     if (showBrowse) {
-        BackHandler { if (!viewModel.browseBack()) showBrowse = false }
+        BackHandler(onBack = leaveBrowse)
     }
 
     // Back out of Random is the same act as the button: the session ends and the playlist is where

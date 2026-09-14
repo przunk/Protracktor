@@ -206,6 +206,8 @@
     <string name="search_scope_local">My library</string>
 
     <string name="browse_title">Add music</string>
+
+    <string name="browsing_author">Browsing author</string>
     <string name="browse_body">Pick a folder and everything playable inside it is added, subfolders included.</string>
 
     <string name="field_year">Year</string>

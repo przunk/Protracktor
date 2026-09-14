@@ -10,6 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -110,6 +117,15 @@ fun BrowseScreen(
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
     playingId: String?,
+    loadingId: String?,
+    /**
+     * Whose folder this is, while a Random session waits under it (`docs/BACKLOG.md` A41), or null.
+     *
+     * The heading it draws is the dice's own shape — icon, what this is, and under it which one —
+     * because a digression is the same kind of state: something plays from somewhere that is not
+     * the playlist, and there is a way back.
+     */
+    digressionAuthor: String? = null,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -140,6 +156,38 @@ fun BrowseScreen(
     ) { transition() }
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
+        if (digressionAuthor != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                // The dice's own header height, so switching between the two screens does not move
+                // the icon (owner, 2026-09-14).
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(SESSION_HEADER_HEIGHT)
+                    .padding(horizontal = 16.dp),
+            ) {
+                Icon(
+                    imageVector = PlayerIcons.Detour,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.browsing_author),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = digressionAuthor,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
         // **The banner that used to live here is gone** (owner, 2026-09-10): "jest to redundantne
         // i psuje UI (przeskakuje na czas istnienia paska)". It named the running downloads and
         // drew an indeterminate bar above the list, so starting one pushed the whole list down and
@@ -162,6 +210,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -180,6 +229,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -200,6 +250,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -214,6 +265,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -317,29 +369,62 @@ private fun DomainRow(
             currentLongClick?.invoke()
         }
     }
-    ListItem(
-        headlineContent = { Text(title, style = MaterialTheme.typography.titleMedium) },
-        supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
-        leadingContent = {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
-        },
-        // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so a
-        // row with nothing to hold does not advertise a long press to TalkBack that does nothing.
-        modifier = if (onLongClick == null) {
-            Modifier.clickable(onClick = rememberedClick)
-        } else {
-            // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at length:
-            // a fresh lambda restarts the gesture detector, and a detector restarted under a finger
-            // that is still down starts timing another long press. This row has not been held long
-            // enough to show it, which is not a reason to leave it.
-            Modifier.combinedClickable(
-                onClick = rememberedClick,
-                onLongClickLabel = longClickLabel,
-                onLongClick = rememberedLongClick,
+    // **A row of its own rather than a `ListItem`, because these rows must not change size.** The
+    // Random row's words depend on what the dice is set to, and a `ListItem` grows with them: with
+    // "everything" the second line wrapped, the row got taller, the icon sat above centre and every
+    // row under it moved a few pixels (owner, 2026-09-14). A fixed height tall enough for two lines
+    // makes the list stand still whatever the scope says.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(DOMAIN_ROW_HEIGHT)
+            // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so
+            // a row with nothing to hold does not advertise a long press to TalkBack that does
+            // nothing.
+            .then(
+                if (onLongClick == null) {
+                    Modifier.clickable(onClick = rememberedClick)
+                } else {
+                    // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at
+                    // length: a fresh lambda restarts the gesture detector, and a detector
+                    // restarted under a finger that is still down starts timing another long press.
+                    Modifier.combinedClickable(
+                        onClick = rememberedClick,
+                        onLongClickLabel = longClickLabel,
+                        onLongClick = rememberedLongClick,
+                    )
+                }
             )
-        },
-    )
+            .padding(horizontal = 16.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
+
+/**
+ * How tall the rows at the root of Browse stand, whatever their words.
+ *
+ * Room for a title and two lines under it: the Random row says what the dice is set to, and that
+ * sentence is a line longer for some scopes than for others.
+ */
+private val DOMAIN_ROW_HEIGHT = 78.dp
 
 /**
  * Where the dice picks from.
@@ -436,6 +521,7 @@ private fun LocalDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -499,6 +585,7 @@ private fun LocalDomain(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -564,6 +651,7 @@ private fun OnlineDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -586,6 +674,7 @@ private fun OnlineDomain(
             scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
+            loadingId = loadingId,
             onPlay = onPlay,
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -859,6 +948,7 @@ private fun SearchDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -910,6 +1000,7 @@ private fun SearchDomain(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -967,6 +1058,7 @@ private fun HistoryDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -1004,6 +1096,7 @@ private fun HistoryDomain(
             scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
+            loadingId = loadingId,
             onPlay = onPlay,
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -1060,6 +1153,7 @@ private fun Selectable(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -1180,6 +1274,7 @@ private fun Selectable(
                         ticked = track.id in selected,
                         selecting = selecting,
                         playing = track.id == playingId,
+                        loading = track.id == loadingId,
                         onPlay = { onPlay(index) },
                         onToggle = {
                             selected = if (track.id in selected) selected - track.id
@@ -1210,6 +1305,16 @@ private fun Selectable(
                 // and the Random record. These are the lists you scroll a long way down while
                 // something plays -- a folder, a search, an author's other tunes -- which is why the
                 // follow-track button was added here too, and why its replacement is here as well.
+                // **Arriving from the tune itself** (owner, 2026-09-14). "More from this author" is
+                // a jump made *from* something playing, so the folder opens with that tune on
+                // screen rather than at the top of eighty rows. Only on a jump: walking into a
+                // folder is not a request to be taken anywhere (`ListScrolling`'s own rule).
+                LaunchedEffect(browse.openAuthor, browse.tracks.size) {
+                    if (!browse.arrivedByJump) return@LaunchedEffect
+                    val at = browse.tracks.indexOfFirst { it.id == playingId }
+                    if (at >= 0) listState.revealRow(at)
+                }
+
                 KeepRowInView(
                     listState = listState,
                     index = browse.tracks.indexOfFirst { it.id == playingId }.takeIf { it >= 0 },
@@ -1291,6 +1396,7 @@ private fun BrowseTrackRow(
     ticked: Boolean,
     selecting: Boolean,
     playing: Boolean,
+    loading: Boolean,
     onPlay: () -> Unit,
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
@@ -1386,6 +1492,25 @@ private fun BrowseTrackRow(
             // with one, and a list whose rows change height when a checkbox arrives is the defect
             // this is here to prevent.
             .heightIn(min = ROW_HEIGHT)
+            // **Fetching says so by breathing** (`docs/WISHLIST.md` B32), here as in the playlist:
+            // these are the lists a tune is most often started from. Allocated only for the row
+            // being fetched, so three hundred others still scroll without a layer each.
+            .then(
+                if (!loading) {
+                    Modifier
+                } else {
+                    val breath = rememberInfiniteTransition(label = "fetching").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0.45f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 550, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "breath",
+                    )
+                    Modifier.graphicsLayer { alpha = breath.value }
+                }
+            )
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
             // into a scroll is claimed by the list before it ever becomes a long press. Both matter:
             // the owner's complaint about another player is a long press firing at a twentieth of a

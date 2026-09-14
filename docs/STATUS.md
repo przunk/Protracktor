@@ -415,6 +415,27 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C51. ~~Next rolled the dice while an author's folder was on screen~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, testing the digression:* in the author's folder "przycisk next/previous powinien
+przesuwać na tej liście (a nie losować random); czyli kontekst się źle przełącza".
+
+A digression leaves the dice's tune playing, and the transport asks about the transient track before
+it asks about a results queue — so next rolled another pick while the author's list filled the
+screen. Walking into the folder now sets that queue **without playing anything**, pointing at the
+tune the jump was made from, and the transport prefers it while a dice is waiting. The dice keeps
+its record and its cursor, and Back still returns to it.
+
+### C50. ~~Browse's rows changed height with the words in them~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: the Random row's icon "nie jest na środku. Jej położenie zależy od wybranego
+filtra", and with two lines of text "rozjeżdża się wszystko na dole o parę pikseli".*
+
+`DomainRow` was a Material `ListItem`, which is as tall as its content. The Random row says what the
+dice is set to, and that sentence is a line longer for some scopes than for others — so the row grew,
+its icon sat above centre, and every row under it moved. The rows are now a fixed height with room
+for two lines, the icon centred in it, and the text ellipsised rather than allowed to push.
+
 ### C49. ~~The Random view stayed up while something else was playing~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14, from a session he described step by step:* in Random he pressed "more from this

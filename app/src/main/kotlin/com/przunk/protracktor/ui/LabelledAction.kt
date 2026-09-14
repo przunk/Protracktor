@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
  * Tall enough for the icon, two lines of label and air above and below both, so a name that wraps
  * changes nothing about the row it is in.
  */
-internal val ACTION_PILL_HEIGHT = 62.dp
+internal val ACTION_PILL_HEIGHT = 72.dp
 
 /**
  * The same pill, for the top bar's row of actions.
@@ -102,6 +102,7 @@ internal fun LabelledAction(
     haptic: (Haptics.() -> Unit)? = { press() },
     /** The top bar's row: shorter, with a smaller icon. Elsewhere the full-sized pill. */
     slim: Boolean = false,
+
 ) {
     val haptics = rememberHaptics()
     val currentClick by rememberUpdatedState(onClick)
@@ -127,9 +128,11 @@ internal fun LabelledAction(
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = 3.dp)
             .defaultMinSize(minWidth = if (slim) SLIM_MIN_WIDTH else 48.dp)
-            // **One height for every pill, whatever its name** (`docs/STATUS.md` C47). Sizing to
-            // the label made a one-word action shorter than a two-word one; two lines of label
-            // forced on every pill fixed the heights and pushed the words to the edges instead.
+            // **One height for every pill, whatever its name** (`docs/STATUS.md` C47), and it is a
+            // plain number rather than anything that depends on the row around it. Two attempts at
+            // cleverness here cost the owner two builds: two lines of label forced on every pill
+            // pushed the words against the edges, and filling the row's height turned the Random
+            // header into a window-tall banner, because that row is offered the whole screen.
             .height(if (slim) ACTION_PILL_HEIGHT_SLIM else ACTION_PILL_HEIGHT)
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(

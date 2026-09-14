@@ -89,6 +89,11 @@ object PlayerIcons {
     val Back: ImageVector by lazy {
         icon("Back", "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z")
     }
+    /** A digression: the way you were going, and the turn taken off it. Drawn for this, not borrowed. */
+    val Detour: ImageVector by lazy {
+        icon("Detour", "M3 5h7a5 5 0 0 1 5 5v6h3l-4.5 5.5L9 16h3v-6a2 2 0 0 0-2-2H3V5z")
+    }
+
     val Folder: ImageVector by lazy {
         icon("Folder", "M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z")
     }

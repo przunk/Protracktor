@@ -1959,6 +1959,84 @@ if (window.__api) {
   check(sections().length === 0, 'a refusal clears them with the rest of Now Playing');
 }
 
+// --- the dice waits while you browse an author (docs/BACKLOG.md A41) -----------------------------
+if (window.__api) {
+  console.log('\ndigression: the dice waits underneath:');
+  const api = window.__api;
+  const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
+  const archive = await import(path.resolve('web/src/catalogue.js'));
+  const { catalogue: store, playlists: saved } = await import(path.resolve('web/src/store.js'));
+
+  const built = archive.toRecords(['1\tProtracker/Trio/a.mod', '1\tProtracker/Trio/b.mod',
+                                   '1\tProtracker/Trio/c.mod'].join('\n'));
+  await store.clear('modland:');
+  await store.putAll(built.records, 100);
+  await store.putAll([{ key: 'modland:meta', tracks: built.tracks, total: built.tracks, phoneOnly: 0,
+                        buckets: built.buckets, formats: built.formats, fingerprint: 'x' }]);
+  await saved.save({ id: 'p-dig', name: 'Mine', tracks: [{ url: 'https://example.test/kept.mod', name: 'kept.mod' }], index: 0 });
+  await api.switchTo('p-dig');
+
+  api.useRandomSource(() => 0.1);
+  await api.openRandom();
+  await settle();
+  const record = api.queueNow();
+  const cursor = api.indexNow();
+  check(api.randomState() != null && record.length > 0, 'the dice is rolling, with a record');
+
+  // The digression, by the way it is really reached: the row's own menu.
+  const scrolls = [];
+  const original = window.HTMLElement.prototype.scrollIntoView;
+  window.HTMLElement.prototype.scrollIntoView = function stub() { scrolls.push(this.dataset.url); };
+  window.document.querySelector('#queue li .rowmenu').click();
+  [...$('menu').children].find((b) => b.textContent === 'More from this author').click();
+  await settle();
+  const marked = [...$('browselist').children].filter((li) => li.classList.contains('playing'));
+  check(!$('browse').hidden && marked.length === 1 && marked[0].dataset.url === record[cursor],
+    'More from this author opens the folder with the tune that is playing marked');
+  check(scrolls.includes(record[cursor]), 'and brings it on screen rather than opening at the top');
+  if (original) window.HTMLElement.prototype.scrollIntoView = original;
+  else delete window.HTMLElement.prototype.scrollIntoView;
+
+  window.document.querySelector('#browselist li.btrack').click();
+  await settle();
+  const session = api.awayState();
+  check(session?.kind === 'browse' && session.dice != null,
+    'playing one of them keeps the dice underneath rather than ending it');
+  check($('sessiontitle').textContent === 'Browsing author' && $('randomscope').textContent === 'Trio'
+        && !$('randomscope').hidden && $('playlistname').textContent === 'Browsing',
+    'and the heading says whose folder this is, in the two lines the dice\'s heading has');
+  check($('random-leave').textContent.includes('Random') && $('random-leave').querySelector('svg'),
+    'the way back offers the dice, not the playlist');
+  check(session.stash.queue.map((t) => t.url).join() === 'https://example.test/kept.mod',
+    'the playlist is still waiting under both of them');
+
+  // Back, out of the author's folder: the dice, where it was, paused.
+  $('browseback').click();
+  await settle();
+  check(api.randomState() != null && api.awayState() == null, 'Back from the author\'s folder returns to the dice');
+  check(api.queueNow().join() === record.join() && api.indexNow() === cursor,
+    'with the record it had and the cursor where it was');
+  check($('sessiontitle').textContent === 'Playing at random' && $('sub').textContent === 'press play',
+    'paused on that pick, not playing something new');
+  check($('browse').hidden, 'and Browse is closed');
+
+  // A playlist chosen while digressing ends both: a way back that leads nowhere is worse than none.
+  api.showPanel('browse');
+  await api.browseTo(['modland', 'Protracker', 'Trio']);
+  window.document.querySelector('#browselist li.btrack').click();
+  await settle();
+  check(api.awayState()?.dice != null, 'digressing again');
+  await api.choosePlaylist('p-dig');
+  await settle();
+  check(api.awayState() == null && api.randomState() == null && api.queueNow().join() === 'https://example.test/kept.mod',
+    'choosing a playlist ends the digression and the dice with it');
+
+  await store.clear('modland:');
+  await saved.remove('p-dig');
+  await api.switchTo('phone');
+  api.useRandomSource(Math.random);
+}
+
 // --- the gear, left of shuffle (owner, 2026-09-14) ------------------------------------------------
 if (window.__api) {
   console.log('\nthe page\'s settings:');

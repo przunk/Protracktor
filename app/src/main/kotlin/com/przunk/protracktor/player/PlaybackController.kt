@@ -126,6 +126,14 @@ data class PlayerUiState(
      * rewrite the list you were keeping.
      */
     val resultsQueue: PlayQueue? = null,
+    /**
+     * A Random session waiting under a digression (`docs/BACKLOG.md` A41).
+     *
+     * "More from this author" from the dice moves playback to that folder; the record and the
+     * cursor stay where they are, and this says there is something to go back to. Back out of the
+     * folder returns to it; a playlist, an external file or a link end it for good.
+     */
+    val diceWaiting: Boolean = false,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
     /**
@@ -1784,6 +1792,18 @@ class PlaybackController private constructor(private val context: Context) {
             val found = catalogues.tracks(located.catalogueId, located.format, located.author)
                 .map(::toTrackRef)
             _browse.update { it.copy(tracks = found, loading = false) }
+
+            // **The transport follows the folder you walked into** (owner, 2026-09-14). A digression
+            // leaves the dice's tune playing, so next rolled another one while the author's list was
+            // on screen. The queue is set here **without playing anything**, pointing at the tune the
+            // jump was made from, so next and previous walk the author. The dice keeps its record
+            // and its cursor and is still what Back returns to.
+            if (_state.value.randomMode || _state.value.diceWaiting) {
+                val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
+                _state.update {
+                    it.copy(resultsQueue = PlayQueue(tracks = found).startAt(at), diceWaiting = true)
+                }
+            }
         }
     }
 
@@ -2404,7 +2424,9 @@ class PlaybackController private constructor(private val context: Context) {
             randomCursor = -1
             randomPlayed = -1
             failedRandomPicks = 0
-            _state.update { it.copy(randomPicks = emptyList(), randomIndex = -1, randomExhausted = false) }
+            _state.update {
+                it.copy(randomPicks = emptyList(), randomIndex = -1, randomExhausted = false, diceWaiting = false)
+            }
             advanceRandom()
         }
     }
@@ -2598,9 +2620,39 @@ class PlaybackController private constructor(private val context: Context) {
                 randomHasPrevious = false,
                 playing = false,
                 positionSeconds = 0.0,
+                // Entered from the dice, the dice waits rather than ending; walking the results
+                // with next keeps it waiting.
+                diceWaiting = it.randomMode || it.diceWaiting,
             )
         }
         load(ref)
+    }
+
+    /**
+     * Back to the dice that was waiting under a digression (`docs/BACKLOG.md` A41).
+     *
+     * **Paused, on the pick it was on** — the owner's decision, "bo inaczej operator dostanie
+     * szoku". Nothing is loaded, so the next press of play goes through [pendingRetry] and starts
+     * that tune; next rolls a new one. What played during the digression is in the history, as
+     * everything played here is.
+     */
+    fun resumeDice() {
+        if (!_state.value.diceWaiting) return
+        val pick = randomHistory.getOrNull(randomCursor) ?: return
+        stopPlayback()
+        pendingRetry = { playTransient(pick) }
+        _state.update {
+            it.copy(
+                resultsQueue = null,
+                transient = pick,
+                diceWaiting = false,
+                randomHasPrevious = randomCursor > 0,
+                playing = false,
+                positionSeconds = 0.0,
+                durationSeconds = 0.0,
+                metadata = emptyMap(),
+            )
+        }
     }
 
     /**
@@ -2647,6 +2699,7 @@ class PlaybackController private constructor(private val context: Context) {
                 transient = null,
                 externalOpen = false,
                 resultsQueue = null,
+                diceWaiting = false,
                 randomHasPrevious = false,
                 randomPicks = emptyList(),
                 randomIndex = -1,
@@ -3213,7 +3266,8 @@ class PlaybackController private constructor(private val context: Context) {
     fun nextFile() {
         val now = _state.value
         if (now.externalMode) return
-        if (now.transient != null) return randomNext()
+        // The dice waiting under a digression does not own the transport; the folder on screen does.
+        if (now.transient != null && !now.diceWaiting) return randomNext()
         now.resultsQueue?.let { results ->
             if (results.hasNext) playFromResultsQueue(results.next())
             return
@@ -3235,7 +3289,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun previousFile() {
         val now = _state.value
         if (now.externalMode) return
-        if (now.transient != null) return randomPrevious()
+        if (now.transient != null && !now.diceWaiting) return randomPrevious()
         now.resultsQueue?.let { results ->
             if (results.hasPrevious) playFromResultsQueue(results.previous())
             return
@@ -3516,6 +3570,8 @@ class PlaybackController private constructor(private val context: Context) {
             it.copy(
                 transient = ref,
                 externalOpen = external,
+                // A file from another app is not a digression to come back from.
+                diceWaiting = if (external) false else it.diceWaiting,
                 randomHasPrevious = if (external) false else randomCursor > 0,
                 playing = false,
                 positionSeconds = 0.0,
