@@ -15,6 +15,36 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A40. Protracktor links open in the app — **parked 2026-09-14, waiting for a fixed address**
+
+*Owner, 2026-09-14: "rozpoznawanie linków do protracktora i jeśli jest APK, to otwierać w niej".*
+The fragment survives the trip into an app intact, so that is not the obstacle. The address is:
+Android binds an app to a **named** host, verified by a file served from it, and the page's tunnel
+takes a new random name every time it starts. The two shapes that work are a scheme of our own
+(`protracktor://…`), which an https link in a chat will never use, and App Links against one stable
+host with `assetlinks.json` on it. Worth doing when the page has a permanent home; brittle before
+that.
+
+## A39. An MP3's cover as a thumbnail — **parked 2026-09-14**
+
+*Owner, 2026-09-14: "okładka albumu MP3 jeśli istnieje jako miniaturka gdzieś widoku tracków".*
+Self-contained but not small: the engine reads no tags at all, so it needs an ID3v2 reader for the
+embedded picture, somewhere to cache what it decodes, and the picture shown in the rows, in Now
+Playing and in the notification. It reaches MP3s only, which is a thin slice of a library of
+modules — which is why it waits behind the three the owner chose.
+
+## A38. Share several tunes as one link — **agreed 2026-09-14**
+
+*Owner, 2026-09-14: "zaznaczyć kilka utworów i kliknąć share in protracktor, żeby wysłać link do
+grania tej listy".* The machinery is there: `QueueLink.pack` already packs a whole queue, and
+`play:` already marks a link as something to play rather than a queue to take over. What is missing
+is the three joins — the action on the selection bar (phone and page), a `play:` link that carries
+more than one tune, and the page playing the lot as a session beside the playlist rather than only
+the first of them.
+
+**The limit is arithmetic**: about 2,000 characters is what a link can be everywhere, which is some
+fifty tracks; past that `pack` already drops the names of files that cannot travel and says it did.
+
 ## A37. Comments cut back to implementation facts — **agreed, not started**
 
 *Owner, 2026-09-14: he does not want entries like "owner: quote" in the source — implementation

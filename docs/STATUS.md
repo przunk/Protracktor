@@ -415,6 +415,20 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C47. Now Playing's buttons are not the same height — **OPEN**
+
+*Owner, 2026-09-14: "funkcje/przyciski w now playing mogłyby mieć od razu dwa wiersze wysokości
+(niektóre pastylki są niższe i inne wyższe)".* `LabelledAction` sizes itself to its label, so a
+one-word action is shorter than a two-word one and the row reads as ragged. Every pill should stand
+two lines tall whatever its name.
+
+### C46. Adding ticked tracks from search closes the search — **OPEN**
+
+*Owner, 2026-09-14: after adding several ticked tracks to a playlist, the search is gone and the
+playlist is showing behind the glass.* `ProtracktorApp` sets `showBrowse = false` in the Browse
+screen's add action, so adding leaves Browse; what is left on screen is the playlist, covered by the
+scrim because what plays is a search result. Adding should keep the list it was made from.
+
 ### C45. ~~The seek bar's position dot is nearly invisible~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14: "nieprzesuwalnego handla na pasku odtwarzania prawie nie widać (kropka, która
