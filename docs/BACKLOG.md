@@ -15,6 +15,31 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A41. Digression mode: the dice waits while you browse an author — **agreed 2026-09-14**
+
+*Owner, 2026-09-14, after C49: "odtwarzam sobie random … nagle mi się jakiś spodoba. Wchodzę w more
+from this author i słucham sobie od niego cudeniek, wtedy robie wstecz … i wraca do random".*
+
+**Today a digression ends the session**: playing a tune from a Browse list moves playback to that
+list, and the dice is finished (C49 made the screen agree with that instead of lying about it).
+This makes the dice **wait** instead.
+
+- **Entered** by "More from this author" from a Random session.
+- **While digressing the heading says what is going on**, in the shape the dice's own heading has:
+  "Browsing author — <name>" where Random says "Playing at random — everything".
+- **Back returns to the dice**: the author's tune stops, the record comes back with the cursor where
+  it was, **paused** — "bo inaczej operator dostanie szoku". Play resumes that pick; next rolls.
+- **One level of digression.** Inside the author's folder, sub-folders may be opened and left again
+  up to that folder, and no higher: the way out above it is the way back to the dice.
+- **The page does the same and looks the same.** It currently ends the dice outright when a Browse
+  tune plays, so this changes both runtimes together.
+- **It ends for good** when something else takes the player: a playlist chosen, a file handed over by
+  another app, a link opened. A way back that leads nowhere is worse than none.
+
+The record and the cursor already survive a digression on the phone (`randomHistory`,
+`randomCursor`); what is missing is the way back and the heading. On the page the dice session is
+replaced by the Browse session, so there it needs a stash, the way the playlist already has one.
+
 ## A40. Protracktor links open in the app — **parked 2026-09-14, waiting for a fixed address**
 
 *Owner, 2026-09-14: "rozpoznawanie linków do protracktora i jeśli jest APK, to otwierać w niej".*
