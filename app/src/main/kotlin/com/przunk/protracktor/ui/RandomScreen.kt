@@ -106,6 +106,8 @@ fun RandomScreen(
             // By position, because the dice may legitimately give the same tune twice out of a
             // small pool and two rows with one key is a crash, not a blemish.
             keyOf = { index, track -> "$index:${track.id}" },
+            // A pick is fetched before it is heard, and the row says so by breathing.
+            loadingCurrent = state.loadingTrack,
             // The cursor, not the track: the record can hold one tune twice, and moving between
             // the two copies must still count as moving. Keeping the row on screen lives in
             // `PlaylistBody` now, shared with every other list (`KeepRowInView`).

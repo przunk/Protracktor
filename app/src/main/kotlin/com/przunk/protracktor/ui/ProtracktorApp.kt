@@ -282,11 +282,31 @@ fun ProtracktorApp(
                         // heading names what it picks from; this names the author (A41).
                         val author = browse.openAuthor
                         if (state.diceWaiting && author != null) {
-                            Text(
-                                text = stringResource(R.string.browsing_author, author),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                            // The dice's own heading in miniature: the icon, what this is, and
+                            // under it which one — rather than a name after a dash (owner,
+                            // 2026-09-14).
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = PlayerIcons.Detour,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.browsing_author),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        maxLines = 1,
+                                    )
+                                    Text(
+                                        text = author,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         } else {
                             Text(stringResource(R.string.browse_title))
                         }

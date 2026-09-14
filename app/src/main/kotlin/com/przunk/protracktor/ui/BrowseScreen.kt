@@ -1243,6 +1243,16 @@ private fun Selectable(
                 // and the Random record. These are the lists you scroll a long way down while
                 // something plays -- a folder, a search, an author's other tunes -- which is why the
                 // follow-track button was added here too, and why its replacement is here as well.
+                // **Arriving from the tune itself** (owner, 2026-09-14). "More from this author" is
+                // a jump made *from* something playing, so the folder opens with that tune on
+                // screen rather than at the top of eighty rows. Only on a jump: walking into a
+                // folder is not a request to be taken anywhere (`ListScrolling`'s own rule).
+                LaunchedEffect(browse.openAuthor, browse.tracks.size) {
+                    if (!browse.arrivedByJump) return@LaunchedEffect
+                    val at = browse.tracks.indexOfFirst { it.id == playingId }
+                    if (at >= 0) listState.revealRow(at)
+                }
+
                 KeepRowInView(
                     listState = listState,
                     index = browse.tracks.indexOfFirst { it.id == playingId }.takeIf { it >= 0 },

@@ -10,6 +10,20 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B32. A row being fetched breathes — DONE 2026-09-14
+
+*Owner, 2026-09-14: while a track is loading it is marked on the list, which is right, "ale powinien
+migać takim fadein/fadeout w oscylacji sekundowej, żeby było widać, że się wczytuje".*
+
+Marking says "this one"; what a download has to add is "still working", and a network fetch is
+seconds. Both runtimes now breathe the row at about a second a cycle — the page in CSS, the phone
+with an animation on the row that is only allocated while one is being fetched, the same guard the
+drag layer has.
+
+**The phone's Browse rows do not**, because the list there does not know what is loading: it takes a
+`BrowseState`, deliberately, so that the position ticking five times a second cannot recompose three
+hundred rows. Worth doing when something else needs that flag there.
+
 ## B32. Modland's `/incoming/` is not in `allmods.zip`, and neither app can see it
 
 *Owner, 2026-09-10, by finding a file we could not find:*

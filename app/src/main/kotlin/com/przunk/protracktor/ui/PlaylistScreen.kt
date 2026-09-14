@@ -49,6 +49,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -95,7 +101,10 @@ fun PlaylistScreen(
     // still have nothing to show — a file another app handed us, and a search result playing.
     if (state.awayFromPlaylist && !state.randomMode) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
+            PlaylistBody(
+                state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {},
+                loadingCurrent = false, contentPadding = contentPadding, enabled = false,
+            )
             AwayScrim(
                 externalMode = state.externalMode,
                 onReturnToPlaylist = onReturnToPlaylist,
@@ -127,6 +136,7 @@ fun PlaylistScreen(
         contentPadding = contentPadding,
         enabled = true,
         modifier = modifier,
+        loadingCurrent = state.loadingTrack,
     )
 }
 
@@ -150,6 +160,8 @@ internal fun PlaylistBody(
     onAddToOtherPlaylist: (TrackRef) -> Unit,
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
     onRemoveMany: (List<Int>) -> Unit,
+    /** Whether the row the queue points at is being fetched, so it can say so by breathing. */
+    loadingCurrent: Boolean = false,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -217,6 +229,7 @@ internal fun PlaylistBody(
                 index = index,
                 track = track,
                 playing = index == currentIndex,
+                loading = loadingCurrent && index == currentIndex,
                 enabled = enabled,
                 dragging = track.id == draggingId,
                 dragOffset = if (track.id == draggingId) dragOffset else 0f,
@@ -405,6 +418,7 @@ private fun TrackRow(
     index: Int,
     track: TrackRef,
     playing: Boolean,
+    loading: Boolean,
     enabled: Boolean,
     dragging: Boolean,
     dragOffset: Float,
@@ -553,6 +567,27 @@ private fun TrackRow(
             // for every row a fling brings past. Browse's rows have no such modifier, which is why
             // three hundred of them scroll smoothly while twenty-two of these did not. At most one
             // row is ever dragged, so at most one layer is ever needed.
+            // **A row being fetched breathes** (owner, 2026-09-14). It is already marked as the one
+            // that was chosen; what a download has to add is "still working". Guarded like the drag
+            // layer above, and for the same reason: at most one row is ever being fetched.
+            .then(
+                if (!loading) {
+                    Modifier
+                } else {
+                    val breath = rememberInfiniteTransition(label = "fetching").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0.45f,
+                        animationSpec = infiniteRepeatable(
+                            // Half a cycle each way, so a breath is about a second: slow enough to
+                            // read as working rather than as a blinking fault.
+                            animation = tween(durationMillis = 550, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "breath",
+                    )
+                    Modifier.graphicsLayer { alpha = breath.value }
+                }
+            )
             .then(
                 if (dragging) {
                     Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset }

@@ -484,6 +484,9 @@ async function showAuthorFolder(entry) {
   browsePath = folder;
   showPanel('browse');
   await renderBrowse();
+  // **On screen, not somewhere below the fold.** You came here from that tune, and an author with
+  // eighty of them would otherwise open at the top with no sign of the one you were listening to.
+  revealRow(markPlayingIn($('browselist'), entry.url));
 }
 
 /** The machine the file is for, from its name, or '' -- the phone's `Platforms.forFileName`. */
@@ -1244,15 +1247,17 @@ function showSessionView(kind) {
   const digressing = kind === 'browse' && !!away?.dice;
   if (kind) {
     const { title, icon } = SESSION[kind];
-    $('sessiontitle').textContent = digressing ? `Browsing author — ${away.author}` : title;
-    $('sessionicon').innerHTML = iconSvg(digressing ? ICON.folder : icon())
+    $('sessiontitle').textContent = digressing ? 'Browsing author' : title;
+    $('sessionicon').innerHTML = iconSvg(digressing ? ICON.detour : icon())
       .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
   // Back to the dice rather than out to the playlist, while there is a dice to go back to.
   $('random-leave').innerHTML = iconSvg(digressing ? ICON.dice : ICON.playlist)
     + (digressing ? 'Random' : 'Playlist');
-  // What the dice picks from means nothing for History, and neither does its Filter.
-  $('randomscope').hidden = kind !== 'random';
+  // The line under the heading: what the dice picks from, or whose folder this is -- the same shape
+  // for both, which is what the owner asked for rather than a name after a dash.
+  if (digressing) $('randomscope').textContent = away.author;
+  $('randomscope').hidden = kind !== 'random' && !digressing;
   $('random-filter').hidden = kind !== 'random';
   // **The chip stays usable** (owner, 2026-09-11: "intuicyjnie wydaje się być możliwe wyjść do
   // playlist"). The phone hides it here; the page lets it name where you are and choose where to go,
@@ -1423,6 +1428,8 @@ const ICON = {
   web: 'M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z',
   playlistAdd: 'M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z',
   search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+  // A digression: the way you were going, and the turn you took off it.
+  detour: 'M3 5h7a5 5 0 0 1 5 5v6h3l-4.5 5.5L9 16h3v-6a2 2 0 0 0-2-2H3V5z',
   // The way back to the playlist, the same glyph the heading's button was drawn with.
   playlist: 'M3 9h10v2H3V9zm0-4h10v2H3V5zm0 8h6v2H3v-2zm11-1v6l5-3-5-3z',
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',

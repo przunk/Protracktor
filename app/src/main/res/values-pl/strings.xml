@@ -116,7 +116,7 @@
 
     <string name="browse_title">Dodaj muzykę</string>
 
-    <string name="browsing_author">Przeglądasz autora — %1$s</string>
+    <string name="browsing_author">Przeglądasz autora</string>
     <string name="browse_body">Wskaż katalog, a wszystko, co da się odtworzyć, zostanie dodane — razem z podkatalogami.</string>
 
     <string name="field_year">Rok</string>
