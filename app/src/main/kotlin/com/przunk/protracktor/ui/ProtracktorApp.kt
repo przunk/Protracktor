@@ -272,6 +272,13 @@ fun ProtracktorApp(
                         IconButton(onClick = leaveBrowse) {
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
+                    } else if (showRandom) {
+                        // The same arrow Browse has (owner, 2026-09-14): the two screens sit side by
+                        // side and only one of them offered a way out of its bar, so their headings
+                        // did not line up either.
+                        IconButton(onClick = { viewModel.returnToPlaylist(); showRandom = false }) {
+                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                        }
                     }
                 },
                 title = {

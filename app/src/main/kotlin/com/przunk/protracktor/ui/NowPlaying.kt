@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -128,8 +130,11 @@ fun NowPlaying(
         // second row. `weight` makes them a grid however many there are -- and the number does
         // vary, deliberately. "Show in playlist" is absent while what plays is not in the playlist,
         // and a local file has neither an author folder nor an address anyone else could open.
+        // **As tall as the tallest label needs** (owner, 2026-09-14): asking for the minimum
+        // intrinsic height lets every pill fill it, so a name that wraps to two lines is not cut and
+        // the row stays a grid of equals.
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             onShowInPlaylist?.let {

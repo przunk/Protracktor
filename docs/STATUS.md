@@ -415,6 +415,17 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C51. ~~Next rolled the dice while an author's folder was on screen~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, testing the digression:* in the author's folder "przycisk next/previous powinien
+przesuwać na tej liście (a nie losować random); czyli kontekst się źle przełącza".
+
+A digression leaves the dice's tune playing, and the transport asks about the transient track before
+it asks about a results queue — so next rolled another pick while the author's list filled the
+screen. Walking into the folder now sets that queue **without playing anything**, pointing at the
+tune the jump was made from, and the transport prefers it while a dice is waiting. The dice keeps
+its record and its cursor, and Back still returns to it.
+
 ### C50. ~~Browse's rows changed height with the words in them~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14: the Random row's icon "nie jest na środku. Jej położenie zależy od wybranego

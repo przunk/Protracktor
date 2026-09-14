@@ -130,7 +130,17 @@ internal fun LabelledAction(
             // **One height for every pill, whatever its name** (`docs/STATUS.md` C47). Sizing to
             // the label made a one-word action shorter than a two-word one; two lines of label
             // forced on every pill fixed the heights and pushed the words to the edges instead.
-            .height(if (slim) ACTION_PILL_HEIGHT_SLIM else ACTION_PILL_HEIGHT)
+            // **Fixed where the labels are one line, and as tall as the row where they are not.**
+            // A fixed height cut the second line off "More from this author" in Now Playing (owner,
+            // 2026-09-14); a row of these asks for `IntrinsicSize.Min` and they fill it together,
+            // which keeps them equal without any of them guessing a number.
+            .then(
+                if (slim) {
+                    Modifier.height(ACTION_PILL_HEIGHT_SLIM)
+                } else {
+                    Modifier.defaultMinSize(minHeight = ACTION_PILL_HEIGHT).fillMaxHeight()
+                }
+            )
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(
                 role = Role.Button,

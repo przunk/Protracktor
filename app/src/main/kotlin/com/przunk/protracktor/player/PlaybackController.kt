@@ -1792,6 +1792,18 @@ class PlaybackController private constructor(private val context: Context) {
             val found = catalogues.tracks(located.catalogueId, located.format, located.author)
                 .map(::toTrackRef)
             _browse.update { it.copy(tracks = found, loading = false) }
+
+            // **The transport follows the folder you walked into** (owner, 2026-09-14). A digression
+            // leaves the dice's tune playing, so next rolled another one while the author's list was
+            // on screen. The queue is set here **without playing anything**, pointing at the tune the
+            // jump was made from, so next and previous walk the author. The dice keeps its record
+            // and its cursor and is still what Back returns to.
+            if (_state.value.randomMode || _state.value.diceWaiting) {
+                val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
+                _state.update {
+                    it.copy(resultsQueue = PlayQueue(tracks = found).startAt(at), diceWaiting = true)
+                }
+            }
         }
     }
 
@@ -3254,7 +3266,8 @@ class PlaybackController private constructor(private val context: Context) {
     fun nextFile() {
         val now = _state.value
         if (now.externalMode) return
-        if (now.transient != null) return randomNext()
+        // The dice waiting under a digression does not own the transport; the folder on screen does.
+        if (now.transient != null && !now.diceWaiting) return randomNext()
         now.resultsQueue?.let { results ->
             if (results.hasNext) playFromResultsQueue(results.next())
             return
@@ -3276,7 +3289,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun previousFile() {
         val now = _state.value
         if (now.externalMode) return
-        if (now.transient != null) return randomPrevious()
+        if (now.transient != null && !now.diceWaiting) return randomPrevious()
         now.resultsQueue?.let { results ->
             if (results.hasPrevious) playFromResultsQueue(results.previous())
             return
