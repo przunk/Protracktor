@@ -1934,6 +1934,24 @@ if (window.__api) {
   check(sections().length === 0, 'a refusal clears them with the rest of Now Playing');
 }
 
+// --- the gear, left of shuffle (owner, 2026-09-14) ------------------------------------------------
+if (window.__api) {
+  console.log('\nthe page\'s settings:');
+  const gear = $('tab-settings');
+  check(gear && gear.nextElementSibling === $('shuffle') && gear.querySelector('svg') && gear.title === 'Settings',
+    'a gear stands left of shuffle, with its icon');
+  check(!gear.disabled, 'and answers whether or not anything is playing');
+  gear.click();
+  await new Promise((r) => setTimeout(r, 40));
+  check(!$('settings').hidden, 'pressing it opens the settings');
+  const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
+  check(labels[0] === 'Decoders in this build' && labels.includes('Modland') && labels.includes('ASMA')
+        && labels.includes('Stored here'),
+    'which say what this build plays, what is indexed, and what the browser is holding');
+  $('settings').querySelector('[data-close]').click();
+  check($('settings').hidden, 'and Close shuts them');
+}
+
 // --- add to playlist, from one row (owner, 2026-09-14) ---------------------------------------------
 //
 // The phone's row menu opens the picker for that one track; the page could only add by ticking rows

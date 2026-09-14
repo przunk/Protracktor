@@ -1636,6 +1636,35 @@ function showingHas(url) {
   return ((random ?? away)?.stash.queue ?? queue).some((t) => t.url === url);
 }
 
+/**
+ * The page's settings, drawn each time they open (owner, 2026-09-14: a gear left of shuffle, "w
+ * przyszłości użyjemy"). **What is in them now is what the page already knew and nobody could
+ * read**: which decoders this browser's engine carries -- the reason a Spectrum tune plays on the
+ * phone and not here -- which archives are indexed, and how much the browser is holding.
+ */
+async function renderSettings() {
+  const list = $('settingsfields');
+  list.replaceChildren();
+  const row = (label, value) => {
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.textContent = value;
+    list.append(dt, dd);
+  };
+  row('Decoders in this build', engineFingerprint || 'the engine has not started yet');
+  for (const source of archive.sources()) {
+    const held = await archive.meta(source);
+    row(archive.sourceName(source), held?.tracks
+      ? `${held.tracks.toLocaleString()} tunes indexed in this browser`
+      : 'not indexed here yet — Browse offers the download');
+  }
+  const { usage, quota } = await estimate();
+  row('Stored here', usage
+    ? `${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB this browser offered`
+    : 'nothing yet');
+}
+
 /** Six seconds, the length of a Material snackbar with an action. */
 function showUndo(text) {
   $('snacktext').textContent = text;
@@ -1910,6 +1939,7 @@ function showPanel(which) {
   $('paste').hidden = which !== 'paste';
   $('playlists').hidden = which !== 'playlists';
   $('addto').hidden = which !== 'addto';
+  $('settings').hidden = which !== 'settings';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
@@ -2464,6 +2494,11 @@ $('saveas').onclick = async () => {
 };
 
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
+$('tab-settings').onclick = async () => {
+  const opening = $('settings').hidden;
+  if (opening) await renderSettings();
+  showPanel(opening ? 'settings' : null);
+};
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 

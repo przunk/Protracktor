@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A36. A gear beside shuffle, opening the page's settings — **agreed, not started**
+## A36. A gear beside shuffle, opening the page's settings — DONE 2026-09-14
 
 *Owner, 2026-09-14: "możesz dodać koło zębate, które otworzy ustawienia WEB po lewej stronie od
 shuffle (w przyszłości użyjemy)".* A way in, to be filled later; the storage line and the engine's
