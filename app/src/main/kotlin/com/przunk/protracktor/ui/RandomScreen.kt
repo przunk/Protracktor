@@ -56,7 +56,7 @@ fun RandomScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
     contentPadding: PaddingValues,

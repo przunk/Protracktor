@@ -2607,6 +2607,11 @@ $('random-filter').onclick = () => { $('randomfilter').hidden = !$('randomfilter
 $('snackundo').onclick = () => undoRemoval();
 $('tab-save').onclick = () => saveEdits();
 $('sel-add').onclick = () => openAddTo();
+$('sel-share').onclick = () => {
+  const tracks = queue.filter((entry) => selected.has(entry));
+  clearSelection();
+  sendToWeb(tracks.map(plain));
+};
 $('sel-delete').onclick = () => {
   const ats = queue.map((entry, i) => (selected.has(entry) ? i : -1)).filter((i) => i >= 0);
   selected = new Set();
@@ -2828,9 +2833,13 @@ async function deflateFragment(text) {
  */
 function playSentTune(tracks) {
   if (!tracks.length) { status('the link names nothing this page can play'); return; }
-  openAway(tracks.slice(0, 1), 0, 'link');
+  openAway(tracks, 0, 'link');
+  // The heading names what arrived: one tune, or the list of them (`docs/BACKLOG.md` A38).
+  if (tracks.length > 1) $('sessiontitle').textContent = 'Playing tunes sent to you';
   showPanel(null);
-  status(`${tracks[0].name} — sent to this player`);
+  status(tracks.length === 1
+    ? `${tracks[0].name} — sent to this player`
+    : `${tracks.length} tunes — sent to this player`);
 }
 
 /**
@@ -2895,18 +2904,23 @@ function canSendToWeb(entry) {
  * either side opens the same way (`QueueLink.withTitle`: Modland as a path, the title only when
  * the address does not already say it).
  */
-async function sendToWeb(entry) {
-  if (!canSendToWeb(entry)) { status('that one has no address another browser could open'); return; }
-  const address = entry.url.startsWith(MODLAND_FILES)
-    ? entry.url.slice(MODLAND_FILES.length).split('/').map(decodeURIComponent).join('/')
-    : entry.url;
-  const file = address.slice(address.lastIndexOf('/') + 1).split('#')[0].split('?')[0];
-  const title = entry.name?.trim() ?? '';
-  const line = !title || title.toLowerCase() === file.toLowerCase() ? address : `${address}\t${title}`;
-  const link = `${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(line)}`;
+async function sendToWeb(entries) {
+  const tunes = (Array.isArray(entries) ? entries : [entries]).filter(canSendToWeb);
+  if (!tunes.length) { status('none of those have an address another browser could open'); return; }
+  const lines = tunes.map((entry) => {
+    const address = entry.url.startsWith(MODLAND_FILES)
+      ? entry.url.slice(MODLAND_FILES.length).split('/').map(decodeURIComponent).join('/')
+      : entry.url;
+    const file = address.slice(address.lastIndexOf('/') + 1).split('#')[0].split('?')[0];
+    const title = entry.name?.trim() ?? '';
+    return !title || title.toLowerCase() === file.toLowerCase() ? address : `${address}\t${title}`;
+  });
+  const entry = tunes[0];
+  const link = `${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(lines.join('\n'))}`;
   lastSentLink = link;
   try {
-    if (navigator.share) { await navigator.share({ title: `${entry.name} — Protracktor web`, url: link }); return; }
+    const named = tunes.length === 1 ? entry.name : `${tunes.length} tunes`;
+    if (navigator.share) { await navigator.share({ title: `${named} — Protracktor web`, url: link }); return; }
   } catch (error) {
     if (error?.name === 'AbortError') return;   // the share sheet was closed; nothing to say
   }

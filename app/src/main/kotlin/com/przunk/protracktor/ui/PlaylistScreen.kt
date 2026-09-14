@@ -79,7 +79,7 @@ fun PlaylistScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit = {},
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit = {},
     onRemoveMany: (List<Int>) -> Unit = {},
@@ -146,7 +146,7 @@ internal fun PlaylistBody(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
     onRemoveMany: (List<Int>) -> Unit,
@@ -239,7 +239,7 @@ internal fun PlaylistBody(
                 onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { { onShareLink(it) } },
                 // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
-                onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(it) } },
+                onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
                 dragHandleModifier = if (!reorderable) null else Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
@@ -287,6 +287,14 @@ internal fun PlaylistBody(
                         label = stringResource(R.string.action_add_to_playlist),
                         onClick = {
                             onAddSelectedToPlaylist(tracks.filter { it.id in selected })
+                            selected = emptySet()
+                        },
+                    )
+                    LabelledAction(
+                        icon = PlayerIcons.Web,
+                        label = stringResource(R.string.action_send_to_web),
+                        onClick = {
+                            onSendToWeb(tracks.filter { it.id in selected })
                             selected = emptySet()
                         },
                     )

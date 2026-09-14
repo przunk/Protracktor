@@ -33,7 +33,7 @@ embedded picture, somewhere to cache what it decodes, and the picture shown in t
 Playing and in the notification. It reaches MP3s only, which is a thin slice of a library of
 modules — which is why it waits behind the three the owner chose.
 
-## A38. Share several tunes as one link — **agreed 2026-09-14**
+## A38. Share several tunes as one link — DONE 2026-09-14
 
 *Owner, 2026-09-14: "zaznaczyć kilka utworów i kliknąć share in protracktor, żeby wysłać link do
 grania tej listy".* The machinery is there: `QueueLink.pack` already packs a whole queue, and

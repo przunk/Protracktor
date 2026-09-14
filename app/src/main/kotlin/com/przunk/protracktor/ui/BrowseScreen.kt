@@ -113,7 +113,7 @@ fun BrowseScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
@@ -439,7 +439,7 @@ private fun LocalDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
@@ -567,7 +567,7 @@ private fun OnlineDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
@@ -862,7 +862,7 @@ private fun SearchDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onQueryChange: (String) -> Unit,
     onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
@@ -970,7 +970,7 @@ private fun HistoryDomain(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -1066,7 +1066,7 @@ private fun Selectable(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
-    onSendToWeb: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
 ) {
     var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
@@ -1196,7 +1196,7 @@ private fun Selectable(
                         onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                             ?.let { { onShareLink(it) } },
                         // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
-                        onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(it) } },
+                        onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
                     )
                 }
             }
@@ -1248,6 +1248,18 @@ private fun Selectable(
                     Icon(
                         imageVector = PlayerIcons.PlaylistAdd,
                         contentDescription = stringResource(R.string.action_add_to_playlist),
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        val toSend = browse.tracks.filter { it.id in selected }
+                        selected = emptySet()
+                        onSendToWeb(toSend)
+                    },
+                ) {
+                    Icon(
+                        imageVector = PlayerIcons.Web,
+                        contentDescription = stringResource(R.string.action_send_to_web),
                     )
                 }
             }

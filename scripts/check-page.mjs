@@ -1726,6 +1726,31 @@ if (window.__api) {
   await settle();
   check(api.queueNow().join() === kept, 'leaving puts the playlist back');
 
+  // **Several tunes, one link** (`docs/BACKLOG.md` A38).
+  const second = { url: 'https://modland.com/pub/modules/AHX/Pink/frog.ahx', name: 'frog.ahx',
+                   file: 'frog.ahx', meta: 'Modland/AHX/Pink' };
+  check($('sel-share') && $('sel-share').querySelector('svg')
+        && $('sel-share').textContent.includes('Share with Protracktor'),
+    'the selection bar offers to share what is ticked, with its icon');
+  await api.sendToWeb([tune, second]);
+  const many = api.lastSentLink();
+  check(await api.inflateFragment(many.split('#play:')[1])
+        === 'Protracker/Jogeir Liljedahl/zoolook.mod\tzoolook\nAHX/Pink/frog.ahx',
+    'and the link carries them both, packed as the phone packs a queue');
+
+  api.contextNow().state = 'suspended';
+  window.location.hash = many.slice(many.indexOf('#') + 1);
+  await settle();
+  check(api.awayState()?.kind === 'link' && api.queueNow().length === 2
+        && api.queueNow()[1] === second.url,
+    'a link of several tunes plays the lot, not only the first');
+  check($('sessiontitle').textContent === 'Playing tunes sent to you' && $('count').textContent === '2 sent to you',
+    'and says so over the list');
+  check(api.awayState().stash.queue.map((t) => t.url).join() === kept && !api.dirtyNow(),
+    'with the playlist left as it was');
+  api.endSession();
+  await settle();
+
   // A queue's link, into a tab showing the code: the code steps aside, as it does for pairing
   // (owner, 2026-09-11: he opened a link and the QR stood in the middle of the screen).
   api.showPanel('pair');
