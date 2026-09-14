@@ -10,6 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -110,6 +117,15 @@ fun BrowseScreen(
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
     playingId: String?,
+    loadingId: String?,
+    /**
+     * Whose folder this is, while a Random session waits under it (`docs/BACKLOG.md` A41), or null.
+     *
+     * The heading it draws is the dice's own shape — icon, what this is, and under it which one —
+     * because a digression is the same kind of state: something plays from somewhere that is not
+     * the playlist, and there is a way back.
+     */
+    digressionAuthor: String? = null,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -140,6 +156,33 @@ fun BrowseScreen(
     ) { transition() }
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
+        if (digressionAuthor != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            ) {
+                Icon(
+                    imageVector = PlayerIcons.Detour,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.browsing_author),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = digressionAuthor,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
         // **The banner that used to live here is gone** (owner, 2026-09-10): "jest to redundantne
         // i psuje UI (przeskakuje na czas istnienia paska)". It named the running downloads and
         // drew an indeterminate bar above the list, so starting one pushed the whole list down and
@@ -162,6 +205,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -180,6 +224,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -200,6 +245,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -214,6 +260,7 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
@@ -469,6 +516,7 @@ private fun LocalDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -532,6 +580,7 @@ private fun LocalDomain(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -597,6 +646,7 @@ private fun OnlineDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -619,6 +669,7 @@ private fun OnlineDomain(
             scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
+            loadingId = loadingId,
             onPlay = onPlay,
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -892,6 +943,7 @@ private fun SearchDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -943,6 +995,7 @@ private fun SearchDomain(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -1000,6 +1053,7 @@ private fun HistoryDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
@@ -1037,6 +1091,7 @@ private fun HistoryDomain(
             scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
+            loadingId = loadingId,
             onPlay = onPlay,
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -1093,6 +1148,7 @@ private fun Selectable(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -1213,6 +1269,7 @@ private fun Selectable(
                         ticked = track.id in selected,
                         selecting = selecting,
                         playing = track.id == playingId,
+                        loading = track.id == loadingId,
                         onPlay = { onPlay(index) },
                         onToggle = {
                             selected = if (track.id in selected) selected - track.id
@@ -1334,6 +1391,7 @@ private fun BrowseTrackRow(
     ticked: Boolean,
     selecting: Boolean,
     playing: Boolean,
+    loading: Boolean,
     onPlay: () -> Unit,
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
@@ -1429,6 +1487,25 @@ private fun BrowseTrackRow(
             // with one, and a list whose rows change height when a checkbox arrives is the defect
             // this is here to prevent.
             .heightIn(min = ROW_HEIGHT)
+            // **Fetching says so by breathing** (`docs/WISHLIST.md` B32), here as in the playlist:
+            // these are the lists a tune is most often started from. Allocated only for the row
+            // being fetched, so three hundred others still scroll without a layer each.
+            .then(
+                if (!loading) {
+                    Modifier
+                } else {
+                    val breath = rememberInfiniteTransition(label = "fetching").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0.45f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 550, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "breath",
+                    )
+                    Modifier.graphicsLayer { alpha = breath.value }
+                }
+            )
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
             // into a scroll is claimed by the list before it ever becomes a long press. Both matter:
             // the owner's complaint about another player is a long press firing at a twentieth of a

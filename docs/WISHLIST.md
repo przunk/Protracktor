@@ -20,9 +20,9 @@ seconds. Both runtimes now breathe the row at about a second a cycle — the pag
 with an animation on the row that is only allocated while one is being fetched, the same guard the
 drag layer has.
 
-**The phone's Browse rows do not**, because the list there does not know what is loading: it takes a
-`BrowseState`, deliberately, so that the position ticking five times a second cannot recompose three
-hundred rows. Worth doing when something else needs that flag there.
+**Browse's rows breathe too**, since 2026-09-14: the id of the tune being fetched follows the id of
+the tune playing, which that list already took. It changes when a fetch starts and stops, not five
+times a second, so the recomposition the screen is careful about is not disturbed.
 
 ## B32. Modland's `/incoming/` is not in `allmods.zip`, and neither app can see it
 

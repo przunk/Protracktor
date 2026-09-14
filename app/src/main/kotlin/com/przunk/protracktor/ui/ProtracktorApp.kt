@@ -278,38 +278,9 @@ fun ProtracktorApp(
                     if (showSettings) {
                         Text(stringResource(R.string.settings_title))
                     } else if (showBrowse) {
-                        // Whose folder this is, while the dice waits under it. The dice's own
-                        // heading names what it picks from; this names the author (A41).
-                        val author = browse.openAuthor
-                        if (state.diceWaiting && author != null) {
-                            // The dice's own heading in miniature: the icon, what this is, and
-                            // under it which one — rather than a name after a dash (owner,
-                            // 2026-09-14).
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = PlayerIcons.Detour,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.browsing_author),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        maxLines = 1,
-                                    )
-                                    Text(
-                                        text = author,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                        } else {
-                            Text(stringResource(R.string.browse_title))
-                        }
+                        // The screen names itself; whose folder a digression is in is said by the
+                        // header under the bar, in the shape the dice's own heading has.
+                        Text(stringResource(R.string.browse_title))
                     } else if (showRandom) {
                         // The screen says "Playing at random" over its own list, so the bar stays
                         // out of its way. The playlist chip in particular would be offering to
@@ -326,7 +297,15 @@ fun ProtracktorApp(
                         LabelledAction(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
-                            onClick = { showBrowse = false },
+                            // **Out, not back** (owner, 2026-09-14). During a digression both
+                            // screens counted themselves showing and drew this button twice. There
+                            // is one: Back returns to whatever sent you here — the dice — and this
+                            // leaves for the playlist whatever is waiting.
+                            onClick = {
+                                viewModel.returnToPlaylist()
+                                showRandom = false
+                                showBrowse = false
+                            },
                             haptic = null,
                             modifier = Modifier.padding(end = TOP_BAR_EDGE),
                         )
@@ -334,7 +313,7 @@ fun ProtracktorApp(
                     // **Leaving ends the session**, which is what it has always done -- the record
                     // goes, the tunes stay in the history, and the playlist is exactly where it was
                     // left because nothing ever wrote to it.
-                    if (showRandom) {
+                    if (showRandom && !showBrowse) {
                         LabelledAction(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
@@ -451,6 +430,12 @@ fun ProtracktorApp(
                 // Marks the row you are hearing. Browse plays through the results queue, so the
                 // current track is the queue's, not the playlist's.
                 playingId = state.current?.id,
+                // What is being fetched, so its row says so by breathing (`docs/WISHLIST.md` B32).
+                loadingId = state.current?.id?.takeIf { state.loadingTrack },
+                // Whose folder, while the dice waits under it — from the moment the jump lands, not
+                // only once something here is playing (owner, 2026-09-14).
+                digressionAuthor = browse.openAuthor
+                    ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting) },
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,
