@@ -117,6 +117,9 @@ internal fun LabelledAction(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 textAlign = TextAlign.Center,
+                // Two lines whatever the name is (`docs/STATUS.md` C47): a pill sized to its label
+                // made "Info" shorter than "Add to playlist", and a row of them read as ragged.
+                minLines = 2,
                 maxLines = 2,
                 modifier = Modifier.padding(top = 2.dp),
             )
