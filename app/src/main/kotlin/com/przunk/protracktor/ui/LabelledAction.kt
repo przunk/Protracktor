@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
  * Tall enough for the icon, two lines of label and air above and below both, so a name that wraps
  * changes nothing about the row it is in.
  */
-internal val ACTION_PILL_HEIGHT = 62.dp
+internal val ACTION_PILL_HEIGHT = 72.dp
 
 /**
  * The same pill, for the top bar's row of actions.
@@ -102,14 +102,7 @@ internal fun LabelledAction(
     haptic: (Haptics.() -> Unit)? = { press() },
     /** The top bar's row: shorter, with a smaller icon. Elsewhere the full-sized pill. */
     slim: Boolean = false,
-    /**
-     * Fill the height the row gives, rather than the pill's own.
-     *
-     * **Only where the row asked for one** — a row of these that sets `IntrinsicSize.Min` so its
-     * pills come out equal however long their labels are. Anywhere else the row's height is the
-     * screen's, and filling it is how the Random header came to be a window tall.
-     */
-    stretch: Boolean = false,
+
 ) {
     val haptics = rememberHaptics()
     val currentClick by rememberUpdatedState(onClick)
@@ -135,20 +128,12 @@ internal fun LabelledAction(
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = 3.dp)
             .defaultMinSize(minWidth = if (slim) SLIM_MIN_WIDTH else 48.dp)
-            // **One height for every pill, whatever its name** (`docs/STATUS.md` C47). Sizing to
-            // the label made a one-word action shorter than a two-word one; two lines of label
-            // forced on every pill fixed the heights and pushed the words to the edges instead.
-            // **Fixed where the labels are one line, and as tall as the row where they are not.**
-            // A fixed height cut the second line off "More from this author" in Now Playing (owner,
-            // 2026-09-14); a row of these asks for `IntrinsicSize.Min` and they fill it together,
-            // which keeps them equal without any of them guessing a number.
-            .then(
-                when {
-                    slim -> Modifier.height(ACTION_PILL_HEIGHT_SLIM)
-                    stretch -> Modifier.defaultMinSize(minHeight = ACTION_PILL_HEIGHT).fillMaxHeight()
-                    else -> Modifier.defaultMinSize(minHeight = ACTION_PILL_HEIGHT)
-                }
-            )
+            // **One height for every pill, whatever its name** (`docs/STATUS.md` C47), and it is a
+            // plain number rather than anything that depends on the row around it. Two attempts at
+            // cleverness here cost the owner two builds: two lines of label forced on every pill
+            // pushed the words against the edges, and filling the row's height turned the Random
+            // header into a window-tall banner, because that row is offered the whole screen.
+            .height(if (slim) ACTION_PILL_HEIGHT_SLIM else ACTION_PILL_HEIGHT)
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(
                 role = Role.Button,

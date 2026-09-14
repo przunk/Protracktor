@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -130,32 +129,24 @@ fun NowPlaying(
         // second row. `weight` makes them a grid however many there are -- and the number does
         // vary, deliberately. "Show in playlist" is absent while what plays is not in the playlist,
         // and a local file has neither an author folder nor an address anyone else could open.
-        // **As tall as the tallest label needs** (owner, 2026-09-14): asking for the minimum
-        // intrinsic height lets every pill fill it, so a name that wraps to two lines is not cut and
-        // the row stays a grid of equals.
         Row(
-            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             onShowInPlaylist?.let {
-                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it,
-                    Modifier.weight(1f), stretch = true)
+                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it, Modifier.weight(1f))
             }
             onShowNeighbours?.let {
-                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it,
-                    Modifier.weight(1f), stretch = true)
+                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it, Modifier.weight(1f))
             }
             onAddToOtherPlaylist?.let {
-                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it,
-                    Modifier.weight(1f), stretch = true)
+                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
             }
             onShareFile?.let {
-                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it,
-                    Modifier.weight(1f), stretch = true)
+                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it, Modifier.weight(1f))
             }
             onShareLink?.let {
-                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it,
-                    Modifier.weight(1f), stretch = true)
+                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it, Modifier.weight(1f))
             }
         }
 
