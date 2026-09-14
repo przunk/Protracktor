@@ -21,7 +21,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 shuffle (w przyszłości użyjemy)".* A way in, to be filled later; the storage line and the engine's
 backends are what there already is to show. Last of the seven in `docs/PLAN_ROUND_9.md`.
 
-## A35. "Add to playlist" in the web's track menu — **agreed, not started**
+## A35. "Add to playlist" in the web's track menu — DONE 2026-09-14
 
 *Owner, 2026-09-14: "3 kropki (ustawienia) tracka nie mają opcji add to playlist jak w APK -> ma
 działać tak samo jak w APK".* The page can only add by ticking rows first; the phone's row menu

@@ -1084,6 +1084,9 @@ function openRowMenu(entry, anchor) {
   const items = [
     // A mouse has no long press to discover, so the way into ticking rows is here as well.
     ['Select', () => startSelecting(entry), !entry.local, ICON.check],
+    // **One row, one press**, as the phone's row menu has it (owner, 2026-09-14): adding used to
+    // mean ticking the row first, which is a gesture for many rows spent on one.
+    ['Add to playlist', () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
     ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
     ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
     ['Share with Protracktor', () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
