@@ -1983,6 +1983,21 @@ if (window.__api) {
   const cursor = api.indexNow();
   check(api.randomState() != null && record.length > 0, 'the dice is rolling, with a record');
 
+  // Keeping what the dice gave, the way the phone's dock offers it.
+  check(!$('nowkeep').hidden && $('nowkeep').querySelector('svg'),
+    'the dock offers to keep what is playing, since it is not from the playlist');
+  const height = window.getComputedStyle($('nowcard')).height;
+  $('nowkeep').click();
+  await settle();
+  check(api.randomState().stash.queue.map((t) => t.url).join() === `https://example.test/kept.mod,${record[cursor]}`,
+    'pressing it appends that tune to the playlist waiting underneath');
+  check(api.dirtyNow(), 'as an edit waiting for Save, like every other');
+  check(window.getComputedStyle($('nowcard')).height === height,
+    'and the card is the same height with the button as without it');
+  // Saved, as he would: what follows switches playlists, and an edit waiting would stop to ask.
+  await api.saveEdits();
+  await settle();
+
   // The digression, by the way it is really reached: the row's own menu.
   const scrolls = [];
   const original = window.HTMLElement.prototype.scrollIntoView;
@@ -2007,8 +2022,9 @@ if (window.__api) {
     'and the heading says whose folder this is, in the two lines the dice\'s heading has');
   check($('random-leave').textContent.includes('Random') && $('random-leave').querySelector('svg'),
     'the way back offers the dice, not the playlist');
-  check(session.stash.queue.map((t) => t.url).join() === 'https://example.test/kept.mod',
-    'the playlist is still waiting under both of them');
+  // What it held, plus the pick kept from the dock a moment ago — and nothing from this folder.
+  check(session.stash.queue.map((t) => t.url).join() === `https://example.test/kept.mod,${record[cursor]}`,
+    'the playlist is still waiting under both of them, with what was kept and nothing else');
 
   // Back, out of the author's folder: the dice, where it was, paused.
   $('browseback').click();
@@ -2028,8 +2044,9 @@ if (window.__api) {
   check(api.awayState()?.dice != null, 'digressing again');
   await api.choosePlaylist('p-dig');
   await settle();
-  check(api.awayState() == null && api.randomState() == null && api.queueNow().join() === 'https://example.test/kept.mod',
-    'choosing a playlist ends the digression and the dice with it');
+  check(api.awayState() == null && api.randomState() == null
+        && api.queueNow().join() === `https://example.test/kept.mod,${record[cursor]}`,
+    'choosing a playlist ends the digression and the dice with it, and the playlist is what it kept');
 
   await store.clear('modland:');
   await saved.remove('p-dig');

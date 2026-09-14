@@ -305,11 +305,23 @@
     margin: 4px 12px 0;
     background: var(--surface-container);
     border-radius: var(--shape-l);
-    padding: 14px 18px;
+    /* A height of its own rather than its tallest child's, so the keep button appearing does not
+       make the dock grow (`docs/STATUS.md` C54, met on the phone first). */
+    height: 64px;
+    padding: 0 18px;
     display: flex; align-items: center; gap: 12px;
     cursor: pointer;
   }
   .nowcard .text { min-width: 0; flex: 1; }
+  /* **A height of its own, not its tallest child's.** The keep button is taller than the chevron
+     beside it, so without this the dock grew wherever keeping was offered — which on the phone was
+     a visibly taller dock in Random than over the playlist (`docs/STATUS.md` C54). */
+  .nowkeep { flex: none; display: flex; align-items: center; justify-content: center;
+             width: 40px; height: 40px; margin-right: 4px; padding: 0;
+             background: none; border: 0; border-radius: 50%; color: var(--on-surface-variant);
+             cursor: pointer; }
+  .nowkeep:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
+  .nowkeep svg { width: 22px; height: 22px; fill: currentColor; }
   .nowcard .title { font-size: var(--title-medium); font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nowcard svg { width: 22px; height: 22px; fill: var(--on-surface-variant); flex: none; }
@@ -773,6 +785,14 @@
         <div class="title" id="title">Nothing playing</div>
         <div class="meta" id="sub">Scan the code with your phone, or paste some URLs</div>
       </div>
+      <!--
+        Keeping what is playing, for anything that is not the playlist: a random pick, a Browse
+        result, a tune sent by link. The phone has it in the same place and for the same reason —
+        the decision comes after hearing it (`keepTransient`).
+      -->
+      <button class="nowkeep" id="nowkeep" title="Add this tune to the playlist" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      </button>
       <svg viewBox="0 0 24 24" id="expand"><path d="m7.4 15.4-1.4-1.4 6-6 6 6-1.4 1.4-4.6-4.6z"/></svg>
     </div>
 

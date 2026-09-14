@@ -841,6 +841,9 @@ function markPlayingIn(list, url = playingUrl()) {
 
 function setPlaying(on) {
   playing = on;
+  // Offered for anything playing that is not the playlist: a dice pick, a Browse result, a tune
+  // sent by link. Deciding to keep it is what you do after hearing it.
+  $('nowkeep').hidden = !(random || away) || !queue[index] || activePlaylist === PHONE;
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
   // Three states, not two: a track being fetched is not "paused", and a button that would restart
   // the same download is the one press nobody wants twice.
@@ -2548,6 +2551,12 @@ $('saveas').onclick = async () => {
 };
 
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
+// Keeping what is playing, without leaving what it is playing from — the phone's `keepTransient`.
+$('nowkeep').onclick = (event) => {
+  event.stopPropagation();
+  const entry = queue[index];
+  if (entry) addToShowing([plain(entry)]);
+};
 $('tab-settings').onclick = async () => {
   const opening = $('settings').hidden;
   if (opening) await renderSettings();
