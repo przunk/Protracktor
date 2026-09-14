@@ -102,6 +102,14 @@ internal fun LabelledAction(
     haptic: (Haptics.() -> Unit)? = { press() },
     /** The top bar's row: shorter, with a smaller icon. Elsewhere the full-sized pill. */
     slim: Boolean = false,
+    /**
+     * Fill the height the row gives, rather than the pill's own.
+     *
+     * **Only where the row asked for one** — a row of these that sets `IntrinsicSize.Min` so its
+     * pills come out equal however long their labels are. Anywhere else the row's height is the
+     * screen's, and filling it is how the Random header came to be a window tall.
+     */
+    stretch: Boolean = false,
 ) {
     val haptics = rememberHaptics()
     val currentClick by rememberUpdatedState(onClick)
@@ -135,10 +143,10 @@ internal fun LabelledAction(
             // 2026-09-14); a row of these asks for `IntrinsicSize.Min` and they fill it together,
             // which keeps them equal without any of them guessing a number.
             .then(
-                if (slim) {
-                    Modifier.height(ACTION_PILL_HEIGHT_SLIM)
-                } else {
-                    Modifier.defaultMinSize(minHeight = ACTION_PILL_HEIGHT).fillMaxHeight()
+                when {
+                    slim -> Modifier.height(ACTION_PILL_HEIGHT_SLIM)
+                    stretch -> Modifier.defaultMinSize(minHeight = ACTION_PILL_HEIGHT).fillMaxHeight()
+                    else -> Modifier.defaultMinSize(minHeight = ACTION_PILL_HEIGHT)
                 }
             )
             .clip(MaterialTheme.shapes.medium)

@@ -138,19 +138,24 @@ fun NowPlaying(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             onShowInPlaylist?.let {
-                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it, Modifier.weight(1f))
+                LabelledAction(PlayerIcons.Locate, stringResource(R.string.action_show_in_playlist), it,
+                    Modifier.weight(1f), stretch = true)
             }
             onShowNeighbours?.let {
-                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it, Modifier.weight(1f))
+                LabelledAction(PlayerIcons.Folder, stringResource(R.string.action_show_neighbours), it,
+                    Modifier.weight(1f), stretch = true)
             }
             onAddToOtherPlaylist?.let {
-                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
+                LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it,
+                    Modifier.weight(1f), stretch = true)
             }
             onShareFile?.let {
-                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it, Modifier.weight(1f))
+                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it,
+                    Modifier.weight(1f), stretch = true)
             }
             onShareLink?.let {
-                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it, Modifier.weight(1f))
+                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it,
+                    Modifier.weight(1f), stretch = true)
             }
         }
 
