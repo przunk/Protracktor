@@ -188,18 +188,25 @@ class LibraryStore(context: Context) {
         helper.writableDatabase.transaction {
             delete("playlist_tracks", "playlist_id = ?", arrayOf(playlistId.toString()))
             unique.forEachIndexed { position, track ->
+                // **Never REPLACE this row** (`docs/STATUS.md` C41). SQLite's REPLACE is a DELETE
+                // and an INSERT, `playlist_tracks.track_id` references it `ON DELETE CASCADE`, and
+                // foreign keys are on -- so re-writing a track already in another playlist deleted
+                // its place there, and the write below put it back in this one only. Adding a track
+                // to a second playlist took it out of the first, which is what the owner saw.
+                // Insert if it is new, then update what we know about it: the row itself stays.
+                val fields = ContentValues().apply {
+                    put("title", track.title)
+                    put("subtitle", track.subtitle)
+                    put("size", track.sizeBytes)
+                    put("file_name", track.fileNameOrTitle)
+                    put("author", track.author)
+                }
                 insertWithOnConflict(
                     "tracks", null,
-                    ContentValues().apply {
-                        put("id", track.id)
-                        put("title", track.title)
-                        put("subtitle", track.subtitle)
-                        put("size", track.sizeBytes)
-                        put("file_name", track.fileNameOrTitle)
-                        put("author", track.author)
-                    },
-                    android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
+                    ContentValues(fields).apply { put("id", track.id) },
+                    android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE,
                 )
+                update("tracks", fields, "id = ?", arrayOf(track.id))
                 insertWithOnConflict(
                     "playlist_tracks", null,
                     ContentValues().apply {

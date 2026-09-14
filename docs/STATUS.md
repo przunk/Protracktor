@@ -444,13 +444,22 @@ in `engine.mjs` — and after it **no tune plays at all** until the tab is reloa
 escaping `pt_open` leaves the engine unusable, and the worklet with it. Second of seven in
 `docs/PLAN_ROUND_9.md`.
 
-### C41. "Add to playlist…" takes the track out of the playlist it was in — **OPEN**
+### C41. ~~"Add to playlist…" takes the track out of the playlist it was in~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14: "add to playlist.. przenosi tracka … w liście źródłowej już tego tracka nie ma!
 a powinien być".* Adding to another playlist must copy, never move.
 `PlaybackController.addToPlaylist(targetPlaylistId, tracks)` writes only the **target**, so the
 source is being rewritten somewhere else on that journey — the caller, the selection, or a stale
-copy written back afterwards. It looks like losing music, so it is first of the seven.
+copy written back afterwards. It looks like losing music, so it was first of the seven.
+
+**It was the `tracks` row, and SQLite's REPLACE.** `LibraryStore.replaceTracks` wrote each track
+with `CONFLICT_REPLACE`; a REPLACE is a DELETE and an INSERT; `playlist_tracks.track_id` references
+`tracks(id)` `ON DELETE CASCADE`; and `ProtracktorDatabase.onConfigure` turns foreign keys on. So
+writing the track for the target playlist deleted **every** row that put it in any playlist, and the
+write that followed gave it back to the target alone. A copy behaved as a move. The row is now
+inserted with `CONFLICT_IGNORE` and its fields updated, so it is never deleted. Two tests in
+`SchemaSqlTest` run both forms against a real SQLite: the safe one keeps the track in both
+playlists, the old one empties the source.
 
 ### C40. ~~The phone's Now Playing shows only the first line of a module's message~~ — FIXED 2026-09-11
 
