@@ -482,6 +482,12 @@ fun ProtracktorApp(
         // leaving the Random view up would show a record of a session that has been ended
         // underneath it -- rows that play nothing and a heading that is no longer true.
         LaunchedEffect(state.externalMode) { if (state.externalMode) showRandom = false }
+
+        // **And so does a tune played from a list** (`docs/STATUS.md` C49). "More from this
+        // author", or a search result, moves playback to that list: the dice is no longer the
+        // source, `next` walks the list, and this screen showed a record of picks that had nothing
+        // to do with what was playing. It closes, and the playlist behind says what is playing.
+        LaunchedEffect(state.searchMode) { if (state.searchMode) showRandom = false }
     }
 
     // **Lifted out of Browse**, which used to be the only place it could open. The Random view's

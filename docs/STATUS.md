@@ -415,6 +415,20 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C49. ~~The Random view stayed up while something else was playing~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, from a session he described step by step:* in Random he pressed "more from this
+author", played one of that author's tunes, went back, pressed next on the Random list — and the
+next tune of the **author's folder** played. "Widok random przestał działać efektywnie."
+
+He was right about the cause. Playing from a Browse list moves playback to a results queue, and
+`PlayerUiState.randomMode` goes false with it — but the Random *screen* is a flag in the UI that
+nothing turned off. So the record of the dice stayed on screen while `next` walked the author's
+folder. A file handed over by another app already closed it; a tune played from a list did not.
+
+It closes now on both. Going back lands on the playlist, which says what is playing, as it does for
+any search result. The page has never had this: there a Browse tune ends the dice session outright.
+
 ### C48. ~~The top bar squeezes the playlist's name to fit its buttons~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14, with two screenshots: with Save and Discard showing, "nie mieszczą się i
