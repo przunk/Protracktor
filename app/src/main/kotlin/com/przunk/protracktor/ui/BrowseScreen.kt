@@ -317,29 +317,62 @@ private fun DomainRow(
             currentLongClick?.invoke()
         }
     }
-    ListItem(
-        headlineContent = { Text(title, style = MaterialTheme.typography.titleMedium) },
-        supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
-        leadingContent = {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
-        },
-        // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so a
-        // row with nothing to hold does not advertise a long press to TalkBack that does nothing.
-        modifier = if (onLongClick == null) {
-            Modifier.clickable(onClick = rememberedClick)
-        } else {
-            // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at length:
-            // a fresh lambda restarts the gesture detector, and a detector restarted under a finger
-            // that is still down starts timing another long press. This row has not been held long
-            // enough to show it, which is not a reason to leave it.
-            Modifier.combinedClickable(
-                onClick = rememberedClick,
-                onLongClickLabel = longClickLabel,
-                onLongClick = rememberedLongClick,
+    // **A row of its own rather than a `ListItem`, because these rows must not change size.** The
+    // Random row's words depend on what the dice is set to, and a `ListItem` grows with them: with
+    // "everything" the second line wrapped, the row got taller, the icon sat above centre and every
+    // row under it moved a few pixels (owner, 2026-09-14). A fixed height tall enough for two lines
+    // makes the list stand still whatever the scope says.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(DOMAIN_ROW_HEIGHT)
+            // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so
+            // a row with nothing to hold does not advertise a long press to TalkBack that does
+            // nothing.
+            .then(
+                if (onLongClick == null) {
+                    Modifier.clickable(onClick = rememberedClick)
+                } else {
+                    // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at
+                    // length: a fresh lambda restarts the gesture detector, and a detector
+                    // restarted under a finger that is still down starts timing another long press.
+                    Modifier.combinedClickable(
+                        onClick = rememberedClick,
+                        onLongClickLabel = longClickLabel,
+                        onLongClick = rememberedLongClick,
+                    )
+                }
             )
-        },
-    )
+            .padding(horizontal = 16.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
+
+/**
+ * How tall the rows at the root of Browse stand, whatever their words.
+ *
+ * Room for a title and two lines under it: the Random row says what the dice is set to, and that
+ * sentence is a line longer for some scopes than for others.
+ */
+private val DOMAIN_ROW_HEIGHT = 78.dp
 
 /**
  * Where the dice picks from.

@@ -415,6 +415,16 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C50. ~~Browse's rows changed height with the words in them~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: the Random row's icon "nie jest na środku. Jej położenie zależy od wybranego
+filtra", and with two lines of text "rozjeżdża się wszystko na dole o parę pikseli".*
+
+`DomainRow` was a Material `ListItem`, which is as tall as its content. The Random row says what the
+dice is set to, and that sentence is a line longer for some scopes than for others — so the row grew,
+its icon sat above centre, and every row under it moved. The rows are now a fixed height with room
+for two lines, the icon centred in it, and the text ellipsised rather than allowed to push.
+
 ### C49. ~~The Random view stayed up while something else was playing~~ — FIXED 2026-09-14
 
 *Owner, 2026-09-14, from a session he described step by step:* in Random he pressed "more from this
