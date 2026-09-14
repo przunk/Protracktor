@@ -462,6 +462,30 @@ function releaseYear(fields) {
 function whereOf(entry) { return entry?.meta ?? (entry?.url ? sourceOf(entry.url) : ''); }
 function fileOf(entry) { return entry?.file || (entry?.url ? entryFor(entry.url).name : entry?.name) || ''; }
 
+/**
+ * The archive folder a tune came from, as a Browse path, or null: the phone's "Show neighbours"
+ * (owner, 2026-09-12: "more from this author"). Read from where the row says it lives --
+ * `Modland/Protracker/4-Mat`, `ASMA/Composers/Aki` -- which a pasted Modland address gives as well,
+ * since `sourceOf` builds the same line from the URL. A file from the phone has no folder here.
+ */
+function authorFolderOf(entry) {
+  if (!entry || entry.local) return null;
+  const [label, format, ...author] = (whereOf(entry) || '').split('/');
+  const source = archive.sources().find((s) => archive.sourceName(s) === label);
+  const who = author.join('/');
+  return source && format && who ? [source, format, who] : null;
+}
+
+/** Opens Browse on that folder: what else this author left in the archive. */
+async function showAuthorFolder(entry) {
+  const folder = authorFolderOf(entry);
+  if (!folder) return;
+  $('browsesearch').value = '';
+  browsePath = folder;
+  showPanel('browse');
+  await renderBrowse();
+}
+
 /** The machine the file is for, from its name, or '' -- the phone's `Platforms.forFileName`. */
 function machineOf(entry) {
   return archive.platformOf(formatTable, fileOf(entry)) ?? '';
@@ -836,6 +860,7 @@ function setPlaying(on) {
   // The panel's actions are about the track it is describing, so they go dead with it.
   const entry = queue[index];
   $('np-show').disabled = !entry;
+  $('np-folder').disabled = !authorFolderOf(entry);
   $('np-save').disabled = !entry || !!entry.local;
   $('np-link').disabled = !entry || !entry.url;
 }
@@ -1062,6 +1087,8 @@ function openRowMenu(entry, anchor) {
     ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
     ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
     ['Share with Protracktor', () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
+    // The phone has this on every list; the page had it in Browse alone (owner, 2026-09-12).
+    ['More from this author', () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
     ['Information', () => informAbout(entry), !entry.local, ICON.info],
   ];
   // Pruning the record before keeping the rest: the phone's rows have it, and "if it is there you
@@ -2185,21 +2212,13 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
 
 /** A Browse tune's menu: the phone's, less sharing, which a page does as saving and copying. */
 function openBrowseMenu(track, anchor, folder) {
-  // `Modland/Protracker/4-Mat` or `ASMA/Composers/Aki`: the archive, the group, the author.
-  const [label, format, ...author] = (track.meta ?? '').split('/');
-  const source = archive.sources().find((s) => archive.sourceName(s) === label);
   const items = [
     ['Add to another playlist', () => openAddTo([plain(track)], { browse: true }), true, ICON.playlistAdd],
     ['Information', () => informAbout(track), true, ICON.info],
   ];
-  // Where the tune lives, and what else is there -- the phone's "Show neighbours". Pointless from
-  // inside that very folder.
-  if (folder && source && format && author.length) {
-    items.push(['Show the author\'s tunes', async () => {
-      $('browsesearch').value = '';
-      browsePath = [source, format, author.join('/')];
-      await renderBrowse();
-    }, true, ICON.folder]);
+  // Where the tune lives, and what else is there. Pointless from inside that very folder.
+  if (folder && authorFolderOf(track)) {
+    items.push(['More from this author', () => showAuthorFolder(track), true, ICON.folder]);
   }
   items.push(['Save the file', () => saveFile(track), true, ICON.save]);
   items.push(['Copy a link', () => copyLink(track), true, ICON.link]);
@@ -2691,6 +2710,7 @@ applyVolume();
 
 // The panel's actions act on whatever is playing, which is the one thing the panel is about.
 $('np-show').onclick = () => { if (index >= 0) showInPlaylist(index); };
+$('np-folder').onclick = () => showAuthorFolder(queue[index]);
 $('np-save').onclick = () => { const e = queue[index]; if (e) saveFile(e); };
 $('np-link').onclick = () => { const e = queue[index]; if (e) copyLink(e); };
 
