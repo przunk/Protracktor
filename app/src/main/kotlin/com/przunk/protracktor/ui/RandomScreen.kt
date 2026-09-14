@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
@@ -135,7 +136,8 @@ private fun RandomHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = contentPadding.calculateTopPadding())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .height(SESSION_HEADER_HEIGHT)
+            .padding(horizontal = 16.dp),
     ) {
         Icon(
             imageVector = PlayerIcons.Dice,
@@ -162,9 +164,20 @@ private fun RandomHeader(
             icon = PlayerIcons.Filter,
             label = stringResource(R.string.random_filter),
             onClick = onFilter,
+            // The header's own size, not the full pill: a 72dp button made this row half again as
+            // tall as the digression's, and the two sit one tap apart (owner, 2026-09-14).
+            slim = true,
         )
     }
 }
+
+/**
+ * How tall the heading over a session stands — the dice's, and a digression's.
+ *
+ * **One number for both**, because they are the same thing said about different places and the owner
+ * switches between them: sized differently, the icon moved down the screen as he did.
+ */
+internal val SESSION_HEADER_HEIGHT = 72.dp
 
 /** What the dice is set to pick from, in words, for wherever that has to be shown. */
 @Composable

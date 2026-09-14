@@ -160,9 +160,12 @@ fun BrowseScreen(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                // The dice's own header measurements, so switching between the two screens does not
-                // move the icon (owner, 2026-09-14).
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                // The dice's own header height, so switching between the two screens does not move
+                // the icon (owner, 2026-09-14).
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(SESSION_HEADER_HEIGHT)
+                    .padding(horizontal = 16.dp),
             ) {
                 Icon(
                     imageVector = PlayerIcons.Detour,
