@@ -508,10 +508,11 @@ fun ProtracktorApp(
                 onShareLink = viewModel::shareLink,
                 onSendToWeb = viewModel::sendToWeb,
                 onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
-                onAdd = { tracks ->
-                    viewModel.addToPlaylist(tracks)
-                    showBrowse = false
-                },
+                // Stays in Browse (`docs/STATUS.md` C46). Adding from a search used to close it,
+                // which left the playlist on screen behind the scrim -- a search result is what was
+                // playing -- so the list the tracks were picked from was gone and what replaced it
+                // was covered over. The notice says what was added.
+                onAdd = { tracks -> viewModel.addToPlaylist(tracks) },
                 onAddToOtherPlaylist = { tracks ->
                     pendingAddToPlaylist = tracks
                 },
