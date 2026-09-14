@@ -164,6 +164,19 @@ fun ProtracktorApp(
         viewModel.openDomain(BrowseDomain.ROOT)
         showBrowse = true
     }
+    // **Out of Browse, and back to whatever sent us there** (`docs/BACKLOG.md` A41). `browseBack`
+    // answers false when there is no level left to climb -- which for "More from this author" is
+    // straight away, since a jump is one step rather than a descent. That is where a digression
+    // ends: the dice is waiting, so Back returns to its record rather than to the playlist.
+    val leaveBrowse = {
+        if (!viewModel.browseBack()) {
+            if (state.diceWaiting) {
+                viewModel.resumeDice()
+                showRandom = true
+            }
+            showBrowse = false
+        }
+    }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
 
     // The chooser needs an activity; preparing what is shared needed a fetch. The controller does
@@ -256,7 +269,7 @@ fun ProtracktorApp(
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     } else if (showBrowse) {
-                        IconButton(onClick = { if (!viewModel.browseBack()) showBrowse = false }) {
+                        IconButton(onClick = leaveBrowse) {
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     }
@@ -265,7 +278,18 @@ fun ProtracktorApp(
                     if (showSettings) {
                         Text(stringResource(R.string.settings_title))
                     } else if (showBrowse) {
-                        Text(stringResource(R.string.browse_title))
+                        // Whose folder this is, while the dice waits under it. The dice's own
+                        // heading names what it picks from; this names the author (A41).
+                        val author = browse.openAuthor
+                        if (state.diceWaiting && author != null) {
+                            Text(
+                                text = stringResource(R.string.browsing_author, author),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        } else {
+                            Text(stringResource(R.string.browse_title))
+                        }
                     } else if (showRandom) {
                         // The screen says "Playing at random" over its own list, so the bar stays
                         // out of its way. The playlist chip in particular would be offering to
@@ -469,7 +493,7 @@ fun ProtracktorApp(
     }
 
     if (showBrowse) {
-        BackHandler { if (!viewModel.browseBack()) showBrowse = false }
+        BackHandler(onBack = leaveBrowse)
     }
 
     // Back out of Random is the same act as the button: the session ends and the playlist is where

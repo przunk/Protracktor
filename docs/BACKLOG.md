@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A41. Digression mode: the dice waits while you browse an author — **agreed 2026-09-14**
+## A41. Digression mode: the dice waits while you browse an author — DONE 2026-09-14
 
 *Owner, 2026-09-14, after C49: "odtwarzam sobie random … nagle mi się jakiś spodoba. Wchodzę w more
 from this author i słucham sobie od niego cudeniek, wtedy robie wstecz … i wraca do random".*
@@ -36,9 +36,16 @@ This makes the dice **wait** instead.
 - **It ends for good** when something else takes the player: a playlist chosen, a file handed over by
   another app, a link opened. A way back that leads nowhere is worse than none.
 
-The record and the cursor already survive a digression on the phone (`randomHistory`,
-`randomCursor`); what is missing is the way back and the heading. On the page the dice session is
-replaced by the Browse session, so there it needs a stash, the way the playlist already has one.
+**Built both sides.** The phone kept the record and the cursor already; what it gained is
+`diceWaiting`, `resumeDice()` — which puts the pick back **selected, not started**, so the next press
+of play starts it through `pendingRetry` — and a Back out of the folder that returns there instead of
+to the playlist. `browseBack` already treated "More from this author" as one step rather than a
+descent, which is the one level of digression, so nothing new decides that.
+
+On the page the dice now waits inside the Browse session (`away.dice`) instead of being thrown away,
+the heading names the author, the heading's button offers the dice rather than the playlist, and
+Back out of the author's folder resumes it. Eleven page checks walk the whole journey, including a
+playlist chosen mid-digression, which ends both.
 
 ## A40. Protracktor links open in the app — **parked 2026-09-14, waiting for a fixed address**
 

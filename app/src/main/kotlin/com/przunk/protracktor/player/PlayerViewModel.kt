@@ -107,6 +107,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun shareLink(track: TrackRef) = controller.shareLink(track)
     fun sendToWeb(tracks: List<TrackRef>) = controller.sendToWeb(tracks)
+    fun resumeDice() = controller.resumeDice()
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the
