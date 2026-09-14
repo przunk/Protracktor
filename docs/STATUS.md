@@ -415,6 +415,43 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C45. The seek bar's position dot is nearly invisible — **OPEN**
+
+*Owner, 2026-09-14: "nieprzesuwalnego handla na pasku odtwarzania prawie nie widać (kropka, która
+wskazuje aktualny czas) - jest ciemna na ciemnym tle".* `ui/SeekBar.kt` draws the dot by hand
+instead of using `SliderDefaults.Thumb`, which grows while pressed; its colour does not carry on a
+dark background. Ordered sixth of seven in `docs/PLAN_ROUND_9.md`.
+
+### C44. The playlist list keeps stale counts after "Add to playlist…" — **OPEN**
+
+*Owner, 2026-09-14: "dana lista w widoku playlist nie odświeża ilości tracków, dopóki się w nią nie
+wejdzie".* `PlayerUiState.playlists` is read once and nothing re-reads it when a playlist gains
+tracks, so the switcher shows yesterday's number until the playlist is opened.
+
+### C43. The transport is sometimes missing from the notification — **OPEN**
+
+*Owner, 2026-09-14: "czasem z jakiegoś powodu nie widzę paska odtwarzania w notification (słyszę jak
+muza gra ale tego playera nie widać)".* No reproduction yet. `PlaybackService` builds the
+notification with MediaStyle and calls `ServiceCompat.startForeground`; what is not yet known is
+which path leaves playback running without it. First job is a way to tell the cases apart, not a
+guess.
+
+### C42. One file the engine refuses by throwing ends the whole session (web) — **OPEN**
+
+*Owner, 2026-09-14, from the browser console:* a Startrekker AM file (libopenmpt: "external
+synthesizes instruments … not supported"), then `uncaught exception: 1464664` from `___cxa_throw`
+in `engine.mjs` — and after it **no tune plays at all** until the tab is reloaded. A C++ exception
+escaping `pt_open` leaves the engine unusable, and the worklet with it. Second of seven in
+`docs/PLAN_ROUND_9.md`.
+
+### C41. "Add to playlist…" takes the track out of the playlist it was in — **OPEN**
+
+*Owner, 2026-09-14: "add to playlist.. przenosi tracka … w liście źródłowej już tego tracka nie ma!
+a powinien być".* Adding to another playlist must copy, never move.
+`PlaybackController.addToPlaylist(targetPlaylistId, tracks)` writes only the **target**, so the
+source is being rewritten somewhere else on that journey — the caller, the selection, or a stale
+copy written back afterwards. It looks like losing music, so it is first of the seven.
+
 ### C40. ~~The phone's Now Playing shows only the first line of a module's message~~ — FIXED 2026-09-11
 
 *Found 2026-09-11 while giving the page the phone's Now Playing, not by a listener.*

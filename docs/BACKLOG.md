@@ -15,6 +15,18 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A36. A gear beside shuffle, opening the page's settings — **agreed, not started**
+
+*Owner, 2026-09-14: "możesz dodać koło zębate, które otworzy ustawienia WEB po lewej stronie od
+shuffle (w przyszłości użyjemy)".* A way in, to be filled later; the storage line and the engine's
+backends are what there already is to show. Last of the seven in `docs/PLAN_ROUND_9.md`.
+
+## A35. "Add to playlist" in the web's track menu — **agreed, not started**
+
+*Owner, 2026-09-14: "3 kropki (ustawienia) tracka nie mają opcji add to playlist jak w APK -> ma
+działać tak samo jak w APK".* The page can only add by ticking rows first; the phone's row menu
+opens the picker for that one track. Same item, same picker.
+
 ## A34. Instrument and sample names in Now Playing — **built, waiting for the owner's test**
 
 *Owner, 2026-09-11: "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach
