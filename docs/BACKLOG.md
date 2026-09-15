@@ -125,12 +125,12 @@ backends are what there already is to show. Last of the seven in `docs/PLAN_ROUN
 działać tak samo jak w APK".* The page can only add by ticking rows first; the phone's row menu
 opens the picker for that one track. Same item, same picker.
 
-## A34. Instrument and sample names in Now Playing — **built, waiting for the owner's test**
+## A34. Instrument and sample names in Now Playing — DONE, tested 2026-09-15
 
 *Owner, 2026-09-11: "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach
 kodują treść".* The whole plan, with the owner's three worries and their answers, is in
-`docs/PLAN_INSTRUMENT_NAMES.md`, written first so it can be picked up cold. Branch:
-`feature/instrument-names`.
+`docs/PLAN_INSTRUMENT_NAMES.md`, written first so it can be picked up cold. Merged, and the owner
+confirmed it on the phone on 2026-09-15: *"przetestowane - pięknie jest"*.
 
 ## A33. Whether the page's Browse lists should stop writing into the playlist — DONE 2026-09-11, the phone's way
 
@@ -168,7 +168,7 @@ replace it.
 
 The machinery for the second exists since item 3; the decision is about what Browse is *for*.
 
-## A32. Whether ZXTune goes into the browser's engine — **the owner's decision**
+## A32. ZXTune in the browser's engine — **decided 2026-09-15: do it**, not started
 
 *Raised by `GOAL.md` round 8 on 2026-09-11, which was told to record it rather than decide it.*
 
@@ -190,7 +190,22 @@ So the question is not "switch it on" but **one of**:
 - find the smaller piece — `ym` and `vtx` are register dumps rather than trackers, 5,856 tunes
   between them, and their decoder may be separable from the rest.
 
-Nothing is built until he chooses.
+**The owner said do it, 2026-09-15** — "można zrobić" — which settles *whether* and leaves *which of
+the three*. That one is not his to guess and not ours to assume either: it is an engineering
+question with a measurement behind it, so the order of work is
+
+1. **Try the build first.** ZXTune under Emscripten as it stands, unpatched, and find out exactly
+   what fails. The claim that it does not build is inherited from a comment, not from a log anybody
+   here has read. If it turns out to build, the whole no-fork problem evaporates.
+2. **If it does not, size the patch** before arguing about it. A three-line configure fix is not a
+   fork; a reimplemented backend is. `docs/ARCHITECTURE.md` §3 forbids the second, and this
+   decides which one is on the table.
+3. **Measure what it costs the page**: the engine is 2.6 MB over the wire today and every byte is
+   paid on first load, so the answer "it works, and it triples the download" is a different answer.
+4. **`ym`/`vtx` alone is the fallback**, not the goal — 5,856 of the 26,537, for what may be a much
+   smaller piece of the library.
+
+Nothing ships until 3 is a number.
 
 ## A31. Haptics on the seven places he named — DONE 2026-09-10
 
