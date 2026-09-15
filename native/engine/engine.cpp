@@ -1715,6 +1715,15 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
                                      std::string &error) {
     error.clear();
 
+    // **The first refusal is the one kept, and every `error =` below says so.**
+    //
+    // The backends are asked in order of how strongly they can claim a file -- by name, then by
+    // magic, then by content, then by trying -- so the first one to refuse is by construction the
+    // one that had the best claim, and its reason is the true one. Overwriting it with a later
+    // backend's reason is how the owner came to be told "wrong file type for this emulator" about a
+    // `.sap` (`docs/STATUS.md` C55): ASAP claimed the name, refused, and game-music-emu -- which had
+    // no business with the file at all -- then spoke over it on its way past.
+
     // MP3 first when the name says so. It shares the reason ASAP goes early -- the name is the
     // only reliable thing about this format -- and nothing else here claims `.mp3`.
     if (Mp3Backend::claimsName(name)) {
@@ -1722,7 +1731,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<Mp3Backend>(bytes);
         } catch (const std::exception &e) {
             LOGE("minimp3 claimed the name but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1733,7 +1742,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<AsapBackend>(bytes, name);
         } catch (const std::exception &e) {
             LOGE("ASAP claimed the name but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1744,7 +1753,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<SidBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("libsidplayfp refused it: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1755,7 +1764,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<HivelyBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("HivelyTracker recognised the header but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1766,7 +1775,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<GmeBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("gme recognised the header but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1780,7 +1789,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<ZxTuneBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("ZXTune refused it: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 #endif
@@ -1793,7 +1802,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<Sc68Backend>(bytes);
         } catch (const std::exception &e) {
             LOGE("sc68 recognised but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
     try {

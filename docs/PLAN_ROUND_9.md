@@ -62,10 +62,11 @@ route in `docs/PLAN_INSTRUMENT_NAMES.md`, then in the page.
 
 Done when: that file is refused with a sentence, and the tune after it plays.
 
-**Android has the same unguarded boundary** (`player_oboe.cpp`: `nativeOpen`, `nativeDescribe` and
-the rest call straight into a backend). There an escaping C++ exception ends the process rather than
-a session. Not part of this item -- the owner reported the browser -- but it is the same repair and
-belongs on a branch of its own.
+**Android had the same unguarded boundary** (`player_oboe.cpp`: `nativeOpen`, `nativeDescribe` and
+the rest called straight into a backend). There an escaping C++ exception ends the process rather
+than a session. It was not part of this item -- the owner reported the browser -- and it was done on
+its own branch on 2026-09-15: sixteen JNI entry points and Oboe's audio callback, the last of which
+could never have been guarded from the boundary. `docs/STATUS.md` C42 has what was found.
 
 ### 3. C44 — the playlist list keeps stale counts
 

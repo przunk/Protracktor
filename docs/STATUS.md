@@ -415,20 +415,32 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C55. A `.sap` refused with "wrong file type for this emulator" — **OPEN**
+### C55. ~~A `.sap` refused with "wrong file type for this emulator"~~ — FIXED 2026-09-15
 
 *Owner, 2026-09-15: "scene register 5 menu.sap" by Yezus would not play, with that message.*
-Recorded to be looked at, not yet investigated.
 
-The wording is game-music-emu's, not ours — so the file reached **that** decoder, which means ASAP
-either was not asked or refused it first. `.sap` is one of the fourteen names ASAP claims by
-extension (`AsapBackend::claimsName`), and a claimed name is tried before anything
-content-identified, so the first thing to find out is which of those two happened: a name that
-arrived without its extension, or an ASAP refusal whose reason was then overwritten by the next
-decoder's. The engine keeps the first reason only when nothing later claims the file
-(`openBackend`), which may be why the message names the wrong library.
+**Two faults in one report, and only one of them is ours.**
 
-Needs the file itself.
+*The file is damaged.* Modland's copy is 7,562 bytes, and its last block claims an end address two
+bytes past that — so ASAP parses the header, finds a valid TYPE B tune by Jakub Karwacki, and then
+cannot load the binary into 6502 memory. Restoring the two bytes makes it play at peak 0.75, which
+is how the truncation was measured rather than guessed. ASMA, which validates what it accepts, does
+not carry the tune at all. **Nothing was made lenient about it**: 111 `.sap` files sampled across 25
+Modland authors all played, so this is one broken file in an archive, not a gap in what we accept.
+
+*The message was ours.* `openBackend` asks the backends in order of how strongly they can claim a
+file — by name, then by magic, then by content — and each one **overwrote** the reason the one
+before had given. `.sap` is claimed by name (`AsapBackend::claimsName`) and ASAP refused it first;
+then game-music-emu, whose `gme_identify_header` knows `SAP\r\n` and whose build here has no Atari
+emulator, refused it too and spoke over ASAP on its way past. The owner was told a decoder's opinion
+about a file it had no business with. **The first refusal is now the one kept**, which by the order
+of the asking is always the decoder with the best claim.
+
+`scripts/check-engine.mjs` holds it: a malformed SAP built in the check — valid header, last block
+two bytes short, exactly the damage above — is refused, and the reason must name ASAP and must not
+name the emulator. The same bytes under a name ASAP does not claim must quote game-music-emu, since
+the rule is "whoever claimed it first", not "never say game-music-emu". Both halves fail against the
+previous code.
 
 ### C54. ~~The dock was taller over Random than over the playlist~~ — FIXED 2026-09-15
 
@@ -584,7 +596,7 @@ nothing in the notification, and nothing telling the system this process was doi
 entry point that can make a sound opens the service now, and `ensureServiceRunning` says so where it
 is defined.
 
-### C42. ~~One file the engine refuses by throwing ends the whole session (web)~~ — GUARDED 2026-09-14
+### C42. ~~One file the engine refuses by throwing ends the whole session~~ — GUARDED 2026-09-14 (web), 2026-09-15 (phone)
 
 *Owner, 2026-09-14, from the browser console:* a Startrekker AM file (libopenmpt: "external
 synthesizes instruments … not supported"), then `uncaught exception: 1464664` from `___cxa_throw`
@@ -605,6 +617,28 @@ with a refusal or with silence; and `processor.js` catches whatever is left, ans
 keeps the worklet alive. Checked on one engine instance: a refused file, then a tune that opens and
 renders. **If it happens again, the page will now say what the decoder said** — which is the next
 piece of evidence.
+
+**The phone had the same hole open until 2026-09-15, and worse consequences.** `player_oboe.cpp`
+was written before its web counterpart and never caught anything either: sixteen JNI entry points
+and Oboe's audio callback, all calling straight through to a decoder. On the web an escaping
+exception wedges a worklet and the owner reloads the tab; through a JNI frame, or out of the
+real-time callback, it is `std::terminate` — the process is gone mid-tune with no message and no
+Android crash dialog worth reading. The same shape is in place now: a `guarded` helper, one
+fallback per call that means what the caller already reads as failure (no handle, `false`, an empty
+string, zero), and the reason to logcat.
+
+Three of those places are not merely "the same as the web's":
+
+* **`onAudioReady`.** The one guard that could not have been put at the boundary, because this is
+  Oboe's thread and nothing above it is ours. A throw mid-render is treated as a decoder that ran
+  out — the buffer is silenced and the stream stops, which is what the end of a tune already does,
+  so Kotlin's poll moves to the next one.
+* **`publishDescribe`.** Where the reported crash actually came from: `describe()` walks a decoder's
+  instrument and sample tables, and a truncated file is where a length read past the end turns into
+  a throw. An unreadable description now costs a line of metadata instead of the process.
+* **`nativeOpen`.** The only guarded call with somewhere to put the reason — it already carries a
+  sentence back for the owner — so a `std::bad_alloc` from a file too large for the heap, or
+  anything thrown that is not a `std::exception` at all, is written into it rather than swallowed.
 
 ### C41. ~~"Add to playlist…" takes the track out of the playlist it was in~~ — FIXED 2026-09-14
 

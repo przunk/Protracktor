@@ -126,6 +126,21 @@ if [ -d web/node_modules/jsdom ]; then
     echo "🖥  $page_checks page checks passed"
 fi
 
+# The engine, when one has been built. Optional for the same reason the page checks are: building
+# the WebAssembly engine needs emsdk, and somebody checking out this repository to build an APK
+# should not have to. When it is there it is part of the suite, because the two faults it guards --
+# a refusal quoting the wrong decoder (C55) and a throw crossing the boundary (C42) -- are both in
+# `native/engine/engine.cpp`, which is the file Android compiles too.
+if [ -f web/vendor/engine.mjs ]; then
+    if ! engine_output=$(node scripts/check-engine.mjs 2>&1); then
+        echo "❌ Engine checks failed:"
+        echo "$engine_output" | grep -a '✗' | sed 's/^/   /'
+        exit 1
+    fi
+    engine_checks=$(echo "$engine_output" | grep -c '✓' || true)
+    echo "🔊 $engine_checks engine checks passed"
+fi
+
 # The server, over a real socket. Needs no npm -- it is node and the standard library -- and it is
 # separate from the page checks because the bug it exists for (`docs/STATUS.md` C29) lives in the
 # address a file is served at, which jsdom never sees.

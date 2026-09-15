@@ -16,6 +16,7 @@
 #include <oboe/Oboe.h>
 
 #include <atomic>
+#include <exception>
 #include <mutex>
 #include <cstdint>
 #include <memory>
@@ -28,6 +29,41 @@ namespace {
 
 using protracktor::Backend;
 using protracktor::openBackend;
+
+/**
+ * **Nothing thrown by a decoder may leave this file** (`docs/STATUS.md` C42, C55).
+ *
+ * The counterpart of `player_wasm.cpp`'s guard, and the more serious of the two. On the web an
+ * escaping exception wedges a worklet and the owner reloads the tab; here there is nothing above
+ * to catch it -- an exception reaching the JVM through a JNI frame, or reaching Oboe's real-time
+ * thread, is `std::terminate` and the process is gone mid-tune with no message.
+ *
+ * `openBackend` already catches what *choosing* a backend throws. Everything after it was
+ * unguarded: describing a file, rendering, seeking, switching subsong, asking a length. A decoder
+ * is allowed to throw on a malformed file -- half of ASMA and Modland is malformed somewhere -- and
+ * this is where that stops being the app's problem.
+ *
+ * The fallback is what the call already means by failure, so Kotlin needs no new vocabulary: no
+ * handle, `false`, an empty string, zero. The reason goes to logcat, which is where the other
+ * refusals in this file already go.
+ */
+template <class T, class Work>
+T guarded(const char *what, Work &&work, T fallback) {
+    try {
+        return work();
+    } catch (const std::exception &e) {
+        LOGE("%s threw and was contained: %s", what, e.what());
+        return fallback;
+    } catch (...) {
+        LOGE("%s threw something that is not an exception and was contained", what);
+        return fallback;
+    }
+}
+
+template <class Work>
+void guardedVoid(const char *what, Work &&work) {
+    guarded<int>(what, [&] { work(); return 0; }, 0);
+}
 
 class Player : public oboe::AudioStreamDataCallback {
 public:
@@ -129,8 +165,18 @@ public:
             return oboe::DataCallbackResult::Continue;
         }
 
-        const std::size_t rendered =
-            backend_->render(stream->getSampleRate(), static_cast<std::size_t>(numFrames), out);
+        // **The one guard that cannot be put at the JNI boundary.** This is Oboe's real-time
+        // thread, not a call from Kotlin: an exception thrown here unwinds into Oboe's C callback
+        // and ends the process, and no `try` around `nativeStart` can see it. A decoder that throws
+        // partway through a malformed file gets treated as a decoder that ran out -- the buffer is
+        // silenced and the stream stops, which is what the tail of this function already does for a
+        // tune that ends. Kotlin is polling `finished_`, so it moves to the next tune on its own.
+        const std::size_t rendered = guarded<std::size_t>(
+            "render", [&] {
+                return backend_->render(stream->getSampleRate(),
+                                        static_cast<std::size_t>(numFrames), out);
+            },
+            0);
 
         // Ducking is applied here rather than by stopping the stream. A notification arriving should
         // lower the music for a moment, not end it -- and the only place a gain can be applied
@@ -162,10 +208,26 @@ public:
 
     bool isFinished() const { return finished_.load(std::memory_order_acquire); }
 
-    /** Reads the backend's own numbers. **Audio thread only**, or at open before it starts. */
-    void publishPosition() { position_.store(backend_->positionSeconds(), std::memory_order_release); }
-    void publishDuration() { duration_.store(backend_->durationSeconds(), std::memory_order_release); }
-    void publishSubsongs() { subsongs_.store(backend_->subsongCount(), std::memory_order_release); }
+    /**
+     * Reads the backend's own numbers. **Audio thread only**, or at open before it starts.
+     *
+     * Guarded at the definition rather than at each of the seven call sites, one of which is inside
+     * the audio callback where a throw would end the process. Keeping the last published value is
+     * the right fallback: a number that has stopped moving shows as a stalled progress bar, and the
+     * tune ends on `render` returning nothing a buffer later anyway.
+     */
+    void publishPosition() {
+        guardedVoid("positionSeconds",
+                    [&] { position_.store(backend_->positionSeconds(), std::memory_order_release); });
+    }
+    void publishDuration() {
+        guardedVoid("durationSeconds",
+                    [&] { duration_.store(backend_->durationSeconds(), std::memory_order_release); });
+    }
+    void publishSubsongs() {
+        guardedVoid("subsongCount",
+                    [&] { subsongs_.store(backend_->subsongCount(), std::memory_order_release); });
+    }
 
     /**
      * Takes the backend's description and keeps it, so nobody else has to ask the backend.
@@ -180,7 +242,12 @@ public:
      * and the phone was showing the first one's for all of them (R4).
      */
     void publishDescribe() {
-        std::string text = backend_->describe();
+        // `describe()` is where the reported crash actually came from (`docs/STATUS.md` C42): it
+        // walks a decoder's instrument and sample tables, which on a truncated file is the first
+        // place a length read past the end turns into a throw. An unreadable description costs the
+        // owner a line of metadata; it used to cost the process.
+        std::string text = guarded<std::string>("describe", [&] { return backend_->describe(); },
+                                                std::string());
         const std::lock_guard<std::mutex> held(describeGuard_);
         describe_ = std::move(text);
     }
@@ -362,8 +429,6 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
                                                           jstring fileName,
                                                           jobjectArray errorOut) {
     const jsize length = env->GetArrayLength(data);
-    std::vector<char> bytes(static_cast<std::size_t>(length));
-    env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
 
     const char *nameChars = env->GetStringUTFChars(fileName, nullptr);
     const std::string name = nameChars ? nameChars : "";
@@ -376,9 +441,31 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
     // clearing and assigning one std::string is undefined behaviour, not merely a mixed-up message.
     std::string error;
 
-    // No backend recognising the bytes is reported as a handle of 0. The caller says so to the user
-    // rather than failing silently.
-    auto backend = openBackend(std::move(bytes), name, error);
+    // **The one guarded call that has somewhere to put the reason.** Everywhere else in this file a
+    // contained throw leaves only a logcat line, because the function it happened in returns a
+    // number. This one already carries a sentence back for the owner to read, so a throw gets
+    // written into it rather than swallowed.
+    //
+    // `openBackend` catches each backend's own refusal, so what reaches here is what it does not:
+    // `std::bad_alloc` from reading a file too big for the heap, and anything thrown that is not a
+    // `std::exception` at all.
+    std::unique_ptr<Backend> backend;
+    try {
+        // Copied out of the Java array here rather than above, so that a file too large to fit in
+        // memory refuses with a sentence instead of ending the process.
+        std::vector<char> bytes(static_cast<std::size_t>(length));
+        env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
+
+        // No backend recognising the bytes is reported as a handle of 0. The caller says so to the
+        // user rather than failing silently.
+        backend = openBackend(std::move(bytes), name, error);
+    } catch (const std::exception &e) {
+        LOGE("opening %s threw and was contained: %s", name.c_str(), e.what());
+        error = std::string("the decoder failed while opening it: ") + e.what();
+    } catch (...) {
+        LOGE("opening %s threw something that is not an exception", name.c_str());
+        error = "the decoder failed while opening it";
+    }
 
     if (errorOut && env->GetArrayLength(errorOut) > 0) {
         jstring text = env->NewStringUTF(error.c_str());
@@ -387,7 +474,9 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
     }
 
     if (!backend) return 0;
-    return reinterpret_cast<jlong>(new Player(std::move(backend)));
+    return guarded<jlong>(
+        "starting the player", [&] { return reinterpret_cast<jlong>(new Player(std::move(backend))); },
+        0);
 }
 
 /**
@@ -399,48 +488,58 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
 JNIEXPORT jstring JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSampleRateNote(JNIEnv *env, jclass,
                                                                     jlong handle) {
-    return env->NewStringUTF(asPlayer(handle)->rateNote().c_str());
+    return guarded<jstring>(
+        "rateNote", [&] { return env->NewStringUTF(asPlayer(handle)->rateNote().c_str()); },
+        env->NewStringUTF(""));
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeClose(JNIEnv *, jclass, jlong handle) {
-    delete asPlayer(handle);
+    // A decoder that throws while being torn down still has to be let go of: `delete` runs the
+    // destructors either way, and containing the throw is all that is left to do.
+    guardedVoid("close", [&] { delete asPlayer(handle); });
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeStart(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->start() ? JNI_TRUE : JNI_FALSE;
+    return guarded<jboolean>("start", [&] { return asPlayer(handle)->start() ? JNI_TRUE : JNI_FALSE; },
+                             JNI_FALSE);
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeStop(JNIEnv *, jclass, jlong handle) {
-    asPlayer(handle)->stop();
+    guardedVoid("stop", [&] { asPlayer(handle)->stop(); });
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeIsFinished(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->isFinished() ? JNI_TRUE : JNI_FALSE;
+    // A player nobody can ask is a player that has finished: saying so gets the owner the next
+    // tune, where `JNI_FALSE` would leave a dead one on screen forever.
+    return guarded<jboolean>(
+        "isFinished", [&] { return asPlayer(handle)->isFinished() ? JNI_TRUE : JNI_FALSE; },
+        JNI_TRUE);
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->restart() ? JNI_TRUE : JNI_FALSE;
+    return guarded<jboolean>(
+        "restart", [&] { return asPlayer(handle)->restart() ? JNI_TRUE : JNI_FALSE; }, JNI_FALSE);
 }
 
 JNIEXPORT jint JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSubsongCount(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->subsongCount();
+    return guarded<jint>("subsongCount", [&] { return asPlayer(handle)->subsongCount(); }, 0);
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSelectSubsong(JNIEnv *, jclass, jlong handle,
                                                                    jint index) {
-    asPlayer(handle)->requestSubsong(index);
+    guardedVoid("selectSubsong", [&] { asPlayer(handle)->requestSubsong(index); });
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlong handle, jdouble seconds) {
-    asPlayer(handle)->seek(seconds);
+    guardedVoid("seek", [&] { asPlayer(handle)->seek(seconds); });
 }
 
 
@@ -457,34 +556,39 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlo
  */
 JNIEXPORT jstring JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeBackendsFingerprint(JNIEnv *env, jclass) {
-    return env->NewStringUTF(protracktor::backendsFingerprint().c_str());
+    return guarded<jstring>(
+        "backendsFingerprint",
+        [&] { return env->NewStringUTF(protracktor::backendsFingerprint().c_str()); },
+        env->NewStringUTF(""));
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetDataPath(JNIEnv *env, jclass, jstring path) {
     const char *chars = env->GetStringUTFChars(path, nullptr);
-    protracktor::setSharedDataPath(chars ? chars : "");
+    guardedVoid("setDataPath", [&] { protracktor::setSharedDataPath(chars ? chars : ""); });
     env->ReleaseStringUTFChars(path, chars);
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetGain(JNIEnv *, jclass, jlong handle, jfloat gain) {
-    asPlayer(handle)->setGain(gain);
+    guardedVoid("setGain", [&] { asPlayer(handle)->setGain(gain); });
 }
 
 JNIEXPORT jstring JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeDescribe(JNIEnv *env, jclass, jlong handle) {
-    return env->NewStringUTF(asPlayer(handle)->describe().c_str());
+    return guarded<jstring>(
+        "describe", [&] { return env->NewStringUTF(asPlayer(handle)->describe().c_str()); },
+        env->NewStringUTF(""));
 }
 
 JNIEXPORT jdouble JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativePositionSeconds(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->positionSeconds();
+    return guarded<jdouble>("positionSeconds", [&] { return asPlayer(handle)->positionSeconds(); }, 0.0);
 }
 
 JNIEXPORT jdouble JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeDurationSeconds(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->durationSeconds();
+    return guarded<jdouble>("durationSeconds", [&] { return asPlayer(handle)->durationSeconds(); }, 0.0);
 }
 
 }  // extern "C"
