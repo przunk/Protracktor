@@ -480,13 +480,49 @@ function authorFolderOf(entry) {
 async function showAuthorFolder(entry) {
   const folder = authorFolderOf(entry);
   if (!folder) return;
+  const digressing = !!random;
   $('browsesearch').value = '';
   browsePath = folder;
   showPanel('browse');
+  // **The dice stands aside as the folder opens, not when something in it is played**
+  // (`docs/SPEC_RANDOM.md` §3). Everything else the owner reported followed from doing it late:
+  // next rolled another pick, Back climbed the archive, and the way back existed only by accident.
+  if (digressing) {
+    const [source, format, author] = folder;
+    const tracks = (await archive.tracksIn(format, author, source)).map(plain);
+    openDigression(tracks, tracks.findIndex((track) => track.url === entry.url));
+  }
   await renderBrowse();
   // **On screen, not somewhere below the fold.** You came here from that tune, and an author with
   // eighty of them would otherwise open at the top with no sign of the one you were listening to.
   revealRow(markPlayingIn($('browselist'), entry.url));
+}
+
+/**
+ * The author's folder becomes what next and previous walk, **without restarting anything**.
+ *
+ * The tune playing is the tune the jump was made from, and it is in this folder — so the session
+ * changes underneath it and the music does not notice. The dice waits inside the new session with
+ * its record and its cursor (`docs/BACKLOG.md` A41).
+ */
+function openDigression(tracks, at) {
+  if (!random || !tracks.length) return;
+  // A change the playlist was still waiting to save is its own; written before the swap.
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveQueue(); }
+  away = {
+    stash: random.stash,
+    kind: 'browse',
+    dice: { session: random, queue, index, history, order },
+    author: browsePath[2] ?? '',
+  };
+  random = null;
+  queue = tracks.slice();
+  index = Math.max(0, at);
+  history = [index];
+  order = [];
+  if (shuffle) reshuffle(index);
+  showSessionView('browse');
+  render();
 }
 
 /** The machine the file is for, from its name, or '' -- the phone's `Platforms.forFileName`. */
@@ -831,9 +867,13 @@ function playingUrl() {
  */
 function markPlayingIn(list, url = playingUrl()) {
   let found = null;
+  const fetching = rowState === 'loading';
   for (const row of list.children) {
     const playing = !!url && row.dataset.url === url;
     row.classList.toggle('playing', playing);
+    // **And breathes while its tune is being fetched** (`docs/WISHLIST.md` B32), here as in the
+    // playlist: these are the lists a tune is most often started from.
+    row.classList.toggle('loading', playing && fetching);
     if (playing && !found) found = row;
   }
   return found;
@@ -882,6 +922,9 @@ function render() {
   const list = $('queue');
   // Browse's Add buttons say whether a tune is in this list, and this is where the list changed.
   for (const row of $('browselist').children) row.repaintAdd?.();
+  // And its rows follow what is playing and what is being fetched, since the list on screen during
+  // a digression is Browse's rather than this one.
+  if (!$('browse').hidden) markPlayingIn($('browselist'));
   if (selected.size) selected = new Set([...selected].filter((entry) => queue.includes(entry)));
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
@@ -2117,9 +2160,20 @@ async function renderBrowse() {
   const list = $('browselist');
   const note = $('browsenote');
   list.replaceChildren();
+  // The dice's own heading, in the screen a digression happens in.
+  $('browsedigression').hidden = !away?.dice;
+  if (away?.dice) {
+    $('browsedigression').innerHTML = iconSvg(ICON.detour)
+      + `<div class="text"><div class="title">Browsing author</div><div class="meta"></div></div>`;
+    $('browsedigression').querySelector('.meta').textContent = away.author;
+  }
   $('browseback').hidden = browsePath.length === 0;
   note.textContent = '';
-  $('browsesearch').hidden = false;
+  // No search inside a digression: it is one author's folder and the way out is Back (the phone
+  // shows no field here either). Close goes with it — a second way out, to somewhere else, beside
+  // the one that leads back to the dice (owner, 2026-09-15).
+  $('browsesearch').hidden = !!away?.dice;
+  $('browseclose').hidden = !!away?.dice;
 
   // **Declared before anything uses it.** It sat below the "From the phone" branch, which calls it
   // since round 8 item 3 -- a `const` read before its declaration, so opening Browse on the phone's

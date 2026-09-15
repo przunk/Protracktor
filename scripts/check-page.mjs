@@ -2009,6 +2009,33 @@ if (window.__api) {
   check(!$('browse').hidden && marked.length === 1 && marked[0].dataset.url === record[cursor],
     'More from this author opens the folder with the tune that is playing marked');
   check(scrolls.includes(record[cursor]), 'and brings it on screen rather than opening at the top');
+
+  // **The dice stands aside as the folder opens** (`docs/SPEC_RANDOM.md` §1, the digression), so
+  // everything below is true before anything in the folder has been played.
+  check(api.awayState()?.kind === 'browse' && api.awayState().dice != null,
+    'the dice waits from the moment the jump lands, not from the first tune played here');
+  const folder = [...$('browselist').children].map((li) => li.dataset.url);
+  check(api.queueNow().join() === folder.join() && api.queueNow()[api.indexNow()] === record[cursor],
+    'the folder is what next and previous walk, starting from the tune the jump was made from');
+  check(api.afterOf(0) === 1, 'so next is the author\'s next tune rather than another roll');
+  check($('browsesearch').hidden, 'a folder offers no search box, as the phone offers none');
+  check($('browseclose').hidden,
+    'and no Close beside it: the way out of a digression is the Back that returns to the dice');
+
+  // A row being fetched breathes here as it does in the playlist (`docs/WISHLIST.md` B32).
+  holdTrackFetch = true;
+  api.playAt(api.indexNow());
+  await settle();
+  check(window.document.querySelector('#browselist li.loading'),
+    'the row whose tune is being fetched says so in Browse too');
+  holdTrackFetch = false;
+  $('playpause').click();   // calls the download off, leaving the digression as it was
+  await settle();
+  check(!$('browsedigression').hidden
+        && $('browsedigression').textContent.includes('Browsing author')
+        && $('browsedigression').textContent.includes('Trio')
+        && $('browsedigression').querySelector('svg'),
+    'and the heading is in this screen, in the shape the dice\'s own heading has');
   if (original) window.HTMLElement.prototype.scrollIntoView = original;
   else delete window.HTMLElement.prototype.scrollIntoView;
 
@@ -2034,6 +2061,10 @@ if (window.__api) {
     'with the record it had and the cursor where it was');
   check($('sessiontitle').textContent === 'Playing at random' && $('sub').textContent === 'press play',
     'paused on that pick, not playing something new');
+  const selectedRow = [...window.document.querySelectorAll('#queue li.track')]
+    .findIndex((li) => li.classList.contains('selected'));
+  check(selectedRow === api.indexNow(),
+    'and the pick it will play is marked, so play starts what the screen names');
   check($('browse').hidden, 'and Browse is closed');
 
   // A playlist chosen while digressing ends both: a way back that leads nowhere is worse than none.
