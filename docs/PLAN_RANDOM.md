@@ -9,23 +9,29 @@ Agreed with the owner on 2026-09-10, in conversation, before any of it was built
 because the view has somewhere to stand there, and the web takes the same shape after** — he asked
 for the two to be as alike as they can be, so the design is written once for both.
 
+**This is the design and the reasoning. What the two runtimes actually do is
+`docs/SPEC_RANDOM.md`**, written when the page had to be held to the phone's behaviour line by line;
+where the two disagree, the spec is right and this is the argument that led there. The digression —
+the dice waiting while you browse an author — came later still and is `docs/BACKLOG.md` A41.
+
 `docs/PLAN_WEB_LIBRARY.md` S5 holds the web-specific half: what the dice picks from, and the
 measurements behind it.
 
 ---
 
-## What Random is today, and why it is thin
+## What Random was, before this
 
-There is no Random view. There is `AwayScrim` — a translucent sheet that **covers the playlist** and
-shows a dice, the words "Playing at random", and a button back. Its own comment says what it is:
-*"a mode you can enter but cannot obviously leave is a trap."* It was written as a defence, not as a
-design. The playlist is hidden because it would lie — nothing in it is playing — and nothing is put
-in its place.
+There was no Random view. There was `AwayScrim` — a translucent sheet that **covered the playlist**
+and showed a dice, the words "Playing at random", and a button back. Its own comment said what it
+was: *"a mode you can enter but cannot obviously leave is a trap."* It was written as a defence, not
+as a design. The playlist was hidden because it would have lied — nothing in it was playing — and
+nothing was put in its place. (The scrim still exists, for the two states that have no list of their
+own: a file another app handed over, and a search result playing.)
 
-The scope is chosen by **long-pressing** the Random row in Browse. Nothing on screen advertises
-this. `a11y_choose_random_scope` exists, so a screen reader announces it and an eye does not.
+The scope was chosen by **long-pressing** the Random row in Browse. Nothing on screen advertised
+this. `a11y_choose_random_scope` existed, so a screen reader announced it and an eye did not.
 
-What the owner already rates as working, and which none of this changes: press the dice and music
+What the owner already rated as working, and which none of this changed: press the dice and music
 plays; the scope can be narrowed; forward and back work; the plus keeps a tune; the file's
 information is there; the playlist gets out of the way.
 
@@ -65,12 +71,12 @@ and the plan had two in it.**
 **The list is not kept between runs.** It would grow without end and there is a history for that:
 *"niech sobie z historii ludzie czytają, ja tego nie potrzebuję."*
 
-**The scope is kept between runs — and only because this design makes it visible.** `RandomScope.kt`
-refuses to persist it, and the reason is worth quoting because it is now spent: *"a scope that
-outlives the session is an invisible mode, and a dice button that quietly remembers a setting has
-stopped being a dice button."* The whole argument rests on invisibility. Put the scope on screen
-next to a Filter button and it no longer applies. The doc comment has to change with the code, or it
-will be defending a decision that was reversed.
+**The scope is kept between runs — and only because this design makes it visible.** It used not to
+be, for a reason worth keeping because it is now spent: *"a scope that outlives the session is an
+invisible mode, and a dice button that quietly remembers a setting has stopped being a dice
+button."* That argument rests entirely on invisibility. With the scope on screen beside a Filter
+button it no longer applies, so the scope is stored with the rest of the player state
+(`random_scope`), and `docs/WISHLIST.md` B22, which recorded the old rule, says so too.
 
 **A second queue, explicitly transient.** The controller holds one queue and a transient track
 beside it. A list you can pick from by hand is a second queue, and it goes in as one rather than as
@@ -93,3 +99,11 @@ one because nobody has ever looked at it. A session running for an hour is hundr
 memory and unscrollable in practice. *"Na razie brak sufitu nie jest problemem, ale pewnie będzie
 kiedyś"* — recorded here as important rather than urgent, and it is the same question for the
 history in `PLAN_WEB_LIBRARY.md` S6, since they are the same list.
+
+## Where this ended up
+
+Built on the phone over builds 519–532 and on the page as `docs/PLAN_WEB_LIBRARY.md` S5, and then
+twice more: the **digression** (A41), where the dice waits while you browse an author and Back
+returns to it paused, and the round of corrections the owner's testing produced on 14–15 September,
+which `docs/STATUS.md` C49–C54 and `docs/SPEC_RANDOM.md` §3 record. **The behaviour both runtimes
+owe each other is the spec; this file is why it is shaped that way.**

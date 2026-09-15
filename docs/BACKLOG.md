@@ -41,8 +41,8 @@ This makes the dice **wait** instead.
   it was, **paused** — "bo inaczej operator dostanie szoku". Play resumes that pick; next rolls.
 - **One level of digression.** Inside the author's folder, sub-folders may be opened and left again
   up to that folder, and no higher: the way out above it is the way back to the dice.
-- **The page does the same and looks the same.** It currently ends the dice outright when a Browse
-  tune plays, so this changes both runtimes together.
+- **The page does the same and looks the same.** It ended the dice outright when a Browse tune
+  played, so this changed both runtimes together.
 - **It ends for good** when something else takes the player: a playlist chosen, a file handed over by
   another app, a link opened. A way back that leads nowhere is worse than none.
 

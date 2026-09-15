@@ -472,8 +472,8 @@ builds 519–532, is the specification. What the page does, and where it had to 
 
 - **Browse → Random** opens the record and plays at once. The engine is started before the first
   `await`, because a browser allows sound only from inside the click. **Offered even while "From
-  the phone" is showing**, where the rest of Browse is shut: that rule is about rewriting what the
-  phone sent, and the dice writes into nothing.
+  the phone" is showing**, which then was the one place the rest of Browse was shut (S4a, undone the
+  next day): that rule was about rewriting what the phone sent, and the dice writes into nothing.
 - **A second queue, explicitly transient.** While the dice runs, `queue` *is* the record, so every
   row keeps the playlist's actions, marking and scrolling (S4b); the playlist that was showing waits
   in a stash. `remember()` refuses to write, and **saving now reads the queue before it awaits** —

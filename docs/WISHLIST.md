@@ -443,9 +443,12 @@ day is another case of it**: "random, but only tunes considered good" wants Modl
 favourites, and that arrives as a second scope rather than a second mechanism. Built the same day —
 B27 above, which also corrects the figure this paragraph first carried: 835 playable, not 924.
 
-**Not persisted, deliberately.** After a restart the dice means anything again. A scope that
-outlives the session is an invisible mode, and the subtitle only defends against that while somebody
-is looking at it.
+**Not persisted, deliberately — and then reversed on 2026-09-10.** The rule was that after a restart
+the dice meant anything again, because a scope outliving the session is an invisible mode and the
+subtitle only defends against that while somebody is looking at it. The Random view took that
+argument away: the scope stands on its own screen beside a Filter button, in words, whether or not
+anybody is looking for it. So it is stored with the rest of the player state and survives a restart
+(`docs/PLAN_RANDOM.md`, `docs/SPEC_RANDOM.md` §1).
 
 ### Two things the owner found on the first run
 
