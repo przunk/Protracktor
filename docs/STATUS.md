@@ -441,13 +441,25 @@ end, and nothing on screen connects the two. A new install is in this state.
 
 1. **Say what the missing database costs.** A one-line change to `song_lengths_none` and the storage
    confirmation. Honest immediately, and it makes the other two optional rather than urgent.
-2. **A fallback length for a tune nothing knows.** Every other player has one — a few minutes, then
-   move on — and it would make an unknown SID behave like a tune rather than like a hang. Needs the
-   owner's opinion on the number and on whether it applies to every lengthless format or only SID.
+2. **A fallback length for a tune nothing knows** — **decided 2026-09-15**. A setting, with a
+   slider, **3 to 10 minutes, defaulting to 3**. It applies wherever nothing supplies a length, not
+   only to SID: the fault is "a tune that never ends", and a `.sndh` sc68 has no entry for hangs the
+   same way. The default matters more than the range — most people will never open that screen, and
+   three minutes is roughly where a C64 tune's loop has said what it has to say.
+
+   **Both players, and the phone's watchdog already exists**: `known > 0.0 && position >= known`
+   simply needs `known` to fall back to the setting. The web has no watchdog at all and needs one
+   built, which is the larger half of this even though it is the smaller of the two changes.
 3. **Song lengths on the web.** The real fix and the largest: the database is about 61,000 rows and
    the page would have to fetch, parse and store it in IndexedDB, plus an MD5 it does not currently
    compute. `docs/SPEC_RANDOM.md` set the precedent that the two players should behave the same;
    this is the biggest place they do not.
+
+   **Its source will not be the one the phone uses.** The phone fetches `Songlengths.md5` from
+   `hvsc.c64.org`; that host sends no `Access-Control-Allow-Origin`, and neither does the DTU mirror
+   (measured 2026-09-15 — the header on that server's root is not on its HVSC paths). So the web
+   cannot simply do what the phone does, and the file is 4.4 MB besides. Settle where it comes from
+   before building this.
 
 **Not a defect, and asked in the same breath — SID subsongs already work.** The owner asked what
 becomes of them: `SidBackend::subsongCount()` returns `info_->songs()` and `selectSubsong` is
