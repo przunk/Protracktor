@@ -613,6 +613,13 @@
      does not read `!important` -- so here both agree, and the page check can see what a browser
      would show. */
   [hidden] { display: none !important; }
+
+    /* The settings sheet's one interactive row. Full width so the slider is easy to hit on a
+       phone, which is where this page is most often read. */
+    .setting { margin: 18px 0 4px; }
+    .setting > label { display: block; font-weight: 600; margin-bottom: 4px; }
+    .setting > output { display: block; margin: 10px 0 2px; font-variant-numeric: tabular-nums; }
+    .setting > input[type=range] { width: 100%; }
 </style>
 </head>
 <body>
@@ -892,6 +899,21 @@
         <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
       </div>
       <dl id="settingsfields"></dl>
+
+      <!--
+        The one setting the page can actually change, and the phone has the same one
+        (`docs/STATUS.md` C56). A SID carries no length; without this it played until somebody
+        pressed next.
+      -->
+      <div class="setting">
+        <label for="fallback">When nothing knows the length</label>
+        <p class="storage">A SID or an unlisted SNDH carries no length of its own. Without this, one
+          would play until you skipped it.</p>
+        <output id="fallbackvalue" for="fallback">3 minutes</output>
+        <input type="range" id="fallback" min="3" max="10" step="1" value="3"
+               aria-describedby="fallbackvalue">
+      </div>
+
       <p class="storage" id="settingsnote">More will live here; for now it is what the page knows about itself.</p>
     </div>
   </div>

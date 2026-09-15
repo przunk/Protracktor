@@ -391,6 +391,8 @@ fun ProtracktorApp(
                 onThemeSelected = onThemeSelected,
                 onDynamicColourChanged = onDynamicColourChanged,
                 onToggleAllSubsongs = viewModel::toggleAllSubsongs,
+                fallbackLengthSeconds = state.fallbackLengthSeconds,
+                onFallbackLengthChanged = viewModel::setFallbackLength,
                 onLanguageSelected = onLanguageSelected,
                 onClearCache = viewModel::clearFetchedCache,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,

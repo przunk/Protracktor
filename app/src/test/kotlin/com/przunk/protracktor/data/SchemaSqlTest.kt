@@ -256,6 +256,44 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `an upgraded phone reads the fallback length as never set`() {
+        // `docs/STATUS.md` C56. The column's default is 0 and 0 means "the owner has not chosen",
+        // which `FallbackLength.fromStored` turns into the default rather than into a tune that
+        // ends instantly. Getting this wrong ends every unlisted tune the moment it starts, which
+        // is a worse fault than the one being fixed.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.migrationsBetween(1, 13).let { VERSION_1_SCHEMA + it })
+            connection.run(listOf("UPDATE player_state SET shuffle = 1"))
+
+            connection.run(SchemaSql.migrationsBetween(13, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT shuffle, fallback_length_seconds FROM player_state"
+                ).use { rows ->
+                    rows.next()
+                    assertEquals("the setting beside it did not survive", 1, rows.getInt(1))
+                    assertEquals("an upgraded phone must read 0, meaning never set", 0, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a chosen fallback length survives being written and read`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(listOf("UPDATE player_state SET fallback_length_seconds = 420"))
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT fallback_length_seconds FROM player_state").use { rows ->
+                    rows.next()
+                    assertEquals(420, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `removing a catalogue takes its tracks with it`() {
         memoryDatabase().use { connection ->
             connection.run(SchemaSql.CREATE)
