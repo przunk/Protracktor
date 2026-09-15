@@ -670,13 +670,13 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 - ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
   count now and nobody has to remember it.
 
-- **`docs/letters/` before the repository goes public.** The listing points at the source, so
-  publishing the app publishes the repository, and that directory holds correspondence with other
-  projects' maintainers. It is gitignored as of 2026-09-05, which only stops new ones — the five
-  already committed are in the history. The owner's decision is to rewrite it and force-push;
-  `docs/PLAY_STORE.md` has the command, tried on a copy. **It does not remove the quotations** —
-  Heikki Orsila's and Matti Tiainen's replies are quoted verbatim in `LICENSES.md`,
-  `PLAN_FORMATS.md` and several commit messages, and those are the words that are not ours.
+- ~~**`docs/letters/` before the repository goes public.**~~ **Done.** The directory is gitignored
+  as of 2026-09-05 and was filtered out of the history and force-pushed; no commit on any branch,
+  local or on the remote, has ever named a file under it — checked, not assumed. The separate half
+  — what the letters *established*, reported in `LICENSES.md` and `PLAN_FORMATS.md` — was settled in
+  two passes: their sentences on 2026-09-05, their attribution and the personal address on
+  2026-09-15. `docs/PLAY_STORE.md` has the rule that came out of it and what the history still
+  holds.
 
 **Not started, and not to be started without the owner**: publishing is his account, his key and
 his name on the listing.
