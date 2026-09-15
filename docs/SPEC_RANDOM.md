@@ -92,9 +92,10 @@ And two the page states in its own way, which is allowed because the shapes diff
 - Browse is a screen in the column rather than a dialog, so a digression's heading belongs **inside
   it**, above the list, where the phone puts it under the bar.
 
-## 3. What was wrong on 2026-09-15, against that list
+## 3. Where the page fell short, 2026-09-15 — found and fixed the same day
 
-The owner's report, each line against the requirement it breaks:
+Kept because it shows how the list above is meant to be used: each thing the owner saw, against the
+requirement it broke.
 
 | What he saw | Requirement |
 |---|---|
@@ -104,9 +105,13 @@ The owner's report, each line against the requirement it breaks:
 | The Modland search box was still there | The phone offers no search in a digression |
 | The heading did not read like Random's | "The heading says Browsing author … in the shape the dice's own heading has" |
 
-The cause was one decision, not five: the page entered the digression when a tune in the folder was
-**played**, while the phone enters it when the folder is **opened**. Everything above follows from
-that, and is fixed by moving the entry to the jump.
+**The cause was one decision, not five**: the page entered the digression when a tune in the folder
+was *played*, while the phone enters it when the folder is *opened*. Moving the entry to the jump
+settled all five, and the page checks now walk the journey the requirements describe.
+
+A second round the same evening, from the same testing: a row being fetched says so in Browse as well
+as in the playlist, a digression offers Back and no Close, and the pick the dice will play next is
+marked so that pressing play starts what the screen names.
 
 *On the tune that came up twice:* with 300,000 tunes and some 150 heard, two sessions sharing one
 tune is about a one-in-fourteen chance — the session drops repeats within itself, and nothing

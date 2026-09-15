@@ -479,7 +479,9 @@ nothing turned off. So the record of the dice stayed on screen while `next` walk
 folder. A file handed over by another app already closed it; a tune played from a list did not.
 
 It closes now on both. Going back lands on the playlist, which says what is playing, as it does for
-any search result. The page has never had this: there a Browse tune ends the dice session outright.
+any search result. The page never had this fault, because a Browse tune there ended the dice session
+outright — which is the half that changed next: `docs/BACKLOG.md` A41 made the dice **wait** on both
+sides instead, and `docs/SPEC_RANDOM.md` is what the two are held to now.
 
 ### C48. ~~The top bar squeezes the playlist's name to fit its buttons~~ — FIXED 2026-09-14
 
