@@ -415,6 +415,48 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C56. A SID never ends on the web, and does not on a fresh phone either — **OPEN**
+
+*Owner, 2026-09-15: "WEB: nie widzi końca SID (gra w nieskończoność); APK to potrafi."*
+
+**Measured, and the phone's advantage is a database rather than a better engine.** `SidBackend`
+reports `durationSeconds() == 0.0` and always has: a SID is a 6502 program with a play routine, and
+nothing in the file says when it should stop. Four Rob Hubbard tunes through the engine confirm it —
+all four open and play, all four report a length of zero.
+
+So a SID ends only where something *else* supplies the length, and on the phone that is **HVSC's
+song length database**: `PlaybackController` hashes the file, asks `SongLengthStore.forMd5`, and the
+position poll calls `handleTrackEnded()` once the position passes it. About 61,000 rows. The web has
+none of that machinery — no MD5, no store, no watchdog — so `_pt_duration` returns 0, `render` never
+runs short, no `ended` message is ever posted, and the tune runs for ever.
+
+**The phone is not actually immune, and this is the part that matters for a release.** The HVSC
+database is a **manual, opt-in download** on the Browse screen. Until the owner taps it,
+`openSongLengths` is empty, the duration is 0, the watchdog's `known > 0.0` is false, and a SID
+plays for ever on the phone exactly as it does on the web. The string next to the button
+(`song_lengths_none`) says "SID tunes will show no length", which undersells it: they also never
+end, and nothing on screen connects the two. A new install is in this state.
+
+**Three separable pieces of work**, smallest first:
+
+1. **Say what the missing database costs.** A one-line change to `song_lengths_none` and the storage
+   confirmation. Honest immediately, and it makes the other two optional rather than urgent.
+2. **A fallback length for a tune nothing knows.** Every other player has one — a few minutes, then
+   move on — and it would make an unknown SID behave like a tune rather than like a hang. Needs the
+   owner's opinion on the number and on whether it applies to every lengthless format or only SID.
+3. **Song lengths on the web.** The real fix and the largest: the database is about 61,000 rows and
+   the page would have to fetch, parse and store it in IndexedDB, plus an MD5 it does not currently
+   compute. `docs/SPEC_RANDOM.md` set the precedent that the two players should behave the same;
+   this is the biggest place they do not.
+
+**Not a defect, and asked in the same breath — SID subsongs already work.** The owner asked what
+becomes of them: `SidBackend::subsongCount()` returns `info_->songs()` and `selectSubsong` is
+implemented, so the phone shows the strip, the "play all subsongs" setting applies, and HVSC's entry
+is a length **per subsong** — `openSongLengths.getOrNull(index)` — so switching tune switches length
+too. Three of the four Hubbard files tested carry four tunes each. The web reads the count and
+switches as well. The only thing wrong with SID subsongs is the thing above: without HVSC, each of
+the four plays for ever instead of one after another.
+
 ### C55. ~~A `.sap` refused with "wrong file type for this emulator"~~ — FIXED 2026-09-15
 
 *Owner, 2026-09-15: "scene register 5 menu.sap" by Yezus would not play, with that message.*
