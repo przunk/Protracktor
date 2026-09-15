@@ -542,7 +542,7 @@ tracks, so the switcher shows yesterday's number until the playlist is opened.
 contents did not.** `refreshPlaylists()` now follows every one of them: adding to another playlist,
 appending to the one showing, and the debounced write of the queue itself.
 
-### C43. The transport is sometimes missing from the notification — **ONE CAUSE REMOVED 2026-09-14, still watched**
+### C43. ~~The transport is sometimes missing from the notification~~ — FIXED 2026-09-15
 
 *Owner, 2026-09-14: "czasem z jakiegoś powodu nie widzę paska odtwarzania w notification (słyszę jak
 muza gra ale tego playera nie widać)".* No reproduction yet. `PlaybackService` builds the
@@ -557,9 +557,17 @@ without a transport; and nothing brought the service back, because a track endin
 starting never passes through the buttons that ask for it. It now stops only when nothing is playing
 **and** nothing is loading.
 
-**Not proven to be the owner's case**, which was never reproduced. So `stopForegroundAndSelf` now
-logs. If it happens again, that line separates "the service stopped" from "the notification was
-never posted" — the second would be the permission or the channel, and a different repair.
+**Not proven to be the owner's case**, which was not reproduced then. So `stopForegroundAndSelf`
+logs; that line separates "the service stopped" from "the notification was never posted".
+
+**The rest of it, 2026-09-15, with his repro:** enter Random, play something, go to the home screen,
+and the music stops — the process taken, with no player in the notification at any point. The
+service is started by the view model, and only some of its doors did it: the transport buttons and a
+file handed over by another app. **Entering Random, tapping a row in its record, and playing from a
+Browse list went straight to the controller**, so those tunes played with no foreground service —
+nothing in the notification, and nothing telling the system this process was doing anything. Every
+entry point that can make a sound opens the service now, and `ensureServiceRunning` says so where it
+is defined.
 
 ### C42. ~~One file the engine refuses by throwing ends the whole session (web)~~ — GUARDED 2026-09-14
 

@@ -107,7 +107,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun shareLink(track: TrackRef) = controller.shareLink(track)
     fun sendToWeb(tracks: List<TrackRef>) = controller.sendToWeb(tracks)
-    fun resumeDice() = controller.resumeDice()
+    fun resumeDice() {
+        // Comes back paused, and a paused transport in the notification is still the player: the
+        // next press of play is on that tune, and it may well come from the notification itself.
+        ensureServiceRunning()
+        controller.resumeDice()
+    }
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the
@@ -115,13 +120,32 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (controller.browse.value.openFormat == null) controller.openFormat(name)
         else controller.openAuthor(name)
     }
-    fun playRandom() = controller.playRandom()
-    fun openRandom() = controller.openRandom()
-    fun playRandomAt(index: Int) = controller.playRandomAt(index)
+    // **Every door into playback opens the service first** (`docs/STATUS.md` C43). These three and
+    // `playFromResults` below did not, so music started from Random or from a Browse list ran with
+    // no foreground service and therefore no notification — and the system took the process the
+    // moment the owner left the app, which is exactly what he described: enter Random, play, go to
+    // the home screen, and the music stops.
+    fun playRandom() {
+        ensureServiceRunning()
+        controller.playRandom()
+    }
+
+    fun openRandom() {
+        ensureServiceRunning()
+        controller.openRandom()
+    }
+
+    fun playRandomAt(index: Int) {
+        ensureServiceRunning()
+        controller.playRandomAt(index)
+    }
     fun removeRandomAt(index: Int) = controller.removeRandomAt(index)
     fun keepTransient() = controller.keepTransient()
     fun returnToPlaylist() = controller.returnToPlaylist()
-    fun playFromResults(results: List<TrackRef>, index: Int) = controller.playFromResults(results, index)
+    fun playFromResults(results: List<TrackRef>, index: Int) {
+        ensureServiceRunning()
+        controller.playFromResults(results, index)
+    }
     fun setQuery(query: String) = controller.setQuery(query)
     fun setSearchScope(scope: SearchScope) = controller.setSearchScope(scope)
     fun setRandomScope(scope: RandomScope) = controller.setRandomScope(scope)
@@ -166,6 +190,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     /**
      * Starts the service before playback rather than after.
+     *
+     * **Called by every entry point that can make a sound.** A tune playing without it has no
+     * notification, no transport on the lock screen, and nothing telling the system this process is
+     * doing something — so the process goes when the app leaves the screen (`docs/STATUS.md` C43).
      *
      * Android only allows a foreground service to be started while the app is itself in the
      * foreground. Waiting until the user leaves would be waiting until it is no longer permitted.
