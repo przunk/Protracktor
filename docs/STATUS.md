@@ -415,6 +415,21 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C55. A `.sap` refused with "wrong file type for this emulator" — **OPEN**
+
+*Owner, 2026-09-15: "scene register 5 menu.sap" by Yezus would not play, with that message.*
+Recorded to be looked at, not yet investigated.
+
+The wording is game-music-emu's, not ours — so the file reached **that** decoder, which means ASAP
+either was not asked or refused it first. `.sap` is one of the fourteen names ASAP claims by
+extension (`AsapBackend::claimsName`), and a claimed name is tried before anything
+content-identified, so the first thing to find out is which of those two happened: a name that
+arrived without its extension, or an ASAP refusal whose reason was then overwritten by the next
+decoder's. The engine keeps the first reason only when nothing later claims the file
+(`openBackend`), which may be why the message names the wrong library.
+
+Needs the file itself.
+
 ### C54. ~~The dock was taller over Random than over the playlist~~ — FIXED 2026-09-15
 
 *Owner, 2026-09-15, with the two screens side by side: "widok random inaczej renderuje pasek dock …
