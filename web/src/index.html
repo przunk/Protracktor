@@ -142,6 +142,8 @@
   main { flex: 1; overflow-y: auto; padding: 4px 0 8px; scrollbar-color: var(--outline) transparent; }
   /* Random's heading: what this list is, what the dice picks from, and the way back. */
   .randomhead { display: flex; align-items: center; gap: 12px; padding: 8px 16px 10px; }
+  /* The same heading inside Browse, where a digression happens (`docs/SPEC_RANDOM.md` §2). */
+  .digression { padding: 6px 0 10px; }
   .randomhead > svg { width: 28px; height: 28px; fill: var(--primary); flex: none; }
   .randomhead .text { flex: 1; min-width: 0; }
   .randomhead .title { font-size: var(--title-medium); font-weight: 500; }
@@ -687,6 +689,8 @@
       <h2 id="browsetitle">Browse</h2>
       <button class="plain" id="browseclose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
     </div>
+    <!-- Whose folder this is, while the dice waits under it: the session heading, in this screen. -->
+    <div id="browsedigression" class="randomhead digression" hidden></div>
     <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
     <p class="note" id="browsenote"></p>
     <ol id="browselist"></ol>
