@@ -867,9 +867,13 @@ function playingUrl() {
  */
 function markPlayingIn(list, url = playingUrl()) {
   let found = null;
+  const fetching = rowState === 'loading';
   for (const row of list.children) {
     const playing = !!url && row.dataset.url === url;
     row.classList.toggle('playing', playing);
+    // **And breathes while its tune is being fetched** (`docs/WISHLIST.md` B32), here as in the
+    // playlist: these are the lists a tune is most often started from.
+    row.classList.toggle('loading', playing && fetching);
     if (playing && !found) found = row;
   }
   return found;
@@ -918,6 +922,9 @@ function render() {
   const list = $('queue');
   // Browse's Add buttons say whether a tune is in this list, and this is where the list changed.
   for (const row of $('browselist').children) row.repaintAdd?.();
+  // And its rows follow what is playing and what is being fetched, since the list on screen during
+  // a digression is Browse's rather than this one.
+  if (!$('browse').hidden) markPlayingIn($('browselist'));
   if (selected.size) selected = new Set([...selected].filter((entry) => queue.includes(entry)));
   list.replaceChildren(...queue.map((entry, i) => {
     const li = document.createElement('li');
@@ -2163,8 +2170,10 @@ async function renderBrowse() {
   $('browseback').hidden = browsePath.length === 0;
   note.textContent = '';
   // No search inside a digression: it is one author's folder and the way out is Back (the phone
-  // shows no field here either).
+  // shows no field here either). Close goes with it — a second way out, to somewhere else, beside
+  // the one that leads back to the dice (owner, 2026-09-15).
   $('browsesearch').hidden = !!away?.dice;
+  $('browseclose').hidden = !!away?.dice;
 
   // **Declared before anything uses it.** It sat below the "From the phone" branch, which calls it
   // since round 8 item 3 -- a `const` read before its declaration, so opening Browse on the phone's
