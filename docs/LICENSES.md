@@ -269,20 +269,25 @@ APK — which is where the doubt actually lives.
 
 ### Decided 2026-09-04: option 3, for sc68 and UADE alike
 
-**And two letters, because the only genuinely clean route is to ask.** Drafts are in
-`docs/letters/`.
+**And two letters, because the only genuinely clean route is to ask.** The drafts and the replies
+stay on the owner's machine: `docs/letters/` is gitignored and was taken out of the history on
+2026-09-05, because other people's replies are not ours to publish.
 
 | | sent | to | status |
 | --- | --- | --- | --- |
 | UADE | **2026-09-04** | `heikki.orsila@iki.fi` | answered by **both maintainers**, exchange closed 2026-09-05 |
+| sc68 | not yet | SourceForge ticket | the owner is holding off |
+
+*The address stands because UADE publishes it*, in its own `AUTHORS` file, as the way to reach its
+main author. Repeating a contact address a project gives out for the purpose is not the same as
+exposing one — and it is the address the letter was sent to, which is the fact this row records.
 
 **A third thing an integration would need, found on the way out.** UADE cannot identify several
-Hippel and TFMX variants from their filenames, and the fix is a `song.conf` of md5 overrides that
-Matti Tiainen maintains for the Audacious plugin. Its licence is **GPL-2.0-or-later** — compatible
-with ours — but the `conf/songdb` beside it is **CC BY-NC-SA 4.0**, non-commercial, and could not
-ship in a store app. Take `conf/song.conf`; leave `conf/songdb`. GitHub's API labels the whole
-repository "GPL-2.0"; the README is the accurate source (`docs/PLAN_FORMATS.md` §4).
-| sc68 | not yet | SourceForge ticket | the owner is holding off |
+Hippel and TFMX variants from their filenames, and the fix is a `song.conf` of md5 overrides
+maintained alongside the Audacious plugin. Its licence is **GPL-2.0-or-later** — compatible with
+ours — but the `conf/songdb` beside it is **CC BY-NC-SA 4.0**, non-commercial, and could not ship in
+a store app. Take `conf/song.conf`; leave `conf/songdb`. GitHub's API labels the whole repository
+"GPL-2.0"; the README is the accurate source (`docs/PLAN_FORMATS.md` §4).
 
 **Neither the work nor the release waits on either.** `sndh_ice.bin` is sc68's own file in sc68's
 own GPL tree and needs no permission, and UADE is not integrated at all. The letters improve what
@@ -315,16 +320,21 @@ in the scene, whose interest is in the music being heard.
 **None of the above is legal advice**, and the letters exist because the one route with no "but"
 left at the end is a person saying yes.
 
-### What UADE's maintainer answered, 2026-09-04
+### What the UADE enquiry settled, 2026-09-04
 
-Heikki Orsila replied within the day and copied Matti Tiainen, UADE's other maintainer. Three things
-in it change what this document can say, and all three were checked against the tree afterwards.
+Both of UADE's maintainers answered, within a day. Three things in the reply change what this
+document can say, and all three were checked against the tree afterwards.
+
+**Their words are not reproduced here and their manner is not characterised**, which is the standing
+rule for a private reply (`docs/PLAY_STORE.md`). Everything below either rests on a document UADE
+publishes — quoted as such — or is our own measurement. The one fact that exists nowhere public is
+marked where it appears.
 
 **1. There is exactly one known objection, and it is specific.** In twenty years of shipping these
-binaries, the only people who have ever objected are the Delitracker authors, about their own work.
-Twenty
-years of shipping 176 binaries and one complaint, from an identifiable group about identifiable
-work.
+176 binaries, one complaint has been raised — by the Delitracker authors, about their own work.
+*This is the fact with no public source; it came from the reply and is recorded because it is
+load-bearing below.* An identifiable group about identifiable work, and nothing else in two
+decades.
 
 That is directly relevant to us and not only to UADE. sc68's replay set contains **eight
 Delitracker-derived files** — `bendaglish.deli`, `hippel-coso_note.deli`, `mon_old.deli`,
@@ -332,10 +342,14 @@ Delitracker-derived files** — `bendaglish.deli`, `hippel-coso_note.deli`, `mon
 `DaveLowe_Deli`. We do not distribute them and never did, but "the one family anybody has ever
 objected to" is worth knowing by name rather than discovering later.
 
-**2. `amigasrc/` is a stronger statement than `COPYING`.** He points at it, and its own README says:
-*"All these files are certainly distributable, but some are not Open Source Initiative approved."*
+**2. `amigasrc/` is a stronger statement than `COPYING`**, and the reply is what sent us to look at
+it. The tree is UADE's own and its README is public:
+
+> All these files are certainly distributable, but some are not Open Source Initiative approved.
+
 That is a much better position than `COPYING`'s "various different licenses and quite a many
-different copyright holders" about `players/`.
+different copyright holders" about `players/` — and both sentences are the project's own published
+text, which is exactly what one should be quoting while reasoning about a project's licence.
 
 Counted, and **the count is a name match, not an authority** — that matters, so it is said before
 the number. `amigasrc/players/` holds 19 directories under `uade`, 98 under `wanted_team`, 7 under
@@ -356,20 +370,23 @@ So: **at most 42 of the 176 have no source in the tree**, probably fewer, and th
 is much smaller than `COPYING` alone suggests. Turning "probably" into a list means reading the
 `EP_*.readme` files, which is work worth doing before anyone relies on it.
 
-He is careful about the limit of that, and the limit is the important half: reverse-engineering a
-routine is not the same as being given permission for it. A routine somebody worked out from the
-bytes is not a routine somebody licensed.
+**The limit of that count is the important half**, and it was not lost on the people who answered:
+reverse-engineering a routine is not the same as being given permission for it. A routine somebody
+worked out from the bytes is not a routine somebody licensed. That is a general point and ours to
+state; the reply is merely where we were reminded of it.
 
-**3. He invites the download outright.** Fetching the players from GitLab is between us and GitLab,
-he says; he distributes the official binaries himself at <https://zakalwe.fi/uade/download.html> and
-is happy for them to be taken from there.
+**3. The download route is invited, not merely tolerated.** UADE publishes the official binaries at
+<https://zakalwe.fi/uade/download.html>, a page that exists for exactly this purpose, and the reply
+confirmed they are there to be taken. Fetching them from GitLab instead is a matter between us and
+GitLab.
 
-So when UADE is integrated the download route is not merely defensible, it is the one its maintainer
-offers. He notes the trade himself: zakalwe.fi is his and can serve any shape we need, GitLab is
-more reliably up. **Prefer zakalwe.fi and fall back to GitLab** — taking what the author offers, and
-staying working when his server is not.
+So when UADE is integrated the download route is not merely defensible, it is the one upstream
+offers. The trade between the two sources was pointed out in the same reply and is easy to verify
+for oneself: zakalwe.fi is the project's own and can serve whatever shape is needed, GitLab is more
+reliably up. **Prefer zakalwe.fi and fall back to GitLab** — taking what the authors offer, and
+staying working when their server is not.
 
-**What this does not settle**: the 77 binaries with no source in the tree, and whether the
+**What this does not settle**: the at most 42 binaries with no source in the tree, and whether the
 Delitracker family should be left out of a download by choice rather than by necessity. Both are the
 owner's, and neither blocks anything today.
 
