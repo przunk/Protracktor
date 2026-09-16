@@ -82,3 +82,32 @@ export function freshPick({ drawn, seen }) {
   for (const url of drawn) if (!had.has(url)) return url;
   return drawn[0] ?? null;
 }
+
+/**
+ * What a typed search means: **every word, anywhere, in any order.**
+ *
+ * The phone's `data/SearchTerms.kt`, and the cases they share are in `docs/rules/queue-cases.tsv`.
+ * Until 2026-09-16 both sides matched the whole query as one substring, which fails on the way
+ * tracker files are actually named -- `space ninja` did not find `space_ninja`, one character in
+ * the middle being a separator rather than a space.
+ *
+ * Splitting the query covers `space_ninja`, `spaceninja`, `Space Ninja` and `ninja space` alike.
+ * What it does not cover is the other direction -- typing `spaceninja` for a file called
+ * `space_ninja` -- which needs the *stored* side stripped of separators too, and that was measured
+ * before it was rejected: 36 ms to 217 ms on 500,000 rows, or a normalised column and twelve
+ * megabytes. This costs nothing.
+ */
+export function searchTerms(query) {
+  return String(query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+/**
+ * Whether any of [texts] satisfies [query] **as a whole**.
+ *
+ * Not "some text matches every word": a tune whose title holds one word and whose author holds the
+ * other is a hit, so each word is looked for across all of them.
+ */
+export function searchMatches(query, ...texts) {
+  const haystacks = texts.filter((t) => t != null).map((t) => String(t).toLowerCase());
+  return searchTerms(query).every((word) => haystacks.some((text) => text.includes(word)));
+}

@@ -154,10 +154,10 @@ class LibraryIndexStore(context: Context) {
     private val PLATFORM_SCAN_FACTOR = 5
 
     suspend fun countMatches(query: String): Int = withContext(Dispatchers.IO) {
-        val like = "%${query.trim()}%"
+        val words = SearchTerms.sqlFor(query, "title", "file_name", "author")
         helper.readableDatabase.rawQuery(
-            "SELECT COUNT(*) FROM library_index WHERE title LIKE ? OR file_name LIKE ? OR author LIKE ?",
-            arrayOf(like, like, like),
+            "SELECT COUNT(*) FROM library_index WHERE ${words.first}",
+            words.second,
         ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
@@ -174,14 +174,16 @@ class LibraryIndexStore(context: Context) {
         limit: Int,
         platforms: Set<String> = emptySet(),
     ): List<TrackRef> = withContext(Dispatchers.IO) {
-        val like = "%${query.trim()}%"
+        // **Every word, anywhere, in any order** (`SearchTerms`). A local file is filed under its
+        // name far more often than under a title, so `file_name` is one of the columns a word may
+        // be found in -- and that is the column with the underscores in it.
+        val words = SearchTerms.sqlFor(query, "title", "file_name", "author")
         helper.readableDatabase.rawQuery(
             "SELECT uri, path, file_name, size, title, author, subsongs FROM library_index " +
-                "WHERE title LIKE ? OR file_name LIKE ? OR author LIKE ? " +
-                "ORDER BY title LIMIT ?",
+                "WHERE ${words.first} ORDER BY title LIMIT ?",
             // No SQL limit: the platform filter runs below, and a limit applied first would cut
             // rows the filter was going to keep. The loop stops itself once it has enough.
-            arrayOf(like, like, like, (limit * PLATFORM_SCAN_FACTOR).toString()),
+            words.second + arrayOf((limit * PLATFORM_SCAN_FACTOR).toString()),
         ).use { row ->
             buildList {
                 while (row.moveToNext() && size < limit) {

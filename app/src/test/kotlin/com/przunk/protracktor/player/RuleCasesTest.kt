@@ -99,6 +99,20 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `what a search matches agrees with the shared cases`() = each("searchMatch") { case ->
+        // The page decides the same thing in `rules.js`. Both sides split the query and look for
+        // every word; the row that expects `no` for a run-on query is there on purpose.
+        val author = case.getValue("author").takeIf { it != "-" } ?: ""
+        assertEquals(
+            case.why(),
+            case.bool("expect"),
+            com.przunk.protracktor.data.SearchTerms.matchesAny(
+                case.getValue("query"), case.getValue("title"), author,
+            ),
+        )
+    }
+
+    @Test
     fun `HVSC's time tokens agree with the shared cases`() = each("songLengthTime") { case ->
         // The page reads the same tokens in `web/src/songlengths.js`, and a SID's whole length
         // comes from getting them right -- there is nothing in the file to fall back on.

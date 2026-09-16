@@ -15,6 +15,31 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
+
+*Owner, 2026-09-16: on the web it "działa kiedy indeks nie jest ściągnięty — wtedy wchodzi w pusty
+folder i nic nie widać. Ta opcja powinna być zablokowana (tak jak browse konkretny folder
+modlandu)".*
+
+Confirmed by reading it: `showAuthorFolder` asks `archive.tracksIn(format, author, source)`, which
+answers out of the stored index. With no index that is an empty list, so Browse opens on the
+author's folder with nothing in it and no explanation — and the digression, if the dice was
+rolling, is handed an empty queue.
+
+**The action should be unavailable rather than silently empty**, which is the rule Browse already
+keeps for walking into a Modland folder by hand. Two things to settle while doing it:
+
+- **Where the guard goes.** `authorFolderOf` returning null is how the action already hides itself
+  for a local file, so the same answer probably serves: no index for that source, no folder. That
+  keeps one place deciding whether the action exists.
+- **Whether the phone has it too.** It offers the same jump and reads the same kind of index, and
+  the two players are meant to behave alike (`docs/SPEC_RANDOM.md`). Check before assuming it is a
+  web-only fault; if the phone guards it, copy what it does rather than inventing a second answer.
+
+A tune reached by a shared link is the case that makes this worth doing rather than shrugging at:
+somebody opening a `#play:` link has no index at all, and "more from this author" is exactly the
+thing they would try next.
+
 ## A42. Line the Random screen's buttons up — **noted 2026-09-15**
 
 *Owner, 2026-09-15, as a note to himself after the session headings were levelled: "wyrównać

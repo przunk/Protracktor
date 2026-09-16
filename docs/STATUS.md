@@ -415,6 +415,35 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C60. ~~A search matched the whole query as one substring~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: "czy wyszukiwanie może działać tak, że jak wpisuję 'space ninja' to znajduje mi
+też 'space_ninja'?"*
+
+Both players matched the typed query as **one** substring — `LIKE '%space ninja%'` on the phone,
+`title.includes(needle)` on the page — so a single separator in the middle of a filename was enough
+to miss it, and tracker files are named with separators.
+
+**It is not a fuzzy search and does not need to be.** Fuzzy matching answers typos; this is about
+`_` and `-` standing where a person types a space. Splitting the query and requiring **every word,
+anywhere, in any order** covers `space_ninja`, `spaceninja`, `Space Ninja` and `ninja space` alike,
+and a word may be satisfied by any of the columns searched — so `4-mat space` finds 4-Mat's
+`space.mod`.
+
+**What it deliberately does not do is normalise the stored name**, so typing `spaceninja` still
+misses `space_ninja`. That was measured before it was rejected. On 500,000 catalogue rows the worst
+case — a search matching nothing, which is every search still being typed — goes from **36 ms to
+217 ms** in SQL, or costs a normalised column and about twelve megabytes; in the browser, where the
+search runs on every keystroke, from **13 ms to 68 ms**. Splitting the query costs nothing
+measurable: **36.5 ms to 36.8 ms** for two words, because the extra clause short-circuits over the
+same scan.
+
+The rule is `data/SearchTerms.kt` and `rules.js`'s `searchTerms`, with ten shared cases in
+`docs/rules/queue-cases.tsv` that both suites run — including the row that expects the run-on query
+to miss, so the day somebody pays for the other half, a failing test says what changed.
+`SearchTermsTest` runs the SQL the rule builds against a real SQLite and compares it to the rule
+itself, rather than to a hand-written expectation.
+
 ### C59. ~~A SID with a known length looped for ever on the web~~ — FIXED 2026-09-16
 
 *Owner, 2026-09-16, on Response's "Normal People": it plays to about 3:50, both players say 4:05,

@@ -14,6 +14,7 @@
 
 import { catalogue } from './store.js';
 import { md5, parseSongLengths } from './songlengths.js';
+import { searchTerms } from './rules.js';
 
 const MODLAND = 'modland';
 const ASMA = 'asma';
@@ -430,14 +431,21 @@ async function ranged(url, range) {
  * Capped, because a query of one letter matches tens of thousands and nobody reads those.
  */
 export async function searchTitles(query, limit = 200, source = MODLAND) {
-  const needle = query.trim().toLowerCase();
-  if (needle.length < 2) return { hits: [], scanned: 0, capped: false };
+  // **Every word, anywhere, in any order** (`rules.js` `searchTerms`, and the phone's
+  // `SearchTerms`): `space ninja` finds `space_ninja`, which one substring never did.
+  const words = searchTerms(query);
+  if (words.join('').length < 2) return { hits: [], scanned: 0, capped: false };
   const found = [];
   let scanned = 0;
   for (const shard of await allTitleShards(source)) {
     for (const [title, format, author] of shard.entries) {
       scanned++;
-      if (!title.toLowerCase().includes(needle)) continue;
+      const haystack = title.toLowerCase();
+      // A plain loop rather than `every`, because this runs half a million times a keystroke and
+      // the first word that is missing is the answer.
+      let all = true;
+      for (const word of words) { if (!haystack.includes(word)) { all = false; break; } }
+      if (!all) continue;
       if (found.length < limit) {
         found.push({ url: urlFor(format, author, title, source), name: title, file: title,
                      meta: metaFor(source, format, author) });
@@ -451,12 +459,13 @@ export async function searchTitles(query, limit = 200, source = MODLAND) {
 
 /** Authors whose name contains [query], with the format they are filed under. */
 export async function searchAuthors(query, limit = 100, source = MODLAND) {
-  const needle = query.trim().toLowerCase();
-  if (needle.length < 2) return [];
+  const words = searchTerms(query);
+  if (words.join('').length < 2) return [];
   const found = [];
   for (const { name: format } of await formats(source)) {
     for (const { name, count } of await authors(format, source)) {
-      if (!name.toLowerCase().includes(needle)) continue;
+      const haystack = name.toLowerCase();
+      if (!words.every((word) => haystack.includes(word))) continue;
       found.push({ source, format, author: name, count });
       if (found.length >= limit) return found;
     }

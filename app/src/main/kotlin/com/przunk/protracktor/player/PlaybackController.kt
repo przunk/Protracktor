@@ -26,6 +26,7 @@ import com.przunk.protracktor.data.PlaylistFile
 import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
+import com.przunk.protracktor.data.SearchTerms
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.Md5
 import com.przunk.protracktor.data.SongDbMetadata
@@ -2849,8 +2850,9 @@ class PlaybackController private constructor(private val context: Context) {
                 // -- but an empty query matches every track in every playlist, and this is the one
                 // source that would have handed back all of them.
                 store.allTracks().asSequence().filter {
-                    (it.title.contains(current.query, ignoreCase = true) ||
-                        it.fileName.contains(current.query, ignoreCase = true)) &&
+                    // The same rule the two SQL searches use (`SearchTerms`), so a query that finds
+                    // a tune in the index does not miss the copy of it sitting in a playlist.
+                    SearchTerms.matchesAny(current.query, it.title, it.fileName) &&
                         (platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds))
                 }.take(SearchResults.PER_SOURCE_LIMIT).toList()
             } else {
