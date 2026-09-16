@@ -623,7 +623,13 @@ replaces.** Three additions:
       *Done when:* a Modland `.vt2` opens, renders audible audio, and reports a length — in both
       players.
 
-- [ ] **2. UADE.** The round's real item: **~29,000 files**, and it takes the 132 orphaned `.med`
+- [~] **2. UADE** — *stopped at the decision, 2026-09-17, per rule 4. The process model is now
+      answered on evidence and recommended (`docs/BACKLOG.md` A44): fork+exec, because `uade.c:476`
+      calls `exit(1)` when the emulated program asks for a missing file, and `exit()` is not an
+      exception. That also answers item 3 — `fork` does not exist in WebAssembly, so UADE is a phone
+      backend. Nothing was built; the integration waits on the owner's yes.*
+
+      *Original text:* The round's real item: **~29,000 files**, and it takes the 132 orphaned `.med`
       files with it (`docs/STATUS.md`: they need "a decoder nobody here has, which puts it with
       UADE's territory").
 

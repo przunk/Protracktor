@@ -571,7 +571,48 @@ of forking. The seam is one function.
 `lib/<abi>/` as a `lib*.so` — the one place Android still permits executing from. That keeps
 instances independent and upstream unforked, at the cost of process lifecycle management.
 
-**Neither is chosen here.** Item 1 was to measure, and this is the measurement.
+**Neither was chosen here.** Item 1 was to measure, and that was the measurement.
+
+### The 51 exits, read rather than counted — 2026-09-17
+
+*Round 12 item 2. The count above is the argument everyone reaches for and it is the weaker half of
+it: what matters is not how many there are but **which of them ordinary data can reach**.*
+
+Forty of the 51 are in `src/uade.c`, which is uadecore's command loop, and they are not all alike:
+
+```c
+/* uade.c:476 — the emulated Amiga program asks for a file */
+nameptr = (char *) get_real_address(src);
+f = lookup_amiga_file_cache(nameptr);
+if (f == NULL) {
+        uadecore_send_debug("load: request error: %s", nameptr);
+        exit(1);
+}
+```
+
+**That is a tune reaching it, not a programmer.** A replay routine asking for a sample file that is
+not there is ordinary damaged data — the same population that produced `docs/STATUS.md` C42 and
+C55 — and it calls `exit(1)`. Others in the same loop fire on a malformed IPC message; one at 662
+is the *intended* termination, when libuade closes the control socket.
+
+So the in-process thread is not a tuning problem. **`exit()` is not an exception**: the guard added
+to `player_oboe.cpp` for C42 catches nothing here, and neither does anything else. One bad Amiga
+module would take the app down, in a way no amount of care at our boundary can prevent.
+
+**Which decides it, unless upstream is patched** — and patching 51 exits is a fork of a library
+`docs/ARCHITECTURE.md` §3 says this project does not fork.
+
+| | |
+| --- | --- |
+| `uadecore`, host build, unstripped | **1.6 MB** |
+| `libuade.so` | 0.17 MB |
+| `players/` | 2.0 MB — **downloaded, not shipped** (`docs/LICENSES.md`, settled 2026-09-04) |
+
+**And it decides the browser too.** `fork`/`exec` do not exist in WebAssembly, so fork+exec means
+UADE is a phone backend and the page cannot have it — about 29,000 tunes the phone plays and the
+browser does not, which Browse would have to say out loud the way it said it about ZXTune. That is
+the answer to the roadmap's step 3, arrived at without building anything under Emscripten: the
+process model settles it first.
 
 **The licence half moved on 2026-09-04**, after UADE's maintainers answered: the replay binaries
 are to be downloaded rather than shipped, from <https://zakalwe.fi/uade/download.html>, the page

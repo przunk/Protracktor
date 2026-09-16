@@ -102,22 +102,36 @@ Most of the hard thinking is done and recorded:
   looks like the format not working. It is GPL-2-or-later and compatible. **`conf/songdb` beside it
   is CC BY-NC-SA and must not ship in a store app.**
 
-What is genuinely open: **the process model.** UADE upstream forks and execs `uadecore`; Android
-permits executing only from `lib/<abi>/`. `docs/PLAN_FORMATS.md` sets out that choice and does not
-make it, and it is the first thing to decide when this is picked up.
+**The process model was the open question and it is now answered on evidence** — 2026-09-17,
+`docs/PLAN_FORMATS.md`. The choice was between running `uadecore` as a thread in our process and
+keeping upstream's fork+exec. Reading the exits rather than counting them settles it: `uade.c:476`
+calls `exit(1)` when the **emulated Amiga program asks for a file that is not there**, which is
+ordinary damaged data reaching it, not a programmer. `exit()` is not an exception, so the guard that
+C42 put on the engine boundary catches nothing — one bad module would take the app down.
+
+**So: fork+exec, with `uadecore` shipped inside `lib/<abi>/`** as a `lib*.so`, which is the one
+place Android still permits executing from and is what upstream builds anyway. 1.6 MB for the
+emulator and 0.17 MB for `libuade`; `players/` stays a download.
+
+**It is the owner's call to confirm** (`docs/BACKLOG.md` A44), because it decides the next item too.
 
 **Do this before any of steps 3–5.** It is worth more than all of them together, and it takes
 `.med`'s 132 with it.
 
-## Step 3 — the browser question that comes with step 2
+## Step 3 — ~~the browser question that comes with step 2~~ — **answered by step 2, 2026-09-17**
 
-UADE is an Amiga emulator; whether it goes into the WebAssembly build is a size question the same
-way ZXTune was, and ZXTune's answer is now known: **+21% over the wire for 26,537 tunes**, and the
-"it does not build under Emscripten" that held it up for a week was eight lines nobody had tried.
+This said to try the Emscripten build early rather than at the end, on ZXTune's lesson. It does not
+arise: **`fork` and `exec` do not exist in WebAssembly**, and step 2's process model needs both. No
+build has to be attempted to know it.
 
-So: **try the build early, not at the end.** If UADE compiles under Emscripten the two players stay
-level, which `docs/SPEC_RANDOM.md` says they should. If it does not, the phone gains 29,000 tunes
-the browser cannot play and that gap wants saying out loud in Browse, the way ZXTune's absence was.
+So UADE is a phone backend, and the page cannot have it — about **29,000 tunes the phone plays and
+the browser does not**. `docs/SPEC_RANDOM.md` wants the two players alike, and this is the one place
+they cannot be, so Browse has to say so out loud the way it said it about ZXTune before 2026-09-15.
+Item 0 makes that easy rather than awkward: both players index the whole archive now, so the page
+already holds those rows and simply does not offer them.
+
+**If UADE is ever wanted in the browser**, the route is the in-process thread that step 2 rejected —
+which means 51 `exit()` calls to answer for, and a fork of a library this project does not fork.
 
 ## Step 4 — the ones that need a decoder of their own
 
