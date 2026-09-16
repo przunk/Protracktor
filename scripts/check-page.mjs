@@ -2402,6 +2402,44 @@ if (window.__api?.catalogueStore) {
   await store.clear('modland:');
 }
 
+// --- the dice never draws what this build cannot open ------------------------------------------
+//
+// The index holds the whole archive since `docs/ROADMAP_FORMATS.md` step 0, so every reader has to
+// ask for the playable part. **The dice is the reader where getting it wrong costs most**: it would
+// fetch a file nothing can decode and move on, which a listener experiences as the dice skipping.
+// The phone proves the same thing in `CataloguePlayableTest`.
+if (window.__api?.catalogueStore && window.__archive) {
+  const store = window.__api.catalogueStore;
+  const archiveApi = window.__archive;
+  await store.clear('modland:');
+  await store.clear('asma:');
+
+  const lines = [];
+  for (let i = 0; i < 20; i++) lines.push(`1\tProtracker/4-Mat/good${i}.mod`);
+  for (let i = 0; i < 80; i++) lines.push(`1\tProtracker/4-Mat/bad${i}.zzzznope`);
+  const built = archiveApi.toRecords(lines.join('\n'), 'modland', (n) => n.endsWith('.mod'));
+  await store.putAll(built.records);
+  await store.putAll([{ key: 'modland:meta', tracks: built.tracks, total: built.total,
+                        complete: true, formats: built.formats, buckets: built.buckets }]);
+
+  const table = await archiveApi.buildRandomTable();
+  check(table.total === 20, 'the pool counts only what can be played', String(table.total));
+  const drawn = [];
+  for (let i = 0; i < 40; i++) {
+    // Spread across the whole pool rather than trusting Math.random to.
+    const at = (i + 0.5) / 40;
+    drawn.push(await archiveApi.drawTrack(table, () => at));
+  }
+  check(drawn.every((t) => t && t.name.endsWith('.mod')),
+    'and forty draws across the pool are all playable',
+    drawn.filter((t) => !t || !t.name.endsWith('.mod')).map((t) => t?.name ?? 'null').join(','));
+  // Every one of the twenty is reachable: an off-by-one in the bucket arithmetic would show as a
+  // pool that only ever hands back its first or last tune.
+  check(new Set(drawn.map((t) => t.name)).size === 20,
+    'and every playable tune in the pool can come up', String(new Set(drawn.map((t) => t.name)).size));
+  await store.clear('modland:');
+}
+
 // --- clearing one archive's rows ----------------------------------------------------------------
 //
 // **Re-indexing was ninety times slower than indexing**, and the owner found it from the outside:

@@ -121,6 +121,50 @@ class CataloguePlayableTest {
     }
 
     @Test
+    fun `the dice never draws a row this build cannot open`() {
+        // **The one reader where an unplayable row costs more than a wrong-looking list**: it would
+        // open a file nothing can decode and move on, which the listener experiences as the dice
+        // skipping. It is also the only filter built from a list rather than written into the SQL,
+        // so a reader scanning for `playable` does not see it — hence a test rather than a glance.
+        database().use { db ->
+            db.add("tune.mod")
+            db.add("tune.zzzznope")
+            for (scope in listOf(
+                Triple(emptySet<String>(), emptySet<String>(), false),
+                Triple(setOf("modland"), emptySet(), false),
+                Triple(emptySet(), setOf("Protracker"), false),
+                Triple(setOf("modland"), setOf("Protracker"), false),
+            )) {
+                val (where, args) = randomWhere(scope.first, scope.second, scope.third)
+                val drawn = db.prepareStatement(
+                    "SELECT title FROM catalogue_tracks$where ORDER BY title"
+                ).use { select ->
+                    args.forEachIndexed { at, value -> select.setString(at + 1, value) }
+                    select.executeQuery().use { rows ->
+                        buildList { while (rows.next()) add(rows.getString(1)) }
+                    }
+                }
+                assertEquals("scope $scope", listOf("tune.mod"), drawn)
+            }
+        }
+    }
+
+    @Test
+    fun `and the filter is the first clause, whatever else narrows the draw`() {
+        // Written as a string check because the order is the property: `playable = 1` leads, so a
+        // scope added later cannot be `AND`-ed in front of it and quietly replace it.
+        for (scope in listOf(
+            Triple(emptySet<String>(), emptySet<String>(), false),
+            Triple(setOf("modland"), setOf("Protracker"), true),
+        )) {
+            assertTrue(
+                "scope $scope",
+                randomWhere(scope.first, scope.second, scope.third).first.startsWith(" WHERE playable = 1"),
+            )
+        }
+    }
+
+    @Test
     fun `only a partial index can be stale`() {
         val whole = CatalogueSummary(
             id = "modland", displayName = "Modland", trackCount = 10, indexedAt = 1L,
