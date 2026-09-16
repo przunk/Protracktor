@@ -168,7 +168,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, fallbackFiredNow: () => fallbackFired, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -275,7 +275,7 @@ if (window.__api) {
   check($('fallback').value === '3' && $('fallbackvalue').textContent === '3 minutes',
     'the fallback length starts at the phone\'s default of three minutes');
   window.__api.onWorklet({ type: 'position', seconds: 60 });
-  check(window.__api.fallbackFiredNow() === false,
+  check(window.__api.endedByClockNow() === false,
     'a tune with no length of its own is left alone before the fallback');
 
   // **Standing at the end of the queue with repeat off**, so that running out has nowhere to go and
@@ -286,8 +286,40 @@ if (window.__api) {
   const last = window.__api.queueNow().length - 1;
   check(window.__api.afterOf(last) == null, 'and the queue has nothing after the last track');
   window.__api.onWorklet({ type: 'position', seconds: 3 * 60 });
-  check(window.__api.fallbackFiredNow() === true && window.__api.finishedNow() === true,
+  check(window.__api.endedByClockNow() === true && window.__api.finishedNow() === true,
     'and ends, through the same path a real end of tune takes, once the fallback is reached');
+  // **And a length HVSC supplied ends the tune too**, which is the half this missed until
+  // 2026-09-16. It checked `duration <= 0`, on the reasoning that a format knowing its own length
+  // runs out of audio -- true of a tracker module and false of the one format it was written for.
+  // A SID never runs out; it loops. The owner found it on a tune whose music fades at 3:38 and
+  // which begins again at 4:05, with the bar pinned at the end meanwhile.
+  window.__api.onWorklet({
+    type: 'opened',
+    describe: 'title\tNormal People\tformat\tCommodore 64 (SID)',
+    duration: 245,
+    subsongs: 1,
+    canSeek: false,
+    preferredRate: 44100,
+    rate: 44100,
+  });
+  await new Promise((r) => setTimeout(r, 20));
+  window.__api.afterOf(last);
+  window.__api.onWorklet({ type: 'position', seconds: 244 });
+  check(window.__api.endedByClockNow() === false,
+    'a tune with a known length is left alone before it');
+  window.__api.onWorklet({ type: 'position', seconds: 245 });
+  check(window.__api.endedByClockNow() === true,
+    'and ends when that length is reached, rather than looping for ever');
+
+  // **And the guard survives the next track being started**, which is the bug that shipped between
+  // the two: `playAt` cleared the flag, but `playAt` only begins *loading* the next tune -- the
+  // worklet plays the old one until the bytes arrive. Its position messages kept coming, `duration`
+  // had just been zeroed for the bar so the limit fell back to three minutes, and the queue walked
+  // on once per message. The owner met it as a SID ending and the list jumping forward four tracks.
+  await window.__api.playAt(wasAt);
+  check(window.__api.endedByClockNow() === true,
+    'and starting the next track does not reopen the guard while the old one is still playing');
+
   // **Put back what these four checks moved.** `afterOf` sets the index as well as reading past it,
   // and the tune above is now finished -- both of which the checks after this one depend on. The
   // open is the same message the block started with, which clears `finished` and the fallback's own
