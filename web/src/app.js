@@ -93,15 +93,18 @@ const FALLBACK_MIN_SECONDS = 3 * 60;
 const FALLBACK_MAX_SECONDS = 10 * 60;
 let fallbackSeconds = FALLBACK_MIN_SECONDS;
 /**
- * Whether the fallback has already ended the tune now playing.
+ * Whether the clock has already ended the tune now playing.
  *
  * **Not `finished`**, which means something else: "played to its end with nothing after it", the
- * state that turns the play button into "again". A tune the fallback moves on from is not finished
- * in that sense at all -- something else is playing a moment later -- and borrowing the flag would
+ * state that turns the play button into "again". A tune the clock moves on from is not finished in
+ * that sense at all -- something else is playing a moment later -- and borrowing the flag would
  * leave the transport claiming so for as long as the next open took. Cleared wherever a tune
  * starts, which is `opened` and `subsong`.
+ *
+ * Named for the clock rather than for the fallback since 2026-09-16, when it stopped being only
+ * about the fallback: a length from HVSC ends a tune through the same door.
  */
-let fallbackFired = false;
+let endedByClock = false;
 
 /**
  * HVSC's lengths for the tune being opened, one per subsong, or empty.
@@ -305,7 +308,7 @@ function onWorklet(message) {
         ? message.duration
         : (openLengths[message.current ?? 0] ?? openLengths[0] ?? 0);
       finished = false;
-      fallbackFired = false;
+      endedByClock = false;
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
       const fields = describeFields(message.describe);
@@ -369,19 +372,27 @@ function onWorklet(message) {
         $('elapsed').textContent = clock(message.seconds);
         $('remaining').textContent = clock(duration);
       }
-      // **A tune nothing can measure still ends** (`docs/STATUS.md` C56). Only when the engine
-      // reports no length of its own: a format that knows when it finishes says so by running out
-      // of audio, and second-guessing that would cut real tunes short. The flag stops this asking
-      // again on every position message while the next tune is being opened.
-      if (duration <= 0 && !fallbackFired && message.seconds >= fallbackSeconds) {
-        fallbackFired = true;
+      // **A tune ends when its length says so, whoever supplied the length.**
+      //
+      // This checked `duration <= 0` until 2026-09-16, on the reasoning that a format knowing its
+      // own length says so by running out of audio. True of a tracker module and **false of the one
+      // format this was written for**: a SID never runs out. It loops. So once HVSC's lengths
+      // arrived and a SID finally had a duration, this stopped firing for exactly the tunes it
+      // existed to stop -- the owner found it on Response's "Normal People", whose music fades at
+      // 3:38 and which begins again at 4:05, HVSC's number to the second.
+      //
+      // The engine's own length still wins over the fallback; what changed is that a known length
+      // is now a reason to stop rather than a reason not to look.
+      const limit = duration > 0 ? duration : fallbackSeconds;
+      if (limit > 0 && !endedByClock && message.seconds >= limit) {
+        endedByClock = true;
         trackEnded();
       }
       break;
     // A subsong is a different tune: its own length, often its own title.
     case 'subsong': {
       finished = false;
-      fallbackFired = false;
+      endedByClock = false;
       currentSubsong = message.index;
       // HVSC times every subsong separately, so switching tune switches length too.
       duration = message.duration > 0 ? message.duration : (openLengths[message.index] ?? 0);
@@ -800,6 +811,7 @@ async function playAt(next) {
   // through the whole of the next download (owner, 2026-09-11).
   duration = 0;
   openLengths = [];
+  endedByClock = false;
   $('seek').value = 0;
   paint($('seek'));
   $('elapsed').textContent = clock(0);
@@ -2969,7 +2981,7 @@ $('fallback').oninput = () => {
   try { localStorage.setItem('protracktor.fallback', String(fallbackSeconds)); } catch { /* private window */ }
   // A tune already past the new limit ends at the next position message, which is what somebody
   // dragging the slider down is asking for -- so the flag is cleared rather than left standing.
-  fallbackFired = false;
+  endedByClock = false;
 };
 showFallback();
 

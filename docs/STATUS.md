@@ -415,6 +415,31 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C59. ~~A SID with a known length looped for ever on the web~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16, on Response's "Normal People": it plays to about 3:50, both players say 4:05,
+and in the browser the bar then sits at the end.*
+
+**The 4:05 is right, and measuring it is how the real fault was found.** HVSC's entry for that file
+is `4a2ab3b1574163989e510b70e80314ff=4:05`, the MD5 matches the file byte for byte, and rendering it
+a second at a time shows why: the music fades out at **3:38**, twenty-six seconds of near-silence
+follow, and at **4:05 the tune begins again**. HVSC times the loop, not the last audible note, and
+4:05 is that to the second. Nothing about the length was wrong.
+
+**What was wrong was that the browser did not stop there.** C56's clock checked `duration <= 0`,
+on the reasoning that a format knowing its own length announces the end by running out of audio.
+That is true of a tracker module and **false of the one format the clock was written for**: a SID
+never runs out — it loops. So the moment HVSC's lengths arrived and a SID finally had a duration,
+the clock stopped firing for exactly the tunes it existed to stop, and the bar sat pinned at the end
+while the tune played round again.
+
+A known length is now a reason to stop rather than a reason not to look: the engine's own length
+wins over the fallback, and either ends the tune. The flag is called `endedByClock` rather than
+`fallbackFired`, because it never was only about the fallback. The phone was never affected — it has
+always taken the known length first.
+
+Two page checks, and the second fails against the previous rule.
+
 ### C58. ~~Re-indexing was ninety times slower than indexing~~ — FIXED 2026-09-16
 
 *Owner, 2026-09-16: "jak robię indeksowanie, to w WEB to trwa z 2-3 s. Jak znowu kliknę indeksuj, to
