@@ -40,15 +40,31 @@ A tune reached by a shared link is the case that makes this worth doing rather t
 somebody opening a `#play:` link has no index at all, and "more from this author" is exactly the
 thing they would try next.
 
-## A42. Line the Random screen's buttons up — **noted 2026-09-15**
+## A42. ~~Line the Random screen's buttons up~~ — DONE 2026-09-16
 
 *Owner, 2026-09-15, as a note to himself after the session headings were levelled: "wyrównać
 przyciski na GUI random".*
 
-What is certain: the heading's Filter is now the slim pill and sits in a header of one fixed height,
-shared with a digression's. What he means beyond that — the row actions, the spacing between them,
-or Filter against the rows below — he will say when he gets to it. **Ask before building**, since
-the note is his shorthand rather than a description.
+**He said which on 2026-09-16, with a screenshot:** *"przycisk 'filter' i 'playlist' (wyżej) nie są
+równo i w równym rozmiarze."* Filter, in the heading, against Playlist in the bar directly above it.
+
+Measured off the screenshot rather than judged by eye — 864px wide at 2.1x — and it was **three
+faults, not one**:
+
+| | Playlist | Filter |
+| --- | --- | --- |
+| height | 134px — a 72dp pill clipped by a 64dp `TopAppBar` | 97px — 46dp, slim |
+| width | 107px — a full pill's 48dp floor, and the label needs 51 | 118px — `SLIM_MIN_WIDTH`, 56dp |
+| right edge | 32px — 8dp + 3dp seam + the bar's own 4dp | 40px — 16dp + the same seam |
+
+Both are slim pills now, so both stand 46dp tall and both sit at the 56dp floor — neither label
+needs more than that, so they come out exactly the same width rather than merely similar. And the
+bar's edge is **derived** from the heading's (`TOP_BAR_ACTION_EDGE = SESSION_HEADER_EDGE -
+TOP_APP_BAR_ACTION_PADDING`) instead of written down beside it, so moving the heading moves the bar
+with it. The 3dp seam every pill keeps inside its own bounds cancels, since both rows add it.
+
+**Not verified by rendering**: there is no emulator here (`AGENTS.md` §3), so the arithmetic is
+checked against the screenshot's pixels and the fix wants an eye on the phone.
 
 ## A41. Digression mode: the dice waits while you browse an author — DONE 2026-09-14
 

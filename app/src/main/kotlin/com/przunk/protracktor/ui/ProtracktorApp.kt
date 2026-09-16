@@ -312,7 +312,8 @@ fun ProtracktorApp(
                                 showBrowse = false
                             },
                             haptic = null,
-                            modifier = Modifier.padding(end = TOP_BAR_EDGE),
+                            slim = true,
+                            modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
                         )
                     }
                     // **Leaving ends the session**, which is what it has always done -- the record
@@ -324,7 +325,10 @@ fun ProtracktorApp(
                             label = stringResource(R.string.action_to_playlist),
                             onClick = { viewModel.returnToPlaylist(); showRandom = false },
                             haptic = null,
-                            modifier = Modifier.padding(end = TOP_BAR_EDGE),
+                            // **The same pill as Filter, one row below it** (owner, 2026-09-16,
+                            // with the two side by side). See `TOP_BAR_ACTION_EDGE`.
+                            slim = true,
+                            modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
                         )
                     }
                 },
@@ -824,6 +828,35 @@ private val TOP_BAR_SEAM = 6.dp
 
 /** The inset between the last control and the edge of the screen. Not a seam; a margin. */
 private val TOP_BAR_EDGE = 8.dp
+
+/**
+ * Where an action in the app bar puts its **visible** right edge, so it lines up with the action in
+ * the header underneath.
+ *
+ * *Owner, 2026-09-16, with a screenshot of Random: "przycisk 'filter' i 'playlist' (wyżej) nie są
+ * równo i w równym rozmiarze."* He was right three times over, and the three were separate:
+ *
+ * - **Height.** The bar's action was a full pill, 72dp, which a 64dp `TopAppBar` then clipped;
+ *   Filter is slim at 46dp. Both are slim now.
+ * - **Width.** A full pill's floor is 48dp and a slim one's is `SLIM_MIN_WIDTH` = 56dp, and neither
+ *   label needs more than that — so as full pills they were 51dp and 56dp, and as slim ones they
+ *   are both exactly 56dp.
+ * - **The right edge**, which is what this constant is for.
+ *
+ * Three paddings stack up before a pill's background starts: this one, `LabelledAction`'s own
+ * [ACTION_SEAM], and `TopAppBar`'s internal 4dp. The heading below adds [SESSION_HEADER_EDGE] and
+ * the same seam — so the seam cancels, and what is left is the heading's edge less what the bar
+ * already adds. **Derived rather than written down**, so that moving the heading moves this too.
+ *
+ * Measured off the owner's screenshot rather than assumed: the two pills stood 32px and 40px from
+ * the edge of an 864px screen at 2.1x, which is 15dp and 19dp — and 19dp is what
+ * `SESSION_HEADER_EDGE + ACTION_SEAM` comes to.
+ *
+ * `TOP_BAR_EDGE` stays 8dp for the playlist bar, whose actions that bar lays out itself rather than
+ * `TopAppBar`, so they never had the extra 4dp to account for.
+ */
+private val TOP_APP_BAR_ACTION_PADDING = 4.dp
+private val TOP_BAR_ACTION_EDGE = SESSION_HEADER_EDGE - TOP_APP_BAR_ACTION_PADDING
 
 /**
  * What the title/actions boundary swallows, added back.

@@ -137,7 +137,7 @@ private fun RandomHeader(
             .fillMaxWidth()
             .padding(top = contentPadding.calculateTopPadding())
             .height(SESSION_HEADER_HEIGHT)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = SESSION_HEADER_EDGE),
     ) {
         Icon(
             imageVector = PlayerIcons.Dice,
@@ -178,6 +178,16 @@ private fun RandomHeader(
  * switches between them: sized differently, the icon moved down the screen as he did.
  */
 internal val SESSION_HEADER_HEIGHT = 72.dp
+
+/**
+ * How far a session heading holds off the edge of the screen — and therefore where the action at
+ * its right-hand end puts its visible edge.
+ *
+ * Named because the app bar above has to agree with it: `TOP_BAR_ACTION_EDGE` is derived from this
+ * rather than written down beside it, so moving the heading moves the bar's action with it instead
+ * of quietly leaving the two a few pixels apart (owner, 2026-09-16).
+ */
+internal val SESSION_HEADER_EDGE = 16.dp
 
 /** What the dice is set to pick from, in words, for wherever that has to be shown. */
 @Composable
