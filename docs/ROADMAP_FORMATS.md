@@ -14,7 +14,7 @@ third is not evenly spread:
 | DefleMask `.dmf` | 1,807 | step 4 — its own decoder |
 | FamiTracker `.ftm` | 1,874 | step 4 — its own decoder |
 | ZX `.ay` | 1,202 | **step 5 — blocked by a licence, not by work** |
-| Vortex Tracker II `.vt2` | *unclaimed* | **step 1 — the decoder is already compiled in** |
+| Vortex Tracker II `.vt2` | **12** | **step 5 — measured 2026-09-17, and it is neither free nor worth it** |
 | `.med` (old Music Editor) | 132 | folds into step 2 |
 | `.imf`, `.psm` stragglers | ~280 | step 4 |
 
@@ -51,21 +51,37 @@ C64 tunes to exactly that. An index that holds everything cannot be wrong about 
 plays; it can only be out of date about the archive, which is a different and much more visible
 thing.
 
-## Step 1 — Vortex Tracker II, `.vt2`
+## Step 1 — ~~Vortex Tracker II, `.vt2`~~ — **struck out 2026-09-17, and both halves of the case for it were wrong**
 
-**The cheapest thing on this page by a wide margin, and it was missed.** ZXTune's
-`protracker3_vortex.cpp` implements `CreateVortexTracker2Decoder()`, `players/aym/vortex.cpp`
-implements the player, and **this project already compiles both** — the CMake globs
-`src/formats/chiptune/aym/*.cpp` and `src/module/players/aym/*.cpp`, so the code is in the binary
-today and nothing ever calls it.
+*This said: the cheapest thing on the page, the decoder is already compiled in, hours not days. It
+was written without a count and without trying it. Kept in full, because the mistake is instructive
+and the next person will be tempted the same way.*
 
-What it needs: one `tryAym` line in `ZxTuneBackend`, the name in `worthTrying`, a row in
-`SupportedFormats` and one in `web/src/formats.tsv`. Hours, not days.
+**The decoder is more than compiled in — it is already wired.** `engine.cpp` has called
+`Module::ProTracker3::CreateFactory(FC::ProTracker3::VortexTracker2::CreateDecoder())` all along,
+right beside the ordinary PT3 decoder. The only thing missing was the **name**: `.vt2` is not in
+`ZxTuneBackend::worthTrying`, so such a file never reaches ZXTune.
 
-**Measure before claiming it.** `.vt2` is a *text* format where ProTracker 3 is binary, so the one
-thing to check is that a real Modland `.vt2` opens and renders rather than merely being claimed —
-the `.psm`, `.ftc` and `.gtr` mistake was exactly this, three names claimed before the decoders were
-wired and three files that said "Protracktor cannot play this yet" about decoders that existed.
+**And adding the name would not have helped.** Renamed to `.pt3`, so that the existing claim carries
+it, a real Modland `.vt2` is still refused — and so are the other seven sampled from seven
+different authors. The host probe says where: the header parses, `ParseBody` stops after **374
+bytes of 38,221**, and `CheckIsSubset` then throws because the order list names patterns the body
+never read. These files put a blank line between sections *and* a blank line after the header, and
+ZXTune's text parser ends the body at the first of them. Collapsing them moves the failure rather
+than fixing it, so there is more than one difference.
+
+**Twelve files.** That is the whole of `.vt2` in Modland's 516,118 — counted from `allmods.zip`, not
+estimated. The step was placed first on the strength of "free", and it is neither free nor worth a
+day of somebody's ZXTune parser archaeology. It lives at step 5 now, beside the other thing that is
+not ours to fix.
+
+**The lesson, which is the reason this is not simply deleted:** the roadmap ordered a step by how
+cheap it looked and never counted what it was worth. `.vt2` went first ahead of 29,000 files. One
+`grep` over the index — ninety seconds — would have said twelve.
+
+**What was kept from the attempt.** `native/probe/zxtune/probe_zxtune.cpp` now prints the decoder's
+own exception under `PROBE_ZXTUNE_WHY=1`, because "reject:load" is every refusal wearing one face
+and the question is always which decoder objected to what. That is how the 374 bytes were found.
 
 ## Step 2 — UADE, and it is the whole of the rest
 
@@ -120,9 +136,12 @@ shared machinery. Worth doing only after step 2, and probably only if somebody w
 to be tried **alongside** the existing one rather than instead of it, and `openBackend`'s
 first-refusal-wins rule (`docs/STATUS.md` C55) decides which reason the owner is shown.
 
-## Step 5 — `.ay`, which is not ours to fix
+## Step 5 — the two that are not worth it, for different reasons
 
-1,202 files, and **no amount of work here changes it.** The only AY-emulation decoder in reach is
+### `.ay` — not ours to fix
+
+1,202 files — Modland's `AY Emul` **directory**, whose members are not named `.ay`, so counting by
+extension says zero. And **no amount of work here changes it.** The only AY-emulation decoder in reach is
 ZXTune's `ayemul.cpp`, which uses `z80ex` — **GPL-2-only**, which cannot be combined with this
 project's GPL-3. That is why it is the one file excluded from our ZXTune build by name.
 
@@ -134,6 +153,12 @@ The routes, and none is engineering:
 3. Leave it, and say so where a `.ay` is met.
 
 **Option 3 today.** Recording it here so it stops being re-derived: this is a licence, not a to-do.
+
+### `.vt2` — twelve files behind a parser disagreement
+
+The whole of step 1 above, moved here. ZXTune's decoder is already wired and refuses every one of
+Modland's twelve; the failure is inside its text parser and would be a day of somebody's time. If
+it is ever done, do it for the parser's sake rather than for the twelve.
 
 ---
 
