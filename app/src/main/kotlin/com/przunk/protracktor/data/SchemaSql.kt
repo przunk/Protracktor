@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 14
+    const val VERSION = 15
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -59,6 +59,12 @@ object SchemaSql {
         )
         """.trimIndent(),
 
+        // **Version 1's indexes, and they do not stay this shape.** `playable` arrives at version
+        // 15 and these are rebuilt as partial indexes over it there -- which they cannot be here,
+        // because `CREATE` is version 1 plus every migration in order and the column does not
+        // exist yet. A fresh install therefore builds these, drops them a moment later and builds
+        // the partial ones, which costs nothing on an empty table and keeps one description of the
+        // schema rather than two.
         "CREATE INDEX idx_catalogue_browse ON catalogue_tracks(catalogue_id, format, author, title)",
         "CREATE INDEX idx_catalogue_title ON catalogue_tracks(catalogue_id, title)",
     )
@@ -294,6 +300,51 @@ object SchemaSql {
         "ALTER TABLE player_state ADD COLUMN fallback_length_seconds INTEGER NOT NULL DEFAULT 0",
     )
 
+    /**
+     * What a catalogue row is filed under, and whether this build can play it, added at version 15.
+     *
+     * **The index stops being a function of the decoder set** (`docs/ROADMAP_FORMATS.md` step 0).
+     * It used to hold only rows `SupportedFormats` accepted, so adding a format changed what an
+     * index should contain and every user downloaded Modland's 40 MB again — a toll charged once
+     * per format, and the roadmap has four items that would each have charged it.
+     *
+     * `ext` and `pre` are the two halves of a filename `SupportedFormats` judges, stored as they
+     * are: they depend on the name and not on the list. `playable` is the judgement, and it is
+     * re-decided for every row by one `UPDATE` when the list changes — 228ms over 516,107 rows,
+     * measured — with no network at all.
+     *
+     * **This migration cannot backfill the rows that were dropped**, because they were never
+     * downloaded. Every existing index is one download short of complete and is marked for a final
+     * refresh; after that there is not another.
+     */
+    private val CATALOGUE_PLAYABLE_V15: List<String> = listOf(
+        "ALTER TABLE catalogue_tracks ADD COLUMN ext TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE catalogue_tracks ADD COLUMN pre TEXT NOT NULL DEFAULT ''",
+        // 1, not 0. An index written before this migration holds **only** playable rows, so every
+        // row in it is playable -- and defaulting to 0 would empty Browse for anybody who did not
+        // re-index immediately.
+        "ALTER TABLE catalogue_tracks ADD COLUMN playable INTEGER NOT NULL DEFAULT 1",
+        // **Whether this index holds the whole archive or only what an older build accepted.**
+        //
+        // The distinction is the one thing a recompute cannot paper over: an index written before
+        // version 15 contains exactly the rows the format list of the day let through, so a format
+        // added afterwards has no rows here to be re-decided and a download is genuinely needed. An
+        // index written since holds everything, and never needs one again.
+        //
+        // 0 for everything that already exists, which is the truth about all of it.
+        "ALTER TABLE catalogues ADD COLUMN complete INTEGER NOT NULL DEFAULT 0",
+        // Rebuilt over the playable rows only, now that the table holds every row. Measured at
+        // Modland's size: 129.0 MB with full indexes, 112.8 MB with these, against 83.3 MB for the
+        // old shape that held 344,071 rows instead of 516,107. The recompute pays for it — 228ms
+        // becomes 1.7s with these to maintain — and it is rare and offline, which the download it
+        // replaces was neither.
+        "DROP INDEX IF EXISTS idx_catalogue_browse",
+        "DROP INDEX IF EXISTS idx_catalogue_title",
+        "CREATE INDEX idx_catalogue_browse ON catalogue_tracks(catalogue_id, format, author, title) " +
+            "WHERE playable = 1",
+        "CREATE INDEX idx_catalogue_title ON catalogue_tracks(catalogue_id, title) WHERE playable = 1",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -351,7 +402,8 @@ object SchemaSql {
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
-        MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14
+        MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
+        CATALOGUE_PLAYABLE_V15
 
 
 
@@ -376,6 +428,7 @@ object SchemaSql {
         12 to MODLAND_FAVOURITES_V12,
         13 to RANDOM_SCOPE_V13,
         14 to FALLBACK_LENGTH_V14,
+        15 to CATALOGUE_PLAYABLE_V15,
     )
 
     /**

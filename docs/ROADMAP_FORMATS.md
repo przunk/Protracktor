@@ -18,13 +18,38 @@ third is not evenly spread:
 | `.med` (old Music Editor) | 132 | folds into step 2 |
 | `.imf`, `.psm` stragglers | ~280 | step 4 |
 
-**One cost applies to every step and is worth knowing before starting any of them.** Adding a name
-to `SupportedFormats` changes its fingerprint, every stored index goes stale, and each user
-re-downloads Modland's 40 MB (`docs/STATUS.md`, the `.vtx` entry). So **the additions want batching**
-— pay it once for a group rather than once per format. That argues for doing step 1 *with* something
-else rather than on its own, unless it is wanted immediately.
+**~~One cost applies to every step~~ — paid off 2026-09-17, and it was step 0.** Adding a name to
+`SupportedFormats` used to change its fingerprint, make every stored index stale, and cost each user
+a re-download of Modland's 40 MB — a toll the four steps below would have charged four times. An
+index holds the whole archive now and what this build can open is decided where it is read, so a
+format added later is a question the stored rows already answer: **one statement, no network.** The
+steps below no longer want batching for that reason, and none of them has to mention it again.
 
 ---
+
+## Step 0 — the index stops depending on what we can play — **done 2026-09-17**
+
+`SupportedFormats` used to decide what a downloaded index **kept**, which made the index a function
+of the decoder set. Both players store every row the archive lists now, with the verdict beside it,
+and every screen asks for the playable part.
+
+| | |
+| --- | --- |
+| a format added later | **one `UPDATE`, 228 ms over 516,107 rows** — or 1.7 s with the partial indexes to maintain — and no network |
+| what it used to cost | Modland's 40 MB, per device, per format |
+| phone database | 83.3 MB → **112.8 MB** at Modland's size: +29.5 MB for 172,036 more rows |
+| a folder in Browse | **faster**, 0.1 ms: the browse index is partial over `playable = 1`, so it covers exactly the rows anything reads |
+
+**The one thing a recompute cannot do is conjure rows that were never downloaded**, so an index
+built before this is marked `complete = 0` and asks for one last refresh. After that there is not
+another. The migration's `playable DEFAULT 1` is what keeps such an index working meanwhile: it
+holds only playable rows by construction, and defaulting to 0 would have emptied Browse.
+
+The class of defect it removes is worth as much as the toll. The fingerprint existed because an
+index built by an older decoder set is missing files **and looks current** — the owner lost 60,572
+C64 tunes to exactly that. An index that holds everything cannot be wrong about what this build
+plays; it can only be out of date about the archive, which is a different and much more visible
+thing.
 
 ## Step 1 — Vortex Tracker II, `.vt2`
 

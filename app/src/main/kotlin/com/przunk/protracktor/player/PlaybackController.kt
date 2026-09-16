@@ -731,6 +731,28 @@ class PlaybackController private constructor(private val context: Context) {
         // and for the same reason.
         scope.launch(Dispatchers.IO) { runCatching { catalogues.pruneUnknownCatalogues() } }
 
+        // **What a format added since the last run costs: one statement, and no network**
+        // (`docs/ROADMAP_FORMATS.md` step 0). An index holds every row the archive lists, so a
+        // change to `SupportedFormats` is a question the stored rows can already answer —
+        // 228ms over 516,107 of them, measured — where it used to mean re-downloading Modland's
+        // 40 MB on every device.
+        //
+        // Run only when the stamp actually moved. Recomputing on every start would be 228ms of
+        // nothing, every time, for a list that changes with a release.
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val current = NativeEngine.backendsFingerprint()
+                if (catalogues.summaries().any { it.indexedAt != null && it.backends != current }) {
+                    catalogues.refreshPlayable()
+                    // Re-stamped only where the index is whole. A partial one -- written before the
+                    // index stopped being a function of the format list -- is missing rows no
+                    // recompute can conjure, and has to go on saying it needs fetching again.
+                    catalogues.restampComplete(current)
+                    _browse.update { it.copy(catalogues = catalogues.summaries()) }
+                }
+            }
+        }
+
         scope.launch(Dispatchers.IO) {
             runCatching {
                 val version = context.packageManager
@@ -2168,14 +2190,12 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val entries = withContext(Dispatchers.Default) {
-                // By name, and here that is right rather than a shortcut. A catalogue index is a
-                // list of filenames on somebody else's server; deciding by content would mean
-                // downloading half a million files to find out. The local library is the opposite
-                // case and is scanned by opening (`docs/BACKLOG.md` A6).
-                // **`inCatalogueIndex`, not `looksPlayable`.** The wider question includes names
-                // this build plays only as local files -- MP3 -- and no archive here holds one, so
-                // asking it would put rows in an index that can never be fetched.
-                catalogue.parseIndex(bytes) { name -> SupportedFormats.inCatalogueIndex(name) }
+                // **Everything the archive lists, and nothing decided here**
+                // (`docs/ROADMAP_FORMATS.md` step 0). What this build can play is written beside
+                // each row as it is stored and re-decided locally when the format list changes, so
+                // the index is no longer a function of the decoders — and adding a format no longer
+                // costs every user the whole 40 MB again.
+                catalogue.parseIndex(bytes)
             }
             catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             endDownload(catalogue.id)
