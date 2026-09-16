@@ -3412,7 +3412,7 @@ class PlaybackController private constructor(private val context: Context) {
      * down is asking for.
      */
     fun setFallbackLength(seconds: Int) {
-        val wanted = seconds.coerceIn(FallbackLength.RANGE_SECONDS)
+        val wanted = FallbackLength.snap(seconds)
         if (wanted == _state.value.fallbackLengthSeconds) return
         _state.update { it.copy(fallbackLengthSeconds = wanted) }
         scheduleSave()

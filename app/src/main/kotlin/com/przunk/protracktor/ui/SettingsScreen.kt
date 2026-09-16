@@ -149,7 +149,15 @@ fun SettingsScreen(
                         )
                         Slider(
                             value = dragging.toFloat(),
-                            onValueChange = { dragging = it.toInt() },
+                            // **Snapped to whole minutes, not truncated.** A stepped Slider hands
+                            // back a float that is only nearly its notch -- 239.99997 for four
+                            // minutes -- and `toInt()` on that stores 239 seconds while the label,
+                            // which divides by 60, still reads "3 minutes". Rounding to the step
+                            // makes the number stored the number shown.
+                            onValueChange = {
+                                dragging = Math.round(it / FallbackLength.STEP_SECONDS) *
+                                    FallbackLength.STEP_SECONDS
+                            },
                             onValueChangeFinished = {
                                 haptics.toggle(true)
                                 onFallbackLengthChanged(dragging)

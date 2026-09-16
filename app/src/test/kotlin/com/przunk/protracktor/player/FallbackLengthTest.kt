@@ -48,6 +48,22 @@ class FallbackLengthTest {
     }
 
     @Test
+    fun `a value a hair under a notch becomes the notch`() {
+        // A stepped Compose Slider hands back 239.99997 for four minutes; truncating it stored 239
+        // seconds while the label, dividing by 60, still read three. Found in review.
+        assertEquals(4 * 60, FallbackLength.snap(239))
+        assertEquals(4 * 60, FallbackLength.snap(240))
+        assertEquals(4 * 60, FallbackLength.snap(241))
+        assertEquals(4 * 60, FallbackLength.fromStored(239))
+    }
+
+    @Test
+    fun `snapping never leaves the range`() {
+        assertEquals(FallbackLength.RANGE_SECONDS.first, FallbackLength.snap(0))
+        assertEquals(FallbackLength.RANGE_SECONDS.last, FallbackLength.snap(99_999))
+    }
+
+    @Test
     fun `the slider has one notch per minute`() {
         // `steps` in Compose counts the notches *between* the ends, so the screen passes
         // STEPS - 2. If this count is wrong the slider lands between minutes and the label shows a

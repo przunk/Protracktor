@@ -33,12 +33,16 @@ signing and rollout remain the owner's actions.
 
 - [ ] Merge only owner-approved branches into `develop` and run the complete final documentation
       pass.
-- [ ] Run `./scripts/test-protracktor.sh --rerun-tasks` and confirm a non-zero test count.
-- [ ] Run `./scripts/build-debug.sh` and complete the outstanding phone test list in
-      `docs/STATUS.md`.
+- [ ] Run `./scripts/test-protracktor.sh --really` and confirm a non-zero test count.
+- [ ] Run `./scripts/build-debug.sh` and work through `docs/TESTING.md` — the standing checks plus
+      whatever section this build's fixes added. Nothing in the suite can see a process die, a
+      foreground service survive, or audio in a real output.
 - [ ] Build release and inspect R8/JNI/resources: `./scripts/build-release.sh`.
-- [ ] The merger bumps `versionCode` exactly once. Set `versionName` according to the release scope.
-- [ ] Commit the version change and create the immutable release tag.
+- [ ] **Nobody bumps `versionCode`.** It is `git rev-list --count HEAD`, decided when the build runs
+      (`app/build.gradle.kts`), after it blocked an upload once by being a number a person had to
+      remember. Set `versionName` by hand according to the release scope, per `docs/BUILD.md`.
+- [ ] Commit any `versionName` change and create the immutable release tag. The tag is what ties the
+      published `versionCode` to a commit, which is how the GPL obligation stays honest.
 
 ## 4. Build and inspect the Play artifact
 

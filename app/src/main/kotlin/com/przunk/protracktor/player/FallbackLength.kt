@@ -47,7 +47,19 @@ object FallbackLength {
      * rather than rejected: a value written by a newer build must not make an older one unusable.
      */
     fun fromStored(seconds: Int): Int =
-        if (seconds <= 0) DEFAULT_SECONDS else seconds.coerceIn(RANGE_SECONDS)
+        if (seconds <= 0) DEFAULT_SECONDS else snap(seconds)
+
+    /**
+     * The nearest whole minute inside the range.
+     *
+     * **Here rather than in the screen**, so the invariant belongs to the setting and not to one
+     * slider. A stepped Compose `Slider` hands back a float that is only nearly its notch --
+     * 239.99997 for four minutes -- and truncating that stores 239 seconds while a label dividing
+     * by 60 still reads three minutes. Rounding at both ends means the number stored is always the
+     * number shown, whichever control is doing the asking.
+     */
+    fun snap(seconds: Int): Int =
+        (Math.round(seconds.toFloat() / STEP_SECONDS) * STEP_SECONDS).coerceIn(RANGE_SECONDS)
 
     /** How many discrete positions the slider has, ends included. */
     val STEPS: Int = (RANGE_SECONDS.last - RANGE_SECONDS.first) / STEP_SECONDS + 1

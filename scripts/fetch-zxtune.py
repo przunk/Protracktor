@@ -156,7 +156,12 @@ def main() -> int:
     stamp = DEST / ".protracktor-version"
     if stamp.is_file() and stamp.read_text().strip() == REVISION and not args.force:
         print(f"  ✅ zxtune {REVISION} (already present)")
-        return 0
+        # **Patched here as well as after a fresh clone**, and the reason is every checkout that
+        # already existed when the patches were added: this path returns before the clone, so
+        # without this they would never be applied at all and the web build would fail on a machine
+        # whose tree is perfectly up to date. `apply_patches` is idempotent, so running it on every
+        # invocation costs five file reads.
+        return 0 if apply_patches() else 1
 
     if DEST.exists():
         shutil.rmtree(DEST)
