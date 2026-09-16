@@ -605,7 +605,11 @@ replaces.** Three additions:
       *Done when:* the format list can change with no re-index, a stored index survives a decoder
       change, nothing unplayable is offered anywhere, and the size cost is a number in the commit.
 
-- [ ] **1. Vortex Tracker II, `.vt2`.** The cheapest item on the roadmap and it is already built:
+- [x] **1. Vortex Tracker II, `.vt2`** — *struck out 2026-09-17, not built: it is **12 files** in
+      Modland's 516,118, the decoder is already wired, and it refuses all twelve anyway. See
+      `docs/ROADMAP_FORMATS.md`, where the step is kept in full because the mistake is instructive.*
+
+      *Original text:* The cheapest item on the roadmap and it is already built:
       ZXTune implements `CreateVortexTracker2Decoder()` and `players/aym/vortex.cpp`, and this
       project's CMake globs compile both — the code is in the binary today and nothing calls it.
 
