@@ -521,6 +521,129 @@ else.
 
 ---
 
+# Round 12 — set 2026-09-17, the formats we cannot play
+
+The gaps are listed and ordered in `docs/ROADMAP_FORMATS.md`; this is the round that closes them.
+**Read that file first** — it has the numbers, and this list does not repeat them.
+
+## Where this starts
+
+The app claims **342,169 of Modland's 516,107 rows**. The missing third is mostly one thing: the
+Amiga formats where the tune is note data and the player is a separate 68000 program, which is
+UADE's territory and about 29,000 files. Everything else on the roadmap is hundreds or low
+thousands.
+
+## The rules
+
+`AGENTS.md`, and round 8's restatement of them, in full. Two additions for this round:
+
+- **Licences are checked, recorded, and do not stop the work.** The owner's instruction,
+  2026-09-17: find out what a component's licence is and write it in `docs/LICENSES.md` as you go,
+  but if it turns out to be a problem, **note it and carry on** — the decision is his and it is made
+  before publishing, not before building. A backend that is written and then not shipped has cost a
+  branch; a backend not written because nobody asked has cost the round.
+- **Measure before claiming a format.** `.psm`, `.ftc` and `.gtr` were once claimed by
+  `SupportedFormats` before their decoders were wired, so three formats told the owner "Protracktor
+  cannot play this yet" about decoders that existed. A name goes in the list **after** a real file
+  from the archive has been played through the built engine.
+
+## Explicitly out of scope
+
+- **`.ay`.** Not a to-do. The only decoder in reach uses `z80ex`, GPL-2-only, which cannot be
+  combined with this project's GPL-3 — see the roadmap's step 5. Do not spend an hour rediscovering
+  this.
+- **Another catalogue.** `docs/PLAN_CATALOGUES.md` measured it on 2026-09-16: only Modland and ASMA
+  send CORS, so anything else is phone-only. A format is worth more than an archive right now.
+- **Deciding UADE's process model** if it turns out to need the owner. Write the choice into
+  `docs/BACKLOG.md` and keep going on what does not depend on it.
+
+## The list
+
+- [ ] **0. Make the index stop depending on what we can play.** *Do this first, and nothing else
+      before it.*
+
+      Today `SupportedFormats` decides what a downloaded index **keeps**, so changing the format
+      list changes its fingerprint, every stored index goes stale, and every user re-downloads
+      Modland's 40 MB. **Every item below would charge that toll separately** — which is the real
+      reason this round starts here rather than with the biggest number.
+
+      Store every row and decide playability **when the index is read** instead. The rows are the
+      same shape either way; what changes is that the index stops being a function of the decoder
+      set.
+
+      **It removes a class of defect as well as the toll.** The fingerprint exists because an index
+      built by an older decoder set is missing files and looks current — the owner lost 60,572 C64
+      tunes to exactly that. An index that holds everything cannot be wrong about anything; it can
+      only be out of date about Modland, which is a different and much more visible thing.
+
+      Costs, to be measured rather than assumed: **+174,000 rows**, roughly half again, on the phone
+      and in the browser's IndexedDB. Measure the database before and after and put the number in
+      the commit. And one **last** re-index for anyone who has one today — say so in the UI, since
+      it is the last one they will be asked for.
+
+      **The risk is a missed filter**, not the storage: an unplayable file appearing in Browse or in
+      Random is worse than the toll this removes. One predicate, applied where the queries already
+      live, and a check per screen that reads the index — Browse, search, Random, the counts and the
+      platform chips. `docs/SPEC_RANDOM.md` says the two players agree; they must still agree here.
+
+      *Done when:* the format list can change with no re-index, a stored index survives a decoder
+      change, nothing unplayable is offered anywhere, and the size cost is a number in the commit.
+
+- [ ] **1. Vortex Tracker II, `.vt2`.** The cheapest item on the roadmap and it is already built:
+      ZXTune implements `CreateVortexTracker2Decoder()` and `players/aym/vortex.cpp`, and this
+      project's CMake globs compile both — the code is in the binary today and nothing calls it.
+
+      One `tryAym` line in `ZxTuneBackend`, the name in `worthTrying`, `SupportedFormats` and
+      `web/src/formats.tsv`.
+
+      **`.vt2` is a text format where ProTracker 3 is binary**, so this is exactly the case the
+      second rule is about: fetch real `.vt2` files from Modland and play them through the built
+      engine before the name goes anywhere.
+
+      *Done when:* a Modland `.vt2` opens, renders audible audio, and reports a length — in both
+      players.
+
+- [ ] **2. UADE.** The round's real item: **~29,000 files**, and it takes the 132 orphaned `.med`
+      files with it (`docs/STATUS.md`: they need "a decoder nobody here has, which puts it with
+      UADE's territory").
+
+      Most of the thinking is recorded and should not be redone — `docs/PLAN_FORMATS.md` for the
+      measurement, `docs/LICENSES.md` for the licence, which is **settled**: the replay binaries are
+      downloaded from the page upstream publishes for the purpose, never shipped.
+
+      Three things an integration needs, and the third is the one that surprises people: the
+      emulator, `players/`, **and a song database**. Without `conf/song.conf`'s md5 overrides the
+      Hippel and TFMX variants fail in a way that looks like the format not working. It is
+      GPL-2-or-later and fine. **`conf/songdb` beside it is CC BY-NC-SA — non-commercial — and must
+      not ship.** Take the one, leave the other.
+
+      **Try the Emscripten build early, not last.** ZXTune's "does not build under Emscripten" was
+      carried for a week and turned out to be eight lines nobody had compiled. If UADE builds, the
+      two players stay level; if it does not, the phone gains 29,000 tunes the browser cannot play,
+      and Browse has to say so the way it says it about everything else.
+
+      *Done when:* a sampled corpus from the directories UADE reaches plays through the built
+      engine, on the phone at least, with the numbers in the commit.
+
+- [ ] **3. The ones that need a decoder of their own** — FamiTracker `.ftm` (1,874), DefleMask
+      `.dmf` (1,807), `.imf` (210, needs an **OPL2** emulator this build does not have), `.psm`
+      (~70). About 3,900 files between them and no shared machinery, so this is four separate pieces
+      of work and the last of them may not be worth doing at all.
+
+      **The trap is the shared extension**, which has caught this project twice. All four names are
+      claimed *today* for the files that do work, so a new decoder is tried **alongside** the
+      existing one, never instead of it — and `openBackend`'s first-refusal-wins rule
+      (`docs/STATUS.md` C55) decides which reason the owner is shown when both refuse.
+
+      Licence each one as you go, per the rule above. Write it down; do not stop for it.
+
+## When the list is done
+
+Write what the app claims now against Modland's 516,107, the same way round 8 did, and say what it
+was before. If item 0 landed, say what one re-index bought and confirm nothing will need another.
+
+And say what nobody ran. Nothing here is confirmed without the owner's phone.
+
 # Round 8 — set 2026-09-10, the web learns Random
 
 *The owner, late on 2026-09-10, after a day spent getting Random right on the phone: "zrobisz jako
