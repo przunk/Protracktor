@@ -811,7 +811,16 @@ async function playAt(next) {
   // through the whole of the next download (owner, 2026-09-11).
   duration = 0;
   openLengths = [];
-  endedByClock = false;
+  // **`endedByClock` is deliberately NOT cleared here**, and clearing it here was a bug that
+  // skipped four tracks at a time (`docs/STATUS.md` C59).
+  //
+  // This function starts *loading* the next tune; the worklet goes on playing the **old** one until
+  // the new bytes arrive and open, which is a fetch away. Its position messages keep coming in that
+  // gap, still carrying the old tune's clock -- and `duration` has just been zeroed for the bar, so
+  // the limit falls back to three minutes and every one of those messages is past it. Cleared here,
+  // the guard reopened and the queue walked on once per message until the fetch finished.
+  //
+  // It is cleared where a new tune actually starts: `opened` and `subsong`.
   $('seek').value = 0;
   paint($('seek'));
   $('elapsed').textContent = clock(0);

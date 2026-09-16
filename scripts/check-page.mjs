@@ -311,6 +311,15 @@ if (window.__api) {
   check(window.__api.endedByClockNow() === true,
     'and ends when that length is reached, rather than looping for ever');
 
+  // **And the guard survives the next track being started**, which is the bug that shipped between
+  // the two: `playAt` cleared the flag, but `playAt` only begins *loading* the next tune -- the
+  // worklet plays the old one until the bytes arrive. Its position messages kept coming, `duration`
+  // had just been zeroed for the bar so the limit fell back to three minutes, and the queue walked
+  // on once per message. The owner met it as a SID ending and the list jumping forward four tracks.
+  await window.__api.playAt(wasAt);
+  check(window.__api.endedByClockNow() === true,
+    'and starting the next track does not reopen the guard while the old one is still playing');
+
   // **Put back what these four checks moved.** `afterOf` sets the index as well as reading past it,
   // and the tune above is now finished -- both of which the checks after this one depend on. The
   // open is the same message the block started with, which clears `finished` and the fallback's own

@@ -438,7 +438,16 @@ wins over the fallback, and either ends the tune. The flag is called `endedByClo
 `fallbackFired`, because it never was only about the fallback. The phone was never affected — it has
 always taken the known length first.
 
-Two page checks, and the second fails against the previous rule.
+**And the first fix carried a worse bug, found by the owner within the hour**: a SID ending walked
+the queue forward about four tracks. Clearing the guard in `playAt` looked like tidying up after
+the old tune and is not — `playAt` begins *loading* the next one, and the worklet plays the old one
+until the bytes arrive. Its position messages keep coming across that gap, still carrying the old
+tune's clock, and `duration` has just been zeroed so the bar can start at nothing — so the limit
+falls back to three minutes and every one of those messages is past it. The guard reopened and the
+queue advanced once per message until the fetch finished.
+
+The guard is cleared where a tune actually starts, which is `opened` and `subsong`, and nowhere
+else. Three page checks now, and two of them fail against the two rules they replaced.
 
 ### C58. ~~Re-indexing was ninety times slower than indexing~~ — FIXED 2026-09-16
 
