@@ -67,6 +67,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -962,6 +965,21 @@ private fun SearchDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
+    // **The keyboard is up before he asks for it.** Search is the one screen nobody arrives at to
+    // look around: they came to type. Two taps used to stand between arriving and typing, and the
+    // field is at the top where the keyboard does not cover it.
+    //
+    // `LaunchedEffect(Unit)` and not a token: this composable exists only while the domain is
+    // Search, so entering composition *is* entering Search. Walking back out of a folder into
+    // results does not re-enter it, so the keyboard does not spring up over a list somebody is
+    // reading.
+    val field = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        field.requestFocus()
+        keyboard?.show()
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = browse.query,
@@ -982,7 +1000,10 @@ private fun SearchDomain(
                     Icon(PlayerIcons.Search, stringResource(R.string.domain_search_title))
                 }
             },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .focusRequester(field),
         )
 
         SearchScopePanel(

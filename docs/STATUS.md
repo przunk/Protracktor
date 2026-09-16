@@ -415,6 +415,29 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C57. ~~Search kept the last query with none of its results~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: going into Search a second time from the playlist — "nie wstecz po
+wyszukiwaniu" — showed the previous search still written in the box.*
+
+**Half the screen was already being cleared.** `BrowseNavigation.enteringDomain` empties `tracks`,
+`groups` and everything else about where you had got to, and the query was not in that list: it was
+asserted to *survive*, in a test that grouped it with the search scope and the downloaded-data
+counts as "things that are not about where you are".
+
+That grouping was the mistake. A scope is a setting and a count is a fact, but **a query is the
+input that produced the results the same function has just thrown away** — so what the owner met was
+his words with nothing underneath, which reads as a search that found nothing rather than as a
+screen waiting for a new one. The query is cleared with its results now, and the test that defended
+the old behaviour says why it changed.
+
+Walking back out of a folder into results does not come through `enteringDomain`, so a search still
+survives being walked away from and returned to.
+
+**And the keyboard comes up with the screen**, which the owner suggested in the same message. Search
+is the one place nobody arrives to look around — they came to type — and two taps stood between
+arriving and typing.
+
 ### C56. A SID never ends on the web, and does not on a fresh phone either — **OPEN**
 
 *Owner, 2026-09-15: "WEB: nie widzi końca SID (gra w nieskończoność); APK to potrafi."*
