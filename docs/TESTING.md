@@ -42,6 +42,32 @@ reporting with the file name; it is the visible end of a contained failure.
 A fix that cannot be told apart from the bug by looking is not finished. Each entry below says what
 to do and **what distinguishes a fix from a coincidence**.
 
+### Build 639 — 2026-09-16 — the fallback length, and the Spectrum in the browser
+
+*In it: `docs/STATUS.md` C56 and `docs/BACKLOG.md` A32. Build 628's list below has not been reported
+on yet and still stands.*
+
+1. **A SID must now end on its own.** Play one with the HVSC database **not** downloaded — Settings
+   → Storage says whether it is. Before this it played until you pressed next. *Fix looks like:* it
+   stops after three minutes and the next tune starts. *Watch for the opposite fault:* a tune that
+   ends the **instant** it starts means the setting read zero and took it literally, which is worse
+   than the bug being fixed.
+2. **The slider**, Settings → Playback → *When nothing knows the length*. Drag it end to end: the
+   label must read whole minutes only, 3 to 10, never something like "3 minutes" sitting on a notch
+   that stores 239 seconds. Leave it somewhere other than 3, force-stop the app, reopen: it must
+   come back where you left it.
+3. **It is not only SID.** A `.sndh` that sc68's database has no entry for behaves the same way.
+   Nothing to do but know it, so that a tune stopping at your setting reads as correct rather than
+   as a fault.
+4. **Nothing else may have started stopping.** This is the risk the change carries: the fallback
+   applies wherever a length is missing, so a format that reports none and deserves longer will now
+   be cut off — and stopping looks normal, so nobody thinks to report it. If a tune ends at exactly
+   your fallback and you expected more, that is the report I need, with the file name.
+5. **The phone should be unchanged by A32.** ZXTune went into the *browser* engine; the patch
+   touches sources Android compiles too, so play a few Spectrum files (`.pt3`, `.stc`, `.asc`) and
+   confirm they are exactly as they were. The web player is where the new thing is: those formats
+   now play there as well, which they never did.
+
 ### Build 628 — 2026-09-15 — the engine boundary and the SAP message
 
 *In it: `docs/STATUS.md` C42 (the phone's half) and C55.*
