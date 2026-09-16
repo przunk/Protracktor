@@ -686,7 +686,7 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 - ~~**The launcher icon** (A9)~~ — done 2026-09-03: an adaptive icon with a monochrome layer for
   themed icons, at every density.
 - ~~**A privacy policy and a data-safety declaration.**~~ **Written 2026-09-04** as round 6 item 5:
-  `docs/PRIVACY.md` is the policy, publishable at its own GitHub URL, and `docs/PLAY_STORE.md`
+  `store/privacy-policy.md` is the policy — one copy, bilingual — and `docs/PLAY_STORE.md`
   answers the data-safety form row by row. Both claims were checked against the source rather than
   assumed — no analytics SDK, no identifier read anywhere, five network hosts and all of them
   archives. `ACCESS_NETWORK_STATE` was found declared and unused, and removed.
