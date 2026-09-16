@@ -415,6 +415,28 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C58. ~~Re-indexing was ninety times slower than indexing~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: "jak robię indeksowanie, to w WEB to trwa z 2-3 s. Jak znowu kliknę indeksuj, to
+trwa dużo dłużej, głównie na sorting wisi. Z 20 sekund."*
+
+**The asymmetry was the diagnosis**: the first index has nothing to clear and the second has an
+archive's worth. `catalogue.clear` walked a cursor and called `cursor.delete()` on every record,
+which is the obvious way to write it and two orders of magnitude slower than the alternative,
+because each step is its own request through the transaction.
+
+Measured at 20,000 records, which is the shape Modland produces: **281 ms to write them all, 26,176
+ms to delete them again**. One `IDBObjectStore.delete` over the key range instead — it takes a range
+as happily as a key — brings that to **48 ms**.
+
+It looked like it hung on "sorting" because the label is set before the clear and the next one is
+not set until storing begins. That is now a window of 48 ms rather than 20 seconds, so it is left
+alone; a stage that flashes for a twentieth of a second is noise.
+
+Three page checks guard the thing that made the fast version worth trusting — that the range still
+deletes exactly the right rows. `modlandish:` is in there deliberately: it is the case a
+hand-written prefix scan gets wrong.
+
 ### C57. ~~Search kept the last query with none of its results~~ — FIXED 2026-09-16
 
 *Owner, 2026-09-16: going into Search a second time from the playlist — "nie wstecz po

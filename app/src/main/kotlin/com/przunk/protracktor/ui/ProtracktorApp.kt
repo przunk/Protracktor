@@ -94,8 +94,6 @@ fun ProtracktorApp(
      * over: once in `onCreate` and again in `onNewIntent` when the app is already running.
      * [onExternalOpened] is what stops the same tune restarting on every recomposition.
      */
-    webPlayer: String = com.przunk.protracktor.player.QueueLink.DEFAULT_BASE,
-    onWebPlayerChanged: (String) -> Unit = {},
     externalOpen: android.net.Uri? = null,
     onExternalOpened: () -> Unit = {},
 ) {
@@ -380,8 +378,11 @@ fun ProtracktorApp(
                 replayCount = browse.replayCount,
                 replayBytes = browse.replayBytes,
                 catalogues = browse.catalogues,
-                webPlayer = webPlayer,
-                onWebPlayerChanged = onWebPlayerChanged,
+                // From the collected state, not from the parameter: a successful pairing
+                // rewrites this address, and a value captured where the screen is built showed the
+                // one from before the scan (owner, 2026-09-16).
+                webPlayer = browse.webPlayer,
+                onWebPlayerChanged = viewModel::setWebPlayer,
                 songLengthCount = browse.songLengthCount,
                 trackMetadataCount = browse.trackMetadataCount,
                 favouriteCount = browse.favouritesListed,

@@ -341,6 +341,15 @@ data class BrowseState(
      * do — a code when it will open the camera, a link when it will send.
      */
     val pairedBrowser: Boolean = false,
+    /**
+     * Where the page is, for a shared link and for the field in Settings.
+     *
+     * **Here rather than read once where the screen is built**, which is where it used to be read:
+     * a successful pairing changes it (`Appearance.rememberPairing`), and a value captured at
+     * composition left Settings showing the address from before the scan. Sending already worked,
+     * because a link asks `Appearance` at the moment it is made; only the screen was behind.
+     */
+    val webPlayer: String = QueueLink.DEFAULT_BASE,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -579,7 +588,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private val pairedAtStart = Appearance.pairedEndpoint(context) != null
 
-    private val _browse = MutableStateFlow(BrowseState(pairedBrowser = pairedAtStart))
+    private val _browse = MutableStateFlow(
+        BrowseState(pairedBrowser = pairedAtStart, webPlayer = Appearance.webPlayer(context)),
+    )
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
 
     /** The open module. Owned here because native memory is invisible to the garbage collector. */
@@ -1541,11 +1552,17 @@ class PlaybackController private constructor(private val context: Context) {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
             Appearance.rememberPairing(context, endpoint)
-            _browse.update { it.copy(pairedBrowser = true) }
+            _browse.update { it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context)) }
             _state.update { it.copy(message = Message("Paired. The playlist is empty, so nothing was sent.")) }
             return
         }
         postQueue(endpoint, tracks, remember = true)
+    }
+
+    /** Stores an address typed in Settings, and publishes it so the field shows what was stored. */
+    fun setWebPlayer(base: String) {
+        Appearance.selectWebPlayer(context, base)
+        _browse.update { it.copy(webPlayer = Appearance.webPlayer(context)) }
     }
 
     fun forgetPairing() {
@@ -1601,7 +1618,9 @@ class PlaybackController private constructor(private val context: Context) {
             when (val outcome = WebRemote.send(endpoint, tracks, index, localFiles)) {
                 is WebRemote.Outcome.Delivered -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
-                    _browse.update { it.copy(pairedBrowser = true) }
+                    _browse.update {
+                        it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
+                    }
                     _state.update {
                         it.copy(
                             message = Message(
@@ -1616,7 +1635,9 @@ class PlaybackController private constructor(private val context: Context) {
                 // and forgetting here would send somebody back to the camera for nothing.
                 is WebRemote.Outcome.NoOneListening -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
-                    _browse.update { it.copy(pairedBrowser = true) }
+                    _browse.update {
+                        it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
+                    }
                     _state.update {
                         it.copy(message = Message("Reached it, but the player page is not open there."))
                     }

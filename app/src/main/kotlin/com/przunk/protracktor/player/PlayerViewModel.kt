@@ -93,6 +93,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()
     fun setFallbackLength(seconds: Int) = controller.setFallbackLength(seconds)
+    fun setWebPlayer(base: String) = controller.setWebPlayer(base)
 
     fun exportPlaylist(id: Long) = controller.exportPlaylist(id)
 

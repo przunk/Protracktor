@@ -165,7 +165,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, fallbackFiredNow: () => fallbackFired, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, fallbackFiredNow: () => fallbackFired, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -2276,6 +2276,37 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+}
+
+// --- clearing one archive's rows ----------------------------------------------------------------
+//
+// **Re-indexing was ninety times slower than indexing**, and the owner found it from the outside:
+// two or three seconds the first time, twenty the second, apparently stuck on "sorting". The first
+// time there is nothing to clear. `catalogue.clear` walked a cursor deleting record by record --
+// 281 ms to write 20,000 rows and 26 seconds to delete them again -- and now issues one `delete`
+// over the key range instead.
+//
+// Speed is not what these check; a benchmark in a test suite measures the machine it runs on. They
+// check the thing that made the fast version worth trusting: **that the range still deletes exactly
+// the right rows**. `modlandish:` is the case that matters, because a prefix scan written by hand
+// gets it wrong.
+if (window.__api?.catalogueStore) {
+  const store = window.__api.catalogueStore;
+  await store.putAll([
+    { key: 'modland:a', v: 1 },
+    { key: 'modland:z', v: 2 },
+    { key: 'asma:a', v: 3 },
+    { key: 'modlandish:a', v: 4 },
+  ]);
+  await store.clear('modland:');
+  const left = (await store.byPrefix('')).map((r) => r.key).sort();
+  check(!left.includes('modland:a') && !left.includes('modland:z'),
+    'clearing an archive removes its rows', left.join(', '));
+  check(left.includes('asma:a'), 'and leaves another archive alone', left.join(', '));
+  check(left.includes('modlandish:a'),
+    'and leaves an archive whose name merely starts the same way', left.join(', '));
+  await store.clear('asma:');
+  await store.clear('modlandish:');
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');
