@@ -500,11 +500,21 @@ end, and nothing on screen connects the two. A new install is in this state.
    compute. `docs/SPEC_RANDOM.md` set the precedent that the two players should behave the same;
    this is the biggest place they do not.
 
-   **Its source will not be the one the phone uses.** The phone fetches `Songlengths.md5` from
-   `hvsc.c64.org`; that host sends no `Access-Control-Allow-Origin`, and neither does the DTU mirror
-   (measured 2026-09-15 — the header on that server's root is not on its HVSC paths). So the web
-   cannot simply do what the phone does, and the file is 4.4 MB besides. Settle where it comes from
-   before building this.
+   **Its source is the one the phone uses, and the note here said otherwise for a day.**
+   `hvsc.c64.org` **does** send `Access-Control-Allow-Origin: *`, on a GET and on a preflight, and it
+   answers ranged requests. The 2026-09-15 measurement that said it did not was taken with `curl -I`
+   — a HEAD, which that server answers without the CORS filter. `Vary: Origin` was there in the HEAD
+   response all along, which is exactly the tell that a CORS decision is being made per request, and
+   it was not read.
+
+   **The lesson is the method, not the host**: CORS is a property of the request, so it has to be
+   measured with the request the page will actually make. The catalogue table in
+   `docs/PLAN_CATALOGUES.md` was re-measured with GET afterwards and its verdicts stand — HVSC was
+   the only one the HEAD got wrong, and HVSC was not in that table.
+
+   So the web can do what the phone does. What is left is work rather than a question: 5,205,150
+   bytes to fetch with progress, a parser mirroring `data/SongLengths.kt`, storage in IndexedDB, and
+   an MD5 — which the page does not currently compute at all.
 
 **Not a defect, and asked in the same breath — SID subsongs already work.** The owner asked what
 becomes of them: `SidBackend::subsongCount()` returns `info_->songs()` and `selectSubsong` is

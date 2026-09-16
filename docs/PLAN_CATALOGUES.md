@@ -121,6 +121,13 @@ fetch from `protracktor.pages.dev` to an archive is cross-origin, and without
 `Access-Control-Allow-Origin` the browser refuses it before the request is even useful. This is not
 a thing to design around — it is the archive's decision and it is binary.
 
+**Measure it with the request the page will make.** These were first taken with `curl -I`, and a
+HEAD is not what a page sends: at least one server — HVSC, which is not in this table — answers a
+HEAD without its CORS filter and a GET with `Access-Control-Allow-Origin: *`, so the HEAD said no
+about a host that says yes (`docs/STATUS.md` C56). The tell is `Vary: Origin` in the response: it
+means a CORS decision is being made per request. The table below was re-measured with a ranged GET
+carrying an `Origin`, and every verdict held.
+
 Measured against every host the owner named:
 
 | | CORS | note |
