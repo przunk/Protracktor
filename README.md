@@ -31,6 +31,7 @@ list — what has actually been confirmed on a device.
 | [`docs/WISHLIST.md`](docs/WISHLIST.md) | ideas, numbered **B1…Bn**, with who raised them and when |
 | [`docs/BUILD.md`](docs/BUILD.md) | how to build debug, release and a store bundle |
 | [`docs/LICENSES.md`](docs/LICENSES.md) | every third-party component, its licence, and what that obliges us to do |
+| [`docs/ROADMAP_FORMATS.md`](docs/ROADMAP_FORMATS.md) | what we cannot play yet, in the order worth doing it, with what each costs |
 | [`store/README.md`](store/README.md) | the Play listing in both languages, the console declarations, and the release gates still open |
 | [`docs/TESTING.md`](docs/TESTING.md) | what only a phone can prove, and what to check on a build before trusting it |
 | `docs/review-round-*.md` | what a pass over a finished round's own diff found, and what it checked and cleared |

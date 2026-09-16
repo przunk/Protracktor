@@ -1,5 +1,8 @@
 # Plan: more formats
 
+*Where to go next is `docs/ROADMAP_FORMATS.md`, written 2026-09-16: the same gaps, ordered by what
+they are worth against what they cost. This file is the history and the measurements behind it.*
+
 Written 2026-09-01, ahead of the owner sending this as its own goal.
 
 Each backend is its own risk and its own commit. The order below is by value per unit of pain, and
