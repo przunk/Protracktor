@@ -535,7 +535,20 @@ thousands.
 
 ## The rules
 
-`AGENTS.md`, and round 8's restatement of them, in full. Two additions for this round:
+`AGENTS.md`, and round 8's restatement of them, in full — **except rule 1, which this round
+replaces.** Three additions:
+
+- **Nothing merges to `develop`.** *The owner's instruction, 2026-09-17: the round runs on a branch
+  because the first alpha on Play is built from `develop` the next morning, and the first public
+  build must not carry a large change nobody has seen on a device.*
+
+  So: one long-lived **`feature/round-12`** off `develop`, one branch per item off **that**, and
+  each finished item merges back into **`feature/round-12`**. `develop` is not touched at all, and
+  neither is `master`. When the owner has the alpha out and a phone free, the round's branch is one
+  merge and his to make.
+
+  It also means the round can be abandoned whole if item 0 turns out worse than it looks, which is
+  worth having for a change that rewrites what an index is.
 
 - **Licences are checked, recorded, and do not stop the work.** The owner's instruction,
   2026-09-17: find out what a component's licence is and write it in `docs/LICENSES.md` as you go,
