@@ -226,7 +226,7 @@ class CatalogueStore(context: Context) {
                 val placeholders = catalogueIds.joinToString(",") { "?" }
                 " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
             }
-            val pattern = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            val words = SearchTerms.sqlFor(query, "title", "author")
             val byFormat = if (formats.isEmpty()) {
                 "" to emptyArray<String>()
             } else {
@@ -235,9 +235,8 @@ class CatalogueStore(context: Context) {
             }
             helper.readableDatabase.rawQuery(
                 "SELECT COUNT(*) FROM catalogue_tracks " +
-                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')" +
-                    "${scope.first}${byFormat.first}",
-                arrayOf(pattern, pattern) + scope.second + byFormat.second,
+                    "WHERE (${words.first})${scope.first}${byFormat.first}",
+                words.second + scope.second + byFormat.second,
             ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
         }
 
@@ -287,9 +286,10 @@ class CatalogueStore(context: Context) {
                 val placeholders = catalogueIds.joinToString(",") { "?" }
                 " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
             }
-            // Escaped so a user typing % or _ searches for those characters instead of matching
-            // everything -- a search box that silently means something else is worse than no search.
-            val pattern = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            // **Every word, anywhere, in any order** (`SearchTerms`), which is also where the
+            // escaping lives: a user typing % or _ searches for those characters rather than
+            // matching everything.
+            val words = SearchTerms.sqlFor(query, "title", "author")
             // Modland's directory name is what the `format` column holds, so narrowing to a platform
             // is one `IN (…)` over a column that already exists. `COLLATE NOCASE` because the table
             // stores the archive's own capitalisation and `Platforms` states everything lower-cased.
@@ -301,9 +301,8 @@ class CatalogueStore(context: Context) {
             }
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
-                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')" +
-                    "${scope.first}${byFormat.first} ORDER BY title LIMIT ?",
-                arrayOf(pattern, pattern) + scope.second + byFormat.second + arrayOf(limit.toString()),
+                    "WHERE (${words.first})${scope.first}${byFormat.first} ORDER BY title LIMIT ?",
+                words.second + scope.second + byFormat.second + arrayOf(limit.toString()),
             ).use { it.toTracks() }
         }
 

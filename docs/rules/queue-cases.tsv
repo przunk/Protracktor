@@ -122,3 +122,20 @@ token	expect	why
 :55	-	no minutes at all
 3:55.	-	a decimal point with nothing after it
 x:55	-	not a number
+
+# What a typed search means, which the phone reads in SearchTerms and the page in rules.js.
+# **Every word, anywhere, in any order.** `title` and `author` are the two fields a hit can come
+# from, and a word may be satisfied by either -- so "4-mat space" finds 4-Mat's "space.mod".
+# `-` in the author column means there is no author to match against.
+[searchMatch]
+query	title	author	expect	why
+ninja	space_ninja.mod	-	yes	one word, as it always did
+space ninja	space_ninja.mod	-	yes	the case the owner reported: a separator where he typed a space
+space ninja	spaceninja.mod	-	yes	and no separator at all, since each word is looked for on its own
+ninja space	space-ninja.mod	-	yes	order is not part of the rule
+SPACE Ninja	space ninja.mod	-	yes	nor is case
+space ninja	space_robot.mod	-	no	every word has to be there, not just one
+spaceninja	space_ninja.mod	-	no	the direction this deliberately does not cover; see rules.js
+4-mat space	space.mod	4-Mat	yes	one word from the title and one from the author is a hit
+4-mat space	ninja.mod	4-Mat	no	the author alone is not enough
+	anything.mod	-	yes	a blank query means everything, which is how a platform scope is asked for

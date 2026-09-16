@@ -168,7 +168,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -2311,6 +2311,9 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
+  each('searchMatch', (c) =>
+    rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
   // HVSC's time tokens, the same rows `RuleCasesTest` runs against `SongLengths.parseTime`. A SID's
   // whole length comes from reading these right; there is nothing in the file to fall back on.
   const lengthsModule = await import(path.resolve('web/src/songlengths.js'));
@@ -2349,6 +2352,35 @@ if (window.__api?.catalogueStore) {
     'and leaves an archive whose name merely starts the same way', left.join(', '));
   await store.clear('asma:');
   await store.clear('modlandish:');
+}
+
+// --- searching for two words -------------------------------------------------------------------
+//
+// The rule is checked from the shared file above; this checks that the **search actually uses it**,
+// through the real store and the real shard layout. The owner's case is the second row: a file
+// named `space_ninja.mod`, typed as `space ninja`.
+if (window.__api?.catalogueStore) {
+  const store = window.__api.catalogueStore;
+  const entries = [
+    ['space_ninja.mod', 'Protracker', '4-Mat'],
+    ['spaceninja.mod', 'Protracker', '4-Mat'],
+    ['space-robot.mod', 'Protracker', '4-Mat'],
+  ];
+  await store.putAll([{ key: 'modland:titles:sp', entries }]);
+  const found = async (q) => (await window.__api.searchTitlesNow(q)).hits.map((h) => h.name).sort();
+
+  check((await found('space ninja')).join(',') === 'space_ninja.mod,spaceninja.mod',
+    'two words find a separator and no separator alike, and nothing else',
+    (await found('space ninja')).join(','));
+  check((await found('ninja space')).join(',') === 'space_ninja.mod,spaceninja.mod',
+    'and the order they were typed in does not matter');
+  check((await found('SPACE NINJA')).length === 2, 'nor does their case');
+  check((await found('ninja')).length === 2, 'one word still works as it always did');
+  // The direction this deliberately does not cover, stated as a check so that the day somebody
+  // decides to pay for it, a passing test says what changed.
+  check((await found('spaceninja')).join(',') === 'spaceninja.mod',
+    'and a run-on query still misses the separated name, which is the measured trade in rules.js');
+  await store.clear('modland:titles:');
 }
 
 // --- MD5, and the lookup it is the key to ---------------------------------------------------------
