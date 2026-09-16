@@ -99,6 +99,18 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `HVSC's time tokens agree with the shared cases`() = each("songLengthTime") { case ->
+        // The page reads the same tokens in `web/src/songlengths.js`, and a SID's whole length
+        // comes from getting them right -- there is nothing in the file to fall back on.
+        val expected = case.getValue("expect").takeIf { it != "-" }?.toDouble()
+        assertEquals(
+            case.why(),
+            expected,
+            com.przunk.protracktor.data.SongLengths.parseTime(case.getValue("token")),
+        )
+    }
+
+    @Test
     fun `next agrees with the shared cases`() = each("next") { case ->
         val queue = queueAt(case.int("tracks"), case.int("at"), repeatOf(case["repeat"]))
         // `onTrackEnded` is the rule; `next()` is the button, and it deliberately ignores
