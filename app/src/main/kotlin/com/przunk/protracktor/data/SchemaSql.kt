@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 13
+    const val VERSION = 14
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -282,6 +282,18 @@ object SchemaSql {
         "ALTER TABLE player_state ADD COLUMN random_scope TEXT NOT NULL DEFAULT ''",
     )
 
+    /**
+     * How long to play a tune nothing knows the length of, added at version 14.
+     *
+     * **Seconds, and zero means "never set"** -- which reads back as the default, the same answer an
+     * upgraded phone gives. Stored rather than derived because it is a preference: `docs/STATUS.md`
+     * C56 is the fault it exists for, where a SID with no HVSC entry played for ever because
+     * nothing in the file, and nothing in the app, ever said to stop.
+     */
+    private val FALLBACK_LENGTH_V14: List<String> = listOf(
+        "ALTER TABLE player_state ADD COLUMN fallback_length_seconds INTEGER NOT NULL DEFAULT 0",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -339,7 +351,7 @@ object SchemaSql {
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
-        MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13
+        MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14
 
 
 
@@ -363,6 +375,7 @@ object SchemaSql {
         11 to TRACK_METADATA_V11,
         12 to MODLAND_FAVOURITES_V12,
         13 to RANDOM_SCOPE_V13,
+        14 to FALLBACK_LENGTH_V14,
     )
 
     /**

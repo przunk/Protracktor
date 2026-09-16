@@ -125,12 +125,12 @@ backends are what there already is to show. Last of the seven in `docs/PLAN_ROUN
 działać tak samo jak w APK".* The page can only add by ticking rows first; the phone's row menu
 opens the picker for that one track. Same item, same picker.
 
-## A34. Instrument and sample names in Now Playing — **built, waiting for the owner's test**
+## A34. Instrument and sample names in Now Playing — DONE, tested 2026-09-15
 
 *Owner, 2026-09-11: "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach
 kodują treść".* The whole plan, with the owner's three worries and their answers, is in
-`docs/PLAN_INSTRUMENT_NAMES.md`, written first so it can be picked up cold. Branch:
-`feature/instrument-names`.
+`docs/PLAN_INSTRUMENT_NAMES.md`, written first so it can be picked up cold. Merged, and the owner
+confirmed it on the phone on 2026-09-15: *"przetestowane - pięknie jest"*.
 
 ## A33. Whether the page's Browse lists should stop writing into the playlist — DONE 2026-09-11, the phone's way
 
@@ -168,20 +168,21 @@ replace it.
 
 The machinery for the second exists since item 3; the decision is about what Browse is *for*.
 
-## A32. Whether ZXTune goes into the browser's engine — **the owner's decision**
+## A32. ~~ZXTune in the browser's engine~~ — DONE 2026-09-15
 
 *Raised by `GOAL.md` round 8 on 2026-09-11, which was told to record it rather than decide it.*
 
-The web engine is built with `-DPROTRACKTOR_WITH_ZXTUNE=OFF` (`scripts/build-web-engine.sh`), and
-since round 8 item 1 the page indexes only what it can play, so the absence is now a number on the
-screen: **26,537 of Modland's tunes play on the phone and not in the browser** — `pt3` 7,376,
-`pt2` 6,284, `ym` 4,977, `stc` 3,639 and the rest of the Spectrum's formats.
+The web engine was built with `-DPROTRACKTOR_WITH_ZXTUNE=OFF`, and since round 8 item 1 the page
+indexes only what it can play, so the absence had become a number on the screen: **26,537 of
+Modland's tunes played on the phone and not in the browser** — `pt3` 7,376, `pt2` 6,284, `ym` 4,977,
+`stc` 3,639 and the rest of the Spectrum's formats.
 
-Why it is off, from the comment it replaced in `web/src/app.js`: ZXTune does not build under
-Emscripten as it stands, and making it build means patching a library `docs/ARCHITECTURE.md` §3
-says this project does not fork (`docs/PLAN_WEB.md` §14).
+*Everything from here to the answer below is what was written **before anybody tried the build**,
+and it is kept because the lesson is in it.* The reason it was off, inherited from a comment in
+`web/src/app.js`: ZXTune does not build under Emscripten as it stands, and making it build means
+patching a library `docs/ARCHITECTURE.md` §3 says this project does not fork.
 
-So the question is not "switch it on" but **one of**:
+So the question was thought not to be "switch it on" but **one of**:
 
 - keep it off, and the browser stays a player for everything but the Spectrum — said plainly in
   Browse, which is what item 1 delivers;
@@ -190,7 +191,38 @@ So the question is not "switch it on" but **one of**:
 - find the smaller piece — `ym` and `vtx` are register dumps rather than trackers, 5,856 tunes
   between them, and their decoder may be separable from the rest.
 
-Nothing is built until he chooses.
+### The answer, 2026-09-15: the second option, and it cost eight lines
+
+**The owner said do it — "można zrobić" — and the first thing to do was read a real log rather than
+that comment.** ZXTune under Emscripten fails on **eight lines in five files**, every one a `const auto*` initialised from a
+`std::string_view` iterator: a raw pointer in the NDK's libc++, a `__wrap_iter` in Emscripten's,
+where ABI version 2 makes it one deliberately so that code cannot rely on the detail. Nothing was
+reimplemented, no logic changed, and Android compiles the same sources.
+
+The patch lives in `scripts/fetch-zxtune.py` rather than in the tree, because a fetch re-clones the
+directory and a hand edit would vanish; each entry states how many times it expects to match, which
+caught a real mistake — one pattern occurs **twice** in `encoding.cpp` and a blind replace had
+quietly done both.
+
+The page needed **no change at all**: `absentDecoders()` reads the engine's own fingerprint, so the
+decoder turning up there is the integration. Measured cost: **2.65 MB → 3.21 MB** over the wire,
++21%, for **26,537 Modland tunes**. `.pt3`, `.asc` and `.stp` were played through the built engine,
+so this is "plays" rather than "links". `docs/PLAN_WEB.md` §14 has the detail.
+
+**The order of work it was done in**, written before any of it and worth keeping because three of
+the four steps turned out to be unnecessary:
+
+1. **Try the build first**, unpatched, and find out exactly what fails — rather than trusting the
+   comment. *This step was the whole answer.*
+2. **If it does not build, size the patch** before arguing about it: a portability fix is not a
+   fork, a reimplemented backend is, and `docs/ARCHITECTURE.md` §3 forbids only the second. *Eight
+   lines, none of them logic.*
+3. **Measure what it costs the page**, because every byte is paid on first load. *+21%.*
+4. **`ym`/`vtx` alone is the fallback**, not the goal — 5,856 of the 26,537. *Not needed.*
+
+**The general lesson, which is the reason this entry keeps its old reasoning**: "it does not build"
+sat in a comment for a week and was repeated into three documents without anybody running the
+command. The cost of checking was one configure and one build.
 
 ## A31. Haptics on the seven places he named — DONE 2026-09-10
 
@@ -654,7 +686,7 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 - ~~**The launcher icon** (A9)~~ — done 2026-09-03: an adaptive icon with a monochrome layer for
   themed icons, at every density.
 - ~~**A privacy policy and a data-safety declaration.**~~ **Written 2026-09-04** as round 6 item 5:
-  `docs/PRIVACY.md` is the policy, publishable at its own GitHub URL, and `docs/PLAY_STORE.md`
+  `store/privacy-policy.md` is the policy — one copy, bilingual — and `docs/PLAY_STORE.md`
   answers the data-safety form row by row. Both claims were checked against the source rather than
   assumed — no analytics SDK, no identifier read anywhere, five network hosts and all of them
   archives. `ACCESS_NETWORK_STATE` was found declared and unused, and removed.

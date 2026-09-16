@@ -68,7 +68,7 @@
         <item quantity="one">%1$d tune</item>
         <item quantity="other">%1$d tunes</item>
     </plurals>
-    <string name="storage_confirm_song_lengths">They can be downloaded again from this screen. Until then, SID tracks will not show a duration.</string>
+    <string name="storage_confirm_song_lengths">They can be downloaded again from this screen. Until then, SID tracks show no duration and end only at the fallback length set in Settings.</string>
     <string name="a11y_delete_storage">Delete %1$s</string>
     <plurals name="subsongs_count">
         <item quantity="one">%1$d tune</item>
@@ -183,7 +183,7 @@
     <string name="history_empty">Nothing played yet. Anything you play — from a playlist, from Random or from a search — turns up here.</string>
     <string name="action_clear_history">Clear history</string>
         <string name="song_lengths_title">SID song lengths (HVSC)</string>
-    <string name="song_lengths_none">Not downloaded — SID tunes will show no length</string>
+    <string name="song_lengths_none">Not downloaded — SID tunes show no length and play until you skip them</string>
     <string name="track_metadata_title">Track metadata (songdb)</string>
     <string name="track_metadata_none">Not downloaded — most tunes will show no year or author</string>
     <plurals name="track_metadata_count">
@@ -191,6 +191,12 @@
         <item quantity="other">%1$d tunes described</item>
     </plurals>
     <string name="a11y_download_track_metadata">Download the track metadata</string>
+    <string name="settings_fallback_length">When nothing knows the length</string>
+    <string name="settings_fallback_length_detail">A SID or an unlisted SNDH carries no length of its own. Without this, one would play until you skipped it.</string>
+    <plurals name="minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
     <plurals name="song_lengths_count">
         <item quantity="one">%1$d tune</item>
         <item quantity="other">%1$,d tunes</item>

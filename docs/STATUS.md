@@ -415,6 +415,51 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C58. ~~Re-indexing was ninety times slower than indexing~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: "jak robię indeksowanie, to w WEB to trwa z 2-3 s. Jak znowu kliknę indeksuj, to
+trwa dużo dłużej, głównie na sorting wisi. Z 20 sekund."*
+
+**The asymmetry was the diagnosis**: the first index has nothing to clear and the second has an
+archive's worth. `catalogue.clear` walked a cursor and called `cursor.delete()` on every record,
+which is the obvious way to write it and two orders of magnitude slower than the alternative,
+because each step is its own request through the transaction.
+
+Measured at 20,000 records, which is the shape Modland produces: **281 ms to write them all, 26,176
+ms to delete them again**. One `IDBObjectStore.delete` over the key range instead — it takes a range
+as happily as a key — brings that to **48 ms**.
+
+It looked like it hung on "sorting" because the label is set before the clear and the next one is
+not set until storing begins. That is now a window of 48 ms rather than 20 seconds, so it is left
+alone; a stage that flashes for a twentieth of a second is noise.
+
+Three page checks guard the thing that made the fast version worth trusting — that the range still
+deletes exactly the right rows. `modlandish:` is in there deliberately: it is the case a
+hand-written prefix scan gets wrong.
+
+### C57. ~~Search kept the last query with none of its results~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: going into Search a second time from the playlist — "nie wstecz po
+wyszukiwaniu" — showed the previous search still written in the box.*
+
+**Half the screen was already being cleared.** `BrowseNavigation.enteringDomain` empties `tracks`,
+`groups` and everything else about where you had got to, and the query was not in that list: it was
+asserted to *survive*, in a test that grouped it with the search scope and the downloaded-data
+counts as "things that are not about where you are".
+
+That grouping was the mistake. A scope is a setting and a count is a fact, but **a query is the
+input that produced the results the same function has just thrown away** — so what the owner met was
+his words with nothing underneath, which reads as a search that found nothing rather than as a
+screen waiting for a new one. The query is cleared with its results now, and the test that defended
+the old behaviour says why it changed.
+
+Walking back out of a folder into results does not come through `enteringDomain`, so a search still
+survives being walked away from and returned to.
+
+**And the keyboard comes up with the screen**, which the owner suggested in the same message. Search
+is the one place nobody arrives to look around — they came to type — and two taps stood between
+arriving and typing.
+
 ### C56. A SID never ends on the web, and does not on a fresh phone either — **OPEN**
 
 *Owner, 2026-09-15: "WEB: nie widzi końca SID (gra w nieskończoność); APK to potrafi."*
@@ -441,13 +486,25 @@ end, and nothing on screen connects the two. A new install is in this state.
 
 1. **Say what the missing database costs.** A one-line change to `song_lengths_none` and the storage
    confirmation. Honest immediately, and it makes the other two optional rather than urgent.
-2. **A fallback length for a tune nothing knows.** Every other player has one — a few minutes, then
-   move on — and it would make an unknown SID behave like a tune rather than like a hang. Needs the
-   owner's opinion on the number and on whether it applies to every lengthless format or only SID.
+2. **A fallback length for a tune nothing knows** — **decided 2026-09-15**. A setting, with a
+   slider, **3 to 10 minutes, defaulting to 3**. It applies wherever nothing supplies a length, not
+   only to SID: the fault is "a tune that never ends", and a `.sndh` sc68 has no entry for hangs the
+   same way. The default matters more than the range — most people will never open that screen, and
+   three minutes is roughly where a C64 tune's loop has said what it has to say.
+
+   **Both players, and the phone's watchdog already exists**: `known > 0.0 && position >= known`
+   simply needs `known` to fall back to the setting. The web has no watchdog at all and needs one
+   built, which is the larger half of this even though it is the smaller of the two changes.
 3. **Song lengths on the web.** The real fix and the largest: the database is about 61,000 rows and
    the page would have to fetch, parse and store it in IndexedDB, plus an MD5 it does not currently
    compute. `docs/SPEC_RANDOM.md` set the precedent that the two players should behave the same;
    this is the biggest place they do not.
+
+   **Its source will not be the one the phone uses.** The phone fetches `Songlengths.md5` from
+   `hvsc.c64.org`; that host sends no `Access-Control-Allow-Origin`, and neither does the DTU mirror
+   (measured 2026-09-15 — the header on that server's root is not on its HVSC paths). So the web
+   cannot simply do what the phone does, and the file is 4.4 MB besides. Settle where it comes from
+   before building this.
 
 **Not a defect, and asked in the same breath — SID subsongs already work.** The owner asked what
 becomes of them: `SidBackend::subsongCount()` returns `info_->songs()` and `selectSubsong` is

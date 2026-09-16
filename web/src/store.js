@@ -159,19 +159,28 @@ export const catalogue = {
     });
   },
 
-  /** Everything belonging to one archive, for a re-index or a delete. */
+  /**
+   * Everything belonging to one archive, for a re-index or a delete.
+   *
+   * **One `delete` over the range, not a cursor deleting record by record.** The cursor version is
+   * the obvious one and it is what was here: open a cursor over the prefix, `cursor.delete()`,
+   * `cursor.continue()`. It is also **two orders of magnitude slower**, because each step is its
+   * own request round trip through the transaction -- measured at 20,000 records, which is the
+   * shape Modland actually produces: 281 ms to write them all and **26 seconds** to delete them
+   * again.
+   *
+   * The owner found it from the outside and described it exactly: indexing takes two or three
+   * seconds the first time and twenty the second. The first time there is nothing to clear.
+   *
+   * `IDBObjectStore.delete` takes a key range as happily as a key, and deletes everything in it in
+   * one request. Same transaction semantics, same result, one round trip.
+   */
   async clear(prefix) {
     const db = await open();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction('catalogue', 'readwrite');
-      const store = transaction.objectStore('catalogue');
       const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`);
-      store.openCursor(range).onsuccess = (event) => {
-        const cursor = event.target.result;
-        if (!cursor) return;
-        cursor.delete();
-        cursor.continue();
-      };
+      transaction.objectStore('catalogue').delete(range);
       transaction.oncomplete = resolve;
       transaction.onerror = () => reject(transaction.error);
     });

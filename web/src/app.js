@@ -76,6 +76,38 @@ let playAllSubsongs = false;
 try {
   playAllSubsongs = localStorage.getItem('protracktor.allsubsongs') === '1';
 } catch { /* a private window. Off is the safer default: it is what the transport looks like. */ }
+
+/**
+ * How long to play a tune whose length nothing knows, in seconds (`docs/STATUS.md` C56).
+ *
+ * **The page had no such limit at all and the phone did**, which is why a SID played here for ever
+ * and ended there: a SID carries no length, the engine reports none, `render` never runs short, and
+ * so `ended` was never posted. The phone asks HVSC's database and stops when the position passes
+ * what it says; this page has no such database, so this is the whole of its answer for now.
+ *
+ * Same range and same default as the phone -- three to ten minutes, three by default -- because
+ * `docs/SPEC_RANDOM.md` settled that the two players behave alike, and a setting that differs by
+ * platform is the kind of difference nobody remembers which way round it goes.
+ */
+const FALLBACK_MIN_SECONDS = 3 * 60;
+const FALLBACK_MAX_SECONDS = 10 * 60;
+let fallbackSeconds = FALLBACK_MIN_SECONDS;
+/**
+ * Whether the fallback has already ended the tune now playing.
+ *
+ * **Not `finished`**, which means something else: "played to its end with nothing after it", the
+ * state that turns the play button into "again". A tune the fallback moves on from is not finished
+ * in that sense at all -- something else is playing a moment later -- and borrowing the flag would
+ * leave the transport claiming so for as long as the next open took. Cleared wherever a tune
+ * starts, which is `opened` and `subsong`.
+ */
+let fallbackFired = false;
+try {
+  const stored = Number(localStorage.getItem('protracktor.fallback'));
+  // NaN fails every comparison, so an absent or damaged value keeps the default without a test of
+  // its own.
+  if (stored >= FALLBACK_MIN_SECONDS && stored <= FALLBACK_MAX_SECONDS) fallbackSeconds = stored;
+} catch { /* a private window */ }
 /**
  * Whether the current track has played to its end with nothing after it.
  *
@@ -241,6 +273,7 @@ function onWorklet(message) {
       clearTimeout(openWatchdog);
       duration = message.duration;
       finished = false;
+      fallbackFired = false;
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
       const fields = describeFields(message.describe);
@@ -304,10 +337,19 @@ function onWorklet(message) {
         $('elapsed').textContent = clock(message.seconds);
         $('remaining').textContent = clock(duration);
       }
+      // **A tune nothing can measure still ends** (`docs/STATUS.md` C56). Only when the engine
+      // reports no length of its own: a format that knows when it finishes says so by running out
+      // of audio, and second-guessing that would cut real tunes short. The flag stops this asking
+      // again on every position message while the next tune is being opened.
+      if (duration <= 0 && !fallbackFired && message.seconds >= fallbackSeconds) {
+        fallbackFired = true;
+        trackEnded();
+      }
       break;
     // A subsong is a different tune: its own length, often its own title.
     case 'subsong': {
       finished = false;
+      fallbackFired = false;
       currentSubsong = message.index;
       duration = message.duration;
       const fields = describeFields(message.describe);
@@ -322,37 +364,49 @@ function onWorklet(message) {
       if (resolve) { describePending.delete(message.id); resolve(message); }
       break;
     }
-    case 'ended': {
-      // **The file before the queue**, when the listener asked for that. Repeat-one is checked
-      // first and deliberately: it means "this tune again", and a file's other tunes are not it.
-      const inside = nextSubsong({
-        playAll: playAllSubsongs, subsong: currentSubsong,
-        count: subsongCount, repeatOne: repeat === 'one',
-      });
-      if (inside != null) {
-        node?.port.postMessage({ type: 'subsong', index: inside });
-        break;
-      }
-      if (random) {
-        // Repeat-one first, as on the phone: the end of a tune under it plays the tune again. The
-        // next *button* does not ask -- on the phone it rolls on regardless.
-        if (repeat === 'one' && index >= 0) { playAt(index); break; }
-        const step = randomNext({ length: queue.length, at: index });
-        if (step === 'roll') rollRandom(); else playAt(step);
-        break;
-      }
-      // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
-      // takes the next of the permutation, repeat-all wraps, and off stops.
-      const next = afterCurrent();
-      if (next == null) {
-        // Nothing follows, so the button now means "again" rather than "resume".
-        finished = true;
-        setPlaying(false);
-      } else if (next === index && repeat === 'one') playAt(index);
-      else playAt(next);
+    case 'ended':
+      trackEnded();
       break;
-    }
   }
+}
+
+/**
+ * What happens when a tune runs out.
+ *
+ * **Its own function because there are two ways to run out**, and they must behave identically: the
+ * engine returning no audio, and the fallback limit for a tune whose length nothing knows
+ * (`docs/STATUS.md` C56). Inlined in the `ended` case, the second one would have been a copy of
+ * this, and a copy is where repeat, shuffle, subsongs and Random start to disagree with each other.
+ * The phone calls one `handleTrackEnded` for the same reason.
+ */
+function trackEnded() {
+  // **The file before the queue**, when the listener asked for that. Repeat-one is checked
+  // first and deliberately: it means "this tune again", and a file's other tunes are not it.
+  const inside = nextSubsong({
+    playAll: playAllSubsongs, subsong: currentSubsong,
+    count: subsongCount, repeatOne: repeat === 'one',
+  });
+  if (inside != null) {
+    node?.port.postMessage({ type: 'subsong', index: inside });
+    return;
+  }
+  if (random) {
+    // Repeat-one first, as on the phone: the end of a tune under it plays the tune again. The
+    // next *button* does not ask -- on the phone it rolls on regardless.
+    if (repeat === 'one' && index >= 0) { playAt(index); return; }
+    const step = randomNext({ length: queue.length, at: index });
+    if (step === 'roll') rollRandom(); else playAt(step);
+    return;
+  }
+  // What a queue is for, and where the modes actually show: repeat-one plays it again, shuffle
+  // takes the next of the permutation, repeat-all wraps, and off stops.
+  const next = afterCurrent();
+  if (next == null) {
+    // Nothing follows, so the button now means "again" rather than "resume".
+    finished = true;
+    setPlaying(false);
+  } else if (next === index && repeat === 'one') playAt(index);
+  else playAt(next);
 }
 
 /**
@@ -2785,6 +2839,28 @@ function holdToSkipFile(button, act) {
 }
 holdToSkipFile($('next'), nextFile);
 holdToSkipFile($('prev'), previousFile);
+
+/**
+ * The fallback length slider (`docs/STATUS.md` C56).
+ *
+ * Minutes on the control, seconds in the variable: the phone's slider has one notch per minute and
+ * this one must not be able to produce a value that one cannot.
+ */
+function showFallback() {
+  const minutes = Math.round(fallbackSeconds / 60);
+  $('fallback').value = String(minutes);
+  $('fallbackvalue').textContent = `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+}
+$('fallback').oninput = () => {
+  const minutes = Number($('fallback').value);
+  fallbackSeconds = Math.min(FALLBACK_MAX_SECONDS, Math.max(FALLBACK_MIN_SECONDS, minutes * 60));
+  showFallback();
+  try { localStorage.setItem('protracktor.fallback', String(fallbackSeconds)); } catch { /* private window */ }
+  // A tune already past the new limit ends at the next position message, which is what somebody
+  // dragging the slider down is asking for -- so the flag is cleared rather than left standing.
+  fallbackFired = false;
+};
+showFallback();
 
 $('allsubsongs').onclick = () => {
   playAllSubsongs = !playAllSubsongs;

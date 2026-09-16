@@ -20,6 +20,11 @@ data class SavedPlayerState(
     val playAllSubsongs: Boolean = false,
     /** What Random picks from, as `RandomScope.stored()` writes it. Empty means never set. */
     val randomScope: String = "",
+    /**
+     * How long to play a tune whose length nothing knows, in seconds. Zero means never set, which
+     * reads back as the default (`docs/STATUS.md` C56).
+     */
+    val fallbackLengthSeconds: Int = 0,
 )
 
 data class SavedPlaylist(
@@ -225,7 +230,7 @@ class LibraryStore(context: Context) {
     suspend fun loadPlayerState(): SavedPlayerState? = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
             "SELECT active_playlist_id, current_track_id, shuffle, repeat_mode, play_all_subsongs, " +
-                "random_scope " +
+                "random_scope, fallback_length_seconds " +
                 "FROM player_state WHERE id = 0",
             null,
         ).use { row ->
@@ -238,6 +243,7 @@ class LibraryStore(context: Context) {
                 repeat = runCatching { RepeatMode.valueOf(row.getString(3)) }.getOrDefault(RepeatMode.OFF),
                 playAllSubsongs = row.getInt(4) != 0,
                 randomScope = if (row.isNull(5)) "" else row.getString(5),
+                fallbackLengthSeconds = row.getInt(6),
             )
         }
     }
@@ -252,6 +258,7 @@ class LibraryStore(context: Context) {
                 put("repeat_mode", state.repeat.name)
                 put("play_all_subsongs", if (state.playAllSubsongs) 1 else 0)
                 put("random_scope", state.randomScope)
+                put("fallback_length_seconds", state.fallbackLengthSeconds)
             },
             "id = 0", null,
         )

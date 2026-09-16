@@ -97,6 +97,15 @@ data class PlayerUiState(
      * otherwise take over a listening session the first time one turned up.
      */
     val playAllSubsongs: Boolean = false,
+    /**
+     * How long to play a tune whose length nothing knows, in seconds (`docs/STATUS.md` C56).
+     *
+     * **Deliberately not folded into [durationSeconds].** That field is what the app *knows*, and a
+     * guess written into it would be shown on screen as a fact and would make an unseekable tune
+     * look seekable. This is the point at which the app stops listening, which is a different
+     * statement from how long the tune is.
+     */
+    val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
@@ -332,6 +341,15 @@ data class BrowseState(
      * do — a code when it will open the camera, a link when it will send.
      */
     val pairedBrowser: Boolean = false,
+    /**
+     * Where the page is, for a shared link and for the field in Settings.
+     *
+     * **Here rather than read once where the screen is built**, which is where it used to be read:
+     * a successful pairing changes it (`Appearance.rememberPairing`), and a value captured at
+     * composition left Settings showing the address from before the scan. Sending already worked,
+     * because a link asks `Appearance` at the moment it is made; only the screen was behind.
+     */
+    val webPlayer: String = QueueLink.DEFAULT_BASE,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -570,7 +588,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private val pairedAtStart = Appearance.pairedEndpoint(context) != null
 
-    private val _browse = MutableStateFlow(BrowseState(pairedBrowser = pairedAtStart))
+    private val _browse = MutableStateFlow(
+        BrowseState(pairedBrowser = pairedAtStart, webPlayer = Appearance.webPlayer(context)),
+    )
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
 
     /** The open module. Owned here because native memory is invisible to the garbage collector. */
@@ -782,7 +802,14 @@ class PlaybackController private constructor(private val context: Context) {
                 //
                 // `handleTrackEnded` and not something of its own, so repeat, shuffle, subsongs and
                 // Random all behave exactly as they do at a real end of tune.
-                val known = _state.value.durationSeconds
+                // **A length nothing knows still ends.** Before C56 this read the known duration
+                // alone, so a tune with none -- a SID with no HVSC entry, a `.sndh` sc68's database
+                // has never heard of -- simply played until somebody noticed. The fallback is the
+                // owner's setting, and it is applied here rather than to `durationSeconds` so that
+                // what the screen reports stays what the app actually knows.
+                val snapshot = _state.value
+                val known = snapshot.durationSeconds.takeIf { it > 0.0 }
+                    ?: snapshot.fallbackLengthSeconds.toDouble()
                 if (known > 0.0 && position >= known) handleTrackEnded()
             }
         }
@@ -817,6 +844,8 @@ class PlaybackController private constructor(private val context: Context) {
                     playlists = playlists,
                     activePlaylistId = playlistId,
                     playAllSubsongs = saved?.playAllSubsongs ?: false,
+                    fallbackLengthSeconds =
+                        FallbackLength.fromStored(saved?.fallbackLengthSeconds ?: 0),
                     restored = true,
                 )
             }
@@ -893,6 +922,7 @@ class PlaybackController private constructor(private val context: Context) {
                 shuffle = snapshot.queue.shuffle,
                 repeat = snapshot.queue.repeat,
                 playAllSubsongs = snapshot.playAllSubsongs,
+                fallbackLengthSeconds = snapshot.fallbackLengthSeconds,
                 randomScope = _browse.value.randomScope.stored(),
             )
         )
@@ -1522,11 +1552,17 @@ class PlaybackController private constructor(private val context: Context) {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
             Appearance.rememberPairing(context, endpoint)
-            _browse.update { it.copy(pairedBrowser = true) }
+            _browse.update { it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context)) }
             _state.update { it.copy(message = Message("Paired. The playlist is empty, so nothing was sent.")) }
             return
         }
         postQueue(endpoint, tracks, remember = true)
+    }
+
+    /** Stores an address typed in Settings, and publishes it so the field shows what was stored. */
+    fun setWebPlayer(base: String) {
+        Appearance.selectWebPlayer(context, base)
+        _browse.update { it.copy(webPlayer = Appearance.webPlayer(context)) }
     }
 
     fun forgetPairing() {
@@ -1582,7 +1618,9 @@ class PlaybackController private constructor(private val context: Context) {
             when (val outcome = WebRemote.send(endpoint, tracks, index, localFiles)) {
                 is WebRemote.Outcome.Delivered -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
-                    _browse.update { it.copy(pairedBrowser = true) }
+                    _browse.update {
+                        it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
+                    }
                     _state.update {
                         it.copy(
                             message = Message(
@@ -1597,7 +1635,9 @@ class PlaybackController private constructor(private val context: Context) {
                 // and forgetting here would send somebody back to the camera for nothing.
                 is WebRemote.Outcome.NoOneListening -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
-                    _browse.update { it.copy(pairedBrowser = true) }
+                    _browse.update {
+                        it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
+                    }
                     _state.update {
                         it.copy(message = Message("Reached it, but the player page is not open there."))
                     }
@@ -3377,6 +3417,25 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun toggleAllSubsongs() {
         _state.update { it.copy(playAllSubsongs = !it.playAllSubsongs) }
+        scheduleSave()
+    }
+
+    /**
+     * How long to play a tune whose length nothing knows (`docs/STATUS.md` C56).
+     *
+     * Clamped rather than validated: the slider cannot produce anything outside the range, so a
+     * value that is outside it came from a stored setting or a newer build, and refusing it would
+     * leave the app with no answer at all. Remembered like the toggle above, for the same reason —
+     * it is about what happens next rather than about one row.
+     *
+     * **It applies from the next poll**, including to whatever is playing now. A tune already past
+     * the new limit ends within the second, which is the behaviour somebody dragging the slider
+     * down is asking for.
+     */
+    fun setFallbackLength(seconds: Int) {
+        val wanted = FallbackLength.snap(seconds)
+        if (wanted == _state.value.fallbackLengthSeconds) return
+        _state.update { it.copy(fallbackLengthSeconds = wanted) }
         scheduleSave()
     }
 

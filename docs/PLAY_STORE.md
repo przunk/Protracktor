@@ -39,11 +39,12 @@ collection, and it is declared as such.
 
 ## The privacy policy
 
-`docs/PRIVACY.md`, which has to be reachable at a public URL for the listing. The repository is
-public, so the file's own URL on GitHub satisfies that:
+`store/privacy-policy.md` — the single copy, bilingual, as of 2026-09-15. It has to be reachable at
+a public URL for the listing, and the file's own URL on GitHub satisfies that **once the repository
+is public**, which it is not yet:
 
 ```
-https://github.com/przunk/protracktor/blob/master/docs/PRIVACY.md
+https://github.com/przunk/protracktor/blob/master/store/privacy-policy.md
 ```
 
 Nothing needs hosting. If a nicer URL is wanted later, GitHub Pages serves the same file.

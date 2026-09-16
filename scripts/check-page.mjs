@@ -165,7 +165,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, fallbackFiredNow: () => fallbackFired, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -262,6 +262,44 @@ if (window.__api) {
   check(values.includes('Rob Hubbard'), 'and their values');
   check(window.document.querySelectorAll('.subsong').length === 3,
     'a file with three tunes gets three subsong buttons');
+
+  // --- C56: a tune whose length nothing knows still ends ----------------------------------------
+  //
+  // The tune opened just above is a SID with `duration: 0`, which is what the engine really reports
+  // for one -- nothing in the file says when to stop. Before this, `render` never ran short, `ended`
+  // was never posted, and the page played it for ever while the phone ended it from HVSC's
+  // database. These four checks fail against that page.
+  check($('fallback').value === '3' && $('fallbackvalue').textContent === '3 minutes',
+    'the fallback length starts at the phone\'s default of three minutes');
+  window.__api.onWorklet({ type: 'position', seconds: 60 });
+  check(window.__api.fallbackFiredNow() === false,
+    'a tune with no length of its own is left alone before the fallback');
+
+  // **Standing at the end of the queue with repeat off**, so that running out has nowhere to go and
+  // `trackEnded` takes its last branch -- which sets `finished`, the state that turns the play
+  // button into "again". That flag is the observable: it is only ever set by the end-of-tune path,
+  // so seeing it proves the fallback went through the same door a real `ended` does.
+  const wasAt = window.__api.indexNow();
+  const last = window.__api.queueNow().length - 1;
+  check(window.__api.afterOf(last) == null, 'and the queue has nothing after the last track');
+  window.__api.onWorklet({ type: 'position', seconds: 3 * 60 });
+  check(window.__api.fallbackFiredNow() === true && window.__api.finishedNow() === true,
+    'and ends, through the same path a real end of tune takes, once the fallback is reached');
+  // **Put back what these four checks moved.** `afterOf` sets the index as well as reading past it,
+  // and the tune above is now finished -- both of which the checks after this one depend on. The
+  // open is the same message the block started with, which clears `finished` and the fallback's own
+  // flag and leaves Now Playing showing exactly what it showed before.
+  window.__api.afterOf(wasAt);
+  window.__api.onWorklet({
+    type: 'opened',
+    describe: 'title\tCrazy Comets\nartist\tRob Hubbard\nformat\tCommodore 64 (SID)\nyear\t1985',
+    duration: 0,
+    subsongs: 3,
+    canSeek: false,
+    preferredRate: 44100,
+    rate: 44100,
+  });
+  await new Promise((r) => setTimeout(r, 50));
   // Author · machine · year, the phone's dock line; the machine is the file's, from its name.
   check($('sub').textContent === 'Rob Hubbard · Amiga · 1985', 'the dock card says who, for what, and when');
   check($('seek').disabled === true, 'a backend that cannot seek disables the slider');
@@ -2238,6 +2276,37 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+}
+
+// --- clearing one archive's rows ----------------------------------------------------------------
+//
+// **Re-indexing was ninety times slower than indexing**, and the owner found it from the outside:
+// two or three seconds the first time, twenty the second, apparently stuck on "sorting". The first
+// time there is nothing to clear. `catalogue.clear` walked a cursor deleting record by record --
+// 281 ms to write 20,000 rows and 26 seconds to delete them again -- and now issues one `delete`
+// over the key range instead.
+//
+// Speed is not what these check; a benchmark in a test suite measures the machine it runs on. They
+// check the thing that made the fast version worth trusting: **that the range still deletes exactly
+// the right rows**. `modlandish:` is the case that matters, because a prefix scan written by hand
+// gets it wrong.
+if (window.__api?.catalogueStore) {
+  const store = window.__api.catalogueStore;
+  await store.putAll([
+    { key: 'modland:a', v: 1 },
+    { key: 'modland:z', v: 2 },
+    { key: 'asma:a', v: 3 },
+    { key: 'modlandish:a', v: 4 },
+  ]);
+  await store.clear('modland:');
+  const left = (await store.byPrefix('')).map((r) => r.key).sort();
+  check(!left.includes('modland:a') && !left.includes('modland:z'),
+    'clearing an archive removes its rows', left.join(', '));
+  check(left.includes('asma:a'), 'and leaves another archive alone', left.join(', '));
+  check(left.includes('modlandish:a'),
+    'and leaves an archive whose name merely starts the same way', left.join(', '));
+  await store.clear('asma:');
+  await store.clear('modlandish:');
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

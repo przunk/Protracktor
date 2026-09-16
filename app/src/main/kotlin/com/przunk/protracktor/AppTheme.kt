@@ -65,7 +65,7 @@ object Appearance {
      *
      * An address entered by hand still wins, because somebody who typed one meant it.
      */
-    private fun pageBesidePairing(endpoint: String): String? {
+    fun pageBesidePairing(endpoint: String): String? {
         val origin = endpoint.substringBefore("/pair/")
         return if (origin == endpoint) null else "$origin/src"
     }
@@ -84,6 +84,22 @@ object Appearance {
         prefs(context).edit().apply {
             if (endpoint.isNullOrBlank()) remove(PAIRED) else putString(PAIRED, endpoint)
         }.apply()
+
+        // **A scan that worked overwrites the typed address** (owner, 2026-09-16). It used to be a
+        // fallback only -- `webPlayer` consulted the pairing when nothing had been typed, and an
+        // address entered by hand won for ever after, on the reasoning that somebody who typed one
+        // meant it. True the day they typed it, and the reason this is wrong: the address it points
+        // at is a Cloudflare quick tunnel, which comes up somewhere new every run
+        // (`docs/WEB_SERVER.md`). So a typed address is a claim about where the page *was*, and a
+        // successful pairing is evidence about where it *is*. Fresher evidence wins.
+        //
+        // Only where the pairing actually reached a browser -- this function is called nowhere else
+        // -- so a bad scan cannot overwrite a good address. Forgetting a pairing deliberately leaves
+        // the address alone: it is still the last place the page is known to have been, and wiping
+        // it would take a hand-typed one with it.
+        if (!endpoint.isNullOrBlank()) {
+            pageBesidePairing(endpoint)?.let { selectWebPlayer(context, it) }
+        }
     }
 
     fun selectWebPlayer(context: Context, base: String): Boolean {

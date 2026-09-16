@@ -16,6 +16,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -35,6 +37,7 @@ import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.engine.NativeEngine
+import com.przunk.protracktor.player.FallbackLength
 
 /**
  * The things you set once and stop thinking about.
@@ -72,6 +75,8 @@ fun SettingsScreen(
     onThemeSelected: (AppTheme) -> Unit,
     onDynamicColourChanged: (Boolean) -> Unit,
     onToggleAllSubsongs: () -> Unit,
+    fallbackLengthSeconds: Int,
+    onFallbackLengthChanged: (Int) -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
@@ -116,6 +121,54 @@ fun SettingsScreen(
                         checked = playAllSubsongs,
                         onCheckedChange = { on -> haptics.toggle(on); onToggleAllSubsongs() },
                     )
+                },
+            )
+        }
+
+        // **The setting that stops a tune nobody can measure** (`docs/STATUS.md` C56). It sits
+        // directly under the subsong switch because both answer "what happens next", and a person
+        // who has just met a SID that would not end looks in Playback first.
+        item {
+            // Dragged locally and committed when the finger lifts. Writing on every step would put
+            // eight rows through the database for one gesture, and the label has to follow the
+            // thumb rather than the stored value or the slider reads as laggy.
+            var dragging by remember(fallbackLengthSeconds) { mutableStateOf(fallbackLengthSeconds) }
+            val minutes = dragging / FallbackLength.STEP_SECONDS
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_fallback_length)) },
+                supportingContent = {
+                    Column {
+                        Text(
+                            stringResource(R.string.settings_fallback_length_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            pluralStringResource(R.plurals.minutes, minutes, minutes),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        Slider(
+                            value = dragging.toFloat(),
+                            // **Snapped to whole minutes, not truncated.** A stepped Slider hands
+                            // back a float that is only nearly its notch -- 239.99997 for four
+                            // minutes -- and `toInt()` on that stores 239 seconds while the label,
+                            // which divides by 60, still reads "3 minutes". Rounding to the step
+                            // makes the number stored the number shown.
+                            onValueChange = {
+                                dragging = Math.round(it / FallbackLength.STEP_SECONDS) *
+                                    FallbackLength.STEP_SECONDS
+                            },
+                            onValueChangeFinished = {
+                                haptics.toggle(true)
+                                onFallbackLengthChanged(dragging)
+                            },
+                            valueRange = FallbackLength.RANGE_SECONDS.first.toFloat()..
+                                FallbackLength.RANGE_SECONDS.last.toFloat(),
+                            // One notch per minute. `steps` counts the ones *between* the ends,
+                            // which is the off-by-one every Slider in every codebase gets wrong.
+                            steps = FallbackLength.STEPS - 2,
+                        )
+                    }
                 },
             )
         }

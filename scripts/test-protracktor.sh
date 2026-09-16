@@ -113,6 +113,11 @@ if [ -n "$untranslated" ]; then
     exit 1
 fi
 
+# The store listing, which is text in a directory and therefore the easiest thing in this project to
+# let drift. The fields have hard character limits and the two locales have to hold the same files;
+# both are checkable here and neither is checkable in Play Console until an upload is refused.
+"$SCRIPT_DIR/check-store-metadata.sh"
+
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
