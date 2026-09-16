@@ -456,30 +456,11 @@ class CatalogueStore(context: Context) {
     ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             if (count <= 0) return@withContext emptyList()
-            // **First, and never optional.** The index holds every row the archive has, playable or
-            // not (`docs/ROADMAP_FORMATS.md` step 0), so a draw without this is a dice that lands
-            // on formats the app cannot open -- which is the one place an unplayable row would not
-            // merely look wrong but waste the listener's time.
-            val clauses = mutableListOf("playable = 1")
-            val arguments = mutableListOf<String>()
-            if (catalogueIds.isNotEmpty()) {
-                clauses += "catalogue_id IN (${catalogueIds.joinToString(",") { "?" }})"
-                arguments += catalogueIds
-            }
-            if (formats.isNotEmpty()) {
-                clauses += "format COLLATE NOCASE IN (${formats.joinToString(",") { "?" }})"
-                arguments += formats
-            }
-            if (favouritesOnly) {
-                clauses += "catalogue_id = ?"
-                arguments += FavouriteStore.MODLAND_ID
-                clauses += "path IN (SELECT path FROM modland_favourites)"
-            }
-            val where = " WHERE " + clauses.joinToString(" AND ")
+            val (where, arguments) = randomWhere(catalogueIds, formats, favouritesOnly)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks" +
                     "$where ORDER BY RANDOM() LIMIT $count",
-                arguments.toTypedArray(),
+                arguments,
             ).use { it.toTracks() }
         }
 
@@ -500,4 +481,39 @@ class CatalogueStore(context: Context) {
             )
         }
     }
+}
+
+/**
+ * The `WHERE` a random draw uses, and its arguments.
+ *
+ * **Lifted out of [randomSample] so it can be proved.** The dice is the one reader where an
+ * unplayable row would not merely look wrong but waste the listener's time — it would open a
+ * file the app cannot decode and move on — and it is also the only one whose filter is built
+ * from a list rather than written into the SQL, where a reader scanning for `playable` does not
+ * see it. `CataloguePlayableTest` runs this against a real SQLite.
+ *
+ * `playable = 1` is first and never optional. The index holds every row the archive has
+ * (`docs/ROADMAP_FORMATS.md` step 0), so a draw without it draws from the whole archive.
+ */
+internal fun randomWhere(
+    catalogueIds: Set<String>,
+    formats: Set<String>,
+    favouritesOnly: Boolean,
+): Pair<String, Array<String>> {
+    val clauses = mutableListOf("playable = 1")
+    val arguments = mutableListOf<String>()
+    if (catalogueIds.isNotEmpty()) {
+        clauses += "catalogue_id IN (${catalogueIds.joinToString(",") { "?" }})"
+        arguments += catalogueIds
+    }
+    if (formats.isNotEmpty()) {
+        clauses += "format COLLATE NOCASE IN (${formats.joinToString(",") { "?" }})"
+        arguments += formats
+    }
+    if (favouritesOnly) {
+        clauses += "catalogue_id = ?"
+        arguments += FavouriteStore.MODLAND_ID
+        clauses += "path IN (SELECT path FROM modland_favourites)"
+    }
+    return " WHERE " + clauses.joinToString(" AND ") to arguments.toTypedArray()
 }
