@@ -651,7 +651,13 @@ replaces.** Three additions:
       *Done when:* a sampled corpus from the directories UADE reaches plays through the built
       engine, on the phone at least, with the numbers in the commit.
 
-- [ ] **3. The ones that need a decoder of their own** — FamiTracker `.ftm` (1,874), DefleMask
+- [x] **3. The ones that need a decoder of their own** — *measured 2026-09-17, not built. Forty
+      files sampled from allmods.zip and played: `.psm` is **not a gap at all** (30 of 30 play, the
+      ZX Spectrum kind through ZXTune), and `.dmf`, `.ftm` and `.imf` are confirmed — the last
+      needing an OPL2 emulator before a decoder. Second correction of the day from playing a file
+      instead of reading a document.*
+
+      *Original text:* — FamiTracker `.ftm` (1,874), DefleMask
       `.dmf` (1,807), `.imf` (210, needs an **OPL2** emulator this build does not have), `.psm`
       (~70). About 3,900 files between them and no shared machinery, so this is four separate pieces
       of work and the last of them may not be worth doing at all.
@@ -663,12 +669,66 @@ replaces.** Three additions:
 
       Licence each one as you go, per the rule above. Write it down; do not stop for it.
 
-## When the list is done
+## Round 12 — closed 2026-09-17
 
-Write what the app claims now against Modland's 516,107, the same way round 8 did, and say what it
-was before. If item 0 landed, say what one re-index bought and confirm nothing will need another.
+**One item built, three answered by measuring.** The round set out to close the format gaps and
+found that two of the four steps were not what the roadmap said they were — both times because the
+roadmap described what the app could play instead of asking it.
 
-And say what nobody ran. Nothing here is confirmed without the owner's phone.
+**What the app claims: 342,129 of Modland's 516,118 — 66%.** Unchanged by this round, and that is
+the honest headline: no format was added. What changed is what adding one now costs.
+
+### Item 0 — the index stops depending on what we can play *(built)*
+
+`SupportedFormats` used to decide what a downloaded index **kept**, so every format added made every
+stored index stale and cost each user Modland's 40 MB. Both players store the whole archive now with
+the verdict beside each row.
+
+| | |
+| --- | --- |
+| a format added later | **one `UPDATE`, 228 ms over 516,107 rows** (1.7 s with the partial indexes to maintain), no network |
+| phone database | 83.3 MB → **112.8 MB**, +29.5 MB for 172,036 more rows |
+| a folder in Browse | **faster** — 0.1 ms, the browse index being partial over `playable = 1` |
+
+**One last re-index for anyone holding one today**, because rows that were never downloaded cannot
+be conjured; such an index says so (`complete = 0`) and asks. After that there is not another, and
+the class of defect that cost the owner 60,572 C64 tunes is gone with it: an index that holds
+everything cannot be wrong about what this build plays.
+
+### Item 1 — `.vt2` *(struck out)*
+
+Placed first because it looked free. It is **twelve files** in 516,118, the decoder was already
+wired, and it refuses all twelve anyway — ZXTune's text parser stops 374 bytes into a 38 KB file.
+The step was ordered by how cheap it looked and never counted what it was worth.
+
+### Item 2 — UADE *(stopped at the decision, `docs/BACKLOG.md` A44)*
+
+The process model is answered on evidence rather than argued: `uade.c:476` calls `exit(1)` when the
+**emulated Amiga program asks for a file that is not there**, which damaged modules do, and `exit()`
+is not an exception. So fork+exec, `uadecore` in `lib/<abi>/`, +1.8 MB — recommended, and the
+owner's to confirm.
+
+### Item 3 — the browser question, and the four decoders *(answered, not built)*
+
+Item 3 of the list needs nothing built: `fork` and `exec` do not exist in WebAssembly, so UADE is a
+phone backend and the page cannot have it. And of the four formats in the last item, **`.psm` was
+not a gap at all** — 30 of 30 play, the ZX Spectrum kind through ZXTune, wired since ZXTune arrived
+and never re-checked. `.dmf`, `.ftm` and `.imf` are confirmed, the last needing an OPL2 emulator
+before a decoder.
+
+### The rule this round earned
+
+The round opened with *play a real file before claiming a format*, written from the `.psm`/`.ftc`/
+`.gtr` mistake. It cuts both ways: **play one before writing a format off.** Two of four steps were
+wrong in that direction, and ninety seconds of `grep` over `allmods.zip` would have said so before
+either was scheduled.
+
+### What nobody ran
+
+**None of it, on a phone.** Item 0 changes what an index is and migrates a schema; it is verified by
+262 unit tests, 426 page checks and compilation, and by nothing else. The one thing to watch for is
+a missed filter — an unplayable row appearing in Browse, search or Random — because that is the
+failure this design can have and the tests can only partly see.
 
 # Round 8 — set 2026-09-10, the web learns Random
 

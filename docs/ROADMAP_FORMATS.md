@@ -13,10 +13,11 @@ third is not evenly spread:
 | Amiga custom replayers | **~29,000** | step 2 — UADE |
 | DefleMask `.dmf` | 1,807 | step 4 — its own decoder |
 | FamiTracker `.ftm` | 1,874 | step 4 — its own decoder |
+| id Software `.imf` | 210 | step 4 — and an OPL2 emulator first |
 | ZX `.ay` | 1,202 | **step 5 — blocked by a licence, not by work** |
 | Vortex Tracker II `.vt2` | **12** | **step 5 — measured 2026-09-17, and it is neither free nor worth it** |
 | `.med` (old Music Editor) | 132 | folds into step 2 |
-| `.imf`, `.psm` stragglers | ~280 | step 4 |
+| ~~`.psm`~~ | ~~141~~ | **not a gap — 30 of 30 play, measured 2026-09-17** |
 
 **~~One cost applies to every step~~ — paid off 2026-09-17, and it was step 0.** Adding a name to
 `SupportedFormats` used to change its fingerprint, make every stored index stale, and cost each user
@@ -133,22 +134,31 @@ already holds those rows and simply does not offer them.
 **If UADE is ever wanted in the browser**, the route is the in-process thread that step 2 rejected —
 which means 51 `exit()` calls to answer for, and a fork of a library this project does not fork.
 
-## Step 4 — the ones that need a decoder of their own
+## Step 4 — the ones that need a decoder of their own — **measured 2026-09-17, and one of the four was already done**
 
-Honest about the ratio: **~3,900 files between them, and each is a separate piece of work** with no
-shared machinery. Worth doing only after step 2, and probably only if somebody wants the format.
+*Forty files sampled from `allmods.zip` at random, played through the built engine. The step is not
+built; this is what it is actually worth.*
 
-| | files | what it would take |
-| --- | --- | --- |
-| FamiTracker `.ftm` | 1,874 | its own decoder; libopenmpt's FTM is *Face The Music* and 1 in 12 of Modland's open by accident |
-| DefleMask `.dmf` | 1,807 | its own decoder; libopenmpt implements X-Tracker's `.dmf`, which is the other 366 |
-| id Software `.imf` | 210 | an **OPL2** emulator, which this build does not have — `emu2413` in gme is OPLL, a different chip |
-| Spectrum Pro Sound Maker `.psm` | ~70 | libopenmpt's PSM is Epic MegaGames MASI; these are a ZX format |
+| | sampled | played | what they are |
+| --- | --- | --- | --- |
+| `.psm` | **30 / 30** | **all** | **not a gap.** Both kinds open: Epic MegaGames MASI through libopenmpt, and *ZX Spectrum PSM* through ZXTune — which has been wired since ZXTune arrived and nobody checked afterwards |
+| `.dmf` | 8 | 2 | the two are Delusion Digital Music Format, X-Tracker's; the rest are DefleMask, 1,807 of 2,186 |
+| `.ftm` | 8 | 0 | FamiTracker, all of them; libopenmpt's FTM is *Face The Music* |
+| `.imf` | 8 | 0 | id Software AdLib. Needs an **OPL2** emulator, which this build does not have — `emu2413` in gme is OPLL, a different chip |
 
-**The trap in all four is the shared extension**, and it has bitten this project twice. `.ftm`,
-`.dmf`, `.psm` and `.imf` are each claimed today for the files that *do* work, so a new decoder has
-to be tried **alongside** the existing one rather than instead of it, and `openBackend`'s
-first-refusal-wins rule (`docs/STATUS.md` C55) decides which reason the owner is shown.
+So **~3,900 becomes ~3,890 across three formats**, and the smallest of the three needs a chip
+emulator before it needs a decoder. Each is a separate piece of work with no shared machinery, and
+this is the step to do last or not at all.
+
+**The `.psm` correction is the second of its kind in one afternoon**, after `.vt2`. Both came from
+a document describing what the app could play rather than from asking it. The rule the round wrote —
+*play a real file before claiming a format* — turns out to cut the other way as well: **play one
+before writing a format off.**
+
+**The trap, if any of the three is ever done.** All three names are claimed *today* for the files
+that do work, so a new decoder is tried **alongside** the existing one, never instead of it — and
+`openBackend`'s first-refusal-wins rule (`docs/STATUS.md` C55) decides which reason the owner is
+shown when both refuse.
 
 ## Step 5 — the two that are not worth it, for different reasons
 
