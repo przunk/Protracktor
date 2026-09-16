@@ -58,6 +58,15 @@ private val SLIM_ICON = 20.dp
 private val SLIM_MIN_WIDTH = 56.dp
 
 /**
+ * The gap a pill leaves on each side of itself, inside its own layout bounds.
+ *
+ * Named because it is invisible and it counts: anything lining a pill up with something in another
+ * row has to know that the background starts this far in. It cancels out between the app bar and
+ * the session heading, which both add it — see `TOP_BAR_ACTION_EDGE`.
+ */
+internal val ACTION_SEAM = 3.dp
+
+/**
  * An action drawn as an icon with its name underneath.
  *
  * The owner's shape, asked for twice: once for the way out of Browse (`docs/BACKLOG.md` A16) and
@@ -126,7 +135,7 @@ internal fun LabelledAction(
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
-            .padding(horizontal = 3.dp)
+            .padding(horizontal = ACTION_SEAM)
             .defaultMinSize(minWidth = if (slim) SLIM_MIN_WIDTH else 48.dp)
             // **One height for every pill, whatever its name** (`docs/STATUS.md` C47), and it is a
             // plain number rather than anything that depends on the row around it. Two attempts at
