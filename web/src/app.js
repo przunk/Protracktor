@@ -102,6 +102,34 @@ let fallbackSeconds = FALLBACK_MIN_SECONDS;
  * starts, which is `opened` and `subsong`.
  */
 let fallbackFired = false;
+
+/**
+ * HVSC's lengths for the tune being opened, one per subsong, or empty.
+ *
+ * **A SID is the only format here whose length comes from outside the file**, and the database that
+ * holds it is an optional download -- so this is empty far more often than not, and the fallback
+ * length is what answers then.
+ */
+let openLengths = [];
+
+/**
+ * The stored lengths for a file, if it is one HVSC could know about.
+ *
+ * The name is the filter and the hash is the lookup. `.sid`, `.psid` and `.rsid` are the three
+ * `formats.tsv` files to `sidplayfp`, and HVSC is a C64 collection: nothing else can be in it, so
+ * nothing else is hashed.
+ */
+async function songLengthsFor(name, bytes) {
+  const dot = String(name ?? '').toLowerCase().lastIndexOf('.');
+  const extension = dot >= 0 ? name.toLowerCase().slice(dot + 1) : '';
+  if (!['sid', 'psid', 'rsid'].includes(extension)) return [];
+  try {
+    return (await archive.songLengthsFor(new Uint8Array(bytes))) ?? [];
+  } catch {
+    // A lookup that fails is a length we do not have, which is the normal case anyway.
+    return [];
+  }
+}
 try {
   const stored = Number(localStorage.getItem('protracktor.fallback'));
   // NaN fails every comparison, so an absent or damaged value keeps the default without a test of
@@ -271,7 +299,11 @@ function onWorklet(message) {
       render();
       $('seek').dataset.opened = '1';
       clearTimeout(openWatchdog);
-      duration = message.duration;
+      // **The engine first, HVSC only when the engine has nothing.** A format that knows its own
+      // length knows it better than a lookup on a hash could; a SID has none to know.
+      duration = message.duration > 0
+        ? message.duration
+        : (openLengths[message.current ?? 0] ?? openLengths[0] ?? 0);
       finished = false;
       fallbackFired = false;
       subsongCount = message.subsongs ?? 1;
@@ -351,7 +383,8 @@ function onWorklet(message) {
       finished = false;
       fallbackFired = false;
       currentSubsong = message.index;
-      duration = message.duration;
+      // HVSC times every subsong separately, so switching tune switches length too.
+      duration = message.duration > 0 ? message.duration : (openLengths[message.index] ?? 0);
       const fields = describeFields(message.describe);
       if (fields.title) $('title').textContent = fields.title;
       $('sub').textContent = describeLine(fields);
@@ -766,6 +799,7 @@ async function playAt(next) {
   // zeroes it the instant a track is chosen; left alone, the page's bar sat on the last tune's 1:07
   // through the whole of the next download (owner, 2026-09-11).
   duration = 0;
+  openLengths = [];
   $('seek').value = 0;
   paint($('seek'));
   $('elapsed').textContent = clock(0);
@@ -832,6 +866,15 @@ async function playAt(next) {
   $('sub').textContent = engineReady
     ? `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`
     : `${(bytes.byteLength / 1024).toFixed(0)} KB — waiting for the engine…`;
+
+  // **Asked before the bytes are handed over, because handing them over detaches them** -- the
+  // postMessage below transfers the buffer, and a moment later this page does not have it. The
+  // phone hashes at the same point and for the same reason (`docs/STATUS.md` C56).
+  //
+  // Only for the three names HVSC could possibly know. Hashing every file would cost a pass over a
+  // five-megabyte MP3 to learn that a C64 database has never heard of it.
+  openLengths = await songLengthsFor(entry.file ?? entry.name, bytes);
+
   node.port.postMessage({ type: 'open', bytes, name: entry.file ?? entry.name }, [bytes]);
   setPlaying(false);
   announceGesture();
@@ -1775,6 +1818,29 @@ async function renderSettings() {
       ? `${held.tracks.toLocaleString()} tunes indexed in this browser`
       : 'not indexed here yet — Browse offers the download');
   }
+  // **What is held, and a way to let go of it.** The phone's storage section is the model: nothing
+  // downloaded here is undeletable, and saying how much there is without saying how to be rid of it
+  // is half an answer.
+  const lengths = await archive.songLengthsMeta();
+  const dt = document.createElement('dt');
+  dt.textContent = 'SID song lengths (HVSC)';
+  const dd = document.createElement('dd');
+  if (lengths?.tunes) {
+    dd.append(`${lengths.tunes.toLocaleString()} tunes · `);
+    const forget = document.createElement('button');
+    forget.className = 'plain';
+    forget.textContent = 'Forget them';
+    forget.onclick = async () => {
+      await archive.clearSongLengths();
+      showNote('SID song lengths forgotten');
+      await renderSettings();
+    };
+    dd.append(forget);
+  } else {
+    dd.textContent = 'not downloaded — Browse offers them; until then a SID stops at the length below';
+  }
+  list.append(dt, dd);
+
   const { usage, quota } = await estimate();
   row('Stored here', usage
     ? `${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB this browser offered`
@@ -2281,6 +2347,18 @@ async function renderBrowse() {
     }
     row(held?.tracks ? 'Download the index again' : 'Download the Modland index', null, downloadIndex, ICON.download);
     row(asma?.tracks ? 'Download the ASMA list again' : 'Download the ASMA list', null, downloadAsmaIndex, ICON.download);
+    // **Not an index of tunes, and it sits with them anyway**, because this is the screen for
+    // "fetch the thing that makes the rest work" and the owner looked for it here. A SID carries no
+    // length; without this one plays until the fallback in Settings stops it.
+    const lengths = await archive.songLengthsMeta();
+    row(
+      lengths?.tunes
+        ? `SID song lengths — ${lengths.tunes.toLocaleString()} tunes`
+        : 'Download SID song lengths (HVSC)',
+      lengths?.tunes ? 'stored here · tap to fetch again' : '5.2 MB, from HVSC',
+      downloadSongLengths,
+      ICON.download,
+    );
     return;
   }
 
@@ -2520,6 +2598,39 @@ async function downloadAsmaIndex() {
     note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections. ${note.textContent}`;
   } catch (e) {
     note.textContent = `the ASMA list could not be downloaded: ${e.message}`;
+  }
+}
+
+/**
+ * Browse → SID song lengths: HVSC's hand-timed durations (`archive.downloadSongLengths`).
+ *
+ * **The one download here that is not a list of tunes.** A SID is a program and has no length in
+ * it; HVSC's is a person's stopwatch, 61,157 of them, and without it the page played every SID
+ * until the fallback in Settings stopped it (`docs/STATUS.md` C56).
+ *
+ * No engine and no format table, unlike the two above: this is keyed on the MD5 of a file, so
+ * nothing about it depends on what this build can decode.
+ */
+async function downloadSongLengths() {
+  const note = $('browsenote');
+  $('browselist').replaceChildren();
+  try {
+    const result = await archive.downloadSongLengths({
+      onProgress: (p) => {
+        if (p.stage === 'fetching' && p.total) {
+          note.textContent = `fetching ${(p.done / 1e6).toFixed(1)} of ${(p.total / 1e6).toFixed(1)} MB…`;
+        } else if (p.stage === 'storing') {
+          note.textContent = `storing ${p.done} of ${p.total}…`;
+        } else {
+          note.textContent = `${p.stage}…`;
+        }
+      },
+    });
+    browsePath = [];
+    await renderBrowse();
+    note.textContent = `SID song lengths: ${result.tunes.toLocaleString()} tunes. ${note.textContent}`;
+  } catch (e) {
+    note.textContent = `the song lengths could not be downloaded: ${e.message}`;
   }
 }
 

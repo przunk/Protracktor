@@ -13,6 +13,7 @@
 // search and the dice treat them alike.
 
 import { catalogue } from './store.js';
+import { md5, parseSongLengths } from './songlengths.js';
 
 const MODLAND = 'modland';
 const ASMA = 'asma';
@@ -573,4 +574,113 @@ function encodeSegment(segment) {
           .map((byte) => `%${byte.toString(16).toUpperCase().padStart(2, '0')}`).join('');
   }
   return out;
+}
+
+
+// --- HVSC's song lengths --------------------------------------------------------------------------
+//
+// **The phone has had these since 2026-09-02 and the page had nothing** (`docs/STATUS.md` C56). A
+// SID carries no duration, so without them the page played one until somebody pressed next. The
+// fallback length added for C56 stays underneath: HVSC only knows about the C64, and every other
+// format nobody has measured still needs an answer.
+//
+// It is fetched from the same address the phone uses. That was recorded as impossible for a day --
+// "hvsc.c64.org sends no Access-Control-Allow-Origin" -- and it was a measurement taken with a HEAD
+// request, which that server answers without its CORS filter. It sends the header on a GET.
+
+const SONG_LENGTHS_URL = 'https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5';
+
+/** Everything song lengths store lives under, so one `clear` takes all of it. */
+const LENGTHS = 'lengths:';
+
+/**
+ * 61,157 tunes in 256 rows rather than 61,157 rows.
+ *
+ * Sharded on the first two characters of the MD5, which is as even a split as exists -- a hash is
+ * uniform by construction, so every shard holds about 240 entries. One row per tune would be a
+ * quarter of a million IndexedDB writes to store and a quarter of a million rows to delete; one row
+ * per *tune* is also the wrong unit for reading, because a lookup wants one entry and would pay a
+ * request for it either way.
+ */
+const shardOfMd5 = (key) => `${LENGTHS}${key.slice(0, 2)}`;
+
+/** What the page knows about the stored database: how many tunes, and when it was fetched. */
+export async function songLengthsMeta() { return catalogue.get(`${LENGTHS}meta`); }
+
+/** Forgets them all. The storage section offers this, as the phone's does. */
+export async function clearSongLengths() {
+  await catalogue.clear(LENGTHS);
+}
+
+/**
+ * Fetches HVSC's database and stores it.
+ *
+ * Progress is reported by bytes while fetching, because it is 5.2 MB of text and a page that says
+ * nothing for ten seconds reads as a page that has stopped. Parsing is another 100 ms and storing a
+ * few hundred, so only the fetch is worth counting.
+ */
+export async function downloadSongLengths({ onProgress = null } = {}) {
+  onProgress?.({ stage: 'fetching', done: 0, total: 0 });
+  const response = await fetch(SONG_LENGTHS_URL);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const total = Number(response.headers.get('content-length')) || 0;
+  let text;
+  if (response.body) {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let done = 0;
+    for (;;) {
+      const read = await reader.read();
+      if (read.done) break;
+      chunks.push(read.value);
+      done += read.value.length;
+      onProgress?.({ stage: 'fetching', done, total });
+    }
+    const joined = new Uint8Array(done);
+    let at = 0;
+    for (const chunk of chunks) { joined.set(chunk, at); at += chunk.length; }
+    // **Latin-1, not UTF-8.** The file is a list of hex keys and digits, but the comment lines above
+    // them carry composer names with accents in whatever eight-bit encoding HVSC has always used.
+    // Decoding as UTF-8 throws on those bytes in strict mode and replaces them otherwise; either
+    // way the comments are not read, and the entries must not be risked for them.
+    text = new TextDecoder('latin1').decode(joined);
+  } else {
+    text = new TextDecoder('latin1').decode(new Uint8Array(await response.arrayBuffer()));
+  }
+
+  onProgress?.({ stage: 'reading' });
+  const entries = parseSongLengths(text);
+  if (entries.length === 0) throw new Error('the song length database was empty');
+
+  const shards = new Map();
+  for (const entry of entries) {
+    const key = shardOfMd5(entry.md5);
+    let held = shards.get(key);
+    if (!held) { held = {}; shards.set(key, held); }
+    held[entry.md5] = entry.seconds;
+  }
+
+  // **Replaced wholesale, not merged**, the same rule the phone keeps: HVSC publishes corrections
+  // as well as additions, so a merge would keep a length its own publisher has withdrawn.
+  await catalogue.clear(LENGTHS);
+  const records = [...shards].map(([key, tunes]) => ({ key, tunes }));
+  await catalogue.putAll(records, 64, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
+  await catalogue.putAll([{ key: `${LENGTHS}meta`, tunes: entries.length, at: Date.now() }]);
+  onProgress?.({ stage: 'done', tunes: entries.length });
+  return { tunes: entries.length };
+}
+
+/**
+ * Every subsong's length for these bytes, or null when HVSC has never heard of them.
+ *
+ * The key is the plain MD5 of the whole file — not the header hash libsidplayfp still exposes,
+ * which older HVSC releases used and this one does not.
+ */
+export async function songLengthsFor(bytes) {
+  if (!bytes || bytes.length === 0) return null;
+  const key = md5(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+  const shard = await catalogue.get(shardOfMd5(key));
+  const found = shard?.tunes?.[key];
+  return Array.isArray(found) ? found : null;
 }

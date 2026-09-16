@@ -146,9 +146,11 @@ window.navigator.storage ??= { persist: async () => true, persisted: async () =>
                                estimate: async () => ({ usage: 1_000_000, quota: 500_000_000_000 }) };
 
 const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
+const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
 const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
+  .replace(/^import .*from '\.\/songlengths\.js';$/gm, lengthsSource)
   .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
@@ -159,7 +161,8 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex, '
-    + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName }; })();')
+    + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
+    + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -2276,6 +2279,13 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // HVSC's time tokens, the same rows `RuleCasesTest` runs against `SongLengths.parseTime`. A SID's
+  // whole length comes from reading these right; there is nothing in the file to fall back on.
+  const lengthsModule = await import(path.resolve('web/src/songlengths.js'));
+  each('songLengthTime', (c) => {
+    const got = lengthsModule.parseSongLengthTime(c.token);
+    return c.expect === '-' ? got === null : got === Number(c.expect);
+  });
 }
 
 // --- clearing one archive's rows ----------------------------------------------------------------
@@ -2307,6 +2317,52 @@ if (window.__api?.catalogueStore) {
     'and leaves an archive whose name merely starts the same way', left.join(', '));
   await store.clear('asma:');
   await store.clear('modlandish:');
+}
+
+// --- MD5, and the lookup it is the key to ---------------------------------------------------------
+//
+// **Written out rather than fetched from anywhere**, because `crypto.subtle` does not offer MD5 and
+// never will: it is broken as a *security* hash. Nothing here is security -- HVSC chose it as a
+// key twenty years ago, and a lookup has to use the key the database was written with.
+//
+// So it is checked against the vectors published with the algorithm. An MD5 that is subtly wrong
+// finds nothing and looks exactly like a database that has never heard of the tune.
+{
+  const lengths = await import(path.resolve('web/src/songlengths.js'));
+  const encode = (text) => new TextEncoder().encode(text);
+  const vectors = [
+    ['', 'd41d8cd98f00b204e9800998ecf8427e'],
+    ['a', '0cc175b9c0f1b6a831c399e269772661'],
+    ['abc', '900150983cd24fb0d6963f7d28e17f72'],
+    ['message digest', 'f96b697d7cb7938d525a2f31aaf161d0'],
+    ['abcdefghijklmnopqrstuvwxyz', 'c3fcd3d76192e4007dfb496cca67e13b'],
+    ['12345678901234567890123456789012345678901234567890123456789012345678901234567890',
+      '57edf4a22be3c955ac49da2e2107b67a'],
+  ];
+  const wrong = vectors.filter(([text, want]) => lengths.md5(encode(text)) !== want);
+  check(wrong.length === 0, 'MD5 agrees with the vectors published with the algorithm',
+    wrong.map(([t]) => JSON.stringify(t)).join(', '));
+
+  // **A block boundary and the length field above 2^32 bits.** 56 bytes is the last size that fits
+  // its padding in one block and 64 is the first that does not, which is where a hand-written MD5
+  // goes wrong. Checked against the same implementation at a size the page will really meet.
+  const long = new Uint8Array(200_000);
+  for (let i = 0; i < long.length; i++) long[i] = (i * 7) & 0xff;
+  check(/^[0-9a-f]{32}$/.test(lengths.md5(long)), 'and hashes a file-sized buffer');
+  check(lengths.md5(new Uint8Array(56)) !== lengths.md5(new Uint8Array(64)),
+    'and 56 bytes and 64 bytes hash differently, which is where padding goes wrong');
+
+  // The parse, the shard and the lookup, end to end through the real store.
+  if (window.__api?.catalogueStore) {
+    const parsed = lengths.parseSongLengths(
+      '[Database]\n; /MUSICIANS/H/Hubbard_Rob/Commando.sid\n' +
+      '6d019ecba831a9f853675aac29a61c10=3:55.594 1:01.288 0:06\n' +
+      'ffffffffffffffffffffffffffffffff=bad\n',
+    );
+    check(parsed.length === 1, 'a line with an unreadable time is dropped whole', `${parsed.length} kept`);
+    check(parsed[0].seconds.join(',') === '235.594,61.288,6', 'and every subsong is kept',
+      parsed[0].seconds.join(','));
+  }
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

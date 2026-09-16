@@ -100,3 +100,25 @@ a,b,c	-	a	nothing heard yet: the first draw
 a,b,c	a	b	a tune the session has had is passed over
 a,b,c	a,b	c	and so is every other one it has had
 a,a,a	a	a	every draw repeats: a small pool has run out, and the dice repeats rather than stops
+
+# HVSC's time tokens, which the phone reads in SongLengths.parseTime and the page in
+# web/src/songlengths.js. A SID carries no length; the whole feature rests on reading these right,
+# and the fraction is the trap -- ".5" is half a second, and the field is described as
+# milliseconds in places, so reading it as five milliseconds makes every fractional length wrong by
+# up to a second in a way nobody notices from the numbers. `-` means the token is not a time, which
+# is the caller's cue to drop the whole line rather than keep a tune with one length missing.
+[songLengthTime]
+token	expect	why
+0:06	6	seconds alone
+3:55	235	minutes and seconds
+3:55.594	235.594	three decimals, the shape most of the file uses
+0:00.5	0.5	one decimal is a tenth of a second, not five milliseconds
+0:00.05	0.05	and two decimals are hundredths
+12:34	754	minutes past ten
+33:46	2026	the longest tune in the file, measured 2026-09-02
+0:60	-	sixty seconds is not a time; it is a minute somebody failed to carry
+3:5	-	the seconds are two digits or it is not this format
+3:55.5943	-	more than three decimals is not a shape this file uses
+:55	-	no minutes at all
+3:55.	-	a decimal point with nothing after it
+x:55	-	not a number

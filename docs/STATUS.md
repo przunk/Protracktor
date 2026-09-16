@@ -460,7 +460,7 @@ survives being walked away from and returned to.
 is the one place nobody arrives to look around — they came to type — and two taps stood between
 arriving and typing.
 
-### C56. A SID never ends on the web, and does not on a fresh phone either — **OPEN**
+### C56. ~~A SID never ends on the web, and does not on a fresh phone either~~ — FIXED 2026-09-16
 
 *Owner, 2026-09-15: "WEB: nie widzi końca SID (gra w nieskończoność); APK to potrafi."*
 
@@ -495,10 +495,32 @@ end, and nothing on screen connects the two. A new install is in this state.
    **Both players, and the phone's watchdog already exists**: `known > 0.0 && position >= known`
    simply needs `known` to fall back to the setting. The web has no watchdog at all and needs one
    built, which is the larger half of this even though it is the smaller of the two changes.
-3. **Song lengths on the web.** The real fix and the largest: the database is about 61,000 rows and
-   the page would have to fetch, parse and store it in IndexedDB, plus an MD5 it does not currently
-   compute. `docs/SPEC_RANDOM.md` set the precedent that the two players should behave the same;
-   this is the biggest place they do not.
+3. ~~**Song lengths on the web.**~~ **Done 2026-09-16.** The page fetches HVSC's `Songlengths.md5`
+   from the same address the phone uses, parses it with the same rules, and stores it in IndexedDB.
+   Browse offers the download beside the Modland and ASMA indexes — which is where the owner looked
+   for it — and Settings says how many are held and lets them go.
+
+   **Sharded 256 ways on the first two characters of the MD5**, because a hash is uniform by
+   construction: 61,157 tunes become 256 rows of about 240 each, rather than 61,157 rows to write
+   and 61,157 to delete. Measured end to end against the real 5.2 MB file: **61,157 tunes stored in
+   256 ms, a lookup in 1 ms.**
+
+   **The MD5 is written out**, sixty lines in `web/src/songlengths.js`, because `crypto.subtle` does
+   not offer MD5 and never will — it is broken as a *security* hash, and nothing here is security.
+   HVSC chose it as a key twenty years ago and a lookup has to use the key the database was written
+   with. It is checked against the vectors published with the algorithm, and against the block
+   boundary at 56 and 64 bytes where a hand-written one goes wrong.
+
+   **Hashed before the bytes are handed to the worklet**, which detaches them — the same point the
+   phone hashes at — and only for `.sid`, `.psid` and `.rsid`, since HVSC is a C64 collection and
+   hashing a five-megabyte MP3 to learn that is waste.
+
+   The time tokens now live in `docs/rules/queue-cases.tsv` as thirteen shared cases that both
+   `RuleCasesTest` and `check-page.mjs` run, so the two parsers cannot drift. The fraction is what
+   they are there for: `.5` is half a second, and the field is called milliseconds in places.
+
+   **The fallback length stays.** HVSC knows about the C64 and nothing else, so every other format
+   nobody has measured still needs an answer.
 
    **Its source is the one the phone uses, and the note here said otherwise for a day.**
    `hvsc.c64.org` **does** send `Access-Control-Allow-Origin: *`, on a GET and on a preflight, and it
