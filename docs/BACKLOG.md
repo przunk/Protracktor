@@ -168,20 +168,21 @@ replace it.
 
 The machinery for the second exists since item 3; the decision is about what Browse is *for*.
 
-## A32. ZXTune in the browser's engine — **decided 2026-09-15: do it**, not started
+## A32. ~~ZXTune in the browser's engine~~ — DONE 2026-09-15
 
 *Raised by `GOAL.md` round 8 on 2026-09-11, which was told to record it rather than decide it.*
 
-The web engine is built with `-DPROTRACKTOR_WITH_ZXTUNE=OFF` (`scripts/build-web-engine.sh`), and
-since round 8 item 1 the page indexes only what it can play, so the absence is now a number on the
-screen: **26,537 of Modland's tunes play on the phone and not in the browser** — `pt3` 7,376,
-`pt2` 6,284, `ym` 4,977, `stc` 3,639 and the rest of the Spectrum's formats.
+The web engine was built with `-DPROTRACKTOR_WITH_ZXTUNE=OFF`, and since round 8 item 1 the page
+indexes only what it can play, so the absence had become a number on the screen: **26,537 of
+Modland's tunes played on the phone and not in the browser** — `pt3` 7,376, `pt2` 6,284, `ym` 4,977,
+`stc` 3,639 and the rest of the Spectrum's formats.
 
-Why it is off, from the comment it replaced in `web/src/app.js`: ZXTune does not build under
-Emscripten as it stands, and making it build means patching a library `docs/ARCHITECTURE.md` §3
-says this project does not fork (`docs/PLAN_WEB.md` §14).
+*Everything from here to the answer below is what was written **before anybody tried the build**,
+and it is kept because the lesson is in it.* The reason it was off, inherited from a comment in
+`web/src/app.js`: ZXTune does not build under Emscripten as it stands, and making it build means
+patching a library `docs/ARCHITECTURE.md` §3 says this project does not fork.
 
-So the question is not "switch it on" but **one of**:
+So the question was thought not to be "switch it on" but **one of**:
 
 - keep it off, and the browser stays a player for everything but the Spectrum — said plainly in
   Browse, which is what item 1 delivers;
@@ -190,22 +191,38 @@ So the question is not "switch it on" but **one of**:
 - find the smaller piece — `ym` and `vtx` are register dumps rather than trackers, 5,856 tunes
   between them, and their decoder may be separable from the rest.
 
-**The owner said do it, 2026-09-15** — "można zrobić" — which settles *whether* and leaves *which of
-the three*. That one is not his to guess and not ours to assume either: it is an engineering
-question with a measurement behind it, so the order of work is
+### The answer, 2026-09-15: the second option, and it cost eight lines
 
-1. **Try the build first.** ZXTune under Emscripten as it stands, unpatched, and find out exactly
-   what fails. The claim that it does not build is inherited from a comment, not from a log anybody
-   here has read. If it turns out to build, the whole no-fork problem evaporates.
-2. **If it does not, size the patch** before arguing about it. A three-line configure fix is not a
-   fork; a reimplemented backend is. `docs/ARCHITECTURE.md` §3 forbids the second, and this
-   decides which one is on the table.
-3. **Measure what it costs the page**: the engine is 2.6 MB over the wire today and every byte is
-   paid on first load, so the answer "it works, and it triples the download" is a different answer.
-4. **`ym`/`vtx` alone is the fallback**, not the goal — 5,856 of the 26,537, for what may be a much
-   smaller piece of the library.
+**The owner said do it — "można zrobić" — and the first thing to do was read a real log rather than
+that comment.** ZXTune under Emscripten fails on **eight lines in five files**, every one a `const auto*` initialised from a
+`std::string_view` iterator: a raw pointer in the NDK's libc++, a `__wrap_iter` in Emscripten's,
+where ABI version 2 makes it one deliberately so that code cannot rely on the detail. Nothing was
+reimplemented, no logic changed, and Android compiles the same sources.
 
-Nothing ships until 3 is a number.
+The patch lives in `scripts/fetch-zxtune.py` rather than in the tree, because a fetch re-clones the
+directory and a hand edit would vanish; each entry states how many times it expects to match, which
+caught a real mistake — one pattern occurs **twice** in `encoding.cpp` and a blind replace had
+quietly done both.
+
+The page needed **no change at all**: `absentDecoders()` reads the engine's own fingerprint, so the
+decoder turning up there is the integration. Measured cost: **2.65 MB → 3.21 MB** over the wire,
++21%, for **26,537 Modland tunes**. `.pt3`, `.asc` and `.stp` were played through the built engine,
+so this is "plays" rather than "links". `docs/PLAN_WEB.md` §14 has the detail.
+
+**The order of work it was done in**, written before any of it and worth keeping because three of
+the four steps turned out to be unnecessary:
+
+1. **Try the build first**, unpatched, and find out exactly what fails — rather than trusting the
+   comment. *This step was the whole answer.*
+2. **If it does not build, size the patch** before arguing about it: a portability fix is not a
+   fork, a reimplemented backend is, and `docs/ARCHITECTURE.md` §3 forbids only the second. *Eight
+   lines, none of them logic.*
+3. **Measure what it costs the page**, because every byte is paid on first load. *+21%.*
+4. **`ym`/`vtx` alone is the fallback**, not the goal — 5,856 of the 26,537. *Not needed.*
+
+**The general lesson, which is the reason this entry keeps its old reasoning**: "it does not build"
+sat in a comment for a week and was repeated into three documents without anybody running the
+command. The cost of checking was one configure and one build.
 
 ## A31. Haptics on the seven places he named — DONE 2026-09-10
 

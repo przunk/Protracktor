@@ -161,7 +161,7 @@ search, and the version column is ours.
 | libsidplayfp | 3.1.1 | GPL-2.0+ | third-party (`libsidplayfp-wasm`), and inside `chip-player-js` | reSIDfp is the expensive one per second of audio |
 | game-music-emu | 0.6.5 | LGPL-2.1+ | inside `chip-player-js` | seven console families in one library |
 | HivelyTracker | V1_9 | BSD-3 | **none found** | three C files, the smallest vendored decoder here; if the toolchain works at all this one works |
-| ZXTune | c93e81d | LGPL-3.0 | **work in progress at best** | the weakest link: the largest C++ of the seven, and the one we deliberately do not fork (`ARCHITECTURE` §3) |
+| ZXTune | c93e81d | LGPL-3.0 | **built and playing, 2026-09-15** | the largest C++ of the seven; eight patched lines, applied by the fetch script rather than committed — see §14 |
 
 **The finding is that six of seven have a precedent and one does not.** ZXTune is also the newest
 arrival — merged 2026-09-07 — and the only one where a web version would plausibly ship with a
@@ -750,18 +750,52 @@ Three defects came out of the owner's first two attempts, and each is worth keep
 **All three were found by using it, none by the tests.** The suite proves the packing round-trips;
 it cannot know that a queue is something a person reads before pressing anything.
 
-### ZXTune is out, and it is a build-time choice now
+### ZXTune is in — 2026-09-15, and it was eight lines
 
-`lexic_analysis.cpp` initialises a `const auto*` from a `std::string::const_iterator`. The NDK's
-libc++ hands that over as a raw pointer; Emscripten's does not. Patching means forking a library
-`ARCHITECTURE` §3 says we do not fork, and it was the *first* file, so probably not the last.
+*Written here as "out" from 2026-09-08 until 2026-09-15. What follows replaces that, and the old
+reasoning is kept in the first paragraph because it is the part that was wrong.*
 
-`PROTRACKTOR_WITH_ZXTUNE` defaults to on, so **the Android build is unchanged**. One asymmetry is
-deliberate: `backendsFingerprint()` appends `;zxtune:none` only when the decoder is *absent*. That
-string is what tells a stored index it was built by a different set, so adding anything to the
-Android build's version would invalidate every index on every device at once.
+**What this section used to say**, and what everything downstream repeated for a week: ZXTune does
+not build under Emscripten, because `lexic_analysis.cpp` initialises a `const auto*` from a
+`std::string_view::const_iterator` — a raw pointer in the NDK's libc++ and not in Emscripten's —
+and it was the *first* file, so probably not the last. Patching it would mean forking a library
+`ARCHITECTURE` §3 says we do not fork.
 
-Cost of the omission: **3,639 Modland files of 516,107**.
+**The diagnosis was right and the conclusion was not, and nobody had run the build.** Doing it
+produced **eight lines in five files**, all the same idiom, and then it linked and played. The
+"probably not the last" was correct — it was six more — and "probably too many to patch" was the
+part that was never measured.
+
+| | |
+| --- | --- |
+| lines patched | **8**, in 5 files |
+| what each one does | lets an iterator keep its own type, or asks the view for a pointer it needed anyway |
+| behaviour changed | **none** — no logic is touched and the Android build compiles the same sources |
+| upstream | has the same code today (checked 2026-09-15), so there is no newer revision to take instead |
+| engine size | **2.65 MB → 3.21 MB** over the wire, +21% |
+
+Emscripten's libc++ runs at ABI version 2, where `_LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW`
+makes that iterator a `__wrap_iter` **on purpose**, to stop code relying on the implementation
+detail. Switching the ABI version back was considered and rejected: it would apply to one target in
+a link whose other objects — and the prebuilt sysroot — are built at version 2, which is an ABI
+mismatch rather than a fix.
+
+**The patch lives in `scripts/fetch-zxtune.py`, not in the tree.** A fetch deletes and re-clones the
+whole directory, so an edit made by hand would vanish the next time anybody ran that script and the
+symptom would be a build that worked yesterday. Each entry carries the number of times it expects to
+match, and a mismatch is a loud failure — which caught a real mistake while this was being written:
+one of the seven patterns occurs **twice** in `encoding.cpp`, and a blind replace had quietly done
+both.
+
+**What it buys: 26,537 Modland tunes** that played on the phone and not in the browser — `pt3`
+7,376, `pt2` 6,284, `ym` 4,977, `stc` 3,639 and the rest of the Spectrum's formats. Verified by
+playing one of each family through the built engine: `.pt3`, `.asc` and `.stp` open and render
+audible audio at ~380× realtime.
+
+**Nothing in the page changed**, which is the part worth noticing. `absentDecoders()` reads what the
+engine says rather than a list somebody maintains, so the decoder appearing in the fingerprint is
+the whole of the integration. `scripts/check-engine.mjs` now asserts the fingerprint reports nothing
+missing, so this cannot quietly go back.
 
 ## Sources for the *read* claims
 

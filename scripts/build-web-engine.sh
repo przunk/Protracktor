@@ -38,7 +38,11 @@ echo "🔧 configuring…"
 emcmake cmake -S "$ROOT/native" -B "$BUILD" \
     -DCMAKE_BUILD_TYPE=Release \
     -DPROTRACKTOR_BUILD_ENGINE=OFF \
-    -DPROTRACKTOR_WITH_ZXTUNE=OFF \
+    `# **ZXTune is in the browser as of 2026-09-15** (docs/BACKLOG.md A32). It was off because it
+     # "does not build under Emscripten", which turned out to be eight lines assuming that
+     # std::string_view::const_iterator is a raw pointer -- true of the NDK's libc++, not of
+     # Emscripten's at ABI version 2. scripts/fetch-zxtune.py patches them and says so.` \
+    -DPROTRACKTOR_WITH_ZXTUNE=ON \
     -G Ninja >"$BUILD/configure.log" 2>&1 || { tail -30 "$BUILD/configure.log"; exit 1; }
 
 echo "🔨 backends…"
@@ -57,7 +61,7 @@ echo "🔗 linking…"
 emcc "$ROOT/native/engine/engine.cpp" "$ROOT/native/engine/player_wasm.cpp" \
     -o "$OUT/engine.mjs" \
     -std=gnu++20 -fexceptions -frtti -O3 \
-    -DFMT_CONSTEVAL= -DHAVE_ZLIB_H -DPROTRACKTOR_WITH_ZXTUNE=0 \
+    -DFMT_CONSTEVAL= -DHAVE_ZLIB_H -DPROTRACKTOR_WITH_ZXTUNE=1 \
     `# **MINIMP3_FLOAT_OUTPUT, and it must be here.** CMake gives it to the minimp3 target as a
      # PUBLIC definition, which reaches everything CMake compiles -- and this line is not one of
      # those: the engine is linked by hand here because it needs Emscripten flags that mean nothing
@@ -72,6 +76,7 @@ emcc "$ROOT/native/engine/engine.cpp" "$ROOT/native/engine/player_wasm.cpp" \
     -I"$V/asap" -I"$V/gme" -I"$V/gme/gme" \
     -I"$V/sidplayfp/src" -I"$V/sidplayfp/src/builders/sidlite-builder" -I"$B/sidplayfp/public" \
     -I"$V/hively/hvl2wav" -I"$V/minimp3" \
+    -I"$V/zxtune/src" -I"$V/zxtune/include" -I"$V/zxtune" -I"$V/zxtune/3rdparty/fmt/include" \
     $(find "$BUILD" -name '*.a' | sort) \
     -sUSE_ZLIB=1 \
     -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web,worker,node \

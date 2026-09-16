@@ -63,6 +63,26 @@ const open = (bytes, name) => {
   return { handle, error: M.UTF8ToString(M._pt_last_error()) };
 };
 
+// --- which decoders this build actually has ----------------------------------------------------
+//
+// `pt_backends` is not a vanity string: `catalogue.js` reads it to decide what the page will offer
+// to index, so a decoder silently dropping out of the build silently removes tunes from Browse.
+// ZXTune is the one that has moved (`docs/BACKLOG.md` A32) and the one this guards.
+{
+  const fingerprint = M.UTF8ToString(M._pt_backends());
+  const absent = fingerprint.split(';')
+    .map((part) => part.split(':'))
+    .filter(([, version]) => version === 'none')
+    .map(([name]) => name);
+  check('the browser engine reports no missing decoder', absent.length === 0,
+    `missing: ${absent.join(', ') || '(none)'} — full fingerprint: ${fingerprint}`);
+  // Named individually, because "nothing missing" also passes on a build that lost a decoder in a
+  // way the fingerprint does not describe.
+  for (const decoder of ['openmpt', 'sc68', 'asap', 'gme', 'sidplayfp', 'minimp3']) {
+    check(`${decoder} is in this build`, fingerprint.includes(`${decoder}:`), fingerprint);
+  }
+}
+
 // --- the reason a refusal gives ----------------------------------------------------------------
 //
 // **A SAP that no decoder can load, built rather than stored.**
