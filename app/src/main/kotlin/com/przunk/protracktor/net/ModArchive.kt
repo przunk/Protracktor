@@ -49,7 +49,7 @@ object ModArchive : Catalogue(
     override fun pathFrom(id: String): String? =
         if (id.startsWith(DOWNLOAD_PREFIX)) id.removePrefix(DOWNLOAD_PREFIX) else null
 
-    override fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry> = emptyList()
+    override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> = emptyList()
 
     /**
      * What a live search actually did.

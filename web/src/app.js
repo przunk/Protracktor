@@ -295,6 +295,7 @@ function onWorklet(message) {
       engineFingerprint = message.backends;
       status(`engine ready — ${message.backends}`);
       readyWaiters.splice(0).forEach((resolve) => resolve());
+      reconsiderStoredIndexes();
       break;
     case 'opened': {
       loading = null;
@@ -451,6 +452,35 @@ function trackEnded() {
     setPlaying(false);
   } else if (next === index && repeat === 'one') playAt(index);
   else playAt(next);
+}
+
+/**
+ * Asks every stored index again what it can offer, now that the engine has said what it is.
+ *
+ * **What a format learnt since the download costs: one local pass** (`docs/ROADMAP_FORMATS.md`
+ * step 0). An index holds every row its archive lists, so this is a question already answered by
+ * rows that are here — where it used to mean fetching Modland's 5.76 MB again on every device.
+ *
+ * Only when the stamp actually moved, and only for indexes written since step 0: an older one is
+ * missing rows no local pass can supply, and Browse offers it the one download that ends that.
+ *
+ * Quiet, and deliberately: nothing the listener did caused this and nothing they can see changes
+ * unless a format really did arrive. Failures are swallowed for the same reason — a browser with
+ * no index has nothing to reconsider, and saying so would be noise.
+ */
+async function reconsiderStoredIndexes() {
+  try {
+    const table = await formatsReady();
+    const current = archive.indexFingerprint(engineFingerprint, table);
+    const isPlayable = archive.playable(table, absentHere());
+    for (const source of archive.sources()) {
+      const held = await archive.meta(source);
+      if (!held?.complete || held.fingerprint === current) continue;
+      await archive.refreshPlayable(source, isPlayable);
+      await archive.stampIndex(source, current);
+    }
+    if (!$('browse').hidden) await renderBrowse();
+  } catch { /* no index, or no engine yet; either way there is nothing to reconsider */ }
 }
 
 /**
@@ -2540,11 +2570,16 @@ function playFromBrowse(tracks, at, kind = 'browse') {
 async function staleSentence(held) {
   if (!held?.tracks) return '';
   const table = await formatsReady().catch(() => null);
-  const stale = held.total === undefined
+  // **Only an index from before step 0 can be stale this way.** One written since holds every row
+  // the archive lists, so a format added later is answered from what is already stored — there is
+  // nothing to fetch and nothing to say.
+  const partial = !held.complete;
+  const moved = held.total === undefined
     || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
-  return stale
-    ? 'This index was built for a different set of formats than this page now plays. Downloading it '
-      + 'again (5.76 MB) brings it in line: it keeps what this browser can play and leaves out what it cannot.'
+  return partial && moved
+    ? 'This index was built for a different set of formats than this page now plays, and was built '
+      + 'before indexes kept everything. Downloading it again (5.76 MB) is the last time that will '
+      + 'be needed: what it stores then no longer depends on which formats this build can open.'
     : '';
 }
 
@@ -2554,13 +2589,20 @@ async function staleSentence(held) {
  * *"Trzeba to będzie jawnie napisać w wyszukiwaniu/browse"* (owner, 2026-09-10) -- the condition
  * on which leaving anything out was agreed at all. Silent for an index that predates the counts.
  */
-function holding({ tracks, total, phoneOnly } = {}) {
+function holding({ tracks, total, complete } = {}) {
   if (!total || !tracks) return '';
   const rest = total - tracks;
   if (rest <= 0) return `This browser holds all ${total.toLocaleString()} of Modland's tunes.`;
-  return `This browser holds ${tracks.toLocaleString()} of Modland's ${total.toLocaleString()} tunes. `
-    + `The other ${rest.toLocaleString()} are in formats it cannot play`
-    + (phoneOnly ? ` — ${phoneOnly.toLocaleString()} of them play on the phone.` : '.');
+  // **"Holds" and "offers" became different numbers** at `docs/ROADMAP_FORMATS.md` step 0: the
+  // index keeps the whole archive and the page offers what it can open. Said that way round
+  // because it is the useful half — a format arriving later needs no download, and the sentence
+  // should not imply one.
+  const kept = complete
+    ? `This browser holds all ${total.toLocaleString()} of Modland's tunes and can play `
+      + `${tracks.toLocaleString()} of them. `
+    : `This browser holds ${tracks.toLocaleString()} of Modland's ${total.toLocaleString()} tunes. `;
+  return `${kept}The other ${rest.toLocaleString()} are in formats it cannot open`
+    + (complete ? ' yet — they are already here if it learns one.' : '.');
 }
 
 async function downloadIndex() {
@@ -2577,9 +2619,10 @@ async function downloadIndex() {
     const table = await formatsReady();
     const result = await archive.downloadModland({
       fingerprint: archive.indexFingerprint(engineFingerprint, table),
-      // The phone's own list, less what this engine cannot open (`web/src/formats.tsv`).
-      keep: archive.playable(table, absentHere()),
-      phone: archive.onPhone(table),
+      // **The verdict, not the filter.** Every row the archive lists is stored; this decides which
+      // of them this build offers (`docs/ROADMAP_FORMATS.md` step 0), and a build that learns a
+      // format re-decides the stored rows instead of fetching them again.
+      isPlayable: archive.playable(table, absentHere()),
       onProgress: (p) => {
         note.textContent = p.stage === 'storing'
           ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
@@ -2607,7 +2650,7 @@ async function downloadAsmaIndex() {
     const table = await formatsReady();
     const result = await archive.downloadAsma({
       fingerprint: archive.indexFingerprint(engineFingerprint, table),
-      keep: archive.playable(table, absentHere()),
+      isPlayable: archive.playable(table, absentHere()),
       onProgress: (p) => {
         note.textContent = p.stage === 'storing'
           ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
@@ -2714,7 +2757,9 @@ async function runSearch(query) {
   note.textContent = found.length
     ? `${found.length}${full ? '+' : ''} tunes by name or author ${among}, in ${ms} ms.`
     : `nothing matched ${among}, in ${ms} ms.`
-      + (held.some(({ phoneOnly }) => phoneOnly) ? ' Formats it cannot play are not indexed — the phone may have it.' : '');
+      + (held.some(({ complete }) => complete)
+        ? ' Formats this build cannot open are indexed but not offered.'
+        : ' Formats it cannot play are not in an index built before this browser kept everything.');
 }
 
 $('browsesearch').oninput = () => {

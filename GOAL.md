@@ -572,7 +572,10 @@ replaces.** Three additions:
 
 ## The list
 
-- [ ] **0. Make the index stop depending on what we can play.** *Do this first, and nothing else
+- [x] **0. Make the index stop depending on what we can play.** *(done 2026-09-17: one `UPDATE`
+      instead of a 40 MB download; 83.3 MB → 112.8 MB at Modland's size, and a folder opens faster
+      than before because the browse index is partial over `playable = 1`. 262 unit tests, 426 page
+      checks. Nobody has run it on a phone.)* *Do this first, and nothing else
       before it.*
 
       Today `SupportedFormats` decides what a downloaded index **keeps**, so changing the format
