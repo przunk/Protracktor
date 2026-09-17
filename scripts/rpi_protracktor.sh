@@ -26,7 +26,7 @@ cat << 'EOF' > "$CONFIG_FILE"
 }
 EOF
 
-# Nadanie bezpiecznych uprawnień (np. 644 - odczyt/zapis dla właściciela, odczyt dla innych)
+# change file permissions
 chmod 644 "$CONFIG_FILE"
 
 # make sure that service is not up
