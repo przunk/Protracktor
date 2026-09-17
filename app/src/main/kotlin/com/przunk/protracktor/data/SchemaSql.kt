@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 15
+    const val VERSION = 16
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -345,6 +345,23 @@ object SchemaSql {
         "CREATE INDEX idx_catalogue_title ON catalogue_tracks(catalogue_id, title) WHERE playable = 1",
     )
 
+    /**
+     * How many rows a catalogue holds, beside how many of them play, added at version 16.
+     *
+     * **Because version 15 made those two different numbers and nothing said so.** The owner met it
+     * the morning after: a snackbar reporting 500,000-odd tracks indexed over a row reporting
+     * 341,842, with nothing to connect them. `track_count` is what this build can open; this is
+     * what the archive has.
+     *
+     * Backfilled by counting, so an index already stored gets its number without being downloaded
+     * again — which is the whole point of the version before this one.
+     */
+    private val CATALOGUE_ARCHIVE_COUNT_V16: List<String> = listOf(
+        "ALTER TABLE catalogues ADD COLUMN archive_count INTEGER NOT NULL DEFAULT 0",
+        "UPDATE catalogues SET archive_count = " +
+            "(SELECT COUNT(*) FROM catalogue_tracks t WHERE t.catalogue_id = catalogues.id)",
+    )
+
     /** What a fresh install gets: version 1's tables plus every migration since. */
     val CREATE: List<String> = listOf(
         """
@@ -403,7 +420,7 @@ object SchemaSql {
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
-        CATALOGUE_PLAYABLE_V15
+        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16
 
 
 
@@ -429,6 +446,7 @@ object SchemaSql {
         13 to RANDOM_SCOPE_V13,
         14 to FALLBACK_LENGTH_V14,
         15 to CATALOGUE_PLAYABLE_V15,
+        16 to CATALOGUE_ARCHIVE_COUNT_V16,
     )
 
     /**

@@ -17,6 +17,14 @@ private data class StoredIndex(
     val indexedAt: Long? = null,
     val backends: String = "",
     val complete: Boolean = false,
+    /**
+     * How many rows the archive has, against [trackCount]'s "how many of them this build opens".
+     *
+     * Two numbers since 2026-09-17, because the index keeps everything (`docs/ROADMAP_FORMATS.md`
+     * step 0). Saying only one of them is how the owner met a snackbar reporting 500,000-odd over a
+     * row reporting 341,842.
+     */
+    val archiveCount: Int = 0,
 )
 
 data class CatalogueSummary(
@@ -42,6 +50,7 @@ data class CatalogueSummary(
      * `refreshPlayable` answers the question locally, in 228ms, with no network.
      */
     val complete: Boolean = false,
+    val archiveCount: Int = 0,
 ) {
     val indexed: Boolean get() = trackCount > 0 || isOnlineOnly
     /** A downloaded catalogue with no index cannot be browsed until the user fetches it again. */
@@ -84,7 +93,10 @@ class CatalogueStore(context: Context) {
 
     suspend fun summaries(): List<CatalogueSummary> = withContext(Dispatchers.IO) {
         val stored = helper.readableDatabase
-            .rawQuery("SELECT id, track_count, indexed_at, backends, complete FROM catalogues", null)
+            .rawQuery(
+                "SELECT id, track_count, indexed_at, backends, complete, archive_count FROM catalogues",
+                null,
+            )
             .use { row ->
                 buildMap {
                     while (row.moveToNext()) {
@@ -95,6 +107,7 @@ class CatalogueStore(context: Context) {
                                 indexedAt = if (row.isNull(2)) null else row.getLong(2),
                                 backends = row.getString(3).orEmpty(),
                                 complete = row.getInt(4) != 0,
+                                archiveCount = row.getInt(5),
                             ),
                         )
                     }
@@ -119,6 +132,7 @@ class CatalogueStore(context: Context) {
                 isOnlineOnly = catalogue.isOnlineOnly,
                 backends = held.backends,
                 complete = held.complete,
+                archiveCount = held.archiveCount,
             )
         }
     }
@@ -169,9 +183,11 @@ class CatalogueStore(context: Context) {
         }
     }
 
-    suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String) =
+    /** @return how many of [entries] this build can open, which is what the catalogue then reports. */
+    suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String): Int =
         withContext(Dispatchers.IO) {
             val db = helper.writableDatabase
+            var playableCount = 0
             db.transaction {
                 insertWithOnConflict(
                     "catalogues", null,
@@ -192,12 +208,12 @@ class CatalogueStore(context: Context) {
                         // Written by a build that keeps every row, so no format added later can
                         // find this index short of anything.
                         put("complete", 1)
+                        put("archive_count", entries.size)
                     },
                     android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
                 )
                 delete("catalogue_tracks", "catalogue_id = ?", arrayOf(catalogue.id))
 
-                var playableCount = 0
                 val insert = compileStatement(
                     "INSERT OR REPLACE INTO catalogue_tracks " +
                         "(catalogue_id, path, format, author, title, size, ext, pre, playable) " +
@@ -233,6 +249,7 @@ class CatalogueStore(context: Context) {
                     "id = ?", arrayOf(catalogue.id),
                 )
             }
+            playableCount
         }
 
     /**

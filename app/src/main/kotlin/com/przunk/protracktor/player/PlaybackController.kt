@@ -2197,10 +2197,27 @@ class PlaybackController private constructor(private val context: Context) {
                 // costs every user the whole 40 MB again.
                 catalogue.parseIndex(bytes)
             }
-            catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
+            val playable =
+                catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             endDownload(catalogue.id)
             _browse.update { it.copy(catalogues = catalogues.summaries()) }
-            _state.update { it.copy(message = Message("Indexed ${entries.size} tracks from ${catalogue.displayName}.")) }
+            // **Both numbers, because there are now two** (`docs/ROADMAP_FORMATS.md` step 0). The
+            // index keeps everything the archive lists and the app offers what it can open, so
+            // saying only the first makes the count on the catalogue's own row look wrong -- which
+            // is how the owner met it: a snackbar saying 500,000-odd over a row saying 341,842.
+            _state.update {
+                it.copy(
+                    message = Message(
+                        if (playable >= entries.size) {
+                            "Indexed all ${entries.size} tracks from ${catalogue.displayName}."
+                        } else {
+                            "Indexed ${entries.size} tracks from ${catalogue.displayName}; " +
+                                "$playable of them play on this build. The rest stay indexed, so a " +
+                                "format added later needs no new download."
+                        }
+                    )
+                )
+            }
         }
     }
 

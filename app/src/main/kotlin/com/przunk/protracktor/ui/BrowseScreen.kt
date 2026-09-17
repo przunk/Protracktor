@@ -737,9 +737,22 @@ private fun OnlineDomain(
                                 if (catalogue.isOnlineOnly) {
                                     stringResource(R.string.catalogue_online_search)
                                 } else if (catalogue.indexed) {
-                                    val counted = pluralStringResource(
-                                        R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
-                                    )
+                                    // **Both numbers when they differ**, since an index keeps
+                                    // every row the archive lists and the app offers what it can
+                                    // open (`docs/ROADMAP_FORMATS.md` step 0). One of them alone
+                                    // is how the owner met a snackbar saying 500,000-odd over a
+                                    // row saying 341,842.
+                                    val counted = if (catalogue.archiveCount > catalogue.trackCount) {
+                                        stringResource(
+                                            R.string.catalogue_playable_of,
+                                            catalogue.trackCount,
+                                            catalogue.archiveCount,
+                                        )
+                                    } else {
+                                        pluralStringResource(
+                                            R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
+                                        )
+                                    }
                                     if (archived > 0L) {
                                         stringResource(
                                             R.string.catalogue_count_and_size,

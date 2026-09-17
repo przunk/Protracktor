@@ -57,6 +57,7 @@
     <string name="storage_cache">Fetched music</string>
     <string name="storage_cache_detail">%1$d MB of %2$d MB, oldest deleted first</string>
     <string name="storage_index">%1$s index</string>
+    <string name="catalogue_playable_of">%1$,d of %2$,d playable</string>
     <string name="catalogue_count_and_size">%1$s · %2$d MB on this phone</string>
     <string name="storage_index_and_archive">%1$s, including a %2$d MB archive</string>
     <string name="storage_megabytes">%1$d MB</string>
