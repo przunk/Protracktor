@@ -1,7 +1,8 @@
 # Status
 
 Updated: 2026-09-17 — version 0.4.0 (versionCode 679, tag `v0.4.0`, in closed testing on Google
-Play), versionCode from the commit count, schema version 14
+Play; develop carries the first round of tester fixes on top), versionCode from the commit
+count, schema version 14
 
 ## What works
 
@@ -416,7 +417,7 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-### C64. ~~Uninstalling did not remove the database~~ — FIXED 2026-09-17, branch
+### C64. ~~Uninstalling did not remove the database~~ — FIXED 2026-09-17
 
 *Owner, 2026-09-17: "po odinstalowaniu aplikacji i zainstalowaniu na nowo mam wrażenie, że baza
 danych zostaje. Miałem starą listę jakąś."*
@@ -438,7 +439,7 @@ one that happens to them.
 `UninstallLeavesNothingTest` reads the manifest, because a manifest attribute has no test of its own
 and the alternative is finding out on a phone a second time.
 
-### C63. ~~The empty playlist offered Browse on a phone with nothing to browse~~ — FIXED 2026-09-17, branch
+### C63. ~~The empty playlist offered Browse on a phone with nothing to browse~~ — FIXED 2026-09-17
 
 *Owner, 2026-09-17: "nie ma co browse jak nie ma indeksów".*
 
@@ -460,7 +461,7 @@ It also needed the controller to read the catalogue summaries and the granted fo
 start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
 were loaded only when Browse opened.
 
-### C62. ~~Buttons cut their labels in half at a larger text size~~ — FIXED 2026-09-17, branch
+### C62. ~~Buttons cut their labels in half at a larger text size~~ — FIXED 2026-09-17
 
 Found by the first closed-testing round, on somebody else's phone: **Przeglądaj**, **Ustawienia**
 and **Playlista** drawn with their lower halves missing.
@@ -478,7 +479,7 @@ fixed height has nowhere to go.
 `PlaylistTopBar`'s name chip already used `defaultMinSize` for exactly this reason and says so in
 its own comment. The pill did not.
 
-### C61. ~~Every notice arrived in English on a Polish phone~~ — FIXED 2026-09-17, branch
+### C61. ~~Every notice arrived in English on a Polish phone~~ — FIXED 2026-09-17
 
 Also from the first testing round. The screens were translated; the sentences the app *says* were
 not. Sixty-one of them were built from literals in `PlaybackController` — "Nothing is indexed yet.
