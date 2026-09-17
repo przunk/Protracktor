@@ -1,6 +1,7 @@
 # Status
 
-Updated: 2026-09-09 — version 0.3.0, versionCode from the commit count, schema version 10
+Updated: 2026-09-17 — version 0.4.0 (versionCode 679, tag `v0.4.0`, in closed testing on Google
+Play), versionCode from the commit count, schema version 14
 
 ## What works
 
