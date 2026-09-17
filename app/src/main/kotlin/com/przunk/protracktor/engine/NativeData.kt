@@ -14,8 +14,8 @@ import java.io.File
  * small 68k binaries that live in sc68's own data directory, and it opens them **by path**. Assets
  * inside an APK have no path, so they have to be copied out once.
  *
- * This is why every SNDH in the owner's library loaded and then played silence: the tune arrived,
- * the replay it asked for did not.
+ * Without the copy an SNDH loads and plays silence: the tune arrives, the replay it names does
+ * not.
  */
 object NativeData {
 

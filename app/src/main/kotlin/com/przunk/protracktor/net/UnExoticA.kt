@@ -6,16 +6,13 @@ package com.przunk.protracktor.net
 /**
  * UnExoticA — Amiga **game** soundtracks, one archive per game.
  *
- * *The owner went looking for an Amiga game's music on 2026-09-07, found only the SNES rip, and
- * asked where the Amiga one lives. This is where it lives.* Modland is organised by musician and is
- * mostly demoscene; that is the shape of the archive rather than an omission, and it leaves out the
- * music most people actually remember.
+ * Modland is organised by musician and is mostly demoscene; that is the shape of the archive
+ * rather than an omission, and it leaves out the music most people remember from games.
  *
- * **This whole file is the feature.** `docs/PLAN_UNEXOTICA.md` explains why that matters: ExoticA
- * were asked on 2026-09-08 whether per-file fetching is acceptable and have not answered, and the
- * owner decided to build it for his own use in the meantime, on the condition that it can be turned
- * off or removed. [ENABLED] is the switch, and the removal list is in that document — this file,
- * two native files, and two lines elsewhere.
+ * **This whole file is the feature**, and deliberately: ExoticA have not answered whether per-file
+ * fetching is acceptable (`docs/PLAN_UNEXOTICA.md`), so the catalogue has to be removable. [ENABLED]
+ * is the switch, and the removal list is in that document — this file, two native files, and two
+ * lines elsewhere.
  *
  * Three things make it a different shape from every catalogue before it:
  *
@@ -40,10 +37,9 @@ object UnExoticA : Catalogue(
     /**
      * Whether the catalogue is offered at all.
      *
-     * A `const` rather than a setting, because it is not the user's choice to make: it is the
-     * owner's answer to a question ExoticA have not yet answered. Setting it to `false` hides the
-     * catalogue and makes [CatalogueStore] drop any rows already stored for it, which is the
-     * difference between "turned off" and "hidden".
+     * A `const` rather than a setting: it answers a question ExoticA have not, so it is not the
+     * user's to decide. `false` hides the catalogue *and* makes [CatalogueStore] drop the rows
+     * already stored for it, which is the difference between "turned off" and "hidden".
      */
     const val ENABLED: Boolean = true
 
@@ -127,9 +123,8 @@ object UnExoticA : Catalogue(
                 // **The game first, then the composer.** Browsing is catalogue → format → author
                 // → tracks, and search matches this column and the title — so this one string has
                 // to answer both "which game" and "who wrote it". The game leads because the
-                // archive is organised around games and that is what the owner went looking for;
-                // the composer follows because without it he searched for "Phelan", who is right
-                // there in the path, and found nothing (2026-09-09).
+                // archive is organised around games, which is what people come here looking for;
+                // the composer follows so that searching a name in the path finds the tune.
                 author = groupOf(path),
                 title = title,
                 size = columns[7].toLongOrNull() ?: 0L,
@@ -153,8 +148,8 @@ object UnExoticA : Catalogue(
      * **Reversed only for two words**, because that is where the archive's convention is certain:
      * measured 2026-09-09, 524 of 571 composer folders are exactly `Surname_Firstname`, 30 are
      * one-word handles, and the remaining 17 are Dutch surnames (`van_der_Valk_Paul`) or group
-     * names (`Pipe_Smokers_Cough`) where any reordering rule guesses. Those keep their own order,
-     * which reads slightly oddly and is never *wrong*.
+     * names (`Pipe_Smokers_Cough`) where any reordering rule guesses. Those keep their own order:
+     * it reads slightly oddly and is never *wrong*.
      *
      * The search does not care either way — "Phelan" matches "Phelan Patrick" as happily as
      * "Patrick Phelan". This is for reading.

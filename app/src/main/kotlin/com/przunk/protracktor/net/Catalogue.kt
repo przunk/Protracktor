@@ -97,10 +97,10 @@ sealed class Catalogue(
          * every object in the list has finished initialising.
          */
         val all: List<Catalogue> by lazy {
-            // UnExoticA is conditional and nothing else is: ExoticA have not answered the question
-            // in `docs/PLAN_UNEXOTICA.md`, so the owner can take it out again by flipping one
-            // constant. Absent from this list means absent everywhere -- `byId`, `owning`, the
-            // browse screen and the stored index all read it from here.
+            // UnExoticA is conditional and nothing else is: the question in
+            // `docs/PLAN_UNEXOTICA.md` is unanswered, so it comes out again by flipping one
+            // constant. Absent here is absent everywhere -- `byId`, `owning`, the browse screen
+            // and the stored index all read it from this list.
             listOf(Modland, Asma, ModArchive) + if (UnExoticA.ENABLED) listOf(UnExoticA) else emptyList()
         }
 

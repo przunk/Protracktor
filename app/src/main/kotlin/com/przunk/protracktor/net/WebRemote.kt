@@ -19,9 +19,8 @@ import kotlinx.coroutines.withContext
  * server in `scripts/serve-web.mjs`; the same three routes move to a Worker unchanged when the page
  * is hosted somewhere reachable from outside a LAN (`docs/PLAN_HANDOFF.md` §3).
  *
- * **The whole queue, not a stream.** This is the owner's first shape: scan, and the browser has the
- * list and the place in it. Keeping the connection open so the phone can drive playback is the next
- * one and uses this same channel.
+ * **The whole queue, not a stream.** Scan, and the browser has the list and the place in it.
+ * Keeping the connection open so the phone can drive playback would use this same channel.
  */
 object WebRemote {
 
@@ -107,9 +106,9 @@ object WebRemote {
             // and which did not fit the byte budget would otherwise arrive as a row that fails the
             // moment it is touched. Marked instead, and the page draws it greyed in its own place,
             // exactly as a link's `phone:` line arrives (`docs/BACKLOG.md` A28).
-            // **And an MP3 whatever its address is.** `localBytesFor` never packs one, so this
-            // would mark it anyway for a local file -- but the rule the owner gave is "always", and
-            // a rule that happens to hold is not the same as one that is written down.
+            // **And an MP3 whatever its address is.** `localBytesFor` never packs one, so a local
+            // MP3 is marked anyway -- but a rule that happens to hold is not the same as one that
+            // is written down.
             // **The address a browser can fetch**, where the catalogue has one: ASMA's rows go as
             // their own files on asma.atari.org rather than as the `asma://` this phone reads.
             val url = Catalogue.owning(track.id)?.let { c -> c.pathFrom(track.id)?.let(c::fileUrlFor) }
