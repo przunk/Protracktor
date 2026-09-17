@@ -15,6 +15,45 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A46. Nobody knew they had to index anything — **owner's question, 2026-09-17**
+
+*Owner, 2026-09-17, from the first testing round: "użytkownicy nie wiedzieli że trzeba coś ręcznie
+indeksować — może warto na początku pobierać indeksy wszystkie w tle po pierwszym uruchomieniu?"*
+
+**The finding is real and it is the most serious of the three.** A player that opens empty, says
+"Jeszcze tu pusto" and waits is a player most people close. The two screenshots from that round show
+it exactly: an empty playlist, then Browse with three catalogues each saying "Brak indeksu — dotknij
+strzałki, aby go pobrać" — an instruction that only reads as an instruction once you already know
+what an index is.
+
+**Downloading all of them in the background on first launch is the wrong shape of the right idea**,
+for three reasons that are measurements rather than opinions:
+
+- **It is 25 MB before anybody has heard a note**, and most of it is not wanted: Modland's index is
+  5.76 MB, ASMA is a 20 MB archive, HVSC's song lengths are 5.2 MB, the songdb metadata is another
+  download again. On a phone away from wi-fi that is somebody's data, spent by an app they have had
+  for four seconds.
+- **It is a decision taken on the user's behalf and invisible while it runs.** The one thing worse
+  than an app that does nothing is an app that does something expensive without asking.
+- **`Data safety` says we fetch on demand.** Fetching four archives at startup is not that, and the
+  declaration is a promise.
+
+**What to do instead, in order of what it costs:**
+
+1. **Offer it, don't hide it.** A first-run card on the playlist screen — "Get some music" — with
+   one primary action that indexes **Modland alone** and says its size. One tap, one download, and
+   the app is full of music. The rest stay where they are for whoever wants them.
+2. **Say what an index is, once, in a sentence.** "Katalogi trzeba raz pobrać, żeby dało się je
+   przeglądać bez sieci" is the whole idea, and it is not in the app anywhere.
+3. **Make the arrow look like a control.** `DownloadAction` is a bare arrow beside a red line of
+   text; the red reads as an error, not as an invitation. A labelled button that says *Pobierz
+   indeks (5,8 MB)* answers both the "what do I do" and the "what will it cost".
+4. **Only then consider doing it automatically**, and if so: Modland only, on unmetered networks
+   only, after the user has been shown what it is, and cancellable from the row it is filling.
+
+**Measure before and after.** The question this answers is "did they get to music", and the release
+that answers it is the one where nobody has to be told what an index is.
+
 ## A45. A jump from the playlist does not name the author the way a jump from Random does — **noted 2026-09-17**
 
 *Owner, 2026-09-17: "more from this author z poziomu playlisty powinno pokazywać tytuł (tak jak w
