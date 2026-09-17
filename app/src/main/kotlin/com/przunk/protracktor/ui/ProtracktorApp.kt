@@ -502,6 +502,9 @@ fun ProtracktorApp(
                 // Nothing indexed and no folder granted means Browse opens on a list of
                 // archives that all say "no index" -- a way in that leads nowhere.
                 canBrowse = browse.hasSomethingToBrowse,
+                // Both halves: the playlist comes from one read and what is held from
+                // another, and the empty screen must not speak before either has landed.
+                stateKnown = state.restored && browse.knowsWhatIsHeld,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,
             )

@@ -15,6 +15,35 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A48. Two seconds pass before the playlist appears — **noted 2026-09-17**
+
+*Owner, 2026-09-17, on the round-12 build: "po uruchomieniu przez 5 sekund miałem pustą listę z
+prośbą o pobranie indeksu, ale czekając te 5 s pojawiła się lista. przy drugim odpaleniu to trwało
+2s."*
+
+**The wrong screen was a defect and is fixed** (the empty playlist now says nothing until it knows
+what it is talking about). **The two seconds are not fixed, and this is that.**
+
+The five seconds on the first run are explained: that launch ran the migration from schema 14 to 16,
+and `CATALOGUE_ARCHIVE_COUNT_V16` is a `COUNT(*)` per catalogue over `catalogue_tracks` — half a
+million rows on his phone. One-off, and the price of the round's own change.
+
+The two seconds after that are not explained, and are what a person meets every time. Candidates,
+in the order worth measuring:
+
+- **`restore()`** reads the playlist and every track in it. A few hundred rows, joined and turned
+  into `TrackRef`s on the main dispatcher's turn.
+- **`pruneUnknownCatalogues()`** at start-up: a delete against a table of half a million rows, and
+  the only one of these that writes.
+- **`enforceBudget()`** walks the fetched-file cache directory.
+- **The database is 112 MB** and the first query after an upgrade reads cold pages.
+- **`summaries()` and `grantedFolders()`**, added for the empty screen's question — small, but they
+  are now on the path and should be ruled in or out rather than assumed innocent.
+
+**Measure before changing anything.** One timing log around each, read once on a real phone, and
+then fix whichever it is. Guessing which of five things costs two seconds is how an afternoon
+disappears.
+
 ## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
 
 *Owner, 2026-09-17: opening `Zalza/akes lekhorna.mod` shows the title as* **"�kes lekh�rna (za)"**,

@@ -304,6 +304,17 @@ data class BrowseState(
     val indexing: Map<String, String> = emptyMap(),
     /** Non-null while a folder is being scanned: files probed so far, and how many there are. */
     val scanProgress: Pair<Int, Int>? = null,
+    /**
+     * True once the app has read what this phone holds: the catalogue summaries and the folders.
+     *
+     * **Nothing may be concluded from an empty [catalogues] before this is true.** Both are read
+     * from the database after launch, so for the first moment of every session they are empty --
+     * and a screen that asks "is anything indexed?" gets "no" from a question that has not been
+     * answered yet. That showed as an offer to download an index, on a phone with half a million
+     * tracks in it, for the two seconds before the list arrived.
+     */
+    val knowsWhatIsHeld: Boolean = false,
+
     /** True when the open folder has never been scanned. */
     val folderUnscanned: Boolean = false,
     /** True when the open folder's index was built by a different set of decoders. */
@@ -754,7 +765,9 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val summaries = catalogues.summaries()
             val granted = store.grantedFolders()
-            _browse.update { it.copy(catalogues = summaries, folders = granted) }
+            _browse.update {
+                it.copy(catalogues = summaries, folders = granted, knowsWhatIsHeld = true)
+            }
         }
 
         // A catalogue that is no longer offered leaves its rows behind, and rows

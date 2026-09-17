@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -94,6 +95,13 @@ fun PlaylistScreen(
     onPickDownloads: () -> Unit,
     /** False on a phone that holds no index and no granted folder: Browse would lead nowhere. */
     canBrowse: Boolean,
+    /**
+     * False until the playlist and what this phone holds have both been read.
+     *
+     * The empty screen makes a claim either way -- "nothing here" or "nothing to browse" -- and
+     * both are wrong while the answer is still being read off the disk.
+     */
+    stateKnown: Boolean,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -119,13 +127,26 @@ fun PlaylistScreen(
     }
 
     if (state.queue.tracks.isEmpty()) {
-        EmptyPlaylist(
-            onBrowse = onBrowse,
-            onPickDownloads = onPickDownloads,
-            canBrowse = canBrowse,
-            contentPadding = contentPadding,
-            modifier = modifier,
-        )
+        if (stateKnown) {
+            EmptyPlaylist(
+                onBrowse = onBrowse,
+                onPickDownloads = onPickDownloads,
+                canBrowse = canBrowse,
+                contentPadding = contentPadding,
+                modifier = modifier,
+            )
+        } else {
+            // **Say nothing rather than the wrong thing.** Until the playlist has been restored
+            // and the catalogue summaries have been read, "nothing here yet" and "nothing to
+            // browse" are both guesses, and the second one offers a 49 MB download to somebody who
+            // already has the lot.
+            Box(
+                modifier = modifier.fillMaxSize().padding(contentPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
         return
     }
 
