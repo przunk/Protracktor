@@ -431,7 +431,6 @@ class PlaybackController private constructor(private val context: Context) {
          * into one write rather than one write each.
          */
         private const val TRACK_WRITE_DEBOUNCE_MS = 1500L
-        const val DEFAULT_PLAYLIST_NAME = "Playlist"
 
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
         const val UNDO = "undo"
@@ -641,6 +640,16 @@ class PlaybackController private constructor(private val context: Context) {
     /** The background metadata pass. Cancelled and restarted whenever the track list changes. */
     private var resolveJob: Job? = null
 
+    /**
+     * What the first playlist is called, and what an unnamed one falls back to.
+     *
+     * Read from resources rather than held as a constant, because it is the first word a new
+     * install shows and it was English on a Polish phone. Only ever used when a name is *created*:
+     * the name is then the user's data, and switching the app's language does not rename what
+     * somebody may have renamed themselves.
+     */
+    private val defaultPlaylistName: String get() = context.getString(R.string.playlist_default_name)
+
     private val store = LibraryStore(context)
     private val catalogues = CatalogueStore(context)
     private val remoteFiles = RemoteFiles(context)
@@ -809,7 +818,7 @@ class PlaybackController private constructor(private val context: Context) {
             val known = store.playlists()
             // The stored active playlist, unless it has since been deleted.
             playlistId = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
-                ?: store.defaultPlaylistId(DEFAULT_PLAYLIST_NAME)
+                ?: store.defaultPlaylistId(defaultPlaylistName)
             val playlists = store.playlists()
             val tracks = store.tracksIn(playlistId)
 
@@ -928,7 +937,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val stored = store.tracksIn(playlistId)
             _state.update {
-                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = Message("Changes discarded."))
+                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = Message(context.getString(R.string.notice_changes_discarded)))
             }
         }
     }
@@ -937,7 +946,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun createPlaylist(name: String) {
         scope.launch {
-            val id = store.createPlaylist(name.ifBlank { DEFAULT_PLAYLIST_NAME })
+            val id = store.createPlaylist(name.ifBlank { defaultPlaylistName })
             _state.update { it.copy(playlists = store.playlists()) }
             switchToPlaylist(id)
         }
@@ -967,7 +976,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             if (store.playlists().size <= 1) {
                 store.replaceTracks(id, emptyList())
-                store.renamePlaylist(id, DEFAULT_PLAYLIST_NAME)
+                store.renamePlaylist(id, defaultPlaylistName)
                 stopPlayback()
                 _state.update {
                     it.copy(
@@ -978,7 +987,7 @@ class PlaybackController private constructor(private val context: Context) {
                         metadata = emptyMap(),
                         positionSeconds = 0.0,
                         durationSeconds = 0.0,
-                        message = Message("Playlist emptied. It is the only one, so it stays."),
+                        message = Message(context.getString(R.string.notice_playlist_emptied)),
                     )
                 }
                 return@launch
@@ -1217,7 +1226,10 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        "Scanned ${folder.displayName}: ${indexed.size} playable of ${candidates.size}."
+                        context.getString(
+                            R.string.notice_scanned,
+                            folder.displayName, indexed.size, candidates.size,
+                        )
                     )
                 )
             }
@@ -1297,7 +1309,7 @@ class PlaybackController private constructor(private val context: Context) {
             val tracks =
                 if (id == current.activePlaylistId) current.queue.tracks else store.tracksIn(id)
             if (tracks.isEmpty()) {
-                _state.update { it.copy(message = Message("There is nothing in this playlist.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_playlist_empty))) }
                 return@launch
             }
             val label = current.playlists.firstOrNull { it.id == id }?.name ?: "playlist"
@@ -1307,7 +1319,7 @@ class PlaybackController private constructor(private val context: Context) {
             }
             val uri = remoteFiles.shareableCopy("$name.m3u8", bytes)
             if (uri == null) {
-                _state.update { it.copy(message = Message("Could not prepare the playlist.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_playlist_failed))) }
                 return@launch
             }
             _share.tryEmit(
@@ -1343,13 +1355,13 @@ class PlaybackController private constructor(private val context: Context) {
                 }.getOrNull()?.toString(Charsets.UTF_8)
             }
             if (text.isNullOrBlank()) {
-                _state.update { it.copy(message = Message("Could not read that file.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_file_unreadable))) }
                 return@launch
             }
 
             val entries = withContext(Dispatchers.Default) { PlaylistFile.read(text) }
             if (entries.isEmpty()) {
-                _state.update { it.copy(message = Message("No tracks in that file.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_file_no_tracks))) }
                 return@launch
             }
 
@@ -1375,12 +1387,15 @@ class PlaybackController private constructor(private val context: Context) {
                 it.copy(
                     message = Message(
                         if (found.size == entries.size) {
-                            "Imported ${found.size} tracks into \"$name\"."
+                            context.resources.getQuantityString(
+                                R.plurals.notice_imported, found.size, found.size, name,
+                            )
                         } else {
                             // Said, not swallowed. A playlist that silently arrived shorter than
                             // the file it came from is worse than one that explains itself.
-                            "Imported ${found.size} of ${entries.size} into \"$name\"; " +
-                                "the rest are not on this device."
+                            context.getString(
+                                R.string.notice_imported_partial, found.size, entries.size, name,
+                            )
                         }
                     )
                 )
@@ -1429,12 +1444,12 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val bytes = loadBytes(ref)
             if (bytes == null) {
-                _state.update { it.copy(message = Message("Could not read ${ref.title}")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_track_unreadable, ref.title))) }
                 return@launch
             }
             val uri = remoteFiles.shareableCopy(ref.fileNameOrTitle, bytes)
             if (uri == null) {
-                _state.update { it.copy(message = Message("Could not prepare ${ref.title} for sharing.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_share_failed, ref.title))) }
                 return@launch
             }
             _share.tryEmit(
@@ -1466,7 +1481,7 @@ class PlaybackController private constructor(private val context: Context) {
         val path = catalogue?.pathFrom(ref.id)
         if (catalogue == null || path == null) {
             _state.update {
-                it.copy(message = Message("Only tracks from an online catalogue have a link."))
+                it.copy(message = Message(context.getString(R.string.notice_link_online_only)))
             }
             return
         }
@@ -1506,7 +1521,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun sendQueueToBrowser() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
-            _state.update { it.copy(message = Message("There is nothing in the playlist to send.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_nothing_to_send))) }
             return
         }
         val paired = Appearance.pairedEndpoint(context)
@@ -1530,7 +1545,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (tracks.isEmpty()) {
             Appearance.rememberPairing(context, endpoint)
             _browse.update { it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context)) }
-            _state.update { it.copy(message = Message("Paired. The playlist is empty, so nothing was sent.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_paired_empty))) }
             return
         }
         postQueue(endpoint, tracks, remember = true)
@@ -1545,7 +1560,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun forgetPairing() {
         Appearance.rememberPairing(context, null)
         _browse.update { it.copy(pairedBrowser = false) }
-        _state.update { it.copy(message = Message("The paired browser is forgotten.")) }
+        _state.update { it.copy(message = Message(context.getString(R.string.notice_pairing_forgotten))) }
     }
 
     /**
@@ -1603,8 +1618,16 @@ class PlaybackController private constructor(private val context: Context) {
                     _state.update {
                         it.copy(
                             message = Message(
-                                if (leftBehind == 0) "Sent ${tracks.size} tracks to the browser."
-                                else "Sent ${tracks.size - leftBehind} tracks; $leftBehind local files were too big to send."
+                                if (leftBehind == 0) {
+                                    context.resources.getQuantityString(
+                                        R.plurals.notice_sent_to_browser, tracks.size, tracks.size,
+                                    )
+                                } else {
+                                    context.getString(
+                                        R.string.notice_sent_some_too_big,
+                                        tracks.size - leftBehind, leftBehind,
+                                    )
+                                }
                             )
                         )
                     }
@@ -1618,7 +1641,7 @@ class PlaybackController private constructor(private val context: Context) {
                         it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
                     }
                     _state.update {
-                        it.copy(message = Message("Reached it, but the player page is not open there."))
+                        it.copy(message = Message(context.getString(R.string.notice_page_not_open)))
                     }
                 }
                 is WebRemote.Outcome.Unreachable -> {
@@ -1630,7 +1653,7 @@ class PlaybackController private constructor(private val context: Context) {
                     _state.update {
                         it.copy(
                             message = Message(
-                                "Could not reach the browser (${outcome.reason}). Press again to scan a code; hold to send a link."
+                                context.getString(R.string.notice_browser_unreachable, outcome.reason)
                             )
                         )
                     }
@@ -1653,7 +1676,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun sendQueueAsLink() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
-            _state.update { it.copy(message = Message("There is nothing in the playlist to send.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_nothing_to_send))) }
             return
         }
         shareQueueAsLink(tracks)
@@ -1664,9 +1687,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (packed.sent == 0) {
             _state.update {
                 it.copy(
-                    message = Message(
-                        "None of these can be sent: a file on this phone has no address a browser could open."
-                    )
+                    message = Message(context.getString(R.string.notice_link_none_sendable))
                 )
             }
             return
@@ -1680,9 +1701,7 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        "Sending ${packed.sent}. The link was too long to carry the names of " +
-                            "${packed.left} files that stayed on this phone, so they are missing " +
-                            "from the list at the other end."
+                        context.getString(R.string.notice_link_truncated, packed.sent, packed.left)
                     )
                 )
             }
@@ -1714,11 +1733,11 @@ class PlaybackController private constructor(private val context: Context) {
                     message = Message(
                         when {
                             one != null && QueueLink.isMp3(one) ->
-                                "An MP3 is never sent to the browser: it is too big to travel."
+                                context.getString(R.string.notice_send_mp3)
                             one != null ->
-                                "This one cannot be sent: a file on this phone has no address a browser could open."
+                                context.getString(R.string.notice_send_one_local)
                             else ->
-                                "None of these can be sent: a browser has no address it could open them at."
+                                context.getString(R.string.notice_send_none)
                         }
                     )
                 )
@@ -1740,8 +1759,10 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        "Sending ${sendable.size}. The other ${tracks.size - sendable.size} have no " +
-                            "address a browser could open."
+                        context.getString(
+                            R.string.notice_send_partial,
+                            sendable.size, tracks.size - sendable.size,
+                        )
                     )
                 )
             }
@@ -1767,7 +1788,7 @@ class PlaybackController private constructor(private val context: Context) {
             val from = Catalogue.owning(ref.id)
             if (from == null) {
                 _state.update {
-                    it.copy(message = Message("Only tracks from an online catalogue can do that."))
+                    it.copy(message = Message(context.getString(R.string.notice_online_only_action)))
                 }
                 return@launch
             }
@@ -1780,7 +1801,7 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update {
                     it.copy(
                         message = Message(
-                            "${from.displayName} is searched live and lists no author, so there is nowhere to jump to."
+                            context.getString(R.string.notice_no_author_live, from.displayName)
                         )
                     )
                 }
@@ -1797,7 +1818,7 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update {
                     it.copy(
                         message = Message(
-                            "That track is not in the ${from.displayName} index. Index it to jump to the author."
+                            context.getString(R.string.notice_not_in_index, from.displayName)
                         )
                     )
                 }
@@ -1914,7 +1935,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             history.clear()
             _browse.update { it.copy(history = emptyList(), tracks = emptyList()) }
-            _state.update { it.copy(message = Message("History cleared.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }
         }
     }
 
@@ -2041,7 +2062,7 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        if (freed > 0L) freedMessage(freed) else "Index deleted. Download it again any time."
+                        if (freed > 0L) freedMessage(freed) else context.getString(R.string.notice_index_deleted)
                     )
                 )
             }
@@ -2058,7 +2079,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun clearSongLengths() {
         scope.launch {
             songLengths.clear()
-            _state.update { it.copy(message = Message("Song lengths deleted.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_song_lengths_deleted))) }
             refreshCatalogues()
         }
     }
@@ -2067,7 +2088,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun clearTrackMetadata() {
         scope.launch {
             trackMetadata.clear()
-            _state.update { it.copy(message = Message("Track metadata deleted.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_deleted))) }
             refreshCatalogues()
         }
     }
@@ -2082,7 +2103,7 @@ class PlaybackController private constructor(private val context: Context) {
             if (_browse.value.randomScope is RandomScope.Favourites) {
                 setRandomScope(RandomScope.Everything)
             }
-            _state.update { it.copy(message = Message("Favourites deleted.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_favourites_deleted))) }
             refreshCatalogues()
         }
     }
@@ -2090,9 +2111,9 @@ class PlaybackController private constructor(private val context: Context) {
     /** The wording for what [CacheBudget.describeFreed] worked out. */
     private fun freedMessage(bytes: Long): String =
         when (val freed = CacheBudget.describeFreed(bytes)) {
-            CacheBudget.Freed.NOTHING -> "There was nothing to delete."
-            CacheBudget.Freed.LESS_THAN_A_MEGABYTE -> "Freed less than 1 MB."
-            is CacheBudget.Freed.Megabytes -> "Freed ${freed.count} MB."
+            CacheBudget.Freed.NOTHING -> context.getString(R.string.notice_freed_nothing)
+            CacheBudget.Freed.LESS_THAN_A_MEGABYTE -> context.getString(R.string.notice_freed_under_a_megabyte)
+            is CacheBudget.Freed.Megabytes -> context.getString(R.string.notice_freed_megabytes, freed.count)
         }
 
     /**
@@ -2128,7 +2149,7 @@ class PlaybackController private constructor(private val context: Context) {
             val bytes = remoteFiles.fetchIndex(catalogue.indexUrl)
             if (bytes == null) {
                 endDownload(catalogue.id)
-                _state.update { it.copy(message = Message("Could not download the ${catalogue.displayName} index.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_index_download_failed, catalogue.displayName))) }
                 return@launch
             }
             // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
@@ -2136,7 +2157,7 @@ class PlaybackController private constructor(private val context: Context) {
             if (catalogue.isArchive && !remoteFiles.storeArchive(catalogue.id, bytes)) {
                 endDownload(catalogue.id)
                 _state.update {
-                    it.copy(message = Message("Could not store the ${catalogue.displayName} archive."))
+                    it.copy(message = Message(context.getString(R.string.notice_archive_store_failed, catalogue.displayName)))
                 }
                 return@launch
             }
@@ -2154,7 +2175,7 @@ class PlaybackController private constructor(private val context: Context) {
             catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             endDownload(catalogue.id)
             _browse.update { it.copy(catalogues = catalogues.summaries()) }
-            _state.update { it.copy(message = Message("Indexed ${entries.size} tracks from ${catalogue.displayName}.")) }
+            _state.update { it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_indexed_tracks, entries.size, entries.size, catalogue.displayName))) }
         }
     }
 
@@ -2172,7 +2193,7 @@ class PlaybackController private constructor(private val context: Context) {
             val bytes = remoteFiles.fetchIndex(SONG_LENGTHS_URL)
             if (bytes == null) {
                 endDownload(DownloadKeys.SONG_LENGTHS)
-                _state.update { it.copy(message = Message("Could not download the song lengths.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_song_lengths_failed))) }
                 return@launch
             }
             val entries = withContext(Dispatchers.Default) {
@@ -2180,13 +2201,13 @@ class PlaybackController private constructor(private val context: Context) {
             }
             if (entries.isEmpty()) {
                 endDownload(DownloadKeys.SONG_LENGTHS)
-                _state.update { it.copy(message = Message("The song length database was empty.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_song_lengths_empty))) }
                 return@launch
             }
             songLengths.replaceAll(entries)
             endDownload(DownloadKeys.SONG_LENGTHS)
             _browse.update { it.copy(songLengthCount = entries.size) }
-            _state.update { it.copy(message = Message("Song lengths for ${entries.size} SID tunes.")) }
+            _state.update { it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_song_lengths_done, entries.size, entries.size))) }
         }
     }
 
@@ -2208,7 +2229,7 @@ class PlaybackController private constructor(private val context: Context) {
             val bytes = remoteFiles.fetchIndex(TRACK_METADATA_URL)
             if (bytes == null) {
                 endDownload(DownloadKeys.TRACK_METADATA)
-                _state.update { it.copy(message = Message("Could not download the track metadata.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_failed))) }
                 return@launch
             }
             // Parsed straight into the table rather than into a list first. Fifteen megabytes of
@@ -2217,12 +2238,12 @@ class PlaybackController private constructor(private val context: Context) {
             val written = trackMetadata.replaceAllFrom(bytes)
             if (written == 0) {
                 endDownload(DownloadKeys.TRACK_METADATA)
-                _state.update { it.copy(message = Message("The track metadata was empty.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_empty))) }
                 return@launch
             }
             endDownload(DownloadKeys.TRACK_METADATA)
             _browse.update { it.copy(trackMetadataCount = written) }
-            _state.update { it.copy(message = Message("Metadata for $written tunes.")) }
+            _state.update { it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_track_metadata_done, written, written))) }
         }
     }
 
@@ -2304,13 +2325,13 @@ class PlaybackController private constructor(private val context: Context) {
             val bytes = remoteFiles.fetchIndex(FAVOURITES_URL)
             if (bytes == null) {
                 endDownload(DownloadKeys.FAVOURITES)
-                _state.update { it.copy(message = Message("Could not download the favourites.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_favourites_failed))) }
                 return@launch
             }
             val written = favourites.replaceAllFrom(bytes)
             if (written == 0) {
                 endDownload(DownloadKeys.FAVOURITES)
-                _state.update { it.copy(message = Message("The favourites list was empty.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_favourites_empty))) }
                 return@launch
             }
             val playable = favourites.playableCount()
@@ -2322,12 +2343,12 @@ class PlaybackController private constructor(private val context: Context) {
                 it.copy(
                     message = Message(
                         if (playable > 0) {
-                            "$playable of $written favourites are in your Modland index."
+                            context.getString(R.string.notice_favourites_playable, playable, written)
                         } else {
                             // The list arrived and reaches nothing. Said plainly, because the
                             // alternative is a Favourites chip that stays disabled after a
                             // download that reported success.
-                            "$written favourites downloaded. Index Modland to play them."
+                            context.getString(R.string.notice_favourites_need_index, written)
                         }
                     )
                 )
@@ -2358,7 +2379,7 @@ class PlaybackController private constructor(private val context: Context) {
             endDownload(DownloadKeys.REPLAYS)
             if (fetched == null || fetched == 0) {
                 _state.update {
-                    it.copy(message = Message("Could not download the replay routines."))
+                    it.copy(message = Message(context.getString(R.string.notice_replays_failed)))
                 }
                 return@launch
             }
@@ -2367,7 +2388,7 @@ class PlaybackController private constructor(private val context: Context) {
             // no restart, and the next `.sc68` works.
             withContext(backgroundWork) { NativeData.adoptDownloadedReplays(context) }
             _state.update {
-                it.copy(message = Message("$fetched replay routines downloaded. .sc68 files should play now."))
+                it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_replays_done, fetched, fetched)))
             }
             refreshCatalogues()
         }
@@ -2518,7 +2539,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (failedRandomPicks > maxFailedRandomPicks) {
             failedRandomPicks = 0
             _state.update {
-                it.copy(message = Message("Several picks in a row would not open. Stopping here."))
+                it.copy(message = Message(context.getString(R.string.notice_random_gave_up)))
             }
             return
         }
@@ -2552,9 +2573,9 @@ class PlaybackController private constructor(private val context: Context) {
             // narrowed dice that comes back empty means the index went away underneath it -- and
             // being told to index a catalogue, having just indexed one, teaches nothing.
             val empty = when (_browse.value.randomScope) {
-                is RandomScope.Everything -> "Nothing is indexed yet. Index a catalogue first."
-                is RandomScope.OnPlatform -> "Nothing indexed for that platform."
-                is RandomScope.Favourites -> "None of the favourites are in your Modland index."
+                is RandomScope.Everything -> context.getString(R.string.notice_random_nothing_indexed)
+                is RandomScope.OnPlatform -> context.getString(R.string.notice_random_nothing_for_platform)
+                is RandomScope.Favourites -> context.getString(R.string.notice_random_no_favourites)
             }
             _state.update { it.copy(message = Message(empty), randomExhausted = true) }
             return
@@ -2707,9 +2728,9 @@ class PlaybackController private constructor(private val context: Context) {
         // on the way. Saying it once is both simpler and true regardless of ordering.
         appendTracks(listOf(ref)) { added, _ ->
             if (added > 0) {
-                Message("Added \"${ref.title}\" to the playlist.")
+                Message(context.getString(R.string.notice_added_track, ref.title))
             } else {
-                Message("\"${ref.title}\" is already in this playlist.")
+                Message(context.getString(R.string.notice_track_already_here, ref.title))
             }
         }
     }
@@ -2862,9 +2883,9 @@ class PlaybackController private constructor(private val context: Context) {
             // had no way of telling anyone it might be one of the others.
             when (live) {
                 is ModArchive.Outcome.NotReached ->
-                    _state.update { it.copy(message = Message("The Mod Archive could not be reached.")) }
+                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreachable))) }
                 is ModArchive.Outcome.Unreadable ->
-                    _state.update { it.copy(message = Message("The Mod Archive answered, but not with a page we can read.")) }
+                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreadable))) }
                 is ModArchive.Outcome.Found -> Unit
             }
             val fromModArchive = (live as? ModArchive.Outcome.Found)?.tracks.orEmpty().filter {
@@ -3040,7 +3061,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun createPlaylistAndAdd(name: String, tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
         scope.launch {
-            val finalName = name.ifBlank { DEFAULT_PLAYLIST_NAME }
+            val finalName = name.ifBlank { defaultPlaylistName }
             val newId = store.createPlaylist(finalName)
             store.replaceTracks(newId, tracks)
             val updated = store.playlists()
@@ -3161,13 +3182,25 @@ class PlaybackController private constructor(private val context: Context) {
      * swipeable (`SwipeableSnackbar`).
      */
     private fun describeAdded(added: Int, skipped: Int): Message? {
-        val where = _state.value.activePlaylistName?.let { " to $it" }.orEmpty()
+        // Named where there is a name to use, and a separate sentence rather than a suffix glued
+        // on: " to X" reads as English word order and would have to be re-glued for every other
+        // language.
+        val where = _state.value.activePlaylistName
         return when {
-            added == 0 && skipped == 0 -> Message("Nothing playable found there.")
-            added == 0 -> Message("Already in this playlist.")
-            skipped == 0 && added == 1 -> Message("Added 1 track$where.")
-            skipped == 0 -> Message("Added $added tracks$where.")
-            else -> Message("Added $added$where; $skipped already there.")
+            added == 0 && skipped == 0 -> Message(context.getString(R.string.notice_nothing_playable))
+            added == 0 -> Message(context.getString(R.string.notice_all_already_here))
+            skipped == 0 && where != null -> Message(
+                context.resources.getQuantityString(
+                    R.plurals.notice_added_count_to_playlist, added, added, where,
+                )
+            )
+            skipped == 0 -> Message(
+                context.resources.getQuantityString(R.plurals.notice_added_count, added, added)
+            )
+            where != null -> Message(
+                context.getString(R.string.notice_added_some_already_named, added, where, skipped)
+            )
+            else -> Message(context.getString(R.string.notice_added_some_already, added, skipped))
         }
     }
 
@@ -3222,9 +3255,11 @@ class PlaybackController private constructor(private val context: Context) {
                 dirty = true,
                 message = Message(
                     text = if (removed.size == 1) {
-                        "Removed ${removed.first().track.title}"
+                        context.getString(R.string.notice_removed_one, removed.first().track.title)
                     } else {
-                        "Removed ${removed.size} tracks"
+                        context.resources.getQuantityString(
+                            R.plurals.notice_removed_count, removed.size, removed.size,
+                        )
                     },
                     actionLabel = UNDO,
                 ),
@@ -3459,7 +3494,7 @@ class PlaybackController private constructor(private val context: Context) {
             // Asking first, and not starting if refused: a player that talks over a phone call is
             // worse than one that does nothing.
             if (!audioFocus.acquire()) {
-                _state.update { it.copy(message = Message("Something else is using the audio.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
                 return
             }
             // **Asked of both meanings of "finished".** The engine knows when a backend stopped
@@ -3706,7 +3741,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             if (!audioFocus.acquire()) {
                 opened.close()
-                _state.update { it.copy(message = Message("Something else is using the audio.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
                 return@launch
             }
 
@@ -3765,7 +3800,7 @@ class PlaybackController private constructor(private val context: Context) {
                     subsongCount = opened.subsongCount().coerceAtLeast(1),
                     durationSeconds = duration,
                     positionSeconds = 0.0,
-                    message = if (started) it.message else Message("Could not open the audio device"),
+                    message = if (started) it.message else Message(context.getString(R.string.notice_audio_device_failed)),
                 )
             }
             // Recorded with the name the tune calls itself rather than the filename it arrived
