@@ -12,20 +12,36 @@ Closed testing, the second build. What the first round of testers found.
 
 | | |
 | --- | --- |
-| Artifact | *built by the owner with `./scripts/build-bundle.sh`; fill in on upload* |
-| Size | |
-| SHA-256 | |
+| Artifact | `dist/protracktor-0.5.0-702.aab` |
+| Size | 19,038,987 bytes |
+| SHA-256 | `aa8c41c19e319ce5430f28c8d478547d99460ed8ff88167492076b58875489b6` |
 | versionCode | 702 — `git rev-list --count HEAD`, not written by hand |
 | versionName | 0.5.0 |
-| Commit | *the commit `v0.5.0` points at* |
+| Commit | `66b6700` |
 | Tag | `v0.5.0` |
-| Built | |
+| Built | 2026-09-17 |
 
-**Signer**: the same upload key as 0.4.0; `build-bundle.sh` prints it from the bundle and it belongs
-here once it has.
+**Signer** (the same upload key as 0.4.0, printed by `build-bundle.sh` from the bundle itself):
+
+```
+Owner:   CN=Przunk, OU=Przunk, O=Przunk, L=Wejherowo, ST=Pomorskie, C=PL
+Valid:   2026-09-02 to 2054-01-18
+SHA-256: E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D
+Algorithm: SHA256withRSA
+```
+
+**What the bundle contains**, checked rather than assumed: `com.przunk.protracktor`, minSdk 29,
+targetSdk 36, not debuggable, three ABIs with every 64-bit library aligned to 16 KB pages, and the
+same six permissions as 0.4.0 — `DUMP` still from `androidx.profileinstaller` and `androidx.work`,
+still never granted to an app installed from Play.
+
+**`android:allowBackup` is `false` in the shipped manifest** and `dataExtractionRules` is present,
+which is C64. Worth saying here because it is the one change in this release that cannot be seen by
+using the app: an upgrade over 0.4.0 keeps what is on the phone, but from now on an *uninstall*
+takes it.
 
 **Content of the release**: C61, C62, C63, C64, C65 and A46 — see `docs/STATUS.md` and the tag's own
-message. No schema change, so an upgrade keeps everything a tester has downloaded.
+message. No schema change, so an upgrade keeps every index a tester has downloaded.
 
 ## 0.4.0 — versionCode 679
 
