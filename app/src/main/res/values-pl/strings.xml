@@ -16,6 +16,7 @@
     <string name="playlist_default_name">Playlista</string>
     <string name="playlist_empty_title">Jeszcze tu pusto</string>
     <string name="playlist_empty_body">Wejdź w Przeglądaj, aby pobrać jeden z katalogów online, albo dodaj folder z modułami z tego telefonu.</string>
+    <string name="playlist_empty_body_nothing_held">Nie ma jeszcze czego przeglądać. Pobierz katalog, a dostaniesz pół miliona utworów do przejrzenia — bez sieci.</string>
 
     <plurals name="track_count">
         <item quantity="one">%d utwór</item>

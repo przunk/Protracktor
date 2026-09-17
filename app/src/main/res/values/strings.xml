@@ -16,6 +16,7 @@
     <string name="playlist_default_name">Playlist</string>
     <string name="playlist_empty_title">Nothing here yet</string>
     <string name="playlist_empty_body">Browse to download one of the online catalogues, or add a folder of modules from this phone.</string>
+    <string name="playlist_empty_body_nothing_held">Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline.</string>
 
     <plurals name="track_count">
         <item quantity="one">%d track</item>

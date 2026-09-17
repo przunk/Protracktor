@@ -727,6 +727,18 @@ class PlaybackController private constructor(private val context: Context) {
         // why this is the cheapest moment to do it.
         scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
 
+        // **What is on this phone, before anybody opens Browse.** The empty playlist has to
+        // choose between offering Browse and offering the download sheet, and it cannot ask a
+        // screen that has never been opened. Two small reads -- the `catalogues` table is one row
+        // per catalogue and `granted_folders` is a handful -- rather than `refreshCatalogues()`,
+        // which also counts platforms across half a million rows and has no business running at
+        // start-up.
+        scope.launch {
+            val summaries = catalogues.summaries()
+            val granted = store.grantedFolders()
+            _browse.update { it.copy(catalogues = summaries, folders = granted) }
+        }
+
         // A catalogue that is no longer offered leaves its rows behind, and rows
         // nothing lists are rows in every global search. Once at start-up, next to the cache sweep
         // and for the same reason.
