@@ -145,8 +145,8 @@ class PlaybackService : Service() {
             PlaybackState.ACTION_STOP
         // `canGoNext`, not `queue.hasNext`. The queue is the playlist, and next does not always
         // walk the playlist: in Random it walks the picks, and in a search it walks the results.
-        // Asking the queue meant the notification hid its skip buttons in exactly the mode where
-        // the dock was showing them -- the owner found it in Random, and search had it too.
+        // Asking the queue hides the notification's skip buttons in exactly the modes where the
+        // dock is showing them -- Random and search.
         //
         // Since Android 13 the system builds these buttons from the session's PlaybackState rather
         // than from the notification's own actions, so this line is what decides whether they

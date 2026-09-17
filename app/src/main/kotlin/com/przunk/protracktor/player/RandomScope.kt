@@ -6,16 +6,14 @@ package com.przunk.protracktor.player
 /**
  * What Random picks from.
  *
- * **A type rather than a nullable platform id**, because the owner raised two wishes on the same
- * day and they are one feature: "random within a platform" (`docs/WISHLIST.md` B22) and "random,
- * but only tunes considered good". The second is [Favourites], and it arrived as another case here
- * rather than as a second mechanism — which is what the type was for.
+ * **A type rather than a nullable platform id**, because "random within a platform"
+ * (`docs/WISHLIST.md` B22) and "random, but only tunes considered good" are one feature.
+ * [Favourites] is another case here rather than a second mechanism, which is what the type is for.
  *
- * **Persisted since 2026-09-10, and it used to be the opposite.** The reason for not keeping it was
- * that a scope outliving the session is an invisible mode, and a dice button that quietly remembers
- * a setting has stopped being a dice button. That argument rested entirely on invisibility, and the
- * Random view spends it: the scope now sits on screen beside a Filter button for as long as you are
- * in there (`docs/PLAN_RANDOM.md`). A setting you can see is a setting, not a trap.
+ * **Persisted**, which is only safe because it is visible: a scope outliving the session would
+ * otherwise be an invisible mode, and a dice button that quietly remembers a setting has stopped
+ * being a dice button. The Random view shows the scope beside its Filter button for as long as you
+ * are in there (`docs/PLAN_RANDOM.md`). A setting you can see is a setting, not a trap.
  */
 sealed interface RandomScope {
 

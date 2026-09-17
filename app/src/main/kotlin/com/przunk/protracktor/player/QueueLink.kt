@@ -43,8 +43,7 @@ object QueueLink {
      * **It cannot travel as music and it still has to travel.** A local file's id is a
      * storage-access grant valid on one phone, so the bytes stay here — but leaving the row out
      * renumbers the list, and two people cannot talk about a playlist that counts itself
-     * differently at each end. The owner met that with an outside listener on 2026-09-09
-     * (`docs/BACKLOG.md` A28): *"nasze listy nie są zgodne"*.
+     * differently at each end (`docs/BACKLOG.md` A28).
      *
      * A scheme rather than a flag, because the page already reads each line as an address.
      */
@@ -71,12 +70,11 @@ object QueueLink {
             val catalogue = Catalogue.owning(track.id)
             val path = catalogue?.pathFrom(track.id)
             when {
-                // **An MP3 never travels, whatever it is and wherever it came from.** The owner's
-                // rule, 2026-09-10: *"wysyłanie mp3 w kodzie QR ma zawsze dawać tylko info o pliku
-                // i niedostępne odtwarzanie"*. The reason is arithmetic -- this whole handoff rests
-                // on a tracker module being kilobytes, and one four-minute MP3 is more than the
-                // eight-megabyte budget for a *whole queue* (`docs/PLAN_WEB.md` §8). A rule rather
-                // than a size check, so it cannot surprise anybody with a short one.
+                // **An MP3 never travels, whatever it is and wherever it came from.** The
+                // arithmetic: this handoff rests on a tracker module being kilobytes, and one
+                // four-minute MP3 exceeds the eight-megabyte budget for a *whole queue*
+                // (`docs/PLAN_WEB.md` §8). A rule rather than a size check, so a short one cannot
+                // surprise anybody.
                 isMp3(track) ->
                     lines += PHONE_PREFIX + (track.title.trim().ifBlank { track.fileNameOrTitle })
                 catalogue == null || path == null ->
@@ -151,8 +149,8 @@ object QueueLink {
     /**
      * Marks a link as **one tune to play** rather than a queue to take over.
      *
-     * Share with Protracktor (owner, 2026-09-11): a tune from any list, as a link that opens the page
-     * playing it. A queue link replaces the list the page shows under "From the phone"; this one
+     * Share with Protracktor: a tune from any list, as a link that opens the page playing it.
+     * A queue link replaces the list the page shows under "From the phone"; this one
      * must not — it is somebody being shown a tune, possibly somebody else entirely — so the page
      * plays it the way it plays a Browse result, beside whatever list is there. `:` because it is
      * not a base64url character, so no packed queue can ever start with it.

@@ -12,9 +12,8 @@ package com.przunk.protracktor.player
  * does nothing without one. So the system drew a large grey player around an empty square
  * (`docs/WISHLIST.md` B21).
  *
- * What fills it is **the format name over a colour derived from the file**. The two halves answer
- * the owner's two complaints separately and neither would do it alone: the colour stops the bar
- * being grey, and the glyph stops it belonging to nothing. The glyph is a fact about the file —
+ * What fills it is **the format name over a colour derived from the file**, and neither half would
+ * do alone: the colour stops the bar being grey, the glyph stops it belonging to nothing. The glyph is a fact about the file —
  * what a `.sndh` is — while the colour is decoration, which is the right way round: a tune's
  * identity should not be something we invented.
  *
