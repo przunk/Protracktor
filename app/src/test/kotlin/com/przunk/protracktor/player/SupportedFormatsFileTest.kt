@@ -12,10 +12,9 @@ import org.junit.Test
  * `SupportedFormats` and `web/src/formats.tsv` name the same things.
  *
  * **The page reads the file; the phone reads its own list; this is what stops them drifting**
- * (`GOAL.md` round 8, item 1). The browser keeps a catalogue row only if the file names it, so a
- * format added here and not there would be one the phone indexes and the page silently does not —
- * the kind of disagreement nobody notices until the owner looks for a tune on one screen that the
- * other has.
+ * The browser keeps a catalogue row only if the file names it, so a format added here and not
+ * there would be one the phone indexes and the page silently does not — the kind of disagreement
+ * nobody notices until a tune is missing from one screen and present on the other.
  *
  * It checks names, not decoders. Which decoder opens a name is the file's to say; whether the name
  * is on the list at all is the question both runtimes must answer the same way.

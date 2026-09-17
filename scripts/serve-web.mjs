@@ -272,8 +272,8 @@ http.createServer((request, response) => {
         // **Typed as what was asked for, and empty.** A 404 served as `text/plain` is what Firefox
         // reports as *"Loading module … was blocked because of a disallowed MIME type
         // (text/plain)"* -- which sends whoever reads it looking for a MIME bug in a server that
-        // does not have one. The owner lost an evening to exactly that sentence on 2026-09-10. With
-        // the right type and no body the browser says 404, which is what happened.
+        // does not have one. With the right type and no body the browser says 404, which is what
+        // happened.
         response.writeHead(404, { 'content-type': known }).end();
         return;
       }

@@ -10,7 +10,7 @@ import org.junit.Test
  * One list out of four sources, and no id twice.
  *
  * A repeated id is not a cosmetic fault: the results list is a `LazyColumn` keyed by track id, and
- * a repeated key throws on the main thread while drawing. The owner met it on 2026-09-04.
+ * a repeated key throws on the main thread while drawing.
  */
 class SearchResultsTest {
 
@@ -72,10 +72,9 @@ class SearchResultsTest {
     /**
      * Display order: library, playlists, **live search**, then the offline indexes.
      *
-     * This used to end with the live search and was changed on 2026-09-06. Precedence — which copy
-     * of a duplicate survives — still runs in the old order and is asserted separately below. The
-     * two were the same list until a catalogue page of two thousand rows made the difference
-     * matter.
+     * Deliberately not the same order as precedence — which copy of a duplicate survives — which
+     * runs offline-first and is asserted separately below. The two are the same list until a catalogue
+     * page of two thousand rows makes the difference matter.
      */
     @Test
     fun `display order puts the live search ahead of the offline indexes`() {

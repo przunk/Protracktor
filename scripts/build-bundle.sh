@@ -2,9 +2,8 @@
 #
 # Builds an Android App Bundle for Google Play, and refuses to hand over one Play would reject.
 #
-# Adapted from Kratkoza's `build-kratkoza-bundle.sh` with the owner's permission (2026-09-02); the
-# signing mechanism is deliberately identical, because both projects sign with the same workshop
-# upload key through the same `PRZUNK_UPLOAD_*` Gradle properties.
+# The signing mechanism is deliberately identical to the other projects in this workshop, because
+# they all sign with the same upload key through the same `PRZUNK_UPLOAD_*` Gradle properties.
 #
 # ## Credentials
 #

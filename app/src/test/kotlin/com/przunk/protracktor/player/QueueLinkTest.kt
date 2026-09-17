@@ -47,13 +47,13 @@ class QueueLinkTest {
     }
 
     /**
-     * The one that matters, and it changed on 2026-09-10.
+     * The case that matters most.
      *
      * A local file's identity is a storage grant to one app on one phone, so its *music* cannot
-     * travel. Its **place in the list** can, and must: an outside listener opened a shared link and
-     * his list numbered itself differently from the owner's, which is the defect `docs/BACKLOG.md`
-     * A28 records. So the row goes as a name under a `phone:` scheme and the page draws it greyed,
-     * in its own position, unplayable.
+     * travel. Its **place in the list** can, and must: otherwise the two people looking at the
+     * same shared link number their lists differently, which is the defect `docs/BACKLOG.md` A28
+     * records. So the row goes as a name under a `phone:` scheme and the page draws it greyed, in
+     * its own position, unplayable.
      */
     @Test
     fun `local files travel as names in their own places`() {
@@ -74,7 +74,7 @@ class QueueLinkTest {
     }
 
     /**
-     * The owner's rule, 2026-09-10, and it is arithmetic before it is a preference.
+     * Arithmetic before it is a preference.
      *
      * The whole handoff rests on a tracker module being kilobytes: Modland's median is 20 KB and the
      * budget for a *whole queue* is eight megabytes. One four-minute MP3 is more than that budget by
@@ -164,8 +164,8 @@ class QueueLinkTest {
     }
 
     /**
-     * The owner's report: a Mod Archive row read `lotus3_4.mod` in the browser and
-     * `L3_CD4-SpaceNinja` on the phone, because the URL is the only thing that travelled.
+     * Without this a Mod Archive row reads `lotus3_4.mod` in the browser and `L3_CD4-SpaceNinja`
+     * on the phone, because the URL is the only thing that travels.
      */
     @Test
     fun `a title the address does not carry travels with it`() {
@@ -188,8 +188,8 @@ class QueueLinkTest {
 
     /**
      * The page and the pairing address are two paths on one machine, which is what lets a scan
-     * settle both. The owner's tunnel is the case that makes it matter: forty random characters
-     * that change whenever it restarts, and nobody is typing those twice.
+     * settle both. A tunnel is the case that makes it matter: forty random characters that change
+     * whenever it restarts, and nobody is typing those twice.
      */
     @Test
     fun `the page address sits beside the pairing address`() {
@@ -224,8 +224,8 @@ class QueueLinkTest {
     }
 
     /**
-     * Share with Protracktor (owner, 2026-09-11): one tune, marked so the page plays it rather than
-     * taking it for a queue to replace its list with.
+     * Share with Protracktor: one tune, marked so the page plays it rather than taking it for a
+     * queue to replace its list with.
      */
     @Test
     fun `one tune goes as a link the page plays`() {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build UADE for the host and compile the probe against it.
 #
-# `GOAL.md` round 6 item 1 says to prove a backend on the host before integrating it. UADE needs
+# A backend is proved on the host before it is integrated. UADE needs
 # more setting up than the other four did: two libraries of its own (bencodetools and libzakalwe,
 # both by UADE's author), and a *separate executable* -- libuade forks and execs `uadecore` and
 # talks to it over pipes. That process model is the central question for Android and this script
@@ -111,9 +111,8 @@ gcc -O2 -Wall -o "$ROOT/native/probe/uade/build/probe-uade" \
 # The song database, without which several formats fail in a way that looks like the format not
 # working. UADE cannot tell from a filename which player a Hippel or TFMX variant needs -- the
 # collections disagree about prefixes and suffixes -- so Matti Tiainen, one of UADE's maintainers,
-# keeps a table of md5 overrides for the Audacious plugin. Its own maintainer pointed us at it on
-# 2026-09-05, and it is the difference between 196/300 and 206/300 on our corpus, and between 0/12
-# and 11/12 on Modland's Hippel ST COSO.
+# keeps a table of md5 overrides for the Audacious plugin. It is the difference between 196/300
+# and 206/300 on our corpus, and between 0/12 and 11/12 on Modland's Hippel ST COSO.
 #
 # `conf/song.conf` and **not** `conf/songdb`: the project is GPL-2.0-or-later, which is compatible
 # with ours, but the songdb directory beside it is CC BY-NC-SA 4.0 and could never ship in a store

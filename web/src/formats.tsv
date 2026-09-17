@@ -3,7 +3,7 @@
 #
 # The names a catalogue index keeps, and which decoders open each one.
 #
-# **One list, read by both runtimes** (`GOAL.md` round 8, item 1). The phone's copy is
+# **One list, read by both runtimes.** The phone's copy is
 # `SupportedFormats.extensions` and `SupportedFormats.prefixes`; `SupportedFormatsFileTest` fails the
 # moment the two disagree, so a name added on one side and not the other cannot ship. The page reads
 # this file at run time and keeps a name only if **at least one of its decoders is in the engine it

@@ -3,13 +3,13 @@
   SPDX-FileCopyrightText: 2026 Przunk
   SPDX-License-Identifier: GPL-3.0-or-later
 
-  The page, dressed as the app (GOAL.md round 7).
+  The page, dressed as the app.
 
-  **The colours are the owner's, sampled rather than guessed.** His phone runs dynamic colour, so it
-  does not show the Material 3 baseline at all: the scheme below was read out of two screenshots he
-  supplied, pixel by pixel — `docs/reference/app-colours.json` records where each one was taken from.
-  A browser cannot read a wallpaper, so everyone sees his scheme; that is the honest cost of looking
-  like his app rather than like a generic Material page.
+  **The colours are sampled from the app, not guessed.** A phone running dynamic colour does not
+  show the Material 3 baseline at all, so the scheme below was read out of screenshots pixel by
+  pixel — `docs/reference/app-colours.json` records where each one was taken from. A browser cannot
+  read a wallpaper, so every reader sees that one scheme; that is the honest cost of looking like
+  the app rather than like a generic Material page.
 
   The structure follows the app screen for screen: a top bar of labelled actions, a list of rows that
   are index-title-subtitle, and a dock that is a seek row, a now-playing card and the transport.
@@ -17,13 +17,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- No pinch to zoom (owner, 2026-09-11): a player laid out as an app, not a document to magnify. -->
+<!-- No pinch to zoom: a player laid out as an app, not a document to magnify. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Protracktor</title>
 <style>
   :root {
     color-scheme: dark;
-    /* Sampled from the owner's screenshots, 2026-09-09. See docs/reference/app-colours.json. */
+    /* Sampled from screenshots of the app. See docs/reference/app-colours.json. */
     --bg: #180523;
     --surface-container: #2D133C;
     --secondary-container: #622B80;
@@ -817,7 +817,7 @@
     <div class="transport">
       <div class="tspacer"></div>
       <div class="buttons">
-      <!-- The page's own settings, left of shuffle where the owner asked for it (2026-09-14). -->
+      <!-- The page's own settings, left of shuffle. -->
       <button class="tbutton" id="tab-settings" title="Settings">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
       </button>
@@ -918,7 +918,8 @@
     </div>
   </div>
 
-  <!-- Where ticked tracks go: another playlist of his own, or a new one (the phone's AddToPlaylistDialog). -->
+  <!-- Where ticked tracks go: another of the reader's playlists, or a new one (the phone's
+       AddToPlaylistDialog). -->
   <div class="overlay" id="addto" hidden>
     <div class="sheet wide">
       <div class="browsehead">

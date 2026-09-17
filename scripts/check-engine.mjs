@@ -6,13 +6,13 @@
 //
 // **Not a probe.** `scripts/probe-web.mjs` measures real files and prints what it found; this
 // asserts, fails, and is part of `scripts/test-protracktor.sh`. The two faults it exists for both
-// reached the owner:
+// reached a listener:
 //
-//   C55  A `.sap` was refused with "wrong file type for this emulator" -- game-music-emu's
-//        sentence about a file ASAP had claimed by name and refused first. The reason he was shown
-//        belonged to a decoder that had no business with the file.
-//   C42  An exception out of a decoder crossed the boundary, and on the web that wedged the
-//        worklet until the tab was reloaded. On the phone the same throw ends the process.
+//   C55  A `.sap` refused with "wrong file type for this emulator" -- game-music-emu's sentence
+//        about a file ASAP had claimed by name and refused first. The reason shown belonged to a
+//        decoder that had no business with the file.
+//   C42  An exception out of a decoder crossing the boundary, which on the web wedges the worklet
+//        until the tab is reloaded. On the phone the same throw ends the process.
 //
 // It runs against the WebAssembly build because that is the one that runs in node -- but the code
 // under test is `native/engine/engine.cpp`, which is the same file Android compiles. Only the
@@ -89,13 +89,13 @@ const open = (bytes, name) => {
 //
 // The header is valid and complete -- ASAP parses it and finds a TYPE B tune -- and then the
 // binary part claims a block two bytes longer than the file, so loading it into 6502 memory fails.
-// That is exactly the damage in the file the owner met: `scene register 5 menu.sap` on Modland is
-// short by two bytes and the copy ASMA keeps does not exist, because ASMA validates.
+// That is exactly the damage in a real file: `scene register 5 menu.sap` on Modland is short by
+// two bytes, and ASMA keeps no copy of it, because ASMA validates.
 //
 // The point of building it here is the *second* decoder. `gme_identify_header` knows `SAP\r\n` and
 // game-music-emu is compiled without its Atari emulator, so it recognises this file and refuses it
 // with "Wrong file type for this emulator" -- after ASAP has already refused. Both refusals are
-// real; the question this checks is which one the owner is told about.
+// real; the question this checks is which one the listener is told about.
 const malformedSap = (() => {
   const header = Buffer.from('SAP\r\nAUTHOR "check"\r\nNAME "malformed"\r\nTYPE B\r\nINIT 2000\r\nPLAYER 2003\r\n', 'latin1');
   // $FF $FF opens the binary part, then a block header: start address, last address. 256 bytes are
@@ -142,8 +142,8 @@ const malformedSap = (() => {
 // --- surviving a decoder that refuses ----------------------------------------------------------
 //
 // C42: what matters is not that a bad file fails but that the next good one still works. A throw
-// that escapes leaves the module unusable and every tune after it fails too -- which is exactly how
-// the owner met it, as a page that played nothing until the tab was reloaded.
+// that escapes leaves the module unusable and every tune after it fails too -- a page that plays
+// nothing until the tab is reloaded.
 //
 // **A real module, built rather than stored.** A four-channel ProTracker file is 1084 bytes of
 // header and 1024 of pattern, and writing it here keeps the check readable and the repository free
@@ -213,7 +213,7 @@ const tinyModule = (() => {
     check('audio comes back', rendered > 0, `${rendered} frames`);
 
     // **Asked for things it may not be able to do.** A subsong that is not there and a seek past
-    // the end are what a mistimed tap actually sends, and both used to reach a decoder unguarded.
+    // the end are what a mistimed tap actually sends, and neither may reach a decoder unguarded.
     M._pt_select_subsong(h, 99);
     M._pt_seek(h, 99999);
     M._pt_rewind(h);

@@ -62,10 +62,10 @@ class BrowseNavigationTest {
 
     @Test
     fun `entering Search forgets the words as well as the results`() {
-        // Owner, 2026-09-16: going into Search a second time from the playlist showed his previous
-        // search still written in the box. `tracks` was already emptied here, so what he met was a
-        // query with nothing under it -- which reads as a search that found nothing rather than as
-        // a screen waiting for a new one.
+        // Entering Search a second time must not show the previous words still written in the
+        // box: `tracks` is emptied here, so a query left behind is a query with nothing under it,
+        // which reads as a search that found nothing rather than as a screen waiting for a new
+        // one.
         val searched = BrowseState(
             domain = BrowseDomain.SEARCH,
             query = "zoolook",
@@ -95,9 +95,9 @@ class BrowseNavigationTest {
         assertEquals(SearchScope.ByPlatform(setOf("amiga")), fresh.searchScope)
         assertEquals(61157, fresh.songLengthCount)
 
-        // **The query used to be asserted here too, and it was in the wrong company.** A scope is a
-        // setting and a count is a fact; a query is neither -- it is the input that produced the
-        // results this function has just thrown away, so keeping it left the two halves of one
-        // screen disagreeing. The test above owns it now.
+        // **The query is deliberately not asserted here.** A scope is a setting and a count is a
+        // fact; a query is neither -- it is the input that produced the results this function has
+        // just thrown away, so keeping it would leave the two halves of one screen disagreeing.
+        // The test above owns it.
     }
 }

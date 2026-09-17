@@ -4,11 +4,11 @@
 // The online archives, indexed in the browser.
 //
 // **`docs/PLAN_WEB_LIBRARY.md` S3, and the shape came out of a measurement rather than a
-// preference.** A record per track meant 515,509 writes and 41 seconds on the owner's slower
-// machine; a record per **bucket** — one per format and author — means 43,715 writes, no index at
+// preference.** A record per track means 515,509 writes and 41 seconds on a slower machine; a
+// record per **bucket** — one per format and author — means 43,715 writes, no index at
 // all, and 2.6 seconds. The key *is* the lookup, which is the structure an index would have built.
 //
-// Two archives: Modland, and since 2026-09-11 ASMA. Both are stored in the same shape under their
+// Two archives, Modland and ASMA. Both are stored in the same shape under their
 // own prefix -- a group (Modland's format, ASMA's section), an author, the tunes -- so browsing,
 // search and the dice treat them alike.
 
@@ -24,7 +24,7 @@ const ASMA_INDEX_URL = 'https://asma.atari.org/asmadb/asma.zip';
 /** What each archive is called on screen, and where its files are served. */
 const SOURCES = {
   [MODLAND]: { name: 'Modland', files: 'https://modland.com/pub/modules/' },
-  // ASMA serves every file at its zip entry's own path (measured 2026-09-11), which is what lets a
+  // ASMA serves every file at its zip entry's own path (measured), which is what lets a
   // browser play it without the 20 MB archive -- `docs/rules/queue-cases.tsv` [asmaUrl].
   [ASMA]: { name: 'ASMA', files: 'https://asma.atari.org/asma/' },
 };
@@ -42,8 +42,8 @@ const keyFor = (source) => ({
   /**
    * Titles, sharded by their first two characters.
    *
-   * **So that searching reads 1,663 records instead of 43,715.** Measured 2026-09-10: building the
-   * shards costs 433 ms and about 29 MB, against 473 GB offered — and it is what turns "find a tune
+   * **So that searching reads 1,663 records instead of 43,715.** Building the shards costs 433 ms
+   * and about 29 MB, against 473 GB offered — and it is what turns "find a tune
    * by name" from reading the whole index into reading a twenty-sixth of it.
    */
   titles: (two) => `${source}:titles:${two}`,
@@ -122,9 +122,8 @@ export function onPhone(table) {
 /**
  * Whether **this** engine can open a name: listed, and at least one of its decoders present.
  *
- * *"Nie indeksujmy utworów, których nie zagramy"* (owner, 2026-09-10). The browser build has no
- * ZXTune, so `pt3`, `ym` and the rest of the Spectrum's formats fall out here -- 26,559 of the rows
- * the phone keeps.
+ * Nothing is indexed that this build cannot play. The browser build has no ZXTune, so `pt3`, `ym`
+ * and the rest of the Spectrum's formats fall out here -- 26,559 of the rows the phone keeps.
  */
 export function playable(table, absent) {
   return (fileName) => {
@@ -136,9 +135,9 @@ export function playable(table, absent) {
 /**
  * What an index records about the set that filtered it.
  *
- * **The engine and the list together**, which is the phone's lesson: recording only the decoders
- * was half the truth, and on 2026-09-04 five names added to the list left every stored index
- * missing 5,558 files while it reported itself current. Order-independent; it only has to differ
+ * **The engine and the list together**, which is the phone's rule as well: recording only the
+ * decoders is half the truth, and five names added to the list leave every stored index missing
+ * 5,558 files while it reports itself current. Order-independent; it only has to differ
  * when either half does.
  */
 export function indexFingerprint(engineFingerprint, table) {
@@ -155,7 +154,7 @@ export function indexFingerprint(engineFingerprint, table) {
  *
  * [total] is every tune Modland lists; [phoneOnly] is the part the phone keeps and this engine
  * cannot open. Both are what lets Browse say plainly how much of Modland is here and why the rest
- * is not -- the owner's condition for leaving anything out at all.
+ * is not, which is the condition on which anything is left out at all.
  */
 export function filterIndex(text, keep, phone = () => true) {
   const kept = [];
@@ -180,8 +179,8 @@ function shardOf(title) { return title.toLowerCase().slice(0, 2).padEnd(2, ' ');
  *
  * **Exactly, and that is the whole of `docs/STATUS.md` C33.** A zip is not a gzip: after the deflate
  * stream come a data descriptor, a central directory and an end record. Node's `DecompressionStream`
- * ignores those; **Firefox refuses them** — *"unexpected input after the end of stream"*, which is
- * what the owner got and what could not be reproduced here, because node had been asked instead.
+ * ignores those; **Firefox refuses them** — "unexpected input after the end of stream". Node will
+ * not reproduce it, so this is one to check in a browser.
  *
  * The compressed size is in the local header, unless bit 3 of the general-purpose flags says the
  * writer did not know it yet — then it is in the central directory, which is found from the end
@@ -309,8 +308,8 @@ export function toRecords(text, source = MODLAND) {
  *
  * [fingerprint] is what the engine reports for the decoders in this build. It is recorded and
  * checked for the same reason the phone records it: an index is filtered by what can be played, so
- * one built by an older set is missing files and **looks empty rather than out of date**. The owner
- * lost 60,572 C64 tunes to exactly that once.
+ * one built by an older set is missing files and **looks empty rather than out of date** -- which
+ * can be 60,572 C64 tunes with nothing on screen to say why.
  */
 export async function downloadModland({
   fingerprint = '', keep = () => true, phone = () => true, onProgress = null,
@@ -343,16 +342,16 @@ export async function downloadModland({
  * ASMA publishes one 20 MB zip and no separate index; the phone downloads the lot, which is what
  * makes it work offline. A browser needs only the list, and a zip keeps its list at the end: the
  * end record says where the central directory is, and the directory names every file and its
- * size. Two ranged requests -- the tail, then the directory -- come to 0.85 MB (measured
- * 2026-09-11: 6,780 entries, 6,335 of them `.sap`), and each tune is then fetched from its own
+ * size. Two ranged requests -- the tail, then the directory -- come to 0.85 MB (measured: 6,780
+ * entries, 6,335 of them `.sap`), and each tune is then fetched from its own
  * address when it plays.
  *
  * A server that ignores `Range` answers 200 with the whole file; the same reading works on that,
  * because the offsets are the file's own.
  *
- * **Never the suffix form, `bytes=-N`** (owner, 2026-09-11: "Failed to fetch"). Only a range with
- * a start is CORS-safelisted; any other makes the browser ask first, and asma.atari.org answers that
- * question without `Access-Control-Allow-Headers`, so the request was refused before it left. The
+ * **Never the suffix form, `bytes=-N`**, which fails with "Failed to fetch". Only a range with a
+ * start is CORS-safelisted; any other makes the browser ask first, and asma.atari.org answers that
+ * question without `Access-Control-Allow-Headers`, so the request is refused before it leaves. The
  * size comes from a HEAD instead, which needs no asking, and the tail is then an ordinary range. A
  * browser too old to safelist even that gets the whole archive, which is slow and always allowed.
  */
@@ -491,10 +490,10 @@ export async function authors(format, source = MODLAND) {
 /**
  * Every tune this browser holds, as a running count over the buckets it is filed in.
  *
- * **Uniform over tunes, not over authors** -- the owner's decision, 2026-09-10: *"mnie interesują
- * utwory, nie autorzy"*. The two differ enough to matter: after item 1's filter there are 32,212
- * buckets, median 2, the largest 3,615, and 41% hold one tune. Drawing an author first would make a
- * one-tune author as likely as Bayliss with 1,298.
+ * **Uniform over tunes, not over authors**, because what is being picked is a tune. The two differ
+ * enough to matter: after the playable filter there are 32,212 buckets, median 2, the largest
+ * 3,615, and 41% hold one tune. Drawing an author first would make a one-tune author as likely as
+ * Bayliss with 1,298.
  *
  * Built from the author lists, which already carry each bucket's count, so it costs one read per
  * format and none per bucket. Held by the caller for the session; a roll is then a random number
@@ -565,7 +564,7 @@ function metaFor(source, format, author) {
  * track and its own are two different tracks.
  *
  * `docs/rules/queue-cases.tsv` has the cases, and `Modland` in `CatalogueTest` checks the other end
- * against the same ones. `!!uu !! !!.it` is in there because the owner played it.
+ * against the same ones. `!!uu !! !!.it` is in there because Modland really contains it.
  */
 export function urlFor(format, author, title, source = MODLAND) {
   // An empty author is a file filed straight under its group (ASMA's `Games/Title.sap`), not an
@@ -588,14 +587,13 @@ function encodeSegment(segment) {
 
 // --- HVSC's song lengths --------------------------------------------------------------------------
 //
-// **The phone has had these since 2026-09-02 and the page had nothing** (`docs/STATUS.md` C56). A
-// SID carries no duration, so without them the page played one until somebody pressed next. The
-// fallback length added for C56 stays underneath: HVSC only knows about the C64, and every other
-// format nobody has measured still needs an answer.
+// The same lengths the phone uses (`docs/STATUS.md` C56). A SID carries no duration, so without
+// them the page plays one until somebody presses next. The fallback length stays underneath: HVSC
+// only knows about the C64, and every other format nobody has measured still needs an answer.
 //
-// It is fetched from the same address the phone uses. That was recorded as impossible for a day --
-// "hvsc.c64.org sends no Access-Control-Allow-Origin" -- and it was a measurement taken with a HEAD
-// request, which that server answers without its CORS filter. It sends the header on a GET.
+// Fetched from the same address the phone uses. **Check CORS with a GET, never a HEAD**: this
+// server answers HEAD without its CORS filter, so a HEAD says there is no
+// `Access-Control-Allow-Origin` when a GET sends one.
 
 const SONG_LENGTHS_URL = 'https://hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5';
 

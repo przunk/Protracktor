@@ -14,7 +14,7 @@ import org.junit.Test
  * **`docs/rules/queue-cases.json` is the reference, and neither implementation is**
  * (`docs/PLAN_WEB_LIBRARY.md` S1). The rules live twice because a browser cannot run Kotlin; what
  * this stops is them being decided twice. C23, C30 and C31 were each one screen doing what the
- * other did not, all three found by the owner rather than by a test, all three inside a week.
+ * other did not, none of them caught by a test, all three inside a week.
  *
  * A rule changed here and not in `web/src/rules.js` fails **there**, and the other way round. That
  * is the whole mechanism and it is why the cases are data rather than code.

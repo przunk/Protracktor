@@ -110,8 +110,8 @@ class UnExoticATest {
 
     @Test
     fun `the switch decides whether the catalogue exists at all`() {
-        // Not a preference: it is the owner's answer to a question ExoticA have not answered.
-        // Whatever it is set to, the list and the constant have to agree -- a catalogue that is
+        // Not a preference: it stands for a question ExoticA have not answered. Whatever it is
+        // set to, the list and the constant have to agree -- a catalogue that is
         // offered while disabled would fetch from an archive that asked not to be fetched from.
         assertEquals(UnExoticA.ENABLED, Catalogue.all.contains(UnExoticA))
         assertEquals(UnExoticA.ENABLED, Catalogue.byId("unexotica") != null)

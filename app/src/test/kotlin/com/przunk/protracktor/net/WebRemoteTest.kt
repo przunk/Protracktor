@@ -34,9 +34,8 @@ class WebRemoteTest {
         )
     }
 
-    /** Modland is full of both, and a broken message would look like a broken connection. */
     /**
-     * The owner's `Tactic.sap`, refused in the browser and playing on the phone.
+     * A file called `Tactic.sap`, refused in the browser and playing on the phone.
      *
      * A local file's title is often its name with the extension taken off, and four backends choose
      * a loader by that extension. `TrackRef` has kept the two apart since the beginning; the message
@@ -58,6 +57,7 @@ class WebRemoteTest {
         assertTrue(json, json.contains(""""title":"Tactic","file":"Tactic.sap""""))
     }
 
+    /** Modland is full of both, and a broken message would look like a broken connection. */
     @Test
     fun `quotes and backslashes in a title do not break the message`() {
         val json = WebRemote.buildJson(

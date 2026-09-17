@@ -35,9 +35,9 @@ for locale in en-US pl-PL; do
     check_field "$listing/short-description.txt" 80 "$locale short description"
     check_field "$listing/full-description.txt" 4000 "$locale full description"
 
-    # **Every release-note file, not one named in this script.** It used to check `2.txt` by name,
-    # which meant that renaming the file for the release it actually ships with -- the obvious thing
-    # to do, since versionCode is the commit count -- silently stopped checking anything.
+    # **Every release-note file, not one named in this script.** Checking a file by name means
+    # that renaming it for the release it ships with -- the obvious thing to do, since versionCode
+    # is the commit count -- silently stops checking anything.
     notes=0
     for note in "$listing/release-notes/"*.txt; do
         [ -e "$note" ] || continue

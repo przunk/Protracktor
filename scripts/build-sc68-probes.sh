@@ -4,7 +4,7 @@
 #
 # A probe, not a build: neither library is compiled the way Android compiles it, and neither result
 # is a claim about a phone. What it does give is the same thirty files run through both libraries,
-# which is the evidence `GOAL.md` round 5 item 1 asks for.
+# is the evidence for adopting it or not.
 #
 # sc68 3.0.0b needs three things autotools would have produced, all of them established by trial
 # compile rather than guessed:

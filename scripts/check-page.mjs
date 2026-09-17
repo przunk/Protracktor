@@ -97,8 +97,8 @@ window.fetch = async (url, options) => {
     if (options?.method === 'HEAD') return { ok: true, status: 200, headers };
     // **What the real server does to a browser**: a range the browser must ask about first -- the
     // suffix form, or any range where it safelists none -- is refused, because asma.atari.org
-    // answers the question without `Access-Control-Allow-Headers`. curl never asks, which is why it
-    // passed there and failed for the owner.
+    // answers the question without `Access-Control-Allow-Headers`. curl never asks, so it passes
+    // there and fails in a browser.
     if (range && (range.startsWith('bytes=-') || window.__asmaNoSafeRange)) throw new TypeError('Failed to fetch');
     if (!range || window.__asmaIgnoreRange) return { ok: true, status: 200, headers, arrayBuffer: async () => copy(zip) };
     window.__asmaRanges.push(range);
@@ -179,8 +179,8 @@ const $ = (id) => window.document.getElementById(id);
 
 check($('status').textContent.length > 0, 'the status line says something');
 
-// **Every button carries an icon and its name** -- the owner's standing rule, asked for on the phone
-// three times and again for this page on 2026-09-11 ("nie wiem ile razy jeszcze będę to wałkować").
+// **Every button carries an icon and its name** -- the standing rule for this app, on the phone
+// and on the page alike.
 // Checked across the whole page so the next button cannot be added bare. The subsong chips are the
 // one exception, numbers in circles exactly as the phone draws them.
 {
@@ -233,7 +233,7 @@ if (window.__api) {
   check(rows[1]?.querySelector('.title')?.textContent === 'L3_CD6',
     'a Mod Archive row is named by its title rather than downloads.php');
   check($('count').textContent === '2 tracks', 'the header counts them');
-  // Four row states, and the owner met three of them looking alike. A queue that has arrived is
+  // Four row states, which must not look alike. A queue that has arrived is
   // *selected*: pointed at, not started, because a browser will not make a sound unasked.
   check(rows[0]?.classList.contains('selected'), 'the row the phone was on is marked selected');
   check(!rows[0]?.classList.contains('playing'), 'and not as playing, because nothing has started');
@@ -288,11 +288,10 @@ if (window.__api) {
   window.__api.onWorklet({ type: 'position', seconds: 3 * 60 });
   check(window.__api.endedByClockNow() === true && window.__api.finishedNow() === true,
     'and ends, through the same path a real end of tune takes, once the fallback is reached');
-  // **And a length HVSC supplied ends the tune too**, which is the half this missed until
-  // 2026-09-16. It checked `duration <= 0`, on the reasoning that a format knowing its own length
-  // runs out of audio -- true of a tracker module and false of the one format it was written for.
-  // A SID never runs out; it loops. The owner found it on a tune whose music fades at 3:38 and
-  // which begins again at 4:05, with the bar pinned at the end meanwhile.
+  // **And a length HVSC supplied ends the tune too**, which gating on `duration <= 0` would miss:
+  // that assumes a format knowing its own length runs out of audio, which is true of a tracker
+  // module and false of the one format this was written for. A SID never runs out, it loops -- so
+  // its music fades at 3:38, it begins again at 4:05, and the bar sits pinned at the end.
   window.__api.onWorklet({
     type: 'opened',
     describe: 'title\tNormal People\tformat\tCommodore 64 (SID)',
@@ -315,7 +314,7 @@ if (window.__api) {
   // the two: `playAt` cleared the flag, but `playAt` only begins *loading* the next tune -- the
   // worklet plays the old one until the bytes arrive. Its position messages kept coming, `duration`
   // had just been zeroed for the bar so the limit fell back to three minutes, and the queue walked
-  // on once per message. The owner met it as a SID ending and the list jumping forward four tracks.
+  // on once per message -- a SID ending and the list jumping forward four tracks.
   await window.__api.playAt(wasAt);
   check(window.__api.endedByClockNow() === true,
     'and starting the next track does not reopen the guard while the old one is still playing');
@@ -366,8 +365,8 @@ if (window.__api) {
   check(metadata?.artist === 'Rob Hubbard', 'and the artist');
   check(metadata?.album === 'Amiga · 1985', 'and what it is for, and when');
 
-  // **The author where the file is silent** (owner, 2026-09-11: zoolook.mod "nie widzę autora"). A
-  // plain .mod has nowhere to record one; Modland files it under a folder that names them.
+  // **The author where the file is silent.** A plain .mod has nowhere to record one; Modland
+  // files it under a folder that names them.
   window.__api.onWorklet({
     type: 'opened',
     describe: 'title\tzoolook\nformat\tProTracker MOD (M.K.)\nartist\t\nchannels\t4\nmessage\tgreetings to\n  all  the scene\n',
@@ -426,8 +425,8 @@ if (window.__api) {
   check(posted.length === before, 'and nothing is fetched for it');
   check($('error').textContent === '', 'and it does not fail');
 
-  // Last, because it replaces the queue everything above was reading -- and into a playlist of
-  // his own, because pasting no longer writes into "From the phone" either.
+  // Last, because it replaces the queue everything above was reading -- and into one of the
+  // reader's own playlists, because pasting does not write into "From the phone".
   await window.__api.switchTo('p-paste');
   window.__api.showPanel('paste');
   $('urls').value = 'https://modland.com/pub/modules/AHX/M0d/sundown.ahx';
@@ -439,9 +438,9 @@ if (window.__api) {
   check(window.document.querySelectorAll('#queue li.track').length === 1, 'and loads what was in it');
   await new Promise((r) => setTimeout(r, 60));   // let that load finish before starting another
 
-  // **A download that will not finish, and the press that calls it off.** The owner's report: press
-  // play on something not cached, then ten seconds of a button that still says "play" and cannot be
-  // taken back.
+  // **A download that will not finish, and the press that calls it off.** Pressing play on
+  // something not cached must not mean ten seconds of a button that still says "play" and cannot
+  // be taken back.
   holdTrackFetch = true;
   window.__api.playAt(0);
   await new Promise((r) => setTimeout(r, 80));
@@ -454,8 +453,8 @@ if (window.__api) {
   check($('sub').textContent === 'stopped', 'and the dock says the load was stopped');
   holdTrackFetch = false;
 
-  // **The load is not over when the fetch is.** The owner met the gap: "opening…" on the dock and a
-  // play arrow on the button, which then did something other than what it showed.
+  // **The load is not over when the fetch is.** Otherwise the dock says "opening…" while the
+  // button shows a play arrow that does something other than what it shows.
   window.__api.playAt(0);
   await new Promise((r) => setTimeout(r, 80));
   // The engine says "ready" in the real page; the harness never runs one, so the wording is the
@@ -563,12 +562,11 @@ if (window.__api) {
   menus[0].click();
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
-  // Select stands first since 2026-09-11 -- the way into ticking rows, which he asked for; the three
-  // he asked for before are still exactly these, in this order, with Share with Protracktor (asked
-  // for the same day) beside the other link.
+  // Select stands first: it is the way into ticking rows, which a mouse has no long press to
+  // find. The rest are in a fixed order, with Share with Protracktor beside the other link.
   check(open.map((b) => b.textContent).join(',')
         === 'Select,Add to playlist,Save the file,Copy a link,Share with Protracktor,More from this author,Information',
-    'with the three the owner asked for, after Select and Add to playlist, and the two he asked for later');
+    'with every action the phone\'s row menu has, in the same order');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
   menus[1].click();
@@ -589,8 +587,8 @@ if (window.__api) {
 
   // --- the files that stayed on the phone (A28) ---------------------------------------------------
   //
-  // The defect this answers is not the missing music, it is the missing rows: an outside listener's
-  // list numbered itself differently from the owner's, and two people cannot talk about that.
+  // The defect this answers is not the missing music, it is the missing rows: two people whose
+  // lists number themselves differently cannot talk about them.
   console.log('\nfiles that stayed on the phone:');
   window.__api.receive({
     queue: [
@@ -759,8 +757,8 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
 // --- playlists that survive a reload (PLAN_WEB_LIBRARY S2) --------------------------------------
 //
 // Driven through the page's own store rather than through the DOM, because what S2 promises is not
-// a dialog -- it is that the queue comes back. A real IndexedDB is behind it (fake-indexeddb), so a
-// broken store fails here rather than on his machine.
+// a dialog -- it is that the queue comes back. A real IndexedDB is behind it (fake-indexeddb), so
+// a broken store fails here rather than in a browser.
 {
   console.log('\nplaylists:');
   const store = await import(path.resolve('web/src/store.js'));
@@ -819,8 +817,8 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
 
   // --- the zip, whose tail is what Firefox refused (C33) ----------------------------------------
   //
-  // Node's DecompressionStream ignores what follows a deflate stream and Firefox does not, so the
-  // owner's failure could not be reproduced by asking node -- which is exactly what had been done.
+  // Node's DecompressionStream ignores what follows a deflate stream and Firefox does not, so
+  // asking node cannot reproduce the failure a browser sees.
   // What *can* be checked anywhere is that the member's bounds are computed rather than guessed.
   {
     const zlib = await import('zlib');
@@ -906,12 +904,12 @@ if (fs.existsSync('web/vendor/engine.mjs')) {
     'with where they are filed and how much is there');
 }
 
-// --- Browse plays without touching the playlist (owner, 2026-09-11) ------------------------------
+// --- Browse plays without touching the playlist -------------------------------------------------
 //
-// **The phone's model, which the page did not have.** He searched "zool", pressed one tune, and his
-// playlist became every result on the screen. On the phone a result plays with the playlist left
-// alone, and only what he adds stays -- so that is what is checked: search answers with tunes, a
-// press plays one from a list that is not the playlist, and Add is the only way in.
+// **The phone's model.** Without it, searching and pressing one tune turns the playlist into every
+// result on the screen. On the phone a result plays with the playlist left alone, and only what is
+// added stays -- so that is what is checked: search answers with tunes, a press plays one from a
+// list that is not the playlist, and Add is the only way in.
 if (window.__api) {
   console.log('\nBrowse plays without touching the playlist:');
   const { catalogue: store, playlists: saved } = await import(path.resolve('web/src/store.js'));
@@ -955,7 +953,7 @@ if (window.__api) {
   check(rows().length === 2, 'which kept its results');
   const phoneBefore = window.__api.queueNow().join();
 
-  // A playlist of his own, with one tune in it.
+  // One of the reader's own playlists, with one tune in it.
   const mine = 'https://modland.com/pub/modules/Coop/Alice%20%26%20Bob/together.mod';
   await saved.save({ id: 'p-browse', name: 'Mine', tracks: [{ url: mine, name: 'together.mod' }], index: 0 });
   await window.__api.switchTo('p-browse');
@@ -1062,11 +1060,11 @@ if (window.__api) {
   await store.clear('modland:meta');
 }
 
-// --- only what this browser can play (GOAL.md round 8, item 1) -----------------------------------
+// --- only what this browser can play ------------------------------------------------------------
 //
 // The list is the phone's (`SupportedFormatsFileTest` holds them together); what these check is the
-// page's half: that it reads the real file, drops exactly what the engine says it lacks, counts what
-// it drops, and **says so** -- the owner's condition for leaving anything out at all.
+// page's half: that it reads the real file, drops exactly what the engine says it lacks, counts
+// what it drops, and **says so**, which is the condition on which anything is left out at all.
 {
   console.log('\nonly what this browser can play:');
   const archive = await import(path.resolve('web/src/catalogue.js'));
@@ -1132,7 +1130,7 @@ if (window.__api) {
   }
 }
 
-// --- every list behaves like the phone's (GOAL.md round 8, item 2) -------------------------------
+// --- every list behaves like the phone's ---------------------------------------------------------
 //
 // jsdom lays nothing out, so where a row ends up cannot be checked here; **whether the page asks to
 // scroll, and how**, can. Each call is recorded by a stand-in for `scrollIntoView`.
@@ -1195,7 +1193,7 @@ if (window.__api) {
   }
 }
 
-// --- Random, in the shape the phone has (GOAL.md round 8, item 3) --------------------------------
+// --- Random, in the shape the phone has ----------------------------------------------------------
 if (window.__api) {
   console.log('\nrandom:');
   const archive = await import(path.resolve('web/src/catalogue.js'));
@@ -1235,7 +1233,7 @@ if (window.__api) {
   check(window.__api.queueNow().length === 1 && window.__api.indexNow() === 0,
     'and entering plays one, with no second press');
   check($('shuffle').disabled, 'shuffle is shut while the dice runs');
-  // The phone hides the chip here; the owner asked for the page's to stay usable (2026-09-11).
+  // The phone hides the chip here; the page's stays usable, because it looks like a way out.
   check($('playlistname').textContent === 'Random' && !$('playlistchip').disabled,
     'the playlist chip says where the music is coming from, and stays usable');
 
@@ -1337,7 +1335,7 @@ if (window.__api) {
   await store.clear('modland:');
 }
 
-// --- History, the same stream kept (GOAL.md round 8, item 4) -------------------------------------
+// --- History, the same stream kept ---------------------------------------------------------------
 if (window.__api) {
   console.log('\nhistory:');
   const { catalogue: store, playlists, played } = await import(path.resolve('web/src/store.js'));
@@ -1416,12 +1414,12 @@ if (window.__api) {
   try { await window.__api.browseTo([]); } catch (error) { threw = error; }
   const labels = [...$('browselist').children].map((li) => li.textContent);
   check(!threw, `Browse on the phone's list with an index held does not throw${threw ? ` (${threw.message})` : ''}`);
-  // An index from before the filter: no counts, every row. The owner re-indexed without being asked
-  // because this panel -- all of Browse he gets while the phone's list shows -- never said so.
+  // An index from before the filter: no counts, every row. This panel is all of Browse there is
+  // while the phone's list shows, so if it does not say so, nothing does.
   await store.putAll([{ key: 'modland:meta', tracks: 516107, formats: 339, buckets: 43721, fingerprint: 'x' }]);
   await window.__api.browseTo([]);
   check($('browsenote').textContent.includes('Downloading it again (5.76 MB)'),
-    'and an index from before the filter is called out there too, where the owner would see it');
+    'and an index from before the filter is called out there too, where it will be seen');
   check(labels.some((t) => t.includes('Random')) && labels.some((t) => t.includes('History')),
     'and still offers Random and History, which write into no playlist');
   await window.__api.browseTo(['history']);
@@ -1431,7 +1429,7 @@ if (window.__api) {
   window.__api.showPanel(null);
 }
 
-// --- the buttons the page builds as it goes also carry icons (owner, 2026-09-11) -------------------
+// --- the buttons the page builds as it goes also carry icons -------------------------------------
 if (window.__api) {
   console.log('\nicons on what the page builds:');
   const settle = (ms = 80) => new Promise((r) => setTimeout(r, ms));
@@ -1450,7 +1448,7 @@ if (window.__api) {
   await store.clear('modland:');
 }
 
-// --- the playlist sheet, in the phone's shape (owner, 2026-09-11, from two screenshots) ------------
+// --- the playlist sheet, in the phone's shape ----------------------------------------------------
 if (window.__api) {
   console.log('\nthe playlist sheet:');
   const { playlists } = await import(path.resolve('web/src/store.js'));
@@ -1497,7 +1495,7 @@ if (window.__api) {
   window.__api.showPanel(null);
 }
 
-// --- editing a playlist of his own, as on the phone (owner, 2026-09-11) ---------------------------
+// --- editing one of the reader's own playlists, as on the phone ----------------------------------
 if (window.__api) {
   console.log('\nediting a playlist:');
   const { playlists } = await import(path.resolve('web/src/store.js'));
@@ -1598,7 +1596,7 @@ if (window.__api) {
   $('menu').hidden = true;
 }
 
-// --- ticking rows, as on the phone (owner, 2026-09-11) ---------------------------------------------
+// --- ticking rows, as on the phone ---------------------------------------------------------------
 if (window.__api) {
   console.log('\nticking rows:');
   const { playlists } = await import(path.resolve('web/src/store.js'));
@@ -1675,7 +1673,7 @@ if (window.__api) {
   $('menu').hidden = true;
 }
 
-// --- Share with Protracktor (owner, 2026-09-11) -------------------------------------------------
+// --- Share with Protracktor ----------------------------------------------------------------------
 //
 // One tune, from any list, as a link that opens this page playing it. **The phone makes the link
 // too**, so the page must open what `QueueLink.trackLink` packs -- checked by packing the same line
@@ -1724,7 +1722,7 @@ if (window.__api) {
     'a link sent here plays that one tune');
   check(session.stash.queue.map((t) => t.url).join() === kept && !api.dirtyNow(),
     'and leaves the playlist that was showing exactly as it was');
-  // Folded, as the owner asked: the dock and the heading say what it is.
+  // Folded: the dock and the heading say what it is.
   check($('nowplaying').hidden && $('pair').hidden && $('title').textContent === 'zoolook',
     'nothing is drawn over it: Now Playing stays folded and the dock names the tune');
   check($('count').textContent === '1 sent to you', 'the line under the name says the tune was sent, not that it came from history');
@@ -1737,8 +1735,8 @@ if (window.__api) {
   await settle();
   check($('playpause').title === 'Play' && $('sub').textContent === 'Tap anywhere to play',
     'opened with no click on the page, the dock asks for a tap, rather than showing pause for a silent tune');
-  // **Any touch starts it** (owner, 2026-09-11), not only Play: the first use of the page is the
-  // permission the browser was waiting for.
+  // **Any touch starts it**, not only Play: the first use of the page is the permission the
+  // browser was waiting for.
   window.__audioBlocked = false;
   const sent = window.__toWorklet.length;
   $('title').dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
@@ -1764,9 +1762,9 @@ if (window.__api) {
   check($('playpause').title === 'Pause' && window.__toWorklet.slice(before).map((m) => m.type).join() === 'play',
     'and Play pressed as that touch starts it, rather than starting and pausing it');
 
-  // **Chrome's order** (owner, 2026-09-11: "widzę fetching i koniec"): it runs no worklet while the
-  // context is suspended, so the tune is not opened until the touch -- the dock must ask for one
-  // while it is still loading, and the button must not offer to stop.
+  // **Chrome's order**: it runs no worklet while the context is suspended, so the tune is not
+  // opened until the touch -- the dock must ask for one while it is still loading, and the button
+  // must not offer to stop, or the page fetches and then sits silent with nothing to say.
   api.contextNow().state = 'suspended';
   window.__audioBlocked = true;
   await api.playAt(0);
@@ -1824,8 +1822,8 @@ if (window.__api) {
   api.endSession();
   await settle();
 
-  // A queue's link, into a tab showing the code: the code steps aside, as it does for pairing
-  // (owner, 2026-09-11: he opened a link and the QR stood in the middle of the screen).
+  // A queue's link, into a tab showing the code: the code steps aside, as it does for pairing,
+  // rather than standing in the middle of the screen over the tune that is arriving.
   api.showPanel('pair');
   window.location.hash = zlib.deflateSync(Buffer.from('Protracker/4-Mat/hi there.mod')).toString('base64url');
   await settle();
@@ -1836,7 +1834,7 @@ if (window.__api) {
   await api.switchTo('phone');
 }
 
-// --- ASMA in the browser (owner, 2026-09-11) ------------------------------------------------------
+// --- ASMA in the browser -------------------------------------------------------------------------
 //
 // **The list, not the archive.** ASMA publishes a 20 MB zip; the page reads its central directory
 // with two ranged requests and fetches each tune from its own address. Checked against a zip built
@@ -1951,7 +1949,7 @@ if (window.__api) {
   window.__api.showPanel(null);
 }
 
-// --- no pinch to zoom (owner, 2026-09-11) ---------------------------------------------------------
+// --- no pinch to zoom ----------------------------------------------------------------------------
 if (window.__api) {
   console.log('\nno pinch to zoom:');
   const viewport = window.document.querySelector('meta[name="viewport"]').content;
@@ -1969,9 +1967,9 @@ if (window.__api) {
     'Safari\'s pinch and a touchpad\'s are refused, and an ordinary scroll is not');
 }
 
-// --- the playlist sheet on a fresh browser, and on a phone's width (owner, 2026-09-11) ----------
+// --- the playlist sheet on a fresh browser, and on a phone's width -------------------------------
 if (window.__api) {
-  console.log('\nthe playlist sheet, as the owner saw it on his phone:');
+  console.log('\nthe playlist sheet, on a phone:');
   // Straight out of the database: `playlists.remove` refuses "From the phone" on purpose, and the
   // state wanted is a browser the phone has never sent anything to.
   await new Promise((resolve, reject) => {
@@ -2067,7 +2065,7 @@ if (window.__api) {
   check(api.dirtyNow(), 'as an edit waiting for Save, like every other');
   check(window.getComputedStyle($('nowcard')).height === height,
     'and the card is the same height with the button as without it');
-  // Saved, as he would: what follows switches playlists, and an edit waiting would stop to ask.
+  // Saved first: what follows switches playlists, and an edit waiting would stop to ask.
   await api.saveEdits();
   await settle();
 
@@ -2158,7 +2156,7 @@ if (window.__api) {
   api.useRandomSource(Math.random);
 }
 
-// --- the gear, left of shuffle (owner, 2026-09-14) ------------------------------------------------
+// --- the gear, left of shuffle -------------------------------------------------------------------
 if (window.__api) {
   console.log('\nthe page\'s settings:');
   const gear = $('tab-settings');
@@ -2176,10 +2174,10 @@ if (window.__api) {
   check($('settings').hidden, 'and Close shuts them');
 }
 
-// --- add to playlist, from one row (owner, 2026-09-14) ---------------------------------------------
+// --- add to playlist, from one row ---------------------------------------------------------------
 //
-// The phone's row menu opens the picker for that one track; the page could only add by ticking rows
-// first, which is the gesture for many spent on one.
+// The phone's row menu opens the picker for that one track. Adding by ticking rows first would be
+// the gesture for many rows spent on one.
 if (window.__api) {
   console.log('\nadd to playlist, from one row:');
   const api = window.__api;
@@ -2212,9 +2210,9 @@ if (window.__api) {
   await api.switchTo('phone');
 }
 
-// --- more from this author (owner, 2026-09-12) ----------------------------------------------------
+// --- more from this author -----------------------------------------------------------------------
 //
-// The phone offers it on every list; the page had it in Browse alone. From a row, and from the tune
+// Offered on every list, as on the phone, not in Browse alone. From a row, and from the tune
 // playing, it opens the folder the tune came from -- read off where the row says it lives, which a
 // pasted Modland address gives as well.
 if (window.__api) {
@@ -2257,8 +2255,8 @@ if (window.__api) {
 //
 // **The point is not that these pass.** It is that they are the same cases `RuleCasesTest.kt`
 // drives, so a rule changed on one side and not the other fails on the side that did not change.
-// C23, C30 and C31 were each one screen doing what the other did not, and all three were found by
-// the owner rather than here.
+// C23, C30 and C31 were each one screen doing what the other did not, and none of the three was
+// caught by a test.
 {
   console.log('\nshared rules:');
   const rules = await import(path.resolve('web/src/rules.js'));
@@ -2325,11 +2323,11 @@ if (window.__api) {
 
 // --- clearing one archive's rows ----------------------------------------------------------------
 //
-// **Re-indexing was ninety times slower than indexing**, and the owner found it from the outside:
-// two or three seconds the first time, twenty the second, apparently stuck on "sorting". The first
-// time there is nothing to clear. `catalogue.clear` walked a cursor deleting record by record --
-// 281 ms to write 20,000 rows and 26 seconds to delete them again -- and now issues one `delete`
-// over the key range instead.
+// **Re-indexing is ninety times slower than indexing** if `catalogue.clear` walks a cursor
+// deleting record by record: 281 ms to write 20,000 rows and 26 seconds to delete them again. From
+// the outside that is two or three seconds the first time and twenty the second, apparently stuck
+// on "sorting" -- the first time there is nothing to clear. One `delete` over the key range
+// instead.
 //
 // Speed is not what these check; a benchmark in a test suite measures the machine it runs on. They
 // check the thing that made the fast version worth trusting: **that the range still deletes exactly
@@ -2357,8 +2355,8 @@ if (window.__api?.catalogueStore) {
 // --- searching for two words -------------------------------------------------------------------
 //
 // The rule is checked from the shared file above; this checks that the **search actually uses it**,
-// through the real store and the real shard layout. The owner's case is the second row: a file
-// named `space_ninja.mod`, typed as `space ninja`.
+// through the real store and the real shard layout. The case that matters is the second row: a
+// file named `space_ninja.mod`, typed as `space ninja`.
 if (window.__api?.catalogueStore) {
   const store = window.__api.catalogueStore;
   const entries = [
