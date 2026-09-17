@@ -256,6 +256,37 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `an index already stored learns how big its archive is without being fetched again`() {
+        // Version 16, and the point of backfilling it by counting rather than by re-downloading:
+        // version 15 had just made "how many rows" and "how many play" different numbers, and an
+        // index stored the day before would otherwise have said its archive held nothing.
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 15))
+            connection.run(
+                listOf(
+                    "INSERT INTO catalogues (id, display_name, track_count) VALUES ('modland', 'Modland', 2)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'a', 'Protracker', '4-Mat', 'a.mod', 1, 1)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'b', 'Protracker', '4-Mat', 'b.mod', 1, 1)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'c', 'Pictures', 'me', 'c.jpg', 1, 0)",
+                )
+            )
+
+            connection.run(SchemaSql.migrationsBetween(15, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT track_count, archive_count FROM catalogues").use { rows ->
+                    rows.next()
+                    assertEquals("what this build opens is untouched", 2, rows.getInt(1))
+                    assertEquals("and what the archive holds is counted, not guessed", 3, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `the browse indexes cover only what is offered`() {
         // `docs/ROADMAP_FORMATS.md` step 0: the table holds the whole archive and every screen asks
         // for the playable part, so indexing the rest is 16 MB of b-tree nothing reads -- measured
