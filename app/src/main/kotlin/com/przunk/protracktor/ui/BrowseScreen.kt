@@ -80,6 +80,7 @@ import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.DownloadKeys
+import com.przunk.protracktor.player.DownloadSizes
 import com.przunk.protracktor.player.BrowseState
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SearchScope
@@ -107,6 +108,7 @@ fun BrowseScreen(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
+    onDownloadEverything: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -238,6 +240,7 @@ fun BrowseScreen(
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onDownloadTrackMetadata = onDownloadTrackMetadata,
+                onDownloadEverything = onDownloadEverything,
                 onDownloadFavourites = onDownloadFavourites,
                 onDownloadReplays = onDownloadReplays,
                 onOpenCatalogue = onOpenCatalogue,
@@ -659,6 +662,7 @@ private fun OnlineDomain(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
+    onDownloadEverything: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -720,6 +724,52 @@ private fun OnlineDomain(
         val listState = scroll.stateFor(key)
         RestorePosition(scroll, key, listState, browse.catalogues.map { it.id }, browse.loading)
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            // **The one press, at the top, while there is anything left to fetch.**
+            //
+            // The first testers did not know an index had to be downloaded at all
+            // (`docs/BACKLOG.md` A46): the rows below say "no index -- tap the arrow", which only
+            // reads as an instruction to somebody who already knows what an index is. This says
+            // what it will do and what it will cost, in one row, in the place they were already
+            // standing.
+            //
+            // It leaves once there is nothing left to download, because an offer that does nothing
+            // is worse than no offer.
+            if (browse.catalogues.any { it.requiresIndex } ||
+                browse.songLengthCount == 0 ||
+                browse.trackMetadataCount == 0
+            ) {
+                item(key = "download-everything") {
+                    ListItem(
+                        leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
+                        headlineContent = {
+                            Text(
+                                stringResource(
+                                    R.string.download_all,
+                                    "${DownloadSizes.EVERYTHING_MB} MB",
+                                )
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.download_all_body),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        trailingContent = {
+                            DownloadAction(
+                                downloading = browse.indexing.containsKey(DownloadKeys.EVERYTHING),
+                                description = stringResource(
+                                    R.string.download_all,
+                                    "${DownloadSizes.EVERYTHING_MB} MB",
+                                ),
+                                onClick = onDownloadEverything,
+                            )
+                        },
+                        modifier = Modifier.clickable(onClick = onDownloadEverything),
+                    )
+                    HorizontalDivider()
+                }
+            }
             items(browse.catalogues, key = { it.id }) { catalogue ->
                 ListItem(
                     headlineContent = { Text(catalogue.displayName) },

@@ -15,7 +15,7 @@
 
     <string name="playlist_default_name">Playlist</string>
     <string name="playlist_empty_title">Nothing here yet</string>
-    <string name="playlist_empty_body">Add a folder of modules and they will show up here.</string>
+    <string name="playlist_empty_body">Browse to download one of the online catalogues, or add a folder of modules from this phone.</string>
 
     <plurals name="track_count">
         <item quantity="one">%d track</item>
@@ -403,4 +403,9 @@
     <string name="notice_freed_megabytes">Freed %1$d MB.</string>
     <string name="notice_audio_busy">Something else is using the audio.</string>
     <string name="notice_audio_device_failed">Could not open the audio device</string>
+    <string name="download_all">Download everything (%1$s)</string>
+    <string name="download_all_body">The catalogues, the SID song lengths and the track metadata, in one go. They are stored on this phone, so browsing them afterwards needs no network.</string>
+    <string name="download_all_running">Downloading everything</string>
+    <string name="notice_all_downloaded">Everything downloaded. Browse is full.</string>
+    <string name="notice_all_downloaded_partly">%1$d downloaded, %2$d could not be fetched. Try those again from Browse.</string>
 </resources>

@@ -271,6 +271,9 @@ object DownloadKeys {
     const val TRACK_METADATA = "trackmetadata"
     const val FAVOURITES = "favourites"
     const val REPLAYS = "replays"
+
+    /** The one press that fetches the lot. Its own key, so the offer can show its own spinner. */
+    const val EVERYTHING = "everything"
 }
 
 data class BrowseState(
@@ -2124,6 +2127,14 @@ class PlaybackController private constructor(private val context: Context) {
      * row blanks the first one's label. Neither cancels anything, though from outside both look
      * like cancellation. One map, one entry per download, and a row that can ask about itself.
      */
+    /** What one step of [downloadEverything] did: whether it landed, and what it would have said. */
+    private data class Fetched(val ok: Boolean, val message: Message)
+
+    /** Puts a notice in front of the user. The single-item downloads all end this way. */
+    private fun say(message: Message) {
+        _state.update { it.copy(message = message) }
+    }
+
     private fun beginDownload(key: String, label: String): Boolean {
         if (_browse.value.indexing.containsKey(key)) return false
         _browse.update { it.copy(indexing = it.indexing + (key to label)) }
@@ -2144,22 +2155,32 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun indexCatalogue(id: String) {
         val catalogue = Catalogue.byId(id) ?: return
-        if (!beginDownload(catalogue.id, catalogue.displayName)) return
-        scope.launch {
+        scope.launch { fetchCatalogue(catalogue)?.let { say(it.message) } }
+    }
+
+    /**
+     * One catalogue, fetched and indexed, reporting what happened rather than announcing it.
+     *
+     * Split from [indexCatalogue] so that [downloadEverything] can run it as one step of several:
+     * a combined download must not raise six notices, and it has to know which steps landed.
+     * Returns null when this catalogue is already downloading, which is not a failure.
+     */
+    private suspend fun fetchCatalogue(catalogue: Catalogue): Fetched? {
+        if (!beginDownload(catalogue.id, catalogue.displayName)) return null
+        run {
             val bytes = remoteFiles.fetchIndex(catalogue.indexUrl)
             if (bytes == null) {
                 endDownload(catalogue.id)
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_index_download_failed, catalogue.displayName))) }
-                return@launch
+                return Fetched(false, Message(context.getString(R.string.notice_index_download_failed, catalogue.displayName)))
             }
             // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
             // discarded -- afterwards both browsing and playing work with no network at all.
             if (catalogue.isArchive && !remoteFiles.storeArchive(catalogue.id, bytes)) {
                 endDownload(catalogue.id)
-                _state.update {
-                    it.copy(message = Message(context.getString(R.string.notice_archive_store_failed, catalogue.displayName)))
-                }
-                return@launch
+                return Fetched(
+                    false,
+                    Message(context.getString(R.string.notice_archive_store_failed, catalogue.displayName)),
+                )
             }
 
             val entries = withContext(Dispatchers.Default) {
@@ -2175,7 +2196,14 @@ class PlaybackController private constructor(private val context: Context) {
             catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             endDownload(catalogue.id)
             _browse.update { it.copy(catalogues = catalogues.summaries()) }
-            _state.update { it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_indexed_tracks, entries.size, entries.size, catalogue.displayName))) }
+            return Fetched(
+                true,
+                Message(
+                    context.resources.getQuantityString(
+                        R.plurals.notice_indexed_tracks, entries.size, entries.size, catalogue.displayName,
+                    )
+                ),
+            )
         }
     }
 
@@ -2188,27 +2216,35 @@ class PlaybackController private constructor(private val context: Context) {
      * came from somewhere else, so it sits below the catalogues rather than among them.
      */
     fun downloadSongLengths() {
-        if (!beginDownload(DownloadKeys.SONG_LENGTHS, SONG_LENGTHS_LABEL)) return
-        scope.launch {
-            val bytes = remoteFiles.fetchIndex(SONG_LENGTHS_URL)
-            if (bytes == null) {
-                endDownload(DownloadKeys.SONG_LENGTHS)
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_song_lengths_failed))) }
-                return@launch
-            }
-            val entries = withContext(Dispatchers.Default) {
-                SongLengths.parse(bytes.toString(Charsets.ISO_8859_1))
-            }
-            if (entries.isEmpty()) {
-                endDownload(DownloadKeys.SONG_LENGTHS)
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_song_lengths_empty))) }
-                return@launch
-            }
-            songLengths.replaceAll(entries)
+        scope.launch { fetchSongLengths()?.let { say(it.message) } }
+    }
+
+    /** HVSC's lengths, as one step. See [fetchCatalogue] for why the steps are shaped like this. */
+    private suspend fun fetchSongLengths(): Fetched? {
+        if (!beginDownload(DownloadKeys.SONG_LENGTHS, SONG_LENGTHS_LABEL)) return null
+        val bytes = remoteFiles.fetchIndex(SONG_LENGTHS_URL)
+        if (bytes == null) {
             endDownload(DownloadKeys.SONG_LENGTHS)
-            _browse.update { it.copy(songLengthCount = entries.size) }
-            _state.update { it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_song_lengths_done, entries.size, entries.size))) }
+            return Fetched(false, Message(context.getString(R.string.notice_song_lengths_failed)))
         }
+        val entries = withContext(Dispatchers.Default) {
+            SongLengths.parse(bytes.toString(Charsets.ISO_8859_1))
+        }
+        if (entries.isEmpty()) {
+            endDownload(DownloadKeys.SONG_LENGTHS)
+            return Fetched(false, Message(context.getString(R.string.notice_song_lengths_empty)))
+        }
+        songLengths.replaceAll(entries)
+        endDownload(DownloadKeys.SONG_LENGTHS)
+        _browse.update { it.copy(songLengthCount = entries.size) }
+        return Fetched(
+            true,
+            Message(
+                context.resources.getQuantityString(
+                    R.plurals.notice_song_lengths_done, entries.size, entries.size,
+                )
+            ),
+        )
     }
 
     /**
@@ -2224,13 +2260,17 @@ class PlaybackController private constructor(private val context: Context) {
      * to put one -- 40,161 ProTracker, 11,733 Fasttracker 2 (`docs/reference/songdb.md`).
      */
     fun downloadTrackMetadata() {
-        if (!beginDownload(DownloadKeys.TRACK_METADATA, TRACK_METADATA_LABEL)) return
-        scope.launch {
+        scope.launch { fetchTrackMetadata()?.let { say(it.message) } }
+    }
+
+    /** The songdb table, as one step. See [fetchCatalogue]. */
+    private suspend fun fetchTrackMetadata(): Fetched? {
+        if (!beginDownload(DownloadKeys.TRACK_METADATA, TRACK_METADATA_LABEL)) return null
+        run {
             val bytes = remoteFiles.fetchIndex(TRACK_METADATA_URL)
             if (bytes == null) {
                 endDownload(DownloadKeys.TRACK_METADATA)
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_failed))) }
-                return@launch
+                return Fetched(false, Message(context.getString(R.string.notice_track_metadata_failed)))
             }
             // Parsed straight into the table rather than into a list first. Fifteen megabytes of
             // this becomes 1.9 million strings, and holding them alongside the download peaks near
@@ -2238,12 +2278,18 @@ class PlaybackController private constructor(private val context: Context) {
             val written = trackMetadata.replaceAllFrom(bytes)
             if (written == 0) {
                 endDownload(DownloadKeys.TRACK_METADATA)
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_empty))) }
-                return@launch
+                return Fetched(false, Message(context.getString(R.string.notice_track_metadata_empty)))
             }
             endDownload(DownloadKeys.TRACK_METADATA)
             _browse.update { it.copy(trackMetadataCount = written) }
-            _state.update { it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_track_metadata_done, written, written))) }
+            return Fetched(
+                true,
+                Message(
+                    context.resources.getQuantityString(
+                        R.plurals.notice_track_metadata_done, written, written,
+                    )
+                ),
+            )
         }
     }
 
@@ -2320,39 +2366,94 @@ class PlaybackController private constructor(private val context: Context) {
      * what the file contained.
      */
     fun downloadFavourites() {
-        if (!beginDownload(DownloadKeys.FAVOURITES, FAVOURITES_LABEL)) return
-        scope.launch {
-            val bytes = remoteFiles.fetchIndex(FAVOURITES_URL)
-            if (bytes == null) {
-                endDownload(DownloadKeys.FAVOURITES)
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_favourites_failed))) }
-                return@launch
-            }
-            val written = favourites.replaceAllFrom(bytes)
-            if (written == 0) {
-                endDownload(DownloadKeys.FAVOURITES)
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_favourites_empty))) }
-                return@launch
-            }
-            val playable = favourites.playableCount()
+        scope.launch { fetchFavourites()?.let { say(it.message) } }
+    }
+
+    /** Modland's favourites, as one step. See [fetchCatalogue]. */
+    private suspend fun fetchFavourites(): Fetched? {
+        if (!beginDownload(DownloadKeys.FAVOURITES, FAVOURITES_LABEL)) return null
+        val bytes = remoteFiles.fetchIndex(FAVOURITES_URL)
+        if (bytes == null) {
             endDownload(DownloadKeys.FAVOURITES)
-            _browse.update {
-                it.copy(favouriteCount = playable, favouritesListed = written)
+            return Fetched(false, Message(context.getString(R.string.notice_favourites_failed)))
+        }
+        val written = favourites.replaceAllFrom(bytes)
+        if (written == 0) {
+            endDownload(DownloadKeys.FAVOURITES)
+            return Fetched(false, Message(context.getString(R.string.notice_favourites_empty)))
+        }
+        val playable = favourites.playableCount()
+        endDownload(DownloadKeys.FAVOURITES)
+        _browse.update {
+            it.copy(favouriteCount = playable, favouritesListed = written)
+        }
+        return Fetched(
+            true,
+            Message(
+                if (playable > 0) {
+                    context.getString(R.string.notice_favourites_playable, playable, written)
+                } else {
+                    // The list arrived and reaches nothing. Said plainly, because the alternative
+                    // is a Favourites chip that stays disabled after a download that reported
+                    // success.
+                    context.getString(R.string.notice_favourites_need_index, written)
+                }
+            ),
+        )
+    }
+
+    /**
+     * Everything an empty install needs, in one press.
+     *
+     * **Why a button and not a background job at first launch.** It is 46 MB (measured 2026-09-17:
+     * Modland 5.5, ASMA 19.2, UnExoticA 1.7, HVSC 5.0, songdb 14.1, favourites 0.1), and an app
+     * that spends that on somebody's mobile data four seconds after it is installed has taken a
+     * decision that was not its to take. Pressed, with the size on the button, it is the user's
+     * decision and `Data safety`'s "fetched on demand" stays true.
+     *
+     * **Sequential, and the order is the point.** Modland is the smallest useful thing here and the
+     * largest catalogue, so somebody who gives up after twenty seconds already has half a million
+     * tracks to browse; the 14 MB metadata table, which only improves what is written under a
+     * title, goes last. In parallel they would fight for the same connection and write to the same
+     * database, and nothing would finish sooner.
+     *
+     * **Each step keeps its own row spinner** (its own [DownloadKeys] entry), so the screen shows
+     * what is happening rather than one opaque bar. A step already running is skipped rather than
+     * started twice, which is what makes pressing this while one catalogue downloads harmless.
+     *
+     * **Partial success is reported as partial.** Six downloads from five hosts will not all land
+     * every time, and "done" over a failed ASMA would be a lie the user finds out about later.
+     */
+    fun downloadEverything() {
+        if (!beginDownload(DownloadKeys.EVERYTHING, context.getString(R.string.download_all_running))) return
+        scope.launch {
+            var landed = 0
+            var failed = 0
+            fun account(step: Fetched?) {
+                if (step == null) return
+                if (step.ok) landed++ else failed++
             }
-            _state.update {
-                it.copy(
-                    message = Message(
-                        if (playable > 0) {
-                            context.getString(R.string.notice_favourites_playable, playable, written)
-                        } else {
-                            // The list arrived and reaches nothing. Said plainly, because the
-                            // alternative is a Favourites chip that stays disabled after a
-                            // download that reported success.
-                            context.getString(R.string.notice_favourites_need_index, written)
-                        }
-                    )
+            // Only the catalogues that have an index to download. The Mod Archive is searched live
+            // and has nothing to fetch, so offering to fetch it would be a promise of a row that
+            // never appears.
+            for (catalogue in Catalogue.all.filter { !it.isOnlineOnly }) {
+                account(fetchCatalogue(catalogue))
+            }
+            account(fetchSongLengths())
+            account(fetchFavourites())
+            account(fetchTrackMetadata())
+            endDownload(DownloadKeys.EVERYTHING)
+            refreshCatalogues()
+            refreshPlatformCounts()
+            say(
+                Message(
+                    if (failed == 0) {
+                        context.getString(R.string.notice_all_downloaded)
+                    } else {
+                        context.getString(R.string.notice_all_downloaded_partly, landed, failed)
+                    }
                 )
-            }
+            )
         }
     }
 

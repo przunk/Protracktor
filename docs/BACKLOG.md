@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A46. Nobody knew they had to index anything — **owner's question, 2026-09-17**
+## A46. Nobody knew they had to index anything — **one-press download BUILT 2026-09-17, branch**
 
 *Owner, 2026-09-17, from the first testing round: "użytkownicy nie wiedzieli że trzeba coś ręcznie
 indeksować — może warto na początku pobierać indeksy wszystkie w tle po pierwszym uruchomieniu?"*
@@ -38,7 +38,22 @@ for three reasons that are measurements rather than opinions:
 - **`Data safety` says we fetch on demand.** Fetching four archives at startup is not that, and the
   declaration is a promise.
 
-**What to do instead, in order of what it costs:**
+**The owner's answer, 2026-09-17: one button, and it fetches the lot.** That is sound, and it
+answers both objections above, because the objection was never to the downloading — it was to
+*nobody having asked*. A press is the asking. What it needs is the size on the face of it:
+`downloadEverything` runs the steps in sequence with the total (46 MB) on the button, each step
+keeping its own row spinner, and partial failure reported as partial.
+
+**The measured total, `curl -I` on 2026-09-17:** Modland 5.49 MB, ASMA 19.18 MB, UnExoticA 1.68 MB,
+HVSC 4.96 MB, songdb metadata 14.11 MB, Modland favourites 0.14 MB — **45.56 MB**. `DownloadSizes`
+rounds each part up and `DownloadSizesTest` keeps the advertised total equal to the sum, so editing
+one line cannot make the button lie.
+
+**What the button deliberately does not fetch** is sc68's replay routines. They are not an index and
+not metadata; they are binaries for one niche format, and they are the one download with a licence
+question attached (`docs/LICENSES.md`). They stay their own row.
+
+**Still open, cheapest first:**
 
 1. **Offer it, don't hide it.** A first-run card on the playlist screen — "Get some music" — with
    one primary action that indexes **Modland alone** and says its size. One tap, one download, and
@@ -48,8 +63,11 @@ for three reasons that are measurements rather than opinions:
 3. **Make the arrow look like a control.** `DownloadAction` is a bare arrow beside a red line of
    text; the red reads as an error, not as an invitation. A labelled button that says *Pobierz
    indeks (5,8 MB)* answers both the "what do I do" and the "what will it cost".
-4. **Only then consider doing it automatically**, and if so: Modland only, on unmetered networks
-   only, after the user has been shown what it is, and cancellable from the row it is filling.
+4. **Cancelling it.** Six downloads in sequence is a minute or two, and there is no way to stop
+   them but to leave the screen — which does not stop them either.
+5. **A word about metered networks.** The size is on the button, which is most of the answer; saying
+   "you are on mobile data" would be the rest of it.
+6. **Doing it automatically** is still not the plan, and the reasons above are unchanged.
 
 **Measure before and after.** The question this answers is "did they get to music", and the release
 that answers it is the one where nobody has to be told what an index is.

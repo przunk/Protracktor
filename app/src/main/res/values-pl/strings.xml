@@ -15,7 +15,7 @@
 
     <string name="playlist_default_name">Playlista</string>
     <string name="playlist_empty_title">Jeszcze tu pusto</string>
-    <string name="playlist_empty_body">Dodaj katalog z modułami, a pojawią się tutaj.</string>
+    <string name="playlist_empty_body">Wejdź w Przeglądaj, aby pobrać jeden z katalogów online, albo dodaj folder z modułami z tego telefonu.</string>
 
     <plurals name="track_count">
         <item quantity="one">%d utwór</item>
@@ -432,4 +432,9 @@
     <string name="notice_freed_megabytes">Zwolniono %1$d MB.</string>
     <string name="notice_audio_busy">Dźwięku używa coś innego.</string>
     <string name="notice_audio_device_failed">Nie udało się otworzyć urządzenia dźwiękowego</string>
+    <string name="download_all">Pobierz wszystko (%1$s)</string>
+    <string name="download_all_body">Katalogi, długości utworów SID i metadane — za jednym razem. Zostaną zapisane na telefonie, więc późniejsze przeglądanie nie wymaga sieci.</string>
+    <string name="download_all_running">Pobieranie wszystkiego</string>
+    <string name="notice_all_downloaded">Pobrano wszystko. Przeglądaj do woli.</string>
+    <string name="notice_all_downloaded_partly">Pobrano %1$d, %2$d się nie udało. Spróbuj ponownie w Przeglądaj.</string>
 </resources>
