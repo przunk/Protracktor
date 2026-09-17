@@ -24,8 +24,12 @@
          is next needed when a track that is not cached is played. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Uninstalling means gone: `allowBackup="false"` turns off Auto Backup, and
+         `dataExtractionRules` turns off device-to-device transfer, which that flag does not
+         cover from Android 12 onwards. The file itself says why. -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"

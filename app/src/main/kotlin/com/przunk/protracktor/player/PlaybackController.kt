@@ -406,7 +406,25 @@ data class BrowseState(
 
     /** Whatever the current level lists, in the form the playlist takes. */
     val tracks: List<TrackRef> = emptyList(),
-)
+) {
+
+    /**
+     * Whether Browse leads anywhere yet: rows to walk, or a folder that was granted.
+     *
+     * **`CatalogueSummary.indexed` is the wrong question**, and answering it here was a defect: it
+     * is `trackCount > 0 || isOnlineOnly`, and The Mod Archive is online-only, so `indexed` is true
+     * for it on a phone that holds nothing at all. `any { it.indexed }` therefore said yes to every
+     * install ever made, including the empty one this exists to detect.
+     *
+     * Rows, then — or a granted folder, so that somebody who only plays their own files is not
+     * pushed towards a 49 MB download they do not want.
+     *
+     * The Mod Archive's live search is still reachable from Browse in the top bar; what this
+     * decides is only what the *empty playlist* offers as the way on.
+     */
+    val hasSomethingToBrowse: Boolean
+        get() = catalogues.any { it.trackCount > 0 } || folders.isNotEmpty()
+}
 
 class PlaybackController private constructor(private val context: Context) {
 

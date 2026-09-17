@@ -501,7 +501,7 @@ fun ProtracktorApp(
                 onPickDownloads = { choosingDownloads = true },
                 // Nothing indexed and no folder granted means Browse opens on a list of
                 // archives that all say "no index" -- a way in that leads nowhere.
-                canBrowse = browse.catalogues.any { it.indexed } || browse.folders.isNotEmpty(),
+                canBrowse = browse.hasSomethingToBrowse,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,
             )
