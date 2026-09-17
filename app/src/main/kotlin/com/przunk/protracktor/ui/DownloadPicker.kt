@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +58,15 @@ internal fun DownloadPicker(
     onDismiss: () -> Unit,
 ) {
     val running = browse.indexing.containsKey(DownloadKeys.EVERYTHING)
+
+    // **The sheet closes itself when the run ends.** Left open it re-reads what this phone now
+    // holds, finds everything held, unticks every box and offers "Download 0 MB" -- an active
+    // button for nothing, over a job that is finished. The snackbar underneath says how it went.
+    var wasRunning by remember { mutableStateOf(false) }
+    LaunchedEffect(running) {
+        if (wasRunning && !running) onDismiss()
+        wasRunning = running
+    }
 
     // Ticked to begin with: whatever this phone does not already hold. The commonest press is the
     // first one, on an install that holds nothing, and it should not start with a tour of the
@@ -108,18 +118,23 @@ internal fun DownloadPicker(
             )
         }
 
+        // **One width for both**, and a wide one. Download and Stop are the same control in two
+        // states, and a button that changes size when it changes meaning moves under the thumb
+        // that is about to press it. Half the sheet, centred, with room below it: this is the last
+        // thing on the screen and the only thing to press.
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 28.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
         ) {
             if (running) {
                 LabelledAction(
                     icon = PlayerIcons.Stop,
                     label = stringResource(R.string.action_stop_downloads),
                     onClick = onStop,
+                    modifier = Modifier.fillMaxWidth(BUTTON_SHARE),
                 )
             } else {
                 LabelledAction(
@@ -129,11 +144,18 @@ internal fun DownloadPicker(
                         DownloadPlan.megabytesFor(selected),
                     ),
                     onClick = { onDownload(selected) },
+                    // Nothing ticked is nothing to fetch. Drawn dead rather than hidden, so the
+                    // sheet does not change shape as the boxes are ticked.
+                    enabled = selected.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(BUTTON_SHARE),
                 )
             }
         }
     }
 }
+
+/** How much of the sheet's width the one button takes. */
+private const val BUTTON_SHARE = 0.55f
 
 /** Whether this phone already holds what [id] would fetch. */
 private fun isHeld(id: String, browse: BrowseState): Boolean = when (id) {

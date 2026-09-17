@@ -15,6 +15,33 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
+
+*Owner, 2026-09-17: opening `Zalza/akes lekhorna.mod` shows the title as* **"�kes lekh�rna (za)"**,
+*with the diamond question marks.*
+
+**The tune is Swedish and the title is almost certainly "Åkes lekhörna".** Two bytes, `0xC5` and
+`0xF6`, are Å and ö in ISO-8859-1 — the encoding an Amiga tracker wrote in 1993 — and neither is
+valid UTF-8. Whatever decodes them replaces each with U+FFFD, which is the diamond.
+
+**Where it goes wrong.** `native/engine/player_oboe.cpp` hands every string over with
+`env->NewStringUTF`, which is documented to take *modified UTF-8*. A module's title is not UTF-8
+and nobody said it was: it is raw bytes from a fixed-size field in the file. The engine already
+scrubs control characters out of a title (`engine.cpp`, `title()`); it does not transcode.
+
+**What it affects.** Titles, author names, and instrument and sample names (A34) — everywhere the
+demoscene wrote in Swedish, German, Finnish or Polish, which is a great deal of Modland. The web
+player reads the same strings through `UTF8ToString` and will show the same diamonds.
+
+**The fix is transcoding, not guessing wildly.** Decode as ISO-8859-1 by default, which is right
+for Amiga trackers, and take valid UTF-8 as UTF-8 where it is unambiguous — a byte sequence that
+parses as UTF-8 almost never does so by accident. CP437 is the third candidate, for DOS trackers,
+and telling it apart from Latin-1 is a guess; do not pretend otherwise. One function in the engine,
+applied where the strings leave it, so both players get the same answer.
+
+**Check the cache key before changing anything.** Titles reach `TrackRef`, the database and the
+handoff to the browser; a title that changes shape must not change what a row is keyed on.
+
 ## A46. Nobody knew they had to index anything — **one-press download BUILT 2026-09-17, branch**
 
 *Owner, 2026-09-17, from the first testing round: "użytkownicy nie wiedzieli że trzeba coś ręcznie

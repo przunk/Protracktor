@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -107,6 +109,13 @@ internal fun LabelledAction(
      * for one press reads as a stutter, not as emphasis.
      */
     haptic: (Haptics.() -> Unit)? = { press() },
+    /**
+     * Whether it can be pressed.
+     *
+     * Drawn dead rather than hidden, for the transport's reason (`PlayerDock`): a row that loses a
+     * button when the state changes is a row whose other buttons move under the thumb.
+     */
+    enabled: Boolean = true,
     /** The top bar's row: shorter, with a smaller icon. Elsewhere the full-sized pill. */
     slim: Boolean = false,
 
@@ -129,8 +138,19 @@ internal fun LabelledAction(
     // ripple is a rectangle behind a rounded button.
     Surface(
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        color = if (enabled) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            // Mixed with the surface rather than made translucent, the same way the seek bar dims
+            // its knob: a see-through container takes the colour of whatever is behind it.
+            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.38f)
+                .compositeOver(MaterialTheme.colorScheme.surface)
+        },
+        contentColor = if (enabled) {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        },
         modifier = modifier
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = ACTION_SEAM)
@@ -143,6 +163,7 @@ internal fun LabelledAction(
             .height(if (slim) ACTION_PILL_HEIGHT_SLIM else ACTION_PILL_HEIGHT)
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(
+                enabled = enabled,
                 role = Role.Button,
                 onClickLabel = label,
                 onLongClickLabel = longClickLabel,
@@ -162,13 +183,13 @@ internal fun LabelledAction(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                tint = LocalContentColor.current,
                 modifier = if (slim) Modifier.size(SLIM_ICON) else Modifier,
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = LocalContentColor.current,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 modifier = Modifier.padding(top = 2.dp),
