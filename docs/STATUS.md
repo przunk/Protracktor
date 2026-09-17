@@ -461,6 +461,25 @@ It also needed the controller to read the catalogue summaries and the granted fo
 start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
 were loaded only when Browse opened.
 
+### C65. ~~The button was four pixels too short for its own label~~ — FIXED 2026-09-17
+
+*Owner, 2026-09-17, on a build that was supposed to have fixed C62: "settings obcina na dole
+literkę 'g'. podobnie z browse na polskim języku."*
+
+C62 scaled the pill's height with the system text size and left the **base** at 46dp. Its contents
+are 12dp of padding, a 20dp icon, 2dp under it and one line of `labelSmall`, whose line box is
+16sp: **50dp**. Four short, at the *default* text size, on an ordinary phone — which is why fixing
+the scaling did not fix what he was looking at. A descender is the first thing to go, so it read as
+"Settings" with the tail cut off its g.
+
+56dp now for a slim pill and 76dp for a full one, both still scaled, and the slim cap raised to the
+64dp the bar itself is.
+
+**The arithmetic is a test now, not a comment.** `ActionPillFitsTest` adds up what Compose stacks
+inside the pill at seven text sizes and fails if the box is smaller than its contents, or if a slim
+pill grows past the bar that would then clip it. It fails against 46dp. Twice wrong by eye is
+enough.
+
 ### C62. ~~Buttons cut their labels in half at a larger text size~~ — FIXED 2026-09-17
 
 Found by the first closed-testing round, on somebody else's phone: **Przeglądaj**, **Ustawienia**
