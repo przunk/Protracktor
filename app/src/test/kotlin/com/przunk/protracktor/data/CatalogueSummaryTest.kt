@@ -17,6 +17,41 @@ import org.junit.Test
  */
 class CatalogueSummaryTest {
 
+    /**
+     * A catalogue whose rows are all unplayable here is still downloaded.
+     *
+     * The two branches that met in round 12 were each right on their own: the index keeps every row
+     * the archive lists, and `indexed` meant "are any of them playable". Together they report a
+     * fully downloaded catalogue as one that still needs downloading, on a build that happens to
+     * play none of it — and offer a download that would change nothing.
+     */
+    @Test
+    fun `an index this build cannot play is still an index`() {
+        val held = CatalogueSummary(
+            id = "somewhere",
+            displayName = "Somewhere",
+            trackCount = 0,
+            indexedAt = 1L,
+            archiveCount = 4_356,
+            complete = true,
+        )
+        assertTrue(held.indexed)
+        assertFalse("it must not be offered for download again", held.requiresIndex)
+    }
+
+    @Test
+    fun `and one that was never fetched still needs fetching`() {
+        val absent = CatalogueSummary(
+            id = "somewhere",
+            displayName = "Somewhere",
+            trackCount = 0,
+            indexedAt = null,
+        )
+        assertFalse(absent.indexed)
+        assertTrue(absent.requiresIndex)
+    }
+
+
     private val current = "openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1"
     private val older = "openmpt:0.8.9;sc68:2.2.1;asap:8.0.0;gme:0.6.5"
 

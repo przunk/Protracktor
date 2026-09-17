@@ -52,7 +52,16 @@ data class CatalogueSummary(
     val complete: Boolean = false,
     val archiveCount: Int = 0,
 ) {
-    val indexed: Boolean get() = trackCount > 0 || isOnlineOnly
+    /**
+     * Whether this phone holds this catalogue's index at all.
+     *
+     * **Rows of any kind, not playable rows.** Since the index keeps everything the archive lists
+     * (`docs/ROADMAP_FORMATS.md` step 0), [trackCount] is how much of it *this build opens* and
+     * [archiveCount] is how much there is. Asking only the first would report a fully downloaded
+     * catalogue as missing whenever this build happens to play none of it -- and then offer to
+     * download it again, which would change nothing.
+     */
+    val indexed: Boolean get() = trackCount > 0 || archiveCount > 0 || isOnlineOnly
     /** A downloaded catalogue with no index cannot be browsed until the user fetches it again. */
     val requiresIndex: Boolean get() = !isOnlineOnly && !indexed
 
