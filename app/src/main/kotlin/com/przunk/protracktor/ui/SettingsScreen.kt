@@ -173,9 +173,9 @@ fun SettingsScreen(
             )
         }
 
-        // Two settings, one shape. Both are "pick one of a handful", both show every option and
-        // the current answer at once, and both used to be a dialog -- which cost a tap to find out
-        // what the options were and then hid the answer again behind a summary line.
+        // Two settings, one shape. Both are "pick one of a handful", and both show every option
+        // and the current answer at once rather than behind a dialog, which would cost a tap to
+        // find out what the options are and then hide the answer again behind a summary line.
         item {
             SettingChoice(
                 label = stringResource(R.string.settings_language),
@@ -220,10 +220,9 @@ fun SettingsScreen(
             }
         }
 
-        // **Its own group, below the palette**, on the owner's instruction (2026-09-09). It had
-        // been sitting under Playback between the language picker and the appearance heading,
-        // which is where it least belongs: it is not a preference about how music sounds, it is
-        // the address of a second copy of the app.
+        // **Its own group, below the palette.** Under Playback it would sit between the language
+        // picker and the appearance heading, which is where it least belongs: it is not a
+        // preference about how music sounds, it is the address of a second copy of the app.
         item { HorizontalDivider(); Section(R.string.settings_web_player_section) }
 
         // Text rather than a choice, because the answer is an address and there is no list of them.
@@ -243,11 +242,10 @@ fun SettingsScreen(
                         )
                         OutlinedTextField(
                             value = editing,
-                            // **Committed on every keystroke**, and the first version was not: it
-                            // saved only on the keyboard's Done, so typing an address and tapping
-                            // away lost it silently — which is exactly what the owner met. A
-                            // half-typed address costs nothing, because it is read when something
-                            // is sent and not before.
+                            // **Committed on every keystroke.** Saving only on the keyboard's
+                            // Done loses an address silently when it is typed and tapped away
+                            // from. A half-typed address costs nothing, because it is read when
+                            // something is sent and not before.
                             onValueChange = { editing = it; onWebPlayerChanged(it) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

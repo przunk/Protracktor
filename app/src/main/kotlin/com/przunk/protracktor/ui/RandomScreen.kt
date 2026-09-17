@@ -32,15 +32,14 @@ import com.przunk.protracktor.player.TrackRef
 /**
  * What the dice has given this session.
  *
- * **This screen replaced a blank** (`docs/PLAN_RANDOM.md`). Random used to draw `AwayScrim` — a
- * sheet of glass over the playlist with the words "Playing at random" on it and nothing else. Its
- * own comment admitted what it was: *"a mode you can enter but cannot obviously leave is a trap."*
- * A defence, not a design. The playlist was hidden because it would have lied, and nothing was put
- * in its place.
+ * **A screen rather than a scrim** (`docs/PLAN_RANDOM.md`). A sheet of glass over the playlist
+ * saying "Playing at random" is a defence, not a design: the playlist is hidden because it would
+ * lie about what is playing, and nothing stands in its place. A mode you can enter but cannot
+ * obviously leave is a trap.
  *
- * The words are the same words. They now stand over the record instead of over nothing, and the
- * three things that were missing are here: what has played, a way back to any of it, and the scope
- * as a control rather than as a long press nothing advertises.
+ * The same words stand over the record instead of over nothing, and the three things a scrim
+ * cannot offer are here: what has played, a way back to any of it, and the scope as a control
+ * rather than as a long press nothing advertises.
  *
  * **A record, not a queue.** `READ_AHEAD` picks stand past the cursor at all times so a tune can be
  * fetched before it is wanted; they are not shown, because showing them would turn this into a
@@ -120,9 +119,9 @@ fun RandomScreen(
 /**
  * The heading, and the scope as something you can see and press.
  *
- * **The scope used to be a long press on the Random row in Browse.** Nothing on screen said so;
- * `a11y_choose_random_scope` exists, so a screen reader announced it and an eye did not. A button
- * with a word on it is the whole of the fix.
+ * **The scope is a button, not a long press on the Random row in Browse.** Nothing on screen
+ * announces a long press; `a11y_choose_random_scope` exists, so a screen reader would say it and
+ * an eye would not.
  */
 @Composable
 private fun RandomHeader(
@@ -164,8 +163,8 @@ private fun RandomHeader(
             icon = PlayerIcons.Filter,
             label = stringResource(R.string.random_filter),
             onClick = onFilter,
-            // The header's own size, not the full pill: a 72dp button made this row half again as
-            // tall as the digression's, and the two sit one tap apart (owner, 2026-09-14).
+            // The header's own size, not the full pill: a 72dp button makes this row half again
+            // as tall as the digression's, and the two sit one tap apart.
             slim = true,
         )
     }
@@ -174,8 +173,8 @@ private fun RandomHeader(
 /**
  * How tall the heading over a session stands — the dice's, and a digression's.
  *
- * **One number for both**, because they are the same thing said about different places and the owner
- * switches between them: sized differently, the icon moved down the screen as he did.
+ * **One number for both**, because they are the same thing said about different places and the
+ * user switches between them: sized differently, the icon moves down the screen on the way.
  */
 internal val SESSION_HEADER_HEIGHT = 72.dp
 
@@ -185,7 +184,7 @@ internal val SESSION_HEADER_HEIGHT = 72.dp
  *
  * Named because the app bar above has to agree with it: `TOP_BAR_ACTION_EDGE` is derived from this
  * rather than written down beside it, so moving the heading moves the bar's action with it instead
- * of quietly leaving the two a few pixels apart (owner, 2026-09-16).
+ * of quietly leaving the two a few pixels apart.
  */
 internal val SESSION_HEADER_EDGE = 16.dp
 

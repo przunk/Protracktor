@@ -16,17 +16,14 @@ import androidx.compose.ui.platform.LocalView
 /**
  * The buzzes this app is allowed to make.
  *
- * **The rule used to be "nothing with a visible result gets one", and the owner has changed it**
- * (2026-09-10). He asked for haptics on the transport, on moving between views and folders, and on
- * holding the seek bar — all of which the screen answers perfectly well on its own. That is his
- * call to make: he is the one holding the phone, and the old rule was written from the armchair.
- *
- * What survives of it is the reason behind it. Haptics on every tap is noise, and noise is what
- * makes people turn the setting off system-wide — at which point the app loses the few that would
- * have been useful. So the answer is not "no", it is **weight**: the things that carry information
- * a finger cannot otherwise get keep the firm effects, and the things he asked for as an *accent*
- * get the lightest ones the platform has. A confirmation you can feel and a tick you can barely
- * feel are both haptics; only one of them becomes noise at fifty a minute.
+ * **The rule is weight, not abstinence.** The transport, moving between views and folders, and
+ * holding the seek bar all buzz, even though the screen answers each of them perfectly well on its
+ * own. What keeps that from becoming noise — and noise is what makes people turn the setting off
+ * system-wide, at which point the app loses the few that would have been useful — is that the
+ * things carrying information a finger cannot otherwise get keep the firm effects, and the things
+ * that are only an *accent* get the lightest ones the platform has. A confirmation you can feel
+ * and a tick you can barely feel are both haptics; only one of them becomes noise at fifty a
+ * minute.
  *
  * Compose's own `LocalHapticFeedback` offers only `LongPress` and `TextHandleMove`, which is too
  * thin for this. The useful constants live on the View and are gated by API level, so each call
@@ -109,9 +106,9 @@ class Haptics(private val view: View?) {
     /**
      * One notch while dragging along a continuum.
      *
-     * **Deliberately the lightest thing here.** It fires tens of times during one drag of the seek
-     * bar, which is the point — *"taki haptic żebym czuł że go trzymam"* — and anything heavier
-     * repeated forty times is not texture, it is a phone buzzing in your hand.
+     * **Deliberately the lightest thing here.** It fires tens of times during one drag of the
+     * seek bar, which is the point — the texture is how you feel that you are holding it — and
+     * anything heavier repeated forty times is not texture, it is a phone buzzing in your hand.
      */
     fun scrub() = perform(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -122,9 +119,9 @@ class Haptics(private val view: View?) {
     /**
      * One of several picked, lightly — a subsong out of a strip of them.
      *
-     * *"Delikatnie na subsong"* (owner, 2026-09-10). `SEGMENT_TICK` is the constant for a discrete
-     * step among many, which is exactly what a subsong is, and it is the lightest of the firm
-     * effects rather than the firmest of the light ones.
+     * Gently: `SEGMENT_TICK` is the constant for a discrete step among many, which is exactly what
+     * a subsong is, and it is the lightest of the firm effects rather than the firmest of the light
+     * ones.
      */
     fun pick() = perform(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)

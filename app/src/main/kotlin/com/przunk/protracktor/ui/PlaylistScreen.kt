@@ -268,7 +268,7 @@ internal fun PlaylistBody(
         }
     }
 
-        // What you can do with what you ticked. Two buttons for the owner's three actions: the
+        // What you can do with what you ticked. Two buttons for three actions: the
         // picker behind "Add to playlist..." offers an existing playlist *or* a new one, so
         // "make a new playlist from these" is in there rather than missing (`docs/BACKLOG.md` A4).
         if (selecting) {
@@ -338,10 +338,10 @@ internal fun PlaylistBody(
         }
     }
 
-    // **The follow-track button used to be here** -- a small FAB you switched on and the first drag
-    // switched off again. Replaced by a list that simply keeps the playing row on screen, one row at
-    // a time and only when it would leave (owner, 2026-09-10). Still, not while ticking rows or
-    // dragging one: a list that moves under a working finger fights it.
+    // **No follow-track button**: a small FAB you switch on is switched off again by the first
+    // drag. The list simply keeps the playing row on screen, one row at a time and only when it
+    // would leave -- but not while ticking rows or dragging one, because a list that moves under a
+    // working finger fights it.
     KeepRowInView(
         listState = listState,
         index = currentIndex,
@@ -465,8 +465,8 @@ private fun TrackRow(
         },
         leadingContent = {
             // The checkbox takes the ordinal's slot, which is already reserved and already this
-            // size -- so entering selection moves nothing (`docs/ARCHITECTURE.md` §17). The owner
-            // defended the ordinal for telling him where he is in three hundred rows; while
+            // size -- so entering selection moves nothing (`docs/ARCHITECTURE.md` §17). The
+            // ordinal earns its place by saying where you are in three hundred rows; while
             // selecting, what matters is which rows are ticked.
             Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
                 if (selecting) {
@@ -542,8 +542,8 @@ private fun TrackRow(
                             )
                         }
                     }
-                    // Delete used to sit here, one thumb-width from the row you tap to play. Behind
-                    // the menu it needs a deliberate second press.
+                    // Delete is not out here, one thumb-width from the row you tap to play.
+                    // Behind the menu it needs a deliberate second press.
                     dragHandleModifier?.let { handle ->
                         Icon(
                             imageVector = PlayerIcons.DragHandle,
@@ -567,7 +567,7 @@ private fun TrackRow(
             // for every row a fling brings past. Browse's rows have no such modifier, which is why
             // three hundred of them scroll smoothly while twenty-two of these did not. At most one
             // row is ever dragged, so at most one layer is ever needed.
-            // **A row being fetched breathes** (owner, 2026-09-14). It is already marked as the one
+            // **A row being fetched breathes.** It is already marked as the one
             // that was chosen; what a download has to add is "still working". Guarded like the drag
             // layer above, and for the same reason: at most one row is ever being fetched.
             .then(
@@ -597,8 +597,8 @@ private fun TrackRow(
             )
             .combinedClickable(
                 enabled = enabled,
-                // **Choosing a tune is the firm one** (owner, 2026-09-10) — it is the press this
-                // whole screen exists for. While selecting, the same tap is a tick in a box, so it
+                // **Choosing a tune is the firm one** — it is the press this whole screen exists
+                // for. While selecting, the same tap is a tick in a box, so it
                 // feels like the checkbox beside it rather than like starting a tune.
                 onClick = {
                     if (selecting) {
@@ -656,8 +656,8 @@ private fun EmptyPlaylist(
             )
             // The same pair the top bar's actions and the follow-track button use, rather than
             // the primary colour a bare `Button` defaults to. This is the same *offer* as Browse
-            // up there -- the owner asked for them to look alike, and two controls that do the
-            // same thing should not be told apart by their colour.
+            // up there, and two controls that do the same thing should not be told apart by
+            // their colour.
             Button(
                 onClick = onBrowse,
                 colors = ButtonDefaults.buttonColors(

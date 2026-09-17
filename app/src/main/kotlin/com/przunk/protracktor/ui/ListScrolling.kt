@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.first
  * Scrolls to an item, animating only when it is close.
  *
  * Animating across three hundred rows is a long, silly animation nobody asked to watch, and it is
- * also the difference between "put me back where I was" feeling instant and feeling like a ride.
+ * also the difference between being put back where you were instantly and being taken on a ride.
  *
  * Shared rather than duplicated: the playlist uses it to follow the playing track (B13, B14) and
  * Browse uses it to put you back on the folder you came out of (A20). One policy, so the two cannot
@@ -53,9 +53,8 @@ internal suspend fun LazyListState.keepInView(index: Int, follow: Boolean) {
 /**
  * Keeps the playing row on screen as the music moves, **one row at a time and only when it leaves.**
  *
- * Built for the Random view and moved here when the owner asked for it on every list (2026-09-10):
- * it replaced the follow-track button, the small FAB that had to be switched on and was switched
- * off again by the first drag. Nothing to switch now: the list moves when the playing row would
+ * On every list, and with nothing to switch on: a follow-track button is a control that has to be
+ * turned on and is turned off again by the first drag. The list moves when the playing row would
  * otherwise be out of sight, and not otherwise.
  *
  * **Arriving is not a change.** The key the list is composed with is remembered and ignored; only a
@@ -86,7 +85,8 @@ internal fun KeepRowInView(listState: LazyListState, index: Int?, key: Any?, act
 /**
  * Scrolls the least that puts [index] wholly on screen, or not at all.
  *
- * Every rule here was a defect first, found by the owner stepping through the Random record:
+ * Four rules, each of which is wrong in a way that is only visible when stepping through a list
+ * one row at a time:
  *
  * - **Measured after the row exists.** The playing row moves at the moment the list grows, and on
  *   that pass `layoutInfo` still describes the list without it.
