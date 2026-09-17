@@ -153,7 +153,7 @@ the first of them.
 **The limit is arithmetic**: about 2,000 characters is what a link can be everywhere, which is some
 fifty tracks; past that `pack` already drops the names of files that cannot travel and says it did.
 
-## A37. Comments cut back to implementation facts — **agreed, not started**
+## A37. Comments cut back to implementation facts — DONE 2026-09-17
 
 *Owner, 2026-09-14: he does not want entries like "owner: quote" in the source — implementation
 facts, or no comment at all, since good names beat commentary. Clean code.*
@@ -175,9 +175,21 @@ the same commit that removes it.
 **Names first.** Where a comment explains a name, rename instead: the comment goes and the reader
 is helped everywhere the name appears, not only here.
 
-**How to do it without a big risky sweep:** one area per commit — the engine, the store, the
-controller, the screens, the page, the checks — with the tests green after each, and no behaviour
-changed in the same commit as a comment change.
+**How it was done:** one area per commit — the engine, the store, the controller, the screens, the
+page, the scripts and the tests — with the suite green after each and no behaviour changed in the
+same commit as a comment change.
+
+**What it found on the way.** Eight KDoc blocks had come loose from what they described and were
+attached to the wrong declaration or to none: the in-flight-open and read-ahead notes in
+`PlaybackController`, `postQueue`'s `@param`, a stale `deletePlaylist` doc still claiming the last
+playlist cannot be deleted, the CX40 and link notes in `PlayerIcons`, the track-list and track-row
+notes in `BrowseScreen`, and one in `WebRemoteTest` sitting on the wrong test. Each is now on the
+declaration it belongs to. One comment was stale and contradicted the code: `StorageSection` said
+it lived in Browse "rather than in a settings screen", and `SettingsScreen` draws it.
+
+**Where the findings went.** The seek rule rescued from a deleted comment is `docs/ARCHITECTURE.md`
+§5; the fallback length points at C56; the CORS-with-a-GET rule is in `web/src/catalogue.js` and
+`docs/PLAN_CATALOGUES.md`. Everything else that was provenance is in the commits that removed it.
 
 ## A36. A gear beside shuffle, opening the page's settings — DONE 2026-09-14
 
