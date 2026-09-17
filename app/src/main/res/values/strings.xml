@@ -307,4 +307,100 @@
         <item quantity="other">%1$d favourites in your index</item>
     </plurals>
     <string name="a11y_download_favourites">Download the Modland favourites</string>
+
+    <!-- Notices. Every sentence the app says to the user lives here, in both languages: a
+         `Message("…")` built from a literal is a sentence that reaches a Polish phone in English.
+         `MessagesAreTranslatedTest` fails on one. -->
+    <string name="notice_changes_discarded">Changes discarded.</string>
+    <string name="notice_playlist_emptied">Playlist emptied. It is the only one, so it stays.</string>
+    <string name="notice_playlist_empty">There is nothing in this playlist.</string>
+    <string name="notice_playlist_failed">Could not prepare the playlist.</string>
+    <string name="notice_file_unreadable">Could not read that file.</string>
+    <string name="notice_file_no_tracks">No tracks in that file.</string>
+    <string name="notice_track_unreadable">Could not read %1$s</string>
+    <string name="notice_share_failed">Could not prepare %1$s for sharing.</string>
+    <string name="notice_link_online_only">Only tracks from an online catalogue have a link.</string>
+    <string name="notice_online_only_action">Only tracks from an online catalogue can do that.</string>
+    <string name="notice_nothing_to_send">There is nothing in the playlist to send.</string>
+    <string name="notice_paired_empty">Paired. The playlist is empty, so nothing was sent.</string>
+    <string name="notice_pairing_forgotten">The paired browser is forgotten.</string>
+    <string name="notice_page_not_open">Reached it, but the player page is not open there.</string>
+    <string name="notice_browser_unreachable">Could not reach the browser (%1$s). Press again to scan a code; hold to send a link.</string>
+    <plurals name="notice_sent_to_browser">
+        <item quantity="one">Sent %1$d track to the browser.</item>
+        <item quantity="other">Sent %1$d tracks to the browser.</item>
+    </plurals>
+    <string name="notice_sent_some_too_big">Sent %1$d tracks; %2$d local files were too big to send.</string>
+    <string name="notice_link_none_sendable">None of these can be sent: a file on this phone has no address a browser could open.</string>
+    <string name="notice_link_truncated">Sending %1$d. The link was too long to carry the names of %2$d files that stayed on this phone, so they are missing from the list at the other end.</string>
+    <string name="notice_send_mp3">An MP3 is never sent to the browser: it is too big to travel.</string>
+    <string name="notice_send_one_local">This one cannot be sent: a file on this phone has no address a browser could open.</string>
+    <string name="notice_send_none">None of these can be sent: a browser has no address it could open them at.</string>
+    <string name="notice_send_partial">Sending %1$d. The other %2$d have no address a browser could open.</string>
+    <string name="notice_no_author_live">%1$s is searched live and lists no author, so there is nowhere to jump to.</string>
+    <string name="notice_not_in_index">That track is not in the %1$s index. Index it to jump to the author.</string>
+    <string name="notice_history_cleared">History cleared.</string>
+    <string name="notice_song_lengths_deleted">Song lengths deleted.</string>
+    <string name="notice_track_metadata_deleted">Track metadata deleted.</string>
+    <string name="notice_favourites_deleted">Favourites deleted.</string>
+    <string name="notice_index_deleted">Index deleted. Download it again any time.</string>
+    <string name="notice_index_download_failed">Could not download the %1$s index.</string>
+    <string name="notice_archive_store_failed">Could not store the %1$s archive.</string>
+    <plurals name="notice_indexed_tracks">
+        <item quantity="one">Indexed %1$d track from %2$s.</item>
+        <item quantity="other">Indexed %1$d tracks from %2$s.</item>
+    </plurals>
+    <string name="notice_song_lengths_failed">Could not download the song lengths.</string>
+    <string name="notice_song_lengths_empty">The song length database was empty.</string>
+    <plurals name="notice_song_lengths_done">
+        <item quantity="one">Song lengths for %1$d SID tune.</item>
+        <item quantity="other">Song lengths for %1$d SID tunes.</item>
+    </plurals>
+    <string name="notice_track_metadata_failed">Could not download the track metadata.</string>
+    <string name="notice_track_metadata_empty">The track metadata was empty.</string>
+    <plurals name="notice_track_metadata_done">
+        <item quantity="one">Metadata for %1$d tune.</item>
+        <item quantity="other">Metadata for %1$d tunes.</item>
+    </plurals>
+    <string name="notice_favourites_failed">Could not download the favourites.</string>
+    <string name="notice_favourites_empty">The favourites list was empty.</string>
+    <string name="notice_favourites_playable">%1$d of %2$d favourites are in your Modland index.</string>
+    <string name="notice_favourites_need_index">%1$d favourites downloaded. Index Modland to play them.</string>
+    <string name="notice_replays_failed">Could not download the replay routines.</string>
+    <plurals name="notice_replays_done">
+        <item quantity="one">%1$d replay routine downloaded. .sc68 files should play now.</item>
+        <item quantity="other">%1$d replay routines downloaded. .sc68 files should play now.</item>
+    </plurals>
+    <string name="notice_random_gave_up">Several picks in a row would not open. Stopping here.</string>
+    <string name="notice_random_nothing_indexed">Nothing is indexed yet. Index a catalogue first.</string>
+    <string name="notice_random_nothing_for_platform">Nothing indexed for that platform.</string>
+    <string name="notice_random_no_favourites">None of the favourites are in your Modland index.</string>
+    <string name="notice_modarchive_unreachable">The Mod Archive could not be reached.</string>
+    <string name="notice_modarchive_unreadable">The Mod Archive answered, but not with a page we can read.</string>
+    <string name="notice_added_track">Added \"%1$s\" to the playlist.</string>
+    <string name="notice_track_already_here">\"%1$s\" is already in this playlist.</string>
+    <string name="notice_nothing_playable">Nothing playable found there.</string>
+    <string name="notice_all_already_here">Already in this playlist.</string>
+    <plurals name="notice_added_count">
+        <item quantity="one">Added %1$d track.</item>
+        <item quantity="other">Added %1$d tracks.</item>
+    </plurals>
+    <string name="notice_added_some_already">Added %1$d; %2$d already there.</string>
+    <string name="notice_added_some_already_named">Added %1$d to %2$s; %3$d already there.</string>
+    <string name="notice_removed_one">Removed %1$s</string>
+    <plurals name="notice_removed_count">
+        <item quantity="one">Removed %1$d track</item>
+        <item quantity="other">Removed %1$d tracks</item>
+    </plurals>
+    <string name="notice_scanned">Scanned %1$s: %2$d playable of %3$d.</string>
+    <plurals name="notice_imported">
+        <item quantity="one">Imported %1$d track into \"%2$s\".</item>
+        <item quantity="other">Imported %1$d tracks into \"%2$s\".</item>
+    </plurals>
+    <string name="notice_imported_partial">Imported %1$d of %2$d into \"%3$s\"; the rest are not on this device.</string>
+    <string name="notice_freed_nothing">There was nothing to delete.</string>
+    <string name="notice_freed_under_a_megabyte">Freed less than 1 MB.</string>
+    <string name="notice_freed_megabytes">Freed %1$d MB.</string>
+    <string name="notice_audio_busy">Something else is using the audio.</string>
+    <string name="notice_audio_device_failed">Could not open the audio device</string>
 </resources>

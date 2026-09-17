@@ -322,4 +322,114 @@
         <item quantity="other">%1$d ulubionych w twoim indeksie</item>
     </plurals>
     <string name="a11y_download_favourites">Pobierz ulubione Modlandu</string>
+
+    <!-- Komunikaty. Patrz values/strings.xml. -->
+    <string name="notice_changes_discarded">Zmiany odrzucone.</string>
+    <string name="notice_playlist_emptied">Playlista opróżniona. Jest jedyna, więc zostaje.</string>
+    <string name="notice_playlist_empty">Ta playlista jest pusta.</string>
+    <string name="notice_playlist_failed">Nie udało się przygotować playlisty.</string>
+    <string name="notice_file_unreadable">Nie udało się odczytać tego pliku.</string>
+    <string name="notice_file_no_tracks">W tym pliku nie ma utworów.</string>
+    <string name="notice_track_unreadable">Nie udało się odczytać %1$s</string>
+    <string name="notice_share_failed">Nie udało się przygotować %1$s do udostępnienia.</string>
+    <string name="notice_link_online_only">Odnośnik mają tylko utwory z katalogu online.</string>
+    <string name="notice_online_only_action">To działa tylko dla utworów z katalogu online.</string>
+    <string name="notice_nothing_to_send">Nie ma czego wysłać — playlista jest pusta.</string>
+    <string name="notice_paired_empty">Sparowano. Playlista jest pusta, więc nic nie wysłano.</string>
+    <string name="notice_pairing_forgotten">Sparowana przeglądarka została zapomniana.</string>
+    <string name="notice_page_not_open">Udało się połączyć, ale strona odtwarzacza nie jest tam otwarta.</string>
+    <string name="notice_browser_unreachable">Nie udało się połączyć z przeglądarką (%1$s). Naciśnij ponownie, aby zeskanować kod; przytrzymaj, aby wysłać odnośnik.</string>
+    <plurals name="notice_sent_to_browser">
+        <item quantity="one">Wysłano %1$d utwór do przeglądarki.</item>
+        <item quantity="few">Wysłano %1$d utwory do przeglądarki.</item>
+        <item quantity="many">Wysłano %1$d utworów do przeglądarki.</item>
+        <item quantity="other">Wysłano %1$d utworu do przeglądarki.</item>
+    </plurals>
+    <string name="notice_sent_some_too_big">Wysłano %1$d utworów; %2$d plików z telefonu było za dużych.</string>
+    <string name="notice_link_none_sendable">Nic z tego nie da się wysłać: plik na tym telefonie nie ma adresu, który przeglądarka mogłaby otworzyć.</string>
+    <string name="notice_link_truncated">Wysyłanie %1$d. Odnośnik był za długi, aby unieść nazwy %2$d plików, które zostały na telefonie, więc nie ma ich na liście po drugiej stronie.</string>
+    <string name="notice_send_mp3">MP3 nigdy nie jedzie do przeglądarki: jest za duże.</string>
+    <string name="notice_send_one_local">Tego nie da się wysłać: plik na tym telefonie nie ma adresu, który przeglądarka mogłaby otworzyć.</string>
+    <string name="notice_send_none">Nic z tego nie da się wysłać: przeglądarka nie ma adresu, pod którym mogłaby to otworzyć.</string>
+    <string name="notice_send_partial">Wysyłanie %1$d. Pozostałe %2$d nie mają adresu, który przeglądarka mogłaby otworzyć.</string>
+    <string name="notice_no_author_live">%1$s jest przeszukiwane na żywo i nie podaje autora, więc nie ma dokąd przejść.</string>
+    <string name="notice_not_in_index">Tego utworu nie ma w indeksie %1$s. Zaindeksuj go, aby przejść do autora.</string>
+    <string name="notice_history_cleared">Historia wyczyszczona.</string>
+    <string name="notice_song_lengths_deleted">Usunięto długości utworów.</string>
+    <string name="notice_track_metadata_deleted">Usunięto metadane utworów.</string>
+    <string name="notice_favourites_deleted">Usunięto ulubione.</string>
+    <string name="notice_index_deleted">Indeks usunięty. Możesz go pobrać ponownie w każdej chwili.</string>
+    <string name="notice_index_download_failed">Nie udało się pobrać indeksu %1$s.</string>
+    <string name="notice_archive_store_failed">Nie udało się zapisać archiwum %1$s.</string>
+    <plurals name="notice_indexed_tracks">
+        <item quantity="one">Zaindeksowano %1$d utwór z %2$s.</item>
+        <item quantity="few">Zaindeksowano %1$d utwory z %2$s.</item>
+        <item quantity="many">Zaindeksowano %1$d utworów z %2$s.</item>
+        <item quantity="other">Zaindeksowano %1$d utworu z %2$s.</item>
+    </plurals>
+    <string name="notice_song_lengths_failed">Nie udało się pobrać długości utworów.</string>
+    <string name="notice_song_lengths_empty">Baza długości utworów była pusta.</string>
+    <plurals name="notice_song_lengths_done">
+        <item quantity="one">Długości dla %1$d utworu SID.</item>
+        <item quantity="few">Długości dla %1$d utworów SID.</item>
+        <item quantity="many">Długości dla %1$d utworów SID.</item>
+        <item quantity="other">Długości dla %1$d utworu SID.</item>
+    </plurals>
+    <string name="notice_track_metadata_failed">Nie udało się pobrać metadanych utworów.</string>
+    <string name="notice_track_metadata_empty">Metadane utworów były puste.</string>
+    <plurals name="notice_track_metadata_done">
+        <item quantity="one">Metadane dla %1$d utworu.</item>
+        <item quantity="few">Metadane dla %1$d utworów.</item>
+        <item quantity="many">Metadane dla %1$d utworów.</item>
+        <item quantity="other">Metadane dla %1$d utworu.</item>
+    </plurals>
+    <string name="notice_favourites_failed">Nie udało się pobrać ulubionych.</string>
+    <string name="notice_favourites_empty">Lista ulubionych była pusta.</string>
+    <string name="notice_favourites_playable">%1$d z %2$d ulubionych jest w twoim indeksie Modland.</string>
+    <string name="notice_favourites_need_index">Pobrano %1$d ulubionych. Zaindeksuj Modland, aby je odtwarzać.</string>
+    <string name="notice_replays_failed">Nie udało się pobrać procedur odtwarzających.</string>
+    <plurals name="notice_replays_done">
+        <item quantity="one">Pobrano %1$d procedurę odtwarzającą. Pliki .sc68 powinny już grać.</item>
+        <item quantity="few">Pobrano %1$d procedury odtwarzające. Pliki .sc68 powinny już grać.</item>
+        <item quantity="many">Pobrano %1$d procedur odtwarzających. Pliki .sc68 powinny już grać.</item>
+        <item quantity="other">Pobrano %1$d procedury odtwarzającej. Pliki .sc68 powinny już grać.</item>
+    </plurals>
+    <string name="notice_random_gave_up">Kilka losowań z rzędu nie chciało się otworzyć. Zatrzymuję się tutaj.</string>
+    <string name="notice_random_nothing_indexed">Nic nie jest jeszcze zaindeksowane. Najpierw zaindeksuj katalog.</string>
+    <string name="notice_random_nothing_for_platform">Nic nie zaindeksowano dla tej platformy.</string>
+    <string name="notice_random_no_favourites">Żadnego z ulubionych nie ma w twoim indeksie Modland.</string>
+    <string name="notice_modarchive_unreachable">Nie udało się połączyć z The Mod Archive.</string>
+    <string name="notice_modarchive_unreadable">The Mod Archive odpowiedziało, ale stroną, której nie umiemy odczytać.</string>
+    <string name="notice_added_track">Dodano „%1$s” do playlisty.</string>
+    <string name="notice_track_already_here">„%1$s” jest już na tej playliście.</string>
+    <string name="notice_nothing_playable">Nie znaleziono tam nic do odtworzenia.</string>
+    <string name="notice_all_already_here">Już jest na tej playliście.</string>
+    <plurals name="notice_added_count">
+        <item quantity="one">Dodano %1$d utwór.</item>
+        <item quantity="few">Dodano %1$d utwory.</item>
+        <item quantity="many">Dodano %1$d utworów.</item>
+        <item quantity="other">Dodano %1$d utworu.</item>
+    </plurals>
+    <string name="notice_added_some_already">Dodano %1$d; %2$d już tam było.</string>
+    <string name="notice_added_some_already_named">Dodano %1$d do playlisty %2$s; %3$d już tam było.</string>
+    <string name="notice_removed_one">Usunięto %1$s</string>
+    <plurals name="notice_removed_count">
+        <item quantity="one">Usunięto %1$d utwór</item>
+        <item quantity="few">Usunięto %1$d utwory</item>
+        <item quantity="many">Usunięto %1$d utworów</item>
+        <item quantity="other">Usunięto %1$d utworu</item>
+    </plurals>
+    <string name="notice_scanned">Przeskanowano %1$s: %2$d do odtworzenia z %3$d.</string>
+    <plurals name="notice_imported">
+        <item quantity="one">Zaimportowano %1$d utwór do „%2$s”.</item>
+        <item quantity="few">Zaimportowano %1$d utwory do „%2$s”.</item>
+        <item quantity="many">Zaimportowano %1$d utworów do „%2$s”.</item>
+        <item quantity="other">Zaimportowano %1$d utworu do „%2$s”.</item>
+    </plurals>
+    <string name="notice_imported_partial">Zaimportowano %1$d z %2$d do „%3$s”; reszty nie ma na tym urządzeniu.</string>
+    <string name="notice_freed_nothing">Nie było czego usuwać.</string>
+    <string name="notice_freed_under_a_megabyte">Zwolniono mniej niż 1 MB.</string>
+    <string name="notice_freed_megabytes">Zwolniono %1$d MB.</string>
+    <string name="notice_audio_busy">Dźwięku używa coś innego.</string>
+    <string name="notice_audio_device_failed">Nie udało się otworzyć urządzenia dźwiękowego</string>
 </resources>
