@@ -59,7 +59,7 @@ class SearchTermsTest {
 
     @Test
     fun `two words find the separated name, which is what this was for`() {
-        // Owner, 2026-09-16: "space ninja" did not find "space_ninja".
+        // Typing "space ninja" has to find "space_ninja".
         assertEquals(listOf("space_ninja.mod", "spaceninja.mod"), sqlFinds("space ninja"))
     }
 

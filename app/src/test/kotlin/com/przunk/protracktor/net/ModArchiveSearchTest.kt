@@ -12,8 +12,8 @@ import org.junit.Test
  *
  * This catalogue has no index to download: it is scraped, live, from somebody else's HTML. That is
  * the one source in the app that can break with nothing here changing, and `docs/STATUS.md` C15 is
- * what that looks like when it does — every search returning nothing, silently, because the failure
- * used to be swallowed.
+ * what that looks like when it does — every search returning nothing, silently, because the
+ * failure was swallowed.
  *
  * `app/src/test/resources/modarchive-search-elysium.html` is the page the site actually returned on
  * 2026-09-06 for `query=elysium`, saved unedited. Pinning the parser to a real page is the only

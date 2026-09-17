@@ -72,9 +72,9 @@ fetch libopenmpt \
 #
 # **2.2.1, and it is no longer what the app plays.** The app uses 3.0.0b, which exists only in
 # SourceForge SVN and is fetched by ./scripts/fetch-sc68-svn.py. This release is kept because
-# ./scripts/probe-sc68.py measures the two against each other, and the whole reason item 1 of
-# GOAL.md round 5 took a day was that nobody could re-run the earlier measurement. Removing the
-# ability to compare is how that happens again.
+# ./scripts/probe-sc68.py measures the two against each other, and a measurement nobody can re-run
+# costs a day the next time the question is asked. Removing the ability to compare is how that
+# happens.
 #
 # Licence verified 2026-09-01: all 51 licensed sources say "or (at your option) any later version",
 # whatever COPYING says on its own.

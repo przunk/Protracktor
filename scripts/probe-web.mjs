@@ -79,8 +79,8 @@ for (const file of files.sort()) {
   const describe = M.UTF8ToString(M._pt_describe(h)).replace(/[\t\n]+/g, ' ').trim();
   // **Ask at the rate the decoder actually produces.** Six of the backends emulate a fixed clock
   // and hand back 44,100 samples a second whatever they are told; measuring those against 48,000
-  // reports a speed 9% wrong and, worse, hides the mismatch that made the page play sharp. The
-  // owner's ear found that before this probe did, which is why it is asked here now.
+  // reports a speed 9% wrong and, worse, hides the mismatch that makes the page play sharp -- a
+  // mismatch the ear catches long before a probe that measures against the wrong rate.
   const rate = M._pt_preferred_rate(h) || SAMPLE_RATE;
   const duration = M._pt_duration(h);
   const subsongs = M._pt_subsong_count(h);

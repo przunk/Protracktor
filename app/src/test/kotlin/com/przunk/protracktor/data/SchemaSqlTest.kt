@@ -257,7 +257,7 @@ class SchemaSqlTest {
 
     @Test
     fun `an upgraded phone reads the fallback length as never set`() {
-        // `docs/STATUS.md` C56. The column's default is 0 and 0 means "the owner has not chosen",
+        // `docs/STATUS.md` C56. The column's default is 0 and 0 means "never chosen",
         // which `FallbackLength.fromStored` turns into the default rather than into a tune that
         // ends instantly. Getting this wrong ends every unlisted tune the moment it starts, which
         // is a worse fault than the one being fixed.
@@ -365,10 +365,9 @@ class SchemaSqlTest {
     /**
      * What `ProtracktorDatabase.onDowngrade` runs, against a real engine.
      *
-     * The one path in this file that had no test and needed one most: it meets a phone holding
-     * somebody's data exactly once, and until 2026-09-08 it threw every time. The list of tables to
-     * drop was written at version 1 and never grew, so the recreate hit `catalogues` and stopped --
-     * leaving an app that could not start at all.
+     * The path in this file that needs a test most: it meets a phone holding somebody's data
+     * exactly once. A list of tables to drop written at version 1 and never grown makes the
+     * recreate stop at `catalogues`, and the app then cannot start at all.
      */
     @Test
     fun `a downgrade recreates the database instead of tripping over what is already there`() {
@@ -581,9 +580,9 @@ class SchemaSqlTest {
     fun `a migration run twice fails, which is why there is one database helper`() {
         // Not a wish, a constraint. The statements are plain CREATE TABLE, so running a migration
         // twice throws -- and `SQLiteOpenHelper` synchronises within an instance, not between
-        // instances. Five stores each holding their own helper (which is what this project had
-        // until 2026-09-03) meant five things that could independently decide to migrate, and two
-        // of them racing during an upgrade crashes the launch that upgrades.
+        // instances. Five stores each holding their own helper would be five things that could
+        // independently decide to migrate, and two of them racing during an upgrade crashes the
+        // launch that upgrades.
         //
         // If somebody makes these idempotent and this test starts failing, the right response is
         // not to delete it: it is to ask whether ProtracktorDatabase still needs to be a singleton,

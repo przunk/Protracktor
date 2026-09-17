@@ -4,10 +4,10 @@
 // What the page keeps, and keeps across a reload.
 //
 // **IndexedDB rather than `localStorage`**, which is a few megabytes and synchronous — and the
-// index in `docs/PLAN_WEB_LIBRARY.md` S3 is eighteen. Measured on the owner's two machines,
-// 2026-09-10: 473 GB and 256 GB offered, `persist()` granted on both, and the whole of Modland
-// written in 2.6 s and 1.9 s. So this stores what it needs and reports what it holds; there is no
-// budget to ration and no eviction rule to design.
+// index in `docs/PLAN_WEB_LIBRARY.md` S3 is eighteen. Measured on two machines: 473 GB and 256 GB
+// offered, `persist()` granted on both, and the whole of Modland written in 2.6 s and 1.9 s. So
+// this stores what it needs and reports what it holds; there is no budget to ration and no
+// eviction rule to design.
 //
 // Everything here is promises over the callback API, in one place, because the alternative is
 // callbacks in the page.
@@ -67,9 +67,9 @@ async function tx(store, mode, run) {
 /**
  * Asks the browser not to evict this.
  *
- * Without it a hand-built playlist is a cache entry, which is data loss rather than a miss. Granted
- * on both of the owner's machines; asked once, and a refusal is not an error — the page works
- * either way and saying so is `storageNote`'s job.
+ * Without it a hand-built playlist is a cache entry, which is data loss rather than a miss. Asked
+ * once, and a refusal is not an error — the page works either way, and saying so is
+ * `storageNote`'s job.
  */
 export async function makePersistent() {
   try {
@@ -169,8 +169,8 @@ export const catalogue = {
    * shape Modland actually produces: 281 ms to write them all and **26 seconds** to delete them
    * again.
    *
-   * The owner found it from the outside and described it exactly: indexing takes two or three
-   * seconds the first time and twenty the second. The first time there is nothing to clear.
+   * From the outside that reads as indexing taking two or three seconds the first time and twenty
+   * the second: the first time there is nothing to clear.
    *
    * `IDBObjectStore.delete` takes a key range as happily as a key, and deletes everything in it in
    * one request. Same transaction semantics, same result, one round trip.
@@ -197,7 +197,7 @@ export const PLAYED_LIMIT = 500;
 let lastStamp = 0;
 
 /**
- * What has been played (`GOAL.md` round 8, item 4), with the phone's rules (`data/HistoryStore.kt`).
+ * What has been played, with the phone's rules (`data/HistoryStore.kt`).
  *
  * **One row per tune rather than per play**, moved to the top and counted when it is played again:
  * the question it answers is "that tune two days ago, what was it", not "audit this page". The

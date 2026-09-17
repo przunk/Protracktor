@@ -5,8 +5,8 @@
 //
 // **A modern phone does not produce a screenshot Play will take.** Play wants each side between
 // 320 and 3840 px, an aspect ratio no taller than 2:1, and — for the screenshot-led recommendation
-// surfaces `store/graphics/README.md` is about — at least 1080 px on the short side. The owner's
-// phone captures 864×1920, which is 2.22:1 and 864 on the short side: wrong on both counts, and
+// surfaces `store/graphics/README.md` is about — at least 1080 px on the short side. A phone that
+// captures 864×1920 gives 2.22:1 and 864 on the short side: wrong on both counts, and
 // wrong in a way that is invisible until Play refuses the upload or quietly drops the listing out
 // of those surfaces.
 //

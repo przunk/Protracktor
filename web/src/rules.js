@@ -60,9 +60,9 @@ export function shouldRestart({ engineFinished, position, duration }) {
  * Random: where next goes in the record the dice has made -- **the next row while there is one, and
  * a new pick (`'roll'`) only at the end** (`docs/PLAN_RANDOM.md`).
  *
- * The phone was briefly made to roll on every press and the owner sent it back: with the record on
- * screen, next means the next row. Repeat is the caller's -- the end of a tune checks repeat-one
- * first and the button does not, exactly as the phone does it.
+ * Rolling on every press is wrong: with the record on screen, next means the next row. Repeat is
+ * the caller's -- the end of a tune checks repeat-one first and the button does not, exactly as the
+ * phone does it.
  */
 export function randomNext({ length, at }) {
   return at + 1 < length ? at + 1 : 'roll';
@@ -87,9 +87,9 @@ export function freshPick({ drawn, seen }) {
  * What a typed search means: **every word, anywhere, in any order.**
  *
  * The phone's `data/SearchTerms.kt`, and the cases they share are in `docs/rules/queue-cases.tsv`.
- * Until 2026-09-16 both sides matched the whole query as one substring, which fails on the way
- * tracker files are actually named -- `space ninja` did not find `space_ninja`, one character in
- * the middle being a separator rather than a space.
+ * Matching the whole query as one substring fails on the way tracker files are actually named:
+ * `space ninja` does not find `space_ninja`, one character in the middle being a separator rather
+ * than a space.
  *
  * Splitting the query covers `space_ninja`, `spaceninja`, `Space Ninja` and `ninja space` alike.
  * What it does not cover is the other direction -- typing `spaceninja` for a file called

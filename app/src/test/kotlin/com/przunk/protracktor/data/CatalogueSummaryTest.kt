@@ -10,10 +10,10 @@ import org.junit.Test
 /**
  * When a catalogue index is out of date.
  *
- * `docs/STATUS.md` C9 and `docs/BACKLOG.md` A22, from a real morning: the owner could find no C64
- * music at all, because his Modland index predated libsidplayfp. An index is filtered **at index
- * time** to the formats a backend can play, so one built before a backend existed is permanently
- * missing that backend's formats — 60,572 of them here — and looks empty rather than stale.
+ * `docs/STATUS.md` C9 and `docs/BACKLOG.md` A22: a Modland index built before libsidplayfp offers
+ * no C64 music at all. An index is filtered **at index time** to the formats a backend can play,
+ * so one built before a backend existed is permanently missing that backend's formats — 60,572 of
+ * them here — and looks empty rather than stale.
  */
 class CatalogueSummaryTest {
 
