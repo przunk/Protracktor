@@ -47,6 +47,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.BufferOverflow
@@ -638,6 +639,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private val prefetched = LinkedHashMap<String, ByteArray>()
     private var prefetchJob: Job? = null
+
+    /** The run of downloads the offer started, kept so that [cancelDownloads] has something to stop. */
+    private var selectedDownloads: Job? = null
     private var scanJob: Job? = null
 
     /** The background metadata pass. Cancelled and restarted whenever the track list changes. */
@@ -2424,37 +2428,70 @@ class PlaybackController private constructor(private val context: Context) {
      * **Partial success is reported as partial.** Six downloads from five hosts will not all land
      * every time, and "done" over a failed ASMA would be a lie the user finds out about later.
      */
-    fun downloadEverything() {
+    fun downloadSelected(ids: Set<String>) {
+        val steps = DownloadPlan.stepsFor(ids)
+        if (steps.isEmpty()) return
         if (!beginDownload(DownloadKeys.EVERYTHING, context.getString(R.string.download_all_running))) return
-        scope.launch {
-            var landed = 0
-            var failed = 0
-            fun account(step: Fetched?) {
-                if (step == null) return
-                if (step.ok) landed++ else failed++
-            }
-            // Only the catalogues that have an index to download. The Mod Archive is searched live
-            // and has nothing to fetch, so offering to fetch it would be a promise of a row that
-            // never appears.
-            for (catalogue in Catalogue.all.filter { !it.isOnlineOnly }) {
-                account(fetchCatalogue(catalogue))
-            }
-            account(fetchSongLengths())
-            account(fetchFavourites())
-            account(fetchTrackMetadata())
-            endDownload(DownloadKeys.EVERYTHING)
-            refreshCatalogues()
-            refreshPlatformCounts()
-            say(
-                Message(
-                    if (failed == 0) {
-                        context.getString(R.string.notice_all_downloaded)
-                    } else {
-                        context.getString(R.string.notice_all_downloaded_partly, landed, failed)
-                    }
+        var landed = 0
+        var failed = 0
+        selectedDownloads = scope.launch {
+            try {
+                for (step in steps) {
+                    val done = runDownloadStep(step) ?: continue
+                    if (done.ok) landed++ else failed++
+                }
+                say(
+                    Message(
+                        if (failed == 0) {
+                            context.getString(R.string.notice_all_downloaded)
+                        } else {
+                            context.getString(R.string.notice_all_downloaded_partly, landed, failed)
+                        }
+                    )
                 )
-            )
+            } finally {
+                // **`NonCancellable`, or stopping leaves the screen mid-download for ever.** The
+                // spinners are state, not a side effect of the coroutine: cancelled without this,
+                // every row the run had reached keeps spinning until the app is restarted, and the
+                // offer cannot be pressed again because its own key is still there.
+                withContext(NonCancellable) {
+                    steps.forEach { endDownload(it) }
+                    endDownload(DownloadKeys.EVERYTHING)
+                    selectedDownloads = null
+                    refreshCatalogues()
+                    refreshPlatformCounts()
+                    if (!isActive) {
+                        say(Message(context.getString(R.string.notice_downloads_stopped, landed)))
+                    }
+                }
+            }
         }
+    }
+
+    /** Everything a fresh install needs, which is every box ticked. */
+    fun downloadEverything() = downloadSelected(DownloadPlan.choices().toSet())
+
+    /**
+     * Stops a run of downloads.
+     *
+     * **What is already on this phone stays.** Each step writes its own table when it finishes, so
+     * stopping after Modland leaves Modland indexed and the rest untouched -- which is the whole
+     * reason the steps are sequential and separate rather than one transaction. What is lost is at
+     * most the file being fetched at the moment of the press.
+     *
+     * A blocking read cannot always be interrupted where it stands, so the step in flight may run
+     * to its end; nothing after it will start.
+     */
+    fun cancelDownloads() {
+        selectedDownloads?.cancel()
+    }
+
+    /** One step of [downloadSelected], by the key `DownloadPlan` named it with. */
+    private suspend fun runDownloadStep(step: String): Fetched? = when (step) {
+        DownloadKeys.SONG_LENGTHS -> fetchSongLengths()
+        DownloadKeys.FAVOURITES -> fetchFavourites()
+        DownloadKeys.TRACK_METADATA -> fetchTrackMetadata()
+        else -> Catalogue.byId(step)?.let { fetchCatalogue(it) }
     }
 
     /**

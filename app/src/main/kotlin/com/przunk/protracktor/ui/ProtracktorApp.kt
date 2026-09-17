@@ -118,6 +118,8 @@ fun ProtracktorApp(
     var showBrowse by rememberSaveable { mutableStateOf(false) }
     // Not saveable: a sheet asking a question should not survive a rotation as an unanswered one.
     var choosingRandomScope by remember { mutableStateOf(false) }
+    // Opened from Browse and drawn here, so a run of downloads survives Browse closing under it.
+    var choosingDownloads by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     /**
      * The Random view: a full-screen destination like Browse and Settings.
@@ -420,7 +422,7 @@ fun ProtracktorApp(
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongLengths = viewModel::downloadSongLengths,
                 onDownloadTrackMetadata = viewModel::downloadTrackMetadata,
-                onDownloadEverything = viewModel::downloadEverything,
+                onPickDownloads = { choosingDownloads = true },
                 onDownloadFavourites = viewModel::downloadFavourites,
                 onDownloadReplays = viewModel::downloadReplays,
                 onOpenCatalogue = viewModel::openCatalogue,
@@ -536,6 +538,15 @@ fun ProtracktorApp(
     // **Here rather than inside Browse.** The Random view's Filter button opens the same sheet,
     // and a sheet that exists only under one destination cannot be reached from another
     // (`docs/PLAN_RANDOM.md`).
+    if (choosingDownloads) {
+        DownloadPicker(
+            browse = browse,
+            onDownload = viewModel::downloadSelected,
+            onStop = viewModel::cancelDownloads,
+            onDismiss = { choosingDownloads = false },
+        )
+    }
+
     if (choosingRandomScope) {
         RandomScopeSheet(
             browse = browse,

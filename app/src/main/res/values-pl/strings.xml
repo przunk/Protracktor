@@ -432,9 +432,18 @@
     <string name="notice_freed_megabytes">Zwolniono %1$d MB.</string>
     <string name="notice_audio_busy">Dźwięku używa coś innego.</string>
     <string name="notice_audio_device_failed">Nie udało się otworzyć urządzenia dźwiękowego</string>
-    <string name="download_all">Pobierz wszystko (%1$s)</string>
-    <string name="download_all_body">Katalogi, długości utworów SID i metadane — za jednym razem. Zostaną zapisane na telefonie, więc późniejsze przeglądanie nie wymaga sieci.</string>
+    <string name="download_all_body">Wybierz, co pobrać — do %1$d MB. Zapisujemy to na telefonie, więc późniejsze przeglądanie nie wymaga sieci.</string>
+    <string name="download_pick_open">Pobierz muzykę do przeglądania</string>
     <string name="download_all_running">Pobieranie wszystkiego</string>
     <string name="notice_all_downloaded">Pobrano wszystko. Przeglądaj do woli.</string>
     <string name="notice_all_downloaded_partly">Pobrano %1$d, %2$d się nie udało. Spróbuj ponownie w Przeglądaj.</string>
+    <string name="notice_downloads_stopped">Zatrzymano. %1$d z nich się skończyło i zostaje.</string>
+    <string name="download_pick_title">Co pobrać</string>
+    <string name="download_pick_modland">Modland — pół miliona utworów, razem z długościami SID i listą ulubionych</string>
+    <string name="download_pick_metadata">Metadane utworów — kto napisał i kiedy</string>
+    <string name="download_pick_size">%1$d MB</string>
+    <string name="download_pick_held">Już na tym telefonie</string>
+    <string name="action_download_selected">Pobierz %1$d MB</string>
+    <string name="action_stop_downloads">Przerwij</string>
+    <string name="a11y_download_pick">Wybierz, co pobrać</string>
 </resources>

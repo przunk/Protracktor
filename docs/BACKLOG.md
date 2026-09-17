@@ -53,6 +53,20 @@ one line cannot make the button lie.
 not metadata; they are binaries for one niche format, and they are the one download with a licence
 question attached (`docs/LICENSES.md`). They stay their own row.
 
+**And a sheet rather than one button, 2026-09-17.** The owner asked for the choice to be the
+user's: checkboxes, a total that follows them, and a way to stop a run. `DownloadPicker` is that
+sheet and `DownloadPlan` is the rule behind it, as a pure function so the rules can be tested
+without a screen. The one grouping decision is the owner's: **the SID song lengths and Modland's
+favourites are not boxes of their own** — they come with Modland, because neither is any use
+without the index it describes, and asking about them separately asks the user to know what HVSC
+is.
+
+**Stopping keeps what landed.** Each step writes its own table as it finishes, which is why the
+steps are sequential and separate rather than one transaction: stopping after Modland leaves
+Modland indexed. The clean-up runs under `NonCancellable`, because the spinners are state rather
+than a side effect of the coroutine — cancelled without that, every row the run had reached would
+spin until the app was restarted.
+
 **Still open, cheapest first:**
 
 1. **Offer it, don't hide it.** A first-run card on the playlist screen — "Get some music" — with
@@ -63,10 +77,9 @@ question attached (`docs/LICENSES.md`). They stay their own row.
 3. **Make the arrow look like a control.** `DownloadAction` is a bare arrow beside a red line of
    text; the red reads as an error, not as an invitation. A labelled button that says *Pobierz
    indeks (5,8 MB)* answers both the "what do I do" and the "what will it cost".
-4. **Cancelling it.** Six downloads in sequence is a minute or two, and there is no way to stop
-   them but to leave the screen — which does not stop them either.
-5. **A word about metered networks.** The size is on the button, which is most of the answer; saying
-   "you are on mobile data" would be the rest of it.
+4. **A word about metered networks.** The size is on the button, which is most of the answer;
+   saying "you are on mobile data" would be the rest of it.
+5. **Progress within a step.** A row spins; it does not say how far 19 MB of ASMA has got.
 6. **Doing it automatically** is still not the plan, and the reasons above are unchanged.
 
 **Measure before and after.** The question this answers is "did they get to music", and the release

@@ -108,7 +108,7 @@ fun BrowseScreen(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
-    onDownloadEverything: () -> Unit,
+    onPickDownloads: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -240,7 +240,7 @@ fun BrowseScreen(
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onDownloadTrackMetadata = onDownloadTrackMetadata,
-                onDownloadEverything = onDownloadEverything,
+                onPickDownloads = onPickDownloads,
                 onDownloadFavourites = onDownloadFavourites,
                 onDownloadReplays = onDownloadReplays,
                 onOpenCatalogue = onOpenCatalogue,
@@ -662,7 +662,7 @@ private fun OnlineDomain(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
-    onDownloadEverything: () -> Unit,
+    onPickDownloads: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -741,31 +741,27 @@ private fun OnlineDomain(
                 item(key = "download-everything") {
                     ListItem(
                         leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
-                        headlineContent = {
-                            Text(
-                                stringResource(
-                                    R.string.download_all,
-                                    "${DownloadSizes.EVERYTHING_MB} MB",
-                                )
-                            )
-                        },
+                        headlineContent = { Text(stringResource(R.string.download_pick_open)) },
                         supportingContent = {
                             Text(
-                                stringResource(R.string.download_all_body),
+                                stringResource(
+                                    R.string.download_all_body,
+                                    DownloadSizes.EVERYTHING_MB,
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         },
+                        // The spinner belongs here as well as in the sheet: a run started from the
+                        // sheet goes on after it is dismissed, and this row is what the screen
+                        // underneath has to say about it.
                         trailingContent = {
                             DownloadAction(
                                 downloading = browse.indexing.containsKey(DownloadKeys.EVERYTHING),
-                                description = stringResource(
-                                    R.string.download_all,
-                                    "${DownloadSizes.EVERYTHING_MB} MB",
-                                ),
-                                onClick = onDownloadEverything,
+                                description = stringResource(R.string.a11y_download_pick),
+                                onClick = onPickDownloads,
                             )
                         },
-                        modifier = Modifier.clickable(onClick = onDownloadEverything),
+                        modifier = Modifier.clickable(onClick = onPickDownloads),
                     )
                     HorizontalDivider()
                 }
