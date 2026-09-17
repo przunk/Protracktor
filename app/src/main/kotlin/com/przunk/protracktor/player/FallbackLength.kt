@@ -19,7 +19,7 @@ package com.przunk.protracktor.player
 object FallbackLength {
 
     /**
-     * The owner's range, 2026-09-15: three to ten minutes.
+     * Three to ten minutes.
      *
      * The lower end is not zero and there is no "off". A tune that never ends is the defect, and an
      * off switch would be a supported way back into it — the honest way to play a SID for ever is
@@ -30,9 +30,8 @@ object FallbackLength {
     /**
      * Three minutes.
      *
-     * **The default matters more than the range**, because most people never open that screen. Three
-     * is roughly where a C64 or Atari loop has said what it has to say, and it is the owner's
-     * choice rather than a derived one.
+     * **The default matters more than the range**, because most people never open that screen.
+     * Three is roughly where a C64 or Atari loop has said what it has to say.
      */
     const val DEFAULT_SECONDS: Int = 3 * 60
 

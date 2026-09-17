@@ -6,10 +6,10 @@ package com.przunk.protracktor.player
 /**
  * Which machine a tune was written for.
  *
- * The search filter used to offer **Modland, ASMA, The Mod Archive** — which is our plumbing showing
- * through. Somebody looking for C64 music does not care which archive holds it, and asking them to
- * know that ASMA is Atari 8-bit is asking them to know about us rather than about music
- * (`docs/WISHLIST.md` B23).
+ * The filter offers platforms rather than **Modland, ASMA, The Mod Archive**, which would be our
+ * plumbing showing through. Somebody looking for C64 music does not care which archive holds it,
+ * and asking them to know that ASMA is Atari 8-bit is asking them to know about us rather than
+ * about music (`docs/WISHLIST.md` B23).
  *
  * **The table is the decision, and it can be wrong in two directions.** A platform nobody picks is a
  * wasted row; a format filed under the wrong platform *hides music*, which is worse. So it is built
@@ -156,11 +156,11 @@ object Platforms {
         catalogueFormats = setOf("spectrum", "ay emul", "zx spectrum"),
         names = setOf(
             "ay",
-            // Through ZXTune, 2026-09-07. Before that this platform had a decoder for one name and
-            // 58 playable files out of 23,891, which is what a greyed-out chip was telling the user.
+            // Through ZXTune. Without it this platform has one name and 58 playable files out of
+            // 23,891, which is what a greyed-out chip was saying.
             "pt3", "pt2", "pt1", "stc", "st1", "st3", "asc", "as0", "sqt", "stp", "ftc", "gtr",
-            // `.vtx` too, from 2026-09-09: a register dump rather than a tracker, but all 879 of
-            // Modland's sit under `Spectrum/` and that is the platform they came off.
+            // `.vtx` too: a register dump rather than a tracker, but all 879 of Modland's sit
+            // under `Spectrum/` and that is the platform they came off.
             "vtx",
             // `psm` is **not** here, and it is the same awkward case as `ftm`: Modland has 90 under
             // "Epic Megagames MASI" and 51 under "Spectrum", where it means Pro Sound Maker. The

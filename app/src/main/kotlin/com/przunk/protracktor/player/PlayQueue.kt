@@ -110,10 +110,10 @@ data class PlayQueue(
     /**
      * The playback order, **derived** rather than stored.
      *
-     * It used to be a constructor property defaulting to `tracks.indices`. That is a trap:
-     * `copy()` does not re-evaluate default arguments, so `copy(tracks = …)` on a queue built empty
-     * carried the empty order forward, and the first call to next() indexed into nothing. Deriving
-     * it makes the two impossible to disagree, which is the only fix that stays fixed.
+     * A constructor property defaulting to `tracks.indices` would be a trap: `copy()` does not
+     * re-evaluate default arguments, so `copy(tracks = …)` on a queue built empty would carry the
+     * empty order forward and the first call to next() would index into nothing. Deriving it makes
+     * the two impossible to disagree.
      */
     private val order: List<Int> by lazy(LazyThreadSafetyMode.NONE) {
         if (shuffle) tracks.indices.shuffled(kotlin.random.Random(shuffleSeed)) else tracks.indices.toList()
@@ -144,7 +144,7 @@ data class PlayQueue(
      * What [next] would land on, without moving.
      *
      * Exists so the player can start loading the following track while this one plays, which is
-     * what R9 actually needs: the wait the owner complained about is a read, not a decode.
+     * what R9 actually needs: the wait is a read, not a decode.
      */
     val upcoming: TrackRef? get() = if (hasNext) next().current else null
 

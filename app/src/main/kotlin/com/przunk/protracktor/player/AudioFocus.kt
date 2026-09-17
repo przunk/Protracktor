@@ -24,14 +24,13 @@ import androidx.core.content.ContextCompat
  *   suddenly play the user's music out loud to a room. This one is a courtesy people only notice
  *   once, memorably.
  *
- * The three kinds of interruption are deliberately not treated alike, because the owner does not
- * experience them alike:
+ * The three kinds of interruption are deliberately not treated alike, because they are not alike
+ * to listen to:
  *
  * - **A notification** asks to duck. The music drops in volume for a moment and comes back. Pausing
  *   for a message arriving is worse than the message.
  * - **A phone call** takes focus transiently. Playback stops and **does not resume** when the call
- *   ends. Music restarting by itself as you put the phone down is startling, and the owner asked for
- *   it not to.
+ *   ends: music restarting by itself as you put the phone down is startling.
  * - **Another player starting** takes focus permanently. Playback stops and stays stopped.
  */
 class AudioFocus(
@@ -50,8 +49,8 @@ class AudioFocus(
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> onDuck(DUCKED_GAIN)
             AudioManager.AUDIOFOCUS_GAIN -> onDuck(1f)
 
-            // A call, or another player. Both stop us; neither brings us back. The owner asked for
-            // music not to restart by itself when a call ends.
+            // A call, or another player. Both stop us; neither brings us back -- music must not
+            // restart by itself when a call ends.
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS -> onPause()
         }
     }

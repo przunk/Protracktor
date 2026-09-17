@@ -122,11 +122,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (controller.browse.value.openFormat == null) controller.openFormat(name)
         else controller.openAuthor(name)
     }
-    // **Every door into playback opens the service first** (`docs/STATUS.md` C43). These three and
-    // `playFromResults` below did not, so music started from Random or from a Browse list ran with
-    // no foreground service and therefore no notification — and the system took the process the
-    // moment the owner left the app, which is exactly what he described: enter Random, play, go to
-    // the home screen, and the music stops.
+    // **Every door into playback opens the service first** (`docs/STATUS.md` C43). Music started
+    // from Random or from a Browse list otherwise runs with no foreground service and therefore no
+    // notification, and the system takes the process as soon as the app is left.
     fun playRandom() {
         ensureServiceRunning()
         controller.playRandom()
