@@ -1,4 +1,4 @@
-Protracktor is a focused player for music created on classic computers and consoles. It keeps your playlists, playback history and place between sessions, and starts small module files without rebuilding your library every time.
+Protracktor is a modern focused player for music created on classic computers and consoles. It keeps your playlists, playback history and place between sessions, and starts small module files without rebuilding your library every time.
 
 Play local music chosen through Android's system folder picker, or explore online archives. Catalogue indexes are stored for offline browsing; tracks are fetched only when you choose them and cached for later playback.
 
