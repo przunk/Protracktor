@@ -16,10 +16,9 @@ import kotlinx.coroutines.withContext
 /**
  * Fetching tracks from an online catalogue, and not fetching them twice.
  *
- * The cache is not an optimisation here. A measured Modland fetch took four seconds for 212 KB, and
- * the owner's own local library sits on an SMB share, so "read the file" is a network round trip
- * either way. R9 — playback that starts immediately — is a caching problem before it is anything
- * else.
+ * The cache is not an optimisation here. A Modland fetch took four seconds for 212 KB, and a local
+ * library on an SMB share is a network round trip too, so "read the file" costs either way. R9 —
+ * playback that starts immediately — is a caching problem before it is anything else.
  */
 class RemoteFiles(private val context: Context) {
 
@@ -156,9 +155,8 @@ class RemoteFiles(private val context: Context) {
     /**
      * What the permanent downloads hold — the ASMA archive and anything like it.
      *
-     * Reported separately because it is exempt from the ceiling by design. It used to say here
-     * that the user had no way to delete it; since 2026-09-04 they do, and the number is what the
-     * delete is next to.
+     * Reported separately because it is exempt from the ceiling by design, and because the number
+     * is what the delete button sits next to.
      */
     fun permanentBytes(): Long = archiveDir.listFiles().orEmpty().sumOf { it.length() }
 

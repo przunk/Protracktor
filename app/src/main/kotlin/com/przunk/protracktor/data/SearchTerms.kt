@@ -6,10 +6,9 @@ package com.przunk.protracktor.data
 /**
  * What a typed search means.
  *
- * **Every word, anywhere, in any order** — rather than the whole query as one substring, which is
- * what this was until 2026-09-16 and which fails on the way tracker files are actually named.
- * `space ninja` did not find `space_ninja`, because one character in the middle is a separator
- * rather than a space. Owner, 2026-09-16.
+ * **Every word, anywhere, in any order** — rather than the whole query as one substring, which
+ * fails on the way tracker files are named: `space ninja` does not occur in `space_ninja`, one
+ * character in the middle being a separator rather than a space.
  *
  * Splitting the query is the whole rule and it covers more than it looks:
  *

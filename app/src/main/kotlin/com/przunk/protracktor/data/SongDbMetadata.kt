@@ -67,9 +67,8 @@ object SongDbMetadata {
      * 380,282 `Entry` objects holding 1.9 million strings; counted against the JVM's per-object
      * overhead that is about 90 MB of headers alone, and with the source text and the downloaded
      * bytes still alive the import peaks near 150 MB. On a phone that is an out-of-memory crash,
-     * and one that would only ever happen on the owner's device — every test here runs on the JVM
-     * against a handful of rows. HVSC's database, which this was modelled on, is a sixth the size
-     * and got away with it.
+     * and one no test here can reach: they run on the JVM against a handful of rows. HVSC's
+     * database, which this was modelled on, is a sixth the size and gets away with it.
      *
      * Rows with an implausible key are dropped rather than repaired: a hash is either the shape the
      * publisher uses or it is a line we do not understand, and guessing at the difference is how a

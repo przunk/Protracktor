@@ -199,12 +199,11 @@ object SchemaSql {
      *
      * A catalogue index is filtered **at index time** to the formats a backend can play, so an
      * index built before a backend existed is permanently missing that backend's formats — and it
-     * looks empty rather than stale. The owner met this on 2026-09-03: his Modland index predated
-     * libsidplayfp, so 60,572 C64 tunes were simply absent and nothing said why.
+     * looks empty rather than stale. A Modland index predating libsidplayfp is missing 60,572 C64
+     * tunes with nothing to say why.
      *
-     * `docs/BACKLOG.md` A7 had been carrying this as a note asking a human to remember, while the
-     * local library index (version 8) already recorded its decoder set and offered a rescan. This
-     * closes that asymmetry.
+     * The local library index (version 8) already recorded its decoder set and offered a rescan;
+     * this closes that asymmetry (`docs/BACKLOG.md` A7).
      */
     private val CATALOGUE_BACKENDS_V9: List<String> = listOf(
         "ALTER TABLE catalogues ADD COLUMN backends TEXT NOT NULL DEFAULT ''",
@@ -215,8 +214,8 @@ object SchemaSql {
      *
      * A setting rather than a property of a track, and stored with the other playback modes for the
      * same reason shuffle and repeat are: it applies to whatever plays next, not to one row. Off by
-     * default, which the owner chose — a file reporting 256 subsongs would otherwise take over a
-     * listening session the first time one appeared.
+     * default — a file reporting 256 subsongs would otherwise take over a listening session the
+     * first time one appeared.
      */
     /**
      * Author, publisher, album and year by file hash, added at version 11.
@@ -416,8 +415,8 @@ object SchemaSql {
      * list it used to carry was written at version 1 and named five tables; [CREATE] makes twelve.
      * Seven migrations added tables that nothing removed, so the recreate ran `CREATE TABLE
      * catalogues` against a `catalogues` that still existed and threw -- **on every start**, which
-     * is the state the whole method exists to prevent. Verified against a real SQLite on
-     * 2026-09-08: `[SQLITE_ERROR] table catalogues already exists`.
+     * is the state the whole method exists to prevent. Against a real SQLite:
+     * `[SQLITE_ERROR] table catalogues already exists`.
      *
      * Asking the file is the fix, and it is the fix rather than a longer list because a longer list
      * would go stale the same way, quietly, and only on somebody's phone.

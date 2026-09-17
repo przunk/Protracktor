@@ -31,10 +31,9 @@ data class CatalogueSummary(
     /**
      * Whether this index was built by decoders this build no longer has — or by an unknown set.
      *
-     * An empty `backends` means the index predates this column, which is exactly the case that
-     * prompted it: the owner's Modland index predated libsidplayfp and its 60,572 C64 tunes were
-     * simply absent. Treating "unknown" as stale is right, because unknown is how the problem
-     * looked.
+     * An empty `backends` is an index written before this column existed, and such an index can be
+     * missing a decoder's whole catalogue while looking current — 60,572 C64 tunes, when
+     * libsidplayfp arrived. Unknown counts as stale for that reason.
      */
     fun isStale(current: String): Boolean =
         !isOnlineOnly && trackCount > 0 && backends != current
@@ -84,11 +83,10 @@ class CatalogueStore(context: Context) {
         // Driven by the catalogues the app knows about, not by what happens to be in the table.
         // A catalogue nobody has indexed yet still has to appear, or there is no way to index it.
         //
-        // **Search-only ones last**, on the owner's note (2026-09-09): they are the only rows with
-        // no download arrow, and a gap in the middle of a column of buttons reads as something
-        // missing rather than as something different. Sorted by the property rather than by naming
-        // The Mod Archive, so the next one lands in the right place without anybody remembering to
-        // move it. `sortedBy` is stable, so the rest keep the order `Catalogue.all` declares.
+        // Search-only ones last: they are the only rows with no download arrow, and a gap in the
+        // middle of a column of buttons reads as something missing. Sorted by the property rather
+        // than by naming The Mod Archive, so the next one lands right without anybody remembering.
+        // `sortedBy` is stable, so the rest keep the order `Catalogue.all` declares.
         Catalogue.all.sortedBy { it.isOnlineOnly }.map { catalogue ->
             val (count, at, backends) = stored[catalogue.id] ?: Triple(0, null, "")
             CatalogueSummary(
@@ -335,12 +333,11 @@ class CatalogueStore(context: Context) {
      * @param formats when non-empty, Modland directory names — the same `format` column the search
      * filter narrows by, and the same set `Platforms` produces. Narrowing the dice to one machine
      * is this clause and nothing else.
-     * @param favouritesOnly draws from Modland's published favourites instead of the whole index —
-     * the owner's "random, but only tunes considered good". A join rather than a fourth kind of
-     * table: the list is 991 paths, everything else about those tunes is already in this one, and
-     * the join is also what silently drops the favourites this build cannot play. It is deliberately
-     * **not** combined with [formats]: the list is Amiga tracker music almost entirely, so narrowing
-     * it by machine would offer a chip that mostly returns nothing.
+     * @param favouritesOnly draws from Modland's published favourites instead of the whole index.
+     * A join rather than a fourth kind of table: the list is 991 paths, everything else about those
+     * tunes is already here, and the join is also what drops the favourites this build cannot play.
+     * Deliberately **not** combined with [formats]: the list is Amiga tracker music almost
+     * entirely, so narrowing it by machine would offer a chip that mostly returns nothing.
      */
     suspend fun randomSample(
         count: Int,
