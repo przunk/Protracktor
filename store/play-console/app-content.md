@@ -42,6 +42,38 @@ chosen by the user. Answer any dynamic question about access to third-party or o
 truthfully; do not promise that every title, embedded sample or comment in those archives has been
 editorially reviewed by Protracktor.
 
+### The answers the questionnaire actually asked, 2026-09-17
+
+Recorded because two of them are judgement calls and one is backed by a measurement nobody should
+have to repeat.
+
+| Question | Answer | Why |
+| --- | --- | --- |
+| Online content not in the initial download | **Yes** | Modland, ASMA, The Mod Archive and UnExoticA are browsed and fetched on demand — the questionnaire's own Spotify example |
+| A web browser or search engine | **No** | Fixed archives, no address bar, no arbitrary URL. The in-app search searches the *indexed catalogues*, not the web |
+| Potentially offensive language | **Yes** | measured, below |
+
+**The language answer is measured, not guessed.** Searching Modland's index for a small set of
+unambiguous words, in **filenames alone**:
+
+| | files |
+| --- | --- |
+| `shit*` | 876 |
+| `fuck*` | 581 |
+| `bitch*` | 214 + `wank*` 214 |
+| the rest | 123 |
+| **total** | **2,013 of 516,118 — 0.39%** |
+
+**And that is a floor.** It counts filenames only. The app also shows author names, **instrument and
+sample names** (`docs/BACKLOG.md` A34, built because the owner asked — *"czasem autorzy w
+instrumentach kodują treść"*) and module messages, which is exactly where the demoscene put its
+greetings and its jokes.
+
+**The "not user-generated content" exclusion does not apply.** IARC means content made by *users of
+this app* — uploads, comments, chat. These are third-party files, published elsewhere, that
+Protracktor displays. Answering No would be a claim to have editorially reviewed half a million
+files, which is the claim the paragraph above this one says not to make.
+
 The calculated IARC ratings, not this document, are the release record. Save the certificate with
 the release evidence.
 
