@@ -25,14 +25,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * How tall every action pill stands, one word or three.
+ * How tall every action pill stands, one word or three, **at the phone's default text size**.
  *
  * Tall enough for the icon, two lines of label and air above and below both, so a name that wraps
- * changes nothing about the row it is in.
+ * changes nothing about the row it is in. Read through [pillHeight], never directly: a height in
+ * dp and a label in sp part company the moment somebody enlarges text, and what the reader sees
+ * then is the bottom of the word cut off.
  */
 internal val ACTION_PILL_HEIGHT = 72.dp
 
@@ -43,6 +48,36 @@ internal val ACTION_PILL_HEIGHT = 72.dp
  * what the top bar needs and what a pill wide enough for an icon *beside* its label could not do.
  */
 internal val ACTION_PILL_HEIGHT_SLIM = 46.dp
+
+/**
+ * How tall a slim pill may grow, however large the text is set.
+ *
+ * `TopAppBar` is 64dp and clips what will not fit, so a pill that grew past this would be cut by
+ * the bar instead of by its own box — the same defect one level out. A slim label is one line
+ * (see below), so the cap is reached only at the largest accessibility sizes, and there the word
+ * ellipsises rather than disappearing.
+ */
+private val ACTION_PILL_HEIGHT_SLIM_MAX = 56.dp
+
+/**
+ * The pill's height at the text size this phone is actually set to.
+ *
+ * **Not a constant, because the label is not.** A label is sp and grows with the accessibility
+ * setting; a height in dp does not. At the sizes testers actually use, a two-line Polish label in a
+ * 46dp pill loses its descenders, and "Przeglądaj" reads as "Przegladai".
+ *
+ * One height for every pill in a row is still the rule (`docs/STATUS.md` C47) — this is the same
+ * number for all of them, it simply follows the text.
+ */
+@Composable
+private fun pillHeight(slim: Boolean): Dp {
+    val scale = LocalDensity.current.fontScale.coerceIn(1f, 2f)
+    return if (slim) {
+        minOf(ACTION_PILL_HEIGHT_SLIM * scale, ACTION_PILL_HEIGHT_SLIM_MAX)
+    } else {
+        ACTION_PILL_HEIGHT * scale
+    }
+}
 
 /** The icon in a slim pill. Material's default is 24dp, which leaves no room for the word under it. */
 private val SLIM_ICON = 20.dp
@@ -127,6 +162,9 @@ internal fun LabelledAction(
     // **`combinedClickable` on a plain Surface**, rather than the clickable Surface overload, which
     // takes an `onClick` and nothing else. The shape has to be clipped explicitly then, or the
     // ripple is a rectangle behind a rounded button.
+    // True where the text is set large enough that a slim pill has run out of room.
+    val tightened = LocalDensity.current.fontScale > 1.25f
+
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -135,12 +173,12 @@ internal fun LabelledAction(
             // A caller using weight still gets an equal grid, with a visible seam between buttons.
             .padding(horizontal = ACTION_SEAM)
             .defaultMinSize(minWidth = if (slim) SLIM_MIN_WIDTH else 48.dp)
-            // **One height for every pill, whatever its name** (`docs/STATUS.md` C47), and it is a
-            // plain number rather than anything that depends on the row around it. Two lines of
+            // **One height for every pill, whatever its name** (`docs/STATUS.md` C47), and it is
+            // one number rather than anything that depends on the row around it. Two lines of
             // label forced on every pill push the words against the edges, and filling the row's
             // height turns the Random header into a window-tall banner, because that row is
             // offered the whole screen.
-            .height(if (slim) ACTION_PILL_HEIGHT_SLIM else ACTION_PILL_HEIGHT)
+            .height(pillHeight(slim))
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(
                 role = Role.Button,
@@ -155,7 +193,11 @@ internal fun LabelledAction(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .fillMaxHeight()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                // **The air goes before the word does.** A slim pill cannot grow past the bar it
+                // lives in, so at the largest text sizes the choice is between padding and
+                // legibility. Three device-independent pixels either side are still a gap; half a
+                // letter missing is not a word.
+                .padding(horizontal = 6.dp, vertical = if (slim && tightened) 3.dp else 6.dp),
         ) {
             // The same quieter pair as the follow-track navigation button. Using the named
             // content colour with its container keeps contrast intact for dynamic colour schemes.
@@ -170,7 +212,12 @@ internal fun LabelledAction(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                // **A slim pill gets one line and grows sideways instead.** It lives in a bar of
+                // fixed height, so a second line has nowhere to go: a long word wrapped there is a
+                // word with its lower half cut off. Width follows the label, and the top bar has
+                // room across; height does not.
+                maxLines = if (slim) 1 else 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp),
             )
         }
