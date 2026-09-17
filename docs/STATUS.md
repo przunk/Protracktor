@@ -416,6 +416,24 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C62. ~~Buttons cut their labels in half at a larger text size~~ — FIXED 2026-09-17, branch
+
+Found by the first closed-testing round, on somebody else's phone: **Przeglądaj**, **Ustawienia**
+and **Playlista** drawn with their lower halves missing.
+
+`LabelledAction` fixed its pill at 46dp (slim) or 72dp, and the label is `labelSmall` — **sp, which
+grows with the system text size, inside a box in dp, which does not**. At the size that tester runs,
+the icon and one line of label no longer fit in 46dp, and Compose clips rather than overflows.
+
+The height now follows `fontScale`, so the rule it was written for still holds — one height for
+every pill in a row (C47) — and that one number grows with the words. A slim pill is capped at 56dp
+because `TopAppBar` is 64dp and would clip it in turn, and above 1.25x its padding gives up three
+pixels rather than the descenders. A slim label is one line with ellipsis: a second line in a bar of
+fixed height has nowhere to go.
+
+`PlaylistTopBar`'s name chip already used `defaultMinSize` for exactly this reason and says so in
+its own comment. The pill did not.
+
 ### C60. ~~A search matched the whole query as one substring~~ — FIXED 2026-09-16
 
 *Owner, 2026-09-16: "czy wyszukiwanie może działać tak, że jak wpisuję 'space ninja' to znajduje mi
