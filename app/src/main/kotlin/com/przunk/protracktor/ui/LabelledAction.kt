@@ -40,26 +40,38 @@ import androidx.compose.ui.unit.dp
  * changes nothing about the row it is in. Read through [pillHeight], never directly: a height in
  * dp and a label in sp part company the moment somebody enlarges text, and what the reader sees
  * then is the bottom of the word cut off.
+ *
+ * **Add it up rather than choosing it**: 12dp of padding, a 24dp icon, 2dp under it and two lines
+ * of `labelSmall` at 16sp each come to 70dp, so this is that plus a little air. The arithmetic is
+ * written down because guessing it is how the slim pill below came to be four device-independent
+ * pixels too short for its own contents.
  */
-internal val ACTION_PILL_HEIGHT = 72.dp
+internal val ACTION_PILL_HEIGHT = 76.dp
 
 /**
  * The same pill, for the top bar's row of actions.
  *
  * Shorter, and with a smaller icon: five of these stand across a phone with room to spare, which is
  * what the top bar needs and what a pill wide enough for an icon *beside* its label could not do.
+ *
+ * **46dp was wrong, and wrong at the default text size** — not only at a large one. Its contents
+ * are 12dp of padding, a 20dp icon, 2dp under it and one line of `labelSmall`, whose line box is
+ * 16sp: **50dp**, four more than the box they were drawn in. What the reader saw was the descender
+ * of *Settings* and of *Przeglądaj* cut off, on an ordinary phone with ordinary settings.
  */
-internal val ACTION_PILL_HEIGHT_SLIM = 46.dp
+internal val ACTION_PILL_HEIGHT_SLIM = 56.dp
 
 /**
  * How tall a slim pill may grow, however large the text is set.
  *
  * `TopAppBar` is 64dp and clips what will not fit, so a pill that grew past this would be cut by
- * the bar instead of by its own box — the same defect one level out. A slim label is one line
- * (see below), so the cap is reached only at the largest accessibility sizes, and there the word
- * ellipsises rather than disappearing.
+ * the bar instead of by its own box — the same defect one level out.
+ *
+ * **Nothing is clipped at the cap, because the contents fit under it.** With one line of label and
+ * the tightened padding above 1.25x, the tallest a slim pill's contents come to is 6 + 20 + 2 +
+ * 32 = 60dp at twice the default text size, which is what the bar can hold.
  */
-private val ACTION_PILL_HEIGHT_SLIM_MAX = 56.dp
+private val ACTION_PILL_HEIGHT_SLIM_MAX = 64.dp
 
 /**
  * The pill's height at the text size this phone is actually set to.
