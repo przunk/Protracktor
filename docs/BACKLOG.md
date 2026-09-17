@@ -15,6 +15,31 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A45. A jump from the playlist does not name the author the way a jump from Random does — **noted 2026-09-17**
+
+*Owner, 2026-09-17: "more from this author z poziomu playlisty powinno pokazywać tytuł (tak jak w
+przypadku użycia tej funkcji z poziomu randoma)."*
+
+The same action from two places, and only one of them says where it landed. From Random it is a
+**digression** — `showNeighboursOf` sets the session's author, the header under the bar reads
+"Browsing <author>", and there is a way back to the dice. From the playlist it is a plain jump:
+Browse opens on the folder and the bar says only "Browse".
+
+**The heading is not decoration.** It is the one thing on screen that says *whose* folder this is,
+and the owner arrives there from a tune rather than by walking the archive — so without it the
+screen answers a question he did not ask ("here is a folder") instead of the one he did ("what else
+did this person write").
+
+Two things to settle when it is picked up:
+
+- **The heading, not the digression.** A jump from the playlist has no session to return to, so it
+  should get the heading and the author's name without the dice's "waiting" state or its back path.
+  `SESSION_HEADER_HEIGHT` is shared for exactly this reason, and `arrivedByJump` already
+  distinguishes a place you were put from one you walked to.
+- **What the web does**, since it offers the same jump from the same two places
+  (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
+  differ — A43 is in the same corner of the same screen and the two may as well be one branch.
+
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
 
 *Owner, 2026-09-16: on the web it "działa kiedy indeks nie jest ściągnięty — wtedy wchodzi w pusty
