@@ -4,16 +4,21 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,47 +80,74 @@ internal fun DownloadPicker(
         mutableStateOf(DownloadPlan.choices().filter { !isHeld(it, browse) }.toSet())
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // **Opened whole, not half.** A Material bottom sheet stops at half height when its content
+    // is tall enough, and the one thing anybody came here to press is the last thing in it -- so
+    // half a sheet is a sheet with its button cut in two. `skipPartiallyExpanded` removes the
+    // state that does that; there is nothing behind this sheet worth seeing past it.
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Text(
             text = stringResource(R.string.download_pick_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
         )
 
-        DownloadPlan.choices().forEach { id ->
-            val held = isHeld(id, browse)
-            val busy = browse.indexing.containsKey(id) ||
-                (id == Modland.id && browse.indexing.keys.any { it == DownloadKeys.SONG_LENGTHS || it == DownloadKeys.FAVOURITES })
-            ListItem(
-                headlineContent = { Text(labelFor(id)) },
-                supportingContent = {
-                    Text(
-                        if (held) {
-                            stringResource(R.string.download_pick_held)
-                        } else {
-                            stringResource(R.string.download_pick_size, megabytesFor(id))
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                },
-                leadingContent = {
-                    Checkbox(
-                        checked = id in selected,
-                        // While it runs the boxes are a report, not a question: what is being
-                        // fetched was decided when the button was pressed.
-                        enabled = !running,
-                        onCheckedChange = { ticked ->
-                            selected = if (ticked) selected + id else selected - id
-                        },
-                    )
-                },
-                trailingContent = if (busy) {
-                    { CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp) }
-                } else {
-                    null
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+        // **The rows scroll; the button does not.** At the largest text sizes four rows and a
+        // heading are taller than the sheet, and the button has to stay reachable -- the same
+        // lesson as `docs/STATUS.md` C62, one level up. `fill = false` so a short list still wraps
+        // its content rather than stretching to the ceiling.
+        Column(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            DownloadPlan.choices().forEach { id ->
+                val held = isHeld(id, browse)
+                val busy = browse.indexing.containsKey(id) ||
+                    (id == Modland.id && browse.indexing.keys.any { it == DownloadKeys.SONG_LENGTHS || it == DownloadKeys.FAVOURITES })
+                ListItem(
+                    headlineContent = { Text(labelFor(id)) },
+                    supportingContent = {
+                        Text(
+                            if (held) {
+                                stringResource(R.string.download_pick_held)
+                            } else {
+                                stringResource(R.string.download_pick_size, megabytesFor(id))
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    },
+                    leadingContent = {
+                        Checkbox(
+                            checked = id in selected,
+                            // While it runs the boxes are a report, not a question: what is being
+                            // fetched was decided when the button was pressed.
+                            enabled = !running,
+                            onCheckedChange = { ticked ->
+                                selected = if (ticked) selected + id else selected - id
+                            },
+                        )
+                    },
+                    // **A slot of one size, whether or not it is spinning.** Rows that change height
+                    // as each step starts and finishes move the sheet under the finger -- and the
+                    // button with it, which is what the owner saw walking down the list.
+                    trailingContent = {
+                        Box(
+                            modifier = Modifier.size(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (busy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         // **One width for both**, and a wide one. Download and Stop are the same control in two
