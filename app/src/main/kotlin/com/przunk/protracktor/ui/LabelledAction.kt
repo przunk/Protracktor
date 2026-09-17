@@ -69,13 +69,12 @@ internal val ACTION_SEAM = 3.dp
 /**
  * An action drawn as an icon with its name underneath.
  *
- * The owner's shape, asked for twice: once for the way out of Browse (`docs/BACKLOG.md` A16) and
- * again for the actions on a track and the way in (`A17`, `A23`). An icon alone does not say where
- * it goes, and a word alone does not read as a control — the pair does both, and several of them
- * fit in one row where the same actions as full-width text buttons did not.
+ * The shape every action in this app takes (`docs/BACKLOG.md` A16, A17, A23). An icon alone does
+ * not say where it goes, and a word alone does not read as a control — the pair does both, and
+ * several of them fit in one row where the same actions as full-width text buttons do not.
  *
- * Shared rather than repeated, because the version that existed was inline in the Browse header and
- * a second copy would have drifted from it by the third caller.
+ * Shared rather than repeated: a second copy inline in one screen's header would drift from this
+ * one by the third caller.
  *
  * **Width comes from the caller.** A row of these should be a grid of equals, and the way to get
  * that is `Modifier.weight(1f)` so they share the space that is actually there. A fixed width was
@@ -93,20 +92,19 @@ internal fun LabelledAction(
     /**
      * The qualified version of the same action, if there is one.
      *
-     * The idiom the transport established and the owner kept: **press does the plain thing, hold
-     * does the qualified one**. Both handlers are held stable, because a lambda rebuilt on every
-     * recomposition restarts the gesture detector and a hold then fires repeatedly — the defect in
-     * `docs/STATUS.md` C17, which cost an evening and is not worth meeting twice.
+     * The idiom the transport established: **press does the plain thing, hold does the qualified
+     * one**. Both handlers are held stable, because a lambda rebuilt on every recomposition
+     * restarts the gesture detector and a hold then fires repeatedly (`docs/STATUS.md` C17).
      */
     onLongClick: (() -> Unit)? = null,
     longClickLabel: String? = null,
     /**
      * What the phone does when this is pressed, or nothing.
      *
-     * **These are the app's function buttons**, and the owner asked for a firm answer from them —
-     * Save and Discard by name (2026-09-10). So a press is the default and the exceptions declare
-     * themselves: the three that change destination pass `null`, because the destination already
-     * buzzes on arrival and two buzzes for one press reads as a stutter, not as emphasis.
+     * **These are the app's function buttons**, and they answer firmly — Save and Discard among
+     * them. So a press is the default and the exceptions declare themselves: the three that change
+     * destination pass `null`, because the destination already buzzes on arrival and two buzzes
+     * for one press reads as a stutter, not as emphasis.
      */
     haptic: (Haptics.() -> Unit)? = { press() },
     /** The top bar's row: shorter, with a smaller icon. Elsewhere the full-sized pill. */
@@ -138,10 +136,10 @@ internal fun LabelledAction(
             .padding(horizontal = ACTION_SEAM)
             .defaultMinSize(minWidth = if (slim) SLIM_MIN_WIDTH else 48.dp)
             // **One height for every pill, whatever its name** (`docs/STATUS.md` C47), and it is a
-            // plain number rather than anything that depends on the row around it. Two attempts at
-            // cleverness here cost the owner two builds: two lines of label forced on every pill
-            // pushed the words against the edges, and filling the row's height turned the Random
-            // header into a window-tall banner, because that row is offered the whole screen.
+            // plain number rather than anything that depends on the row around it. Two lines of
+            // label forced on every pill push the words against the edges, and filling the row's
+            // height turns the Random header into a window-tall banner, because that row is
+            // offered the whole screen.
             .height(if (slim) ACTION_PILL_HEIGHT_SLIM else ACTION_PILL_HEIGHT)
             .clip(MaterialTheme.shapes.medium)
             .combinedClickable(

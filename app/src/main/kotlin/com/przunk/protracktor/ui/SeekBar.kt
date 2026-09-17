@@ -30,9 +30,9 @@ import androidx.compose.ui.unit.dp
 /**
  * The seek control, used by both the dock and Now Playing.
  *
- * One component in two places so the two cannot drift apart. The owner asked to be able to move
- * through a track without opening anything first, and a bar that reads differently in each place
- * would be worse than not having it in the second.
+ * One component in two places so the two cannot drift apart: a track can be moved through without
+ * opening anything first, and a bar that read differently in each place would be worse than not
+ * having it in the dock at all.
  *
  * While the thumb is held it shows where the finger is rather than where playback is. Without that
  * the position poll two hundred milliseconds later drags the thumb out from under the user, which
@@ -56,9 +56,9 @@ fun SeekBar(
     val shown = (scrubbing ?: positionSeconds.toFloat()).coerceIn(0f, range)
     val interaction = remember { MutableInteractionSource() }
 
-    // **"Taki haptic żebym czuł że go trzymam"** (owner, 2026-09-10). Three parts, and all three
-    // are needed for that sentence to be true: a firm one when the thumb is taken hold of, a very
-    // light one per notch while it moves, and the gesture's own end when it is let go.
+    // **The thumb is felt, not just seen.** Three parts, and all three are needed for that: a
+    // firm one when the thumb is taken hold of, a very light one per notch while it moves, and the
+    // gesture's own end when it is let go.
     //
     // The notches are a fixed count across the bar rather than a fixed number of seconds, so a
     // ninety-second chiptune and a twenty-minute SID feel the same under the thumb. Without them
@@ -93,33 +93,32 @@ fun SeekBar(
             .fillMaxWidth()
             // **The height is the touch target, not the look of the line.** The track's thickness
             // is set on the track itself, so this can be a proper 48dp finger without the bar
-            // getting any fatter. It was 28dp, under Material's minimum, with a full-width button
-            // immediately below it -- so a low miss did not do nothing, it opened Now Playing. The
-            // owner met that in a car, which is where a small target costs the most.
+            // getting any fatter. At 28dp it is under Material's minimum, with a full-width
+            // button immediately below it -- so a low miss does not do nothing, it opens Now
+            // Playing.
             .then(if (compact) Modifier.height(COMPACT_TOUCH_HEIGHT) else Modifier)
             .then(label?.let { text -> Modifier.semantics { contentDescription = text } } ?: Modifier),
         thumb = {
-            // A visible grab point, which is what the owner asked for: a progress line with nothing
-            // to take hold of does not look like something you can move.
+            // A visible grab point: a progress line with nothing to take hold of does not look
+            // like something you can move.
             //
             // **And nothing to take hold of when there is nothing to move.** SID and Atari ST
             // cannot seek — libsidplayfp is running a program and has no notion of a position at
-            // all — and since HVSC started supplying SID durations, the bar shows a real length and
-            // looked exactly like a bar you could drag. The owner tried, on 2026-09-04. A greyed
-            // thumb reads as "not now"; no thumb reads as "this is progress", which is the truth.
+            // all — and since HVSC supplies SID durations the bar shows a real length, so it
+            // would otherwise look exactly like a bar you could drag. A greyed thumb reads as "not
+            // now"; no thumb reads as "this is progress", which is the truth.
             //
             // **Drawn here rather than by `SliderDefaults.Thumb`**, which grows while pressed. The
             // track is inset by the thumb's radius, so a thumb that changes size makes the line
-            // itself widen at both ends the moment you touch it — which is what the owner saw. A
-            // fixed circle keeps the bar still under the finger.
+            // itself widen at both ends the moment you touch it. A fixed circle keeps the bar
+            // still under the finger.
             //
             // **The same dot whether or not it can be dragged** (`docs/STATUS.md` C45). Drawing
-            // nothing at all was the earlier answer to "this is progress, not a control", and the
-            // owner met what it costs: with Material's disabled track colours the played part is
-            // grey on a dark surface and there is no mark on it, so where the tune had got to could
-            // not be read. A smaller dot was tried for one build and he sent it back -- the track is
-            // inset by the thumb's radius, so a smaller circle sits higher and the bar shifts with
-            // it. Same size, same place; the colours are what changed.
+            // nothing costs too much: with Material's disabled track colours the played part is
+            // grey on a dark surface and carries no mark, so where the tune has got to cannot be
+            // read. Nor a smaller dot -- the track is inset by the thumb's radius, so a smaller
+            // circle sits higher and the bar shifts with it. Same size, same place; only the
+            // colours change.
             val size = if (compact) 14.dp else 20.dp
             // Darker where it cannot be dragged, and darker by *mixing with the surface* rather
             // than by going see-through: a translucent dot takes the colour of whatever is behind
@@ -157,9 +156,9 @@ fun SeekBar(
 /**
  * How far the dot and the played line are taken towards the surface where the tune cannot be seeked.
  *
- * **The knob for the look of a bar you cannot drag** (owner, 2026-09-14: "daj kolor akcentowany
- * nieco ciemniej"). 0 is the playing colour exactly; 1 disappears into the background. Raise it to
- * push the bar further back, lower it to bring it forward.
+ * **The knob for the look of a bar you cannot drag.** 0 is the playing colour exactly; 1
+ * disappears into the background. Raise it to push the bar further back, lower it to bring it
+ * forward.
  */
 private const val DIMMED = 0.4f
 

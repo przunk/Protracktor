@@ -195,7 +195,7 @@ fun ProtracktorApp(
     var scanning by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) { viewModel.scan.collect { scanning = true } }
 
-    // **Where you are, felt when it becomes somewhere else** (owner, 2026-09-10).
+    // **Where you are, felt when it becomes somewhere else.**
     //
     // Keyed on the destination rather than called from the buttons, because there are a dozen ways
     // to change it — three buttons, two Back handlers, a link arriving, a scan finishing, a random
@@ -225,8 +225,8 @@ fun ProtracktorApp(
     // playlist was left, in a list of a different length.
     val randomState = rememberLazyListState()
 
-    // Newly added tracks land at the end of the list, out of sight. Going to them is the
-    // confirmation that the removed snackbar used to be.
+    // Newly added tracks land at the end of the list, out of sight. Going to them is half the
+    // confirmation that anything happened; the notice is the other half.
     LaunchedEffect(Unit) {
         viewModel.reveal.collect { index -> playlistState.animateScrollToItem(index) }
     }
@@ -271,9 +271,9 @@ fun ProtracktorApp(
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     } else if (showRandom) {
-                        // The same arrow Browse has (owner, 2026-09-14): the two screens sit side by
-                        // side and only one of them offered a way out of its bar, so their headings
-                        // did not line up either.
+                        // The same arrow Browse has: the two screens sit side by side, so one of
+                        // them offering no way out of its bar would leave their headings out of
+                        // line as well.
                         IconButton(onClick = { viewModel.returnToPlaylist(); showRandom = false }) {
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
@@ -302,10 +302,10 @@ fun ProtracktorApp(
                         LabelledAction(
                             icon = PlayerIcons.Playlist,
                             label = stringResource(R.string.action_to_playlist),
-                            // **Out, not back** (owner, 2026-09-14). During a digression both
-                            // screens counted themselves showing and drew this button twice. There
-                            // is one: Back returns to whatever sent you here — the dice — and this
-                            // leaves for the playlist whatever is waiting.
+                            // **Out, not back.** During a digression both screens count
+                            // themselves showing, so without this condition the button is drawn
+                            // twice. There is one: Back returns to whatever sent you here — the
+                            // dice — and this leaves for the playlist whatever is waiting.
                             onClick = {
                                 viewModel.returnToPlaylist()
                                 showRandom = false
@@ -325,8 +325,8 @@ fun ProtracktorApp(
                             label = stringResource(R.string.action_to_playlist),
                             onClick = { viewModel.returnToPlaylist(); showRandom = false },
                             haptic = null,
-                            // **The same pill as Filter, one row below it** (owner, 2026-09-16,
-                            // with the two side by side). See `TOP_BAR_ACTION_EDGE`.
+                            // **The same pill as Filter, one row below it.** See
+                            // `TOP_BAR_ACTION_EDGE`.
                             slim = true,
                             modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
                         )
@@ -383,8 +383,8 @@ fun ProtracktorApp(
                 replayBytes = browse.replayBytes,
                 catalogues = browse.catalogues,
                 // From the collected state, not from the parameter: a successful pairing
-                // rewrites this address, and a value captured where the screen is built showed the
-                // one from before the scan (owner, 2026-09-16).
+                // rewrites this address, and a value captured where the screen is built would
+                // show the one from before the scan.
                 webPlayer = browse.webPlayer,
                 onWebPlayerChanged = viewModel::setWebPlayer,
                 songLengthCount = browse.songLengthCount,
@@ -424,9 +424,10 @@ fun ProtracktorApp(
                 onDownloadReplays = viewModel::downloadReplays,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
-                // **Open, not just play.** The dice used to start a tune and drop you back on a
-                // playlist behind glass; now it opens the record it is about to fill, and rolls
-                // once so there is no second press between here and music.
+                // **Open, not just play.** Starting a tune and dropping back onto a playlist
+                // behind glass says nothing about what the dice did; this opens the record it is
+                // about to fill, and rolls once so there is no second press between here and
+                // music.
                 onRandom = {
                     viewModel.openRandom()
                     showBrowse = false
@@ -446,8 +447,8 @@ fun ProtracktorApp(
                 playingId = state.current?.id,
                 // What is being fetched, so its row says so by breathing (`docs/WISHLIST.md` B32).
                 loadingId = state.current?.id?.takeIf { state.loadingTrack },
-                // Whose folder, while the dice waits under it — from the moment the jump lands, not
-                // only once something here is playing (owner, 2026-09-14).
+                // Whose folder, while the dice waits under it — from the moment the jump lands,
+                // not only once something here is playing.
                 digressionAuthor = browse.openAuthor
                     ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting) },
                 onShowNeighbours = viewModel::showNeighboursOf,
@@ -455,10 +456,9 @@ fun ProtracktorApp(
                 onShareLink = viewModel::shareLink,
                 onSendToWeb = viewModel::sendToWeb,
                 onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
-                // Stays in Browse (`docs/STATUS.md` C46). Adding from a search used to close it,
-                // which left the playlist on screen behind the scrim -- a search result is what was
-                // playing -- so the list the tracks were picked from was gone and what replaced it
-                // was covered over. The notice says what was added.
+                // Stays in Browse (`docs/STATUS.md` C46). Closing it on an add would take away
+                // the list the tracks were picked from and leave the playlist behind the scrim,
+                // since a search result is what is playing. The notice says what was added.
                 onAdd = { tracks -> viewModel.addToPlaylist(tracks) },
                 onAddToOtherPlaylist = { tracks ->
                     pendingAddToPlaylist = tracks
@@ -532,9 +532,9 @@ fun ProtracktorApp(
         LaunchedEffect(state.searchMode) { if (state.searchMode) showRandom = false }
     }
 
-    // **Lifted out of Browse**, which used to be the only place it could open. The Random view's
-    // Filter button opens the same sheet, and a sheet that exists only under one destination cannot
-    // be reached from another (`docs/PLAN_RANDOM.md`).
+    // **Here rather than inside Browse.** The Random view's Filter button opens the same sheet,
+    // and a sheet that exists only under one destination cannot be reached from another
+    // (`docs/PLAN_RANDOM.md`).
     if (choosingRandomScope) {
         RandomScopeSheet(
             browse = browse,
@@ -833,8 +833,8 @@ private val TOP_BAR_EDGE = 8.dp
  * Where an action in the app bar puts its **visible** right edge, so it lines up with the action in
  * the header underneath.
  *
- * *Owner, 2026-09-16, with a screenshot of Random: "przycisk 'filter' i 'playlist' (wyżej) nie są
- * równo i w równym rozmiarze."* He was right three times over, and the three were separate:
+ * Filter, in the header, and the playlist action in the bar above it have to match. Three separate
+ * things make them differ:
  *
  * - **Height.** The bar's action was a full pill, 72dp, which a 64dp `TopAppBar` then clipped;
  *   Filter is slim at 46dp. Both are slim now.
@@ -848,9 +848,9 @@ private val TOP_BAR_EDGE = 8.dp
  * the same seam — so the seam cancels, and what is left is the heading's edge less what the bar
  * already adds. **Derived rather than written down**, so that moving the heading moves this too.
  *
- * Measured off the owner's screenshot rather than assumed: the two pills stood 32px and 40px from
- * the edge of an 864px screen at 2.1x, which is 15dp and 19dp — and 19dp is what
- * `SESSION_HEADER_EDGE + ACTION_SEAM` comes to.
+ * Measured rather than assumed: before this, the two pills stood 32px and 40px from the edge of an
+ * 864px screen at 2.1x, which is 15dp and 19dp — and 19dp is what `SESSION_HEADER_EDGE +
+ * ACTION_SEAM` comes to.
  *
  * `TOP_BAR_EDGE` stays 8dp for the playlist bar, whose actions that bar lays out itself rather than
  * `TopAppBar`, so they never had the extra 4dp to account for.
@@ -863,8 +863,8 @@ private val TOP_BAR_ACTION_EDGE = SESSION_HEADER_EDGE - TOP_APP_BAR_ACTION_PADDI
  *
  * **Measured on a device, not computed.** Every other gap on this bar is arithmetic — two known
  * paddings either side of a known spacer — but this one crosses between two slots the top bar lays
- * out itself, and how much they leave between them is not ours to know. The owner looked at it and
- * said it was a pixel short, which is the only instrument there is for this.
+ * out itself, and how much they leave between them is not ours to know. A pixel short is visible
+ * on a screen and in no formula here, which is the only instrument there is for this.
  */
 private val TOP_BAR_SLOT_SEAM = 1.dp
 

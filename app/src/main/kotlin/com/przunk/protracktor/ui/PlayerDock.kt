@@ -77,13 +77,13 @@ fun PlayerDock(
         // The surface still paints behind the gesture bar -- only the controls move up. Padding the
         // Surface instead would leave a strip of the wrong colour under the dock.
         Column(modifier = Modifier.navigationBarsPadding()) {
-            // The same seek control as Now Playing. The owner asked to be able to move
-            // through a track from the main screen without opening anything first; a progress line
-            // you cannot grab was the fault.
+            // The same seek control as Now Playing, so a track can be moved through from the main
+            // screen without opening anything first.
+            //
             // Position on the left, length on the right, with the bar between them: the two
             // numbers then read as where this line starts and where it ends. Written as
-            // "0:36 / 2:20" beside the title they were one string to decode, in a row that was
-            // getting crowded -- the owner's observation, and his layout.
+            // "0:36 / 2:20" beside the title they are one string to decode, in a row that is
+            // already crowded.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -114,10 +114,9 @@ fun PlayerDock(
             // lands on nothing instead of opening Now Playing, which is what it did in the car.
             Spacer(Modifier.height(6.dp))
 
-            // **It has to look like a control.** This row opens the player, and nothing said so --
-            // the owner pointed that out, and it matters more now that the tunes inside a file are
-            // reached through it. Same remedy as the playlist name in the top bar, which had the
-            // same problem: a surface you can see, and a chevron.
+            // **It has to look like a control.** This row opens the player, which is also how the
+            // tunes inside a file are reached, and nothing else on it says so. Same remedy as the
+            // playlist name in the top bar: a surface you can see, and a chevron.
             Surface(
                 onClick = if (loaded != null) onExpand else onBrowse,
                 shape = MaterialTheme.shapes.medium,
@@ -129,9 +128,8 @@ fun PlayerDock(
             ) {
             // **A height of its own, not its tallest child's** (`docs/STATUS.md` C54). The keep
             // button is an `IconButton` and carries Material's 48dp touch target; the chevron beside
-            // it is a bare icon. So the card grew by four pixels wherever keeping was offered — the
-            // dock was visibly taller in Random than over the playlist, which the owner saw at once
-            // with the two screens side by side.
+            // it is a bare icon. Without a fixed height the card grows by four pixels wherever
+            // keeping is offered, and the dock is visibly taller in Random than over the playlist.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -142,8 +140,8 @@ fun PlayerDock(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = loaded?.title ?: stringResource(R.string.dock_idle_title),
-                        // A size up from titleSmall. The owner reads this in a car, where a glance
-                        // is all there is; the dock grows to fit rather than the text being
+                        // A size up from titleSmall: this is read at a glance, in a car among
+                        // other places, so the dock grows to fit rather than the text being
                         // squeezed to keep the dock's old height.
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
@@ -152,11 +150,10 @@ fun PlayerDock(
                     Text(
                         // Said out loud, because on a network share this is seconds. A player that
                         // looks idle while it works gets pressed again.
-                        // Author, then the machine and the year -- the owner asked for
-                        // "AMIGA | 1992" while driving, and this is the line that had room for it
-                        // without making the dock taller. The author comes first and the whole
-                        // line ellipsises, so a long name pushes out the decoration rather than
-                        // the other way round.
+                        // Author, then the machine and the year -- "AMIGA | 1992" -- because this
+                        // is the line with room for it without making the dock taller. The author
+                        // comes first and the whole line ellipsises, so a long name pushes out the
+                        // decoration rather than the other way round.
                         //
                         // With no author the platform *replaces* the format rather than joining
                         // it: "MOD · Amiga" says one thing twice.
@@ -191,10 +188,10 @@ fun PlayerDock(
                     }
                 }
                 // Says there is more inside without adding a control: the tunes are chosen in
-                // the player this row opens. Shown in **both** modes -- gating it on "play all" was
-                // the first design and it closed a door on itself, since you then had to already
-                // know a file held fifteen tunes in order to switch to the mode that would tell
-                // you. The owner spotted that; "1 of 15" is true either way.
+                // the player this row opens. Shown in **both** modes: gating it on "play all"
+                // closes a door on itself, since you would have to already know a file held
+                // fifteen tunes in order to switch to the mode that would tell you. "1 of 15" is
+                // true either way.
                 if (state.subsongCount > 1) {
                     Text(
                         text = stringResource(
@@ -221,14 +218,13 @@ fun PlayerDock(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // **Dead while the dice is running, and drawn dead** (owner, 2026-09-10: "opcja
-                // shuffle chyba jest bezużyteczna"). He is right, and it is not a matter of taste:
-                // shuffle reorders the *playlist's* queue, and Random plays from neither the
-                // playlist nor its order. Nothing at all happened when it was pressed.
+                // **Dead while the dice is running, and drawn dead.** Shuffle reorders the
+                // *playlist's* queue, and Random plays from neither the playlist nor its order, so
+                // pressing it does nothing at all.
                 //
                 // Greyed rather than hidden. A transport that loses a button when the mode changes
-                // is a transport whose other buttons move under the thumb, and this row is the one
-                // the owner uses while driving.
+                // is a transport whose other buttons move under the thumb, and this row is pressed
+                // without looking.
                 ToggleControl(
                     icon = PlayerIcons.Shuffle,
                     active = state.queue.shuffle,
@@ -336,8 +332,8 @@ private fun ToggleControl(
             contentDescription = null,
             // **The disabled tint has to be spelled out.** `IconButton` dims a disabled child
             // through `LocalContentColor`, and naming a tint here overrides exactly that -- so
-            // `enabled = false` was doing nothing visible and the owner reported a shuffle button
-            // that looked as alive as the rest of the row while doing nothing.
+            // without this `enabled = false` does nothing visible, and a dead button looks as alive
+            // as the rest of the row.
             tint = when {
                 !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f)
                 active -> MaterialTheme.colorScheme.primary
@@ -351,10 +347,10 @@ private fun ToggleControl(
 /**
  * How big a transport control is, and how big its glyph.
  *
- * The owner's reason is the whole specification: *"when I am driving it is hard to hit them."*
- * Material's 48dp is the minimum that counts as reachable sitting still and looking at it; this is
- * a size up from that, and the glyph grows with the target so the button does not become a large
- * area of nothing around a small mark.
+ * These are pressed without looking, in a car among other places. Material's 48dp is the minimum
+ * that counts as reachable sitting still and looking at it; this is a size up from that, and the
+ * glyph grows with the target so the button does not become a large area of nothing around a small
+ * mark.
  */
 private val TRANSPORT_TARGET = 56.dp
 private val TRANSPORT_GLYPH = 30.dp
@@ -372,8 +368,8 @@ internal fun formatTime(seconds: Double): String {
  *
  * **Why a hold and not another button.** `aleste 2.kss` holds 256 tunes, so leaving it with the
  * ordinary next is 256 presses; but a fourth transport control would be on screen always, for a
- * thing wanted rarely, in the row the owner reads while driving. The hold costs nothing when it is
- * not used.
+ * thing wanted rarely, in a row that is pressed without looking. The hold costs nothing when it
+ * is not used.
  *
  * `IconButton` has no long press, so this is the same shape built on `combinedClickable`: the
  * material target size, a circular ripple, and the disabled tint M3 uses. `onLongClickLabel` is not
@@ -409,9 +405,9 @@ private fun TransportButton(
     // `combinedClickable` installs a gesture detector keyed on the lambdas it is given. Hand it a
     // fresh lambda on every recomposition and the detector is torn down and started again -- and a
     // detector that starts while a finger is already down begins timing a *new* long press. Skipping
-    // a file recomposes this row, because the title above it changes, so one continuous hold fired
-    // once every half second: two files, or four if you held a little longer. That is what the owner
-    // saw, and it is not a race in the player at all.
+    // a file recomposes this row, because the title above it changes, so one continuous hold fires
+    // once every half second: two files skipped, or four if the hold is a little longer. It looks
+    // like a race in the player and is not one.
     //
     // `rememberUpdatedState` keeps the identity fixed while letting the body see the current
     // callbacks.

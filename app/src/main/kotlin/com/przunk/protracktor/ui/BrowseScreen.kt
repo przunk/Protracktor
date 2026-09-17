@@ -88,10 +88,10 @@ import com.przunk.protracktor.player.TrackRef
 /**
  * Browse: a full screen, one component, four domains.
  *
- * The owner asked for the choice of *where to look* to come first — local disk, the online
- * archives, a random pick, or a search — rather than for "add a folder" to be the only thing on
- * offer. Everything below that is the same list-and-tick machinery whatever the source, which is
- * why one component covers all four.
+ * The choice of *where to look* comes first — local disk, the online archives, a random pick, or
+ * a search — rather than "add a folder" being the only thing on offer. Everything below that is
+ * the same list-and-tick machinery whatever the source, which is why one component covers all
+ * four.
  */
 @Composable
 fun BrowseScreen(
@@ -141,10 +141,10 @@ fun BrowseScreen(
     // at the top (`docs/STATUS.md` C6) while a descent and return does not.
     val scroll = rememberBrowseScroll()
 
-    // **A step through the catalogue, felt** (owner, 2026-09-10). Keyed on where Browse is rather
-    // than on the taps that got it there: descending, Back, "more from this author" and the jump a
-    // search result makes all end up changing these five fields, and a call at each of those sites
-    // would be a list that goes stale the first time a sixth route is added.
+    // **A step through the catalogue, felt.** Keyed on where Browse is rather than on the taps
+    // that got it there: descending, Back, "more from this author" and the jump a search result
+    // makes all end up changing these five fields, and a call at each of those sites would be a
+    // list that goes stale the first time a sixth route is added.
     //
     // `transition()` is the lightest thing in `Haptics`, on purpose — this fires on every level of
     // every descent, which is the most frequent haptic in the app by a wide margin.
@@ -163,8 +163,8 @@ fun BrowseScreen(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                // The dice's own header height, so switching between the two screens does not move
-                // the icon (owner, 2026-09-14).
+                // The dice's own header height, so switching between the two screens does not
+                // move the icon.
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(SESSION_HEADER_HEIGHT)
@@ -191,15 +191,13 @@ fun BrowseScreen(
                 }
             }
         }
-        // **The banner that used to live here is gone** (owner, 2026-09-10): "jest to redundantne
-        // i psuje UI (przeskakuje na czas istnienia paska)". It named the running downloads and
-        // drew an indeterminate bar above the list, so starting one pushed the whole list down and
-        // finishing it pulled the list back up -- while the row he had just tapped was already
-        // saying the same thing with its own spinner.
+        // **No banner here, deliberately.** One naming the running downloads above the list means
+        // starting a download pushes the whole list down and finishing it pulls the list back up,
+        // while the row that was tapped is already saying the same thing with its own spinner.
         //
-        // Both things it carried moved into the rows: `DownloadAction` says "indexing…" under its
-        // spinner, and the replay row -- the one download that counts its files -- shows the count
-        // in its own supporting line.
+        // Both things such a banner would carry live in the rows instead: `DownloadAction` says
+        // "indexing…" under its spinner, and the replay row -- the one download that counts its
+        // files -- shows the count in its own supporting line.
 
         when (browse.domain) {
             BrowseDomain.ROOT -> DomainChooser(
@@ -374,9 +372,9 @@ private fun DomainRow(
     }
     // **A row of its own rather than a `ListItem`, because these rows must not change size.** The
     // Random row's words depend on what the dice is set to, and a `ListItem` grows with them: with
-    // "everything" the second line wrapped, the row got taller, the icon sat above centre and every
-    // row under it moved a few pixels (owner, 2026-09-14). A fixed height tall enough for two lines
-    // makes the list stand still whatever the scope says.
+    // "everything" the second line wraps, the row gets taller, the icon sits above centre and
+    // every row under it moves a few pixels. A fixed height tall enough for two lines makes the
+    // list stand still whatever the scope says.
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -479,12 +477,11 @@ internal fun RandomScopeSheet(
             }
         }
 
-        // **A disabled chip has to say why, and here it can also fix it.** The owner met a dead
-        // platform chip once already and asked for the reason to be shown; a dead Favourites chip
-        // is worse, because the thing it needs is a 142 KB download the app can start from this
-        // sheet. Zero has two causes, and they take different advice -- the list was never
-        // downloaded, or it was and Modland is not indexed, in which case offering a download
-        // again would send somebody round a loop.
+        // **A disabled chip has to say why, and here it can also fix it.** What a dead Favourites
+        // chip needs is a 142 KB download the app can start from this sheet. Zero has two causes,
+        // and they take different advice -- the list was never downloaded, or it was and Modland
+        // is not indexed, in which case offering a download again would send somebody round a
+        // loop.
         if (browse.favouriteCount == 0) {
             val downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES)
             Row(
@@ -728,10 +725,9 @@ private fun OnlineDomain(
                     headlineContent = { Text(catalogue.displayName) },
                     supportingContent = {
                         Column {
-                            // What it holds, and what that costs. The size used to appear only
-                            // in the storage section and, oddly, in the notice after deleting it --
-                            // so the one moment you were told how much a catalogue weighed was the
-                            // moment you no longer had it. It belongs where the decision is made.
+                            // What it holds, and what that costs. The size belongs where the
+                            // decision is made, not only in the storage section and the notice
+                            // after deleting it.
                             val archived = browse.archiveBytes[catalogue.id] ?: 0L
                             Text(
                                 if (catalogue.isOnlineOnly) {
@@ -763,8 +759,8 @@ private fun OnlineDomain(
                             )
                             // An index keeps only the formats a decoder could play when it was
                             // built, so one built by an older set is missing whatever arrived
-                            // since -- and looks empty rather than out of date. The owner lost
-                            // 60,572 C64 tunes to exactly this and nothing said why.
+                            // since -- and looks empty rather than out of date. That can be
+                            // 60,572 C64 tunes missing with nothing on screen to say why.
                             if (catalogue.isStale(browse.backends)) {
                                 Text(
                                     text = stringResource(R.string.catalogue_stale),
@@ -897,9 +893,9 @@ private fun OnlineDomain(
                         headlineContent = { Text(stringResource(R.string.replays_title)) },
                         supportingContent = {
                             // **The one download that counts its files**, so while it runs this
-                            // line carries the count rather than the invitation. It used to be in
-                            // the banner at the top of the screen, which is gone; nothing else on
-                            // this row could say how far ninety-eight small files had got.
+                            // line carries the count rather than the invitation. There is no
+                            // banner at the top of the screen, and nothing else on this row can
+                            // say how far ninety-eight small files have got.
                             Text(
                                 browse.indexing[DownloadKeys.REPLAYS]
                                     ?: stringResource(R.string.replays_none),
@@ -924,9 +920,8 @@ private fun OnlineDomain(
                 }
             }
 
-            // The storage section lived here from 2026-09-04 until the settings screen existed,
-            // which was always the plan and was said so at the time. Browse is for finding music;
-            // what the app is keeping on the phone is not that.
+            // No storage section here: it lives in Settings. Browse is for finding music; what
+            // the app is keeping on the phone is not that.
             item {
                 Text(
                     text = stringResource(R.string.catalogue_more_coming),
@@ -965,9 +960,9 @@ private fun SearchDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
-    // **The keyboard is up before he asks for it.** Search is the one screen nobody arrives at to
-    // look around: they came to type. Two taps used to stand between arriving and typing, and the
-    // field is at the top where the keyboard does not cover it.
+    // **The keyboard is up before it is asked for.** Search is the one screen nobody arrives at
+    // to look around: they came to type, and anything between arriving and typing is in the way.
+    // The field is at the top, where the keyboard does not cover it.
     //
     // `LaunchedEffect(Unit)` and not a token: this composable exists only while the domain is
     // Search, so entering composition *is* entering Search. Walking back out of a folder into
@@ -1041,8 +1036,8 @@ private fun SearchDomain(
  *
  * **The middle of the window is not the middle of what you can see.** The app is edge-to-edge, so
  * the keyboard is drawn *over* the content rather than shrinking it — and a spinner centred in the
- * full height sits underneath it for the whole of a search, which is the one place you most want to
- * know something is happening. The owner reported exactly that on 2026-09-04.
+ * full height sits underneath it for the whole of a search, which is the one place you most want
+ * to know something is happening.
  *
  * `imePadding` alone would have fixed the search case and left the spinner wherever the remaining
  * space happened to centre. Near the top is better for every caller: it is where the results will
@@ -1130,21 +1125,10 @@ private fun HistoryDomain(
 }
 
 /**
- * The track list, shared by every domain.
- *
- * Two modes, and `docs/ARCHITECTURE.md` §17 is why they are these two. **Normally a tap plays** --
- * the app used to select on tap, which almost nothing does, and the owner said so. **A long press
- * starts selecting**, a checkbox appears where nothing was, and further taps tick rows. Back leaves
- * the selection with nothing ticked.
- *
- * Selection is this composable's own business and dies with it. Holding it in the controller would
- * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
- */
-/**
  * Puts the row you came out of back on screen, once the list it lives in has arrived.
  *
- * Identity first, and there is no index fallback on purpose: an index is only "where I was" while
- * the list is unchanged, and the case this exists for is precisely the one where it changed. When
+ * Identity first, and there is no index fallback on purpose: an index names the same place only
+ * while the list is unchanged, and the case this exists for is precisely the one where it did. When
  * the row is gone, the level's own saved offset is already correct enough, and jumping somewhere
  * arbitrary because a number still parses would be worse than leaving it alone.
  */
@@ -1168,6 +1152,17 @@ private fun RestorePosition(
     }
 }
 
+/**
+ * The track list, shared by every domain.
+ *
+ * Two modes, and `docs/ARCHITECTURE.md` §17 is why they are these two. **Normally a tap plays**,
+ * rather than selecting, which almost nothing else does. **A long press starts selecting**, a
+ * checkbox appears where nothing was, and further taps tick rows. Back leaves the selection with
+ * nothing ticked.
+ *
+ * Selection is this composable's own business and dies with it. Holding it in the controller would
+ * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
+ */
 @Composable
 private fun Selectable(
     browse: BrowseState,
@@ -1193,8 +1188,8 @@ private fun Selectable(
     val selecting = selected.isNotEmpty()
 
     // Takes back before the level-and-exit handler outside, because the innermost enabled handler
-    // wins. That is the stack the owner asked for: leave the selection, then go up a level, then
-    // out to the playlist -- one step each.
+    // wins. That is the stack: leave the selection, then go up a level, then out to the playlist --
+    // one step each.
     BackHandler(enabled = selecting) { selected = emptySet() }
 
     showingInfo?.let { track ->
@@ -1322,11 +1317,11 @@ private fun Selectable(
                     modifier = Modifier.align(Alignment.CenterEnd),
                 )
 
-                // The playing row kept on screen as next and previous move it, the same as the playlist
-                // and the Random record. These are the lists you scroll a long way down while
-                // something plays -- a folder, a search, an author's other tunes -- which is why the
-                // follow-track button was added here too, and why its replacement is here as well.
-                // **Arriving from the tune itself** (owner, 2026-09-14). "More from this author" is
+                // The playing row kept on screen as next and previous move it, the same as the
+                // playlist and the Random record. These are the lists you scroll a long way down
+                // while something plays -- a folder, a search, an author's other tunes.
+                //
+                // **Arriving from the tune itself.** "More from this author" is
                 // a jump made *from* something playing, so the folder opens with that tune on
                 // screen rather than at the top of eighty rows. Only on a jump: walking into a
                 // folder is not a request to be taken anywhere (`ListScrolling`'s own rule).
@@ -1393,22 +1388,22 @@ private fun Selectable(
     }
 }
 
-/**
- * One row of a track list outside the playlist.
- *
- * The same anatomy as a playlist row minus the drag handle, which is the only thing that is
- * genuinely different: a playlist has an order that belongs to the user and these do not.
- *
- * No ordinal. In the playlist the number answers "where am I in three hundred rows of *my* list";
- * here it would only say which row of somebody else's archive this is. The space it would have
- * taken is the checkbox's, so the row does not change width when selection begins.
- */
 /** Wide enough for a checkbox, and reserved whether or not one is showing. */
 private val CHECKBOX_SLOT = 40.dp
 
 /** What every track row is at least, in both modes, so entering selection moves nothing. */
 private val ROW_HEIGHT = 72.dp
 
+/**
+ * One row of a track list outside the playlist.
+ *
+ * The same anatomy as a playlist row minus the drag handle, which is the only thing that is
+ * genuinely different: a playlist has an order that belongs to the user and these do not.
+ *
+ * No ordinal. In the playlist the number says where you are in three hundred rows of your own
+ * list; here it would only say which row of somebody else's archive this is. The space it would
+ * have taken is the checkbox's, so the row does not change width when selection begins.
+ */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun BrowseTrackRow(
@@ -1533,12 +1528,12 @@ private fun BrowseTrackRow(
                 }
             )
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
-            // into a scroll is claimed by the list before it ever becomes a long press. Both matter:
-            // the owner's complaint about another player is a long press firing at a twentieth of a
-            // second mid-scroll, after which back throws him out of the list entirely.
+            // into a scroll is claimed by the list before it ever becomes a long press. Both
+            // matter: a long press firing at a twentieth of a second mid-scroll drops the reader
+            // into selection, and back then throws them out of the list entirely.
             .combinedClickable(
-                // **Choosing a tune is the firm one** (owner, 2026-09-10) — it is the press this
-                // whole screen exists for. While selecting, the same tap is a tick in a box, so it
+                // **Choosing a tune is the firm one** — it is the press this whole screen exists
+                // for. While selecting, the same tap is a tick in a box, so it
                 // feels like the checkbox beside it rather than like starting a tune.
                 onClick = {
                     if (selecting) {
@@ -1565,16 +1560,15 @@ private fun BrowseTrackRow(
 /**
  * The arrow that starts a download, and the spinner-with-a-word it becomes while one is running.
  *
- * **In the row rather than only in the banner.** Several of these can run at once — they always
- * could, being independent coroutines — but the screen only ever showed the most recent one, so
- * tapping a second arrow looked like it had cancelled the first (owner, 2026-09-09). A row that
- * shows its own state cannot lie about it, and the same spinner is what says "this one is already
- * going" when a second tap would otherwise do nothing visible.
+ * **In the row rather than in a banner.** Several of these run at once, being independent
+ * coroutines, and a screen showing only the most recent makes tapping a second arrow look like it
+ * cancelled the first. A row that shows its own state cannot lie about it, and the same spinner is
+ * what says "this one is already going" when a second tap would otherwise do nothing visible.
  *
- * **A bare spinner is a shape, not a sentence** (owner, 2026-09-10), so it now carries the word
- * under it. Both states sit in a box of one fixed size, centred, which is the whole point: the
- * banner this replaced changed the layout when it appeared and again when it left, and a caption
- * that made the row grow would be the same mistake one level down. The box is as wide as the
+ * **A bare spinner is a shape, not a sentence**, so it carries the word under it. Both states sit
+ * in a box of one fixed size, centred, which is the whole point: a banner changes the layout when
+ * it appears and again when it leaves, and a caption that made the row grow would do the same one
+ * level down. The box is as wide as the
  * longest of the two languages needs — Polish "indeksowanie…" is half again the English — and as
  * tall as the icon already was, so the spinner and its word fit inside what the arrow occupied.
  */
