@@ -1,1 +1,5 @@
-First testing release. Browse Modland, ASMA and The Mod Archive, or play your own files. Tracker, ZX Spectrum, Atari, C64, Amiga and console formats. Multiple playlists with favourites, background playback, shuffle with a real back history, and Random discovery across everything, one platform or your favourites. Share a tune as a file, a link, or a link that plays it in a browser. Polish and English.
+From the first round of testers.
+
+One press now fetches the archives: pick what you want, see what each costs, and stop it half way if you change your mind. An empty playlist offers that instead of sending you to a Browse screen with nothing in it.
+
+Every message the app shows is in your language now, not only the screens around it. Buttons are tall enough for accented letters and for larger system text. Uninstalling removes the app's data, as it should.

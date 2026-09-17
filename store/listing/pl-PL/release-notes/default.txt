@@ -1,1 +1,5 @@
-Pierwsze wydanie testowe. Przeglądaj Modland, ASMA i The Mod Archive albo odtwarzaj własne pliki. Formaty trackerowe, ZX Spectrum, Atari, C64, Amigi i konsol. Wiele playlist z ulubionymi, odtwarzanie w tle, losowanie z prawdziwą historią cofania oraz odkrywanie przez Random — ze wszystkiego, z jednej platformy albo z ulubionych. Udostępnij utwór jako plik, link albo link odtwarzający go w przeglądarce. Po polsku i po angielsku.
+Z pierwszej rundy testów.
+
+Archiwa pobierzesz teraz jednym przyciskiem: wybierasz, co chcesz, widzisz, ile co waży, i możesz przerwać w połowie. Pusta playlista proponuje właśnie to, zamiast wysyłać cię do pustego ekranu przeglądania.
+
+Wszystkie komunikaty są po polsku, nie tylko same ekrany. Przyciski mieszczą polskie ogonki i powiększoną czcionkę systemową. Odinstalowanie usuwa dane aplikacji, tak jak powinno.
