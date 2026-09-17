@@ -416,6 +416,24 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C61. ~~Every notice arrived in English on a Polish phone~~ — FIXED 2026-09-17, branch
+
+Also from the first testing round. The screens were translated; the sentences the app *says* were
+not. Sixty-one of them were built from literals in `PlaybackController` — "Nothing is indexed yet.
+Index a catalogue first." landing on top of a screen that was otherwise Polish throughout.
+
+They are resources now, in both languages, with real plurals: Polish has four plural forms to
+English's two, so "Added 3 tracks" cannot be assembled from a number and a noun.
+
+The default playlist name was the same fault one layer down. `PlaybackController` carried
+`DEFAULT_PLAYLIST_NAME = "Playlist"` while `playlist_default_name` already existed, translated, and
+was read only by the screen — so a new install in Polish opened on a playlist called "Playlist".
+Names created from now on are translated; an existing one is the user's data and is not renamed
+underneath them.
+
+`MessagesAreTranslatedTest` fails on a literal reaching `Message(`, and fails when the two
+`strings.xml` files stop naming the same strings.
+
 ### C60. ~~A search matched the whole query as one substring~~ — FIXED 2026-09-16
 
 *Owner, 2026-09-16: "czy wyszukiwanie może działać tak, że jak wpisuję 'space ninja' to znajduje mi
