@@ -13,34 +13,76 @@ third is not evenly spread:
 | Amiga custom replayers | **~29,000** | step 2 — UADE |
 | DefleMask `.dmf` | 1,807 | step 4 — its own decoder |
 | FamiTracker `.ftm` | 1,874 | step 4 — its own decoder |
+| id Software `.imf` | 210 | step 4 — and an OPL2 emulator first |
 | ZX `.ay` | 1,202 | **step 5 — blocked by a licence, not by work** |
-| Vortex Tracker II `.vt2` | *unclaimed* | **step 1 — the decoder is already compiled in** |
+| Vortex Tracker II `.vt2` | **12** | **step 5 — measured 2026-09-17, and it is neither free nor worth it** |
 | `.med` (old Music Editor) | 132 | folds into step 2 |
-| `.imf`, `.psm` stragglers | ~280 | step 4 |
+| ~~`.psm`~~ | ~~141~~ | **not a gap — 30 of 30 play, measured 2026-09-17** |
 
-**One cost applies to every step and is worth knowing before starting any of them.** Adding a name
-to `SupportedFormats` changes its fingerprint, every stored index goes stale, and each user
-re-downloads Modland's 40 MB (`docs/STATUS.md`, the `.vtx` entry). So **the additions want batching**
-— pay it once for a group rather than once per format. That argues for doing step 1 *with* something
-else rather than on its own, unless it is wanted immediately.
+**~~One cost applies to every step~~ — paid off 2026-09-17, and it was step 0.** Adding a name to
+`SupportedFormats` used to change its fingerprint, make every stored index stale, and cost each user
+a re-download of Modland's 40 MB — a toll the four steps below would have charged four times. An
+index holds the whole archive now and what this build can open is decided where it is read, so a
+format added later is a question the stored rows already answer: **one statement, no network.** The
+steps below no longer want batching for that reason, and none of them has to mention it again.
 
 ---
 
-## Step 1 — Vortex Tracker II, `.vt2`
+## Step 0 — the index stops depending on what we can play — **done 2026-09-17**
 
-**The cheapest thing on this page by a wide margin, and it was missed.** ZXTune's
-`protracker3_vortex.cpp` implements `CreateVortexTracker2Decoder()`, `players/aym/vortex.cpp`
-implements the player, and **this project already compiles both** — the CMake globs
-`src/formats/chiptune/aym/*.cpp` and `src/module/players/aym/*.cpp`, so the code is in the binary
-today and nothing ever calls it.
+`SupportedFormats` used to decide what a downloaded index **kept**, which made the index a function
+of the decoder set. Both players store every row the archive lists now, with the verdict beside it,
+and every screen asks for the playable part.
 
-What it needs: one `tryAym` line in `ZxTuneBackend`, the name in `worthTrying`, a row in
-`SupportedFormats` and one in `web/src/formats.tsv`. Hours, not days.
+| | |
+| --- | --- |
+| a format added later | **one `UPDATE`, 228 ms over 516,107 rows** — or 1.7 s with the partial indexes to maintain — and no network |
+| what it used to cost | Modland's 40 MB, per device, per format |
+| phone database | 83.3 MB → **112.8 MB** at Modland's size: +29.5 MB for 172,036 more rows |
+| a folder in Browse | **faster**, 0.1 ms: the browse index is partial over `playable = 1`, so it covers exactly the rows anything reads |
 
-**Measure before claiming it.** `.vt2` is a *text* format where ProTracker 3 is binary, so the one
-thing to check is that a real Modland `.vt2` opens and renders rather than merely being claimed —
-the `.psm`, `.ftc` and `.gtr` mistake was exactly this, three names claimed before the decoders were
-wired and three files that said "Protracktor cannot play this yet" about decoders that existed.
+**The one thing a recompute cannot do is conjure rows that were never downloaded**, so an index
+built before this is marked `complete = 0` and asks for one last refresh. After that there is not
+another. The migration's `playable DEFAULT 1` is what keeps such an index working meanwhile: it
+holds only playable rows by construction, and defaulting to 0 would have emptied Browse.
+
+The class of defect it removes is worth as much as the toll. The fingerprint existed because an
+index built by an older decoder set is missing files **and looks current** — the owner lost 60,572
+C64 tunes to exactly that. An index that holds everything cannot be wrong about what this build
+plays; it can only be out of date about the archive, which is a different and much more visible
+thing.
+
+## Step 1 — ~~Vortex Tracker II, `.vt2`~~ — **struck out 2026-09-17, and both halves of the case for it were wrong**
+
+*This said: the cheapest thing on the page, the decoder is already compiled in, hours not days. It
+was written without a count and without trying it. Kept in full, because the mistake is instructive
+and the next person will be tempted the same way.*
+
+**The decoder is more than compiled in — it is already wired.** `engine.cpp` has called
+`Module::ProTracker3::CreateFactory(FC::ProTracker3::VortexTracker2::CreateDecoder())` all along,
+right beside the ordinary PT3 decoder. The only thing missing was the **name**: `.vt2` is not in
+`ZxTuneBackend::worthTrying`, so such a file never reaches ZXTune.
+
+**And adding the name would not have helped.** Renamed to `.pt3`, so that the existing claim carries
+it, a real Modland `.vt2` is still refused — and so are the other seven sampled from seven
+different authors. The host probe says where: the header parses, `ParseBody` stops after **374
+bytes of 38,221**, and `CheckIsSubset` then throws because the order list names patterns the body
+never read. These files put a blank line between sections *and* a blank line after the header, and
+ZXTune's text parser ends the body at the first of them. Collapsing them moves the failure rather
+than fixing it, so there is more than one difference.
+
+**Twelve files.** That is the whole of `.vt2` in Modland's 516,118 — counted from `allmods.zip`, not
+estimated. The step was placed first on the strength of "free", and it is neither free nor worth a
+day of somebody's ZXTune parser archaeology. It lives at step 5 now, beside the other thing that is
+not ours to fix.
+
+**The lesson, which is the reason this is not simply deleted:** the roadmap ordered a step by how
+cheap it looked and never counted what it was worth. `.vt2` went first ahead of 29,000 files. One
+`grep` over the index — ninety seconds — would have said twelve.
+
+**What was kept from the attempt.** `native/probe/zxtune/probe_zxtune.cpp` now prints the decoder's
+own exception under `PROBE_ZXTUNE_WHY=1`, because "reject:load" is every refusal wearing one face
+and the question is always which decoder objected to what. That is how the 374 bytes were found.
 
 ## Step 2 — UADE, and it is the whole of the rest
 
@@ -61,43 +103,69 @@ Most of the hard thinking is done and recorded:
   looks like the format not working. It is GPL-2-or-later and compatible. **`conf/songdb` beside it
   is CC BY-NC-SA and must not ship in a store app.**
 
-What is genuinely open: **the process model.** UADE upstream forks and execs `uadecore`; Android
-permits executing only from `lib/<abi>/`. `docs/PLAN_FORMATS.md` sets out that choice and does not
-make it, and it is the first thing to decide when this is picked up.
+**The process model was the open question and it is now answered on evidence** — 2026-09-17,
+`docs/PLAN_FORMATS.md`. The choice was between running `uadecore` as a thread in our process and
+keeping upstream's fork+exec. Reading the exits rather than counting them settles it: `uade.c:476`
+calls `exit(1)` when the **emulated Amiga program asks for a file that is not there**, which is
+ordinary damaged data reaching it, not a programmer. `exit()` is not an exception, so the guard that
+C42 put on the engine boundary catches nothing — one bad module would take the app down.
+
+**So: fork+exec, with `uadecore` shipped inside `lib/<abi>/`** as a `lib*.so`, which is the one
+place Android still permits executing from and is what upstream builds anyway. 1.6 MB for the
+emulator and 0.17 MB for `libuade`; `players/` stays a download.
+
+**It is the owner's call to confirm** (`docs/BACKLOG.md` A44), because it decides the next item too.
 
 **Do this before any of steps 3–5.** It is worth more than all of them together, and it takes
 `.med`'s 132 with it.
 
-## Step 3 — the browser question that comes with step 2
+## Step 3 — ~~the browser question that comes with step 2~~ — **answered by step 2, 2026-09-17**
 
-UADE is an Amiga emulator; whether it goes into the WebAssembly build is a size question the same
-way ZXTune was, and ZXTune's answer is now known: **+21% over the wire for 26,537 tunes**, and the
-"it does not build under Emscripten" that held it up for a week was eight lines nobody had tried.
+This said to try the Emscripten build early rather than at the end, on ZXTune's lesson. It does not
+arise: **`fork` and `exec` do not exist in WebAssembly**, and step 2's process model needs both. No
+build has to be attempted to know it.
 
-So: **try the build early, not at the end.** If UADE compiles under Emscripten the two players stay
-level, which `docs/SPEC_RANDOM.md` says they should. If it does not, the phone gains 29,000 tunes
-the browser cannot play and that gap wants saying out loud in Browse, the way ZXTune's absence was.
+So UADE is a phone backend, and the page cannot have it — about **29,000 tunes the phone plays and
+the browser does not**. `docs/SPEC_RANDOM.md` wants the two players alike, and this is the one place
+they cannot be, so Browse has to say so out loud the way it said it about ZXTune before 2026-09-15.
+Item 0 makes that easy rather than awkward: both players index the whole archive now, so the page
+already holds those rows and simply does not offer them.
 
-## Step 4 — the ones that need a decoder of their own
+**If UADE is ever wanted in the browser**, the route is the in-process thread that step 2 rejected —
+which means 51 `exit()` calls to answer for, and a fork of a library this project does not fork.
 
-Honest about the ratio: **~3,900 files between them, and each is a separate piece of work** with no
-shared machinery. Worth doing only after step 2, and probably only if somebody wants the format.
+## Step 4 — the ones that need a decoder of their own — **measured 2026-09-17, and one of the four was already done**
 
-| | files | what it would take |
-| --- | --- | --- |
-| FamiTracker `.ftm` | 1,874 | its own decoder; libopenmpt's FTM is *Face The Music* and 1 in 12 of Modland's open by accident |
-| DefleMask `.dmf` | 1,807 | its own decoder; libopenmpt implements X-Tracker's `.dmf`, which is the other 366 |
-| id Software `.imf` | 210 | an **OPL2** emulator, which this build does not have — `emu2413` in gme is OPLL, a different chip |
-| Spectrum Pro Sound Maker `.psm` | ~70 | libopenmpt's PSM is Epic MegaGames MASI; these are a ZX format |
+*Forty files sampled from `allmods.zip` at random, played through the built engine. The step is not
+built; this is what it is actually worth.*
 
-**The trap in all four is the shared extension**, and it has bitten this project twice. `.ftm`,
-`.dmf`, `.psm` and `.imf` are each claimed today for the files that *do* work, so a new decoder has
-to be tried **alongside** the existing one rather than instead of it, and `openBackend`'s
-first-refusal-wins rule (`docs/STATUS.md` C55) decides which reason the owner is shown.
+| | sampled | played | what they are |
+| --- | --- | --- | --- |
+| `.psm` | **30 / 30** | **all** | **not a gap.** Both kinds open: Epic MegaGames MASI through libopenmpt, and *ZX Spectrum PSM* through ZXTune — which has been wired since ZXTune arrived and nobody checked afterwards |
+| `.dmf` | 8 | 2 | the two are Delusion Digital Music Format, X-Tracker's; the rest are DefleMask, 1,807 of 2,186 |
+| `.ftm` | 8 | 0 | FamiTracker, all of them; libopenmpt's FTM is *Face The Music* |
+| `.imf` | 8 | 0 | id Software AdLib. Needs an **OPL2** emulator, which this build does not have — `emu2413` in gme is OPLL, a different chip |
 
-## Step 5 — `.ay`, which is not ours to fix
+So **~3,900 becomes ~3,890 across three formats**, and the smallest of the three needs a chip
+emulator before it needs a decoder. Each is a separate piece of work with no shared machinery, and
+this is the step to do last or not at all.
 
-1,202 files, and **no amount of work here changes it.** The only AY-emulation decoder in reach is
+**The `.psm` correction is the second of its kind in one afternoon**, after `.vt2`. Both came from
+a document describing what the app could play rather than from asking it. The rule the round wrote —
+*play a real file before claiming a format* — turns out to cut the other way as well: **play one
+before writing a format off.**
+
+**The trap, if any of the three is ever done.** All three names are claimed *today* for the files
+that do work, so a new decoder is tried **alongside** the existing one, never instead of it — and
+`openBackend`'s first-refusal-wins rule (`docs/STATUS.md` C55) decides which reason the owner is
+shown when both refuse.
+
+## Step 5 — the two that are not worth it, for different reasons
+
+### `.ay` — not ours to fix
+
+1,202 files — Modland's `AY Emul` **directory**, whose members are not named `.ay`, so counting by
+extension says zero. And **no amount of work here changes it.** The only AY-emulation decoder in reach is
 ZXTune's `ayemul.cpp`, which uses `z80ex` — **GPL-2-only**, which cannot be combined with this
 project's GPL-3. That is why it is the one file excluded from our ZXTune build by name.
 
@@ -109,6 +177,12 @@ The routes, and none is engineering:
 3. Leave it, and say so where a `.ay` is met.
 
 **Option 3 today.** Recording it here so it stops being re-derived: this is a licence, not a to-do.
+
+### `.vt2` — twelve files behind a parser disagreement
+
+The whole of step 1 above, moved here. ZXTune's decoder is already wired and refuses every one of
+Modland's twelve; the failure is inside its text parser and would be a day of somebody's time. If
+it is ever done, do it for the parser's sake rather than for the twelve.
 
 ---
 

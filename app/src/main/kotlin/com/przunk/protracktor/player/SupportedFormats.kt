@@ -157,11 +157,26 @@ object SupportedFormats {
      * **The narrower question, and the one `fingerprint` is about.** Half a million Modland paths
      * are filtered through this; a name that no archive carries only costs disk and a re-index.
      */
-    fun inCatalogueIndex(fileName: String): Boolean {
+    fun inCatalogueIndex(fileName: String): Boolean =
+        extensionOf(fileName) in extensions || prefixOf(fileName) in prefixes
+
+    /**
+     * The two halves a name is judged by, **kept apart from the judging**.
+     *
+     * A catalogue index stores these beside every row and decides playability from them at read
+     * time (`docs/ROADMAP_FORMATS.md` step 0). That is the whole point: they depend on the
+     * *filename* and not on this list, so adding a format re-decides 516,107 stored rows with one
+     * `UPDATE` — 228ms, measured — instead of asking every user to download Modland's 40 MB again.
+     *
+     * Empty when there is none, and empty is in neither set, so an empty answer is simply not a
+     * match. `mod.title` has a prefix and no extension worth having; `tune.mod` the reverse; a name
+     * with no dot at all has neither.
+     */
+    fun extensionOf(fileName: String): String =
+        fileName.lowercase().substringAfterLast('.', "")
+
+    fun prefixOf(fileName: String): String {
         val name = fileName.lowercase()
-        val extension = name.substringAfterLast('.', "")
-        if (extension.isNotEmpty() && extension in extensions) return true
-        val prefix = name.substringBefore('.', "")
-        return prefix.isNotEmpty() && name.contains('.') && prefix in prefixes
+        return if (name.contains('.')) name.substringBefore('.', "") else ""
     }
 }

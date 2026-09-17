@@ -137,6 +137,44 @@ Two things to settle when it is picked up:
   (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
   differ — A43 is in the same corner of the same screen and the two may as well be one branch.
 
+## A44. UADE's process model — **the owner's to confirm, recommended 2026-09-17**
+
+Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
+guess it. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
+licence (`players/` downloaded from the page upstream publishes for it, never shipped), and the
+song database it also needs (`conf/song.conf`, GPL-2-or-later — **not** `conf/songdb` beside it,
+which is CC BY-NC-SA and cannot ship in a store app).
+
+**The recommendation is fork+exec**, with `uadecore` inside `lib/<abi>/`, and it is a recommendation
+rather than a preference because it was measured. The alternative — running `uadecore` as a thread
+in our own process, where "the seam is one function" — founders on `uade.c:476`:
+
+```c
+f = lookup_amiga_file_cache(nameptr);
+if (f == NULL) {
+        uadecore_send_debug("load: request error: %s", nameptr);
+        exit(1);
+}
+```
+
+That fires when the **emulated Amiga program asks for a file that is not there** — a replay routine
+wanting a sample that a damaged module does not carry, which is the same population of files that
+produced C42 and C55. `exit()` is not an exception, so the guard on the engine boundary catches
+nothing and the app simply disappears. Forty of the 51 exits are in that one command loop.
+
+**What confirming it costs, so the trade is visible:**
+
+| | |
+| --- | --- |
+| APK | +1.8 MB — `uadecore` 1.6 MB, `libuade` 0.17 MB |
+| the browser | **cannot have UADE at all**: `fork` and `exec` do not exist in WebAssembly |
+| so | ~29,000 tunes the phone plays and the page does not, which Browse must say out loud |
+| the alternative | patching 51 exits, which is forking a library `docs/ARCHITECTURE.md` §3 says we do not fork |
+
+**Not blocked on anything else.** Say yes and the work is the integration; say no and it is the same
+integration with a fork of UADE in front of it. `docs/PLAN_FORMATS.md` has the full reading.
+
+
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
 
 *Owner, 2026-09-16: on the web it "działa kiedy indeks nie jest ściągnięty — wtedy wchodzi w pusty

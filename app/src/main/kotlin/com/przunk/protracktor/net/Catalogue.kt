@@ -79,8 +79,16 @@ sealed class Catalogue(
      */
     open val isOnlineOnly: Boolean get() = false
 
-    /** Turns the downloaded index into entries. Given the raw bytes; several ship them zipped. */
-    abstract fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry>
+    /**
+     * Turns the downloaded index into entries. Given the raw bytes; several ship them zipped.
+     *
+     * **Every row, and it used to be only the playable ones** (`docs/ROADMAP_FORMATS.md` step 0).
+     * Filtering here made the index a function of `SupportedFormats`, so adding one format meant
+     * every user downloading the whole archive's index again. The verdict is stored beside each row
+     * now and re-decided locally, so this parses what the archive says it has and nothing decides
+     * anything.
+     */
+    abstract fun parseIndex(bytes: ByteArray): List<CatalogueEntry>
 
     companion object {
         /**
@@ -141,7 +149,7 @@ object Modland : Catalogue(
         }
     }
 
-    override fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry> {
+    override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> {
         val text = java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
             zip.nextEntry ?: return emptyList()
             zip.readBytes().toString(Charsets.UTF_8)
@@ -155,7 +163,6 @@ object Modland : Catalogue(
             val path = line.substring(tab + 1)
 
             val title = path.substringAfterLast('/')
-            if (!keep(title)) return@forEach
 
             // "Format/Author/title" is the convention, but coop releases and unknown authors give
             // deeper and shallower paths. Taking the first segment as the format and everything
@@ -220,7 +227,7 @@ object Asma : Catalogue(
 
     override val isArchive: Boolean get() = true
 
-    override fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry> {
+    override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> {
         val entries = ArrayList<CatalogueEntry>(7000)
         java.util.zip.ZipInputStream(bytes.inputStream()).use { zip ->
             while (true) {
@@ -229,7 +236,6 @@ object Asma : Catalogue(
 
                 val path = entry.name
                 val title = path.substringAfterLast('/')
-                if (!keep(title)) continue
 
                 // asma/<section>/<author>/<title>. Anything shallower keeps what it has rather than
                 // being dropped: a file filed loosely is still a file.

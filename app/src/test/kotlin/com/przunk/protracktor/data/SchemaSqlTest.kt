@@ -256,6 +256,93 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `an index already stored learns how big its archive is without being fetched again`() {
+        // Version 16, and the point of backfilling it by counting rather than by re-downloading:
+        // version 15 had just made "how many rows" and "how many play" different numbers, and an
+        // index stored the day before would otherwise have said its archive held nothing.
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 15))
+            connection.run(
+                listOf(
+                    "INSERT INTO catalogues (id, display_name, track_count) VALUES ('modland', 'Modland', 2)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'a', 'Protracker', '4-Mat', 'a.mod', 1, 1)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'b', 'Protracker', '4-Mat', 'b.mod', 1, 1)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'c', 'Pictures', 'me', 'c.jpg', 1, 0)",
+                )
+            )
+
+            connection.run(SchemaSql.migrationsBetween(15, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT track_count, archive_count FROM catalogues").use { rows ->
+                    rows.next()
+                    assertEquals("what this build opens is untouched", 2, rows.getInt(1))
+                    assertEquals("and what the archive holds is counted, not guessed", 3, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the browse indexes cover only what is offered`() {
+        // `docs/ROADMAP_FORMATS.md` step 0: the table holds the whole archive and every screen asks
+        // for the playable part, so indexing the rest is 16 MB of b-tree nothing reads -- measured
+        // at Modland's size, 129.0 MB against 112.8. Checked as SQL rather than as a comment,
+        // because a partial index reverted to a full one is invisible until somebody measures.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            val indexes = connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL"
+                ).use { rows ->
+                    buildMap { while (rows.next()) put(rows.getString(1), rows.getString(2)) }
+                }
+            }
+            for (name in listOf("idx_catalogue_browse", "idx_catalogue_title")) {
+                val sql = indexes[name]
+                assertTrue("$name is missing", sql != null)
+                assertTrue("$name is not partial: $sql", sql!!.contains("WHERE playable = 1"))
+            }
+        }
+    }
+
+    @Test
+    fun `an index written before version 15 keeps every row it has`() {
+        // `docs/ROADMAP_FORMATS.md` step 0. The migration's `DEFAULT 1` on `playable` is
+        // load-bearing: an index written earlier holds **only** rows the format list of the day
+        // accepted, so every row in it is playable — and defaulting to 0 would empty Browse for
+        // anybody who did not re-index that minute.
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 14))
+            connection.run(
+                listOf(
+                    "INSERT INTO catalogues (id, display_name) VALUES ('modland', 'Modland')",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                        "VALUES ('modland', 'p', 'Protracker', '4-Mat', 'tune.mod', 1)",
+                )
+            )
+
+            connection.run(SchemaSql.migrationsBetween(14, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT playable FROM catalogue_tracks").use { rows ->
+                    rows.next()
+                    assertEquals("an old row stays visible", 1, rows.getInt(1))
+                }
+                // And says what it is: part of the archive, not all of it, so a format added later
+                // still needs the index fetching again — which no local recompute can supply.
+                statement.executeQuery("SELECT complete FROM catalogues").use { rows ->
+                    rows.next()
+                    assertEquals(0, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `an upgraded phone reads the fallback length as never set`() {
         // `docs/STATUS.md` C56. The column's default is 0 and 0 means "never chosen",
         // which `FallbackLength.fromStored` turns into the default rather than into a tune that

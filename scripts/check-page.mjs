@@ -160,7 +160,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
       .replace(/^export function (\w+)/gm, 'function $1')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
-    + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, filterIndex, '
+    + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
     + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
     + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
@@ -168,7 +168,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -1093,13 +1093,28 @@ if (window.__api) {
   check(!here('holiday.jpg') && !archive.onPhone(table)('holiday.jpg'), 'and a photograph is kept by neither');
   check(archive.onPhone(table)('bomb.pt3'), 'the phone would keep the Spectrum tune the browser drops');
 
-  const f = archive.filterIndex([
+  // **The index keeps every row now** (`docs/ROADMAP_FORMATS.md` step 0), and what plays is decided
+  // where it is read. This used to check `filterIndex`, which dropped rows at download time and
+  // made the index a function of the format list — so one format added cost every user the whole
+  // 5.76 MB again.
+  const built = archive.toRecords([
     '1\tProtracker/4-Mat/elysium.mod', '2\tSpectrum/PT3/x/bomb.pt3', '3\tYM/Hippel/zynaps.ym',
     '4\tPictures/me/holiday.jpg', '', 'no tab here',
-  ].join('\n'), here, archive.onPhone(table));
-  check(f.total === 4, 'every listed tune is counted, and blank or malformed lines are not');
-  check(f.phoneOnly === 2, 'the phone-only ones are counted separately from the unplayable ones');
-  check(f.text === '1\tProtracker/4-Mat/elysium.mod', 'and only what plays is kept');
+  ].join('\n'), 'modland', here);
+  check(built.total === 4, 'every listed tune is stored, and blank or malformed lines are not');
+  check(built.tracks === 1, 'and only one of the four counts as playable here');
+  const bucketed = built.records
+    .filter((r) => r.tracks)
+    .flatMap((r) => r.tracks.map((e) => `${e.t}:${e.p}`))
+    .sort();
+  check(bucketed.join(',') === 'bomb.pt3:0,elysium.mod:1,holiday.jpg:0,zynaps.ym:0',
+    'every row is kept, each carrying whether this build can open it', bucketed.join(','));
+  // The derived records are the ones Browse and search read, and they hold only what plays.
+  const titles = built.records.filter((r) => r.entries).flatMap((r) => r.entries.map((e) => e[0]));
+  check(titles.join(',') === 'elysium.mod', 'the searchable titles are only the playable ones',
+    titles.join(','));
+  check(built.records.filter((r) => r.authors).flatMap((r) => r.authors).length === 1,
+    'and an author with nothing playable is not offered');
 
   check(archive.indexFingerprint(browser, table) !== archive.indexFingerprint(phone, table),
     'an index built by another engine reads as another index');
@@ -1111,13 +1126,24 @@ if (window.__api) {
     const { catalogue: store } = await import(path.resolve('web/src/store.js'));
     await window.__api.switchTo('p-test');
 
-    await store.putAll([{ key: 'modland:meta', tracks: 315294, total: 516107, phoneOnly: 26537,
+    // An index from before step 0: it holds only what the build of the day accepted.
+    await store.putAll([{ key: 'modland:meta', tracks: 315294, total: 516107,
                           formats: 90, buckets: 32212, fingerprint: 'x' }]);
     await window.__api.renderBrowse();
     check($('browsenote').textContent.includes("holds 315,294 of Modland's 516,107"),
-      'Browse says how much of Modland this browser holds');
-    check($('browsenote').textContent.includes('26,537 of them play on the phone'),
-      'and that the rest is formats it cannot play, many of which the phone can');
+      'Browse says how much of Modland a partial index holds');
+
+    // And one written since, which holds the archive and offers what it can open. The distinction
+    // is the point of step 0 and the page has to state it, or "the other 200,813" reads as a
+    // download somebody still owes.
+    await store.putAll([{ key: 'modland:meta', tracks: 342169, total: 516107, complete: true,
+                          formats: 90, buckets: 32212, fingerprint: 'x' }]);
+    await window.__api.renderBrowse();
+    check($('browsenote').textContent.includes("holds all 516,107 of Modland's tunes and can play 342,169"),
+      'a whole index says it holds everything and plays some of it',
+      $('browsenote').textContent);
+    check($('browsenote').textContent.includes('already here if it learns one'),
+      'and that a format arriving later needs no download');
 
     // An index from before the page filtered at all: no counts, every row.
     await store.putAll([{ key: 'modland:meta', tracks: 516107, formats: 339, buckets: 43721, fingerprint: 'x' }]);
@@ -2319,6 +2345,97 @@ if (window.__api) {
     const got = lengthsModule.parseSongLengthTime(c.token);
     return c.expect === '-' ? got === null : got === Number(c.expect);
   });
+}
+
+// --- a format learnt after the download costs nothing ------------------------------------------
+//
+// **The whole of `docs/ROADMAP_FORMATS.md` step 0, checked end to end.** An index holds every row
+// the archive lists; what this build can open is decided where it is read and re-decided locally.
+// Before this, one format added meant every user fetching Modland's 5.76 MB again — and the
+// roadmap has four items that would each have charged it.
+if (window.__api?.catalogueStore) {
+  const store = window.__api.catalogueStore;
+  const archiveApi = window.__archive;
+  await store.clear('modland:');
+
+  const lines = [
+    '1\tProtracker/4-Mat/elysium.mod',
+    '2\tSpectrum/PT3/x/bomb.pt3',
+    '3\tSpectrum/PT3/x/lasers.pt3',
+  ].join('\n');
+  const canPlayMod = (name) => name.endsWith('.mod');
+  const built = archiveApi.toRecords(lines, 'modland', canPlayMod);
+  await store.putAll(built.records);
+  await store.putAll([{ key: 'modland:meta', tracks: built.tracks, total: built.total,
+                        complete: true, formats: built.formats, buckets: built.buckets,
+                        fingerprint: 'before' }]);
+
+  check(built.total === 3 && built.tracks === 1,
+    'three rows stored, one of them playable', `${built.total}/${built.tracks}`);
+  check((await archiveApi.tracksIn('Spectrum', 'PT3/x', 'modland')).length === 0,
+    'the folder of a format this build cannot open lists nothing');
+  check((await archiveApi.formats('modland')).length === 1,
+    'and that format is not offered at the top level');
+
+  // The build learns the format. No fetch, no network, one pass over what is already here.
+  const offered = await archiveApi.refreshPlayable('modland', () => true);
+  check(offered === 3, 'learning a format re-decides the stored rows', String(offered));
+  check((await archiveApi.tracksIn('Spectrum', 'PT3/x', 'modland')).length === 2,
+    'the folder fills in, from rows that were downloaded months ago');
+  check((await archiveApi.formats('modland')).map((f) => f.name).sort().join(',') === 'Protracker,Spectrum',
+    'the format appears at the top level');
+  const hits = (await archiveApi.searchTitles('lasers', 20, 'modland')).hits;
+  check(hits.length === 1, 'and search finds it, which means the title shards were rebuilt');
+
+  // And the other direction: a format lost must disappear from every derived record, not just from
+  // the folder. A stale title shard is a tune findable in search and absent from Browse.
+  await archiveApi.refreshPlayable('modland', canPlayMod);
+  check((await archiveApi.searchTitles('lasers', 20, 'modland')).hits.length === 0,
+    'losing a format empties the search as well as the folder');
+
+  // A partial index -- written before any of this -- cannot be repaired locally and must say so.
+  await store.putAll([{ key: 'modland:meta', tracks: 1, total: 3, complete: false }]);
+  check((await archiveApi.refreshPlayable('modland', () => true)) === null,
+    'and an index from before step 0 is left alone, because its rows were never downloaded');
+  await store.clear('modland:');
+}
+
+// --- the dice never draws what this build cannot open ------------------------------------------
+//
+// The index holds the whole archive since `docs/ROADMAP_FORMATS.md` step 0, so every reader has to
+// ask for the playable part. **The dice is the reader where getting it wrong costs most**: it would
+// fetch a file nothing can decode and move on, which a listener experiences as the dice skipping.
+// The phone proves the same thing in `CataloguePlayableTest`.
+if (window.__api?.catalogueStore && window.__archive) {
+  const store = window.__api.catalogueStore;
+  const archiveApi = window.__archive;
+  await store.clear('modland:');
+  await store.clear('asma:');
+
+  const lines = [];
+  for (let i = 0; i < 20; i++) lines.push(`1\tProtracker/4-Mat/good${i}.mod`);
+  for (let i = 0; i < 80; i++) lines.push(`1\tProtracker/4-Mat/bad${i}.zzzznope`);
+  const built = archiveApi.toRecords(lines.join('\n'), 'modland', (n) => n.endsWith('.mod'));
+  await store.putAll(built.records);
+  await store.putAll([{ key: 'modland:meta', tracks: built.tracks, total: built.total,
+                        complete: true, formats: built.formats, buckets: built.buckets }]);
+
+  const table = await archiveApi.buildRandomTable();
+  check(table.total === 20, 'the pool counts only what can be played', String(table.total));
+  const drawn = [];
+  for (let i = 0; i < 40; i++) {
+    // Spread across the whole pool rather than trusting Math.random to.
+    const at = (i + 0.5) / 40;
+    drawn.push(await archiveApi.drawTrack(table, () => at));
+  }
+  check(drawn.every((t) => t && t.name.endsWith('.mod')),
+    'and forty draws across the pool are all playable',
+    drawn.filter((t) => !t || !t.name.endsWith('.mod')).map((t) => t?.name ?? 'null').join(','));
+  // Every one of the twenty is reachable: an off-by-one in the bucket arithmetic would show as a
+  // pool that only ever hands back its first or last tune.
+  check(new Set(drawn.map((t) => t.name)).size === 20,
+    'and every playable tune in the pool can come up', String(new Set(drawn.map((t) => t.name)).size));
+  await store.clear('modland:');
 }
 
 // --- clearing one archive's rows ----------------------------------------------------------------
