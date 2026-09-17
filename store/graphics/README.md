@@ -6,6 +6,16 @@ already exists in adaptive and raster fallback forms.
 
 ## Required assets
 
+**A phone screenshot is not a store screenshot, and the gap is invisible until Play says no.** The
+owner's device captures **864×1920** — 2.22:1, where Play's limit is 2:1, and 864 on the short side
+where these surfaces want 1080. Both wrong, and nothing on the device says so.
+
+`node scripts/fit-store-screenshots.mjs store/graphics/*.png` writes a `-store.png` beside each one:
+**padded to 1080 wide, never scaled**, with the bars filled from the image's own top-left pixel. On
+this app's dark screens that reads as a wider phone rather than as letterboxing, and every pixel of
+the actual screen survives — which matters for a picture whose whole job is to show what the app
+looks like. Upload the `-store.png` files; the originals stay as what the phone produced.
+
 - **Feature graphic:** exactly 1024×500 px, JPEG or 24-bit PNG without alpha.
 - **Screenshots:** at least two to publish; JPEG or 24-bit PNG without alpha, dimensions from 320 to
   3840 px, with the long side no more than twice the short side.
