@@ -246,11 +246,9 @@ public:
     /**
      * A cheap pre-filter, not a verdict.
      *
-     * 2.2.1 had `api68_verify_mem`, and it was already distrusted here: it returns -1 for an
-     * ICE-packed SNDH that then loads and plays perfectly, and gating on it is what once stopped
-     * every SNDH in the owner's library from opening. 3.x has no equivalent, which costs nothing --
-     * the magic checks were doing the work. The real answer still comes from whether the load
-     * succeeds.
+     * `api68_verify_mem` returned -1 for an ICE-packed SNDH that then loads and plays perfectly,
+     * so gating on it rejected the format wholesale. 3.x has no equivalent and loses nothing: the
+     * magic checks do the work, and the real answer is whether the load succeeds.
      */
     static bool worthTrying(const std::vector<char> &bytes) {
         if (bytes.size() < 16) return false;
@@ -588,9 +586,8 @@ public:
 
         const std::size_t produced = static_cast<std::size_t>(bytes) / sizeof(short) / channels;
         for (std::size_t i = 0; i < produced; ++i) {
-            // Mono is duplicated rather than left in one ear. Half these tunes are single-POKEY and
-            // the owner's phone puts its second channel through the screen vibrator, where it would
-            // be inaudible.
+            // Mono is duplicated rather than left in one ear: half these tunes are single-POKEY,
+            // and a phone whose second channel is a screen vibrator would play them inaudibly.
             const float left = static_cast<float>(scratch_[i * channels]) / 32768.0f;
             const float right = channels > 1
                 ? static_cast<float>(scratch_[i * channels + 1]) / 32768.0f
@@ -712,12 +709,10 @@ public:
      * So when the first track renders nothing, look for one that does — entered **only** when
      * track 0 was silent, so a file that starts with music never pays for this.
      *
-     * **Bounded by time rather than by a track count**, which is the second version of this. The
-     * first stopped after twelve tracks, and the owner immediately found `aleste 2.kss`: 256
-     * tracks, 82 of them audible, and **the first is number 47**. Twelve was a guess dressed as a
-     * limit. A wall-clock budget makes no guess about how fast the phone is — a quick device
-     * searches further, a slow one stops sooner and behaves as it did before — and it is the
-     * quantity that actually matters, since what is being protected is the wait before sound.
+     * Bounded by time rather than by a track count. `aleste 2.kss` has 256 tracks, 82 of them
+     * audible, and the first audible one is number 47 — any count small enough to be safe is too
+     * small to find it. A wall-clock budget makes no guess about how fast the device is, and time
+     * is the quantity being protected: the wait before sound.
      *
      * It does not touch `gme_track_count`, which reports a flat 256 for KSS and HES whatever the
      * file holds. That number is wrong — `aleste 2.kss` really has 82 tunes, not 256 — and finding
@@ -895,10 +890,9 @@ private:
 /**
  * MP3, through minimp3 — and it is the one format here that is not a chiptune.
  *
- * **Why it is in a chiptune player at all** is `docs/BACKLOG.md` A29: the owner keeps rips and
- * recordings among his own files and had no way to hear them without leaving the app. It is
- * deliberately a *local file* format — no catalogue here holds an MP3, and `SupportedFormats` keeps
- * it out of the list an online index is filtered through so that adding it costs nobody a re-index.
+ * Why a chiptune player has one is `docs/BACKLOG.md` A29. It is deliberately a *local file*
+ * format: no catalogue here holds an MP3, and `SupportedFormats` keeps it out of the list an
+ * online index is judged against.
  *
  * **`mp3dec_ex` rather than the plain frame decoder**, and the difference is the two things a
  * player needs and a frame loop cannot give: a length for a variable-bitrate file, and an index to
@@ -1059,9 +1053,8 @@ private:
  *
  * The largest single body of music left after trackers: roughly 72,000 files in Modland alone.
  *
- * **No Commodore ROMs are supplied**, and thirty random Modland SIDs all played without them, none
- * of them needing BASIC. Whether to ship or source ROMs at all is the owner's call and is not made
- * here; the measurement is in `docs/PLAN_FORMATS.md` so the question has a number attached.
+ * No Commodore ROMs are supplied. Thirty random Modland SIDs played without them and none needed
+ * BASIC (`docs/PLAN_FORMATS.md`); whether to ship or source ROMs is an open question there.
  *
  * The emulation is SIDLite rather than ReSIDfp: 3.x split ReSIDfp into a separate library, and
  * SIDLite ships inside this one.
@@ -1567,9 +1560,8 @@ public:
      * as `SIGSEGV` inside `AYMRenderer::SetPosition` -- a runaway walking off the end of its own
      * state rather than a null anybody passed in.
      *
-     * The owner reached it the obvious way: dragging the slider to the far right. The bar's own
-     * maximum *is* the duration, and a float that rounds a hair over it is enough, so this needed
-     * no unusual gesture to find.
+     * Reached by dragging the slider to the far right: the bar's maximum *is* the duration, and a
+     * float rounding a hair over it is enough.
      *
      * Half a second short of the end, not a hair short: the last position the renderer can actually
      * reach is the last one it emits, which is a frame before the end rather than the end itself.
@@ -1720,9 +1712,9 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
     // The backends are asked in order of how strongly they can claim a file -- by name, then by
     // magic, then by content, then by trying -- so the first one to refuse is by construction the
     // one that had the best claim, and its reason is the true one. Overwriting it with a later
-    // backend's reason is how the owner came to be told "wrong file type for this emulator" about a
-    // `.sap` (`docs/STATUS.md` C55): ASAP claimed the name, refused, and game-music-emu -- which had
-    // no business with the file at all -- then spoke over it on its way past.
+    // backend's reason reports a decoder that had no business with the file: a `.sap` claimed by
+    // name and refused by ASAP was described by game-music-emu on its way past
+    // (`docs/STATUS.md` C55).
 
     // MP3 first when the name says so. It shares the reason ASAP goes early -- the name is the
     // only reliable thing about this format -- and nothing else here claims `.mp3`.

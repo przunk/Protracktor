@@ -3,11 +3,10 @@
 
 // Android's half of the engine: the Oboe callback, and the JNI surface above it.
 //
-// **Everything Android-specific in the native code is in this file**, which is the point of it
-// existing. `engine.cpp` next door decodes and knows nothing about phones; this drives it from an
-// audio callback and exposes fifteen functions to Kotlin. `docs/ARCHITECTURE.md` §4 is the rule
-// this arrangement comes from -- PCM never crosses the boundary -- and `docs/OPEN_QUESTIONS.md` Q9
-// is the argument about whether the boundary should be a process instead.
+// Everything Android-specific in the native code is here. `engine.cpp` decodes and knows nothing
+// about phones; this drives it from an audio callback and exposes sixteen functions to Kotlin.
+// PCM never crosses the boundary (`docs/ARCHITECTURE.md` §4); whether it should be a separate
+// process instead is `docs/OPEN_QUESTIONS.md` Q9.
 
 #include "engine.h"
 #include "log.h"
@@ -31,21 +30,15 @@ using protracktor::Backend;
 using protracktor::openBackend;
 
 /**
- * **Nothing thrown by a decoder may leave this file** (`docs/STATUS.md` C42, C55).
+ * Nothing thrown by a decoder may leave this file (`docs/STATUS.md` C42, C55).
  *
- * The counterpart of `player_wasm.cpp`'s guard, and the more serious of the two. On the web an
- * escaping exception wedges a worklet and the owner reloads the tab; here there is nothing above
- * to catch it -- an exception reaching the JVM through a JNI frame, or reaching Oboe's real-time
- * thread, is `std::terminate` and the process is gone mid-tune with no message.
+ * An exception reaching the JVM through a JNI frame, or reaching Oboe's real-time thread, is
+ * `std::terminate`: the process ends with no message. Decoders are allowed to throw on malformed
+ * files, which a public archive has plenty of.
  *
- * `openBackend` already catches what *choosing* a backend throws. Everything after it was
- * unguarded: describing a file, rendering, seeking, switching subsong, asking a length. A decoder
- * is allowed to throw on a malformed file -- half of ASMA and Modland is malformed somewhere -- and
- * this is where that stops being the app's problem.
- *
- * The fallback is what the call already means by failure, so Kotlin needs no new vocabulary: no
- * handle, `false`, an empty string, zero. The reason goes to logcat, which is where the other
- * refusals in this file already go.
+ * `openBackend` catches what *choosing* a backend throws; this covers everything after -- describe,
+ * render, seek, subsong, length. The fallback is what each call already means by failure, so Kotlin
+ * needs no new vocabulary: no handle, `false`, an empty string, zero. The reason goes to logcat.
  */
 template <class T, class Work>
 T guarded(const char *what, Work &&work, T fallback) {
@@ -83,11 +76,9 @@ public:
     /**
      * How many tunes are in the file, from a value the backend published rather than by asking it.
      *
-     * **`docs/review-round-8.md` R2, and it is `docs/review.md` R6 with one case missed.** This used
-     * to call straight through, and Kotlin calls it three lines after `start()` -- so
-     * `get_num_subsongs()` and `gme_track_count()` ran on an object the audio callback was reading,
-     * which is the exact thing libopenmpt's header forbids. The count cannot change for the life of
-     * a file, so publishing it once in the constructor is the whole fix.
+     * Asking the backend here would read it from the control thread while the audio callback is
+     * reading it too, which libopenmpt's header forbids (`docs/review-round-8.md` R2). The count
+     * cannot change for the life of a file, so it is published once in the constructor.
      */
     int subsongCount() const { return subsongs_.load(std::memory_order_acquire); }
 
@@ -98,12 +89,10 @@ public:
      * here: that callback is the only thread which touches the backend, and a decoder cannot be
      * changed underneath a read in progress.
      *
-     * **But a finished tune has no callback left to hand it to.** When a backend runs out,
-     * `onAudioReady` returns `Stop` and Oboe calls it no more -- `stream_` is still there, it is
-     * simply never entered again. A request stored then would sit forever, `finished_` would stay
-     * true, and the poll on the Kotlin side would ask for the next tune again and again: every
-     * subsong of the file "played" instantly and in silence, which is exactly what the owner saw.
-     * So when nothing is running, the switch happens here and the stream is started again.
+     * A finished tune has no callback left to hand it to: when a backend runs out, `onAudioReady`
+     * returns `Stop` and Oboe never enters it again, though `stream_` is still there. A request
+     * stored then would sit forever. So when nothing is running, the switch happens on this thread
+     * and the stream is started again.
      */
     void requestSubsong(int index) {
         // **Under the lock, on this thread, running or not.** Switching tune is the same unbounded
@@ -120,10 +109,8 @@ public:
             publishDuration();
             publishDescribe();
         }
-        // A finished tune has no callback left to hand anything to: `onAudioReady` returned `Stop`
-        // and Oboe will not enter it again, so the stream needs starting for the new tune to be
-        // heard. Every subsong of a finished file otherwise "played" instantly and in silence,
-        // which is what the owner saw before this was understood.
+        // A finished tune has no callback left to hand anything to, so the stream needs starting
+        // for the new tune to be heard.
         if (!wasRunning) start();
     }
 
@@ -138,20 +125,13 @@ public:
     /**
      * **The decoder is locked, and the audio thread never waits for it.**
      *
-     * This used to hand a seek to the callback through an atomic, on the reasoning that the
-     * callback is the only thread touching the decoder so the race disappears. The race did
-     * disappear. What replaced it was worse: `Backend::seek` is **unbounded work** for every
-     * emulator here -- a SID, an SC68, a GME and libopenmpt all reach a position by running
-     * forward to it -- so seeking near the end of a five-minute tune meant emulating five minutes
-     * of a 6502 inside a callback with a few milliseconds to answer in. The stream starves, goes
-     * silent and stops advancing, and the next `close()` blocks waiting for that callback to
-     * return, which on `Dispatchers.Main.immediate` is a frozen app. The owner hit exactly that
-     * twice on 2026-09-10, both times by dragging the seek bar while a tune was still loading.
+     * `Backend::seek` is unbounded work for every emulator here (`docs/ARCHITECTURE.md` §5), so
+     * it cannot happen on a thread with milliseconds to answer in. Seeking is done by its caller
+     * under the lock; this takes the lock only if it is free.
      *
-     * So the work moved off this thread and a `try_lock` guards what is left. Failing to take the
-     * lock is not an error and never blocks: it means somebody is seeking, and a buffer of silence
-     * is the correct thing to play while they are. `try_lock` on an uncontended mutex is an atomic
-     * compare-and-swap, which is what the old design was paying anyway.
+     * Failing to take it is not an error and never blocks: somebody is seeking, and a buffer of
+     * silence is the right thing to play meanwhile. `try_lock` on an uncontended mutex is one
+     * atomic compare-and-swap.
      */
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *stream, void *audioData,
                                           int32_t numFrames) override {
@@ -159,18 +139,16 @@ public:
 
         std::unique_lock<std::mutex> held(decoderGuard_, std::try_to_lock);
         if (!held.owns_lock()) {
-            // Somebody has the decoder. Silence for this buffer, and the stream stays alive --
-            // which is the whole point, because a stream that stalls is what wedged the app.
+            // Somebody has the decoder. Silence for this buffer, and the stream stays alive: a
+            // stalled stream cannot be restarted from here and wedges the player.
             std::memset(out, 0, static_cast<std::size_t>(numFrames) * 2 * sizeof(float));
             return oboe::DataCallbackResult::Continue;
         }
 
-        // **The one guard that cannot be put at the JNI boundary.** This is Oboe's real-time
-        // thread, not a call from Kotlin: an exception thrown here unwinds into Oboe's C callback
-        // and ends the process, and no `try` around `nativeStart` can see it. A decoder that throws
-        // partway through a malformed file gets treated as a decoder that ran out -- the buffer is
-        // silenced and the stream stops, which is what the tail of this function already does for a
-        // tune that ends. Kotlin is polling `finished_`, so it moves to the next tune on its own.
+        // The one guard that cannot sit at the JNI boundary: this is Oboe's real-time thread, and
+        // an exception here unwinds into Oboe's C callback and ends the process. A throw is treated
+        // as a decoder that ran out -- the tail of this function silences the buffer and stops the
+        // stream, and Kotlin's poll moves to the next tune.
         const std::size_t rendered = guarded<std::size_t>(
             "render", [&] {
                 return backend_->render(stream->getSampleRate(),
@@ -238,14 +216,13 @@ public:
      * `docs/review-round-8.md` R3 is about. A lock held for one string copy, a few times a
      * listening session, is a smaller price than a rule nobody can see from the call site.
      *
-     * It is also what makes a subsong's own title reach the screen: a GBS names each of its tunes
-     * and the phone was showing the first one's for all of them (R4).
+     * It is also what gets a subsong's own title to the screen: a GBS names each of its tunes
+     * (`docs/review-round-8.md` R4).
      */
     void publishDescribe() {
-        // `describe()` is where the reported crash actually came from (`docs/STATUS.md` C42): it
-        // walks a decoder's instrument and sample tables, which on a truncated file is the first
-        // place a length read past the end turns into a throw. An unreadable description costs the
-        // owner a line of metadata; it used to cost the process.
+        // `describe()` walks a decoder's instrument and sample tables, which on a truncated file
+        // is the first place a length read past the end becomes a throw (`docs/STATUS.md` C42). An
+        // unreadable description costs a line of metadata, not the process.
         std::string text = guarded<std::string>("describe", [&] { return backend_->describe(); },
                                                 std::string());
         const std::lock_guard<std::mutex> held(describeGuard_);
@@ -310,20 +287,13 @@ public:
             stream_.reset();
             return false;
         }
-        // **The one assumption in this chain nobody has ever measured.** The comment above says
-        // "Oboe resamples if need be", and if it ever does not, `getSampleRate()` comes back as the
-        // device's rate, the callback hands that number to a backend that ignores it, and 44,100
-        // samples play at 48,000 -- 8.8% fast, about a semitone and a half sharp. That is not a
-        // hypothetical: it is exactly the defect the web build shipped with until 2026-09-08,
-        // found by the owner saying a SID "sounded quicker than I remember".
+        // If Oboe does not resample, `getSampleRate()` is the device's rate, the callback hands
+        // that number to a backend that ignores it, and 44,100 samples play at 48,000 -- 8.8%
+        // fast, about a semitone and a half sharp (`docs/STATUS.md` C26).
         //
-        // He said the same thing about two SPCs on 2026-09-09. A log line is what turns "I think
-        // it sounds fast" into a fact, and it costs nothing on a path that runs once per track.
-        // **Kept as a string as well as logged, because logcat is not a channel the owner can
-        // reach.** The tag here is `protracktor` and the Kotlin side's is `Protracktor`, so
-        // filtering on the obvious one shows everything except this — which is what happened when
-        // he went looking. The app asks for this note straight after starting and says it out loud
-        // once, which is a diagnosis a person can read on the device that has the problem.
+        // Kept as a string as well as logged, because logcat is not a channel a listener can
+        // reach: this file's tag is `protracktor` and Kotlin's is `Protracktor`, so filtering on
+        // one hides the other. The app asks for the note after starting and shows it once.
         rateNote_.clear();
         if (preferred > 0 && stream_->getSampleRate() != preferred) {
             const double fast =
@@ -434,17 +404,13 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
     const std::string name = nameChars ? nameChars : "";
     env->ReleaseStringUTFChars(fileName, nameChars);
 
-    // The reason is a local and goes back with this call, not into a global for somebody to
-    // collect afterwards. It used to be one process-wide std::string; that was fine while one
-    // thread opened files at a time, and became a data race the moment library scanning was made
-    // concurrent with playback -- ThreadSanitizer confirmed it (`docs/review.md` R2). Two threads
-    // clearing and assigning one std::string is undefined behaviour, not merely a mixed-up message.
+    // A local, and it goes back with this call. A process-wide string here is a data race as soon
+    // as scanning runs concurrently with playback, and two threads assigning one `std::string` is
+    // undefined behaviour rather than merely a mixed-up message (`docs/review.md` R2).
     std::string error;
 
-    // **The one guarded call that has somewhere to put the reason.** Everywhere else in this file a
-    // contained throw leaves only a logcat line, because the function it happened in returns a
-    // number. This one already carries a sentence back for the owner to read, so a throw gets
-    // written into it rather than swallowed.
+    // The one guarded call with somewhere to put the reason: it already carries a sentence back,
+    // so a throw is written into it rather than left in logcat alone.
     //
     // `openBackend` catches each backend's own refusal, so what reaches here is what it does not:
     // `std::bad_alloc` from reading a file too big for the heap, and anything thrown that is not a
@@ -513,8 +479,8 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeStop(JNIEnv *, jclass, jlo
 
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeIsFinished(JNIEnv *, jclass, jlong handle) {
-    // A player nobody can ask is a player that has finished: saying so gets the owner the next
-    // tune, where `JNI_FALSE` would leave a dead one on screen forever.
+    // A player nobody can ask is a player that has finished: saying so moves to the next tune,
+    // where `JNI_FALSE` would leave a dead one on screen forever.
     return guarded<jboolean>(
         "isFinished", [&] { return asPlayer(handle)->isFinished() ? JNI_TRUE : JNI_FALSE; },
         JNI_TRUE);

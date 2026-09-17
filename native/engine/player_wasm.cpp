@@ -40,14 +40,14 @@ struct Handle {
 std::string lastError;
 
 /**
- * **Nothing thrown here may reach JavaScript** (`docs/STATUS.md` C42).
+ * Nothing thrown here may reach JavaScript (`docs/STATUS.md` C42).
  *
  * An exception crossing this boundary is not an error the page can report: Emscripten turns it into
  * `uncaught exception` out of `___cxa_throw`, the worklet is left mid-message, and every tune after
- * it fails as well -- the owner met exactly that and had to reload the tab. A decoder is allowed to
- * throw; this is where it stops being anybody else's problem. `openBackend` already catches what the
- * *choosing* of a backend throws; what was unguarded is everything after -- describing the file,
- * rendering, seeking, asking a length.
+ * it fails too until the tab is reloaded.
+ *
+ * `openBackend` catches what *choosing* a backend throws; this covers everything after -- describe,
+ * render, seek, length.
  */
 void rememberFailure(const char *what) {
     lastError = (what && *what) ? what : "the decoder failed without saying why";
