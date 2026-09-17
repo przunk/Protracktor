@@ -15,7 +15,8 @@
 
     <string name="playlist_default_name">Playlist</string>
     <string name="playlist_empty_title">Nothing here yet</string>
-    <string name="playlist_empty_body">Add a folder of modules and they will show up here.</string>
+    <string name="playlist_empty_body">Browse to download one of the online catalogues, or add a folder of modules from this phone.</string>
+    <string name="playlist_empty_body_nothing_held">Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline.</string>
 
     <plurals name="track_count">
         <item quantity="one">%d track</item>
@@ -403,4 +404,18 @@
     <string name="notice_freed_megabytes">Freed %1$d MB.</string>
     <string name="notice_audio_busy">Something else is using the audio.</string>
     <string name="notice_audio_device_failed">Could not open the audio device</string>
+    <string name="download_all_body">Pick what to fetch — up to %1$d MB. It is stored on this phone, so browsing it afterwards needs no network.</string>
+    <string name="download_pick_open">Get some music to browse</string>
+    <string name="download_all_running">Downloading everything</string>
+    <string name="notice_all_downloaded">Everything downloaded. Browse is full.</string>
+    <string name="notice_all_downloaded_partly">%1$d downloaded, %2$d could not be fetched. Try those again from Browse.</string>
+    <string name="notice_downloads_stopped">Stopped. %1$d of them finished and are kept.</string>
+    <string name="download_pick_title">What to download</string>
+    <string name="download_pick_modland">Modland — half a million tracks, with the SID song lengths and the favourites list</string>
+    <string name="download_pick_metadata">Track metadata — who wrote a tune, and when</string>
+    <string name="download_pick_size">%1$d MB</string>
+    <string name="download_pick_held">Already on this phone</string>
+    <string name="action_download_selected">Download %1$d MB</string>
+    <string name="action_stop_downloads">Stop</string>
+    <string name="a11y_download_pick">Choose what to download</string>
 </resources>

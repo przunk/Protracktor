@@ -62,6 +62,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun downloadSongLengths() = controller.downloadSongLengths()
     fun downloadTrackMetadata() = controller.downloadTrackMetadata()
     fun downloadFavourites() = controller.downloadFavourites()
+
+    /** The catalogues, the song lengths and the metadata, in one press (`docs/BACKLOG.md` A46). */
+    fun downloadEverything() = controller.downloadEverything()
+
+    /** Only the boxes that were ticked. `DownloadPlan` decides what each one comes to. */
+    fun downloadSelected(ids: Set<String>) = controller.downloadSelected(ids)
+
+    /** Stops a run. What already landed stays. */
+    fun cancelDownloads() = controller.cancelDownloads()
     fun sendQueueToBrowser() = controller.sendQueueToBrowser()
     fun pairWith(endpoint: String) = controller.pairWith(endpoint)
     fun forgetPairing() = controller.forgetPairing()

@@ -90,6 +90,10 @@ fun PlaylistScreen(
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit = {},
     onRemoveMany: (List<Int>) -> Unit = {},
     onBrowse: () -> Unit,
+    /** Opens the download sheet. What the empty screen offers when there is nothing to browse. */
+    onPickDownloads: () -> Unit,
+    /** False on a phone that holds no index and no granted folder: Browse would lead nowhere. */
+    canBrowse: Boolean,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -115,7 +119,13 @@ fun PlaylistScreen(
     }
 
     if (state.queue.tracks.isEmpty()) {
-        EmptyPlaylist(onBrowse = onBrowse, contentPadding = contentPadding, modifier = modifier)
+        EmptyPlaylist(
+            onBrowse = onBrowse,
+            onPickDownloads = onPickDownloads,
+            canBrowse = canBrowse,
+            contentPadding = contentPadding,
+            modifier = modifier,
+        )
         return
     }
 
@@ -629,9 +639,19 @@ private fun TrackRow(
  * own. This says where the track came from and what it is, which is what "which one is this" needs.
  */
 
+/**
+ * The first screen of a fresh install, and the last one anybody should be stuck on.
+ *
+ * **What it offers depends on whether there is anything to browse.** With an index or a granted
+ * folder, Browse is the way on. With neither, Browse leads to a list of archives that all say "no
+ * index" — which is precisely what the first testers met, and why nobody found the music
+ * (`docs/BACKLOG.md` A46). So on an empty phone the offer is the download sheet itself.
+ */
 @Composable
 private fun EmptyPlaylist(
     onBrowse: () -> Unit,
+    onPickDownloads: () -> Unit,
+    canBrowse: Boolean,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -649,7 +669,9 @@ private fun EmptyPlaylist(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = stringResource(R.string.playlist_empty_body),
+                text = stringResource(
+                    if (canBrowse) R.string.playlist_empty_body else R.string.playlist_empty_body_nothing_held
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -659,18 +681,22 @@ private fun EmptyPlaylist(
             // up there, and two controls that do the same thing should not be told apart by
             // their colour.
             Button(
-                onClick = onBrowse,
+                onClick = if (canBrowse) onBrowse else onPickDownloads,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ),
             ) {
                 Icon(
-                    imageVector = PlayerIcons.Cloud,
+                    imageVector = if (canBrowse) PlayerIcons.Cloud else PlayerIcons.Download,
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp),
                 )
-                Text(stringResource(R.string.action_browse))
+                Text(
+                    stringResource(
+                        if (canBrowse) R.string.action_browse else R.string.download_pick_open
+                    )
+                )
             }
         }
     }

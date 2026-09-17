@@ -416,6 +416,50 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
+### C64. ~~Uninstalling did not remove the database~~ — FIXED 2026-09-17, branch
+
+*Owner, 2026-09-17: "po odinstalowaniu aplikacji i zainstalowaniu na nowo mam wrażenie, że baza
+danych zostaje. Miałem starą listę jakąś."*
+
+He was right, and it was not the app's doing: **Android's Auto Backup is on unless a manifest says
+otherwise.** The database goes to Google Drive and comes back on the next install, so an uninstall
+is undone by the platform.
+
+Now `android:allowBackup="false"` plus a `dataExtractionRules` file that excludes every domain from
+device-to-device transfer as well — the flag alone does not cover that from Android 12 onwards.
+
+Four reasons it is off rather than selective, in `res/xml/data_extraction_rules.xml`: most of the
+database is a re-downloadable copy of somebody else's archive; a restored SAF grant is dead, because
+the permission belongs to the installation that asked for it; a restored database is a schema
+nobody tested, since backups cross versions freely; and uninstalling is how a person says "take this
+off my phone". Playlists worth keeping have an export, which is a path somebody chooses rather than
+one that happens to them.
+
+`UninstallLeavesNothingTest` reads the manifest, because a manifest attribute has no test of its own
+and the alternative is finding out on a phone a second time.
+
+### C63. ~~The empty playlist offered Browse on a phone with nothing to browse~~ — FIXED 2026-09-17, branch
+
+*Owner, 2026-09-17: "nie ma co browse jak nie ma indeksów".*
+
+The empty screen said "Nothing here yet" and offered **Browse**, which on a fresh install opens a
+list of archives that all read "no index — tap the arrow". That is where the first round of testers
+stopped (`docs/BACKLOG.md` A46).
+
+It now offers the download sheet instead, and says "Nothing to browse yet" above it — unless there
+is an index or a granted folder, in which case nothing changes. A local-files-only user is not
+pushed towards a 49 MB download.
+
+**The first attempt at the rule was wrong, and shipped in a build the owner tested.**
+`CatalogueSummary.indexed` is `trackCount > 0 || isOnlineOnly`, and The Mod Archive is online-only —
+so `catalogues.any { it.indexed }` is true on every install ever made, including the empty one the
+offer exists for. The rule is `BrowseState.hasSomethingToBrowse` now, with rows rather than
+`indexed`, and `EmptyScreenOfferTest` fails against the old form.
+
+It also needed the controller to read the catalogue summaries and the granted folders **at
+start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
+were loaded only when Browse opened.
+
 ### C61. ~~Every notice arrived in English on a Polish phone~~ — FIXED 2026-09-17, branch
 
 Also from the first testing round. The screens were translated; the sentences the app *says* were

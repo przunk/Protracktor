@@ -15,6 +15,103 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
+
+*Owner, 2026-09-17: opening `Zalza/akes lekhorna.mod` shows the title as* **"�kes lekh�rna (za)"**,
+*with the diamond question marks.*
+
+**The tune is Swedish and the title is almost certainly "Åkes lekhörna".** Two bytes, `0xC5` and
+`0xF6`, are Å and ö in ISO-8859-1 — the encoding an Amiga tracker wrote in 1993 — and neither is
+valid UTF-8. Whatever decodes them replaces each with U+FFFD, which is the diamond.
+
+**Where it goes wrong.** `native/engine/player_oboe.cpp` hands every string over with
+`env->NewStringUTF`, which is documented to take *modified UTF-8*. A module's title is not UTF-8
+and nobody said it was: it is raw bytes from a fixed-size field in the file. The engine already
+scrubs control characters out of a title (`engine.cpp`, `title()`); it does not transcode.
+
+**What it affects.** Titles, author names, and instrument and sample names (A34) — everywhere the
+demoscene wrote in Swedish, German, Finnish or Polish, which is a great deal of Modland. The web
+player reads the same strings through `UTF8ToString` and will show the same diamonds.
+
+**The fix is transcoding, not guessing wildly.** Decode as ISO-8859-1 by default, which is right
+for Amiga trackers, and take valid UTF-8 as UTF-8 where it is unambiguous — a byte sequence that
+parses as UTF-8 almost never does so by accident. CP437 is the third candidate, for DOS trackers,
+and telling it apart from Latin-1 is a guess; do not pretend otherwise. One function in the engine,
+applied where the strings leave it, so both players get the same answer.
+
+**Check the cache key before changing anything.** Titles reach `TrackRef`, the database and the
+handoff to the browser; a title that changes shape must not change what a row is keyed on.
+
+## A46. Nobody knew they had to index anything — **one-press download BUILT 2026-09-17, branch**
+
+*Owner, 2026-09-17, from the first testing round: "użytkownicy nie wiedzieli że trzeba coś ręcznie
+indeksować — może warto na początku pobierać indeksy wszystkie w tle po pierwszym uruchomieniu?"*
+
+**The finding is real and it is the most serious of the three.** A player that opens empty, says
+"Jeszcze tu pusto" and waits is a player most people close. The two screenshots from that round show
+it exactly: an empty playlist, then Browse with three catalogues each saying "Brak indeksu — dotknij
+strzałki, aby go pobrać" — an instruction that only reads as an instruction once you already know
+what an index is.
+
+**Downloading all of them in the background on first launch is the wrong shape of the right idea**,
+for three reasons that are measurements rather than opinions:
+
+- **It is 25 MB before anybody has heard a note**, and most of it is not wanted: Modland's index is
+  5.76 MB, ASMA is a 20 MB archive, HVSC's song lengths are 5.2 MB, the songdb metadata is another
+  download again. On a phone away from wi-fi that is somebody's data, spent by an app they have had
+  for four seconds.
+- **It is a decision taken on the user's behalf and invisible while it runs.** The one thing worse
+  than an app that does nothing is an app that does something expensive without asking.
+- **`Data safety` says we fetch on demand.** Fetching four archives at startup is not that, and the
+  declaration is a promise.
+
+**The owner's answer, 2026-09-17: one button, and it fetches the lot.** That is sound, and it
+answers both objections above, because the objection was never to the downloading — it was to
+*nobody having asked*. A press is the asking. What it needs is the size on the face of it:
+`downloadEverything` runs the steps in sequence with the total (46 MB) on the button, each step
+keeping its own row spinner, and partial failure reported as partial.
+
+**The measured total, `curl -I` on 2026-09-17:** Modland 5.49 MB, ASMA 19.18 MB, UnExoticA 1.68 MB,
+HVSC 4.96 MB, songdb metadata 14.11 MB, Modland favourites 0.14 MB — **45.56 MB**. `DownloadSizes`
+rounds each part up and `DownloadSizesTest` keeps the advertised total equal to the sum, so editing
+one line cannot make the button lie.
+
+**What the button deliberately does not fetch** is sc68's replay routines. They are not an index and
+not metadata; they are binaries for one niche format, and they are the one download with a licence
+question attached (`docs/LICENSES.md`). They stay their own row.
+
+**And a sheet rather than one button, 2026-09-17.** The owner asked for the choice to be the
+user's: checkboxes, a total that follows them, and a way to stop a run. `DownloadPicker` is that
+sheet and `DownloadPlan` is the rule behind it, as a pure function so the rules can be tested
+without a screen. The one grouping decision is the owner's: **the SID song lengths and Modland's
+favourites are not boxes of their own** — they come with Modland, because neither is any use
+without the index it describes, and asking about them separately asks the user to know what HVSC
+is.
+
+**Stopping keeps what landed.** Each step writes its own table as it finishes, which is why the
+steps are sequential and separate rather than one transaction: stopping after Modland leaves
+Modland indexed. The clean-up runs under `NonCancellable`, because the spinners are state rather
+than a side effect of the coroutine — cancelled without that, every row the run had reached would
+spin until the app was restarted.
+
+**Still open, cheapest first:**
+
+1. **Offer it, don't hide it.** A first-run card on the playlist screen — "Get some music" — with
+   one primary action that indexes **Modland alone** and says its size. One tap, one download, and
+   the app is full of music. The rest stay where they are for whoever wants them.
+2. **Say what an index is, once, in a sentence.** "Katalogi trzeba raz pobrać, żeby dało się je
+   przeglądać bez sieci" is the whole idea, and it is not in the app anywhere.
+3. **Make the arrow look like a control.** `DownloadAction` is a bare arrow beside a red line of
+   text; the red reads as an error, not as an invitation. A labelled button that says *Pobierz
+   indeks (5,8 MB)* answers both the "what do I do" and the "what will it cost".
+4. **A word about metered networks.** The size is on the button, which is most of the answer;
+   saying "you are on mobile data" would be the rest of it.
+5. **Progress within a step.** A row spins; it does not say how far 19 MB of ASMA has got.
+6. **Doing it automatically** is still not the plan, and the reasons above are unchanged.
+
+**Measure before and after.** The question this answers is "did they get to music", and the release
+that answers it is the one where nobody has to be told what an index is.
+
 ## A45. A jump from the playlist does not name the author the way a jump from Random does — **noted 2026-09-17**
 
 *Owner, 2026-09-17: "more from this author z poziomu playlisty powinno pokazywać tytuł (tak jak w
