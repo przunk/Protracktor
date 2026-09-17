@@ -6,6 +6,27 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 0.5.0 — versionCode 702
+
+Closed testing, the second build. What the first round of testers found.
+
+| | |
+| --- | --- |
+| Artifact | *built by the owner with `./scripts/build-bundle.sh`; fill in on upload* |
+| Size | |
+| SHA-256 | |
+| versionCode | 702 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 0.5.0 |
+| Commit | *the commit `v0.5.0` points at* |
+| Tag | `v0.5.0` |
+| Built | |
+
+**Signer**: the same upload key as 0.4.0; `build-bundle.sh` prints it from the bundle and it belongs
+here once it has.
+
+**Content of the release**: C61, C62, C63, C64, C65 and A46 — see `docs/STATUS.md` and the tag's own
+message. No schema change, so an upgrade keeps everything a tester has downloaded.
+
 ## 0.4.0 — versionCode 679
 
 Closed testing. The first build offered to testers outside the workshop.
