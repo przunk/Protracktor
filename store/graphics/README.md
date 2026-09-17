@@ -1,8 +1,37 @@
 # Store graphics
 
-No store graphic has been fabricated in this branch. Screenshots must show the final application on
-a real device, and the feature graphic needs an owner-approved visual direction. The launcher icon
-already exists in adaptive and raster fallback forms.
+Screenshots must show the final application on a real device. The icon and the feature graphic are
+generated from the launcher's own geometry and are not drawn by hand.
+
+## What goes where in Play Console
+
+| File here | Play Console field |
+| --- | --- |
+| `play-store-icon-512.png` | **Grow users → Store presence → Main store listing → App icon** |
+| `feature-graphic-1024x500.png` | the same page, **Feature graphic** |
+| `Screenshot_*-store.png` | the same page, **Phone screenshots** — the `-store` files, never the originals |
+| `store/listing/<locale>/*.txt` | title, short and full description, on the same page per language |
+
+## The icon and the feature graphic are generated
+
+```sh
+java -Djava.awt.headless=true scripts/GenerateLauncherIcons.java .
+```
+
+One run writes the adaptive vectors, the ten raster fallbacks, `artwork/`, and both store files
+here. **The mark is defined once**, in that generator, so the icon on the phone and the icon in the
+store cannot drift apart — which is what happens the moment somebody exports a second version by
+hand.
+
+**The store icon is the launcher icon, on the same near-black `#05070C`.** Cyan `#00E7E8` on white
+is a contrast ratio of **1.54:1** and the mark disappears into the card; on the app's own background
+it is **13.05:1**. Play rounds the corners and casts the shadow itself, so the file carries neither,
+and it is written without an alpha channel because Play refuses transparency here.
+
+**The feature graphic carries no text, deliberately.** Play crops it differently on every surface it
+appears on and overlays a play button on some of them, a word would have to exist in both listing
+languages, and a brand should not depend on whichever font a build machine happens to have. What is
+on it is the mark and the tracker pattern the letter is built from, fading east.
 
 ## Required assets
 
