@@ -460,6 +460,31 @@ It also needed the controller to read the catalogue summaries and the granted fo
 start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
 were loaded only when Browse opened.
 
+### C68. ~~With no length, the bar sat at the end and the total read 0:00~~ — FIXED 2026-09-18, branch
+
+*Owner, 2026-09-18, on the build that fixed C67: "player mówi 0:00 max, zaraz po kliknięciu play
+pasek odtwarzania trafia na koniec, a czas po lewej rośnie."*
+
+Both halves of C67's other side, and both were waiting to be found the moment a tune honestly
+reported no length.
+
+**The bar.** `SeekBar` floors the range at a thousandth of a second so the slider cannot divide by
+zero. With a real duration that floor is invisible; with none it *is* the range, so the first tick
+put the thumb at the far end. It now draws an empty bar and refuses the drag — a position is asked
+for as a fraction of a length, and there is no length.
+
+**The total.** `formatTime(0.0)` is "0:00", which where a total belongs says the tune is over before
+it starts. `formatTotal` prints dashes instead. Elapsed zero is still "0:00", because that one is
+true.
+
+**What is not a defect:** the tune faded at 2:30 and ended around 2:35. That is `applyFade`, still
+set from game-music-emu's `play_length` on purpose (C67) — a looping tune nothing can measure fades
+out somewhere rather than running until the fallback cuts it dead.
+
+**What is still missing** is a bar that moves. The app learns the real length every time such a
+tune plays to its end and then throws it away; `docs/BACKLOG.md` A50 is the owner's proposal to
+write it down.
+
 ### C67. ~~Console tunes with no length all claimed 2:30~~ — FIXED 2026-09-18, branch
 
 *Owner, 2026-09-18: `stars through the clouds.nsf` (Nintendo Sound Format / Tadpole) "gra przez
