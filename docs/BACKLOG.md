@@ -15,6 +15,41 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18**
+
+*Owner, 2026-09-18: `Beaver Sweeper/Steffo/nokia.gtk` does not play, "żadnego gtk" — and search
+finds it when he types "nokia".*
+
+**Both halves are working as designed, and the answer is a measurement.**
+
+`.gtk` is two unrelated formats. Fetched both and put them through this engine:
+
+| file | magic | what happens |
+| --- | --- | --- |
+| `Graoumf Tracker/Dumbo/demo.gtk` | `GTK\x01` | opens: "Graoumf Tracker v1", 88.9 s |
+| `Beaver Sweeper/Steffo/nokia.gtk` | `+SNT` | refused: libopenmpt, "error loading file" |
+
+Beaver Sweeper is an Amiga custom replayer — the ~29,000-file bucket `docs/ROADMAP_FORMATS.md`
+step 2 assigns to UADE. It happens to share an extension with a tracker libopenmpt does play, and an
+index built from filenames cannot tell them apart. Deciding by content would mean downloading half a
+million files, which is why the index decides by name (`docs/BACKLOG.md` A6).
+
+**The scale, counted in Modland's own index rather than guessed: four files.** 52 `.gtk` rows are
+Graoumf Tracker and 4 are Beaver Sweeper, out of 516,118. Across the whole archive **18** of the 103
+extensions this build claims appear under more than one format directory, and **5,079** rows sit
+under a directory that is not their extension's main one — most of which play anyway, because
+`.mod` under Fasttracker 2 is still a `.mod`.
+
+**So: no blocklist, and no per-directory special case.** Four files do not earn machinery, and the
+next archive would need its own.
+
+**What is worth doing** is making the refusal say what the archive itself calls the file. The row
+already carries its format directory — `catalogueFormatOf` reads it, and `OpenFailure.formatName`
+already uses it for a format nothing here claims. A file that *is* claimed and still refused falls
+into `FILE_REFUSED_WITH_REASON`, which repeats the decoder's own sentence and never mentions that
+Modland files this under **Beaver Sweeper**. One clause, from data already in hand, turns a puzzling
+refusal into an explanation — and it covers every one of those 5,079 rows, not just this extension.
+
 ## A50. A length learnt by playing it once — **the owner's idea, 2026-09-18**
 
 *Owner, 2026-09-18, on the NSF whose length nothing states: "skoro wiemy kiedy kończy się utwór, to
