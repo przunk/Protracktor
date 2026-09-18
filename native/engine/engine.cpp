@@ -840,8 +840,34 @@ public:
     }
     double positionSeconds() const override { return gme_tell(emu_) / 1000.0; }
 
+    /**
+     * How long the tune is, **or nothing when the file never said**.
+     *
+     * `play_length` is not a measurement. game-music-emu's own header spells out what it is:
+     *
+     *     Length if available, otherwise intro_length+loop_length*2 if available,
+     *     otherwise a default of 150000 (2.5 minutes).
+     *
+     * So every NSF, AY, KSS and GBS that carries no length at all -- which is most of them, the
+     * format has no field for it -- reported **exactly 2:30**, and the app drew a progress bar
+     * promising two and a half minutes over a tune that stops when it stops. Measured on Tadpole's
+     * `stars through the clouds.nsf`: reported 150.0 s, last audible sound at 29.4 s, ended by the
+     * library at 30.5 s. The skip was right; the number above it was fiction.
+     *
+     * Asked of the fields that are honest about not knowing: `length` is "total length, if file
+     * specifies it", and the two loop fields are -1 when unknown. When none of them knows, this
+     * says so, and the app treats the tune as unmeasured -- the same path a SID with no HVSC entry
+     * takes (`docs/BACKLOG.md` C56).
+     *
+     * [applyFade] deliberately still uses `play_length`: a looping tune that nothing can measure
+     * should still fade out at some point rather than run until the fallback cuts it dead, and
+     * 2.5 minutes is as good a point as any. What changes is only what we claim to know.
+     */
     double durationSeconds() const override {
-        return (info_ && info_->play_length > 0) ? info_->play_length / 1000.0 : 0.0;
+        if (!info_) return 0.0;
+        const bool known = info_->length > 0 || info_->intro_length > 0 || info_->loop_length > 0;
+        if (!known) return 0.0;
+        return info_->play_length > 0 ? info_->play_length / 1000.0 : 0.0;
     }
 
     std::string describe() const override {

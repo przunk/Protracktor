@@ -84,7 +84,7 @@ fun NowPlaying(
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = formatTime(state.durationSeconds),
+                text = formatTotal(state.durationSeconds),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
