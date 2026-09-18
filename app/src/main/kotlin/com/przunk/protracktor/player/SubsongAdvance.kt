@@ -32,12 +32,11 @@ object SubsongAdvance {
      * @param repeatOne whether repeat-one is on
      *
      * **Repeat-one repeats the tune you are hearing. Always.** It outranks "play all": while it is
-     * on, nothing advances, and the subsong that just ended plays again. The owner put it in three
-     * words — *"one to one"* — and it does not matter whether the thing being repeated is a whole
-     * file or the fifth tune inside one.
+     * on, nothing advances and the subsong that just ended plays again, whether the thing being
+     * repeated is a whole file or the fifth tune inside one.
      *
-     * This is the second reading of that control, and the first was mine and wrong. It said "one"
-     * meant one row of the playlist, so a multi-tune file would loop from its first tune. That is
+     * The tempting reading is that "one" means one row of the playlist, so a multi-tune file loops
+     * from its first tune. That is
      * defensible on paper and it fails the only test that counts: with "play all" on, pressing
      * repeat-one still moved you off the tune you were listening to. A repeat that goes somewhere
      * else is not a repeat.

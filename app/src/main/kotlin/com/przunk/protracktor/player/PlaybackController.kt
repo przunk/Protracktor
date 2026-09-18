@@ -26,6 +26,7 @@ import com.przunk.protracktor.data.PlaylistFile
 import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
+import com.przunk.protracktor.data.SearchTerms
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.Md5
 import com.przunk.protracktor.data.SongDbMetadata
@@ -46,6 +47,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.BufferOverflow
@@ -97,25 +99,32 @@ data class PlayerUiState(
      * otherwise take over a listening session the first time one turned up.
      */
     val playAllSubsongs: Boolean = false,
+    /**
+     * How long to play a tune whose length nothing knows, in seconds (`docs/STATUS.md` C56).
+     *
+     * **Deliberately not folded into [durationSeconds].** That field is what the app *knows*, and a
+     * guess written into it would be shown on screen as a fact and would make an unseekable tune
+     * look seekable. This is the point at which the app stops listening, which is a different
+     * statement from how long the tune is.
+     */
+    val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
     /**
      * Playing, but not part of the playlist.
      *
-     * What Random produces. The owner asked for it to play rather than land in the list, so that
-     * keeping it is a decision he makes after hearing it -- which is the only order that makes
-     * sense for something picked at random.
+     * What Random produces: it plays first, and keeping it is a separate decision taken after
+     * hearing it.
      */
     val transient: TrackRef? = null,
     /**
      * Whether [transient] came from outside the app — a file another app handed us.
      *
-     * A transient track used to mean one thing, Random, so `randomMode` was written as
-     * "transient != null". A tune opened from a file manager is also playing outside the playlist
-     * and is not Random at all: next must not roll the dice, and the scrim over the playlist must
-     * not say "Next picks another", because next picks nothing. One file arrived, and that is all
-     * there is.
+     * A transient track is not necessarily a random pick: a tune opened from a file manager also
+     * plays outside the playlist. Next must not roll the dice for it, and the scrim over the
+     * playlist must not say "Next picks another", because next picks nothing. One file arrived,
+     * and that is all there is.
      */
     val externalOpen: Boolean = false,
     /**
@@ -126,8 +135,35 @@ data class PlayerUiState(
      * rewrite the list you were keeping.
      */
     val resultsQueue: PlayQueue? = null,
+    /**
+     * A Random session waiting under a digression (`docs/BACKLOG.md` A41).
+     *
+     * "More from this author" from the dice moves playback to that folder; the record and the
+     * cursor stay where they are, and this says there is something to go back to. Back out of the
+     * folder returns to it; a playlist, an external file or a link end it for good.
+     */
+    val diceWaiting: Boolean = false,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
+    /**
+     * What the dice has actually given this session, oldest first.
+     *
+     * **Only what has played.** `READ_AHEAD` picks stand past the cursor at all times so a tune can
+     * be fetched before it is wanted, and those are a fetching strategy rather than a promise —
+     * showing them would turn a record into a schedule, and a schedule the dice is free to discard
+     * whenever the scope changes (`docs/PLAN_RANDOM.md`).
+     */
+    val randomPicks: List<TrackRef> = emptyList(),
+    /** Which of [randomPicks] is playing, or -1. */
+    val randomIndex: Int = -1,
+    /**
+     * True when the dice looked and found nothing to pick from.
+     *
+     * The message says why — nothing indexed, or nothing indexed for that platform — but a message
+     * is a snackbar and goes. Without this the Random view would sit on "Rolling…" for ever, which
+     * is a screen lying about what it is doing.
+     */
+    val randomExhausted: Boolean = false,
     val playlists: List<SavedPlaylist> = emptyList(),
     val activePlaylistId: Long = 0L,
     /** False until the stored state has been read. Saving before then would erase it. */
@@ -135,9 +171,8 @@ data class PlayerUiState(
     /**
      * The playlist on screen differs from the one on disk.
      *
-     * Adding and removing edit a working copy; nothing is written until the user says so. That is
-     * what the owner asked for -- a list you can rearrange without committing to it -- and it means
-     * leaving without saving loses the edits, which the UI has to say out loud.
+     * Adding and removing edit a working copy; nothing is written until the user says so. Leaving
+     * without saving therefore loses the edits, which the UI has to say out loud.
      */
     val dirty: Boolean = false,
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
@@ -237,6 +272,9 @@ object DownloadKeys {
     const val TRACK_METADATA = "trackmetadata"
     const val FAVOURITES = "favourites"
     const val REPLAYS = "replays"
+
+    /** The one press that fetches the lot. Its own key, so the offer can show its own spinner. */
+    const val EVERYTHING = "everything"
 }
 
 data class BrowseState(
@@ -256,11 +294,9 @@ data class BrowseState(
     /**
      * What is downloading right now: a key per download, and a line to show for each.
      *
-     * **A map rather than one string, since 2026-09-09.** It was one string, and starting a second
-     * download while the first ran overwrote it — then whichever finished *first* cleared it, so
-     * the banner vanished while a download was still going. The owner read that as the second tap
-     * cancelling the first: *"jak klikam po kolei od razu je, to przerywa poprzednie"*. Nothing was
-     * ever cancelled; the coroutines ran on happily and only the UI had lost track of them.
+     * A map rather than one string: downloads run concurrently, so a single field would be
+     * overwritten by the second and then cleared by whichever finished first, hiding the banner
+     * while a download was still running.
      *
      * Keyed by [DownloadKeys] or a catalogue id, so a row can ask whether **it** is the one
      * downloading and show a spinner where its arrow was.
@@ -268,6 +304,17 @@ data class BrowseState(
     val indexing: Map<String, String> = emptyMap(),
     /** Non-null while a folder is being scanned: files probed so far, and how many there are. */
     val scanProgress: Pair<Int, Int>? = null,
+    /**
+     * True once the app has read what this phone holds: the catalogue summaries and the folders.
+     *
+     * **Nothing may be concluded from an empty [catalogues] before this is true.** Both are read
+     * from the database after launch, so for the first moment of every session they are empty --
+     * and a screen that asks "is anything indexed?" gets "no" from a question that has not been
+     * answered yet. That showed as an offer to download an index, on a phone with half a million
+     * tracks in it, for the two seconds before the list arrived.
+     */
+    val knowsWhatIsHeld: Boolean = false,
+
     /** True when the open folder has never been scanned. */
     val folderUnscanned: Boolean = false,
     /** True when the open folder's index was built by a different set of decoders. */
@@ -301,10 +348,18 @@ data class BrowseState(
      * Whether a browser is paired.
      *
      * In state rather than read from preferences at the call site, because it decides an **icon**:
-     * the owner's rule for "to browser" is that the icon says which of the two things a press will
-     * do — a code when it will open the camera, a link when it will send.
+     * "to browser" shows a code when a press will open the camera, a link when it will send.
      */
     val pairedBrowser: Boolean = false,
+    /**
+     * Where the page is, for a shared link and for the field in Settings.
+     *
+     * **Here rather than read once where the screen is built**: a successful pairing changes it
+     * (`Appearance.rememberPairing`), and a value captured at composition would leave Settings
+     * showing the address from before the scan. A link asks `Appearance` at the moment it is made,
+     * so sending is unaffected; only the screen would be behind.
+     */
+    val webPlayer: String = QueueLink.DEFAULT_BASE,
     /** Bytes in the fetched-file cache, and bytes in permanent downloads. */
     val storageBytes: Pair<Long, Long> = 0L to 0L,
     /** Bytes each downloaded catalogue archive holds, by catalogue id. Only what exists is listed. */
@@ -330,7 +385,7 @@ data class BrowseState(
      *
      * Counted from the catalogue index, which contains only files this build claims, so a platform
      * missing from this map has nothing to offer and its chip is drawn disabled. Computed rather
-     * than declared: a hard-coded "supported" list would have been wrong the day after AHX landed.
+     * than declared: a hard-coded "supported" list goes stale the moment a decoder is added.
      */
     val platformCounts: Map<String, Int> = emptyMap(),
     /** What the dice picks from. Not persisted: see [RandomScope]. */
@@ -338,17 +393,17 @@ data class BrowseState(
     /**
      * Whether a search has been run for the scope now shown.
      *
-     * An empty list means two different things and the screen used to say the alarming one for
-     * both. Nothing typed yet is not the same as nothing out there.
+     * An empty list means two different things, and the screen must not say the alarming one for
+     * both: nothing typed yet is not the same as nothing out there.
      */
     val searched: Boolean = false,
     /**
      * True when the only source the scope could ask was the live one, and the query was blank.
      *
      * The Mod Archive has no index here to list, and asking it for nothing returns its
-     * "Or perhaps enjoy some of these…" page rather than the archive. So a blank query skips it --
-     * correctly -- and the screen then said "nothing found", which is a claim about the archive
-     * rather than about what we did. It found nothing because nothing was asked.
+     * "Or perhaps enjoy some of these…" page rather than the archive. A blank query therefore
+     * skips it, and the screen must not then say "nothing found" -- that is a claim about the
+     * archive, when in truth nothing was asked.
      */
     val liveSearchNeededQuery: Boolean = false,
     /**
@@ -362,7 +417,25 @@ data class BrowseState(
 
     /** Whatever the current level lists, in the form the playlist takes. */
     val tracks: List<TrackRef> = emptyList(),
-)
+) {
+
+    /**
+     * Whether Browse leads anywhere yet: rows to walk, or a folder that was granted.
+     *
+     * **`CatalogueSummary.indexed` is the wrong question**, and answering it here was a defect: it
+     * is `trackCount > 0 || isOnlineOnly`, and The Mod Archive is online-only, so `indexed` is true
+     * for it on a phone that holds nothing at all. `any { it.indexed }` therefore said yes to every
+     * install ever made, including the empty one this exists to detect.
+     *
+     * Rows, then — or a granted folder, so that somebody who only plays their own files is not
+     * pushed towards a 49 MB download they do not want.
+     *
+     * The Mod Archive's live search is still reachable from Browse in the top bar; what this
+     * decides is only what the *empty playlist* offers as the way on.
+     */
+    val hasSomethingToBrowse: Boolean
+        get() = catalogues.any { it.trackCount > 0 } || folders.isNotEmpty()
+}
 
 class PlaybackController private constructor(private val context: Context) {
 
@@ -391,7 +464,6 @@ class PlaybackController private constructor(private val context: Context) {
          * into one write rather than one write each.
          */
         private const val TRACK_WRITE_DEBOUNCE_MS = 1500L
-        const val DEFAULT_PLAYLIST_NAME = "Playlist"
 
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
         const val UNDO = "undo"
@@ -460,6 +532,17 @@ class PlaybackController private constructor(private val context: Context) {
          * listen into a handful of downloads.
          */
         private const val READ_AHEAD = 3
+
+        /**
+         * How many times over to draw, so repeats can be dropped and enough still remain.
+         *
+         * Four is not measured, and does not need to be: the cost is a `LIMIT 12` where a `LIMIT 3`
+         * would do, against a query that already sorts the whole scope by a generated key
+         * (`docs/review-round-8.md` R7). If the pool is wide enough for repeats to be rare the
+         * extra rows are thrown away, and if it is narrow enough for them to be common this is what
+         * stops the dice looping over the same handful.
+         */
+        private const val OVERDRAW = 4
     }
 
     // Main.immediate so a press and the state change it causes land in the same frame; the work
@@ -471,8 +554,8 @@ class PlaybackController private constructor(private val context: Context) {
      *
      * **`Dispatchers.IO` is the wrong tool for this.** Its threads run at default priority, so
      * opening a decoder — which is real CPU work, and for sc68 means building a 68000 emulator —
-     * competes with the UI thread on equal terms. On a phone that is a list which stutters while
-     * the work runs, which is what the owner reported for the first twenty seconds after launch.
+     * competes with the UI thread on equal terms. On a phone that is a list which stutters for as
+     * long as the work runs — the first twenty seconds after launch, when a library is scanned.
      *
      * A single thread at `THREAD_PRIORITY_BACKGROUND` puts this in Android's background cgroup,
      * where it gets a small share of the processor and *cannot* starve drawing however long it
@@ -525,14 +608,15 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Whether a browser is paired, read once at start-up.
      *
-     * It decides an icon, and the icon was wrong for the whole first minute of every session: the
-     * flag only became true after something had been sent, so an app that *was* paired opened
-     * showing a QR code and changed to a link once the owner pressed it. Reading the stored
-     * pairing here costs one preference lookup at construction.
+     * It decides an icon, which has to be right from the first frame. An in-memory flag set only
+     * once something has been sent would leave a *paired* app showing a QR code until the first
+     * press. Reading the stored pairing here costs one preference lookup at construction.
      */
     private val pairedAtStart = Appearance.pairedEndpoint(context) != null
 
-    private val _browse = MutableStateFlow(BrowseState(pairedBrowser = pairedAtStart))
+    private val _browse = MutableStateFlow(
+        BrowseState(pairedBrowser = pairedAtStart, webPlayer = Appearance.webPlayer(context)),
+    )
     val browse: StateFlow<BrowseState> = _browse.asStateFlow()
 
     /** The open module. Owned here because native memory is invisible to the garbage collector. */
@@ -542,9 +626,8 @@ class PlaybackController private constructor(private val context: Context) {
      * HVSC's lengths for the open file, one per tune, or empty when it did not supply any.
      *
      * Kept because the backend cannot be asked twice. libsidplayfp reports no length at all — the
-     * database is the only source — and a subsong switch used to clear the duration and wait for a
-     * backend that would never answer, so tune two onwards showed no length and, once the player
-     * started stopping at a known length, would have played for ever again.
+     * database is the only source — so a subsong switch must not clear the duration and wait for a
+     * backend that will never answer: tune two onwards would show no length and play for ever.
      */
     private var openSongLengths: List<Double> = emptyList()
 
@@ -557,13 +640,6 @@ class PlaybackController private constructor(private val context: Context) {
     private var openMetadata: com.przunk.protracktor.data.SongDbMetadata.Entry? = null
 
     /**
-     * The in-flight open. Cancelled before a new one starts.
-     *
-     * Two quick presses of next used to start two audio streams at once: each press launched its
-     * own open, and the second overwrote `track` without closing the first, which went on playing
-     * with nobody holding it.
-     */
-    /**
      * Whether the audio path has already been complained about this session.
      *
      * Once is a diagnosis; once per track is a nuisance, and the answer cannot change while the app
@@ -574,28 +650,41 @@ class PlaybackController private constructor(private val context: Context) {
     /** Set by a subsong switch, cleared by the poll that re-reads the new tune's description. */
     private var describeAgain = false
 
+    /**
+     * The in-flight open. Cancelled before a new one starts, because two quick presses of next
+     * would otherwise run two opens, and the second would overwrite `track` without closing the
+     * first — leaving a stream playing with nobody holding it.
+     */
     private var openJob: Job? = null
 
     /**
-     * The next track's bytes, read while the current one plays.
-     *
-     * R9 -- "playback starts immediately" -- is a reading problem, not a decoding one. A module is
-     * kilobytes and decodes in milliseconds; the wait the owner measured at five to thirty seconds
-     * was opening the file, and his library sits on an SMB share where that means a network round
-     * trip. One entry is enough: it is the next track people wait for.
-     */
-    /**
      * Tracks read ahead, keyed by reference id, in the order they were read.
      *
-     * More than one because Random reads several ahead (`docs/BACKLOG.md` A11), and a single slot
-     * could only ever hold the very next one.
+     * Read ahead because starting a track is dominated by **reading** it rather than by decoding
+     * it: a module is kilobytes and decodes in milliseconds, while opening one on a network share
+     * is a round trip measured in seconds (`docs/BACKLOG.md` R9). More than one entry because
+     * Random reads several ahead (`docs/BACKLOG.md` A11), and a single slot could only ever hold
+     * the very next one.
      */
     private val prefetched = LinkedHashMap<String, ByteArray>()
     private var prefetchJob: Job? = null
+
+    /** The run of downloads the offer started, kept so that [cancelDownloads] has something to stop. */
+    private var selectedDownloads: Job? = null
     private var scanJob: Job? = null
 
     /** The background metadata pass. Cancelled and restarted whenever the track list changes. */
     private var resolveJob: Job? = null
+
+    /**
+     * What the first playlist is called, and what an unnamed one falls back to.
+     *
+     * Read from resources rather than held as a constant, because it is the first word a new
+     * install shows and it was English on a Polish phone. Only ever used when a name is *created*:
+     * the name is then the user's data, and switching the app's language does not rename what
+     * somebody may have renamed themselves.
+     */
+    private val defaultPlaylistName: String get() = context.getString(R.string.playlist_default_name)
 
     private val store = LibraryStore(context)
     private val catalogues = CatalogueStore(context)
@@ -623,6 +712,30 @@ class PlaybackController private constructor(private val context: Context) {
     private var randomCursor = -1
 
     /**
+     * Which Random session the work in flight belongs to.
+     *
+     * **The record and the cursor are fields, and the work that reads them suspends** — filling the
+     * queue asks the database. Start a session again, or leave for the playlist, while an advance
+     * is waiting, and it would resume against a record that is not its own — the cursor back at -1
+     * and the new session's first pick already in the list, which reads the list out of bounds.
+     * Raised wherever a session begins or ends; checked after every wait.
+     */
+    private var randomSession = 0
+
+    /**
+     * Copies the played part of the history into the state, for the Random view to draw.
+     *
+     * Called from every place that moves the cursor or edits the record. A single writer would be
+     * better; there is no single place the history changes, and inventing one would mean routing
+     * `advanceRandom`, `randomPrevious` and the list's own edits through a funnel that does nothing
+     * else.
+     */
+    private fun publishRandomPicks() {
+        val played = randomHistory.take(randomPlayed + 1)
+        _state.update { it.copy(randomPicks = played, randomIndex = randomCursor) }
+    }
+
+    /**
      * How far into [randomHistory] has actually been played. Anything past it was picked ahead and
      * never heard -- which is the difference between history and speculation, and the dice needs it.
      */
@@ -643,10 +756,46 @@ class PlaybackController private constructor(private val context: Context) {
         // why this is the cheapest moment to do it.
         scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
 
-        // A catalogue that used to be offered and is not any more leaves its rows behind, and rows
+        // **What is on this phone, before anybody opens Browse.** The empty playlist has to
+        // choose between offering Browse and offering the download sheet, and it cannot ask a
+        // screen that has never been opened. Two small reads -- the `catalogues` table is one row
+        // per catalogue and `granted_folders` is a handful -- rather than `refreshCatalogues()`,
+        // which also counts platforms across half a million rows and has no business running at
+        // start-up.
+        scope.launch {
+            val summaries = catalogues.summaries()
+            val granted = store.grantedFolders()
+            _browse.update {
+                it.copy(catalogues = summaries, folders = granted, knowsWhatIsHeld = true)
+            }
+        }
+
+        // A catalogue that is no longer offered leaves its rows behind, and rows
         // nothing lists are rows in every global search. Once at start-up, next to the cache sweep
         // and for the same reason.
         scope.launch(Dispatchers.IO) { runCatching { catalogues.pruneUnknownCatalogues() } }
+
+        // **What a format added since the last run costs: one statement, and no network**
+        // (`docs/ROADMAP_FORMATS.md` step 0). An index holds every row the archive lists, so a
+        // change to `SupportedFormats` is a question the stored rows can already answer —
+        // 228ms over 516,107 of them, measured — where it used to mean re-downloading Modland's
+        // 40 MB on every device.
+        //
+        // Run only when the stamp actually moved. Recomputing on every start would be 228ms of
+        // nothing, every time, for a list that changes with a release.
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val current = NativeEngine.backendsFingerprint()
+                if (catalogues.summaries().any { it.indexedAt != null && it.backends != current }) {
+                    catalogues.refreshPlayable()
+                    // Re-stamped only where the index is whole. A partial one -- written before the
+                    // index stopped being a function of the format list -- is missing rows no
+                    // recompute can conjure, and has to go on saying it needs fetching again.
+                    catalogues.restampComplete(current)
+                    _browse.update { it.copy(catalogues = catalogues.summaries()) }
+                }
+            }
+        }
 
         scope.launch(Dispatchers.IO) {
             runCatching {
@@ -709,9 +858,9 @@ class PlaybackController private constructor(private val context: Context) {
                 //
                 // `isFinished` is set by the engine when a backend renders a short buffer, and some
                 // never do: libsidplayfp is running a 6502 in a loop and has no idea the music is
-                // over, so a SID played until the user pressed something. Since HVSC started
-                // supplying lengths the app *knows* the answer and was not acting on it — the
-                // owner's observation on 2026-09-04, and it applies to every format, not just SID.
+                // over, so without this a SID plays until the user presses something. Where HVSC
+                // supplies a length the app knows the answer, and this acts on it — for every
+                // format, not just SID.
                 //
                 // Whatever supplied the duration is trusted to be right: HVSC for SID, sc68's
                 // database for SNDH, the file itself elsewhere. A wrong entry cuts a tune short,
@@ -720,7 +869,14 @@ class PlaybackController private constructor(private val context: Context) {
                 //
                 // `handleTrackEnded` and not something of its own, so repeat, shuffle, subsongs and
                 // Random all behave exactly as they do at a real end of tune.
-                val known = _state.value.durationSeconds
+                // **A length nothing knows still ends** (`docs/BACKLOG.md` C56). A tune with no
+                // duration at all -- a SID with no HVSC entry, a `.sndh` sc68's database has never
+                // heard of -- would otherwise play until somebody noticed. The fallback comes from
+                // Settings, and is applied here rather than to `durationSeconds` so that what the
+                // screen reports stays what the app actually knows.
+                val snapshot = _state.value
+                val known = snapshot.durationSeconds.takeIf { it > 0.0 }
+                    ?: snapshot.fallbackLengthSeconds.toDouble()
                 if (known > 0.0 && position >= known) handleTrackEnded()
             }
         }
@@ -731,11 +887,14 @@ class PlaybackController private constructor(private val context: Context) {
     private fun restore() {
         scope.launch {
             val saved = store.loadPlayerState()
+            // Read once and used twice. `defaultPlaylistId` can create one, so the list is read
+            // again only when it did; asking the database the same question twice at launch is a
+            // query nobody needs on the path A48 is about.
             val known = store.playlists()
             // The stored active playlist, unless it has since been deleted.
-            playlistId = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
-                ?: store.defaultPlaylistId(DEFAULT_PLAYLIST_NAME)
-            val playlists = store.playlists()
+            val stored = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
+            playlistId = stored ?: store.defaultPlaylistId(defaultPlaylistName)
+            val playlists = if (stored != null) known else store.playlists()
             val tracks = store.tracksIn(playlistId)
 
             _state.update { current ->
@@ -755,9 +914,13 @@ class PlaybackController private constructor(private val context: Context) {
                     playlists = playlists,
                     activePlaylistId = playlistId,
                     playAllSubsongs = saved?.playAllSubsongs ?: false,
+                    fallbackLengthSeconds =
+                        FallbackLength.fromStored(saved?.fallbackLengthSeconds ?: 0),
                     restored = true,
                 )
             }
+            // The dice's scope, kept between runs now that the Random view shows what is set.
+            _browse.update { it.copy(randomScope = storedRandomScope(saved?.randomScope)) }
             resolveMetadataInBackground()
         }
     }
@@ -766,12 +929,10 @@ class PlaybackController private constructor(private val context: Context) {
      * Writes the track list, shortly.
      *
      * **Debounced, and it has to be.** `replaceTracks` deletes every row of the playlist and
-     * reinserts it — two inserts per track — and background metadata resolution used to call it
-     * once per track it identified, every 120 ms. On a playlist of three hundred that is some six
-     * hundred inserts eight times a second, into the same database the list is being read from, for
-     * as long as the resolution runs. The owner reported it as the list stuttering for the first ten
-     * to twenty seconds after launch, and was right that it had nothing to do with the scrollbar he
-     * had just been given.
+     * reinserts it — two inserts per track — and background metadata resolution identifies a
+     * track every 120 ms. Undebounced, a playlist of three hundred means some six hundred inserts
+     * eight times a second, into the same database the list is being read from, for as long as the
+     * resolution runs, and the list stutters for as long as it does.
      *
      * The state still updates per track, so titles appear as they are learned. It is only the disk
      * that waits.
@@ -781,7 +942,20 @@ class PlaybackController private constructor(private val context: Context) {
         trackWriteJob = scope.launch {
             delay(TRACK_WRITE_DEBOUNCE_MS)
             store.replaceTracks(playlistId, _state.value.queue.tracks)
+            refreshPlaylists()
         }
+    }
+
+    /**
+     * The switcher counts what each playlist holds, so every write that changes a count says so.
+     *
+     * `docs/STATUS.md` C44: making, renaming and deleting a playlist already re-read the list;
+     * the writes that change only its **contents** did not, so "Add to playlist…" wrote the track
+     * and left the number on screen as it was until the playlist was opened.
+     */
+    private suspend fun refreshPlaylists() {
+        val known = store.playlists()
+        _state.update { it.copy(playlists = known) }
     }
 
     /**
@@ -816,6 +990,8 @@ class PlaybackController private constructor(private val context: Context) {
                 shuffle = snapshot.queue.shuffle,
                 repeat = snapshot.queue.repeat,
                 playAllSubsongs = snapshot.playAllSubsongs,
+                fallbackLengthSeconds = snapshot.fallbackLengthSeconds,
+                randomScope = _browse.value.randomScope.stored(),
             )
         )
     }
@@ -836,7 +1012,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val stored = store.tracksIn(playlistId)
             _state.update {
-                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = Message("Changes discarded."))
+                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = Message(context.getString(R.string.notice_changes_discarded)))
             }
         }
     }
@@ -845,7 +1021,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun createPlaylist(name: String) {
         scope.launch {
-            val id = store.createPlaylist(name.ifBlank { DEFAULT_PLAYLIST_NAME })
+            val id = store.createPlaylist(name.ifBlank { defaultPlaylistName })
             _state.update { it.copy(playlists = store.playlists()) }
             switchToPlaylist(id)
         }
@@ -860,18 +1036,12 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Deletes a playlist. The tracks stay in the library; only the list goes.
+     * Deletes a playlist — or empties it, when it is the only one there is. The tracks stay in the
+     * library; only the list goes.
      *
-     * The last playlist cannot be deleted -- an app with nowhere to put anything is a state with no
-     * way out, and "delete" is not a request to be stranded.
-     */
-    /**
-     * Deletes a playlist — or empties it, when it is the only one there is.
-     *
-     * **The last playlist is not refused, it is reset.** It used to answer "the last playlist
-     * cannot be deleted", which is a rule the user did not agree to and could not see: they pressed
-     * Delete, confirmed it, and nothing happened. The notice explaining why lost a race with the
-     * sheet the button lives in, so even the explanation did not arrive.
+     * **The last playlist is not refused, it is reset.** Refusing it means the user presses Delete,
+     * confirms, and nothing happens — and the notice explaining why loses a race with the sheet the
+     * button lives in, so not even the explanation arrives.
      *
      * Somebody deleting their only playlist wants it gone, and the closest thing to gone that can
      * exist is empty and called what a new one would be called. There is nothing to undo that the
@@ -881,7 +1051,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             if (store.playlists().size <= 1) {
                 store.replaceTracks(id, emptyList())
-                store.renamePlaylist(id, DEFAULT_PLAYLIST_NAME)
+                store.renamePlaylist(id, defaultPlaylistName)
                 stopPlayback()
                 _state.update {
                     it.copy(
@@ -892,7 +1062,7 @@ class PlaybackController private constructor(private val context: Context) {
                         metadata = emptyMap(),
                         positionSeconds = 0.0,
                         durationSeconds = 0.0,
-                        message = Message("Playlist emptied. It is the only one, so it stays."),
+                        message = Message(context.getString(R.string.notice_playlist_emptied)),
                     )
                 }
                 return@launch
@@ -951,19 +1121,19 @@ class PlaybackController private constructor(private val context: Context) {
                 refreshPlatformCounts()
             }
             BrowseDomain.HISTORY -> openHistory()
-            // The root has a consumer too, and it was missed: Random's scope sheet is opened from
-            // here and draws the same chips. Without the counts every platform reads as "nothing
-            // indexed" and the whole sheet is disabled -- which is what the owner saw.
+            // The root has a consumer too: Random's scope sheet is opened from here and draws the
+            // same chips. Without the counts every platform reads as "nothing indexed" and the
+            // whole sheet is disabled.
             //
             // Only when they are absent. This is a grouped scan of every catalogue row, the root is
             // returned to on every step back out of a folder, and the answer only changes when an
             // index does.
             BrowseDomain.ROOT -> {
                 if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
-                // And the favourite count, for the same sheet and the same reason -- **the same
-                // mistake made twice**: it was only ever set by `refreshCatalogues`, which the root
-                // does not call, so the Favourites chip read as "not downloaded" for anyone who had
-                // not visited the catalogue list this session. Unguarded, because unlike the
+                // And the favourite count, for the same sheet and the same reason: it is set by
+                // `refreshCatalogues`, which the root does not call, so without this the Favourites
+                // chip reads as "not downloaded" for anyone who has not visited the catalogue list
+                // this session. Unguarded, because unlike the
                 // platform counts it is one `COUNT` over a thousand rows rather than a grouped scan
                 // of half a million, and because zero is a real answer here rather than "not asked
                 // yet" -- a guard on emptiness could never tell the two apart.
@@ -979,7 +1149,7 @@ class PlaybackController private constructor(private val context: Context) {
         // A jump is one step, not a descent. "More from this author" puts you three levels deep
         // without your having passed through any of them, so back should return you to where you
         // actually were -- the playlist -- rather than making you climb out of a hierarchy you
-        // never climbed into. Reported by the owner, who had to press back four times.
+        // never climbed into, one press per level.
         if (current.arrivedByJump) {
             _browse.update { it.copy(arrivedByJump = false) }
             return false
@@ -1047,9 +1217,9 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Shows what a folder holds, from the index rather than by walking it again.
      *
-     * It used to re-scan the tree every time, which on the owner's network share is seconds of
-     * waiting for an answer that has not changed -- and it decided what was playable from filenames
-     * (`docs/STATUS.md` C4). Now the scan happens once, on purpose, and this reads the result.
+     * Walking the tree again would be seconds of waiting on a network share for an answer that
+     * has not changed, and would have to guess what is playable from filenames
+     * (`docs/STATUS.md` C4). The scan happens once, on purpose, and this reads its result.
      */
     fun openFolder(folder: GrantedFolder) {
         scope.launch {
@@ -1086,9 +1256,9 @@ class PlaybackController private constructor(private val context: Context) {
      * what gets stored. A file called `.txt` that is really a module is indexed; a file called
      * `.mod` that is really a photograph is not.
      *
-     * Playing is not interrupted. That used to be impossible: sc68 2.2.1 kept its emulator in
-     * global state, so opening a second instance while one played clobbered it. 3.0.0b is
-     * instance-based and was measured safe across four concurrent threads
+     * Playing is not interrupted, which depends on the backends being re-entrant: sc68 2.2.1 kept
+     * its emulator in global state, so opening a second instance while one played clobbered it.
+     * 3.0.0b is instance-based and was measured safe across four concurrent threads
      * (`native/probe/sc68/probe_concurrency.c`), which is what makes this a background job rather
      * than something the user has to stop the music for.
      */
@@ -1131,7 +1301,10 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        "Scanned ${folder.displayName}: ${indexed.size} playable of ${candidates.size}."
+                        context.getString(
+                            R.string.notice_scanned,
+                            folder.displayName, indexed.size, candidates.size,
+                        )
                     )
                 )
             }
@@ -1211,7 +1384,7 @@ class PlaybackController private constructor(private val context: Context) {
             val tracks =
                 if (id == current.activePlaylistId) current.queue.tracks else store.tracksIn(id)
             if (tracks.isEmpty()) {
-                _state.update { it.copy(message = Message("There is nothing in this playlist.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_playlist_empty))) }
                 return@launch
             }
             val label = current.playlists.firstOrNull { it.id == id }?.name ?: "playlist"
@@ -1221,7 +1394,7 @@ class PlaybackController private constructor(private val context: Context) {
             }
             val uri = remoteFiles.shareableCopy("$name.m3u8", bytes)
             if (uri == null) {
-                _state.update { it.copy(message = Message("Could not prepare the playlist.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_playlist_failed))) }
                 return@launch
             }
             _share.tryEmit(
@@ -1257,13 +1430,13 @@ class PlaybackController private constructor(private val context: Context) {
                 }.getOrNull()?.toString(Charsets.UTF_8)
             }
             if (text.isNullOrBlank()) {
-                _state.update { it.copy(message = Message("Could not read that file.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_file_unreadable))) }
                 return@launch
             }
 
             val entries = withContext(Dispatchers.Default) { PlaylistFile.read(text) }
             if (entries.isEmpty()) {
-                _state.update { it.copy(message = Message("No tracks in that file.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_file_no_tracks))) }
                 return@launch
             }
 
@@ -1289,12 +1462,15 @@ class PlaybackController private constructor(private val context: Context) {
                 it.copy(
                     message = Message(
                         if (found.size == entries.size) {
-                            "Imported ${found.size} tracks into \"$name\"."
+                            context.resources.getQuantityString(
+                                R.plurals.notice_imported, found.size, found.size, name,
+                            )
                         } else {
                             // Said, not swallowed. A playlist that silently arrived shorter than
                             // the file it came from is worse than one that explains itself.
-                            "Imported ${found.size} of ${entries.size} into \"$name\"; " +
-                                "the rest are not on this device."
+                            context.getString(
+                                R.string.notice_imported_partial, found.size, entries.size, name,
+                            )
                         }
                     )
                 )
@@ -1343,12 +1519,12 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val bytes = loadBytes(ref)
             if (bytes == null) {
-                _state.update { it.copy(message = Message("Could not read ${ref.title}")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_track_unreadable, ref.title))) }
                 return@launch
             }
             val uri = remoteFiles.shareableCopy(ref.fileNameOrTitle, bytes)
             if (uri == null) {
-                _state.update { it.copy(message = Message("Could not prepare ${ref.title} for sharing.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_share_failed, ref.title))) }
                 return@launch
             }
             _share.tryEmit(
@@ -1380,7 +1556,7 @@ class PlaybackController private constructor(private val context: Context) {
         val path = catalogue?.pathFrom(ref.id)
         if (catalogue == null || path == null) {
             _state.update {
-                it.copy(message = Message("Only tracks from an online catalogue have a link."))
+                it.copy(message = Message(context.getString(R.string.notice_link_online_only)))
             }
             return
         }
@@ -1399,10 +1575,10 @@ class PlaybackController private constructor(private val context: Context) {
      * Hands the whole queue to a browser, as a link.
      *
      * **No server is involved in this at all**, which is the point of it (`docs/PLAN_HANDOFF.md` §3
-     * H1). The queue becomes a few hundred characters in a URL fragment, the owner sends that to
-     * himself by whatever channel he already uses, and the page at the other end fetches the music
-     * from Modland directly. A fragment never reaches a server, so even the page's own host does not
-     * learn what is on the list.
+     * H1). The queue becomes a few hundred characters in a URL fragment, sent by whatever channel
+     * the user already has, and the page at the other end fetches the music from Modland directly.
+     * A fragment never reaches a server, so even the page's own host does not learn what is on the
+     * list.
      *
      * **It says what it could not send.** A local file's identity is a grant to one app on one
      * phone and means nothing in a browser, so those rows cannot travel — and a handoff that
@@ -1420,7 +1596,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun sendQueueToBrowser() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
-            _state.update { it.copy(message = Message("There is nothing in the playlist to send.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_nothing_to_send))) }
             return
         }
         val paired = Appearance.pairedEndpoint(context)
@@ -1434,41 +1610,42 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Uses a scanned code, and remembers it **only if it worked**.
      *
-     * The first version stored it before trying. The owner scanned with the firewall still closed,
-     * the send failed, and the address was kept anyway — so every later press used a pairing that
-     * had never once succeeded, fell back to the link, and there was no way back to the scanner.
-     * A remembered pairing is a claim that a browser is reachable, and the only evidence for it is
-     * having reached one.
+     * Storing it before trying keeps an address that may never have worked — a firewall still
+     * closed, say — and every later press then uses a pairing that has never once succeeded, falls
+     * back to the link, and leaves no way back to the scanner. A remembered pairing is a claim that
+     * a browser is reachable, and the only evidence for it is having reached one.
      */
     fun pairWith(endpoint: String) {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
             Appearance.rememberPairing(context, endpoint)
-            _browse.update { it.copy(pairedBrowser = true) }
-            _state.update { it.copy(message = Message("Paired. The playlist is empty, so nothing was sent.")) }
+            _browse.update { it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context)) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_paired_empty))) }
             return
         }
         postQueue(endpoint, tracks, remember = true)
     }
 
+    /** Stores an address typed in Settings, and publishes it so the field shows what was stored. */
+    fun setWebPlayer(base: String) {
+        Appearance.selectWebPlayer(context, base)
+        _browse.update { it.copy(webPlayer = Appearance.webPlayer(context)) }
+    }
+
     fun forgetPairing() {
         Appearance.rememberPairing(context, null)
         _browse.update { it.copy(pairedBrowser = false) }
-        _state.update { it.copy(message = Message("The paired browser is forgotten.")) }
+        _state.update { it.copy(message = Message(context.getString(R.string.notice_pairing_forgotten))) }
     }
 
-    /**
-     * @param remember whether a success should store this address. A scan asks for that; a send to
-     * an address already stored does not need to re-store it.
-     */
     /**
      * The bytes of the tracks a browser cannot fetch for itself.
      *
      * **This is the half `docs/PLAN_WEB.md` §8 said could not travel, travelling.** A local file's
      * identity is a grant to one app on one phone, so no URL can carry it — but the phone is
      * *present* at the moment of transfer and can simply hand over the file. That is the difference
-     * between a live pairing and an account sync, and it is why the accountless design turned out to
-     * be the more capable one.
+     * between a live pairing and an account sync, and why the accountless design is the more
+     * capable one.
      *
      * Budgeted, and what does not fit is reported rather than dropped.
      */
@@ -1477,15 +1654,17 @@ class PlaybackController private constructor(private val context: Context) {
         var left = 0
         var used = 0
         for (track in tracks) {
-            // **An MP3 never travels**, by the owner's rule and by arithmetic: the budget for a
-            // whole queue is eight megabytes and one four-minute recording is more than that. It is
+            // **An MP3 never travels**, by arithmetic: the budget for a whole queue is eight
+            // megabytes and one four-minute recording is more than that. It is
             // marked instead, and arrives as a greyed row naming the file (`docs/BACKLOG.md` A29).
             if (QueueLink.isMp3(track)) continue
-            // **Skipped only when the browser can fetch it for itself.** Modland serves every file
-            // over HTTP, so its rows travel as a URL and cost nothing here. ASMA and UnExoticA do
-            // not publish one: `asma://` and `unexotica://` mean something on this phone and
-            // nothing anywhere else, so those tracks travel as bytes or they arrive dead.
-            if (Catalogue.owning(track.id) != null && track.id.startsWith("http")) continue
+            // **Skipped only when the browser can fetch it for itself.** Modland and ASMA serve
+            // every file over HTTP, so their rows travel as a URL and cost nothing here.
+            // UnExoticA's `unexotica://`
+            // means something on this phone and nothing anywhere else, so it travels as bytes or
+            // arrives dead.
+            val catalogue = Catalogue.owning(track.id)
+            if (catalogue?.pathFrom(track.id)?.let(catalogue::fileUrlFor) != null) continue
             if (used >= WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
             val bytes = loadBytes(track)
             if (bytes == null || used + bytes.size > WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
@@ -1495,6 +1674,12 @@ class PlaybackController private constructor(private val context: Context) {
         return packed to left
     }
 
+    /**
+     * Sends a queue to an address, and reports what happened.
+     *
+     * @param remember whether a success should store this address. A scan asks for that; a send to
+     * an address already stored does not need to re-store it.
+     */
     private fun postQueue(endpoint: String, tracks: List<TrackRef>, remember: Boolean) {
         scope.launch {
             val index = _state.value.queue.currentIndex ?: 0
@@ -1502,12 +1687,22 @@ class PlaybackController private constructor(private val context: Context) {
             when (val outcome = WebRemote.send(endpoint, tracks, index, localFiles)) {
                 is WebRemote.Outcome.Delivered -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
-                    _browse.update { it.copy(pairedBrowser = true) }
+                    _browse.update {
+                        it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
+                    }
                     _state.update {
                         it.copy(
                             message = Message(
-                                if (leftBehind == 0) "Sent ${tracks.size} tracks to the browser."
-                                else "Sent ${tracks.size - leftBehind} tracks; $leftBehind local files were too big to send."
+                                if (leftBehind == 0) {
+                                    context.resources.getQuantityString(
+                                        R.plurals.notice_sent_to_browser, tracks.size, tracks.size,
+                                    )
+                                } else {
+                                    context.getString(
+                                        R.string.notice_sent_some_too_big,
+                                        tracks.size - leftBehind, leftBehind,
+                                    )
+                                }
                             )
                         )
                     }
@@ -1517,21 +1712,23 @@ class PlaybackController private constructor(private val context: Context) {
                 // and forgetting here would send somebody back to the camera for nothing.
                 is WebRemote.Outcome.NoOneListening -> {
                     if (remember) Appearance.rememberPairing(context, endpoint)
-                    _browse.update { it.copy(pairedBrowser = true) }
+                    _browse.update {
+                        it.copy(pairedBrowser = true, webPlayer = Appearance.webPlayer(context))
+                    }
                     _state.update {
-                        it.copy(message = Message("Reached it, but the player page is not open there."))
+                        it.copy(message = Message(context.getString(R.string.notice_page_not_open)))
                     }
                 }
                 is WebRemote.Outcome.Unreachable -> {
                     // **Forgotten, so the next press opens the camera instead of failing again.**
                     // An address that cannot be reached is not a pairing, and a stored one with no
-                    // way back to the scanner is a dead end -- which is what the owner met.
+                    // way back to the scanner is a dead end.
                     Appearance.rememberPairing(context, null)
                     _browse.update { it.copy(pairedBrowser = false) }
                     _state.update {
                         it.copy(
                             message = Message(
-                                "Could not reach the browser (${outcome.reason}). Press again to scan a code; hold to send a link."
+                                context.getString(R.string.notice_browser_unreachable, outcome.reason)
                             )
                         )
                     }
@@ -1543,10 +1740,10 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Opens the camera whatever is paired already.
      *
-     * The owner's call, and it is the right one: a hold is for "not the usual thing", and the usual
-     * thing here is sending to the browser already known. What is not usual is **a different
-     * browser** — a tunnel that restarted under a new name, a second machine, a page reopened
-     * somewhere else. Without this the only way to re-pair was to make a send fail first.
+     * A hold is for "not the usual thing", and the usual thing here is sending to the browser
+     * already known. What is not usual is **a different browser** — a tunnel that restarted under a
+     * new name, a second machine, a page reopened somewhere else. Without this, re-pairing would
+     * mean making a send fail first.
      */
     fun rescan() = _scan.tryEmit(Unit)
 
@@ -1554,7 +1751,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun sendQueueAsLink() {
         val tracks = _state.value.queue.tracks
         if (tracks.isEmpty()) {
-            _state.update { it.copy(message = Message("There is nothing in the playlist to send.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_nothing_to_send))) }
             return
         }
         shareQueueAsLink(tracks)
@@ -1565,9 +1762,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (packed.sent == 0) {
             _state.update {
                 it.copy(
-                    message = Message(
-                        "None of these can be sent: a file on this phone has no address a browser could open."
-                    )
+                    message = Message(context.getString(R.string.notice_link_none_sendable))
                 )
             }
             return
@@ -1581,9 +1776,7 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        "Sending ${packed.sent}. The link was too long to carry the names of " +
-                            "${packed.left} files that stayed on this phone, so they are missing " +
-                            "from the list at the other end."
+                        context.getString(R.string.notice_link_truncated, packed.sent, packed.left)
                     )
                 )
             }
@@ -1595,6 +1788,60 @@ class PlaybackController private constructor(private val context: Context) {
                 putExtra(Intent.EXTRA_SUBJECT, "Protracktor queue")
             }
         )
+    }
+
+    /**
+     * Share with Protracktor: one tune as a link that opens the web player playing it.
+     *
+     * Through the share sheet, like the queue's link, because where it goes is the person's choice
+     * -- their own browser, a message to somebody else. It points at the page this phone knows
+     * ([Appearance.webPlayer]), so it opens only where that address can be reached from.
+     */
+    fun sendToWeb(tracks: List<TrackRef>) {
+        if (tracks.isEmpty()) return
+        val sendable = tracks.filter(QueueLink::canSend)
+        val link = QueueLink.tracksLink(Appearance.webPlayer(context), tracks)
+        if (link == null) {
+            val one = tracks.singleOrNull()
+            _state.update {
+                it.copy(
+                    message = Message(
+                        when {
+                            one != null && QueueLink.isMp3(one) ->
+                                context.getString(R.string.notice_send_mp3)
+                            one != null ->
+                                context.getString(R.string.notice_send_one_local)
+                            else ->
+                                context.getString(R.string.notice_send_none)
+                        }
+                    )
+                )
+            }
+            return
+        }
+        val subject = sendable.singleOrNull()?.let { "${it.title} — Protracktor web" }
+            ?: "${sendable.size} tunes — Protracktor web"
+        _share.tryEmit(
+            Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, link)
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+            }
+        )
+        // Said only when some were left behind, and then it says how many: a link that quietly
+        // carries four of six tunes is the failure `docs/PLAN_WEB.md` §8 calls worse than refusing.
+        if (sendable.size < tracks.size) {
+            _state.update {
+                it.copy(
+                    message = Message(
+                        context.getString(
+                            R.string.notice_send_partial,
+                            sendable.size, tracks.size - sendable.size,
+                        )
+                    )
+                )
+            }
+        }
     }
 
     /**
@@ -1616,7 +1863,7 @@ class PlaybackController private constructor(private val context: Context) {
             val from = Catalogue.owning(ref.id)
             if (from == null) {
                 _state.update {
-                    it.copy(message = Message("Only tracks from an online catalogue can do that."))
+                    it.copy(message = Message(context.getString(R.string.notice_online_only_action)))
                 }
                 return@launch
             }
@@ -1629,24 +1876,24 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update {
                     it.copy(
                         message = Message(
-                            "${from.displayName} is searched live and lists no author, so there is nowhere to jump to."
+                            context.getString(R.string.notice_no_author_live, from.displayName)
                         )
                     )
                 }
                 return@launch
             }
 
-            // **Two failures, and they used to share a sentence.** A track that came from a
+            // **Two failures, and they must not share a sentence.** A track that came from a
             // catalogue but is not in the index today -- deleted to save room, or added to a
-            // playlist before an index was rebuilt -- was told it was not from a catalogue, which
-            // is both untrue and no help: the fix is to index, and the message did not say so.
-            // Where the jump goes is read from the index, so there is nothing to do without one.
+            // playlist before an index was rebuilt -- is not the same as a track from no catalogue
+            // at all: the fix here is to index, and the message has to say so. Where the jump goes
+            // is read from the index, so there is nothing to do without one.
             val located = from.pathFrom(ref.id)?.let { path -> catalogues.locate(from.id, path) }
             if (located == null) {
                 _state.update {
                     it.copy(
                         message = Message(
-                            "That track is not in the ${from.displayName} index. Index it to jump to the author."
+                            context.getString(R.string.notice_not_in_index, from.displayName)
                         )
                     )
                 }
@@ -1671,6 +1918,18 @@ class PlaybackController private constructor(private val context: Context) {
             val found = catalogues.tracks(located.catalogueId, located.format, located.author)
                 .map(::toTrackRef)
             _browse.update { it.copy(tracks = found, loading = false) }
+
+            // **The transport follows the folder you walked into.** A digression leaves the dice's
+            // tune playing, and next would otherwise roll another one while the author's list is on
+            // screen. The queue is set here **without playing anything**, pointing at the tune the
+            // jump was made from, so next and previous walk the author. The dice keeps its record
+            // and its cursor and is still what Back returns to.
+            if (_state.value.randomMode || _state.value.diceWaiting) {
+                val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
+                _state.update {
+                    it.copy(resultsQueue = PlayQueue(tracks = found).startAt(at), diceWaiting = true)
+                }
+            }
         }
     }
 
@@ -1712,9 +1971,8 @@ class PlaybackController private constructor(private val context: Context) {
                 id = entry.trackId,
                 title = entry.title,
                 // When, then where. "That tune two days ago" is the question history exists to
-                // answer (`docs/ARCHITECTURE.md` §15) and the ordering alone only says "before that
-                // other one" -- which the owner said plainly when he chose this over reordering the
-                // list on a replay (`docs/BACKLOG.md` A18).
+                // answer (`docs/ARCHITECTURE.md` §15); the ordering alone only says "before that
+                // other one". Chosen over reordering the list on a replay (`docs/BACKLOG.md` A18).
                 //
                 // It borrows the source line rather than adding a third. Day headings might read
                 // better still and are the open half of `docs/WISHLIST.md` B15; this is the part
@@ -1752,7 +2010,7 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             history.clear()
             _browse.update { it.copy(history = emptyList(), tracks = emptyList()) }
-            _state.update { it.copy(message = Message("History cleared.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }
         }
     }
 
@@ -1844,8 +2102,8 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Throws away one catalogue's index.
      *
-     * **Playback is deliberately left alone, and this comment used to claim otherwise** (round 6
-     * review R3). A queued catalogue track carries its own id, and the URL to fetch it is derived
+     * **Playback is deliberately left alone.** A queued catalogue track carries its own id, and
+     * the URL to fetch it is derived
      * from that id by `Catalogue.urlFor` rather than read from `catalogue_tracks` — so a track that
      * is playing keeps playing, and one further down the playlist still plays when it is reached.
      * What actually degrades is the format label (`catalogueFormatOf` finds nothing and returns
@@ -1853,8 +2111,8 @@ class PlaybackController private constructor(private val context: Context) {
      *
      * **An archive catalogue's index and its archive are one thing**, so this deletes both. ASMA
      * publishes a single zip that `indexCatalogue` stores whole and parses in place; removing the
-     * rows and keeping the zip left a catalogue reporting its full track count, browsing normally
-     * and playing nothing (review R4).
+     * removing the rows and keeping the zip would leave a catalogue reporting its full track
+     * count, browsing normally and playing nothing.
      */
     fun deleteCatalogueIndex(catalogueId: String) {
         scope.launch {
@@ -1879,7 +2137,7 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
-                        if (freed > 0L) freedMessage(freed) else "Index deleted. Download it again any time."
+                        if (freed > 0L) freedMessage(freed) else context.getString(R.string.notice_index_deleted)
                     )
                 )
             }
@@ -1890,15 +2148,13 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Throws away the HVSC song lengths. SID durations go unknown until they are fetched again.
      *
-     * **It used to delete the songdb metadata as well**, silently, and say only "Song lengths
-     * deleted" -- 380,282 rows of author, album and year thrown out by a button that named
-     * something else, because the metadata arrived after this and was hung on the nearest hook
-     * rather than given its own. It has its own now.
+     * **The songdb metadata is not touched here**, and has its own control: it is 380,282 rows of
+     * author, album and year, and a button naming song lengths must not throw them out.
      */
     fun clearSongLengths() {
         scope.launch {
             songLengths.clear()
-            _state.update { it.copy(message = Message("Song lengths deleted.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_song_lengths_deleted))) }
             refreshCatalogues()
         }
     }
@@ -1907,7 +2163,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun clearTrackMetadata() {
         scope.launch {
             trackMetadata.clear()
-            _state.update { it.copy(message = Message("Track metadata deleted.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_deleted))) }
             refreshCatalogues()
         }
     }
@@ -1922,7 +2178,7 @@ class PlaybackController private constructor(private val context: Context) {
             if (_browse.value.randomScope is RandomScope.Favourites) {
                 setRandomScope(RandomScope.Everything)
             }
-            _state.update { it.copy(message = Message("Favourites deleted.")) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_favourites_deleted))) }
             refreshCatalogues()
         }
     }
@@ -1930,20 +2186,27 @@ class PlaybackController private constructor(private val context: Context) {
     /** The wording for what [CacheBudget.describeFreed] worked out. */
     private fun freedMessage(bytes: Long): String =
         when (val freed = CacheBudget.describeFreed(bytes)) {
-            CacheBudget.Freed.NOTHING -> "There was nothing to delete."
-            CacheBudget.Freed.LESS_THAN_A_MEGABYTE -> "Freed less than 1 MB."
-            is CacheBudget.Freed.Megabytes -> "Freed ${freed.count} MB."
+            CacheBudget.Freed.NOTHING -> context.getString(R.string.notice_freed_nothing)
+            CacheBudget.Freed.LESS_THAN_A_MEGABYTE -> context.getString(R.string.notice_freed_under_a_megabyte)
+            is CacheBudget.Freed.Megabytes -> context.getString(R.string.notice_freed_megabytes, freed.count)
         }
 
     /**
      * Marks [key] as downloading, or answers false if it already was.
      *
-     * **The guard is the point.** Every download here is an independent coroutine and always was;
-     * what a second tap on the same row used to do was start a second identical download, and what
-     * a tap on a *different* row used to do was blank the first one's label. Neither was a
-     * cancellation, which is what it looked like from outside (owner, 2026-09-09). One map, one
-     * entry per download, and a row that can ask about itself.
+     * **The guard is the point.** Every download here is an independent coroutine, so without it
+     * a second tap on the same row starts a second identical download, and a tap on a *different*
+     * row blanks the first one's label. Neither cancels anything, though from outside both look
+     * like cancellation. One map, one entry per download, and a row that can ask about itself.
      */
+    /** What one step of [downloadEverything] did: whether it landed, and what it would have said. */
+    private data class Fetched(val ok: Boolean, val message: Message)
+
+    /** Puts a notice in front of the user. The single-item downloads all end this way. */
+    private fun say(message: Message) {
+        _state.update { it.copy(message = message) }
+    }
+
     private fun beginDownload(key: String, label: String): Boolean {
         if (_browse.value.indexing.containsKey(key)) return false
         _browse.update { it.copy(indexing = it.indexing + (key to label)) }
@@ -1964,38 +2227,66 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun indexCatalogue(id: String) {
         val catalogue = Catalogue.byId(id) ?: return
-        if (!beginDownload(catalogue.id, catalogue.displayName)) return
-        scope.launch {
+        scope.launch { fetchCatalogue(catalogue)?.let { say(it.message) } }
+    }
+
+    /**
+     * One catalogue, fetched and indexed, reporting what happened rather than announcing it.
+     *
+     * Split from [indexCatalogue] so that [downloadEverything] can run it as one step of several:
+     * a combined download must not raise six notices, and it has to know which steps landed.
+     * Returns null when this catalogue is already downloading, which is not a failure.
+     */
+    private suspend fun fetchCatalogue(catalogue: Catalogue): Fetched? {
+        if (!beginDownload(catalogue.id, catalogue.displayName)) return null
+        run {
             val bytes = remoteFiles.fetchIndex(catalogue.indexUrl)
             if (bytes == null) {
                 endDownload(catalogue.id)
-                _state.update { it.copy(message = Message("Could not download the ${catalogue.displayName} index.")) }
-                return@launch
+                return Fetched(false, Message(context.getString(R.string.notice_index_download_failed, catalogue.displayName)))
             }
             // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
             // discarded -- afterwards both browsing and playing work with no network at all.
             if (catalogue.isArchive && !remoteFiles.storeArchive(catalogue.id, bytes)) {
                 endDownload(catalogue.id)
-                _state.update {
-                    it.copy(message = Message("Could not store the ${catalogue.displayName} archive."))
-                }
-                return@launch
+                return Fetched(
+                    false,
+                    Message(context.getString(R.string.notice_archive_store_failed, catalogue.displayName)),
+                )
             }
 
             val entries = withContext(Dispatchers.Default) {
-                // By name, and here that is right rather than a shortcut. A catalogue index is a
-                // list of filenames on somebody else's server; deciding by content would mean
-                // downloading half a million files to find out. The local library is the opposite
-                // case and is scanned by opening (`docs/BACKLOG.md` A6).
-                // **`inCatalogueIndex`, not `looksPlayable`.** The wider question includes names
-                // this build plays only as local files -- MP3 -- and no archive here holds one, so
-                // asking it would put rows in an index that can never be fetched.
-                catalogue.parseIndex(bytes) { name -> SupportedFormats.inCatalogueIndex(name) }
+                // **Everything the archive lists, and nothing decided here**
+                // (`docs/ROADMAP_FORMATS.md` step 0). What this build can play is written beside
+                // each row as it is stored and re-decided locally when the format list changes, so
+                // the index is no longer a function of the decoders — and adding a format no longer
+                // costs every user the whole 40 MB again.
+                catalogue.parseIndex(bytes)
             }
-            catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
+            val playable =
+                catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             endDownload(catalogue.id)
             _browse.update { it.copy(catalogues = catalogues.summaries()) }
-            _state.update { it.copy(message = Message("Indexed ${entries.size} tracks from ${catalogue.displayName}.")) }
+            // **Both numbers, because there are now two** (`docs/ROADMAP_FORMATS.md` step 0).
+            // The index keeps everything the archive lists and the app offers what it can open, so
+            // saying only the first makes the count on the catalogue's own row look wrong -- a
+            // snackbar saying 500,000-odd over a row saying 341,842.
+            return Fetched(
+                true,
+                Message(
+                    if (playable >= entries.size) {
+                        context.resources.getQuantityString(
+                            R.plurals.notice_indexed_all, entries.size, entries.size,
+                            catalogue.displayName,
+                        )
+                    } else {
+                        context.resources.getQuantityString(
+                            R.plurals.notice_indexed_partly, entries.size, entries.size,
+                            catalogue.displayName, playable,
+                        )
+                    }
+                ),
+            )
         }
     }
 
@@ -2008,27 +2299,35 @@ class PlaybackController private constructor(private val context: Context) {
      * came from somewhere else, so it sits below the catalogues rather than among them.
      */
     fun downloadSongLengths() {
-        if (!beginDownload(DownloadKeys.SONG_LENGTHS, SONG_LENGTHS_LABEL)) return
-        scope.launch {
-            val bytes = remoteFiles.fetchIndex(SONG_LENGTHS_URL)
-            if (bytes == null) {
-                endDownload(DownloadKeys.SONG_LENGTHS)
-                _state.update { it.copy(message = Message("Could not download the song lengths.")) }
-                return@launch
-            }
-            val entries = withContext(Dispatchers.Default) {
-                SongLengths.parse(bytes.toString(Charsets.ISO_8859_1))
-            }
-            if (entries.isEmpty()) {
-                endDownload(DownloadKeys.SONG_LENGTHS)
-                _state.update { it.copy(message = Message("The song length database was empty.")) }
-                return@launch
-            }
-            songLengths.replaceAll(entries)
+        scope.launch { fetchSongLengths()?.let { say(it.message) } }
+    }
+
+    /** HVSC's lengths, as one step. See [fetchCatalogue] for why the steps are shaped like this. */
+    private suspend fun fetchSongLengths(): Fetched? {
+        if (!beginDownload(DownloadKeys.SONG_LENGTHS, SONG_LENGTHS_LABEL)) return null
+        val bytes = remoteFiles.fetchIndex(SONG_LENGTHS_URL)
+        if (bytes == null) {
             endDownload(DownloadKeys.SONG_LENGTHS)
-            _browse.update { it.copy(songLengthCount = entries.size) }
-            _state.update { it.copy(message = Message("Song lengths for ${entries.size} SID tunes.")) }
+            return Fetched(false, Message(context.getString(R.string.notice_song_lengths_failed)))
         }
+        val entries = withContext(Dispatchers.Default) {
+            SongLengths.parse(bytes.toString(Charsets.ISO_8859_1))
+        }
+        if (entries.isEmpty()) {
+            endDownload(DownloadKeys.SONG_LENGTHS)
+            return Fetched(false, Message(context.getString(R.string.notice_song_lengths_empty)))
+        }
+        songLengths.replaceAll(entries)
+        endDownload(DownloadKeys.SONG_LENGTHS)
+        _browse.update { it.copy(songLengthCount = entries.size) }
+        return Fetched(
+            true,
+            Message(
+                context.resources.getQuantityString(
+                    R.plurals.notice_song_lengths_done, entries.size, entries.size,
+                )
+            ),
+        )
     }
 
     /**
@@ -2044,13 +2343,17 @@ class PlaybackController private constructor(private val context: Context) {
      * to put one -- 40,161 ProTracker, 11,733 Fasttracker 2 (`docs/reference/songdb.md`).
      */
     fun downloadTrackMetadata() {
-        if (!beginDownload(DownloadKeys.TRACK_METADATA, TRACK_METADATA_LABEL)) return
-        scope.launch {
+        scope.launch { fetchTrackMetadata()?.let { say(it.message) } }
+    }
+
+    /** The songdb table, as one step. See [fetchCatalogue]. */
+    private suspend fun fetchTrackMetadata(): Fetched? {
+        if (!beginDownload(DownloadKeys.TRACK_METADATA, TRACK_METADATA_LABEL)) return null
+        run {
             val bytes = remoteFiles.fetchIndex(TRACK_METADATA_URL)
             if (bytes == null) {
                 endDownload(DownloadKeys.TRACK_METADATA)
-                _state.update { it.copy(message = Message("Could not download the track metadata.")) }
-                return@launch
+                return Fetched(false, Message(context.getString(R.string.notice_track_metadata_failed)))
             }
             // Parsed straight into the table rather than into a list first. Fifteen megabytes of
             // this becomes 1.9 million strings, and holding them alongside the download peaks near
@@ -2058,12 +2361,18 @@ class PlaybackController private constructor(private val context: Context) {
             val written = trackMetadata.replaceAllFrom(bytes)
             if (written == 0) {
                 endDownload(DownloadKeys.TRACK_METADATA)
-                _state.update { it.copy(message = Message("The track metadata was empty.")) }
-                return@launch
+                return Fetched(false, Message(context.getString(R.string.notice_track_metadata_empty)))
             }
             endDownload(DownloadKeys.TRACK_METADATA)
             _browse.update { it.copy(trackMetadataCount = written) }
-            _state.update { it.copy(message = Message("Metadata for $written tunes.")) }
+            return Fetched(
+                true,
+                Message(
+                    context.resources.getQuantityString(
+                        R.plurals.notice_track_metadata_done, written, written,
+                    )
+                ),
+            )
         }
     }
 
@@ -2113,7 +2422,7 @@ class PlaybackController private constructor(private val context: Context) {
      *
      * `OpenableColumns.DISPLAY_NAME` first, because a document provider knows the real name and the
      * URI often does not carry it. Falling back to the last path segment covers `file://` and every
-     * `http(s)` link, which is the case the owner described.
+     * `http(s)` link.
      */
     private fun displayNameOf(uri: Uri): String {
         if (uri.scheme == "content") {
@@ -2140,40 +2449,128 @@ class PlaybackController private constructor(private val context: Context) {
      * what the file contained.
      */
     fun downloadFavourites() {
-        if (!beginDownload(DownloadKeys.FAVOURITES, FAVOURITES_LABEL)) return
-        scope.launch {
-            val bytes = remoteFiles.fetchIndex(FAVOURITES_URL)
-            if (bytes == null) {
-                endDownload(DownloadKeys.FAVOURITES)
-                _state.update { it.copy(message = Message("Could not download the favourites.")) }
-                return@launch
-            }
-            val written = favourites.replaceAllFrom(bytes)
-            if (written == 0) {
-                endDownload(DownloadKeys.FAVOURITES)
-                _state.update { it.copy(message = Message("The favourites list was empty.")) }
-                return@launch
-            }
-            val playable = favourites.playableCount()
+        scope.launch { fetchFavourites()?.let { say(it.message) } }
+    }
+
+    /** Modland's favourites, as one step. See [fetchCatalogue]. */
+    private suspend fun fetchFavourites(): Fetched? {
+        if (!beginDownload(DownloadKeys.FAVOURITES, FAVOURITES_LABEL)) return null
+        val bytes = remoteFiles.fetchIndex(FAVOURITES_URL)
+        if (bytes == null) {
             endDownload(DownloadKeys.FAVOURITES)
-            _browse.update {
-                it.copy(favouriteCount = playable, favouritesListed = written)
-            }
-            _state.update {
-                it.copy(
-                    message = Message(
-                        if (playable > 0) {
-                            "$playable of $written favourites are in your Modland index."
+            return Fetched(false, Message(context.getString(R.string.notice_favourites_failed)))
+        }
+        val written = favourites.replaceAllFrom(bytes)
+        if (written == 0) {
+            endDownload(DownloadKeys.FAVOURITES)
+            return Fetched(false, Message(context.getString(R.string.notice_favourites_empty)))
+        }
+        val playable = favourites.playableCount()
+        endDownload(DownloadKeys.FAVOURITES)
+        _browse.update {
+            it.copy(favouriteCount = playable, favouritesListed = written)
+        }
+        return Fetched(
+            true,
+            Message(
+                if (playable > 0) {
+                    context.getString(R.string.notice_favourites_playable, playable, written)
+                } else {
+                    // The list arrived and reaches nothing. Said plainly, because the alternative
+                    // is a Favourites chip that stays disabled after a download that reported
+                    // success.
+                    context.getString(R.string.notice_favourites_need_index, written)
+                }
+            ),
+        )
+    }
+
+    /**
+     * Everything an empty install needs, in one press.
+     *
+     * **Why a button and not a background job at first launch.** It is 46 MB (measured 2026-09-17:
+     * Modland 5.5, ASMA 19.2, UnExoticA 1.7, HVSC 5.0, songdb 14.1, favourites 0.1), and an app
+     * that spends that on somebody's mobile data four seconds after it is installed has taken a
+     * decision that was not its to take. Pressed, with the size on the button, it is the user's
+     * decision and `Data safety`'s "fetched on demand" stays true.
+     *
+     * **Sequential, and the order is the point.** Modland is the smallest useful thing here and the
+     * largest catalogue, so somebody who gives up after twenty seconds already has half a million
+     * tracks to browse; the 14 MB metadata table, which only improves what is written under a
+     * title, goes last. In parallel they would fight for the same connection and write to the same
+     * database, and nothing would finish sooner.
+     *
+     * **Each step keeps its own row spinner** (its own [DownloadKeys] entry), so the screen shows
+     * what is happening rather than one opaque bar. A step already running is skipped rather than
+     * started twice, which is what makes pressing this while one catalogue downloads harmless.
+     *
+     * **Partial success is reported as partial.** Six downloads from five hosts will not all land
+     * every time, and "done" over a failed ASMA would be a lie the user finds out about later.
+     */
+    fun downloadSelected(ids: Set<String>) {
+        val steps = DownloadPlan.stepsFor(ids)
+        if (steps.isEmpty()) return
+        if (!beginDownload(DownloadKeys.EVERYTHING, context.getString(R.string.download_all_running))) return
+        var landed = 0
+        var failed = 0
+        selectedDownloads = scope.launch {
+            try {
+                for (step in steps) {
+                    val done = runDownloadStep(step) ?: continue
+                    if (done.ok) landed++ else failed++
+                }
+                say(
+                    Message(
+                        if (failed == 0) {
+                            context.getString(R.string.notice_all_downloaded)
                         } else {
-                            // The list arrived and reaches nothing. Said plainly, because the
-                            // alternative is a Favourites chip that stays disabled after a
-                            // download that reported success.
-                            "$written favourites downloaded. Index Modland to play them."
+                            context.getString(R.string.notice_all_downloaded_partly, landed, failed)
                         }
                     )
                 )
+            } finally {
+                // **`NonCancellable`, or stopping leaves the screen mid-download for ever.** The
+                // spinners are state, not a side effect of the coroutine: cancelled without this,
+                // every row the run had reached keeps spinning until the app is restarted, and the
+                // offer cannot be pressed again because its own key is still there.
+                withContext(NonCancellable) {
+                    steps.forEach { endDownload(it) }
+                    endDownload(DownloadKeys.EVERYTHING)
+                    selectedDownloads = null
+                    refreshCatalogues()
+                    refreshPlatformCounts()
+                    if (!isActive) {
+                        say(Message(context.getString(R.string.notice_downloads_stopped, landed)))
+                    }
+                }
             }
         }
+    }
+
+    /** Everything a fresh install needs, which is every box ticked. */
+    fun downloadEverything() = downloadSelected(DownloadPlan.choices().toSet())
+
+    /**
+     * Stops a run of downloads.
+     *
+     * **What is already on this phone stays.** Each step writes its own table when it finishes, so
+     * stopping after Modland leaves Modland indexed and the rest untouched -- which is the whole
+     * reason the steps are sequential and separate rather than one transaction. What is lost is at
+     * most the file being fetched at the moment of the press.
+     *
+     * A blocking read cannot always be interrupted where it stands, so the step in flight may run
+     * to its end; nothing after it will start.
+     */
+    fun cancelDownloads() {
+        selectedDownloads?.cancel()
+    }
+
+    /** One step of [downloadSelected], by the key `DownloadPlan` named it with. */
+    private suspend fun runDownloadStep(step: String): Fetched? = when (step) {
+        DownloadKeys.SONG_LENGTHS -> fetchSongLengths()
+        DownloadKeys.FAVOURITES -> fetchFavourites()
+        DownloadKeys.TRACK_METADATA -> fetchTrackMetadata()
+        else -> Catalogue.byId(step)?.let { fetchCatalogue(it) }
     }
 
     /**
@@ -2199,7 +2596,7 @@ class PlaybackController private constructor(private val context: Context) {
             endDownload(DownloadKeys.REPLAYS)
             if (fetched == null || fetched == 0) {
                 _state.update {
-                    it.copy(message = Message("Could not download the replay routines."))
+                    it.copy(message = Message(context.getString(R.string.notice_replays_failed)))
                 }
                 return@launch
             }
@@ -2208,7 +2605,7 @@ class PlaybackController private constructor(private val context: Context) {
             // no restart, and the next `.sc68` works.
             withContext(backgroundWork) { NativeData.adoptDownloadedReplays(context) }
             _state.update {
-                it.copy(message = Message("$fetched replay routines downloaded. .sc68 files should play now."))
+                it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_replays_done, fetched, fetched)))
             }
             refreshCatalogues()
         }
@@ -2266,15 +2663,67 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** Picks something at random from the indexed catalogues and plays it, without adding it. */
     /**
-     * The dice: a tune nobody here has heard, now.
+     * Opens a Random session: a fresh record, and a tune playing without a second press.
+     *
+     * **A new list every time.** What this throws away is the record, not the tunes — everything
+     * that played is in History.
+     *
+     * Separate from [playRandom] because the dice button inside a running session means "re-roll,
+     * keeping what I have heard", and entering the view means "start".
+     */
+    fun openRandom() {
+        scope.launch {
+            randomSession++
+            randomHistory.clear()
+            randomCursor = -1
+            randomPlayed = -1
+            failedRandomPicks = 0
+            _state.update {
+                it.copy(randomPicks = emptyList(), randomIndex = -1, randomExhausted = false, diceWaiting = false)
+            }
+            advanceRandom()
+        }
+    }
+
+    /**
+     * Plays one of the picks already made, chosen by hand from the list.
+     *
+     * Only backwards into the record — [randomPlayed] is the edge of what has been heard, and the
+     * picks past it are speculation nobody has been shown.
+     */
+    fun playRandomAt(index: Int) {
+        if (index < 0 || index > randomPlayed || index > randomHistory.lastIndex) return
+        randomCursor = index
+        playTransient(randomHistory[index])
+        publishRandomPicks()
+    }
+
+    /**
+     * Drops a pick from the record.
+     *
+     * Not a queue edit — the order is the dice's and there is nothing past the cursor to disturb.
+     * It is pruning what you are looking at before keeping the rest. Removing the one playing is
+     * allowed and leaves it playing: stopping the music because a row was tidied away would be a
+     * surprise, and the dock still says what it is.
+     */
+    fun removeRandomAt(index: Int) {
+        if (index < 0 || index > randomPlayed || index > randomHistory.lastIndex) return
+        randomHistory.removeAt(index)
+        if (index <= randomCursor) randomCursor--
+        randomPlayed--
+        publishRandomPicks()
+    }
+
+    /**
+     * The dice: a tune nobody here has heard, now. Picks at random from the indexed catalogues and
+     * plays it, without adding it to anything.
      *
      * Picks read ahead but never played are **speculation**, and the dice means "surprise me", so
      * they go and everything actually played stays. Stepping back through the history and then
      * pressing the dice therefore re-rolls, while pressing next -- which means forward -- walks
-     * into the queue as it should. The old code truncated at the cursor and so threw away real
-     * history; keeping [randomPlayed] is what lets it throw away only the guesses.
+     * into the queue as it should. Truncating at the cursor would throw away real history as well;
+     * keeping [randomPlayed] is what lets it throw away only the guesses.
      */
     fun playRandom() {
         scope.launch {
@@ -2307,7 +2756,7 @@ class PlaybackController private constructor(private val context: Context) {
         if (failedRandomPicks > maxFailedRandomPicks) {
             failedRandomPicks = 0
             _state.update {
-                it.copy(message = Message("Several picks in a row would not open. Stopping here."))
+                it.copy(message = Message(context.getString(R.string.notice_random_gave_up)))
             }
             return
         }
@@ -2318,41 +2767,54 @@ class PlaybackController private constructor(private val context: Context) {
         if (randomCursor <= 0) return
         randomCursor--
         playTransient(randomHistory[randomCursor])
+        publishRandomPicks()
     }
 
     /**
      * Moves Random forward one, having decided what comes after it first.
      *
-     * The order is the point of the whole item. Random used to pick at the moment you pressed it,
-     * so there was never anything to fetch in advance -- not because the read-ahead was missing but
-     * because nothing had been decided for it to read. Deciding early is what makes the wait go.
+     * The order is the point of the whole item: picking at the moment the button is pressed leaves
+     * nothing to fetch in advance, so the read-ahead has nothing to work on however well it works.
+     * Deciding early is what makes the wait go.
      */
     private suspend fun advanceRandom() {
+        val session = randomSession
+        // **Forward walks the record, and rolls only at its end.** With a list on screen, next
+        // means the next row: rolling from the middle of the record would leave a gap between what
+        // you are hearing and what you are looking at. The dice button is what always rolls.
         fillRandomQueue()
+        if (session != randomSession) return
         if (randomCursor >= randomHistory.lastIndex) {
             // Which sentence depends on the scope, because "nothing is indexed" is only true of
             // the unnarrowed dice. The chips are disabled when they would draw nothing, so a
             // narrowed dice that comes back empty means the index went away underneath it -- and
             // being told to index a catalogue, having just indexed one, teaches nothing.
             val empty = when (_browse.value.randomScope) {
-                is RandomScope.Everything -> "Nothing is indexed yet. Index a catalogue first."
-                is RandomScope.OnPlatform -> "Nothing indexed for that platform."
-                is RandomScope.Favourites -> "None of the favourites are in your Modland index."
+                is RandomScope.Everything -> context.getString(R.string.notice_random_nothing_indexed)
+                is RandomScope.OnPlatform -> context.getString(R.string.notice_random_nothing_for_platform)
+                is RandomScope.Favourites -> context.getString(R.string.notice_random_no_favourites)
             }
-            _state.update { it.copy(message = Message(empty)) }
+            _state.update { it.copy(message = Message(empty), randomExhausted = true) }
             return
         }
 
         randomCursor++
         randomPlayed = maxOf(randomPlayed, randomCursor)
+        _state.update { it.copy(randomExhausted = false) }
+        publishRandomPicks()
         // Topped up before playing rather than after: `load` reads ahead when it finishes, and it
         // can only read what has already been decided.
         fillRandomQueue()
-        playTransient(randomHistory[randomCursor])
+        if (session != randomSession) return
+        // Read rather than indexed: the checks above say this session is still the one running, and
+        // this says the record still has the row it is pointing at.
+        val pick = randomHistory.getOrNull(randomCursor) ?: return
+        playTransient(pick)
     }
 
     /** Tops the queue up so [READ_AHEAD] picks stand past the cursor. */
     private suspend fun fillRandomQueue() {
+        val session = randomSession
         val short = READ_AHEAD - (randomHistory.lastIndex - randomCursor)
         if (short <= 0) return
         // The scope is read here rather than captured when Random started, so changing it takes
@@ -2364,11 +2826,31 @@ class PlaybackController private constructor(private val context: Context) {
             is RandomScope.Everything, is RandomScope.Favourites -> emptySet()
             is RandomScope.OnPlatform -> Platforms.catalogueFormatsOf(setOf(scope.platformId))
         }
-        randomHistory += catalogues.randomSample(
-            short,
+        // **Drawn wide and filtered, because the query cannot exclude anything.** `randomSample`
+        // is `ORDER BY RANDOM() LIMIT n` over the whole scope every time, so nothing stops it
+        // handing back a tune this session has already played -- which reads exactly like the dice
+        // replaying history, and is likelier the narrower the scope: Favourites is 991 tunes, not
+        // half a million. Asking for more than is needed and dropping the repeats is one query and
+        // no schema.
+        val already = randomHistory.mapTo(mutableSetOf()) { it.id }
+        val drawn = catalogues.randomSample(
+            short * OVERDRAW,
             formats = formats,
             favouritesOnly = scope is RandomScope.Favourites,
-        ).map(::toTrackRef)
+        ).map(::toTrackRef).filter { already.add(it.id) }.take(short)
+        // A pool smaller than the session can exhaust honestly — forty favourites cannot fill an
+        // evening without repeating. Sooner than repeat silently or stop dead, the dice repeats,
+        // which is what it did before any of this and what a small pool means.
+        // Drawing asked the database; by now the session may be another one, and these picks belong
+        // to nobody.
+        if (session != randomSession) return
+        randomHistory += drawn.ifEmpty {
+            catalogues.randomSample(
+                short,
+                formats = formats,
+                favouritesOnly = scope is RandomScope.Favourites,
+            ).map(::toTrackRef)
+        }
     }
 
     /**
@@ -2380,6 +2862,8 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun setRandomScope(scope: RandomScope) {
         _browse.update { it.copy(randomScope = scope) }
+        // A setting, so it is written like one.
+        scheduleSave()
         if (_state.value.randomMode) {
             randomHistory.subList(randomCursor + 1, randomHistory.size).clear()
         }
@@ -2388,9 +2872,9 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Plays a search result, without adding it to anything.
      *
-     * The point of a search is finding out what something is, and that used to require adding it to
-     * the playlist first — which is backwards. The results become the queue while you are in them,
-     * so next and previous walk what you found and the playlist is untouched.
+     * The point of a search is finding out what something is, which must not require adding it to
+     * the playlist first. The results become the queue while you are in them, so next and previous
+     * walk what you found and the playlist is untouched.
      */
     fun playFromResults(results: List<TrackRef>, index: Int) {
         if (index !in results.indices) return
@@ -2407,34 +2891,63 @@ class PlaybackController private constructor(private val context: Context) {
                 randomHasPrevious = false,
                 playing = false,
                 positionSeconds = 0.0,
+                // Entered from the dice, the dice waits rather than ending; walking the results
+                // with next keeps it waiting.
+                diceWaiting = it.randomMode || it.diceWaiting,
             )
         }
         load(ref)
     }
 
     /**
+     * Back to the dice that was waiting under a digression (`docs/BACKLOG.md` A41).
+     *
+     * **Paused, on the pick it was on**, rather than starting it: coming back from a digression
+     * should not put music on unasked. Nothing is loaded, so the next press of play goes through
+     * [pendingRetry] and starts that tune; next rolls a new one. What played during the digression
+     * is in the history, as everything played here is.
+     */
+    fun resumeDice() {
+        if (!_state.value.diceWaiting) return
+        val pick = randomHistory.getOrNull(randomCursor) ?: return
+        stopPlayback()
+        pendingRetry = { playTransient(pick) }
+        _state.update {
+            it.copy(
+                resultsQueue = null,
+                transient = pick,
+                diceWaiting = false,
+                randomHasPrevious = randomCursor > 0,
+                playing = false,
+                positionSeconds = 0.0,
+                durationSeconds = 0.0,
+                metadata = emptyMap(),
+            )
+        }
+    }
+
+    /**
      * Keeps what is playing, without leaving Random.
      *
-     * The owner asked for these to be separate: adding a track you like should not end the sequence
-     * you are listening through.
+     * Deliberately separate from leaving Random: adding a track you like should not end the
+     * sequence you are listening through.
      */
     fun keepTransient() {
         // Anything playing that is not the playlist: a Random pick, a search result, a track tapped
         // while browsing. All three are "I am hearing something I did not choose to keep", and the
-        // moment just after hearing it is when a person decides. It used to work for Random alone,
-        // which is where the idea came from and not where it belongs.
+        // moment just after hearing it is when a person decides — so this is not Random's alone,
+        // even though that is where the idea came from.
         val ref = _state.value.transient ?: _state.value.resultsQueue?.current ?: return
         // Its own wording, because this one knows the track's name and the general notice does not.
         //
-        // It used to add through `addToPlaylist` and then overwrite the message that produced --
-        // which worked only because `appendTracks` happens to be synchronous, and briefly put a
-        // second notice into a conflated flow on the way (round 6 review R5). Saying it once is
-        // both simpler and true regardless of ordering.
+        // Not `addToPlaylist` with the message overwritten afterwards: that would depend on
+        // `appendTracks` happening to be synchronous, and would put a second notice into the flow
+        // on the way. Saying it once is both simpler and true regardless of ordering.
         appendTracks(listOf(ref)) { added, _ ->
             if (added > 0) {
-                Message("Added \"${ref.title}\" to the playlist.")
+                Message(context.getString(R.string.notice_added_track, ref.title))
             } else {
-                Message("\"${ref.title}\" is already in this playlist.")
+                Message(context.getString(R.string.notice_track_already_here, ref.title))
             }
         }
     }
@@ -2448,6 +2961,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun returnToPlaylist() {
         if (!_state.value.awayFromPlaylist) return
         stopPlayback()
+        randomSession++
         randomHistory.clear()
         randomCursor = -1
         randomPlayed = -1
@@ -2456,7 +2970,11 @@ class PlaybackController private constructor(private val context: Context) {
                 transient = null,
                 externalOpen = false,
                 resultsQueue = null,
+                diceWaiting = false,
                 randomHasPrevious = false,
+                randomPicks = emptyList(),
+                randomIndex = -1,
+                randomExhausted = false,
                 playing = false,
                 metadata = emptyMap(),
                 positionSeconds = 0.0,
@@ -2487,11 +3005,11 @@ class PlaybackController private constructor(private val context: Context) {
      * Results belong to the *kind* of search that produced them.
      *
      * Left on screen after switching between local, online and by-platform they are a lie the app
-     * tells with a straight face: the owner switched to `Online` and saw his own local files
-     * sitting there, looking like an answer. The label had already changed, which made it worse
-     * rather than better -- two things on one screen disagreeing about what you are looking at.
+     * tells with a straight face: switching to `Online` and seeing local files sitting there makes
+     * them look like an answer. The label changing on its own makes it worse rather than better --
+     * two things on one screen disagreeing about what you are looking at.
      *
-     * **Ticking one more catalogue or platform does not do this**, and that was a correction. It
+     * **Ticking one more catalogue or platform does not do this.** It
      * widens the same question rather than asking a different one, so throwing the answer away
      * because Modland has been joined by ASMA reads as the app losing your place. The results are
      * incomplete until you search again, which is the ordinary state of a filter you are still
@@ -2506,10 +3024,10 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Runs the search the scope describes.
      *
-     * **An empty query is a question, not a mistake.** `%%` matches every row, so "everything on the
-     * Amiga" is a scope with nothing typed -- which is the natural way to ask it and used to return
-     * silently. The per-source cap and the count beside it were already built for exactly this
-     * shape of answer.
+     * **An empty query is a question, not a mistake.** `%%` matches every row, so "everything on
+     * the Amiga" is a scope with nothing typed, which is the natural way to ask it and must not
+     * return silently. The per-source cap and the count beside it are built for exactly this shape
+     * of answer.
      */
     fun runSearch() {
         val current = _browse.value
@@ -2539,8 +3057,9 @@ class PlaybackController private constructor(private val context: Context) {
                 // -- but an empty query matches every track in every playlist, and this is the one
                 // source that would have handed back all of them.
                 store.allTracks().asSequence().filter {
-                    (it.title.contains(current.query, ignoreCase = true) ||
-                        it.fileName.contains(current.query, ignoreCase = true)) &&
+                    // The same rule the two SQL searches use (`SearchTerms`), so a query that finds
+                    // a tune in the index does not miss the copy of it sitting in a playlist.
+                    SearchTerms.matchesAny(current.query, it.title, it.fileName) &&
                         (platformIds.isEmpty() || Platforms.matches(it.fileName, platformIds))
                 }.take(SearchResults.PER_SOURCE_LIMIT).toList()
             } else {
@@ -2581,9 +3100,9 @@ class PlaybackController private constructor(private val context: Context) {
             // had no way of telling anyone it might be one of the others.
             when (live) {
                 is ModArchive.Outcome.NotReached ->
-                    _state.update { it.copy(message = Message("The Mod Archive could not be reached.")) }
+                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreachable))) }
                 is ModArchive.Outcome.Unreadable ->
-                    _state.update { it.copy(message = Message("The Mod Archive answered, but not with a page we can read.")) }
+                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreadable))) }
                 is ModArchive.Outcome.Found -> Unit
             }
             val fromModArchive = (live as? ModArchive.Outcome.Found)?.tracks.orEmpty().filter {
@@ -2656,10 +3175,10 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * What to tell the user when a track will not open.
      *
-     * **The four cases are genuinely different and were one message until 2026-09-07**, which cost
-     * an hour twice in a day: a file that failed to *download* read as a format we cannot play, and
-     * one `.stc` among 3,639 read as "Spectrum is a format Protracktor cannot play yet" — a whole
-     * platform, of which this build plays 95%.
+     * **The four cases are genuinely different**, and one message for all of them misleads: a
+     * file that failed to *download* reads as a format we cannot play, and one `.stc` among 3,639
+     * reads as "Spectrum is a format Protracktor cannot play yet" — a whole platform, of which
+     * this build plays 95%.
      *
      * The choice is made by [OpenFailure], where it can be tested; this supplies what only the
      * controller knows. The decoder's own reason is kept where there is one — it is true, and
@@ -2692,10 +3211,10 @@ class PlaybackController private constructor(private val context: Context) {
             id = catalogue?.urlFor(track.path) ?: track.path,
             title = track.title,
             // The source, as a path, the same shape a local file's is: "Modland/Protracker/4-Mat".
-            // It used to be "format · author", which reads well in a row and badly everywhere else
-            // -- the information panel needs to say where a file came from, and a search result has
-            // to answer "which one of these is it". The author still has its own field, so nothing
-            // is lost by making this a path.
+            // A path rather than "format · author", which reads well in a row and badly everywhere
+            // else -- the information panel has to say where a file came from, and a search result
+            // has to answer "which one of these is it". The author keeps its own field, so nothing
+            // is lost.
             subtitle = listOf(catalogue?.displayName, track.path.substringBeforeLast('/', ""))
                 .filter { !it.isNullOrBlank() }
                 .joinToString("/"),
@@ -2737,6 +3256,7 @@ class PlaybackController private constructor(private val context: Context) {
             }
             if (added > 0) {
                 store.replaceTracks(targetPlaylistId, existing)
+                refreshPlaylists()
             }
             val message = when {
                 tracks.size == 1 && added == 1 ->
@@ -2758,7 +3278,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun createPlaylistAndAdd(name: String, tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
         scope.launch {
-            val finalName = name.ifBlank { DEFAULT_PLAYLIST_NAME }
+            val finalName = name.ifBlank { defaultPlaylistName }
             val newId = store.createPlaylist(finalName)
             store.replaceTracks(newId, tracks)
             val updated = store.playlists()
@@ -2855,7 +3375,10 @@ class PlaybackController private constructor(private val context: Context) {
         if (added > 0 && !hadPendingEdit) {
             // Written from the state rather than from `found`, so it stores exactly the list the
             // screen is showing -- including whatever the de-duplication above decided.
-            scope.launch { store.replaceTracks(playlistId, _state.value.queue.tracks) }
+            scope.launch {
+                store.replaceTracks(playlistId, _state.value.queue.tracks)
+                refreshPlaylists()
+            }
         }
 
         // Adding appends to the end, so without this nothing visibly happens -- which matters more
@@ -2866,25 +3389,35 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * What to say after adding — now always something.
      *
-     * **This used to stay silent on success**, on the reasoning that the rows appearing *is* the
-     * confirmation and a notice repeating the screen is noise. That reasoning was written when the
-     * snackbar covered the very rows it was reporting, and it does not survive contact: adding from
-     * a local folder closes Browse and lands on a playlist that may not visibly change at all —
-     * the new rows are at the end, and scrolling to them is not something a person registers as an
-     * answer. The owner reported the silence as a fault, which settles it: he is the one who can
-     * tell a confirmation from noise.
+     * **Silence on success is not enough.** The argument for it — the rows appearing *is* the
+     * confirmation, and a notice repeating the screen is noise — holds only when the rows are
+     * visible. Adding from a local folder closes Browse and lands on a playlist that may not
+     * visibly change at all: the new rows are at the end, and scrolling to them is not something a
+     * person registers as an answer.
      *
-     * The snackbar it once collided with is swipeable now (`SwipeableSnackbar`), so the objection
-     * that produced the silence has been dealt with separately.
+     * The objection that a snackbar covers the rows it reports is dealt with separately: it is
+     * swipeable (`SwipeableSnackbar`).
      */
     private fun describeAdded(added: Int, skipped: Int): Message? {
-        val where = _state.value.activePlaylistName?.let { " to $it" }.orEmpty()
+        // Named where there is a name to use, and a separate sentence rather than a suffix glued
+        // on: " to X" reads as English word order and would have to be re-glued for every other
+        // language.
+        val where = _state.value.activePlaylistName
         return when {
-            added == 0 && skipped == 0 -> Message("Nothing playable found there.")
-            added == 0 -> Message("Already in this playlist.")
-            skipped == 0 && added == 1 -> Message("Added 1 track$where.")
-            skipped == 0 -> Message("Added $added tracks$where.")
-            else -> Message("Added $added$where; $skipped already there.")
+            added == 0 && skipped == 0 -> Message(context.getString(R.string.notice_nothing_playable))
+            added == 0 -> Message(context.getString(R.string.notice_all_already_here))
+            skipped == 0 && where != null -> Message(
+                context.resources.getQuantityString(
+                    R.plurals.notice_added_count_to_playlist, added, added, where,
+                )
+            )
+            skipped == 0 -> Message(
+                context.resources.getQuantityString(R.plurals.notice_added_count, added, added)
+            )
+            where != null -> Message(
+                context.getString(R.string.notice_added_some_already_named, added, where, skipped)
+            )
+            else -> Message(context.getString(R.string.notice_added_some_already, added, skipped))
         }
     }
 
@@ -2939,9 +3472,11 @@ class PlaybackController private constructor(private val context: Context) {
                 dirty = true,
                 message = Message(
                     text = if (removed.size == 1) {
-                        "Removed ${removed.first().track.title}"
+                        context.getString(R.string.notice_removed_one, removed.first().track.title)
                     } else {
-                        "Removed ${removed.size} tracks"
+                        context.resources.getQuantityString(
+                            R.plurals.notice_removed_count, removed.size, removed.size,
+                        )
                     },
                     actionLabel = UNDO,
                 ),
@@ -2991,10 +3526,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun next() {
         val now = _state.value
-        // A tune inside the file first, but **only in "play all"**. The owner settled that: making
-        // next mean something different depending on the *file* would be the transport behaving
-        // differently for reasons the user did not choose, which is the complaint that shaped the
-        // whole transport in the first place. Tied to a mode he set, it is predictable.
+        // A tune inside the file first, but **only in "play all"**. Making next mean something
+        // different depending on the *file* would be the transport behaving differently for
+        // reasons the user did not choose. Tied to a mode they set, it is predictable.
         if (now.playAllSubsongs && now.subsong + 1 < now.subsongCount) {
             selectSubsong(now.subsong + 1)
             return
@@ -3005,9 +3539,9 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Straight to the next file, past whatever is left inside this one.
      *
-     * A long press on the transport, and the owner's reason is exact: `aleste 2.kss` holds 256
-     * tunes, so leaving it with the ordinary next means 256 presses. Pressing is for the tune you
-     * are on; holding is for the file.
+     * A long press on the transport. `aleste 2.kss` holds 256 tunes, so leaving it with the
+     * ordinary next would mean 256 presses. Pressing is for the tune you are on; holding is for
+     * the file.
      *
      * Deliberately **not** on the notification or a headset button. Those have no long press, and
      * inventing a double-tap for them would be a second vocabulary for one idea.
@@ -3015,7 +3549,8 @@ class PlaybackController private constructor(private val context: Context) {
     fun nextFile() {
         val now = _state.value
         if (now.externalMode) return
-        if (now.transient != null) return randomNext()
+        // The dice waiting under a digression does not own the transport; the folder on screen does.
+        if (now.transient != null && !now.diceWaiting) return randomNext()
         now.resultsQueue?.let { results ->
             if (results.hasNext) playFromResultsQueue(results.next())
             return
@@ -3037,7 +3572,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun previousFile() {
         val now = _state.value
         if (now.externalMode) return
-        if (now.transient != null) return randomPrevious()
+        if (now.transient != null && !now.diceWaiting) return randomPrevious()
         now.resultsQueue?.let { results ->
             if (results.hasPrevious) playFromResultsQueue(results.previous())
             return
@@ -3046,12 +3581,23 @@ class PlaybackController private constructor(private val context: Context) {
         openAndPlay(now.queue.previous())
     }
 
+    /**
+     * Moves the playing position.
+     *
+     * **Off the main thread, because a seek is not quick.** Every emulator here reaches a position
+     * by running forward to it, so asking for the end of a five-minute SID is minutes of emulated
+     * 6502. Run inside the audio callback that work wedges the app, so it happens on the caller's
+     * thread instead — which must therefore never be the thread drawing the screen
+     * (`docs/ARCHITECTURE.md` §5).
+     *
+     * The slider is moved first and does not wait for the decoder to agree. A slider that springs
+     * back to where it was until the seek lands reads as a control that did not work — and it now
+     * has whole seconds in which to read that way.
+     */
     fun seekTo(seconds: Double) {
         val open = track ?: return
-        open.seekTo(seconds)
-        // Shown immediately rather than waiting for the next poll: a slider that springs back to
-        // where it was before catching up reads as a control that did not work.
         _state.update { it.copy(positionSeconds = seconds) }
+        scope.launch { withContext(Dispatchers.IO) { runCatching { open.seekTo(seconds) } } }
     }
 
     /**
@@ -3095,12 +3641,30 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
+     * How long to play a tune whose length nothing knows (`docs/STATUS.md` C56).
+     *
+     * Clamped rather than validated: the slider cannot produce anything outside the range, so a
+     * value that is outside it came from a stored setting or a newer build, and refusing it would
+     * leave the app with no answer at all. Remembered like the toggle above, for the same reason —
+     * it is about what happens next rather than about one row.
+     *
+     * **It applies from the next poll**, including to whatever is playing now. A tune already past
+     * the new limit ends within the second, which is the behaviour somebody dragging the slider
+     * down is asking for.
+     */
+    fun setFallbackLength(seconds: Int) {
+        val wanted = FallbackLength.snap(seconds)
+        if (wanted == _state.value.fallbackLengthSeconds) return
+        _state.update { it.copy(fallbackLengthSeconds = wanted) }
+        scheduleSave()
+    }
+
+    /**
      * How to try the last thing the user asked for again, kept until something opens.
      *
-     * Play after a failure used to start the playlist, because a failed open leaves nothing loaded
+     * Without it, play after a failure starts the playlist: a failed open leaves nothing loaded,
      * and "nothing loaded" is also what a fresh restart looks like. From the sofa that reads as the
-     * app ignoring you and playing something of its own choosing -- the owner found it and was
-     * right to call it unintuitive.
+     * app ignoring you and playing something of its own choosing.
      *
      * **A closure rather than a `TrackRef`**, because there are two ways to be playing a track and
      * they are not interchangeable: a playlist track goes through `openAndPlay` and a search result
@@ -3115,11 +3679,11 @@ class PlaybackController private constructor(private val context: Context) {
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {
-        // **A track being fetched can be called off.** Pressing play on something not cached starts
-        // a download that took up to ten seconds on the owner's connection, and until now the only
-        // way out was to wait for it: the button showed "play" the whole time, and pressing it
-        // again fell into the branch below and started the *same* track over. Cancelling the open
-        // job is the honest answer to a second press -- it is the press that means "not now".
+        // **A track being fetched can be called off.** Pressing play on something not cached
+        // starts a download that can take ten seconds, and the button shows "play" throughout, so
+        // without this the second press falls into the branch below and starts the *same* track
+        // over with no way out but waiting. Cancelling the open job is the honest answer: the
+        // second press is the one that means "not now".
         if (_state.value.loadingTrack) {
             openJob?.cancel()
             openJob = null
@@ -3147,7 +3711,7 @@ class PlaybackController private constructor(private val context: Context) {
             // Asking first, and not starting if refused: a player that talks over a phone call is
             // worse than one that does nothing.
             if (!audioFocus.acquire()) {
-                _state.update { it.copy(message = Message("Something else is using the audio.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
                 return
             }
             // **Asked of both meanings of "finished".** The engine knows when a backend stopped
@@ -3201,9 +3765,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     private fun handleTrackEnded() {
         // A file with more tunes in it runs on into the next one, but only in "play all". Off, a
-        // 256-subsong file behaves like any other track and the playlist keeps moving -- which is
-        // exactly why the owner chose that as the default. The rule itself, including what
-        // repeat-one means here, is in `SubsongAdvance` where it can be tested.
+        // 256-subsong file behaves like any other track and the playlist keeps moving, which is
+        // why off is the default. The rule itself, including what repeat-one means here, is in
+        // `SubsongAdvance` where it can be tested.
         val now = _state.value
         when (
             val next = SubsongAdvance.after(
@@ -3242,10 +3806,10 @@ class PlaybackController private constructor(private val context: Context) {
         // `transient` to null on its way through `playFromResultsQueue` above. The external one
         // stops when it ends -- there is no next, because one file arrived and that was all of it.
         //
-        // Random used to stop here, guarding against rolling on into the playlist: that would
-        // answer a question nobody asked by pressing Random. **That guard still holds** and this is
-        // not it. Going to the next random pick is the question they did ask, and stopping after
-        // every tune made Random something you operate rather than something you listen to.
+        // Random does **not** stop here. The guard worth keeping is against rolling on into the
+        // *playlist*, which answers a question nobody asked by pressing Random; going to the next
+        // random pick is the question they did ask. Stopping after every tune would make Random
+        // something you operate rather than something you listen to.
         if (_state.value.transient != null) {
             // Repeat-one is the one setting that means "keep playing this", and it says so on the
             // dock while Random is running. Skipping to another tune under it would be the app
@@ -3254,6 +3818,22 @@ class PlaybackController private constructor(private val context: Context) {
                 val playing = track?.restart() ?: false
                 _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
             } else if (!_state.value.externalOpen) {
+                // **Not playing any more, said before the next pick is chosen, not after.**
+                //
+                // The poll that called this runs every 200 ms and skips only while `playing` is
+                // false or a load is running. The playlist's path satisfies that at once -- it
+                // starts loading before it returns. Random did not: `randomNext` launches, moves
+                // the cursor, publishes the row, and then *waits on a database query* for the next
+                // read-ahead pick before `playTransient` sets `playing = false` and starts the load.
+                // That query sorts the whole scope by a generated key (`docs/review-round-8.md`
+                // R7), and under a platform filter it can take several ticks. Every tick in that
+                // gap found the same finished track, still "playing", and advanced again.
+                //
+                // What that looks like: a tune ends, five picks appear on the record at once and
+                // the sixth plays. Only at a natural end, because a pressed next leaves a track
+                // that is not finished, and only sometimes, because it depends on whether the
+                // query beats the next tick -- it does once SQLite has the pages cached.
+                _state.update { it.copy(playing = false) }
                 randomNext()
             } else {
                 _state.update { it.copy(playing = false) }
@@ -3290,6 +3870,8 @@ class PlaybackController private constructor(private val context: Context) {
             it.copy(
                 transient = ref,
                 externalOpen = external,
+                // A file from another app is not a digression to come back from.
+                diceWaiting = if (external) false else it.diceWaiting,
                 randomHasPrevious = if (external) false else randomCursor > 0,
                 playing = false,
                 positionSeconds = 0.0,
@@ -3351,11 +3933,11 @@ class PlaybackController private constructor(private val context: Context) {
                 _state.update {
                     it.copy(message = Message(describeFailure(ref, fetched = true, reason = result.error)))
                 }
-                // **Random walks past a file it cannot open.** The owner met this on Atari ST: a
-                // dice roll landed on a `.ym`, nothing here can open one (`docs/STATUS.md` C20),
-                // and Random stopped dead on it -- which turns "surprise me" into "surprise me and
-                // then come back to the phone". A playlist stops on purpose, because that file is
-                // one the listener chose; a random pick is one nobody chose.
+                // **Random walks past a file it cannot open.** A dice roll can land on a `.ym`,
+                // which nothing here opens (`docs/STATUS.md` C20), and stopping dead on it turns
+                // "surprise me" into "surprise me and then come back to the phone". A playlist
+                // stops on purpose, because that file is one the listener chose; a random pick is
+                // one nobody chose.
                 //
                 // Bounded, and the bound is the point: an index full of unplayable rows would
                 // otherwise spin through them all. After a few in a row it stops and says so.
@@ -3376,7 +3958,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             if (!audioFocus.acquire()) {
                 opened.close()
-                _state.update { it.copy(message = Message("Something else is using the audio.")) }
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_audio_busy))) }
                 return@launch
             }
 
@@ -3388,11 +3970,11 @@ class PlaybackController private constructor(private val context: Context) {
             val described = opened.describe()
             val started = opened.start()
 
-            // **Said out loud, once, because the owner cannot read logcat.** Backends that
-            // synthesise at a fixed rate ask Oboe for it and Oboe is meant to resample; nobody has
-            // ever checked that it does, and if it declines, every one of those tunes plays sharp
-            // with nothing to say so. He reported two SPCs sounding fast on 2026-09-09 — this is
-            // how that becomes a fact instead of a suspicion. Empty is the normal answer.
+            // **Said out loud, once, because a listener cannot read logcat.** Backends that
+            // synthesise at a fixed rate ask Oboe for it and Oboe is meant to resample; if it
+            // declines, every one of those tunes plays sharp with nothing on screen to say so —
+            // which is how "this SPC sounds fast" becomes a fact instead of a suspicion. Empty is
+            // the normal answer.
             if (started && !reportedSampleRate) {
                 val note = runCatching { opened.sampleRateNote() }.getOrDefault("")
                 if (note.isNotEmpty()) {
@@ -3435,7 +4017,7 @@ class PlaybackController private constructor(private val context: Context) {
                     subsongCount = opened.subsongCount().coerceAtLeast(1),
                     durationSeconds = duration,
                     positionSeconds = 0.0,
-                    message = if (started) it.message else Message("Could not open the audio device"),
+                    message = if (started) it.message else Message(context.getString(R.string.notice_audio_device_failed)),
                 )
             }
             // Recorded with the name the tune calls itself rather than the filename it arrived
@@ -3523,8 +4105,8 @@ class PlaybackController private constructor(private val context: Context) {
      *
      * **It runs only while nothing is loaded**, and that is a hard requirement rather than
      * politeness: sc68 keeps its 68000 emulator in global state, so opening a second instance while
-     * one is playing would clobber the one you are listening to. Waiting for idle is also exactly
-     * the lowest priority the owner asked for. The consequence — adding a folder mid-playback
+     * one is playing would clobber the one you are listening to. Waiting for idle is also the
+     * lowest priority this work should ever have. The consequence — adding a folder mid-playback
      * resolves nothing until you stop — is real and accepted.
      */
     private fun resolveMetadataInBackground() {
@@ -3559,9 +4141,8 @@ class PlaybackController private constructor(private val context: Context) {
                     text
                 } ?: continue
 
-                // Logged rather than guessed at. The owner reported twenty seconds of stutter for
-                // twenty-two tracks and the first explanation -- a database write per track -- was
-                // wrong, which a number here would have shown immediately.
+                // Logged rather than guessed at: when this pass is blamed for stutter, the first
+                // explanation offered is rarely the right one, and a number settles it.
                 android.util.Log.d(
                     "Protracktor",
                     "resolved ${ref.fileNameOrTitle} in ${SystemClock.elapsedRealtime() - startedAt} ms",
@@ -3648,8 +4229,8 @@ class PlaybackController private constructor(private val context: Context) {
         prefetchJob = scope.launch {
             // **Together, not one after another.** These fetches spend nearly all their time
             // waiting on a network, so reading three in turn makes the third arrive three round
-            // trips late -- which is the wait this whole thing exists to remove. Written serially
-            // first, and the owner noticed on a device before any measurement here did.
+            // trips late -- which is the wait this whole thing exists to remove. Serial reads here
+            // are visible on a device without needing a measurement.
             missing.forEach { ref ->
                 launch {
                     val bytes = loadBytes(ref) ?: return@launch
@@ -3668,6 +4249,12 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun stopPlayback() {
+        // **The open in flight goes too.** Everything that calls this is the user moving on —
+        // leaving Random for the playlist, say — and a fetch already running would finish
+        // afterwards and start the tune nobody is asking for any more, over a screen naming a
+        // different one.
+        openJob?.cancel()
+        openJob = null
         prefetchJob?.cancel()
         prefetched.clear()
         track?.close()

@@ -521,6 +521,484 @@ else.
 
 ---
 
+# Round 12 — set 2026-09-17, the formats we cannot play
+
+The gaps are listed and ordered in `docs/ROADMAP_FORMATS.md`; this is the round that closes them.
+**Read that file first** — it has the numbers, and this list does not repeat them.
+
+## Where this starts
+
+The app claims **342,169 of Modland's 516,107 rows**. The missing third is mostly one thing: the
+Amiga formats where the tune is note data and the player is a separate 68000 program, which is
+UADE's territory and about 29,000 files. Everything else on the roadmap is hundreds or low
+thousands.
+
+## The rules
+
+`AGENTS.md`, and round 8's restatement of them, in full — **except rule 1, which this round
+replaces.** Three additions:
+
+- **Nothing merges to `develop`.** *The owner's instruction, 2026-09-17: the round runs on a branch
+  because the first alpha on Play is built from `develop` the next morning, and the first public
+  build must not carry a large change nobody has seen on a device.*
+
+  So: one long-lived **`feature/round-12`** off `develop`, one branch per item off **that**, and
+  each finished item merges back into **`feature/round-12`**. `develop` is not touched at all, and
+  neither is `master`. When the owner has the alpha out and a phone free, the round's branch is one
+  merge and his to make.
+
+  It also means the round can be abandoned whole if item 0 turns out worse than it looks, which is
+  worth having for a change that rewrites what an index is.
+
+- **Licences are checked, recorded, and do not stop the work.** The owner's instruction,
+  2026-09-17: find out what a component's licence is and write it in `docs/LICENSES.md` as you go,
+  but if it turns out to be a problem, **note it and carry on** — the decision is his and it is made
+  before publishing, not before building. A backend that is written and then not shipped has cost a
+  branch; a backend not written because nobody asked has cost the round.
+- **Measure before claiming a format.** `.psm`, `.ftc` and `.gtr` were once claimed by
+  `SupportedFormats` before their decoders were wired, so three formats told the owner "Protracktor
+  cannot play this yet" about decoders that existed. A name goes in the list **after** a real file
+  from the archive has been played through the built engine.
+
+## Explicitly out of scope
+
+- **`.ay`.** Not a to-do. The only decoder in reach uses `z80ex`, GPL-2-only, which cannot be
+  combined with this project's GPL-3 — see the roadmap's step 5. Do not spend an hour rediscovering
+  this.
+- **Another catalogue.** `docs/PLAN_CATALOGUES.md` measured it on 2026-09-16: only Modland and ASMA
+  send CORS, so anything else is phone-only. A format is worth more than an archive right now.
+- **Deciding UADE's process model** if it turns out to need the owner. Write the choice into
+  `docs/BACKLOG.md` and keep going on what does not depend on it.
+
+## The list
+
+- [x] **0. Make the index stop depending on what we can play.** *(done 2026-09-17: one `UPDATE`
+      instead of a 40 MB download; 83.3 MB → 112.8 MB at Modland's size, and a folder opens faster
+      than before because the browse index is partial over `playable = 1`. 262 unit tests, 426 page
+      checks. Nobody has run it on a phone.)* *Do this first, and nothing else
+      before it.*
+
+      Today `SupportedFormats` decides what a downloaded index **keeps**, so changing the format
+      list changes its fingerprint, every stored index goes stale, and every user re-downloads
+      Modland's 40 MB. **Every item below would charge that toll separately** — which is the real
+      reason this round starts here rather than with the biggest number.
+
+      Store every row and decide playability **when the index is read** instead. The rows are the
+      same shape either way; what changes is that the index stops being a function of the decoder
+      set.
+
+      **It removes a class of defect as well as the toll.** The fingerprint exists because an index
+      built by an older decoder set is missing files and looks current — the owner lost 60,572 C64
+      tunes to exactly that. An index that holds everything cannot be wrong about anything; it can
+      only be out of date about Modland, which is a different and much more visible thing.
+
+      Costs, to be measured rather than assumed: **+174,000 rows**, roughly half again, on the phone
+      and in the browser's IndexedDB. Measure the database before and after and put the number in
+      the commit. And one **last** re-index for anyone who has one today — say so in the UI, since
+      it is the last one they will be asked for.
+
+      **The risk is a missed filter**, not the storage: an unplayable file appearing in Browse or in
+      Random is worse than the toll this removes. One predicate, applied where the queries already
+      live, and a check per screen that reads the index — Browse, search, Random, the counts and the
+      platform chips. `docs/SPEC_RANDOM.md` says the two players agree; they must still agree here.
+
+      *Done when:* the format list can change with no re-index, a stored index survives a decoder
+      change, nothing unplayable is offered anywhere, and the size cost is a number in the commit.
+
+- [x] **1. Vortex Tracker II, `.vt2`** — *struck out 2026-09-17, not built: it is **12 files** in
+      Modland's 516,118, the decoder is already wired, and it refuses all twelve anyway. See
+      `docs/ROADMAP_FORMATS.md`, where the step is kept in full because the mistake is instructive.*
+
+      *Original text:* The cheapest item on the roadmap and it is already built:
+      ZXTune implements `CreateVortexTracker2Decoder()` and `players/aym/vortex.cpp`, and this
+      project's CMake globs compile both — the code is in the binary today and nothing calls it.
+
+      One `tryAym` line in `ZxTuneBackend`, the name in `worthTrying`, `SupportedFormats` and
+      `web/src/formats.tsv`.
+
+      **`.vt2` is a text format where ProTracker 3 is binary**, so this is exactly the case the
+      second rule is about: fetch real `.vt2` files from Modland and play them through the built
+      engine before the name goes anywhere.
+
+      *Done when:* a Modland `.vt2` opens, renders audible audio, and reports a length — in both
+      players.
+
+- [~] **2. UADE** — *stopped at the decision, 2026-09-17, per rule 4. The process model is now
+      answered on evidence and recommended (`docs/BACKLOG.md` A44): fork+exec, because `uade.c:476`
+      calls `exit(1)` when the emulated program asks for a missing file, and `exit()` is not an
+      exception. That also answers item 3 — `fork` does not exist in WebAssembly, so UADE is a phone
+      backend. Nothing was built; the integration waits on the owner's yes.*
+
+      *Original text:* The round's real item: **~29,000 files**, and it takes the 132 orphaned `.med`
+      files with it (`docs/STATUS.md`: they need "a decoder nobody here has, which puts it with
+      UADE's territory").
+
+      Most of the thinking is recorded and should not be redone — `docs/PLAN_FORMATS.md` for the
+      measurement, `docs/LICENSES.md` for the licence, which is **settled**: the replay binaries are
+      downloaded from the page upstream publishes for the purpose, never shipped.
+
+      Three things an integration needs, and the third is the one that surprises people: the
+      emulator, `players/`, **and a song database**. Without `conf/song.conf`'s md5 overrides the
+      Hippel and TFMX variants fail in a way that looks like the format not working. It is
+      GPL-2-or-later and fine. **`conf/songdb` beside it is CC BY-NC-SA — non-commercial — and must
+      not ship.** Take the one, leave the other.
+
+      **Try the Emscripten build early, not last.** ZXTune's "does not build under Emscripten" was
+      carried for a week and turned out to be eight lines nobody had compiled. If UADE builds, the
+      two players stay level; if it does not, the phone gains 29,000 tunes the browser cannot play,
+      and Browse has to say so the way it says it about everything else.
+
+      *Done when:* a sampled corpus from the directories UADE reaches plays through the built
+      engine, on the phone at least, with the numbers in the commit.
+
+- [x] **3. The ones that need a decoder of their own** — *measured 2026-09-17, not built. Forty
+      files sampled from allmods.zip and played: `.psm` is **not a gap at all** (30 of 30 play, the
+      ZX Spectrum kind through ZXTune), and `.dmf`, `.ftm` and `.imf` are confirmed — the last
+      needing an OPL2 emulator before a decoder. Second correction of the day from playing a file
+      instead of reading a document.*
+
+      *Original text:* — FamiTracker `.ftm` (1,874), DefleMask
+      `.dmf` (1,807), `.imf` (210, needs an **OPL2** emulator this build does not have), `.psm`
+      (~70). About 3,900 files between them and no shared machinery, so this is four separate pieces
+      of work and the last of them may not be worth doing at all.
+
+      **The trap is the shared extension**, which has caught this project twice. All four names are
+      claimed *today* for the files that do work, so a new decoder is tried **alongside** the
+      existing one, never instead of it — and `openBackend`'s first-refusal-wins rule
+      (`docs/STATUS.md` C55) decides which reason the owner is shown when both refuse.
+
+      Licence each one as you go, per the rule above. Write it down; do not stop for it.
+
+## Round 12 — closed 2026-09-17
+
+**One item built, three answered by measuring.** The round set out to close the format gaps and
+found that two of the four steps were not what the roadmap said they were — both times because the
+roadmap described what the app could play instead of asking it.
+
+**What the app claims: 342,129 of Modland's 516,118 — 66%.** Unchanged by this round, and that is
+the honest headline: no format was added. What changed is what adding one now costs.
+
+### Item 0 — the index stops depending on what we can play *(built)*
+
+`SupportedFormats` used to decide what a downloaded index **kept**, so every format added made every
+stored index stale and cost each user Modland's 40 MB. Both players store the whole archive now with
+the verdict beside each row.
+
+| | |
+| --- | --- |
+| a format added later | **one `UPDATE`, 228 ms over 516,107 rows** (1.7 s with the partial indexes to maintain), no network |
+| phone database | 83.3 MB → **112.8 MB**, +29.5 MB for 172,036 more rows |
+| a folder in Browse | **faster** — 0.1 ms, the browse index being partial over `playable = 1` |
+
+**One last re-index for anyone holding one today**, because rows that were never downloaded cannot
+be conjured; such an index says so (`complete = 0`) and asks. After that there is not another, and
+the class of defect that cost the owner 60,572 C64 tunes is gone with it: an index that holds
+everything cannot be wrong about what this build plays.
+
+### Item 1 — `.vt2` *(struck out)*
+
+Placed first because it looked free. It is **twelve files** in 516,118, the decoder was already
+wired, and it refuses all twelve anyway — ZXTune's text parser stops 374 bytes into a 38 KB file.
+The step was ordered by how cheap it looked and never counted what it was worth.
+
+### Item 2 — UADE *(stopped at the decision, `docs/BACKLOG.md` A44)*
+
+The process model is answered on evidence rather than argued: `uade.c:476` calls `exit(1)` when the
+**emulated Amiga program asks for a file that is not there**, which damaged modules do, and `exit()`
+is not an exception. So fork+exec, `uadecore` in `lib/<abi>/`, +1.8 MB — recommended, and the
+owner's to confirm.
+
+### Item 3 — the browser question, and the four decoders *(answered, not built)*
+
+Item 3 of the list needs nothing built: `fork` and `exec` do not exist in WebAssembly, so UADE is a
+phone backend and the page cannot have it. And of the four formats in the last item, **`.psm` was
+not a gap at all** — 30 of 30 play, the ZX Spectrum kind through ZXTune, wired since ZXTune arrived
+and never re-checked. `.dmf`, `.ftm` and `.imf` are confirmed, the last needing an OPL2 emulator
+before a decoder.
+
+### The rule this round earned
+
+The round opened with *play a real file before claiming a format*, written from the `.psm`/`.ftc`/
+`.gtr` mistake. It cuts both ways: **play one before writing a format off.** Two of four steps were
+wrong in that direction, and ninety seconds of `grep` over `allmods.zip` would have said so before
+either was scheduled.
+
+### What nobody ran
+
+**None of it, on a phone.** Item 0 changes what an index is and migrates a schema; it is verified by
+262 unit tests, 426 page checks and compilation, and by nothing else. The one thing to watch for is
+a missed filter — an unplayable row appearing in Browse, search or Random — because that is the
+failure this design can have and the tests can only partly see.
+
+# Round 8 — set 2026-09-10, the web learns Random
+
+*The owner, late on 2026-09-10, after a day spent getting Random right on the phone: "zrobisz jako
+goal pkt 1-3? zapisz do pliku i odpalę ci." Points 1–3 of the web list he was given that evening —
+and then: "pamiętaj też, żeby listy działały tak jak w apk (nasze ostatnie poprawki)", which is
+item 2.*
+
+## Where this starts
+
+The phone's Random became a screen today, and was then corrected across eleven builds (519–532) by
+the owner using it. **That correction history is the specification.** Read it before writing a line:
+
+- `docs/PLAN_RANDOM.md` — the shape, agreed in conversation, for APK and web together.
+- `docs/PLAN_WEB_LIBRARY.md` S5 and S6 — the web-specific half, and the measurements behind it.
+- The APK code as it now stands: `ui/RandomScreen.kt`; in `player/PlaybackController.kt`,
+  `openRandom`, `advanceRandom`, `playRandomAt`, `removeRandomAt`, `fillRandomQueue` (with `OVERDRAW`)
+  and the Random branch of `handleTrackEnded`; `ui/ListScrolling.kt` (`KeepRowInView`, `revealRow`).
+- `docs/STATUS.md` C35, and the commits `0f46546` → `19f2cea` — one over-correction and its reversal,
+  so the same mistake is not made twice.
+
+The page already has: its own playlists (S2), Modland indexed in IndexedDB (S3), search (S4), and
+Browse shut while "From the phone" is showing (S4a).
+
+## The rules
+
+`AGENTS.md` and `/mnt/workspace/AGENTS.md` as always. Restated where this round leans on them:
+
+1. **One item, one branch, one merge**, off `develop`, merged back when the item is green. That is
+   this file's convention for an unattended run and the one exception to "merge only after the
+   owner has tested"; he tests the bundle afterwards. **Never `master`.**
+2. **Every item ends with `./scripts/test-protracktor.sh --really` green** — the Kotlin tests, the
+   page checks and the server checks together — **and `./scripts/package-web.sh` building.** No APK
+   unless Kotlin changed; if one is built at all, it is the release build.
+3. **Nothing in this round is seen by the agent doing it.** The page checks run in jsdom; the judge
+   is the owner in a real browser. Say what was verified and by what, and what was not.
+4. **A decision the owner has not made is not yours.** Write it into `docs/BACKLOG.md` and go on.
+   Implementation choices are yours — say so in the commit.
+5. **Measure rather than divide.** Numbers go into the plan documents, with how they were taken.
+6. Update `docs/PLAN_WEB_LIBRARY.md` and `docs/STATUS.md` as you go; tick items off here.
+7. Nothing outside this repository. English in git and in the documents.
+
+## Explicitly out of scope
+
+- **The relay** (S7). It would make the Pi fetch from ExoticA on a listener's behalf, contrary to the
+  letter sent them. Blocked on their answer.
+- **ASMA and HVSC in the browser.** Modland only, this round.
+- **Drag a file onto the page** (`docs/WISHLIST.md` B31).
+- **Random scopes other than Everything.** A platform needs `Platforms.kt` shared the way the queue
+  rules are; Favourites needs a second download. The Filter button exists and says what is set.
+- **A ceiling on the Random record or the history.** Recorded as important and not urgent. Do not
+  solve it; do not make it worse.
+- **Any change to the APK's behaviour.** Kotlin may change only to read a shared data file or to
+  drive new shared test cases.
+- **Persisting the Random list** — decided against. **The release script** (`docs/OPEN_QUESTIONS.md`
+  Q10). **`master`.**
+
+## Decisions that are not yours, if you meet them
+
+- Whether "From the phone" is one playlist or the newest of several.
+- Whether the page asks before the first 5.76 MB download — and now before a re-download too.
+- **Whether ZXTune goes into the wasm build.** It is off (`-DPROTRACKTOR_WITH_ZXTUNE=OFF` in
+  `scripts/build-web-engine.sh`), which is why the browser plays less than the phone: 26,559 of the
+  phone's rows. Turning it on is a size and build question, and item 1 makes its absence visible.
+  Record the question with that number; do not change the build.
+
+## The list
+
+- [x] **1. Index only what the browser can play, and say so** *(done 2026-09-11: 315,294 of
+      516,107 kept, 26,537 phone-only; list in `web/src/formats.tsv`, held to the phone by
+      `SupportedFormatsFileTest`; not yet seen in a browser)*
+      *The owner, 2026-09-10: "nie indeksujmy utworów, których nie zagramy. Trzeba to będzie jawnie
+      napisać w wyszukiwaniu/browse."*
+
+      Measured that evening against Modland's `allmods.txt`:
+
+      | | rows |
+      |---|---|
+      | Modland | 516,107 |
+      | what the phone indexes (`SupportedFormats`) | 342,169 — 66% |
+      | of those, ZXTune-only | 26,559 — `pt3` 7,376, `pt2` 6,284, `ym` 4,977, `stc` 3,639 … |
+      | **what the browser can open** | **~315,610 — 61% of what it holds today** |
+
+      Half of this exists already. `downloadModland({ fingerprint, keep })` in `web/src/catalogue.js`
+      takes a `keep` predicate that today keeps everything; `app.js` reads `engineFingerprint` and
+      `engineHasZxTune` from the engine's `pt_backends`, and already marks a stored index stale when
+      the fingerprint differs.
+
+      - **The playable set is the phone's list minus what only ZXTune opens, when the engine reports
+        `zxtune:none`.** Matched the way the phone matches: by extension, or by a `mod.title`-style
+        prefix. Two traps from the measurement: `psm` is listed twice in `SupportedFormats.kt` and
+        libopenmpt takes it, so it is not ZXTune-only; `ay` stays with game-music-emu.
+      - **Do not retype the phone's list beside it.** Make it one file both runtimes read, the way
+        `docs/rules/queue-cases.tsv` settled the queue rules (S1), with a Kotlin test proving
+        `SupportedFormats` and the file agree. How is yours to choose; a second hand-kept copy is not.
+      - **The fingerprint must change with the playable set**, so every stored index goes stale.
+        **The page says why before it downloads again** — it will be his third Modland download.
+      - **Rebuild the title shards and the author counts from the kept rows.** Item 2's table is built
+        from those counts and must only ever land on something that plays.
+      - **Say it plainly in Browse and in search**: how much of Modland this browser holds, and that
+        the rest are formats this browser cannot play — many of which the phone can.
+      - Measure after: rows kept, bytes on disk, time to index — against 18 MB and 2.6 s.
+      - Page checks: a ZXTune-only row dropped when the engine has no ZXTune and kept when it has; a
+        changed fingerprint marks the index stale; the sentence is on screen.
+
+- [x] **2. Every list behaves like the phone's** *(done 2026-09-11: one `revealRow`, Browse marks
+      and follows the playing tune, the dock is a sibling so the phone's defect cannot occur;
+      geometry not seen)*
+      *The owner: "pamiętaj też, żeby listy działały tak jak w apk (nasze ostatnie poprawki)."* Before
+      Random and History, because both are new lists and should be born obeying this.
+
+      The phone's rules, from `ui/ListScrolling.kt` (`KeepRowInView`, `revealRow`) and the commits
+      that grew them in the Random view and then moved them to every list:
+
+      - **Every list that can hold the playing track keeps it in view** — the playlist (`#queue`),
+        Browse's track lists (a folder or author, search results), and the lists items 3 and 4 add.
+        Today the page does this for `#queue` only, through `followPlaying()`; Browse does not.
+      - **One row at a time, and only when the row would leave.** `scrollIntoView({ block:
+        'nearest' })` is exactly that rule natively, which is why the page got it right first time
+        where the phone took five builds. Keep it; share it across lists rather than copying it.
+      - **Never on arrival.** `followPlaying()` is called from `playAt` alone, so returning to a list,
+        re-rendering it, adding or removing rows does not scroll. Keep it that way — on the phone
+        that was a deliberate decision, not a default.
+      - **Measured against what is visible.** The phone's version counted a row hidden under the dock
+        as visible and left it there. Check the page's layout: if the dock or the top bar can cover
+        a row that `nearest` thinks is on screen, `scroll-padding` on the scrolling element is the
+        browser's own answer — `scrollIntoView` honours it.
+      - **Not while rows are being ticked**, if the page has a selection mode: a list that moves under
+        a working finger fights it.
+      - **No follow button.** The phone removed its FAB the same evening; the page never had one.
+        **"Show in playlist"** (`showInPlaylist`, centred) stays as the deliberate jump, as it did
+        on the phone.
+      - jsdom has no layout, which is why the code guards `row?.scrollIntoView`. The page checks can
+        prove **whether** the page asks to scroll and with what options — on a new playing row yes,
+        on arrival, re-render, add and remove no — and cannot prove the geometry. Say so; the
+        geometry is the owner's to judge.
+      - Naming trap: `history` in `app.js` is the stack behind the Previous button, not item 4's.
+
+- [x] **3. Random, in the shape the phone has** *(done 2026-09-11: transient record, uniform over
+      tunes, three fetched ahead, walk-then-roll, the C35 guard, shuffle shut; rules web-only in the
+      shared file with the reason; found C36 on the way; not seen in a browser)*
+
+      - **Browse → Random opens the view and plays**, with no second press. Resume the `AudioContext`
+        **inside the click, before the first `await`** — a browser refuses sound started later.
+      - **Uniform over tracks, not authors** (his decision). A cumulative table over the playable
+        per-author counts, built once and held in memory; a roll is a random number, a binary search,
+        and an index into that author's bucket. 43,721 buckets, median 3, largest 3,615, 35% holding
+        one track — the two definitions of "random" differ enough to matter.
+      - **The record is what has played.** Three picks are drawn and fetched ahead (`READ_AHEAD`) and
+        not shown: a fetching strategy, not a promise.
+      - **Next walks the record and rolls only at its end.** Previous walks back. The phone was
+        briefly made to always roll and the owner sent it back.
+      - **No repeats within a session**: draw wide, drop what the session holds; allow a repeat only
+        when the pool is exhausted. So **rows are keyed by position**, not by track.
+      - Rows carry the ordinary track actions, **delete yes, reorder no**.
+      - **"Playing at random"** over the list; a **Filter** button with the scope in words beneath;
+        a way back to the playlist in the corner. Leaving ends the session; a new entry is a new list.
+      - **Transient**: it never writes into a playlist, "From the phone" included.
+      - **Shuffle greyed** while Random runs — it reorders the playlist and Random uses neither. Grey
+        that is visibly grey: on the phone a hard-coded tint hid the disabled state for one build.
+        Repeat-one is honoured.
+      - **The playing row stays in view by item 2's rule**, the same function as every other list.
+        The phone's record keyed this on its cursor rather than the track, because a tune can occur
+        twice in it; the page must not lose that distinction.
+      - **The C35 lesson, because it will be met again.** On the phone, a track's end could be acted
+        on once per poll tick while the next pick was being chosen, and five picks went by in a
+        second. Here the gap is IndexedDB and a fetch. **Mark the advance synchronously, before the
+        first `await`**, so a second "ended" finds it already under way.
+      - **Shared rules.** Walk-then-roll, previous, and no-repeat-until-exhausted belong in
+        `docs/rules/queue-cases.tsv` as a new group, driven by `RuleCasesTest.kt` *and*
+        `check-page.mjs`, so the two Randoms cannot drift apart. If a case cannot be expressed on the
+        Kotlin side without refactoring the controller, keep it web-only and say why; do not
+        refactor the APK for it.
+      - Page checks: entering plays; the record grows one row per track played; next walks then rolls;
+        previous walks back; delete; a repeat avoided; **two "ended" in a row advance once.**
+
+- [x] **4. History — the same stream, kept** *(done 2026-09-11: one recording path in `opened`, the
+      phone's rules at database version 3, plays transiently; found and fixed C37 from item 3;
+      raised A33; not seen in a browser)*
+
+      On the phone, `data/HistoryStore.kt`: one row per track rather than per play, moved to the top
+      and counted when replayed, the oldest forgotten past a limit; shown in Browse → History and
+      clearable. Read it for the fields and the limit, and match them.
+
+      - **One recording path, not two.** Every play is recorded; the Random view shows the current
+        session's slice of the same stream (`docs/PLAN_WEB_LIBRARY.md` S6). Only the history is
+        persisted, in IndexedDB; the Random record is not.
+      - Browse → History lists it, plays from it the way every Browse list plays — without writing
+        into the playlist — keeps the playing row in view by item 2's rule, and can be cleared.
+      - Tracks that exist only as bytes — a `phone:` ghost, a `data:` entry — cannot be replayed after
+        a reload. Record them marked as such, or skip them: yours to choose, stated in the commit.
+      - Page checks: a play is recorded; a replay moves to the top and counts; the limit holds;
+        clearing empties it; playing from history leaves the playlist alone.
+
+## When the list is done
+
+Close the round below this line, the way the others are closed: what landed, what the measurements
+said, what changed the plan on the way, and **what nobody has done — run it in a browser.** Leave a
+bundle in `dist/` from `./scripts/package-web.sh` and name it.
+
+## Round 8 — closed 2026-09-11
+
+All four items landed in one unattended run, each on its own branch and merged on green tests, as
+this file allows. **Nobody has run any of it in a browser**, and that is the only judgement that
+counts for three of the four.
+
+**What landed.**
+
+1. **The browser indexes only what it plays, and says so.** 315,294 of Modland's 516,107 kept;
+   26,537 left out that play on the phone, because the web engine has no ZXTune. One list for both
+   runtimes, `web/src/formats.tsv`, held to the phone's by `SupportedFormatsFileTest`. The index's
+   fingerprint is the engine's and the list's together, so every index stored before today is stale
+   on sight — **the owner will be asked for a third Modland download**, and told why first.
+2. **Every list behaves like the phone's.** The page already had the rule — `scrollIntoView` with
+   `nearest` is what the phone took five builds to reach — and only lacked it in Browse, which now
+   marks and follows the playing tune. The phone's dock defect cannot occur here: the page's dock is
+   the list's sibling, not a layer over it.
+3. **Random, in the phone's shape.** A transient record, uniform over tunes, three picks fetched
+   ahead (the page had no prefetch at all), next walking the record and rolling only at its end, the
+   C35 guard in the first line of the roll. Its rules are in `docs/rules/queue-cases.tsv`, driven by
+   the page only, with the reason written beside them.
+4. **History**, with the phone's rules at database version 3, recorded at the one place every play
+   arrives, and playing without touching the playlist.
+
+**What changed the plan on the way.**
+
+The round's own text was wrong once. It asked History to play "the way every Browse list plays —
+without writing into the playlist", and on the page those are opposites: its folder and search lists
+replace the playlist showing. History was built the way the goal and the phone both mean, and the
+rest is the owner's to decide — `docs/BACKLOG.md` A33.
+
+Saving read the queue after an `await`, harmless while there was one queue and a hole the moment
+Random made a second. Closed before Random could write a pick into a playlist.
+
+**What the checks found that nobody asked about.**
+
+- **C36, open.** A next from the arrow keys or a media key is swallowed after a long press that ended
+  without a click. Recorded rather than fixed: the obvious repair is wrong on touch.
+- **C37, fixed.** Browse on "From the phone" threw once an index was held — introduced by item 3,
+  found by item 4, and invisible to 195 checks until one was written to build that exact state.
+
+**Decisions raised and not taken.** A32: whether ZXTune goes into the wasm build, now that its
+absence is a number on the screen. A33: whether the page's Browse lists should stop writing into the
+playlist, as the phone's do. Still waiting from before: whether "From the phone" is one playlist or
+several, and whether the page asks before the first download.
+
+**Measured.** Front end 140,415 → 177,228 bytes, 6.7% of the 2.64 MB engine against round 7's bar of
+a tenth. Checks: page 146 → 211, server 7 → 8, Kotlin 218 → 222.
+
+**What only a browser can answer**, in the order worth looking:
+
+- the re-download prompt, and Browse's sentence about what it holds;
+- sound starting on Browse → Random, which depends on the click reaching the engine before any
+  `await` — Firefox is the stricter of his two browsers;
+- where rows land as next and previous move them — jsdom has no layout;
+- the picks read ahead arriving without a gap.
+
+**The bundle is `dist/protracktor-web-20260911-004649.tar.gz`.** The Pi runs its own copy of the
+server, so it needs updating there by the owner, as before.
+
+## What this round is not allowed to lose
+
+- **The page's weight.** Round 7 set the bar at a tenth of the engine and came in at a twentieth.
+  Measure before and after; say the numbers.
+- **"From the phone" is never written into** — by Browse, the paste box, and now by Random.
+- **The queue rules agree between the runtimes** — the whole point of S1.
+- **The lists behave the same in both** — item 2, and the evening of work on the phone behind it.
+
+---
+
 # Round 7 — set 2026-09-09, the web player's face
 
 *The owner, at half past midnight: "przerobienie GUI webowego. Musi wyglądać prawie tak, jak

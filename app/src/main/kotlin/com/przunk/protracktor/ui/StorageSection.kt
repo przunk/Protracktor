@@ -35,11 +35,9 @@ import com.przunk.protracktor.net.Catalogue
  * The user's own things are deliberately absent. Playlists, granted folders and history are not
  * storage to be reclaimed, and a screen that mixes the two teaches people to be afraid of it.
  *
- * **It lives in Browse rather than in a settings screen**, because granted folders are managed from
- * Browse already and this is the same question — what does this app have of mine. Building it here
- * needs no new navigation, which matters: the app has no top-level overflow menu and adding one to
- * reach a single screen is a navigation decision the owner has reserved (`docs/OPEN_QUESTIONS.md`
- * Q1, `docs/BACKLOG.md` A13). When A13 is designed this section moves in one piece.
+ * **It lives in Settings**, drawn by `SettingsScreen`, and is one composable so that it can be
+ * moved in one piece if the navigation changes again (`docs/OPEN_QUESTIONS.md` Q1,
+ * `docs/BACKLOG.md` A13).
  */
 @Composable
 fun StorageSection(
@@ -92,8 +90,8 @@ fun StorageSection(
 
     // One row per catalogue, because for an archive catalogue the downloaded zip **is** the index
     // -- ASMA publishes a single file that is stored whole and parsed in place. Listing them
-    // separately offered two deletes for one thing, and taking either left the other describing a
-    // catalogue that no longer worked (round 6 review R4).
+    // separately would offer two deletes for one thing, and taking either would leave the other
+    // describing a catalogue that no longer works.
     catalogues.filter { !it.isOnlineOnly }.forEach { catalogue ->
         val archived = archiveBytes[catalogue.id] ?: 0L
         if (catalogue.trackCount <= 0 && archived <= 0L) return@forEach
@@ -150,10 +148,9 @@ fun StorageSection(
         )
     }
 
-    // The two downloads that arrived after this screen was written, and had no row until
-    // 2026-09-08. Neither could be deleted; worse, the song-lengths button quietly deleted the
-    // metadata as well while naming only the lengths. A download the app cannot show and cannot
-    // remove is a download the user cannot reason about.
+    // The song lengths and the songdb metadata, each with its own row and its own delete. A
+    // download the app cannot show and cannot remove is a download the user cannot reason about,
+    // and one button naming the lengths must not quietly take the metadata with it.
     if (trackMetadataCount > 0) {
         val metadataName = stringResource(R.string.track_metadata_title)
         StorageRow(

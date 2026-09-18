@@ -113,6 +113,11 @@ if [ -n "$untranslated" ]; then
     exit 1
 fi
 
+# The store listing, which is text in a directory and therefore the easiest thing in this project to
+# let drift. The fields have hard character limits and the two locales have to hold the same files;
+# both are checkable here and neither is checkable in Play Console until an upload is refused.
+"$SCRIPT_DIR/check-store-metadata.sh"
+
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
@@ -124,6 +129,21 @@ if [ -d web/node_modules/jsdom ]; then
     fi
     page_checks=$(echo "$page_output" | grep -c '✓' || true)
     echo "🖥  $page_checks page checks passed"
+fi
+
+# The engine, when one has been built. Optional for the same reason the page checks are: building
+# the WebAssembly engine needs emsdk, and somebody checking out this repository to build an APK
+# should not have to. When it is there it is part of the suite, because the two faults it guards --
+# a refusal quoting the wrong decoder (C55) and a throw crossing the boundary (C42) -- are both in
+# `native/engine/engine.cpp`, which is the file Android compiles too.
+if [ -f web/vendor/engine.mjs ]; then
+    if ! engine_output=$(node scripts/check-engine.mjs 2>&1); then
+        echo "❌ Engine checks failed:"
+        echo "$engine_output" | grep -a '✗' | sed 's/^/   /'
+        exit 1
+    fi
+    engine_checks=$(echo "$engine_output" | grep -c '✓' || true)
+    echo "🔊 $engine_checks engine checks passed"
 fi
 
 # The server, over a real socket. Needs no npm -- it is node and the standard library -- and it is

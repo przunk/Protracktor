@@ -15,6 +15,551 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A48. Two seconds pass before the playlist appears — **measured, one cause fixed 2026-09-18**
+
+*Owner, 2026-09-17, on the round-12 build: "po uruchomieniu przez 5 sekund miałem pustą listę z
+prośbą o pobranie indeksu, ale czekając te 5 s pojawiła się lista. przy drugim odpaleniu to trwało
+2s."*
+
+**The wrong screen was a defect and is fixed** (the empty playlist now says nothing until it knows
+what it is talking about). **The two seconds are not fixed, and this is that.**
+
+The five seconds on the first run are explained: that launch ran the migration from schema 14 to 16,
+and `CATALOGUE_ARCHIVE_COUNT_V16` is a `COUNT(*)` per catalogue over `catalogue_tracks` — half a
+million rows on his phone. One-off, and the price of the round's own change.
+
+The two seconds after that are not explained, and are what a person meets every time. Candidates,
+in the order worth measuring:
+
+- **`restore()`** reads the playlist and every track in it. A few hundred rows, joined and turned
+  into `TrackRef`s on the main dispatcher's turn.
+- **`pruneUnknownCatalogues()`** at start-up: a delete against a table of half a million rows, and
+  the only one of these that writes.
+- **`enforceBudget()`** walks the fetched-file cache directory.
+- **The database is 112 MB** and the first query after an upgrade reads cold pages.
+- **`summaries()` and `grantedFolders()`**, added for the empty screen's question — small, but they
+  are now on the path and should be ruled in or out rather than assumed innocent.
+
+### What the measurement said
+
+Built a `catalogue_tracks` of **516,000 rows** on this machine and timed the launch path against it.
+Desktop SQLite, so these are a floor; a phone's storage is several times slower.
+
+| | |
+| --- | --- |
+| `pruneUnknownCatalogues`, the delete over `catalogue_tracks` | **55.6 ms** |
+| the same against the `catalogues` table | 0.0 ms |
+| `summaries()` | 0.0 ms |
+| asking *whether* anything is stale, from `catalogues` | **0.0 ms** |
+| the v16 `archive_count` backfill, which ran once | 27.7 ms |
+
+**`catalogue_id NOT IN (…)` cannot use an index.** A negation indexes nothing, and since v15 the two
+browse indexes are partial (`WHERE playable = 1`), so they could not serve it even if it were
+positive. `EXPLAIN QUERY PLAN` says `SCAN catalogue_tracks`: half a million rows, **inside a write
+transaction**, on the one connection every other read at launch is queueing behind — `restore()`
+and `summaries()` both wait for it.
+
+**Fixed:** ask the `catalogues` table first, which is one row per catalogue and answers in no
+measurable time, and do the delete only when there is something to delete — which is almost never.
+`LaunchDoesNotScanTheIndexTest` holds it there as a query plan rather than a stopwatch, so it means
+the same thing on any machine.
+
+**Also fixed, while reading:** `restore()` asked `store.playlists()` twice.
+
+### What is left
+
+The rest of the two seconds is unaccounted for and the remaining candidates are unchanged:
+`tracksIn` for a long playlist, `enforceBudget()` walking the cache directory, and cold pages in a
+112 MB database. **Do not guess at those either** — the next step is a timing log around each, read
+once on a phone.
+
+## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
+
+*Owner, 2026-09-17: opening `Zalza/akes lekhorna.mod` shows the title as* **"�kes lekh�rna (za)"**,
+*with the diamond question marks.*
+
+**The tune is Swedish and the title is almost certainly "Åkes lekhörna".** Two bytes, `0xC5` and
+`0xF6`, are Å and ö in ISO-8859-1 — the encoding an Amiga tracker wrote in 1993 — and neither is
+valid UTF-8. Whatever decodes them replaces each with U+FFFD, which is the diamond.
+
+**Where it goes wrong.** `native/engine/player_oboe.cpp` hands every string over with
+`env->NewStringUTF`, which is documented to take *modified UTF-8*. A module's title is not UTF-8
+and nobody said it was: it is raw bytes from a fixed-size field in the file. The engine already
+scrubs control characters out of a title (`engine.cpp`, `title()`); it does not transcode.
+
+**What it affects.** Titles, author names, and instrument and sample names (A34) — everywhere the
+demoscene wrote in Swedish, German, Finnish or Polish, which is a great deal of Modland. The web
+player reads the same strings through `UTF8ToString` and will show the same diamonds.
+
+**The fix is transcoding, not guessing wildly.** Decode as ISO-8859-1 by default, which is right
+for Amiga trackers, and take valid UTF-8 as UTF-8 where it is unambiguous — a byte sequence that
+parses as UTF-8 almost never does so by accident. CP437 is the third candidate, for DOS trackers,
+and telling it apart from Latin-1 is a guess; do not pretend otherwise. One function in the engine,
+applied where the strings leave it, so both players get the same answer.
+
+**Check the cache key before changing anything.** Titles reach `TrackRef`, the database and the
+handoff to the browser; a title that changes shape must not change what a row is keyed on.
+
+## A46. Nobody knew they had to index anything — **one-press download BUILT 2026-09-17, branch**
+
+*Owner, 2026-09-17, from the first testing round: "użytkownicy nie wiedzieli że trzeba coś ręcznie
+indeksować — może warto na początku pobierać indeksy wszystkie w tle po pierwszym uruchomieniu?"*
+
+**The finding is real and it is the most serious of the three.** A player that opens empty, says
+"Jeszcze tu pusto" and waits is a player most people close. The two screenshots from that round show
+it exactly: an empty playlist, then Browse with three catalogues each saying "Brak indeksu — dotknij
+strzałki, aby go pobrać" — an instruction that only reads as an instruction once you already know
+what an index is.
+
+**Downloading all of them in the background on first launch is the wrong shape of the right idea**,
+for three reasons that are measurements rather than opinions:
+
+- **It is 25 MB before anybody has heard a note**, and most of it is not wanted: Modland's index is
+  5.76 MB, ASMA is a 20 MB archive, HVSC's song lengths are 5.2 MB, the songdb metadata is another
+  download again. On a phone away from wi-fi that is somebody's data, spent by an app they have had
+  for four seconds.
+- **It is a decision taken on the user's behalf and invisible while it runs.** The one thing worse
+  than an app that does nothing is an app that does something expensive without asking.
+- **`Data safety` says we fetch on demand.** Fetching four archives at startup is not that, and the
+  declaration is a promise.
+
+**The owner's answer, 2026-09-17: one button, and it fetches the lot.** That is sound, and it
+answers both objections above, because the objection was never to the downloading — it was to
+*nobody having asked*. A press is the asking. What it needs is the size on the face of it:
+`downloadEverything` runs the steps in sequence with the total (46 MB) on the button, each step
+keeping its own row spinner, and partial failure reported as partial.
+
+**The measured total, `curl -I` on 2026-09-17:** Modland 5.49 MB, ASMA 19.18 MB, UnExoticA 1.68 MB,
+HVSC 4.96 MB, songdb metadata 14.11 MB, Modland favourites 0.14 MB — **45.56 MB**. `DownloadSizes`
+rounds each part up and `DownloadSizesTest` keeps the advertised total equal to the sum, so editing
+one line cannot make the button lie.
+
+**What the button deliberately does not fetch** is sc68's replay routines. They are not an index and
+not metadata; they are binaries for one niche format, and they are the one download with a licence
+question attached (`docs/LICENSES.md`). They stay their own row.
+
+**And a sheet rather than one button, 2026-09-17.** The owner asked for the choice to be the
+user's: checkboxes, a total that follows them, and a way to stop a run. `DownloadPicker` is that
+sheet and `DownloadPlan` is the rule behind it, as a pure function so the rules can be tested
+without a screen. The one grouping decision is the owner's: **the SID song lengths and Modland's
+favourites are not boxes of their own** — they come with Modland, because neither is any use
+without the index it describes, and asking about them separately asks the user to know what HVSC
+is.
+
+**Stopping keeps what landed.** Each step writes its own table as it finishes, which is why the
+steps are sequential and separate rather than one transaction: stopping after Modland leaves
+Modland indexed. The clean-up runs under `NonCancellable`, because the spinners are state rather
+than a side effect of the coroutine — cancelled without that, every row the run had reached would
+spin until the app was restarted.
+
+**Still open, cheapest first:**
+
+1. **Offer it, don't hide it.** A first-run card on the playlist screen — "Get some music" — with
+   one primary action that indexes **Modland alone** and says its size. One tap, one download, and
+   the app is full of music. The rest stay where they are for whoever wants them.
+2. **Say what an index is, once, in a sentence.** "Katalogi trzeba raz pobrać, żeby dało się je
+   przeglądać bez sieci" is the whole idea, and it is not in the app anywhere.
+3. **Make the arrow look like a control.** `DownloadAction` is a bare arrow beside a red line of
+   text; the red reads as an error, not as an invitation. A labelled button that says *Pobierz
+   indeks (5,8 MB)* answers both the "what do I do" and the "what will it cost".
+4. **A word about metered networks.** The size is on the button, which is most of the answer;
+   saying "you are on mobile data" would be the rest of it.
+5. **Progress within a step.** A row spins; it does not say how far 19 MB of ASMA has got.
+6. **Doing it automatically** is still not the plan, and the reasons above are unchanged.
+
+**Measure before and after.** The question this answers is "did they get to music", and the release
+that answers it is the one where nobody has to be told what an index is.
+
+## A45. A jump from the playlist does not name the author the way a jump from Random does — **noted 2026-09-17**
+
+*Owner, 2026-09-17: "more from this author z poziomu playlisty powinno pokazywać tytuł (tak jak w
+przypadku użycia tej funkcji z poziomu randoma)."*
+
+The same action from two places, and only one of them says where it landed. From Random it is a
+**digression** — `showNeighboursOf` sets the session's author, the header under the bar reads
+"Browsing <author>", and there is a way back to the dice. From the playlist it is a plain jump:
+Browse opens on the folder and the bar says only "Browse".
+
+**The heading is not decoration.** It is the one thing on screen that says *whose* folder this is,
+and the owner arrives there from a tune rather than by walking the archive — so without it the
+screen answers a question he did not ask ("here is a folder") instead of the one he did ("what else
+did this person write").
+
+Two things to settle when it is picked up:
+
+- **The heading, not the digression.** A jump from the playlist has no session to return to, so it
+  should get the heading and the author's name without the dice's "waiting" state or its back path.
+  `SESSION_HEADER_HEIGHT` is shared for exactly this reason, and `arrivedByJump` already
+  distinguishes a place you were put from one you walked to.
+- **What the web does**, since it offers the same jump from the same two places
+  (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
+  differ — A43 is in the same corner of the same screen and the two may as well be one branch.
+
+## A44. UADE's process model — **the owner's to confirm, recommended 2026-09-17**
+
+Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
+guess it. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
+licence (`players/` downloaded from the page upstream publishes for it, never shipped), and the
+song database it also needs (`conf/song.conf`, GPL-2-or-later — **not** `conf/songdb` beside it,
+which is CC BY-NC-SA and cannot ship in a store app).
+
+**The recommendation is fork+exec**, with `uadecore` inside `lib/<abi>/`, and it is a recommendation
+rather than a preference because it was measured. The alternative — running `uadecore` as a thread
+in our own process, where "the seam is one function" — founders on `uade.c:476`:
+
+```c
+f = lookup_amiga_file_cache(nameptr);
+if (f == NULL) {
+        uadecore_send_debug("load: request error: %s", nameptr);
+        exit(1);
+}
+```
+
+That fires when the **emulated Amiga program asks for a file that is not there** — a replay routine
+wanting a sample that a damaged module does not carry, which is the same population of files that
+produced C42 and C55. `exit()` is not an exception, so the guard on the engine boundary catches
+nothing and the app simply disappears. Forty of the 51 exits are in that one command loop.
+
+**What confirming it costs, so the trade is visible:**
+
+| | |
+| --- | --- |
+| APK | +1.8 MB — `uadecore` 1.6 MB, `libuade` 0.17 MB |
+| the browser | **cannot have UADE at all**: `fork` and `exec` do not exist in WebAssembly |
+| so | ~29,000 tunes the phone plays and the page does not, which Browse must say out loud |
+| the alternative | patching 51 exits, which is forking a library `docs/ARCHITECTURE.md` §3 says we do not fork |
+
+**Not blocked on anything else.** Say yes and the work is the integration; say no and it is the same
+integration with a fork of UADE in front of it. `docs/PLAN_FORMATS.md` has the full reading.
+
+
+## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
+
+*Owner, 2026-09-16: on the web it "działa kiedy indeks nie jest ściągnięty — wtedy wchodzi w pusty
+folder i nic nie widać. Ta opcja powinna być zablokowana (tak jak browse konkretny folder
+modlandu)".*
+
+Confirmed by reading it: `showAuthorFolder` asks `archive.tracksIn(format, author, source)`, which
+answers out of the stored index. With no index that is an empty list, so Browse opens on the
+author's folder with nothing in it and no explanation — and the digression, if the dice was
+rolling, is handed an empty queue.
+
+**The action should be unavailable rather than silently empty**, which is the rule Browse already
+keeps for walking into a Modland folder by hand. Two things to settle while doing it:
+
+- **Where the guard goes.** `authorFolderOf` returning null is how the action already hides itself
+  for a local file, so the same answer probably serves: no index for that source, no folder. That
+  keeps one place deciding whether the action exists.
+- **Whether the phone has it too.** It offers the same jump and reads the same kind of index, and
+  the two players are meant to behave alike (`docs/SPEC_RANDOM.md`). Check before assuming it is a
+  web-only fault; if the phone guards it, copy what it does rather than inventing a second answer.
+
+A tune reached by a shared link is the case that makes this worth doing rather than shrugging at:
+somebody opening a `#play:` link has no index at all, and "more from this author" is exactly the
+thing they would try next.
+
+## A42. ~~Line the Random screen's buttons up~~ — DONE 2026-09-16
+
+*Owner, 2026-09-15, as a note to himself after the session headings were levelled: "wyrównać
+przyciski na GUI random".*
+
+**He said which on 2026-09-16, with a screenshot:** *"przycisk 'filter' i 'playlist' (wyżej) nie są
+równo i w równym rozmiarze."* Filter, in the heading, against Playlist in the bar directly above it.
+
+Measured off the screenshot rather than judged by eye — 864px wide at 2.1x — and it was **three
+faults, not one**:
+
+| | Playlist | Filter |
+| --- | --- | --- |
+| height | 134px — a 72dp pill clipped by a 64dp `TopAppBar` | 97px — 46dp, slim |
+| width | 107px — a full pill's 48dp floor, and the label needs 51 | 118px — `SLIM_MIN_WIDTH`, 56dp |
+| right edge | 32px — 8dp + 3dp seam + the bar's own 4dp | 40px — 16dp + the same seam |
+
+Both are slim pills now, so both stand 46dp tall and both sit at the 56dp floor — neither label
+needs more than that, so they come out exactly the same width rather than merely similar. And the
+bar's edge is **derived** from the heading's (`TOP_BAR_ACTION_EDGE = SESSION_HEADER_EDGE -
+TOP_APP_BAR_ACTION_PADDING`) instead of written down beside it, so moving the heading moves the bar
+with it. The 3dp seam every pill keeps inside its own bounds cancels, since both rows add it.
+
+**Not verified by rendering**: there is no emulator here (`AGENTS.md` §3), so the arithmetic is
+checked against the screenshot's pixels and the fix wants an eye on the phone.
+
+## A41. Digression mode: the dice waits while you browse an author — DONE 2026-09-14
+
+*Owner, 2026-09-14, after C49: "odtwarzam sobie random … nagle mi się jakiś spodoba. Wchodzę w more
+from this author i słucham sobie od niego cudeniek, wtedy robie wstecz … i wraca do random".*
+
+**Today a digression ends the session**: playing a tune from a Browse list moves playback to that
+list, and the dice is finished (C49 made the screen agree with that instead of lying about it).
+This makes the dice **wait** instead.
+
+- **Entered** by "More from this author" from a Random session.
+- **While digressing the heading says what is going on**, in the shape the dice's own heading has:
+  "Browsing author — <name>" where Random says "Playing at random — everything".
+- **Back returns to the dice**: the author's tune stops, the record comes back with the cursor where
+  it was, **paused** — "bo inaczej operator dostanie szoku". Play resumes that pick; next rolls.
+- **One level of digression.** Inside the author's folder, sub-folders may be opened and left again
+  up to that folder, and no higher: the way out above it is the way back to the dice.
+- **The page does the same and looks the same.** It ended the dice outright when a Browse tune
+  played, so this changed both runtimes together.
+- **It ends for good** when something else takes the player: a playlist chosen, a file handed over by
+  another app, a link opened. A way back that leads nowhere is worse than none.
+
+**Built both sides.** The phone kept the record and the cursor already; what it gained is
+`diceWaiting`, `resumeDice()` — which puts the pick back **selected, not started**, so the next press
+of play starts it through `pendingRetry` — and a Back out of the folder that returns there instead of
+to the playlist. `browseBack` already treated "More from this author" as one step rather than a
+descent, which is the one level of digression, so nothing new decides that.
+
+On the page the dice now waits inside the Browse session (`away.dice`) instead of being thrown away,
+the heading names the author, the heading's button offers the dice rather than the playlist, and
+Back out of the author's folder resumes it. Eleven page checks walk the whole journey, including a
+playlist chosen mid-digression, which ends both.
+
+## A40. Protracktor links open in the app — **parked 2026-09-14, waiting for a fixed address**
+
+*Owner, 2026-09-14: "rozpoznawanie linków do protracktora i jeśli jest APK, to otwierać w niej".*
+The fragment survives the trip into an app intact, so that is not the obstacle. The address is:
+Android binds an app to a **named** host, verified by a file served from it, and the page's tunnel
+takes a new random name every time it starts. The two shapes that work are a scheme of our own
+(`protracktor://…`), which an https link in a chat will never use, and App Links against one stable
+host with `assetlinks.json` on it. Worth doing when the page has a permanent home; brittle before
+that.
+
+## A39. An MP3's cover as a thumbnail — **parked 2026-09-14**
+
+*Owner, 2026-09-14: "okładka albumu MP3 jeśli istnieje jako miniaturka gdzieś widoku tracków".*
+Self-contained but not small: the engine reads no tags at all, so it needs an ID3v2 reader for the
+embedded picture, somewhere to cache what it decodes, and the picture shown in the rows, in Now
+Playing and in the notification. It reaches MP3s only, which is a thin slice of a library of
+modules — which is why it waits behind the three the owner chose.
+
+## A38. Share several tunes as one link — DONE 2026-09-14
+
+*Owner, 2026-09-14: "zaznaczyć kilka utworów i kliknąć share in protracktor, żeby wysłać link do
+grania tej listy".* The machinery is there: `QueueLink.pack` already packs a whole queue, and
+`play:` already marks a link as something to play rather than a queue to take over. What is missing
+is the three joins — the action on the selection bar (phone and page), a `play:` link that carries
+more than one tune, and the page playing the lot as a session beside the playlist rather than only
+the first of them.
+
+**The limit is arithmetic**: about 2,000 characters is what a link can be everywhere, which is some
+fifty tracks; past that `pack` already drops the names of files that cannot travel and says it did.
+
+## A37. Comments cut back to implementation facts — DONE 2026-09-17
+
+*Owner, 2026-09-14: he does not want entries like "owner: quote" in the source — implementation
+facts, or no comment at all, since good names beat commentary. Clean code.*
+
+**What to strip.** Quoted requests, dates, who asked for what, the argument a decision won, "this
+used to be X and it was wrong", and anything restating what the line below already says.
+
+**What to keep.** What the code cannot say about itself: a constraint that is invisible locally
+(SQLite's REPLACE deletes and cascades, so the track row is never replaced), a platform rule (a
+foreground service has about five seconds to post its notification), a measurement the choice rests
+on (buckets: 43,715 writes against 515,509), and the licence headers. Keep them as plain statements
+— the fact, not its provenance.
+
+**Where the rest belongs, so nothing is lost by deleting it:** `docs/STATUS.md` for defects and what
+caused them, `docs/BACKLOG.md` and the plans for decisions and their reasons, and git history for
+who asked and when. Every quote now in the source already has a home there or can be given one in
+the same commit that removes it.
+
+**Names first.** Where a comment explains a name, rename instead: the comment goes and the reader
+is helped everywhere the name appears, not only here.
+
+**How it was done:** one area per commit — the engine, the store, the controller, the screens, the
+page, the scripts and the tests — with the suite green after each and no behaviour changed in the
+same commit as a comment change.
+
+**What it found on the way.** Eight KDoc blocks had come loose from what they described and were
+attached to the wrong declaration or to none: the in-flight-open and read-ahead notes in
+`PlaybackController`, `postQueue`'s `@param`, a stale `deletePlaylist` doc still claiming the last
+playlist cannot be deleted, the CX40 and link notes in `PlayerIcons`, the track-list and track-row
+notes in `BrowseScreen`, and one in `WebRemoteTest` sitting on the wrong test. Each is now on the
+declaration it belongs to. One comment was stale and contradicted the code: `StorageSection` said
+it lived in Browse "rather than in a settings screen", and `SettingsScreen` draws it.
+
+**Where the findings went.** The seek rule rescued from a deleted comment is `docs/ARCHITECTURE.md`
+§5; the fallback length points at C56; the CORS-with-a-GET rule is in `web/src/catalogue.js` and
+`docs/PLAN_CATALOGUES.md`. Everything else that was provenance is in the commits that removed it.
+
+## A36. A gear beside shuffle, opening the page's settings — DONE 2026-09-14
+
+*Owner, 2026-09-14: "możesz dodać koło zębate, które otworzy ustawienia WEB po lewej stronie od
+shuffle (w przyszłości użyjemy)".* A way in, to be filled later; the storage line and the engine's
+backends are what there already is to show. Last of the seven in `docs/PLAN_ROUND_9.md`.
+
+## A35. "Add to playlist" in the web's track menu — DONE 2026-09-14
+
+*Owner, 2026-09-14: "3 kropki (ustawienia) tracka nie mają opcji add to playlist jak w APK -> ma
+działać tak samo jak w APK".* The page can only add by ticking rows first; the phone's row menu
+opens the picker for that one track. Same item, same picker.
+
+## A34. Instrument and sample names in Now Playing — DONE, tested 2026-09-15
+
+*Owner, 2026-09-11: "czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach
+kodują treść".* The whole plan, with the owner's three worries and their answers, is in
+`docs/PLAN_INSTRUMENT_NAMES.md`, written first so it can be picked up cold. Merged, and the owner
+confirmed it on the phone on 2026-09-15: *"przetestowane - pięknie jest"*.
+
+## A33. Whether the page's Browse lists should stop writing into the playlist — DONE 2026-09-11, the phone's way
+
+**Decided by the owner on 2026-09-11, by using it.** He searched "zool", pressed `zoolook.mod`, and
+found the playlist he had made earlier replaced by every result on the screen: *"zupełnie nie tak
+działa to w APK."* What he expected, in his order: a search shows tunes, not folders; pressing one
+plays it, with Add and the other actions beside it; and when he is done browsing, the playlist holds
+what it held before plus exactly the tunes he added.
+
+**Built on `feature/web-browse-transient`** (`docs/PLAN_WEB_LIBRARY.md` S4c): every Browse list plays
+through the transient session History and Random use, Browse became a screen with the dock under it
+rather than a dialog over it, Add appends to the playlist and waits for Save, and S4a's block went
+with nothing left to block. The question as it was put is kept below.
+
+*Raised by `GOAL.md` round 8 on 2026-09-11, while building item 4.*
+
+On the phone, playing from any Browse list — a folder, a search, History — plays through a queue of
+its own and leaves the playlist exactly as it was; the playlist goes behind glass until you come
+back. **On the page, a folder or a search result replaces the playlist that is showing** — which is
+why Browse is shut while "From the phone" is up (`docs/PLAN_WEB_LIBRARY.md` S4a), the rule the owner
+asked for when he first used it.
+
+Round 8 asked for History to play "without writing into the playlist", and it does: it uses the
+transient session Random built (item 3), with a heading and a way back. So the page now has both
+behaviours at once — History and Random leave the playlist alone; a folder and a search result
+replace it.
+
+**Which he wants for the rest is his to choose:**
+
+- **Leave it.** Browse fills a playlist on the page, which is a way of *building* one; History and
+  Random are listening, not building.
+- **Make the page match the phone.** Every Browse list plays transiently, the way History now does,
+  and filling a playlist becomes an explicit "add". The S4a block would then have nothing left to
+  block.
+
+The machinery for the second exists since item 3; the decision is about what Browse is *for*.
+
+## A32. ~~ZXTune in the browser's engine~~ — DONE 2026-09-15
+
+*Raised by `GOAL.md` round 8 on 2026-09-11, which was told to record it rather than decide it.*
+
+The web engine was built with `-DPROTRACKTOR_WITH_ZXTUNE=OFF`, and since round 8 item 1 the page
+indexes only what it can play, so the absence had become a number on the screen: **26,537 of
+Modland's tunes played on the phone and not in the browser** — `pt3` 7,376, `pt2` 6,284, `ym` 4,977,
+`stc` 3,639 and the rest of the Spectrum's formats.
+
+*Everything from here to the answer below is what was written **before anybody tried the build**,
+and it is kept because the lesson is in it.* The reason it was off, inherited from a comment in
+`web/src/app.js`: ZXTune does not build under Emscripten as it stands, and making it build means
+patching a library `docs/ARCHITECTURE.md` §3 says this project does not fork.
+
+So the question was thought not to be "switch it on" but **one of**:
+
+- keep it off, and the browser stays a player for everything but the Spectrum — said plainly in
+  Browse, which is what item 1 delivers;
+- carry a patch to ZXTune for the wasm build, against the no-fork rule, and measure what it adds to
+  the engine's 2.6 MB;
+- find the smaller piece — `ym` and `vtx` are register dumps rather than trackers, 5,856 tunes
+  between them, and their decoder may be separable from the rest.
+
+### The answer, 2026-09-15: the second option, and it cost eight lines
+
+**The owner said do it — "można zrobić" — and the first thing to do was read a real log rather than
+that comment.** ZXTune under Emscripten fails on **eight lines in five files**, every one a `const auto*` initialised from a
+`std::string_view` iterator: a raw pointer in the NDK's libc++, a `__wrap_iter` in Emscripten's,
+where ABI version 2 makes it one deliberately so that code cannot rely on the detail. Nothing was
+reimplemented, no logic changed, and Android compiles the same sources.
+
+The patch lives in `scripts/fetch-zxtune.py` rather than in the tree, because a fetch re-clones the
+directory and a hand edit would vanish; each entry states how many times it expects to match, which
+caught a real mistake — one pattern occurs **twice** in `encoding.cpp` and a blind replace had
+quietly done both.
+
+The page needed **no change at all**: `absentDecoders()` reads the engine's own fingerprint, so the
+decoder turning up there is the integration. Measured cost: **2.65 MB → 3.21 MB** over the wire,
++21%, for **26,537 Modland tunes**. `.pt3`, `.asc` and `.stp` were played through the built engine,
+so this is "plays" rather than "links". `docs/PLAN_WEB.md` §14 has the detail.
+
+**The order of work it was done in**, written before any of it and worth keeping because three of
+the four steps turned out to be unnecessary:
+
+1. **Try the build first**, unpatched, and find out exactly what fails — rather than trusting the
+   comment. *This step was the whole answer.*
+2. **If it does not build, size the patch** before arguing about it: a portability fix is not a
+   fork, a reimplemented backend is, and `docs/ARCHITECTURE.md` §3 forbids only the second. *Eight
+   lines, none of them logic.*
+3. **Measure what it costs the page**, because every byte is paid on first load. *+21%.*
+4. **`ym`/`vtx` alone is the fallback**, not the goal — 5,856 of the 26,537. *Not needed.*
+
+**The general lesson, which is the reason this entry keeps its old reasoning**: "it does not build"
+sat in a comment for a week and was repeated into three documents without anybody running the
+command. The cost of checking was one configure and one build.
+
+## A31. Haptics on the seven places he named — DONE 2026-09-10
+
+*Owner, 2026-09-10, after feeling what A8 had built and finding it too sparse.* Four asked for
+plainly, three offered as an "accent" — his word — and all seven built.
+
+**This overturns A8's closing rule**, which forbade haptics on anything with a visible result. What
+survives of that rule is its reason: haptics everywhere is noise, and noise is what makes somebody
+turn the setting off system-wide, at which point the useful ones go too. So the answer is not "no",
+it is **weight** — the buzzes that carry information a finger cannot otherwise get keep the firm
+effects, and the ones he asked for as accents get the lightest the platform has.
+
+The vocabulary in `ui/Haptics.kt` grew from three to eight, each with a fallback because `minSdk`
+is 29 and the interesting constants arrived in API 30 and 34:
+
+| | effect (API 34 / 30 / 29) | where |
+|---|---|---|
+| `press()` | `CONFIRM` / `CONFIRM` / `KEYBOARD_TAP` | indexing arrows, the replay row, the pairing camera, play-pause, next, previous |
+| `toggle(on)` | `TOGGLE_ON`,`TOGGLE_OFF` / `CONTEXT_CLICK` | shuffle, repeat, the two Settings switches, the segmented pickers, the selection checkboxes |
+| `grab()` | `DRAG_START` / `GESTURE_START` / `LONG_PRESS` | taking hold of the seek thumb |
+| `scrub()` | `SEGMENT_FREQUENT_TICK` / `CLOCK_TICK` | each notch while dragging it |
+| `transition()` | `CLOCK_TICK` | arriving at another view, another folder |
+| `tick()` | `SEGMENT_TICK` / `CONTEXT_CLICK` | a row that actually changed places *(fallback strengthened from `CLOCK_TICK`: this says a thing happened, and on an older phone the old one was faint enough to be missed under a moving thumb)* |
+| `pick()` | `SEGMENT_TICK` / `CLOCK_TICK` | a subsong chosen from the strip |
+
+**Four more the same day, after he felt the first seven.** *"Delikatnie na subsong, mocniej na
+przyciski funkcyjne save revert…, track song"*, and a question about the list:
+
+- **Function buttons** — `LabelledAction` is the shape every one of them wears, so the press lives
+  there and reaches Save, Discard, the five track actions in Now Playing, and the two bulk actions
+  in the playlist at once. **The three that navigate pass `haptic = null`**: arriving already
+  buzzes, and two buzzes for one press reads as a stutter rather than as emphasis. Its long press
+  gained `gestureEnd()`, which closes the loose end A8 left open — a long press with no answer
+  feels like a press that missed.
+- **Choosing a tune** — `press()`, the firm one, on the tap this whole screen exists for. The same
+  tap while selecting is a tick in a box instead, so it feels like the checkbox beside it.
+- **Long press that starts a selection** — `gestureEnd()`. A8 owed this since 2026-09-01.
+- **Subsongs** — `pick()`, and nothing at all for the one already playing.
+
+### A31a. ~~A notch per row while a list is dragged~~ — BUILT AND REMOVED, same day
+
+*His question:* "czy na przesuwanie listy też sugerujesz dać coś super delikatnego ale «rzadko» po
+przewinięciu 1 wiersza". *His answer, once he had felt it:* **"wywal to przewijanie bo nie jest
+fajne."**
+
+Built as `HapticOnRowScroll`: one `scrub()` per row, and only while the finger was down, so a fling
+across fifty rows would not fire fifty times. The care went into the right problem and the thing
+was still wrong — a list is a surface you read, and giving it a texture makes reading it feel like
+operating it.
+
+**Kept here rather than deleted** because the idea is an obvious one to have twice. It was tried, it
+worked as designed, and as designed it was not nice. The divisor this entry once proposed as the
+fix would not have saved it; less of something unpleasant is not pleasant.
+
+### A31b. The follow-track button had none
+
+*Moot since the evening of 2026-09-10: the button itself was removed, replaced by lists that keep
+the playing row in view on their own (`docs/WISHLIST.md` B14). Kept so the haptics table above
+does not appear to have lost a row without a reason.*
+
+*Owner, 2026-09-10: "dodaj też do «follow current track» bo dalej nie ma".*
+
+`toggle(on = true)` on the press, and deliberately **nothing when following switches off** — that
+happens because the user dragged the list, and a buzz mid-scroll would be answering a gesture
+nobody aimed at the button. On is a press; off is a side effect of looking somewhere else.
+
 ## A1. ~~Search results need the path too, and a way to hear a track first~~ — DONE 2026-09-02
 
 
@@ -242,8 +787,13 @@ would have been useful. So the list is short on purpose:
   that failed.
 - **Swipe past the snackbar's dismiss threshold** — it already fades; a tick says "let go now".
 
-And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
-result. The screen already answered.
+~~And deliberately **not**: play, pause, next, previous, shuffle, repeat, or anything with a visible
+result. The screen already answered.~~
+
+**The owner reversed this on 2026-09-10 — see A31.** He asked for haptics on the transport, on
+moving between views and folders, and on holding the seek bar: exactly the list this paragraph
+ruled out. He is the one holding the phone; this was written from the armchair. The reasoning
+behind the rule survives as *weight* rather than as a ban, which A31 sets out.
 
 **Implementation notes.** Compose's `LocalHapticFeedback` offers only `LongPress` and
 `TextHandleMove`, which is thin. The richer constants live on `View.performHapticFeedback` —
@@ -297,6 +847,11 @@ would be a list of URLs plus local files that cannot travel. Not in scope here.
 — and what to do with it is the recipient's business. So Modland's track URL stays as it is, and
 the reason ASMA cannot have one (it publishes an archive, not a file tree) is now the whole reason
 its share names the collection and the path instead.
+
+**Corrected 2026-09-11: ASMA does have one.** Every file is served at its zip entry's own path under
+`https://asma.atari.org/`, with CORS open — measured, not assumed, when the web player took ASMA on
+(`docs/PLAN_WEB_LIBRARY.md` S7). So ASMA's link is now the file, exactly like Modland's, and the
+"collection and path" fallback is left for a catalogue that really has no per-file address.
 
 ## A11. ~~Random should read ahead, the way the playlist does~~ — DONE 2026-09-02
 
@@ -402,7 +957,7 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 - ~~**The launcher icon** (A9)~~ — done 2026-09-03: an adaptive icon with a monochrome layer for
   themed icons, at every density.
 - ~~**A privacy policy and a data-safety declaration.**~~ **Written 2026-09-04** as round 6 item 5:
-  `docs/PRIVACY.md` is the policy, publishable at its own GitHub URL, and `docs/PLAY_STORE.md`
+  `store/privacy-policy.md` is the policy — one copy, bilingual — and `docs/PLAY_STORE.md`
   answers the data-safety form row by row. Both claims were checked against the source rather than
   assumed — no analytics SDK, no identifier read anywhere, five network hosts and all of them
   archives. `ACCESS_NETWORK_STATE` was found declared and unused, and removed.
@@ -418,13 +973,13 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
 - ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
   count now and nobody has to remember it.
 
-- **`docs/letters/` before the repository goes public.** The listing points at the source, so
-  publishing the app publishes the repository, and that directory holds correspondence with other
-  projects' maintainers. It is gitignored as of 2026-09-05, which only stops new ones — the five
-  already committed are in the history. The owner's decision is to rewrite it and force-push;
-  `docs/PLAY_STORE.md` has the command, tried on a copy. **It does not remove the quotations** —
-  Heikki Orsila's and Matti Tiainen's replies are quoted verbatim in `LICENSES.md`,
-  `PLAN_FORMATS.md` and several commit messages, and those are the words that are not ours.
+- ~~**`docs/letters/` before the repository goes public.**~~ **Done.** The directory is gitignored
+  as of 2026-09-05 and was filtered out of the history and force-pushed; no commit on any branch,
+  local or on the remote, has ever named a file under it — checked, not assumed. The separate half
+  — what the letters *established*, reported in `LICENSES.md` and `PLAN_FORMATS.md` — was settled in
+  two passes: their sentences on 2026-09-05, their attribution and the personal address on
+  2026-09-15. `docs/PLAY_STORE.md` has the rule that came out of it and what the history still
+  holds.
 
 **Not started, and not to be started without the owner**: publishing is his account, his key and
 his name on the listing.

@@ -22,11 +22,9 @@ object SupportedFormats {
         // The mainstream trackers
         "mod", "xm", "s3m", "it", "mptm",
         // Amiga and Atari lineage
-        // "ahx" and "hvl" were here from the start on the assumption that libopenmpt handled them.
-        // It does not -- no AHX loader exists in its source -- so they were removed on 2026-09-04
-        // after measuring 0 of 12 and 0 of 6. They are back because HivelyTracker's replayer is now
-        // a backend, and this time the number is 80 of 80: loaded from a buffer, audible, and
-        // reaching a song end (`docs/PLAN_FORMATS.md` §6). Identified by content -- "THX" and "HVL"
+        // libopenmpt has no AHX loader, so these two play only because HivelyTracker's replayer
+        // is a backend: 80 of 80 loaded from a buffer, audible, and reaching a song end
+        // (`docs/PLAN_FORMATS.md` §6). Identified by content -- "THX" and "HVL"
         // at offset zero -- so these two only decide what a folder scan picks up.
         "ahx", "hvl",
         "med", "okt", "dbm", "digi", "stk", "sfx", "ice", "gmc", "unic", "kris",
@@ -72,10 +70,9 @@ object SupportedFormats {
         // Vendoring lhasa made ZXTune's `ym_vtx` decoder buildable -- Modland's YM files are
         // LHA-packed -- and the measurement is 20 of 20 and 20 of 20 (`docs/PLAN_FORMATS.md` §8).
         //
-        // **"vtx" is new here, and it costs a re-index.** Adding a name changes `fingerprint`, so
-        // every stored index goes stale and the owner downloads Modland's 40 MB again. It buys 879
-        // files that play, which is the version of that bargain worth taking -- the one C20 argued
-        // against was paying the same price to *remove* rows.
+        // Adding a name changes `fingerprint` and costs every stored index a re-download. "vtx"
+        // buys 879 files that play, which is the side of that bargain worth taking; C20 argued
+        // against paying the same price to *remove* rows.
         "ym", "vtx",
         // Commodore 64, through libsidplayfp. Identified by a four-byte magic, so these extensions
         // only decide what a folder scan picks up.
@@ -88,10 +85,10 @@ object SupportedFormats {
      * Names this build can play that **no catalogue carries**.
      *
      * **A separate set, and the separation is the whole point.** `extensions` is what a catalogue
-     * index is filtered through *and* what `fingerprint` is computed from, so a name added there
-     * marks every stored index stale — the owner re-downloads Modland's 40 MB. Modland, ASMA, The
-     * Mod Archive and UnExoticA hold no MP3 between them, so putting `.mp3` in that list would cost
-     * a re-index to gain nothing (`docs/BACKLOG.md` A29).
+     * index is judged against *and* what `fingerprint` is computed from, so a name added there
+     * marks every stored index stale. Modland, ASMA, The Mod Archive and UnExoticA hold no MP3
+     * between them, so `.mp3` in that list would cost a re-index to gain nothing
+     * (`docs/BACKLOG.md` A29).
      *
      * A folder scan does not consult either list: it opens every file and lets the decoder answer
      * (`MediaScanner.listFiles`), which is why an MP3 in a scanned folder needs nothing here at all.
@@ -131,10 +128,9 @@ object SupportedFormats {
      *
      * An index — of a folder or of an online catalogue — is filtered at build time to names this
      * object accepts, so it is only as good as **this list** and the decoders together. Recording
-     * only the decoders was half the truth and the half that had not yet bitten: on 2026-09-04
-     * five names were added for formats libopenmpt had been able to play all along, and every
-     * existing index was instantly missing 5,558 Modland files while still reporting itself
-     * current, because no decoder had changed.
+     * the decoders alone is half the truth: adding five names for formats libopenmpt could already
+     * play left every existing index missing 5,558 Modland files while reporting itself current,
+     * because no decoder had changed.
      *
      * Order-independent and cheap, so adding a name here is all it takes to invalidate what the
      * name would have changed. It is a fingerprint, not a checksum: it only has to differ when the
@@ -161,11 +157,26 @@ object SupportedFormats {
      * **The narrower question, and the one `fingerprint` is about.** Half a million Modland paths
      * are filtered through this; a name that no archive carries only costs disk and a re-index.
      */
-    fun inCatalogueIndex(fileName: String): Boolean {
+    fun inCatalogueIndex(fileName: String): Boolean =
+        extensionOf(fileName) in extensions || prefixOf(fileName) in prefixes
+
+    /**
+     * The two halves a name is judged by, **kept apart from the judging**.
+     *
+     * A catalogue index stores these beside every row and decides playability from them at read
+     * time (`docs/ROADMAP_FORMATS.md` step 0). That is the whole point: they depend on the
+     * *filename* and not on this list, so adding a format re-decides 516,107 stored rows with one
+     * `UPDATE` — 228ms, measured — instead of asking every user to download Modland's 40 MB again.
+     *
+     * Empty when there is none, and empty is in neither set, so an empty answer is simply not a
+     * match. `mod.title` has a prefix and no extension worth having; `tune.mod` the reverse; a name
+     * with no dot at all has neither.
+     */
+    fun extensionOf(fileName: String): String =
+        fileName.lowercase().substringAfterLast('.', "")
+
+    fun prefixOf(fileName: String): String {
         val name = fileName.lowercase()
-        val extension = name.substringAfterLast('.', "")
-        if (extension.isNotEmpty() && extension in extensions) return true
-        val prefix = name.substringBefore('.', "")
-        return prefix.isNotEmpty() && name.contains('.') && prefix in prefixes
+        return if (name.contains('.')) name.substringBefore('.', "") else ""
     }
 }

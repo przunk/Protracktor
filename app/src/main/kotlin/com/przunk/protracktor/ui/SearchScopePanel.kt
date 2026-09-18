@@ -153,10 +153,9 @@ private fun ScopeTile(
 /**
  * One row that scrolls sideways, for both chip lists.
  *
- * This was a wrapping grid first, on the argument that a horizontal row hides its own contents. The
- * owner ran it and the argument lost: thirteen platforms wrap to four rows, and with the field and
- * the tiles above them **two results were left visible**. A filter that costs you the answer is
- * worse than one you have to drag.
+ * Not a wrapping grid, although a horizontal row does hide its own contents: thirteen platforms
+ * wrap to four rows, and with the field and the tiles above them that leaves **two results
+ * visible**. A filter that costs you the answer is worse than one you have to drag.
  *
  * The order is fixed — biggest share of the archive first — so the chips that matter are the ones
  * you reach without dragging, and nothing moves as an index grows.

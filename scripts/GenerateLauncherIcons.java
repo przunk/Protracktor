@@ -10,6 +10,7 @@
  */
 
 import java.awt.Color;
+import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
@@ -23,6 +24,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import javax.imageio.ImageIO;
 
 public final class GenerateLauncherIcons {
@@ -36,6 +38,16 @@ public final class GenerateLauncherIcons {
     private static final Color FOREGROUND = Color.decode(FOREGROUND_HEX);
     private static final Color DARK_CELL = Color.decode(DARK_CELL_HEX);
     private static final Color LIGHT_CELL = Color.decode(LIGHT_CELL_HEX);
+
+    // Google Play's two fixed sizes. The store icon is the launcher icon at 512 px and opaque:
+    // Play rounds the corners itself and refuses transparency, and an icon that differs from the
+    // one on the phone is an icon somebody installs twice by accident.
+    private static final int STORE_ICON_SIZE = 512;
+    private static final int FEATURE_WIDTH = 1024;
+    private static final int FEATURE_HEIGHT = 500;
+    // The far corner of the feature graphic's wash, a few points off the background rather than a
+    // different colour: enough to stop 1024x500 of flat near-black reading as a rendering fault.
+    private static final Color FEATURE_WASH = Color.decode("#0B1220");
 
     private GenerateLauncherIcons() {}
 
@@ -74,7 +86,13 @@ public final class GenerateLauncherIcons {
         Files.createDirectories(artwork);
         writePng(artwork.resolve("protracktor-launcher-icon-512.png"), 512, false, logo);
 
-        System.out.println("Generated adaptive vectors, 10 fallback PNGs, and the 512 px artwork.");
+        Path graphics = root.resolve("store/graphics");
+        Files.createDirectories(graphics);
+        writeStoreIcon(graphics.resolve("play-store-icon-512.png"), logo);
+        writeFeatureGraphic(graphics.resolve("feature-graphic-1024x500.png"), logo);
+
+        System.out.println("Generated adaptive vectors, 10 fallback PNGs, the 512 px artwork,");
+        System.out.println("and store/graphics: play-store-icon-512.png, feature-graphic-1024x500.png");
     }
 
     private static Logo createLogo() {
@@ -184,6 +202,144 @@ public final class GenerateLauncherIcons {
             throw new IllegalStateException("Launcher mark is missing or too small in " + output);
         }
         ImageIO.write(image, "png", output.toFile());
+    }
+
+    /**
+     * The 512 px icon Google Play asks for.
+     *
+     * The same square as the launcher's own fallback PNG, drawn opaque. Play masks the corners and
+     * casts the shadow itself, so neither is baked in, and `TYPE_INT_RGB` is what guarantees the
+     * file carries no alpha channel for Play to refuse.
+     */
+    private static void writeStoreIcon(Path output, Logo logo) throws IOException {
+        BufferedImage image = new BufferedImage(STORE_ICON_SIZE, STORE_ICON_SIZE, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        try {
+            quality(graphics);
+            graphics.setColor(BACKGROUND);
+            graphics.fillRect(0, 0, STORE_ICON_SIZE, STORE_ICON_SIZE);
+            graphics.scale(STORE_ICON_SIZE / VIEWPORT, STORE_ICON_SIZE / VIEWPORT);
+            graphics.translate(VIEWPORT / 2, VIEWPORT / 2);
+            graphics.scale(MARK_SCALE, MARK_SCALE);
+            graphics.translate(-VIEWPORT / 2, -VIEWPORT / 2);
+            paintMark(graphics, logo);
+        } finally {
+            graphics.dispose();
+        }
+        requireMark(image, output);
+        ImageIO.write(image, "png", output.toFile());
+    }
+
+    /**
+     * The 1024x500 feature graphic.
+     *
+     * **No text on it, deliberately.** Play crops this differently on every surface it appears on
+     * and overlays a play button on some of them, a word would have to exist in both listing
+     * languages, and the font a headless container happens to have is not a thing to make a brand
+     * depend on. What is left is the mark and the pattern it is made of.
+     *
+     * The mark sits left of centre, clear of the edges. The pattern field to its right is the same
+     * tracker cells the letter is built from, laid on a fixed grid and faded out towards the edge,
+     * so the graphic reads as one idea rather than as a logo on a background.
+     */
+    private static void writeFeatureGraphic(Path output, Logo logo) throws IOException {
+        BufferedImage image = new BufferedImage(FEATURE_WIDTH, FEATURE_HEIGHT, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        try {
+            quality(graphics);
+            graphics.setPaint(new GradientPaint(0, FEATURE_HEIGHT, BACKGROUND, FEATURE_WIDTH, 0, FEATURE_WASH));
+            graphics.fillRect(0, 0, FEATURE_WIDTH, FEATURE_HEIGHT);
+
+            paintPatternField(graphics);
+
+            // Measured off the geometry rather than guessed, so moving a channel moves the mark
+            // with it instead of leaving it a few pixels off centre.
+            Rectangle2D bounds = logo.body().shape().getBounds2D();
+            bounds = bounds.createUnion(logo.darkCells().shape().getBounds2D());
+            bounds = bounds.createUnion(logo.lightCells().shape().getBounds2D());
+
+            double markHeight = FEATURE_HEIGHT * 0.62;
+            double scale = markHeight / bounds.getHeight();
+            double left = FEATURE_WIDTH * 0.11;
+            double top = (FEATURE_HEIGHT - markHeight) / 2.0;
+            graphics.translate(left - bounds.getX() * scale, top - bounds.getY() * scale);
+            graphics.scale(scale, scale);
+            paintMark(graphics, logo);
+        } finally {
+            graphics.dispose();
+        }
+        requireMark(image, output);
+        ImageIO.write(image, "png", output.toFile());
+    }
+
+    /**
+     * Cells on a fixed grid, fading east.
+     *
+     * Deterministic: a fixed seed, so running the generator twice produces the same file and a
+     * change in the image is always a change somebody made.
+     */
+    private static void paintPatternField(Graphics2D graphics) {
+        Random pattern = new Random(19_840_217L);
+        double columnWidth = 46;
+        double columnGap = 26;
+        double cellHeight = 20;
+        double cellGap = 12;
+        double firstColumn = FEATURE_WIDTH * 0.42;
+        for (double x = firstColumn; x < FEATURE_WIDTH + columnWidth; x += columnWidth + columnGap) {
+            double distance = (x - firstColumn) / (FEATURE_WIDTH - firstColumn);
+            double offset = pattern.nextDouble() * (cellHeight + cellGap);
+            for (double y = -offset; y < FEATURE_HEIGHT; y += cellHeight + cellGap) {
+                if (pattern.nextDouble() < 0.34) {
+                    continue;
+                }
+                Color colour = switch (pattern.nextInt(3)) {
+                    case 0 -> FOREGROUND;
+                    case 1 -> LIGHT_CELL;
+                    default -> DARK_CELL;
+                };
+                // Bright near the mark, gone by the far edge, and never solid enough to compete
+                // with the letter itself.
+                double alpha = 0.30 * (1.0 - distance) * (1.0 - distance);
+                graphics.setColor(new Color(colour.getRed(), colour.getGreen(), colour.getBlue(),
+                        (int) Math.round(Math.max(0, alpha) * 255)));
+                graphics.fill(new Rectangle2D.Double(x, y, columnWidth, cellHeight));
+            }
+        }
+    }
+
+    private static void quality(Graphics2D graphics) {
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        graphics.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+    }
+
+    private static void paintMark(Graphics2D graphics, Logo logo) {
+        graphics.setColor(FOREGROUND);
+        graphics.fill(logo.body().shape());
+        graphics.setColor(DARK_CELL);
+        graphics.fill(logo.darkCells().shape());
+        graphics.setColor(LIGHT_CELL);
+        graphics.fill(logo.lightCells().shape());
+    }
+
+    /** The same guard the launcher PNGs carry: an empty canvas is a silent failure. */
+    private static void requireMark(BufferedImage image, Path output) {
+        long markPixels = 0;
+        int foregroundRgb = FOREGROUND.getRGB() & 0x00FFFFFF;
+        int darkCellRgb = DARK_CELL.getRGB() & 0x00FFFFFF;
+        int lightCellRgb = LIGHT_CELL.getRGB() & 0x00FFFFFF;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int rgb = image.getRGB(x, y) & 0x00FFFFFF;
+                if (rgb == foregroundRgb || rgb == darkCellRgb || rgb == lightCellRgb) {
+                    markPixels++;
+                }
+            }
+        }
+        long pixels = (long) image.getWidth() * image.getHeight();
+        if (markPixels < pixels / 100L) {
+            throw new IllegalStateException("The mark is missing or too small in " + output);
+        }
     }
 
     private static void writeVectorResources(Path resources, Logo logo) throws IOException {

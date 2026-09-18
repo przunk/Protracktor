@@ -6,11 +6,10 @@ package com.przunk.protracktor.data
 /**
  * Modland's own favourites list, as parsing and nothing else.
  *
- * The owner asked for "random, but only tunes considered good", and the honest reading of that is
- * **somebody else's judgement, published** — not a rating this app invents. Modland keeps a
- * favourites list; `audacious-uade-tools` republishes it as one tab-separated file, which is the
- * same repository and the same licence as the metadata table next door (GPL-2.0-or-later,
- * `docs/LICENSES.md`).
+ * "Only tunes considered good" is **somebody else's judgement, published** — not a rating this app
+ * invents. Modland keeps a favourites list; `audacious-uade-tools` republishes it as one
+ * tab-separated file, from the same repository and under the same licence as the metadata table
+ * next door (GPL-2.0-or-later, `docs/LICENSES.md`).
  *
  * ### The file, and the trap in it
  *

@@ -26,8 +26,8 @@ tar -cf - --exclude='*.tar.gz' --exclude='node_modules' web | tar -xf - -C "$STA
 cp scripts/serve-web.mjs "$STAGE/protracktor-web/scripts/"
 cp docs/WEB_SERVER.md "$STAGE/protracktor-web/README.md"
 
-# A `.mjs` is a module, not a program: running it needs `node` in front, and the owner met that as
-# "Permission denied" followed by "command not found" under sudo. One line of shell removes the
+# A `.mjs` is a module, not a program: running it needs `node` in front, and without this it fails
+# as "Permission denied" and then "command not found" under sudo. One line of shell removes the
 # question.
 cat > "$STAGE/protracktor-web/run.sh" <<'RUN'
 #!/usr/bin/env sh

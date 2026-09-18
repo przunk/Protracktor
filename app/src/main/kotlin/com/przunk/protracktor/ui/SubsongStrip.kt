@@ -33,15 +33,13 @@ import com.przunk.protracktor.R
 /**
  * The tunes inside one file.
  *
- * `docs/BACKLOG.md` A2. A SAP holding fifteen tunes played exactly one of them until now, and the
- * owner's own example — Tactic — is one of those. Console formats are worse: a GBS in the sample
- * reported 99 and an HES 256.
+ * `docs/BACKLOG.md` A2. Without it a SAP holding fifteen tunes plays exactly one of them. Console
+ * formats hold more: a GBS in the sample reported 99 subsongs and an HES 256.
  *
- * **It lives on Now Playing and nowhere else**, which is the owner's constraint (c): that
- * screen *is* the track, so a strip there covers nothing. It appears only when there is more than
- * one tune, so a MOD's view is exactly what it was.
+ * **It lives on Now Playing and nowhere else**: that screen *is* the track, so a strip there covers
+ * nothing. It appears only when there is more than one tune, so a MOD's view is unchanged.
  *
- * The mode beside it is constraint (b) and it is **global**, like shuffle and repeat: it decides
+ * The mode beside it is **global**, like shuffle and repeat: it decides
  * whether one tune runs into the next and whether the transport walks them. Manual selection here
  * works in either mode — the mode governs what happens on its own, not what the user may choose.
  */
@@ -57,6 +55,7 @@ internal fun SubsongStrip(
 ) {
     if (count <= 1) return
 
+    val haptics = rememberHaptics()
     val listState = rememberLazyListState()
 
     // Which tune the strip last moved for. Reset per file, because a new file's strip starts
@@ -65,11 +64,11 @@ internal fun SubsongStrip(
 
     // **Follows the music only while you are watching the music.**
     //
-    // It used to follow unconditionally, and the owner found what that costs: scroll out to tune
-    // 240 of 256 to see what is there, and the moment the current tune ends the strip yanks itself
-    // back to tune 68 — so reading the far end of a long file is impossible while it plays. Worse,
-    // `bringIntoView` scrolls the item to the *start* of the view, so even an ordinary advance
-    // dragged the whole strip and put everything before the playing tune out of reach.
+    // Following unconditionally costs too much: scroll out to tune 240 of 256 to see what is
+    // there, and the moment the current tune ends the strip yanks itself back to tune 68, so
+    // reading the far end of a long file while it plays is impossible. Worse, `bringIntoView`
+    // scrolls the item to the *start* of the view, so even an ordinary advance drags the whole
+    // strip and puts everything before the playing tune out of reach.
     //
     // The signal for "am I watching the music" is the playing chip itself: if the tune that just
     // finished was on screen, the user is looking at the playing area and following is what they
@@ -97,6 +96,9 @@ internal fun SubsongStrip(
                     if (playAll) R.string.subsongs_all else R.string.subsongs_first_only
                 ),
                 onClick = onTogglePlayAll,
+                // A function button by shape, a toggle by meaning — and the label changes with it,
+                // so the finger may as well be told which way it went.
+                haptic = { toggle(!playAll) },
             )
         }
 
@@ -119,7 +121,12 @@ internal fun SubsongStrip(
                             },
                             CircleShape,
                         )
-                        .clickable { onSelect(index) },
+                        .clickable {
+                            // *"Delikatnie na subsong."* And nothing at all for the one already
+                            // playing: pressing it changes nothing, and a buzz would say it had.
+                            if (!selected) haptics.pick()
+                            onSelect(index)
+                        },
                 ) {
                     Text(
                         text = "${index + 1}",

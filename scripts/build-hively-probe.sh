@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fetch HivelyTracker's standalone replayer and build the probe against it, twice.
 #
-# `GOAL.md` round 6 item 1 says to prove a backend on the host before integrating it. This is the
+# A backend is proved on the host before it is integrated. This is the
 # cheapest of the five that have been through it: `hvl2wav/` is three source files -- `replay.c`,
 # `replay.h`, `types.h` -- with no build system to configure, no second process, no replay binaries
 # and no library to link. BSD 3-Clause, so the licence question that cost a day on sc68 and UADE

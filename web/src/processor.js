@@ -105,9 +105,19 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
       this.port.postMessage({ type: 'failed', reason: `the engine did not load: ${error}` });
     });
 
+    // **A message that throws must not take the worklet with it** (`docs/STATUS.md` C42). The
+    // engine's own boundary catches what a decoder throws, so this is the second line: whatever is
+    // left -- a message this build does not understand, a failure inside the module glue -- is
+    // answered as a refusal, and the next tune still opens.
     this.port.onmessage = (event) => {
-      if (this.pending) this.pending.push(event.data);
-      else this.onMessage(event.data);
+      if (this.pending) { this.pending.push(event.data); return; }
+      try {
+        this.onMessage(event.data);
+      } catch (error) {
+        this.handle = 0;
+        this.playing = false;
+        this.port.postMessage({ type: 'failed', reason: `the engine failed on this file: ${error}` });
+      }
     };
   }
 

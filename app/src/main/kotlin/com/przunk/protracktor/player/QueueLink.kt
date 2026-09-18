@@ -43,8 +43,7 @@ object QueueLink {
      * **It cannot travel as music and it still has to travel.** A local file's id is a
      * storage-access grant valid on one phone, so the bytes stay here — but leaving the row out
      * renumbers the list, and two people cannot talk about a playlist that counts itself
-     * differently at each end. The owner met that with an outside listener on 2026-09-09
-     * (`docs/BACKLOG.md` A28): *"nasze listy nie są zgodne"*.
+     * differently at each end (`docs/BACKLOG.md` A28).
      *
      * A scheme rather than a flag, because the page already reads each line as an address.
      */
@@ -71,12 +70,11 @@ object QueueLink {
             val catalogue = Catalogue.owning(track.id)
             val path = catalogue?.pathFrom(track.id)
             when {
-                // **An MP3 never travels, whatever it is and wherever it came from.** The owner's
-                // rule, 2026-09-10: *"wysyłanie mp3 w kodzie QR ma zawsze dawać tylko info o pliku
-                // i niedostępne odtwarzanie"*. The reason is arithmetic -- this whole handoff rests
-                // on a tracker module being kilobytes, and one four-minute MP3 is more than the
-                // eight-megabyte budget for a *whole queue* (`docs/PLAN_WEB.md` §8). A rule rather
-                // than a size check, so it cannot surprise anybody with a short one.
+                // **An MP3 never travels, whatever it is and wherever it came from.** The
+                // arithmetic: this handoff rests on a tracker module being kilobytes, and one
+                // four-minute MP3 exceeds the eight-megabyte budget for a *whole queue*
+                // (`docs/PLAN_WEB.md` §8). A rule rather than a size check, so a short one cannot
+                // surprise anybody.
                 isMp3(track) ->
                     lines += PHONE_PREFIX + (track.title.trim().ifBlank { track.fileNameOrTitle })
                 catalogue == null || path == null ->
@@ -85,7 +83,9 @@ object QueueLink {
                 // would have removed most of that anyway; this makes the untruncated link shorter for
                 // the small queues where the limit actually bites.
                 catalogue.id == "modland" -> { lines += withTitle(path, track); playable++ }
-                else -> { lines += withTitle(track.id, track); playable++ }
+                // The address a browser can fetch -- ASMA's own file, not the `asma://` this phone
+                // reads it by -- and the reference as it stands where there is none.
+                else -> { lines += withTitle(catalogue.fileUrlFor(path) ?: track.id, track); playable++ }
             }
         }
         if (playable == 0) return Packed("", 0, lines.size)
@@ -145,6 +145,43 @@ object QueueLink {
     fun isMp3(track: TrackRef): Boolean =
         track.fileNameOrTitle.lowercase().endsWith(".mp3") ||
             track.title.lowercase().endsWith(".mp3")
+
+    /**
+     * Marks a link as **one tune to play** rather than a queue to take over.
+     *
+     * Share with Protracktor: a tune from any list, as a link that opens the page playing it.
+     * A queue link replaces the list the page shows under "From the phone"; this one
+     * must not — it is somebody being shown a tune, possibly somebody else entirely — so the page
+     * plays it the way it plays a Browse result, beside whatever list is there. `:` because it is
+     * not a base64url character, so no packed queue can ever start with it.
+     */
+    const val PLAY_PREFIX = "play:"
+
+    /**
+     * Whether [track] can go as a one-tune link: [pack]'s two refusals, and one more. A queue link
+     * carries rows the page cannot play as greyed places in the list; a one-tune link to such a row
+     * is a dead link. So only a tune with an address a browser can fetch ([Catalogue.fileUrlFor]):
+     * Modland's and ASMA's, not UnExoticA's, whose tunes sit inside archives.
+     */
+    fun canSend(track: TrackRef): Boolean =
+        !isMp3(track) && Catalogue.owning(track.id)?.let { c -> c.pathFrom(track.id)?.let(c::fileUrlFor) } != null
+
+    /** The link that opens the page at [base] playing [track], or null when it cannot travel. */
+    fun trackLink(base: String, track: TrackRef): String? = tracksLink(base, listOf(track))
+
+    /**
+     * The link that opens the page playing [tracks], or null when none of them can travel.
+     *
+     * The ones that cannot are left out rather than sent as placeholders: a queue link carries them
+     * as greyed rows so the list numbers the same at both ends, and this is not a list anybody is
+     * comparing -- it is a few tunes to hear, and a row that cannot play is only a dead one.
+     */
+    fun tracksLink(base: String, tracks: List<TrackRef>): String? {
+        val sendable = tracks.filter(::canSend)
+        if (sendable.isEmpty()) return null
+        val packed = pack(sendable)
+        return if (packed.sent == 0) null else linkTo(base, PLAY_PREFIX + packed.fragment)
+    }
 
     /** The whole address, given where the page is served from. */
     fun linkTo(base: String, fragment: String): String =

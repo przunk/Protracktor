@@ -64,3 +64,78 @@ Impulsetracker	Wayfinder	!!uu !! !!.it	Impulsetracker/Wayfinder/%21%21uu%20%21%2
 Ad Lib	Unknown	a+b.sng	Ad%20Lib/Unknown/a%2Bb.sng	a literal plus, which a space must not become
 Protracker	Ko%C5%82o	x.mod	Protracker/Ko%25C5%2582o/x.mod	a percent sign in a name is a percent sign
 Octamed	Mr.Man	tune~1.med	Octamed/Mr.Man/tune%7E1.med	dot and hyphen survive, tilde does not
+
+# ASMA's files, at the zip entry's own path under https://asma.atari.org/ (measured 2026-09-11), and
+# escaped by the same rule as Modland's -- the phone's `Asma.fileUrlFor` and the page's ASMA index.
+[asmaUrl]
+path	expect	why
+asma/Composers/Aki/Robots.sap	asma/Composers/Aki/Robots.sap	the ordinary case, a real file that answered 200
+asma/Composers/Pieczko_Szymon/SimCity_2000.sap	asma/Composers/Pieczko_Szymon/SimCity_2000.sap	underscores are what ASMA uses for spaces, and they survive
+asma/Games/Boulder Dash (Tune 1).sap	asma/Games/Boulder%20Dash%20%28Tune%201%29.sap	a space and brackets, escaped as Modland's are
+asma/Composers/O'Brien/x.sap	asma/Composers/O%27Brien/x.sap	an apostrophe, which encodeURIComponent would have kept
+
+# Random -- driven by check-page.mjs only, and the reason is worth keeping next to the cases. The
+# phone's version of these rules is not a function of its own: it lives inside PlaybackController
+# (advanceRandom, fillRandomQueue), and GOAL.md round 8 forbids refactoring the APK to reach it.
+# RuleCasesTest parses these groups and does not drive them. Extract the phone's rule one day and
+# these become shared like the rest; until then they are the web's half, written down.
+
+[randomNext]
+length	at	expect	why
+3	0	1	walks the record while there is a row ahead
+3	1	2	still a row ahead, still a walk
+3	2	roll	at the end of the record, and only there, the dice rolls
+1	0	roll	one tune played: the next is a new one
+0	-1	roll	an empty record rolls, which is what entering does
+
+[randomPrevious]
+at	expect	why
+2	1	back one row
+1	0	back to the first pick
+0	-	nothing before the first pick
+
+[randomFresh]
+drawn	seen	expect	why
+a,b,c	-	a	nothing heard yet: the first draw
+a,b,c	a	b	a tune the session has had is passed over
+a,b,c	a,b	c	and so is every other one it has had
+a,a,a	a	a	every draw repeats: a small pool has run out, and the dice repeats rather than stops
+
+# HVSC's time tokens, which the phone reads in SongLengths.parseTime and the page in
+# web/src/songlengths.js. A SID carries no length; the whole feature rests on reading these right,
+# and the fraction is the trap -- ".5" is half a second, and the field is described as
+# milliseconds in places, so reading it as five milliseconds makes every fractional length wrong by
+# up to a second in a way nobody notices from the numbers. `-` means the token is not a time, which
+# is the caller's cue to drop the whole line rather than keep a tune with one length missing.
+[songLengthTime]
+token	expect	why
+0:06	6	seconds alone
+3:55	235	minutes and seconds
+3:55.594	235.594	three decimals, the shape most of the file uses
+0:00.5	0.5	one decimal is a tenth of a second, not five milliseconds
+0:00.05	0.05	and two decimals are hundredths
+12:34	754	minutes past ten
+33:46	2026	the longest tune in the file, measured 2026-09-02
+0:60	-	sixty seconds is not a time; it is a minute somebody failed to carry
+3:5	-	the seconds are two digits or it is not this format
+3:55.5943	-	more than three decimals is not a shape this file uses
+:55	-	no minutes at all
+3:55.	-	a decimal point with nothing after it
+x:55	-	not a number
+
+# What a typed search means, which the phone reads in SearchTerms and the page in rules.js.
+# **Every word, anywhere, in any order.** `title` and `author` are the two fields a hit can come
+# from, and a word may be satisfied by either -- so "4-mat space" finds 4-Mat's "space.mod".
+# `-` in the author column means there is no author to match against.
+[searchMatch]
+query	title	author	expect	why
+ninja	space_ninja.mod	-	yes	one word, as it always did
+space ninja	space_ninja.mod	-	yes	the case the owner reported: a separator where he typed a space
+space ninja	spaceninja.mod	-	yes	and no separator at all, since each word is looked for on its own
+ninja space	space-ninja.mod	-	yes	order is not part of the rule
+SPACE Ninja	space ninja.mod	-	yes	nor is case
+space ninja	space_robot.mod	-	no	every word has to be there, not just one
+spaceninja	space_ninja.mod	-	no	the direction this deliberately does not cover; see rules.js
+4-mat space	space.mod	4-Mat	yes	one word from the title and one from the author is a hit
+4-mat space	ninja.mod	4-Mat	no	the author alone is not enough
+	anything.mod	-	yes	a blank query means everything, which is how a platform scope is asked for

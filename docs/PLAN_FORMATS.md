@@ -1,5 +1,8 @@
 # Plan: more formats
 
+*Where to go next is `docs/ROADMAP_FORMATS.md`, written 2026-09-16: the same gaps, ordered by what
+they are worth against what they cost. This file is the history and the measurements behind it.*
+
 Written 2026-09-01, ahead of the owner sending this as its own goal.
 
 Each backend is its own risk and its own commit. The order below is by value per unit of pain, and
@@ -395,8 +398,9 @@ directories plays: the render pass is deliberately sampled.
 **Why the previous result was wrong.** The original probe set `UC_CONTENT_DETECTION`, believing the
 name enabled additional detection. UADE exposes that option in `uade123` as strict content-only
 detection. It therefore rejected the filename match whenever the bytes alone did not identify the
-format. Heikki Orsila caught this by playing `amberstar (03).hipc` with stock `uade123`; removing
-the option made the exact file render here too with player `Hippel-COSO`.
+format. **Upstream caught this** — the reply pointed at `amberstar (03).hipc` played with stock
+`uade123`, which anyone can repeat; removing the option made the exact file render here too, with
+player `Hippel-COSO`.
 
 The old result can be compared exactly rather than guessed. `scripts/probe-uade.py
 --supported-formats-revision 95da64a` restores the supported-format list used to choose the original
@@ -410,8 +414,8 @@ is outside the top 25 and does not change the 300-file play corpus.
 ### Hippel ST COSO is Modland's problem, not UADE's — established 2026-09-05
 
 The one directory still at 0/12 after the probe was corrected, and the answer came from the
-reference set Heikki pointed at: `git clone git://zakalwe.fi/chip`, which he describes as UADE's
-test-case repository, with an example of every format it supports.
+reference set upstream pointed at: `git clone git://zakalwe.fi/chip`, UADE's own test-case
+repository, holding an example of every format it supports.
 
 | | accepted |
 | --- | --- |
@@ -430,21 +434,21 @@ offset 0x20, so they are the same format rather than two different ones.
 **No diagnosis beyond that is offered, deliberately.** A header-offset theory was tried and
 discarded within the hour: Modland's files appear "truncated" by that measure and so do reference
 files that play perfectly, which means the measure was reading the format wrong. After
-`UC_CONTENT_DETECTION`, a second confident wrong theory is the thing most worth avoiding — the
-observation is reported to UADE's maintainer and the explanation left to him.
+`UC_CONTENT_DETECTION`, a second confident wrong theory is the thing most worth avoiding — so the
+observation went upstream and the explanation was left to the people who know the format.
 
 **What follows from it for us:** `zakalwe.fi/chip` is the reference set now, not Modland. Modland
 remains what the app *browses*, but a format measured only against it is a format measured against
 one ripper's habits.
 
-### And then Matti Tiainen answered, and this section was wrong too
+### And then upstream answered, and this section was wrong too
 
-Within the hour, UADE's other maintainer replied. The Hippel and TFMX families are a mess, he said —
-not the formats themselves but the way they are distributed, with different collections and sites
-using prefix and suffix conventions that contradict each other. And he pointed at the fix he already
-maintains: a `song.conf` of **md5 overrides** at
-<https://github.com/mvtiaine/audacious-uade/blob/master/conf/song.conf>, which he said covers the
-Modland files in question.
+Within the hour, UADE's other maintainer replied, and the answer was that the mess is in the
+*distribution* of the Hippel and TFMX families rather than in the formats: different collections and
+sites use prefix and suffix conventions that contradict each other. The fix already exists and is
+public — a `song.conf` of **md5 overrides** at
+<https://github.com/mvtiaine/audacious-uade/blob/master/conf/song.conf>, maintained alongside the
+Audacious plugin, and said to cover the Modland files in question.
 
 It does. Dropped into UADE's base directory, where `uade_load_initial_song_conf` looks for it:
 
@@ -475,10 +479,10 @@ same README says *"Songdb (`conf/songdb`) is licensed under CC BY-NC-SA 4.0"*, w
 
 ### RMC — the format that would make most of this moot
 
-Heikki added it for the record. RMC was designed as a single-file format that states exactly what a
-song is and what it needs: a torrent-like container holding an optional player, the song itself, and
-metadata including subsong durations. He describes it as solving many of these compatibility
-problems. — `git clone git://zakalwe.fi/rmc-chip`.
+Raised by upstream for the record, and worth keeping. RMC is a single-file format that states
+exactly what a song is and what it needs: a torrent-like container holding an optional player, the
+song itself, and metadata including subsong durations — which is most of the compatibility trouble
+above, solved at the source. — `git clone git://zakalwe.fi/rmc-chip`.
 
 **libuade already implements it**, which is what makes this worth writing down rather than filing
 away: `uade_is_rmc`, `uade_rmc_get_subsongs` (a dictionary of subsong number to length in
@@ -567,12 +571,53 @@ of forking. The seam is one function.
 `lib/<abi>/` as a `lib*.so` — the one place Android still permits executing from. That keeps
 instances independent and upstream unforked, at the cost of process lifecycle management.
 
-**Neither is chosen here.** Item 1 was to measure, and this is the measurement.
+**Neither was chosen here.** Item 1 was to measure, and that was the measurement.
 
-**The licence half moved on 2026-09-04**, after UADE's maintainer answered: the replay binaries are
-to be downloaded rather than shipped, from <https://zakalwe.fi/uade/download.html> which he offers
-for exactly that, with GitLab as the fallback when his server is not up. `docs/LICENSES.md` has
-what he said and what it settles. That removes the objection that made this item's cost look
+### The 51 exits, read rather than counted — 2026-09-17
+
+*Round 12 item 2. The count above is the argument everyone reaches for and it is the weaker half of
+it: what matters is not how many there are but **which of them ordinary data can reach**.*
+
+Forty of the 51 are in `src/uade.c`, which is uadecore's command loop, and they are not all alike:
+
+```c
+/* uade.c:476 — the emulated Amiga program asks for a file */
+nameptr = (char *) get_real_address(src);
+f = lookup_amiga_file_cache(nameptr);
+if (f == NULL) {
+        uadecore_send_debug("load: request error: %s", nameptr);
+        exit(1);
+}
+```
+
+**That is a tune reaching it, not a programmer.** A replay routine asking for a sample file that is
+not there is ordinary damaged data — the same population that produced `docs/STATUS.md` C42 and
+C55 — and it calls `exit(1)`. Others in the same loop fire on a malformed IPC message; one at 662
+is the *intended* termination, when libuade closes the control socket.
+
+So the in-process thread is not a tuning problem. **`exit()` is not an exception**: the guard added
+to `player_oboe.cpp` for C42 catches nothing here, and neither does anything else. One bad Amiga
+module would take the app down, in a way no amount of care at our boundary can prevent.
+
+**Which decides it, unless upstream is patched** — and patching 51 exits is a fork of a library
+`docs/ARCHITECTURE.md` §3 says this project does not fork.
+
+| | |
+| --- | --- |
+| `uadecore`, host build, unstripped | **1.6 MB** |
+| `libuade.so` | 0.17 MB |
+| `players/` | 2.0 MB — **downloaded, not shipped** (`docs/LICENSES.md`, settled 2026-09-04) |
+
+**And it decides the browser too.** `fork`/`exec` do not exist in WebAssembly, so fork+exec means
+UADE is a phone backend and the page cannot have it — about 29,000 tunes the phone plays and the
+browser does not, which Browse would have to say out loud the way it said it about ZXTune. That is
+the answer to the roadmap's step 3, arrived at without building anything under Emscripten: the
+process model settles it first.
+
+**The licence half moved on 2026-09-04**, after UADE's maintainers answered: the replay binaries
+are to be downloaded rather than shipped, from <https://zakalwe.fi/uade/download.html>, the page
+upstream publishes for exactly that, with GitLab as the fallback when that server is not up.
+`docs/LICENSES.md` has what the exchange settled. That removes the objection that made this item's cost look
 open-ended — what remains is the emulator, the process model and at least the 5,799 files covered
 by successful directories in the current top-25 sample.
 

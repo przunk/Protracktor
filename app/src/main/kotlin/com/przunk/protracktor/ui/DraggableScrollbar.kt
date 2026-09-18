@@ -29,9 +29,8 @@ import kotlin.math.roundToInt
 /**
  * A scrollbar you can take hold of.
  *
- * `docs/BACKLOG.md` A3, in the owner's own words: *"a visible scrollbar on the right that you can
- * grab and drag down."* Three hundred rows is a long way by flinging, and this app's lists reach
- * half a million.
+ * `docs/BACKLOG.md` A3: a visible scrollbar on the right that can be grabbed and dragged. Three
+ * hundred rows is a long way by flinging, and this app's lists reach half a million.
  *
  * **It is a third drag on a screen that already has two**, which is the thing to be careful about
  * (`docs/ARCHITECTURE.md` §17): a playlist row has a drag handle for reordering, and a long press

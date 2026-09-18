@@ -11,8 +11,8 @@ import org.junit.Test
 /**
  * The rule a multi-tune file follows when one of its tunes ends.
  *
- * `docs/STATUS.md` C13. The owner reported that repeat-one did not repeat a subsong; reading the
- * code found two faults, and this covers the one that lives in Kotlin.
+ * `docs/STATUS.md` C13, where repeat-one did not repeat a subsong. Two faults were behind it;
+ * this covers the one that lives in Kotlin.
  */
 class SubsongAdvanceTest {
 
@@ -29,18 +29,17 @@ class SubsongAdvanceTest {
     }
 
     /**
-     * The rule, in the owner's own three words: *"one to one"*.
+     * One means one.
      *
      * Repeat-one outranks "play all". While it is on, nothing advances — not between tunes, not at
      * the end of the file — and the tune that just ended plays again. `Next.FileFinished` is how
      * that is said here, because repeating what is playing is the caller's `restart()`, the same
      * path an ordinary track already uses.
      *
-     * **The first version of this test asserted the opposite** and passed: it said repeat-one on
-     * the last tune should go back to the first, on the reasoning that "one" meant one row of the
-     * playlist. He tried it and the answer was immediate — with "play all" on, repeat-one still
-     * moved him off the tune he was listening to, and a repeat that goes somewhere else is not a
-     * repeat.
+     * **The opposite reading is wrong**, and it is easy to assert by mistake: that repeat-one on the
+     * last tune goes back to the first, on the reasoning that "one" means one row of the playlist.
+     * With "play all" on, that moves the listener off the tune they are listening to, and a repeat
+     * that goes somewhere else is not a repeat.
      */
     @Test
     fun `repeat-one repeats the tune that is playing, wherever it is in the file`() {
@@ -62,8 +61,8 @@ class SubsongAdvanceTest {
     }
 
     /**
-     * The default, and the owner's own decision: one tune per file unless asked otherwise, so a
-     * 256-subsong SAP does not hold the playlist hostage.
+     * The default: one tune per file unless asked otherwise, so a 256-subsong SAP does not hold the
+     * playlist hostage.
      */
     @Test
     fun `with play-all off the file never walks, whatever repeat says`() {

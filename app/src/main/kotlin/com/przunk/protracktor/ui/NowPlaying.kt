@@ -3,11 +3,14 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -18,10 +21,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.przunk.protracktor.engine.DescribeBlock
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.PlayerUiState
 
@@ -180,6 +190,59 @@ fun NowPlaying(
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
             )
         }
+
+        // Where the scene wrote when the format had nowhere else -- a MOD's sample names are its only
+        // text (`docs/PLAN_INSTRUMENT_NAMES.md`). Folded, and only where there is something to read;
+        // one list where the two say the same.
+        val instruments = DescribeBlock.names(state.metadata["instrument_names"])
+        val samples = DescribeBlock.names(state.metadata["sample_names"])
+        if (instruments.isNotEmpty()) {
+            NameList(stringResource(R.string.field_instrument_names), instruments, track?.id)
+        }
+        if (samples.isNotEmpty() && samples != instruments) {
+            NameList(stringResource(R.string.field_sample_names), samples, track?.id)
+        }
+    }
+}
+
+/**
+ * One list of names, folded until tapped: numbered as a tracker numbers them, monospaced, never
+ * wrapped -- a line too wide scrolls sideways in its own box, so the text an author laid out keeps
+ * its shape. Folded again for the next tune, which is what keying it by the track does.
+ */
+@Composable
+private fun NameList(label: String, names: List<String>, trackKey: String?) {
+    var open by rememberSaveable(trackKey, label) { mutableStateOf(false) }
+    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { open = !open }
+            .padding(vertical = 4.dp),
+    ) {
+        Icon(
+            imageVector = PlayerIcons.Expand,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.rotate(if (open) 0f else 180f),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "$label (${names.size})",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    if (open) {
+        val digits = names.size.toString().length.coerceAtLeast(2)
+        Text(
+            text = names.mapIndexed { i, name -> "${(i + 1).toString().padStart(digits, '0')} $name" }
+                .joinToString("\n"),
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            softWrap = false,
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        )
     }
 }
 

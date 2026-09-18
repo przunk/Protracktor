@@ -38,5 +38,12 @@ object BrowseNavigation {
         folderStale = false,
         // A jump is a place you were put, not one you walked to. Choosing a domain by hand ends it.
         arrivedByJump = false,
+        // **The words go with the results they found.** This already empties `tracks`, and a query
+        // left behind greets the next visit with the last search written in the box and nothing
+        // under it -- which reads as a search that returned nothing.
+        //
+        // Only on entering a domain by hand. Walking back out of a folder into results does not
+        // come through here, so a search survives being walked away from and returned to.
+        query = "",
     )
 }

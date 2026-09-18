@@ -50,6 +50,68 @@ class SchemaSqlTest {
         }
     }
 
+    /**
+     * `docs/STATUS.md` C41: adding a track to another playlist took it out of the one it was in.
+     *
+     * **SQLite's REPLACE is a DELETE and an INSERT**, and `playlist_tracks.track_id` references
+     * `tracks(id)` `ON DELETE CASCADE` with foreign keys on. So re-writing the `tracks` row for a
+     * track already in a playlist deleted every `playlist_tracks` row that pointed at it -- and the
+     * write that followed put it back in one playlist only. A copy became a move.
+     */
+    @Test
+    fun `writing a track again leaves it in the playlists it is already in`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO playlists (id, name, position) VALUES (1, 'source', 0)",
+                    "INSERT INTO playlists (id, name, position) VALUES (2, 'target', 1)",
+                    "INSERT INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 'x', 0)",
+                )
+            )
+
+            // What `LibraryStore.replaceTracks` does for the target: the track's own row, then its
+            // place in that playlist.
+            connection.run(
+                listOf(
+                    "INSERT OR IGNORE INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "UPDATE tracks SET title = 'Tune', subtitle = 'where' WHERE id = 'x'",
+                    "INSERT OR REPLACE INTO playlist_tracks (playlist_id, track_id, position) VALUES (2, 'x', 0)",
+                )
+            )
+
+            assertEquals(setOf(1L, 2L), connection.playlistsHolding("x"))
+        }
+    }
+
+    /** The same write the old way, to show what the rule above is protecting against. */
+    @Test
+    fun `replacing the track row instead would empty the other playlists`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(
+                listOf(
+                    "INSERT INTO playlists (id, name, position) VALUES (1, 'source', 0)",
+                    "INSERT INTO playlists (id, name, position) VALUES (2, 'target', 1)",
+                    "INSERT INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 'x', 0)",
+                    "INSERT OR REPLACE INTO tracks (id, title, subtitle) VALUES ('x', 'Tune', 'where')",
+                    "INSERT OR REPLACE INTO playlist_tracks (playlist_id, track_id, position) VALUES (2, 'x', 0)",
+                )
+            )
+            assertEquals(setOf(2L), connection.playlistsHolding("x"))
+        }
+    }
+
+    private fun Connection.playlistsHolding(trackId: String): Set<Long> =
+        prepareStatement("SELECT playlist_id FROM playlist_tracks WHERE track_id = ?").use { statement ->
+            statement.setString(1, trackId)
+            statement.executeQuery().use { rows ->
+                buildSet { while (rows.next()) add(rows.getLong(1)) }
+            }
+        }
+
     @Test
     fun `player_state holds exactly one row and refuses a second`() {
         memoryDatabase().use { connection ->
@@ -194,6 +256,131 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `an index already stored learns how big its archive is without being fetched again`() {
+        // Version 16, and the point of backfilling it by counting rather than by re-downloading:
+        // version 15 had just made "how many rows" and "how many play" different numbers, and an
+        // index stored the day before would otherwise have said its archive held nothing.
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 15))
+            connection.run(
+                listOf(
+                    "INSERT INTO catalogues (id, display_name, track_count) VALUES ('modland', 'Modland', 2)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'a', 'Protracker', '4-Mat', 'a.mod', 1, 1)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'b', 'Protracker', '4-Mat', 'b.mod', 1, 1)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, playable) " +
+                        "VALUES ('modland', 'c', 'Pictures', 'me', 'c.jpg', 1, 0)",
+                )
+            )
+
+            connection.run(SchemaSql.migrationsBetween(15, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT track_count, archive_count FROM catalogues").use { rows ->
+                    rows.next()
+                    assertEquals("what this build opens is untouched", 2, rows.getInt(1))
+                    assertEquals("and what the archive holds is counted, not guessed", 3, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the browse indexes cover only what is offered`() {
+        // `docs/ROADMAP_FORMATS.md` step 0: the table holds the whole archive and every screen asks
+        // for the playable part, so indexing the rest is 16 MB of b-tree nothing reads -- measured
+        // at Modland's size, 129.0 MB against 112.8. Checked as SQL rather than as a comment,
+        // because a partial index reverted to a full one is invisible until somebody measures.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            val indexes = connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL"
+                ).use { rows ->
+                    buildMap { while (rows.next()) put(rows.getString(1), rows.getString(2)) }
+                }
+            }
+            for (name in listOf("idx_catalogue_browse", "idx_catalogue_title")) {
+                val sql = indexes[name]
+                assertTrue("$name is missing", sql != null)
+                assertTrue("$name is not partial: $sql", sql!!.contains("WHERE playable = 1"))
+            }
+        }
+    }
+
+    @Test
+    fun `an index written before version 15 keeps every row it has`() {
+        // `docs/ROADMAP_FORMATS.md` step 0. The migration's `DEFAULT 1` on `playable` is
+        // load-bearing: an index written earlier holds **only** rows the format list of the day
+        // accepted, so every row in it is playable — and defaulting to 0 would empty Browse for
+        // anybody who did not re-index that minute.
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 14))
+            connection.run(
+                listOf(
+                    "INSERT INTO catalogues (id, display_name) VALUES ('modland', 'Modland')",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                        "VALUES ('modland', 'p', 'Protracker', '4-Mat', 'tune.mod', 1)",
+                )
+            )
+
+            connection.run(SchemaSql.migrationsBetween(14, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT playable FROM catalogue_tracks").use { rows ->
+                    rows.next()
+                    assertEquals("an old row stays visible", 1, rows.getInt(1))
+                }
+                // And says what it is: part of the archive, not all of it, so a format added later
+                // still needs the index fetching again — which no local recompute can supply.
+                statement.executeQuery("SELECT complete FROM catalogues").use { rows ->
+                    rows.next()
+                    assertEquals(0, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `an upgraded phone reads the fallback length as never set`() {
+        // `docs/STATUS.md` C56. The column's default is 0 and 0 means "never chosen",
+        // which `FallbackLength.fromStored` turns into the default rather than into a tune that
+        // ends instantly. Getting this wrong ends every unlisted tune the moment it starts, which
+        // is a worse fault than the one being fixed.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.migrationsBetween(1, 13).let { VERSION_1_SCHEMA + it })
+            connection.run(listOf("UPDATE player_state SET shuffle = 1"))
+
+            connection.run(SchemaSql.migrationsBetween(13, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery(
+                    "SELECT shuffle, fallback_length_seconds FROM player_state"
+                ).use { rows ->
+                    rows.next()
+                    assertEquals("the setting beside it did not survive", 1, rows.getInt(1))
+                    assertEquals("an upgraded phone must read 0, meaning never set", 0, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a chosen fallback length survives being written and read`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.run(listOf("UPDATE player_state SET fallback_length_seconds = 420"))
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT fallback_length_seconds FROM player_state").use { rows ->
+                    rows.next()
+                    assertEquals(420, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `removing a catalogue takes its tracks with it`() {
         memoryDatabase().use { connection ->
             connection.run(SchemaSql.CREATE)
@@ -265,10 +452,9 @@ class SchemaSqlTest {
     /**
      * What `ProtracktorDatabase.onDowngrade` runs, against a real engine.
      *
-     * The one path in this file that had no test and needed one most: it meets a phone holding
-     * somebody's data exactly once, and until 2026-09-08 it threw every time. The list of tables to
-     * drop was written at version 1 and never grew, so the recreate hit `catalogues` and stopped --
-     * leaving an app that could not start at all.
+     * The path in this file that needs a test most: it meets a phone holding somebody's data
+     * exactly once. A list of tables to drop written at version 1 and never grown makes the
+     * recreate stop at `catalogues`, and the app then cannot start at all.
      */
     @Test
     fun `a downgrade recreates the database instead of tripping over what is already there`() {
@@ -481,9 +667,9 @@ class SchemaSqlTest {
     fun `a migration run twice fails, which is why there is one database helper`() {
         // Not a wish, a constraint. The statements are plain CREATE TABLE, so running a migration
         // twice throws -- and `SQLiteOpenHelper` synchronises within an instance, not between
-        // instances. Five stores each holding their own helper (which is what this project had
-        // until 2026-09-03) meant five things that could independently decide to migrate, and two
-        // of them racing during an upgrade crashes the launch that upgrades.
+        // instances. Five stores each holding their own helper would be five things that could
+        // independently decide to migrate, and two of them racing during an upgrade crashes the
+        // launch that upgrades.
         //
         // If somebody makes these idempotent and this test starts failing, the right response is
         // not to delete it: it is to ask whether ProtracktorDatabase still needs to be a singleton,

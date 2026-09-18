@@ -1,0 +1,5 @@
+The index now keeps everything an archive lists, and notes beside each track whether this build can play it. Adding a decoder later costs a moment of local work instead of downloading the whole index again.
+
+The first launch after updating rearranges what is already downloaded, so it may take a few seconds. Nothing is lost and nothing is fetched.
+
+Indexing now reports both numbers: how much the archive holds, and how much of it plays here. Large numbers read as numbers everywhere.

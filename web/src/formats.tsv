@@ -1,0 +1,162 @@
+# SPDX-FileCopyrightText: 2026 Przunk
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The names a catalogue index keeps, and which decoders open each one.
+#
+# **One list, read by both runtimes.** The phone's copy is
+# `SupportedFormats.extensions` and `SupportedFormats.prefixes`; `SupportedFormatsFileTest` fails the
+# moment the two disagree, so a name added on one side and not the other cannot ship. The page reads
+# this file at run time and keeps a name only if **at least one of its decoders is in the engine it
+# is running on** -- which is how the browser, whose build has no ZXTune, comes to index 61% of
+# Modland rather than all of it.
+#
+# A decoder is judged absent only when the engine says so: `pt_backends` ends in `zxtune:none` when
+# that decoder is compiled out, and names nothing else as missing. HivelyTracker is in every build
+# and is not in the fingerprint at all, so "not mentioned" must mean "present" -- the rule is the
+# engine's absence, never this file's guess.
+#
+# Two names have two decoders, and that is not a mistake: `fc` is the Amiga Future Composer to
+# libopenmpt and an Atari 8-bit format to ASAP; `psm` is Epic MegaGames to libopenmpt and Pro Sound
+# Maker to ZXTune. Either decoder being present keeps the name.
+#
+# The fourth column is the machine a name belongs to -- `Platforms.forFileName` on the phone, which
+# the dock names beside the author ("Jogeir Liljedahl · Amiga · 1994"). The same test holds it to the
+# phone's table; `-` is a name no platform claims.
+#
+# kind	name	decoders	platform
+
+# The mainstream trackers
+extension	mod	openmpt	Amiga
+extension	xm	openmpt	PC
+extension	s3m	openmpt	PC
+extension	it	openmpt	PC
+extension	mptm	openmpt	PC
+
+# Amiga and Atari lineage
+extension	ahx	hively	Amiga
+extension	hvl	hively	Amiga
+extension	med	openmpt	Amiga
+extension	okt	openmpt	Amiga
+extension	dbm	openmpt	Amiga
+extension	digi	openmpt	Amiga
+extension	stk	openmpt	Amiga
+extension	sfx	openmpt	Amiga
+extension	ice	openmpt	Amiga
+extension	gmc	openmpt	Amiga
+extension	unic	openmpt	Amiga
+extension	kris	openmpt	Amiga
+extension	puma	openmpt	Amiga
+extension	tcb	openmpt	Amiga
+extension	fc	openmpt,asap	Amiga
+extension	fc13	openmpt	Amiga
+extension	fc14	openmpt	Amiga
+extension	smod	openmpt	Amiga
+extension	dsym	openmpt	Amiga
+extension	symmod	openmpt	Amiga
+extension	ftm	openmpt	Nintendo
+extension	etx	openmpt	Atari ST
+extension	mmd0	openmpt	Amiga
+extension	mmd1	openmpt	Amiga
+extension	mmd2	openmpt	Amiga
+extension	mmd3	openmpt	Amiga
+extension	okta	openmpt	Amiga
+extension	gtk	openmpt	Amiga
+extension	mms	openmpt	Amiga
+
+# PC and console lineage
+extension	far	openmpt	PC
+extension	gdm	openmpt	PC
+extension	imf	openmpt	PC
+extension	mdl	openmpt	PC
+extension	mtm	openmpt	PC
+extension	ptm	openmpt	PC
+extension	stm	openmpt	PC
+extension	ult	openmpt	PC
+extension	669	openmpt	PC
+extension	amf	openmpt	PC
+extension	ams	openmpt	PC
+extension	dmf	openmpt	PC
+extension	dsm	openmpt	PC
+extension	dtm	openmpt	PC
+extension	j2b	openmpt	PC
+extension	mt2	openmpt	PC
+extension	psm	openmpt,zxtune	PC
+extension	plm	openmpt	PC
+extension	rtm	openmpt	PC
+extension	c67	openmpt	PC
+extension	cba	openmpt	PC
+extension	gt2	openmpt	PC
+extension	mo3	openmpt	PC
+extension	xmf	openmpt	PC
+
+# Atari ST
+extension	sndh	sc68	Atari ST
+extension	sc68	sc68	Atari ST
+
+# Atari 8-bit
+extension	sap	asap	Atari 8-bit
+extension	cmc	asap	Atari 8-bit
+extension	cm3	asap	Atari 8-bit
+extension	cmr	asap	Atari 8-bit
+extension	cms	asap	Atari 8-bit
+extension	dmc	asap	Atari 8-bit
+extension	dlt	asap	Atari 8-bit
+extension	mpt	asap	Atari 8-bit
+extension	mpd	asap	Atari 8-bit
+extension	rmt	asap	Atari 8-bit
+extension	tmc	asap	Atari 8-bit
+extension	tm2	asap	Atari 8-bit
+extension	tm8	asap	Atari 8-bit
+
+# Consoles
+extension	nsf	gme	Nintendo
+extension	nsfe	gme	Nintendo
+extension	spc	gme	Nintendo
+extension	gbs	gme	Nintendo
+extension	vgm	gme	Sega
+extension	vgz	gme	Sega
+extension	hes	gme	PC Engine
+extension	ay	gme	ZX Spectrum
+extension	kss	gme	MSX
+
+# ZX Spectrum -- the rows the browser build cannot open
+extension	pt3	zxtune	ZX Spectrum
+extension	pt2	zxtune	ZX Spectrum
+extension	pt1	zxtune	ZX Spectrum
+extension	stc	zxtune	ZX Spectrum
+extension	st1	zxtune	ZX Spectrum
+extension	st3	zxtune	ZX Spectrum
+extension	asc	zxtune	ZX Spectrum
+extension	as0	zxtune	ZX Spectrum
+extension	sqt	zxtune	ZX Spectrum
+extension	stp	zxtune	ZX Spectrum
+extension	ftc	zxtune	ZX Spectrum
+extension	gtr	zxtune	ZX Spectrum
+extension	ym	zxtune	Atari ST
+extension	vtx	zxtune	ZX Spectrum
+
+# Commodore 64
+extension	sid	sidplayfp	Commodore 64
+extension	psid	sidplayfp	Commodore 64
+extension	rsid	sidplayfp	Commodore 64
+
+# Containers libopenmpt unpacks itself
+extension	mmcmp	openmpt	PC
+extension	pp20	openmpt	PC
+extension	xpk	openmpt	PC
+extension	umx	openmpt	PC
+
+# Filename prefixes, the Amiga way: `mod.title` rather than `title.mod`
+prefix	ahx	hively	Amiga
+prefix	hvl	hively	Amiga
+prefix	mod	openmpt	Amiga
+prefix	med	openmpt	Amiga
+prefix	okt	openmpt	Amiga
+prefix	dbm	openmpt	Amiga
+prefix	digi	openmpt	Amiga
+prefix	stk	openmpt	Amiga
+prefix	sfx	openmpt	Amiga
+prefix	ice	openmpt	Amiga
+prefix	fc	openmpt,asap	Amiga
+prefix	smod	openmpt	Amiga
+prefix	sndh	sc68	Atari ST

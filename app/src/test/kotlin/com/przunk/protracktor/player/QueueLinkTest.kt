@@ -47,13 +47,13 @@ class QueueLinkTest {
     }
 
     /**
-     * The one that matters, and it changed on 2026-09-10.
+     * The case that matters most.
      *
      * A local file's identity is a storage grant to one app on one phone, so its *music* cannot
-     * travel. Its **place in the list** can, and must: an outside listener opened a shared link and
-     * his list numbered itself differently from the owner's, which is the defect `docs/BACKLOG.md`
-     * A28 records. So the row goes as a name under a `phone:` scheme and the page draws it greyed,
-     * in its own position, unplayable.
+     * travel. Its **place in the list** can, and must: otherwise the two people looking at the
+     * same shared link number their lists differently, which is the defect `docs/BACKLOG.md` A28
+     * records. So the row goes as a name under a `phone:` scheme and the page draws it greyed, in
+     * its own position, unplayable.
      */
     @Test
     fun `local files travel as names in their own places`() {
@@ -74,7 +74,7 @@ class QueueLinkTest {
     }
 
     /**
-     * The owner's rule, 2026-09-10, and it is arithmetic before it is a preference.
+     * Arithmetic before it is a preference.
      *
      * The whole handoff rests on a tracker module being kilobytes: Modland's median is 20 KB and the
      * budget for a *whole queue* is eight megabytes. One four-minute MP3 is more than that budget by
@@ -164,8 +164,8 @@ class QueueLinkTest {
     }
 
     /**
-     * The owner's report: a Mod Archive row read `lotus3_4.mod` in the browser and
-     * `L3_CD4-SpaceNinja` on the phone, because the URL is the only thing that travelled.
+     * Without this a Mod Archive row reads `lotus3_4.mod` in the browser and `L3_CD4-SpaceNinja`
+     * on the phone, because the URL is the only thing that travels.
      */
     @Test
     fun `a title the address does not carry travels with it`() {
@@ -188,8 +188,8 @@ class QueueLinkTest {
 
     /**
      * The page and the pairing address are two paths on one machine, which is what lets a scan
-     * settle both. The owner's tunnel is the case that makes it matter: forty random characters
-     * that change whenever it restarts, and nobody is typing those twice.
+     * settle both. A tunnel is the case that makes it matter: forty random characters that change
+     * whenever it restarts, and nobody is typing those twice.
      */
     @Test
     fun `the page address sits beside the pairing address`() {
@@ -207,8 +207,78 @@ class QueueLinkTest {
     }
 
     @Test
-    fun `a non-Modland catalogue keeps its whole URL`() {
+    fun `a non-Modland catalogue goes as the address a browser can fetch`() {
+        // ASMA as its own file on asma.atari.org, not the `asma://` this phone reads it by.
         val packed = QueueLink.pack(listOf(track("asma://asma/Games/Rob_Hubbard/tune.sap", "tune.sap")))
-        assertEquals(listOf("asma://asma/Games/Rob_Hubbard/tune.sap"), unpack(packed.fragment))
+        assertEquals(listOf("https://asma.atari.org/asma/Games/Rob_Hubbard/tune.sap"), unpack(packed.fragment))
+    }
+
+    @Test
+    fun `an ASMA tune goes as a link the page plays`() {
+        val tune = track("asma://asma/Composers/Aki/Robots.sap", "Robots")
+        val link = QueueLink.trackLink("https://pi.example/src/", tune)!!
+        assertEquals(
+            listOf("https://asma.atari.org/asma/Composers/Aki/Robots.sap\tRobots"),
+            unpack(link.substringAfter("#play:")),
+        )
+    }
+
+    /**
+     * Share with Protracktor: one tune, marked so the page plays it rather than taking it for a
+     * queue to replace its list with.
+     */
+    @Test
+    fun `one tune goes as a link the page plays`() {
+        val tune = track("https://modland.com/pub/modules/Protracker/Jogeir%20Liljedahl/zoolook.mod", "zoolook")
+        val link = QueueLink.trackLink("https://pi.example/src/", tune)!!
+        assertTrue(link, link.startsWith("https://pi.example/src/#play:"))
+        assertEquals(
+            listOf("Protracker/Jogeir Liljedahl/zoolook.mod\tzoolook"),
+            unpack(link.substringAfter("#play:")),
+        )
+    }
+
+    /** `docs/BACKLOG.md` A38: several ticked tunes, as one link that plays the lot. */
+    @Test
+    fun `several tunes go as one link the page plays`() {
+        val link = QueueLink.tracksLink(
+            "https://pi.example/src/",
+            listOf(
+                track("https://modland.com/pub/modules/Protracker/4-Mat/hi%20there.mod", "hi there.mod"),
+                track("https://modland.com/pub/modules/AHX/Pink/frog.ahx", "frog.ahx"),
+            ),
+        )!!
+        assertTrue(link, link.startsWith("https://pi.example/src/#play:"))
+        assertEquals(
+            listOf("Protracker/4-Mat/hi there.mod", "AHX/Pink/frog.ahx"),
+            unpack(link.substringAfter("#play:")),
+        )
+    }
+
+    @Test
+    fun `the ones that cannot travel are left out of a link, not sent as placeholders`() {
+        val link = QueueLink.tracksLink(
+            "https://pi.example/src/",
+            listOf(
+                track("content://x/1", "mine.mod"),
+                track("https://modland.com/pub/modules/AHX/Pink/frog.ahx", "frog.ahx"),
+                track("https://example.org/music/live set.mp3", "live set.mp3"),
+            ),
+        )!!
+        assertEquals(listOf("AHX/Pink/frog.ahx"), unpack(link.substringAfter("#play:")))
+        assertEquals(null, QueueLink.tracksLink("https://pi.example/src/", listOf(track("content://x/1", "a.mod"))))
+    }
+
+    @Test
+    fun `a tune the page could not fetch makes no link`() {
+        // A file on this phone, an MP3 with an address, and a tune inside an UnExoticA archive.
+        listOf(
+            track("content://x/1", "mine.mod"),
+            track("https://example.org/music/live set.mp3", "live set.mp3"),
+            track("unexotica://Game/Composer/Title.lha/Title/mod.name", "mod.name"),
+        ).forEach { tune ->
+            assertEquals(tune.id, null, QueueLink.trackLink("https://pi.example/src/", tune))
+            assertTrue(tune.id, !QueueLink.canSend(tune))
+        }
     }
 }

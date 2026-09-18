@@ -45,8 +45,8 @@ mkdir -p "$OUT"
 #
 # `ayemul.cpp` is excluded by name and that exclusion is the licence decision: it is the only AY
 # plugin reaching `3rdparty/z80ex`, which is GPL-2-only. `ym_vtx.cpp` was excluded on the same
-# grounds until 2026-09-09 -- YM and VTX are LHA-compressed and it wanted `3rdparty/lhasa`. It is
-# built now, against the upstream lhasa in `native/vendor/lhasa` and through our own
+# grounds -- YM and VTX are LHA-compressed and it wants `3rdparty/lhasa` -- and is built now
+# against the upstream lhasa in `native/vendor/lhasa`, through our own
 # `native/backends/zxtune/lha_zxtune.cpp`, which is what the app links too.
 mapfile -t SOURCES < <(
     {

@@ -114,6 +114,37 @@ namespace {
 
 using protracktor::Backend;
 
+/**
+ * Instrument or sample names as one line of the describe block (`docs/PLAN_INSTRUMENT_NAMES.md`).
+ *
+ * **One line, because `message` must stay the only value with line breaks, and last**
+ * (`docs/STATUS.md` C40). So the names are joined by the unit separator, and a tab, a line break or
+ * a unit separator inside a name becomes a space. Empty names inside the list are kept -- the scene
+ * built text and pictures out of them -- and trailing empty ones are dropped. Empty when every name
+ * is, so the caller can leave the line out.
+ */
+std::string joinNames(const std::vector<std::string> &names) {
+    const char separator = static_cast<char>(0x1f);
+    std::vector<std::string> clean;
+    clean.reserve(names.size());
+    for (std::string name : names) {
+        for (char &c : name) {
+            if (c == '\t' || c == '\r' || c == '\n' || c == separator) c = ' ';
+        }
+        clean.push_back(std::move(name));
+    }
+    const auto blank = [](const std::string &text) {
+        return text.find_first_not_of(' ') == std::string::npos;
+    };
+    while (!clean.empty() && blank(clean.back())) clean.pop_back();
+    std::string out;
+    for (size_t i = 0; i < clean.size(); ++i) {
+        if (i) out += separator;
+        out += clean[i];
+    }
+    return out;
+}
+
 class OpenmptBackend : public Backend {
 public:
     explicit OpenmptBackend(const std::vector<char> &bytes)
@@ -164,8 +195,15 @@ public:
           << "instruments\t" << module_->get_num_instruments() << '\n'
           << "samples\t" << module_->get_num_samples() << '\n'
           << "subsongs\t" << module_->get_num_subsongs() << '\n'
-          << "seekable\t1" << '\n'
-          << "message\t" << module_->get_metadata("message_raw");
+          << "seekable\t1" << '\n';
+        // Where the scene wrote when the format had nowhere else: a MOD's 31 sample names are its
+        // only text. Before `message`, which must stay last. `message_raw` rather than `message`,
+        // which would fall back to these very names and mix the two.
+        const std::string samples = joinNames(module_->get_sample_names());
+        const std::string instruments = joinNames(module_->get_instrument_names());
+        if (!samples.empty()) o << "sample_names\t" << samples << '\n';
+        if (!instruments.empty()) o << "instrument_names\t" << instruments << '\n';
+        o << "message\t" << module_->get_metadata("message_raw");
         return o.str();
     }
 
@@ -208,11 +246,9 @@ public:
     /**
      * A cheap pre-filter, not a verdict.
      *
-     * 2.2.1 had `api68_verify_mem`, and it was already distrusted here: it returns -1 for an
-     * ICE-packed SNDH that then loads and plays perfectly, and gating on it is what once stopped
-     * every SNDH in the owner's library from opening. 3.x has no equivalent, which costs nothing --
-     * the magic checks were doing the work. The real answer still comes from whether the load
-     * succeeds.
+     * `api68_verify_mem` returned -1 for an ICE-packed SNDH that then loads and plays perfectly,
+     * so gating on it rejected the format wholesale. 3.x has no equivalent and loses nothing: the
+     * magic checks do the work, and the real answer is whether the load succeeds.
      */
     static bool worthTrying(const std::vector<char> &bytes) {
         if (bytes.size() < 16) return false;
@@ -550,9 +586,8 @@ public:
 
         const std::size_t produced = static_cast<std::size_t>(bytes) / sizeof(short) / channels;
         for (std::size_t i = 0; i < produced; ++i) {
-            // Mono is duplicated rather than left in one ear. Half these tunes are single-POKEY and
-            // the owner's phone puts its second channel through the screen vibrator, where it would
-            // be inaudible.
+            // Mono is duplicated rather than left in one ear: half these tunes are single-POKEY,
+            // and a phone whose second channel is a screen vibrator would play them inaudibly.
             const float left = static_cast<float>(scratch_[i * channels]) / 32768.0f;
             const float right = channels > 1
                 ? static_cast<float>(scratch_[i * channels + 1]) / 32768.0f
@@ -674,12 +709,10 @@ public:
      * So when the first track renders nothing, look for one that does — entered **only** when
      * track 0 was silent, so a file that starts with music never pays for this.
      *
-     * **Bounded by time rather than by a track count**, which is the second version of this. The
-     * first stopped after twelve tracks, and the owner immediately found `aleste 2.kss`: 256
-     * tracks, 82 of them audible, and **the first is number 47**. Twelve was a guess dressed as a
-     * limit. A wall-clock budget makes no guess about how fast the phone is — a quick device
-     * searches further, a slow one stops sooner and behaves as it did before — and it is the
-     * quantity that actually matters, since what is being protected is the wait before sound.
+     * Bounded by time rather than by a track count. `aleste 2.kss` has 256 tracks, 82 of them
+     * audible, and the first audible one is number 47 — any count small enough to be safe is too
+     * small to find it. A wall-clock budget makes no guess about how fast the device is, and time
+     * is the quantity being protected: the wait before sound.
      *
      * It does not touch `gme_track_count`, which reports a flat 256 for KSS and HES whatever the
      * file holds. That number is wrong — `aleste 2.kss` really has 82 tunes, not 256 — and finding
@@ -857,10 +890,9 @@ private:
 /**
  * MP3, through minimp3 — and it is the one format here that is not a chiptune.
  *
- * **Why it is in a chiptune player at all** is `docs/BACKLOG.md` A29: the owner keeps rips and
- * recordings among his own files and had no way to hear them without leaving the app. It is
- * deliberately a *local file* format — no catalogue here holds an MP3, and `SupportedFormats` keeps
- * it out of the list an online index is filtered through so that adding it costs nobody a re-index.
+ * Why a chiptune player has one is `docs/BACKLOG.md` A29. It is deliberately a *local file*
+ * format: no catalogue here holds an MP3, and `SupportedFormats` keeps it out of the list an
+ * online index is judged against.
  *
  * **`mp3dec_ex` rather than the plain frame decoder**, and the difference is the two things a
  * player needs and a frame loop cannot give: a length for a variable-bitrate file, and an index to
@@ -1021,9 +1053,8 @@ private:
  *
  * The largest single body of music left after trackers: roughly 72,000 files in Modland alone.
  *
- * **No Commodore ROMs are supplied**, and thirty random Modland SIDs all played without them, none
- * of them needing BASIC. Whether to ship or source ROMs at all is the owner's call and is not made
- * here; the measurement is in `docs/PLAN_FORMATS.md` so the question has a number attached.
+ * No Commodore ROMs are supplied. Thirty random Modland SIDs played without them and none needed
+ * BASIC (`docs/PLAN_FORMATS.md`); whether to ship or source ROMs is an open question there.
  *
  * The emulation is SIDLite rather than ReSIDfp: 3.x split ReSIDfp into a separate library, and
  * SIDLite ships inside this one.
@@ -1312,6 +1343,14 @@ public:
           << "channels\t" << ht_->ht_Channels << '\n'
           << "subsongs\t" << subsongCount() << '\n'
           << "seekable\t1";
+        // 1-based, as the tracker numbers them: `hvl_load_ahx` and `hvl_load_hvl` fill 1..N and never 0.
+        std::vector<std::string> names;
+        for (int i = 1; i <= ht_->ht_InstrumentNr; ++i) {
+            const auto &name = ht_->ht_Instruments[i].ins_Name;
+            names.emplace_back(name, strnlen(name, sizeof name));
+        }
+        const std::string instruments = joinNames(names);
+        if (!instruments.empty()) o << '\n' << "instrument_names\t" << instruments;
         return o.str();
     }
 
@@ -1511,10 +1550,28 @@ public:
 
     bool canSeek() const override { return durationSeconds_ > 0; }
 
+    /**
+     * Moves the position, **never past the end**.
+     *
+     * `Renderer::SetPosition` reaches a position by running the emulation forward to it, and asked
+     * for one the tune never reaches it runs forward for ever. Measured on the host, 2026-09-10:
+     * seeking to 90% of a 192-second PT3 returns at once, before or after a first render, and
+     * seeking to `duration + 30s` had not returned after four minutes. On the phone that came back
+     * as `SIGSEGV` inside `AYMRenderer::SetPosition` -- a runaway walking off the end of its own
+     * state rather than a null anybody passed in.
+     *
+     * Reached by dragging the slider to the far right: the bar's maximum *is* the duration, and a
+     * float rounding a hair over it is enough.
+     *
+     * Half a second short of the end, not a hair short: the last position the renderer can actually
+     * reach is the last one it emits, which is a frame before the end rather than the end itself.
+     */
     void seek(double seconds) override {
+        const double limit = durationSeconds_ > 0.5 ? durationSeconds_ - 0.5 : 0.0;
+        const double target = std::clamp(seconds, 0.0, limit);
         renderer_->SetPosition(
-            Time::AtMillisecond() + Time::Milliseconds(static_cast<uint_t>(seconds * 1000.0)));
-        rendered_ = static_cast<std::size_t>(std::max(0.0, seconds) * kSampleRate);
+            Time::AtMillisecond() + Time::Milliseconds(static_cast<uint_t>(target * 1000.0)));
+        rendered_ = static_cast<std::size_t>(target * kSampleRate);
         chunk_ = Sound::Chunk();
         chunkPos_ = 0;
         ended_ = false;
@@ -1650,6 +1707,15 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
                                      std::string &error) {
     error.clear();
 
+    // **The first refusal is the one kept, and every `error =` below says so.**
+    //
+    // The backends are asked in order of how strongly they can claim a file -- by name, then by
+    // magic, then by content, then by trying -- so the first one to refuse is by construction the
+    // one that had the best claim, and its reason is the true one. Overwriting it with a later
+    // backend's reason reports a decoder that had no business with the file: a `.sap` claimed by
+    // name and refused by ASAP was described by game-music-emu on its way past
+    // (`docs/STATUS.md` C55).
+
     // MP3 first when the name says so. It shares the reason ASAP goes early -- the name is the
     // only reliable thing about this format -- and nothing else here claims `.mp3`.
     if (Mp3Backend::claimsName(name)) {
@@ -1657,7 +1723,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<Mp3Backend>(bytes);
         } catch (const std::exception &e) {
             LOGE("minimp3 claimed the name but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1668,7 +1734,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<AsapBackend>(bytes, name);
         } catch (const std::exception &e) {
             LOGE("ASAP claimed the name but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1679,7 +1745,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<SidBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("libsidplayfp refused it: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1690,7 +1756,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<HivelyBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("HivelyTracker recognised the header but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1701,7 +1767,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<GmeBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("gme recognised the header but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 
@@ -1715,7 +1781,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<ZxTuneBackend>(bytes);
         } catch (const std::exception &e) {
             LOGE("ZXTune refused it: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
 #endif
@@ -1728,7 +1794,7 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
             return std::make_unique<Sc68Backend>(bytes);
         } catch (const std::exception &e) {
             LOGE("sc68 recognised but refused: %s", e.what());
-            error = e.what();
+            if (error.empty()) error = e.what();
         }
     }
     try {

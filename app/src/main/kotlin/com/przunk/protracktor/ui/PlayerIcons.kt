@@ -89,24 +89,19 @@ object PlayerIcons {
     val Back: ImageVector by lazy {
         icon("Back", "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z")
     }
+    /** A digression: the way you were going, and the turn taken off it. Drawn for this, not borrowed. */
+    val Detour: ImageVector by lazy {
+        icon("Detour", "M3 5h7a5 5 0 0 1 5 5v6h3l-4.5 5.5L9 16h3v-6a2 2 0 0 0-2-2H3V5z")
+    }
+
     val Folder: ImageVector by lazy {
         icon("Folder", "M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z")
     }
     /**
-     * A CX40 — the Atari 2600 stick — for the "by platform" filter.
-     *
-     * Drawn as three subpaths with **even-odd** fill so the fire button is a hole rather than a
-     * shape of its own. That is also why the ball and the shaft are one outline instead of a circle
-     * overlapping a rectangle: under even-odd an overlap cancels, and the first attempt had a notch
-     * bitten out of the stick where the two met. The path was rasterised and looked at before it
-     * went in, which is how that was found.
-     */
-    /**
      * A calendar, for the history of what was played.
      *
-     * It used to be the information "i", which said nothing about time. A clock would be the
-     * conventional choice for "recent"; the owner asked for a calendar, and it suits what the list
-     * actually shows -- entries carry the day they were played (`docs/WISHLIST.md` B15).
+     * A clock would be the conventional choice for "recent"; a calendar suits what the list
+     * actually shows, since entries carry the day they were played (`docs/WISHLIST.md` B15).
      *
      * Even-odd again, so the page is a hole and the header a band. The two tabs stop exactly at the
      * body's top edge rather than overlapping it, because an overlap under even-odd cancels.
@@ -123,6 +118,15 @@ object PlayerIcons {
         )
     }
 
+    /**
+     * A CX40 — the Atari 2600 stick — for the "by platform" filter.
+     *
+     * Drawn as three subpaths with **even-odd** fill so the fire button is a hole rather than a
+     * shape of its own. That is also why the ball and the shaft are one outline instead of a circle
+     * overlapping a rectangle: under even-odd an overlap cancels, and a circle drawn over a
+     * rectangle leaves a notch bitten out of the stick where the two meet. Rasterise the path and
+     * look at it before changing it.
+     */
     val Joystick: ImageVector by lazy {
         icon(
             "Joystick",
@@ -144,10 +148,8 @@ object PlayerIcons {
     /**
      * A die, and it has to read as one at 24dp.
      *
-     * This was Material's `casino` glyph, whose pips wind the same way as its outline: under
-     * non-zero winding they filled in and the icon became a solid rounded square. The owner's
-     * description was "it does not look like a die, it looks like the Excel logo", which is exactly
-     * what a solid green-adjacent rounded square looks like.
+     * Not Material's `casino` glyph: its pips wind the same way as its outline, so under non-zero
+     * winding they fill in and the icon becomes a solid rounded square with no pips at all.
      *
      * Drawn as an outline plus five pips and rendered even-odd, so the frame is a frame and the
      * pips are holes in the face rather than part of it.
@@ -183,12 +185,11 @@ object PlayerIcons {
                 "4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z",
         )
     }
-    /** For sharing a **link**. Deliberately a different shape from [Share], which sends the file. */
     /**
      * A QR code, for "there is nobody to send to yet — point me at a screen".
      *
-     * The owner's rule for that button: **the icon says which of the two things pressing it will
-     * do.** Unpaired it opens a camera, so it is a code; paired it sends, so it is a link.
+     * The rule for that button: **the icon says which of the two things pressing it will do.**
+     * Unpaired it opens a camera, so it is a code; paired it sends, so it is a link.
      */
     val QrCode: ImageVector by lazy {
         icon(
@@ -199,6 +200,16 @@ object PlayerIcons {
         )
     }
 
+    /** A window with an arrow into it: "open this in the browser", for Share with Protracktor. */
+    val Web: ImageVector by lazy {
+        icon(
+            "Web",
+            "M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2z" +
+                "m-7 6l-4 4h3v6h2v-6h3l-4-4z",
+        )
+    }
+
+    /** For sharing a **link**. Deliberately a different shape from [Share], which sends the file. */
     val Link: ImageVector by lazy {
         icon(
             "Link",
@@ -281,6 +292,12 @@ object PlayerIcons {
      * a second press restarts the same download, which is the opposite of what anybody means by it.
      */
     val Stop: ImageVector by lazy { icon("Stop", "M6 6h12v12H6z") }
+
+    // Three bars narrowing downwards -- the shape everything else in the world uses for a
+    // filter, which is the whole argument for drawing it rather than inventing one.
+    val Filter: ImageVector by lazy {
+        icon("Filter", "M3 6h18v2H3zm3 5h12v2H6zm4 5h4v2h-4z")
+    }
 
     val Pause: ImageVector by lazy {
         icon("Pause", "M6 19h4V5H6v14zm8-14v14h4V5h-4z")

@@ -6,10 +6,9 @@ package com.przunk.protracktor.player
 /**
  * What a search covers, as one value.
  *
- * The filter used to be three independent switches — local, online, and a set of catalogues — and
- * the trouble was never the switches but that **the scope was not anywhere**. You worked it out by
- * reading five chips, and "online and by platform at once" had no defined meaning because nothing
- * had to state it.
+ * Three independent switches — local, online, and a set of catalogues — leave **the scope
+ * nowhere**: you work it out by reading five chips, and "online and by platform at once" has no
+ * defined meaning, because nothing has to state it.
  *
  * One value, shown in the search field's own label. That is what makes the rest simple: there is no
  * conjunction to resolve, an empty selection can safely mean "all of these" because the label says

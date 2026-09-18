@@ -10,6 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,6 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,8 +67,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
@@ -68,17 +80,19 @@ import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.DownloadKeys
+import com.przunk.protracktor.player.DownloadSizes
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
 
 /**
  * Browse: a full screen, one component, four domains.
  *
- * The owner asked for the choice of *where to look* to come first — local disk, the online
- * archives, a random pick, or a search — rather than for "add a folder" to be the only thing on
- * offer. Everything below that is the same list-and-tick machinery whatever the source, which is
- * why one component covers all four.
+ * The choice of *where to look* comes first — local disk, the online archives, a random pick, or
+ * a search — rather than "add a folder" being the only thing on offer. Everything below that is
+ * the same list-and-tick machinery whatever the source, which is why one component covers all
+ * four.
  */
 @Composable
 fun BrowseScreen(
@@ -94,6 +108,7 @@ fun BrowseScreen(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
+    onPickDownloads: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -107,9 +122,19 @@ fun BrowseScreen(
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
     playingId: String?,
+    loadingId: String?,
+    /**
+     * Whose folder this is, while a Random session waits under it (`docs/BACKLOG.md` A41), or null.
+     *
+     * The heading it draws is the dice's own shape — icon, what this is, and under it which one —
+     * because a digression is the same kind of state: something plays from somewhere that is not
+     * the playlist, and there is a way back.
+     */
+    digressionAuthor: String? = null,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
@@ -118,25 +143,63 @@ fun BrowseScreen(
     // at the top (`docs/STATUS.md` C6) while a descent and return does not.
     val scroll = rememberBrowseScroll()
 
+    // **A step through the catalogue, felt.** Keyed on where Browse is rather than on the taps
+    // that got it there: descending, Back, "more from this author" and the jump a search result
+    // makes all end up changing these five fields, and a call at each of those sites would be a
+    // list that goes stale the first time a sixth route is added.
+    //
+    // `transition()` is the lightest thing in `Haptics`, on purpose — this fires on every level of
+    // every descent, which is the most frequent haptic in the app by a wide margin.
+    HapticOnChange(
+        listOf(
+            browse.domain,
+            browse.openFolder,
+            browse.openCatalogue?.id,
+            browse.openFormat,
+            browse.openAuthor,
+        )
+    ) { transition() }
+
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-        if (browse.indexing.isNotEmpty()) {
-            // An index download is minutes of work on a slow connection. Saying which catalogue and
-            // showing movement is the difference between "working" and "hung".
-            //
-            // **One line each, since 2026-09-09.** Several can run at once, and a banner that named
-            // only the most recent was how the owner came to believe a second tap cancelled the
-            // first. The row itself now carries its own spinner too; this stays because it is the
-            // only thing that says *how far* the replay download has got.
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                browse.indexing.values.sorted().forEach { label ->
+        if (digressionAuthor != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                // The dice's own header height, so switching between the two screens does not
+                // move the icon.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(SESSION_HEADER_HEIGHT)
+                    .padding(horizontal = 16.dp),
+            ) {
+                Icon(
+                    imageVector = PlayerIcons.Detour,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.browse_indexing, label),
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = stringResource(R.string.browsing_author),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = digressionAuthor,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         }
+        // **No banner here, deliberately.** One naming the running downloads above the list means
+        // starting a download pushes the whole list down and finishing it pulls the list back up,
+        // while the row that was tapped is already saying the same thing with its own spinner.
+        //
+        // Both things such a banner would carry live in the rows instead: `DownloadAction` says
+        // "indexing…" under its spinner, and the replay row -- the one download that counts its
+        // files -- shows the count in its own supporting line.
 
         when (browse.domain) {
             BrowseDomain.ROOT -> DomainChooser(
@@ -150,9 +213,11 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onPickFolder = onPickFolder,
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
@@ -167,12 +232,15 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongLengths = onDownloadSongLengths,
                 onDownloadTrackMetadata = onDownloadTrackMetadata,
+                onPickDownloads = onPickDownloads,
                 onDownloadFavourites = onDownloadFavourites,
                 onDownloadReplays = onDownloadReplays,
                 onOpenCatalogue = onOpenCatalogue,
@@ -186,9 +254,11 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onClearHistory = onClearHistory,
                 onPlay = onPlay,
                 onAdd = onAdd,
@@ -199,9 +269,11 @@ fun BrowseScreen(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
                 onQueryChange = onQueryChange,
                 onScope = onScope,
                 onToggleCatalogue = onToggleCatalogue,
@@ -301,29 +373,62 @@ private fun DomainRow(
             currentLongClick?.invoke()
         }
     }
-    ListItem(
-        headlineContent = { Text(title, style = MaterialTheme.typography.titleMedium) },
-        supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
-        leadingContent = {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
-        },
-        // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so a
-        // row with nothing to hold does not advertise a long press to TalkBack that does nothing.
-        modifier = if (onLongClick == null) {
-            Modifier.clickable(onClick = rememberedClick)
-        } else {
-            // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at length:
-            // a fresh lambda restarts the gesture detector, and a detector restarted under a finger
-            // that is still down starts timing another long press. This row has not been held long
-            // enough to show it, which is not a reason to leave it.
-            Modifier.combinedClickable(
-                onClick = rememberedClick,
-                onLongClickLabel = longClickLabel,
-                onLongClick = rememberedLongClick,
+    // **A row of its own rather than a `ListItem`, because these rows must not change size.** The
+    // Random row's words depend on what the dice is set to, and a `ListItem` grows with them: with
+    // "everything" the second line wraps, the row gets taller, the icon sits above centre and
+    // every row under it moves a few pixels. A fixed height tall enough for two lines makes the
+    // list stand still whatever the scope says.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(DOMAIN_ROW_HEIGHT)
+            // `combinedClickable` only where a row has a second action -- `clickable` elsewhere, so
+            // a row with nothing to hold does not advertise a long press to TalkBack that does
+            // nothing.
+            .then(
+                if (onLongClick == null) {
+                    Modifier.clickable(onClick = rememberedClick)
+                } else {
+                    // Remembered handlers, for the reason `PlayerDock.TransportButton` sets out at
+                    // length: a fresh lambda restarts the gesture detector, and a detector
+                    // restarted under a finger that is still down starts timing another long press.
+                    Modifier.combinedClickable(
+                        onClick = rememberedClick,
+                        onLongClickLabel = longClickLabel,
+                        onLongClick = rememberedLongClick,
+                    )
+                }
             )
-        },
-    )
+            .padding(horizontal = 16.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
+
+/**
+ * How tall the rows at the root of Browse stand, whatever their words.
+ *
+ * Room for a title and two lines under it: the Random row says what the dice is set to, and that
+ * sentence is a line longer for some scopes than for others.
+ */
+private val DOMAIN_ROW_HEIGHT = 78.dp
 
 /**
  * Where the dice picks from.
@@ -375,12 +480,11 @@ internal fun RandomScopeSheet(
             }
         }
 
-        // **A disabled chip has to say why, and here it can also fix it.** The owner met a dead
-        // platform chip once already and asked for the reason to be shown; a dead Favourites chip
-        // is worse, because the thing it needs is a 142 KB download the app can start from this
-        // sheet. Zero has two causes, and they take different advice -- the list was never
-        // downloaded, or it was and Modland is not indexed, in which case offering a download
-        // again would send somebody round a loop.
+        // **A disabled chip has to say why, and here it can also fix it.** What a dead Favourites
+        // chip needs is a 142 KB download the app can start from this sheet. Zero has two causes,
+        // and they take different advice -- the list was never downloaded, or it was and Modland
+        // is not indexed, in which case offering a download again would send somebody round a
+        // loop.
         if (browse.favouriteCount == 0) {
             val downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES)
             Row(
@@ -420,9 +524,11 @@ private fun LocalDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
@@ -482,12 +588,14 @@ private fun LocalDomain(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
             )
         }
         return
@@ -546,12 +654,15 @@ private fun OnlineDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongLengths: () -> Unit,
     onDownloadTrackMetadata: () -> Unit,
+    onPickDownloads: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
@@ -560,18 +671,21 @@ private fun OnlineDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
+    val haptics = rememberHaptics()
     when {
         browse.openAuthor != null -> Selectable(
             browse = browse,
             scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
+            loadingId = loadingId,
             onPlay = onPlay,
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareLink = onShareLink,
+            onSendToWeb = onSendToWeb,
         )
 
         browse.openCatalogue != null -> {
@@ -610,23 +724,77 @@ private fun OnlineDomain(
         val listState = scroll.stateFor(key)
         RestorePosition(scroll, key, listState, browse.catalogues.map { it.id }, browse.loading)
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            // **The one press, at the top, while there is anything left to fetch.**
+            //
+            // The first testers did not know an index had to be downloaded at all
+            // (`docs/BACKLOG.md` A46): the rows below say "no index -- tap the arrow", which only
+            // reads as an instruction to somebody who already knows what an index is. This says
+            // what it will do and what it will cost, in one row, in the place they were already
+            // standing.
+            //
+            // It leaves once there is nothing left to download, because an offer that does nothing
+            // is worse than no offer.
+            if (browse.catalogues.any { it.requiresIndex } ||
+                browse.songLengthCount == 0 ||
+                browse.trackMetadataCount == 0
+            ) {
+                item(key = "download-everything") {
+                    ListItem(
+                        leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
+                        headlineContent = { Text(stringResource(R.string.download_pick_open)) },
+                        supportingContent = {
+                            Text(
+                                stringResource(
+                                    R.string.download_all_body,
+                                    DownloadSizes.EVERYTHING_MB,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        // The spinner belongs here as well as in the sheet: a run started from the
+                        // sheet goes on after it is dismissed, and this row is what the screen
+                        // underneath has to say about it.
+                        trailingContent = {
+                            DownloadAction(
+                                downloading = browse.indexing.containsKey(DownloadKeys.EVERYTHING),
+                                description = stringResource(R.string.a11y_download_pick),
+                                onClick = onPickDownloads,
+                            )
+                        },
+                        modifier = Modifier.clickable(onClick = onPickDownloads),
+                    )
+                    HorizontalDivider()
+                }
+            }
             items(browse.catalogues, key = { it.id }) { catalogue ->
                 ListItem(
                     headlineContent = { Text(catalogue.displayName) },
                     supportingContent = {
                         Column {
-                            // What it holds, and what that costs. The size used to appear only
-                            // in the storage section and, oddly, in the notice after deleting it --
-                            // so the one moment you were told how much a catalogue weighed was the
-                            // moment you no longer had it. It belongs where the decision is made.
+                            // What it holds, and what that costs. The size belongs where the
+                            // decision is made, not only in the storage section and the notice
+                            // after deleting it.
                             val archived = browse.archiveBytes[catalogue.id] ?: 0L
                             Text(
                                 if (catalogue.isOnlineOnly) {
                                     stringResource(R.string.catalogue_online_search)
                                 } else if (catalogue.indexed) {
-                                    val counted = pluralStringResource(
-                                        R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
-                                    )
+                                    // **Both numbers when they differ**, since an index keeps
+                                    // every row the archive lists and the app offers what it can
+                                    // open (`docs/ROADMAP_FORMATS.md` step 0). One of them alone
+                                    // is how the owner met a snackbar saying 500,000-odd over a
+                                    // row saying 341,842.
+                                    val counted = if (catalogue.archiveCount > catalogue.trackCount) {
+                                        stringResource(
+                                            R.string.catalogue_playable_of,
+                                            catalogue.trackCount,
+                                            catalogue.archiveCount,
+                                        )
+                                    } else {
+                                        pluralStringResource(
+                                            R.plurals.track_count, catalogue.trackCount, catalogue.trackCount
+                                        )
+                                    }
                                     if (archived > 0L) {
                                         stringResource(
                                             R.string.catalogue_count_and_size,
@@ -650,8 +818,8 @@ private fun OnlineDomain(
                             )
                             // An index keeps only the formats a decoder could play when it was
                             // built, so one built by an older set is missing whatever arrived
-                            // since -- and looks empty rather than out of date. The owner lost
-                            // 60,572 C64 tunes to exactly this and nothing said why.
+                            // since -- and looks empty rather than out of date. That can be
+                            // 60,572 C64 tunes missing with nothing on screen to say why.
                             if (catalogue.isStale(browse.backends)) {
                                 Text(
                                     text = stringResource(R.string.catalogue_stale),
@@ -783,8 +951,13 @@ private fun OnlineDomain(
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.replays_title)) },
                         supportingContent = {
+                            // **The one download that counts its files**, so while it runs this
+                            // line carries the count rather than the invitation. There is no
+                            // banner at the top of the screen, and nothing else on this row can
+                            // say how far ninety-eight small files have got.
                             Text(
-                                stringResource(R.string.replays_none),
+                                browse.indexing[DownloadKeys.REPLAYS]
+                                    ?: stringResource(R.string.replays_none),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         },
@@ -799,15 +972,15 @@ private fun OnlineDomain(
                         modifier = if (browse.indexing.containsKey(DownloadKeys.REPLAYS)) {
                             Modifier
                         } else {
-                            Modifier.clickable { onDownloadReplays() }
+                            // The same act as an arrow, only the whole row is the button.
+                            Modifier.clickable { haptics.press(); onDownloadReplays() }
                         },
                     )
                 }
             }
 
-            // The storage section lived here from 2026-09-04 until the settings screen existed,
-            // which was always the plan and was said so at the time. Browse is for finding music;
-            // what the app is keeping on the phone is not that.
+            // No storage section here: it lives in Settings. Browse is for finding music; what
+            // the app is keeping on the phone is not that.
             item {
                 Text(
                     text = stringResource(R.string.catalogue_more_coming),
@@ -832,9 +1005,11 @@ private fun SearchDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onQueryChange: (String) -> Unit,
     onScope: (SearchScope) -> Unit,
     onToggleCatalogue: (String) -> Unit,
@@ -844,6 +1019,21 @@ private fun SearchDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
+    // **The keyboard is up before it is asked for.** Search is the one screen nobody arrives at
+    // to look around: they came to type, and anything between arriving and typing is in the way.
+    // The field is at the top, where the keyboard does not cover it.
+    //
+    // `LaunchedEffect(Unit)` and not a token: this composable exists only while the domain is
+    // Search, so entering composition *is* entering Search. Walking back out of a folder into
+    // results does not re-enter it, so the keyboard does not spring up over a list somebody is
+    // reading.
+    val field = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        field.requestFocus()
+        keyboard?.show()
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
             value = browse.query,
@@ -864,7 +1054,10 @@ private fun SearchDomain(
                     Icon(PlayerIcons.Search, stringResource(R.string.domain_search_title))
                 }
             },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .focusRequester(field),
         )
 
         SearchScopePanel(
@@ -882,12 +1075,14 @@ private fun SearchDomain(
                 scroll = scroll,
                 playlistName = playlistName,
                 playingId = playingId,
+                loadingId = loadingId,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareLink = onShareLink,
+                onSendToWeb = onSendToWeb,
             )
         }
     }
@@ -900,8 +1095,8 @@ private fun SearchDomain(
  *
  * **The middle of the window is not the middle of what you can see.** The app is edge-to-edge, so
  * the keyboard is drawn *over* the content rather than shrinking it — and a spinner centred in the
- * full height sits underneath it for the whole of a search, which is the one place you most want to
- * know something is happening. The owner reported exactly that on 2026-09-04.
+ * full height sits underneath it for the whole of a search, which is the one place you most want
+ * to know something is happening.
  *
  * `imePadding` alone would have fixed the search case and left the spinner wherever the remaining
  * space happened to centre. Near the top is better for every caller: it is where the results will
@@ -938,9 +1133,11 @@ private fun HistoryDomain(
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -974,32 +1171,23 @@ private fun HistoryDomain(
             scroll = scroll,
             playlistName = playlistName,
             playingId = playingId,
+            loadingId = loadingId,
             onPlay = onPlay,
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareLink = onShareLink,
+            onSendToWeb = onSendToWeb,
         )
     }
 }
 
 /**
- * The track list, shared by every domain.
- *
- * Two modes, and `docs/ARCHITECTURE.md` §17 is why they are these two. **Normally a tap plays** --
- * the app used to select on tap, which almost nothing does, and the owner said so. **A long press
- * starts selecting**, a checkbox appears where nothing was, and further taps tick rows. Back leaves
- * the selection with nothing ticked.
- *
- * Selection is this composable's own business and dies with it. Holding it in the controller would
- * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
- */
-/**
  * Puts the row you came out of back on screen, once the list it lives in has arrived.
  *
- * Identity first, and there is no index fallback on purpose: an index is only "where I was" while
- * the list is unchanged, and the case this exists for is precisely the one where it changed. When
+ * Identity first, and there is no index fallback on purpose: an index names the same place only
+ * while the list is unchanged, and the case this exists for is precisely the one where it did. When
  * the row is gone, the level's own saved offset is already correct enough, and jumping somewhere
  * arbitrary because a number still parses would be worse than leaving it alone.
  */
@@ -1023,36 +1211,44 @@ private fun RestorePosition(
     }
 }
 
+/**
+ * The track list, shared by every domain.
+ *
+ * Two modes, and `docs/ARCHITECTURE.md` §17 is why they are these two. **Normally a tap plays**,
+ * rather than selecting, which almost nothing else does. **A long press starts selecting**, a
+ * checkbox appears where nothing was, and further taps tick rows. Back leaves the selection with
+ * nothing ticked.
+ *
+ * Selection is this composable's own business and dies with it. Holding it in the controller would
+ * mean remembering to clear it, and a stale tick that survives a rescan adds a file nobody chose.
+ */
 @Composable
 private fun Selectable(
     browse: BrowseState,
     scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
+    loadingId: String?,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
 ) {
     var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
     }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
-    // Reset when the list underneath changes: following a row in a folder you have just left is
-    // following nothing.
-    var following by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
-        mutableStateOf(false)
-    }
     LaunchedEffect(browse.tracks) {
         selected = selected.intersect(browse.tracks.map { it.id }.toSet())
     }
     val selecting = selected.isNotEmpty()
 
     // Takes back before the level-and-exit handler outside, because the innermost enabled handler
-    // wins. That is the stack the owner asked for: leave the selection, then go up a level, then
-    // out to the playlist -- one step each.
+    // wins. That is the stack: leave the selection, then go up a level, then out to the playlist --
+    // one step each.
     BackHandler(enabled = selecting) { selected = emptySet() }
 
     showingInfo?.let { track ->
@@ -1153,6 +1349,7 @@ private fun Selectable(
                         ticked = track.id in selected,
                         selecting = selecting,
                         playing = track.id == playingId,
+                        loading = track.id == loadingId,
                         onPlay = { onPlay(index) },
                         onToggle = {
                             selected = if (track.id in selected) selected - track.id
@@ -1168,6 +1365,8 @@ private fun Selectable(
                         onShareFile = { onShareFile(track) },
                         onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                             ?.let { { onShareLink(it) } },
+                        // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
+                        onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
                     )
                 }
             }
@@ -1177,27 +1376,26 @@ private fun Selectable(
                     modifier = Modifier.align(Alignment.CenterEnd),
                 )
 
-                // The same button the playlist has. These are the lists you scroll a long way down
-                // while something plays -- a folder, a search, an author's other tunes -- so losing
-                // the playing row here costs more than it does on the playlist, not less.
+                // The playing row kept on screen as next and previous move it, the same as the
+                // playlist and the Random record. These are the lists you scroll a long way down
+                // while something plays -- a folder, a search, an author's other tunes.
                 //
-                // **After the list, not before it.** Children of a `Box` draw in order, so put
-                // above the `LazyColumn` it was painted and then covered by every row -- present,
-                // correct and invisible, which is how the owner found it.
-                //
-                // Hidden while selecting for the reason it is hidden on the playlist: it floats
-                // over the bottom-right corner, which is where the actions are, and following the
-                // music is not what you are doing when you are ticking rows.
-                if (!selecting) {
-                    FollowTrackButton(
-                        listState = listState,
-                        currentIndex = browse.tracks.indexOfFirst { it.id == playingId }
-                            .takeIf { it >= 0 },
-                        contentPadding = PaddingValues(0.dp),
-                        following = following,
-                        onFollowingChange = { following = it },
-                    )
+                // **Arriving from the tune itself.** "More from this author" is
+                // a jump made *from* something playing, so the folder opens with that tune on
+                // screen rather than at the top of eighty rows. Only on a jump: walking into a
+                // folder is not a request to be taken anywhere (`ListScrolling`'s own rule).
+                LaunchedEffect(browse.openAuthor, browse.tracks.size) {
+                    if (!browse.arrivedByJump) return@LaunchedEffect
+                    val at = browse.tracks.indexOfFirst { it.id == playingId }
+                    if (at >= 0) listState.revealRow(at)
                 }
+
+                KeepRowInView(
+                    listState = listState,
+                    index = browse.tracks.indexOfFirst { it.id == playingId }.takeIf { it >= 0 },
+                    key = playingId,
+                    active = !selecting,
+                )
             }
             }
         }
@@ -1232,10 +1430,28 @@ private fun Selectable(
                         contentDescription = stringResource(R.string.action_add_to_playlist),
                     )
                 }
+                IconButton(
+                    onClick = {
+                        val toSend = browse.tracks.filter { it.id in selected }
+                        selected = emptySet()
+                        onSendToWeb(toSend)
+                    },
+                ) {
+                    Icon(
+                        imageVector = PlayerIcons.Web,
+                        contentDescription = stringResource(R.string.action_send_to_web),
+                    )
+                }
             }
         }
     }
 }
+
+/** Wide enough for a checkbox, and reserved whether or not one is showing. */
+private val CHECKBOX_SLOT = 40.dp
+
+/** What every track row is at least, in both modes, so entering selection moves nothing. */
+private val ROW_HEIGHT = 72.dp
 
 /**
  * One row of a track list outside the playlist.
@@ -1243,16 +1459,10 @@ private fun Selectable(
  * The same anatomy as a playlist row minus the drag handle, which is the only thing that is
  * genuinely different: a playlist has an order that belongs to the user and these do not.
  *
- * No ordinal. In the playlist the number answers "where am I in three hundred rows of *my* list";
- * here it would only say which row of somebody else's archive this is. The space it would have
- * taken is the checkbox's, so the row does not change width when selection begins.
+ * No ordinal. In the playlist the number says where you are in three hundred rows of your own
+ * list; here it would only say which row of somebody else's archive this is. The space it would
+ * have taken is the checkbox's, so the row does not change width when selection begins.
  */
-/** Wide enough for a checkbox, and reserved whether or not one is showing. */
-private val CHECKBOX_SLOT = 40.dp
-
-/** What every track row is at least, in both modes, so entering selection moves nothing. */
-private val ROW_HEIGHT = 72.dp
-
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun BrowseTrackRow(
@@ -1261,6 +1471,7 @@ private fun BrowseTrackRow(
     ticked: Boolean,
     selecting: Boolean,
     playing: Boolean,
+    loading: Boolean,
     onPlay: () -> Unit,
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
@@ -1269,7 +1480,9 @@ private fun BrowseTrackRow(
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareLink: (() -> Unit)?,
+    onSendToWeb: (() -> Unit)?,
 ) {
+    val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
 
     ListItem(
@@ -1284,7 +1497,12 @@ private fun BrowseTrackRow(
         // under the very finger that had just long-pressed one.
         leadingContent = {
             Box(modifier = Modifier.size(CHECKBOX_SLOT), contentAlignment = Alignment.Center) {
-                if (selecting) Checkbox(checked = ticked, onCheckedChange = { onToggle() })
+                if (selecting) {
+                    Checkbox(
+                        checked = ticked,
+                        onCheckedChange = { on -> haptics.toggle(on); onToggle() },
+                    )
+                }
             }
         },
         // Nothing here while selecting: a menu on a row you are ticking is a second meaning for a
@@ -1327,6 +1545,13 @@ private fun BrowseTrackRow(
                                 onClick = { menuOpen = false; share() },
                             )
                         }
+                        onSendToWeb?.let { send ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_send_to_web)) },
+                                leadingIcon = { Icon(PlayerIcons.Web, contentDescription = null) },
+                                onClick = { menuOpen = false; send() },
+                            )
+                        }
                     }
                 }
             }
@@ -1342,37 +1567,99 @@ private fun BrowseTrackRow(
             // with one, and a list whose rows change height when a checkbox arrives is the defect
             // this is here to prevent.
             .heightIn(min = ROW_HEIGHT)
+            // **Fetching says so by breathing** (`docs/WISHLIST.md` B32), here as in the playlist:
+            // these are the lists a tune is most often started from. Allocated only for the row
+            // being fetched, so three hundred others still scroll without a layer each.
+            .then(
+                if (!loading) {
+                    Modifier
+                } else {
+                    val breath = rememberInfiniteTransition(label = "fetching").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0.45f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 550, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "breath",
+                    )
+                    Modifier.graphicsLayer { alpha = breath.value }
+                }
+            )
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
-            // into a scroll is claimed by the list before it ever becomes a long press. Both matter:
-            // the owner's complaint about another player is a long press firing at a twentieth of a
-            // second mid-scroll, after which back throws him out of the list entirely.
+            // into a scroll is claimed by the list before it ever becomes a long press. Both
+            // matter: a long press firing at a twentieth of a second mid-scroll drops the reader
+            // into selection, and back then throws them out of the list entirely.
             .combinedClickable(
-                onClick = { if (selecting) onToggle() else onPlay() },
-                onLongClick = { if (!selecting) onStartSelecting() },
+                // **Choosing a tune is the firm one** — it is the press this whole screen exists
+                // for. While selecting, the same tap is a tick in a box, so it
+                // feels like the checkbox beside it rather than like starting a tune.
+                onClick = {
+                    if (selecting) {
+                        haptics.toggle(!ticked)
+                        onToggle()
+                    } else {
+                        haptics.press()
+                        onPlay()
+                    }
+                },
+                // The loose end `docs/BACKLOG.md` A8 left open: a long press with no answer feels
+                // like a press that missed, and this one silently changes what every other tap on
+                // the screen will do.
+                onLongClick = {
+                    if (!selecting) {
+                        haptics.gestureEnd()
+                        onStartSelecting()
+                    }
+                },
             ),
     )
 }
 
 /**
- * The arrow that starts a download, and the spinner it becomes while one is running.
+ * The arrow that starts a download, and the spinner-with-a-word it becomes while one is running.
  *
- * **In the row rather than only in the banner.** Several of these can run at once — they always
- * could, being independent coroutines — but the screen only ever showed the most recent one, so
- * tapping a second arrow looked like it had cancelled the first (owner, 2026-09-09). A row that
- * shows its own state cannot lie about it, and the same spinner is what says "this one is already
- * going" when a second tap would otherwise do nothing visible.
+ * **In the row rather than in a banner.** Several of these run at once, being independent
+ * coroutines, and a screen showing only the most recent makes tapping a second arrow look like it
+ * cancelled the first. A row that shows its own state cannot lie about it, and the same spinner is
+ * what says "this one is already going" when a second tap would otherwise do nothing visible.
  *
- * The same size as the icon it replaces, so nothing in the list moves when it appears.
+ * **A bare spinner is a shape, not a sentence**, so it carries the word under it. Both states sit
+ * in a box of one fixed size, centred, which is the whole point: a banner changes the layout when
+ * it appears and again when it leaves, and a caption that made the row grow would do the same one
+ * level down. The box is as wide as the
+ * longest of the two languages needs — Polish "indeksowanie…" is half again the English — and as
+ * tall as the icon already was, so the spinner and its word fit inside what the arrow occupied.
  */
 @Composable
 private fun DownloadAction(downloading: Boolean, description: String, onClick: () -> Unit) {
-    if (downloading) {
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-        }
-    } else {
-        IconButton(onClick = onClick) {
-            Icon(PlayerIcons.Download, description)
+    val haptics = rememberHaptics()
+    Box(
+        modifier = Modifier.width(84.dp).height(48.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (downloading) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(
+                    text = stringResource(R.string.browse_indexing_short),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        } else {
+            // **The one button in this app whose result is a spinner.** Everything it starts is
+            // minutes of work over the network, and until the first byte arrives the screen has
+            // nothing to show but the spinner it swapped in. The buzz is the receipt.
+            IconButton(onClick = { haptics.press(); onClick() }) {
+                Icon(PlayerIcons.Download, description)
+            }
         }
     }
 }

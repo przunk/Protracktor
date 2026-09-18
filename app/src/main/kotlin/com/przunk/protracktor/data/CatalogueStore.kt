@@ -7,8 +7,25 @@ import android.content.ContentValues
 import android.content.Context
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.CatalogueEntry
+import com.przunk.protracktor.player.SupportedFormats
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/** One `catalogues` row as stored, which outgrew being a `Triple` when `complete` arrived. */
+private data class StoredIndex(
+    val trackCount: Int = 0,
+    val indexedAt: Long? = null,
+    val backends: String = "",
+    val complete: Boolean = false,
+    /**
+     * How many rows the archive has, against [trackCount]'s "how many of them this build opens".
+     *
+     * Two numbers since 2026-09-17, because the index keeps everything (`docs/ROADMAP_FORMATS.md`
+     * step 0). Saying only one of them is how the owner met a snackbar reporting 500,000-odd over a
+     * row reporting 341,842.
+     */
+    val archiveCount: Int = 0,
+)
 
 data class CatalogueSummary(
     val id: String,
@@ -23,21 +40,40 @@ data class CatalogueSummary(
      * set is missing whatever arrived since — and looks empty rather than out of date.
      */
     val backends: String = "",
+    /**
+     * Whether this index holds the whole archive rather than one build's idea of it.
+     *
+     * **False is what every index written before 2026-09-17 is**, and it is the reason [isStale]
+     * still exists. Those hold only the rows the format list of the day accepted, so a format added
+     * afterwards has no row here to be re-decided and the archive's index has to be fetched again.
+     * An index written since holds everything and is never stale for that reason —
+     * `refreshPlayable` answers the question locally, in 228ms, with no network.
+     */
+    val complete: Boolean = false,
+    val archiveCount: Int = 0,
 ) {
-    val indexed: Boolean get() = trackCount > 0 || isOnlineOnly
+    /**
+     * Whether this phone holds this catalogue's index at all.
+     *
+     * **Rows of any kind, not playable rows.** Since the index keeps everything the archive lists
+     * (`docs/ROADMAP_FORMATS.md` step 0), [trackCount] is how much of it *this build opens* and
+     * [archiveCount] is how much there is. Asking only the first would report a fully downloaded
+     * catalogue as missing whenever this build happens to play none of it -- and then offer to
+     * download it again, which would change nothing.
+     */
+    val indexed: Boolean get() = trackCount > 0 || archiveCount > 0 || isOnlineOnly
     /** A downloaded catalogue with no index cannot be browsed until the user fetches it again. */
     val requiresIndex: Boolean get() = !isOnlineOnly && !indexed
 
     /**
      * Whether this index was built by decoders this build no longer has — or by an unknown set.
      *
-     * An empty `backends` means the index predates this column, which is exactly the case that
-     * prompted it: the owner's Modland index predated libsidplayfp and its 60,572 C64 tunes were
-     * simply absent. Treating "unknown" as stale is right, because unknown is how the problem
-     * looked.
+     * An empty `backends` is an index written before this column existed, and such an index can be
+     * missing a decoder's whole catalogue while looking current — 60,572 C64 tunes, when
+     * libsidplayfp arrived. Unknown counts as stale for that reason.
      */
     fun isStale(current: String): Boolean =
-        !isOnlineOnly && trackCount > 0 && backends != current
+        !isOnlineOnly && trackCount > 0 && !complete && backends != current
 }
 
 /** A row of an online catalogue, ready to become a playable reference. */
@@ -65,16 +101,21 @@ class CatalogueStore(context: Context) {
 
     suspend fun summaries(): List<CatalogueSummary> = withContext(Dispatchers.IO) {
         val stored = helper.readableDatabase
-            .rawQuery("SELECT id, track_count, indexed_at, backends FROM catalogues", null)
+            .rawQuery(
+                "SELECT id, track_count, indexed_at, backends, complete, archive_count FROM catalogues",
+                null,
+            )
             .use { row ->
                 buildMap {
                     while (row.moveToNext()) {
                         put(
                             row.getString(0),
-                            Triple(
-                                row.getInt(1),
-                                if (row.isNull(2)) null else row.getLong(2),
-                                row.getString(3).orEmpty(),
+                            StoredIndex(
+                                trackCount = row.getInt(1),
+                                indexedAt = if (row.isNull(2)) null else row.getLong(2),
+                                backends = row.getString(3).orEmpty(),
+                                complete = row.getInt(4) != 0,
+                                archiveCount = row.getInt(5),
                             ),
                         )
                     }
@@ -84,20 +125,21 @@ class CatalogueStore(context: Context) {
         // Driven by the catalogues the app knows about, not by what happens to be in the table.
         // A catalogue nobody has indexed yet still has to appear, or there is no way to index it.
         //
-        // **Search-only ones last**, on the owner's note (2026-09-09): they are the only rows with
-        // no download arrow, and a gap in the middle of a column of buttons reads as something
-        // missing rather than as something different. Sorted by the property rather than by naming
-        // The Mod Archive, so the next one lands in the right place without anybody remembering to
-        // move it. `sortedBy` is stable, so the rest keep the order `Catalogue.all` declares.
+        // Search-only ones last: they are the only rows with no download arrow, and a gap in the
+        // middle of a column of buttons reads as something missing. Sorted by the property rather
+        // than by naming The Mod Archive, so the next one lands right without anybody remembering.
+        // `sortedBy` is stable, so the rest keep the order `Catalogue.all` declares.
         Catalogue.all.sortedBy { it.isOnlineOnly }.map { catalogue ->
-            val (count, at, backends) = stored[catalogue.id] ?: Triple(0, null, "")
+            val held = stored[catalogue.id] ?: StoredIndex()
             CatalogueSummary(
                 id = catalogue.id,
                 displayName = catalogue.displayName,
-                trackCount = count,
-                indexedAt = at,
+                trackCount = held.trackCount,
+                indexedAt = held.indexedAt,
                 isOnlineOnly = catalogue.isOnlineOnly,
-                backends = backends,
+                backends = held.backends,
+                complete = held.complete,
+                archiveCount = held.archiveCount,
             )
         }
     }
@@ -142,15 +184,37 @@ class CatalogueStore(context: Context) {
         val known = Catalogue.all.map { it.id }
         val placeholders = known.joinToString(",") { "?" }
         val ids = known.toTypedArray()
+
+        // **Asked before it is done, because the asking is free and the doing is not.**
+        //
+        // This runs at every launch, and `catalogue_id NOT IN (...)` over `catalogue_tracks` is a
+        // full scan: nothing indexes a negation, and since v15 the two browse indexes are partial
+        // (`WHERE playable = 1`) so they could not serve it even if it were positive. Measured on
+        // 516,000 rows: **55.6 ms on a desktop**, in a write transaction, on the one connection
+        // every other read at launch is queueing behind — and a phone's storage is several times
+        // slower than that (`docs/BACKLOG.md` A48).
+        //
+        // The `catalogues` table has one row per catalogue and answers the same question in
+        // **0.0 ms**. A catalogue that has rows but no row of its own is not reachable by anything
+        // this app does: `replaceIndex` writes both in one transaction and this deletes both in
+        // one. If that is ever untrue, it is a defect in whatever broke the pair, and scanning half
+        // a million rows at every launch is not the way to find out.
+        val stale = helper.readableDatabase
+            .rawQuery("SELECT EXISTS(SELECT 1 FROM catalogues WHERE id NOT IN ($placeholders))", ids)
+            .use { row -> row.moveToFirst() && row.getInt(0) == 1 }
+        if (!stale) return@withContext
+
         helper.writableDatabase.transaction {
             delete("catalogue_tracks", "catalogue_id NOT IN ($placeholders)", ids)
             delete("catalogues", "id NOT IN ($placeholders)", ids)
         }
     }
 
-    suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String) =
+    /** @return how many of [entries] this build can open, which is what the catalogue then reports. */
+    suspend fun replaceIndex(catalogue: Catalogue, entries: List<CatalogueEntry>, backends: String): Int =
         withContext(Dispatchers.IO) {
             val db = helper.writableDatabase
+            var playableCount = 0
             db.transaction {
                 insertWithOnConflict(
                     "catalogues", null,
@@ -158,10 +222,20 @@ class CatalogueStore(context: Context) {
                         put("id", catalogue.id)
                         put("display_name", catalogue.displayName)
                         put("indexed_at", System.currentTimeMillis())
-                        put("track_count", entries.size)
-                        // What produced this index. An index is filtered to the formats a backend
-                        // can play, so it is only as good as the decoders that built it.
+                        // **What can be played, not what was stored.** Since the index keeps
+                        // every row, `entries.size` is the archive's size and would tell the owner
+                        // he has half a million tunes he cannot open. Filled in below, once the
+                        // rows have been counted.
+                        put("track_count", 0)
+                        // What produced this index. It no longer decides what the index *holds*
+                        // -- every row is kept -- but it still records which format list decided
+                        // the `playable` flags, so a change to that list can be noticed and the
+                        // flags re-decided without a download (`refreshPlayable`).
                         put("backends", backends)
+                        // Written by a build that keeps every row, so no format added later can
+                        // find this index short of anything.
+                        put("complete", 1)
+                        put("archive_count", entries.size)
                     },
                     android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
                 )
@@ -169,10 +243,17 @@ class CatalogueStore(context: Context) {
 
                 val insert = compileStatement(
                     "INSERT OR REPLACE INTO catalogue_tracks " +
-                        "(catalogue_id, path, format, author, title, size) VALUES (?, ?, ?, ?, ?, ?)"
+                        "(catalogue_id, path, format, author, title, size, ext, pre, playable) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
                 insert.use { statement ->
                     entries.forEach { entry ->
+                        // **Every row, whether this build can play it or not.** The two halves of
+                        // the name go in beside it, and the verdict is `playable` -- which one
+                        // `UPDATE` re-decides when the format list changes, instead of a download
+                        // (`docs/ROADMAP_FORMATS.md` step 0).
+                        val ext = SupportedFormats.extensionOf(entry.title)
+                        val pre = SupportedFormats.prefixOf(entry.title)
                         statement.clearBindings()
                         statement.bindString(1, catalogue.id)
                         statement.bindString(2, entry.path)
@@ -180,15 +261,81 @@ class CatalogueStore(context: Context) {
                         statement.bindString(4, entry.author)
                         statement.bindString(5, entry.title)
                         statement.bindLong(6, entry.size)
+                        statement.bindString(7, ext)
+                        statement.bindString(8, pre)
+                        val playable =
+                            ext in SupportedFormats.extensions || pre in SupportedFormats.prefixes
+                        if (playable) playableCount++
+                        statement.bindLong(9, if (playable) 1L else 0L)
                         statement.executeInsert()
                     }
                 }
+                update(
+                    "catalogues",
+                    ContentValues().apply { put("track_count", playableCount) },
+                    "id = ?", arrayOf(catalogue.id),
+                )
             }
+            playableCount
         }
+
+    /**
+     * Records that these indexes were judged by the current format list.
+     *
+     * **Only the whole ones.** A partial index — written before the index stopped being a function
+     * of that list — is short of rows for any format added since, and nothing local can supply
+     * them; leaving its stamp alone is what keeps it saying so.
+     */
+    suspend fun restampComplete(backends: String) = withContext(Dispatchers.IO) {
+        helper.writableDatabase.update(
+            "catalogues",
+            ContentValues().apply { put("backends", backends) },
+            "complete = 1", null,
+        )
+        Unit
+    }
+
+    /**
+     * Re-decides `playable` for every stored row, for nothing but the cost of one statement.
+     *
+     * **This is what item 0 of `docs/ROADMAP_FORMATS.md` bought.** Adding a format used to mean
+     * every user downloading Modland's 40 MB again, because the index held only what the old list
+     * accepted. It holds everything now, so a new format is a question already answered by rows
+     * that are already here: 228ms over 516,107 of them, measured, and no network.
+     *
+     * `ext` and `pre` were written from the filename and never from the list, which is why this can
+     * be a single `UPDATE` rather than half a million round trips through Kotlin.
+     *
+     * @return how many rows are playable afterwards, so the caller can say what changed.
+     */
+    suspend fun refreshPlayable(): Int = withContext(Dispatchers.IO) {
+        val extensions = SupportedFormats.extensions.toList()
+        val prefixes = SupportedFormats.prefixes.toList()
+        val ext = extensions.joinToString(",") { "?" }
+        val pre = prefixes.joinToString(",") { "?" }
+        helper.writableDatabase.transaction {
+            execSQL(
+                "UPDATE catalogue_tracks SET playable = " +
+                    "(CASE WHEN ext IN ($ext) OR pre IN ($pre) THEN 1 ELSE 0 END)",
+                (extensions + prefixes).toTypedArray(),
+            )
+            // The count every catalogue shows follows the flags, or the number on screen is the
+            // answer to a question the app stopped asking.
+            execSQL(
+                "UPDATE catalogues SET track_count = (" +
+                    "SELECT COUNT(*) FROM catalogue_tracks t WHERE t.catalogue_id = catalogues.id " +
+                    "AND t.playable = 1)"
+            )
+        }
+        helper.readableDatabase
+            .rawQuery("SELECT COUNT(*) FROM catalogue_tracks WHERE playable = 1", null)
+            .use { if (it.moveToFirst()) it.getInt(0) else 0 }
+    }
 
     suspend fun formats(catalogueId: String): List<CatalogueGroup> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT format, COUNT(*) FROM catalogue_tracks WHERE catalogue_id = ? GROUP BY format ORDER BY format",
+            "SELECT format, COUNT(*) FROM catalogue_tracks WHERE catalogue_id = ? AND playable = 1 " +
+                "GROUP BY format ORDER BY format",
             arrayOf(catalogueId),
         ).use { it.toGroups() }
     }
@@ -196,7 +343,7 @@ class CatalogueStore(context: Context) {
     suspend fun authors(catalogueId: String, format: String): List<CatalogueGroup> =
         withContext(Dispatchers.IO) {
             helper.readableDatabase.rawQuery(
-                "SELECT author, COUNT(*) FROM catalogue_tracks WHERE catalogue_id = ? AND format = ? " +
+                "SELECT author, COUNT(*) FROM catalogue_tracks WHERE catalogue_id = ? AND format = ? AND playable = 1 " +
                     "GROUP BY author ORDER BY author",
                 arrayOf(catalogueId, format),
             ).use { it.toGroups() }
@@ -206,7 +353,7 @@ class CatalogueStore(context: Context) {
         withContext(Dispatchers.IO) {
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
-                    "WHERE catalogue_id = ? AND format = ? AND author = ? ORDER BY title",
+                    "WHERE catalogue_id = ? AND format = ? AND author = ? AND playable = 1 ORDER BY title",
                 arrayOf(catalogueId, format, author),
             ).use { it.toTracks() }
         }
@@ -226,7 +373,7 @@ class CatalogueStore(context: Context) {
                 val placeholders = catalogueIds.joinToString(",") { "?" }
                 " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
             }
-            val pattern = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            val words = SearchTerms.sqlFor(query, "title", "author")
             val byFormat = if (formats.isEmpty()) {
                 "" to emptyArray<String>()
             } else {
@@ -235,9 +382,8 @@ class CatalogueStore(context: Context) {
             }
             helper.readableDatabase.rawQuery(
                 "SELECT COUNT(*) FROM catalogue_tracks " +
-                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')" +
-                    "${scope.first}${byFormat.first}",
-                arrayOf(pattern, pattern) + scope.second + byFormat.second,
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byFormat.first}",
+                words.second + scope.second + byFormat.second,
             ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
         }
 
@@ -254,7 +400,7 @@ class CatalogueStore(context: Context) {
      */
     suspend fun formatCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT format, COUNT(*) FROM catalogue_tracks GROUP BY format", emptyArray(),
+            "SELECT format, COUNT(*) FROM catalogue_tracks WHERE playable = 1 GROUP BY format", emptyArray(),
         ).use { row ->
             buildMap { while (row.moveToNext()) put(row.getString(0), row.getInt(1)) }
         }
@@ -287,9 +433,10 @@ class CatalogueStore(context: Context) {
                 val placeholders = catalogueIds.joinToString(",") { "?" }
                 " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
             }
-            // Escaped so a user typing % or _ searches for those characters instead of matching
-            // everything -- a search box that silently means something else is worse than no search.
-            val pattern = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
+            // **Every word, anywhere, in any order** (`SearchTerms`), which is also where the
+            // escaping lives: a user typing % or _ searches for those characters rather than
+            // matching everything.
+            val words = SearchTerms.sqlFor(query, "title", "author")
             // Modland's directory name is what the `format` column holds, so narrowing to a platform
             // is one `IN (…)` over a column that already exists. `COLLATE NOCASE` because the table
             // stores the archive's own capitalisation and `Platforms` states everything lower-cased.
@@ -301,9 +448,8 @@ class CatalogueStore(context: Context) {
             }
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
-                    "WHERE (title LIKE ? ESCAPE '!' OR author LIKE ? ESCAPE '!')" +
-                    "${scope.first}${byFormat.first} ORDER BY title LIMIT ?",
-                arrayOf(pattern, pattern) + scope.second + byFormat.second + arrayOf(limit.toString()),
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byFormat.first} ORDER BY title LIMIT ?",
+                words.second + scope.second + byFormat.second + arrayOf(limit.toString()),
             ).use { it.toTracks() }
         }
 
@@ -319,6 +465,9 @@ class CatalogueStore(context: Context) {
     suspend fun locate(catalogueId: String, path: String): CatalogueTrack? =
         withContext(Dispatchers.IO) {
             helper.readableDatabase.rawQuery(
+                // **Not filtered by `playable`**, deliberately: this answers "where does this path
+                // sit", which is a fact about the archive, and it is asked about a track already
+                // playing. A row that stopped being playable should still be locatable.
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
                     "WHERE catalogue_id = ? AND path = ? LIMIT 1",
                 arrayOf(catalogueId, path),
@@ -336,12 +485,11 @@ class CatalogueStore(context: Context) {
      * @param formats when non-empty, Modland directory names — the same `format` column the search
      * filter narrows by, and the same set `Platforms` produces. Narrowing the dice to one machine
      * is this clause and nothing else.
-     * @param favouritesOnly draws from Modland's published favourites instead of the whole index —
-     * the owner's "random, but only tunes considered good". A join rather than a fourth kind of
-     * table: the list is 991 paths, everything else about those tunes is already in this one, and
-     * the join is also what silently drops the favourites this build cannot play. It is deliberately
-     * **not** combined with [formats]: the list is Amiga tracker music almost entirely, so narrowing
-     * it by machine would offer a chip that mostly returns nothing.
+     * @param favouritesOnly draws from Modland's published favourites instead of the whole index.
+     * A join rather than a fourth kind of table: the list is 991 paths, everything else about those
+     * tunes is already here, and the join is also what drops the favourites this build cannot play.
+     * Deliberately **not** combined with [formats]: the list is Amiga tracker music almost
+     * entirely, so narrowing it by machine would offer a chip that mostly returns nothing.
      */
     suspend fun randomSample(
         count: Int,
@@ -351,26 +499,11 @@ class CatalogueStore(context: Context) {
     ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             if (count <= 0) return@withContext emptyList()
-            val clauses = mutableListOf<String>()
-            val arguments = mutableListOf<String>()
-            if (catalogueIds.isNotEmpty()) {
-                clauses += "catalogue_id IN (${catalogueIds.joinToString(",") { "?" }})"
-                arguments += catalogueIds
-            }
-            if (formats.isNotEmpty()) {
-                clauses += "format COLLATE NOCASE IN (${formats.joinToString(",") { "?" }})"
-                arguments += formats
-            }
-            if (favouritesOnly) {
-                clauses += "catalogue_id = ?"
-                arguments += FavouriteStore.MODLAND_ID
-                clauses += "path IN (SELECT path FROM modland_favourites)"
-            }
-            val where = if (clauses.isEmpty()) "" else " WHERE " + clauses.joinToString(" AND ")
+            val (where, arguments) = randomWhere(catalogueIds, formats, favouritesOnly)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks" +
                     "$where ORDER BY RANDOM() LIMIT $count",
-                arguments.toTypedArray(),
+                arguments,
             ).use { it.toTracks() }
         }
 
@@ -391,4 +524,39 @@ class CatalogueStore(context: Context) {
             )
         }
     }
+}
+
+/**
+ * The `WHERE` a random draw uses, and its arguments.
+ *
+ * **Lifted out of [randomSample] so it can be proved.** The dice is the one reader where an
+ * unplayable row would not merely look wrong but waste the listener's time — it would open a
+ * file the app cannot decode and move on — and it is also the only one whose filter is built
+ * from a list rather than written into the SQL, where a reader scanning for `playable` does not
+ * see it. `CataloguePlayableTest` runs this against a real SQLite.
+ *
+ * `playable = 1` is first and never optional. The index holds every row the archive has
+ * (`docs/ROADMAP_FORMATS.md` step 0), so a draw without it draws from the whole archive.
+ */
+internal fun randomWhere(
+    catalogueIds: Set<String>,
+    formats: Set<String>,
+    favouritesOnly: Boolean,
+): Pair<String, Array<String>> {
+    val clauses = mutableListOf("playable = 1")
+    val arguments = mutableListOf<String>()
+    if (catalogueIds.isNotEmpty()) {
+        clauses += "catalogue_id IN (${catalogueIds.joinToString(",") { "?" }})"
+        arguments += catalogueIds
+    }
+    if (formats.isNotEmpty()) {
+        clauses += "format COLLATE NOCASE IN (${formats.joinToString(",") { "?" }})"
+        arguments += formats
+    }
+    if (favouritesOnly) {
+        clauses += "catalogue_id = ?"
+        arguments += FavouriteStore.MODLAND_ID
+        clauses += "path IN (SELECT path FROM modland_favourites)"
+    }
+    return " WHERE " + clauses.joinToString(" AND ") to arguments.toTypedArray()
 }

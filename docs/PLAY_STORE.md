@@ -39,11 +39,12 @@ collection, and it is declared as such.
 
 ## The privacy policy
 
-`docs/PRIVACY.md`, which has to be reachable at a public URL for the listing. The repository is
-public, so the file's own URL on GitHub satisfies that:
+`store/privacy-policy.md` — the single copy, bilingual, as of 2026-09-15. It has to be reachable at
+a public URL for the listing, and the file's own URL on GitHub satisfies that **once the repository
+is public**, which it is not yet:
 
 ```
-https://github.com/przunk/protracktor/blob/master/docs/PRIVACY.md
+https://github.com/przunk/protracktor/blob/master/store/privacy-policy.md
 ```
 
 Nothing needs hosting. If a nicer URL is wanted later, GitHub Pages serves the same file.
@@ -119,28 +120,57 @@ knowing before running it for real:
 - **It changes every commit hash** from the first letter onward. Any other clone is dead; the merge
   history and the messages survive intact.
 
-### What the rewrite does not remove, and is the part worth thinking about
+### What the rewrite did not remove, and what was done about it — settled 2026-09-15
 
-The letters are drafts in the owner's own words. **The quotations are other people's.**
-`docs/LICENSES.md` and `docs/PLAN_FORMATS.md` quoted Heikki Orsila and Matti Tiainen verbatim — the
+The letters were drafts in the owner's own words. **The substance around them was other people's**,
+and filtering `docs/letters` left all of that in place: `docs/LICENSES.md` and
+`docs/PLAN_FORMATS.md` reported what UADE's two maintainers had written in a private reply — the
 `players/` licence position, the invitation to fetch the binaries from zakalwe.fi, the limit on what
-counts as permission, the RMC note — and several commit messages did too. Filtering `docs/letters`
-leaves all of it.
+counts as permission, the Hippel `song.conf`, the RMC note.
 
-That is not obviously wrong: quoting a maintainer's technical answer, attributed, in the reasoning
-it produced is ordinary engineering practice, and none of it is unflattering. But these were private
-replies rather than a public list, so it is a courtesy question and not a legal one. Three ways to
-settle it, cheapest first:
+Quoting a maintainer's technical answer, attributed, in the reasoning it produced is ordinary
+engineering practice and none of it was unflattering. But a private reply is not a public list, so
+it was a courtesy question rather than a legal one, and it was settled twice:
 
-1. **Ask them.** They answered a cold question within a day and copied each other in; "may I quote
-   your replies in the project's documentation?" would very likely get a yes, and a yes is worth
-   more than either alternative.
-2. **Keep the facts, drop the verbatim.** The measurements and the conclusions are ours; the
-   sentences are theirs. Paraphrasing costs a little colour and no information.
-3. **Leave it.** Defensible, and it is the option that cannot be taken back.
+- **2026-09-05 — their sentences came out.** Five passages were rewritten so that nothing reproduced
+  their words. `a9a645e`.
+- **2026-09-15 — their attribution came out too.** What stands now rests on documents UADE
+  **publishes** — `amigasrc/README`, `COPYING`, the download page, `song.conf` — quoted as such, or
+  on our own measurements. The exchange is recorded as having happened and as having settled things;
+  its content is not reconstructed and the manner of the people who wrote it is not characterised.
+  Exactly one fact has no public source (the single objection in twenty years, and whose it was); it
+  is load-bearing for the argument above, so it is kept and **marked** as coming from the reply.
 
-**Deciding late is the expensive version** — after the first public push the history is out and no
-rewrite recalls it. Worth settling in the same hour as that push, not after.
+**The rule for anything similar in future**, so this is decided once: *quote what a project
+publishes; report only what a private reply established, never how it said it.* Quoting a project's
+own licence text while reasoning about its licence is the right thing to do. A reply sent to one
+person is not that.
+
+**Contact addresses are decided by where they already are**, and this was got wrong once in the
+direction of caution. `heikki.orsila@iki.fi` was taken out of the letters table on 2026-09-15 and
+**put back the same day**: UADE's own `AUTHORS` publishes it as the way to reach its main author, so
+repeating it is not exposing it, and it is the fact that row exists to record. An address that
+appeared only in a reply would be the other case, and there is none here.
+
+**What the history still holds, and why it stays.** The pre-2026-09-05 versions of those two
+documents are in the commits, and so are the commit messages that discussed them — but they never
+carried a quotation-marked private sentence either: those passages were reported speech from the day
+they were written, and what 2026-09-05 removed was closeness to their phrasing rather than
+quotation. `docs/letters/` itself is absent from every commit on every branch, local and on the
+remote, which was checked rather than assumed.
+
+**Nothing is public yet**: the GitHub repository is private, so no version of any of this has left
+the owner's machines. That is what makes the cleanup above complete rather than mitigating, and it
+is also why **no further history rewrite is planned**. Two things were raised as candidates on
+2026-09-15 and the owner decided against both:
+
+* **The three screenshots** of his own phone, committed by accident and removed from the tree that
+  day. His call: not a problem — some version of those screens goes on the store listing anyway.
+* **The contact address**, for the reason two paragraphs up.
+
+So the repository goes public with its history intact when the owner is ready. The standing warning
+still applies to anything *new*: after the first public push no rewrite recalls it, so a thing worth
+removing is worth removing beforehand.
 
 ## What is still missing, and is his
 

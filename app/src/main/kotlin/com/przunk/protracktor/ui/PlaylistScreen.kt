@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -49,6 +50,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -59,6 +66,7 @@ import androidx.compose.ui.zIndex
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.PlayerUiState
+import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.TrackRef
 
@@ -78,10 +86,22 @@ fun PlaylistScreen(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit = {},
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit = {},
     onRemoveMany: (List<Int>) -> Unit = {},
     onBrowse: () -> Unit,
+    /** Opens the download sheet. What the empty screen offers when there is nothing to browse. */
+    onPickDownloads: () -> Unit,
+    /** False on a phone that holds no index and no granted folder: Browse would lead nowhere. */
+    canBrowse: Boolean,
+    /**
+     * False until the playlist and what this phone holds have both been read.
+     *
+     * The empty screen makes a claim either way -- "nothing here" or "nothing to browse" -- and
+     * both are wrong while the answer is still being read off the disk.
+     */
+    stateKnown: Boolean,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -89,11 +109,15 @@ fun PlaylistScreen(
     // Random and a search both play something that is not in this list, so the list goes behind
     // glass: visible, clearly not what you are listening to, and not touchable by accident. Cheaper
     // and more portable than a blur, which needs API 31 and this app runs from 29.
-    if (state.awayFromPlaylist) {
+    // Random has a screen of its own now (`docs/PLAN_RANDOM.md`); the glass is for the two that
+    // still have nothing to show — a file another app handed us, and a search result playing.
+    if (state.awayFromPlaylist && !state.randomMode) {
         Box(modifier = modifier.fillMaxSize()) {
-            PlaylistBody(state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, contentPadding, enabled = false)
+            PlaylistBody(
+                state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {},
+                loadingCurrent = false, contentPadding = contentPadding, enabled = false,
+            )
             AwayScrim(
-                randomMode = state.randomMode,
                 externalMode = state.externalMode,
                 onReturnToPlaylist = onReturnToPlaylist,
                 contentPadding = contentPadding,
@@ -103,7 +127,26 @@ fun PlaylistScreen(
     }
 
     if (state.queue.tracks.isEmpty()) {
-        EmptyPlaylist(onBrowse = onBrowse, contentPadding = contentPadding, modifier = modifier)
+        if (stateKnown) {
+            EmptyPlaylist(
+                onBrowse = onBrowse,
+                onPickDownloads = onPickDownloads,
+                canBrowse = canBrowse,
+                contentPadding = contentPadding,
+                modifier = modifier,
+            )
+        } else {
+            // **Say nothing rather than the wrong thing.** Until the playlist has been restored
+            // and the catalogue summaries have been read, "nothing here yet" and "nothing to
+            // browse" are both guesses, and the second one offers a 49 MB download to somebody who
+            // already has the lot.
+            Box(
+                modifier = modifier.fillMaxSize().padding(contentPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
         return
     }
 
@@ -117,17 +160,19 @@ fun PlaylistScreen(
         onShowNeighbours = onShowNeighbours,
         onShareFile = onShareFile,
         onShareLink = onShareLink,
+        onSendToWeb = onSendToWeb,
         onAddToOtherPlaylist = onAddToOtherPlaylist,
         onAddSelectedToPlaylist = onAddSelectedToPlaylist,
         onRemoveMany = onRemoveMany,
         contentPadding = contentPadding,
         enabled = true,
         modifier = modifier,
+        loadingCurrent = state.loadingTrack,
     )
 }
 
 @Composable
-private fun PlaylistBody(
+internal fun PlaylistBody(
     // **The track list, not the whole player state.** `positionSeconds` ticks every 200 ms while
     // anything plays, so taking `PlayerUiState` here recomposed every row five times a second --
     // which is what "as if the FPS were low" was. Browse takes `BrowseState`, which does not tick,
@@ -142,12 +187,43 @@ private fun PlaylistBody(
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
+    onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
     onAddSelectedToPlaylist: (List<TrackRef>) -> Unit,
     onRemoveMany: (List<Int>) -> Unit,
+    /** Whether the row the queue points at is being fetched, so it can say so by breathing. */
+    loadingCurrent: Boolean = false,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    /**
+     * Whether rows may be dragged into another order.
+     *
+     * False for the Random view, which shows a record rather than an arrangement. Shared with the
+     * playlist rather than copied for it: two lists of tracks that drift apart in what a row offers
+     * is exactly the defect `docs/STATUS.md` C23, C30 and C31 each were.
+     */
+    reorderable: Boolean = true,
+    /**
+     * What identifies a row to the list.
+     *
+     * **The track id everywhere but Random.** A playlist cannot hold the same file twice —
+     * `appendTracks` drops a candidate that `sameFileAs` anything already there — so the id is
+     * unique and reordering keeps a row's identity while it moves.
+     *
+     * The Random record has no such rule. The dice draws from a pool that may be small: forty
+     * favourites cannot fill an evening without repeating, and the read-ahead falls back to
+     * allowing one rather than stopping dead. Two rows with one key is not a cosmetic problem —
+     * `LazyColumn` throws on it — so that view keys by position, which it can afford, having
+     * nothing to reorder.
+     */
+    keyOf: (Int, TrackRef) -> Any = { _, track -> track.id },
+    /**
+     * What counts as the playing row *changing*, for [KeepRowInView]. The track's id by default,
+     * so reordering or removing rows around it does not move the list; the Random view passes its
+     * cursor, because its record can hold the same tune twice.
+     */
+    followKey: Any? = currentIndex?.let { tracks.getOrNull(it)?.id },
 ) {
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
@@ -166,7 +242,6 @@ private fun PlaylistBody(
     val trackCount = remember { { liveTracks.size } }
     val moveTrack = remember { { from: Int, to: Int -> move(from, to) } }
 
-    var following by remember { mutableStateOf(false) }
     // Selection lives here and dies with the screen, the same as in Browse: a tick that survives a
     // reload would act on a row the user never saw (`docs/ARCHITECTURE.md` §17).
     var selected by remember { mutableStateOf(emptySet<String>()) }
@@ -180,11 +255,12 @@ private fun PlaylistBody(
 
     Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
-        itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
+        itemsIndexed(tracks, key = keyOf) { index, track ->
             TrackRow(
                 index = index,
                 track = track,
                 playing = index == currentIndex,
+                loading = loadingCurrent && index == currentIndex,
                 enabled = enabled,
                 dragging = track.id == draggingId,
                 dragOffset = if (track.id == draggingId) dragOffset else 0f,
@@ -206,7 +282,9 @@ private fun PlaylistBody(
                 // Absent for a local file, which has no address anyone else could open.
                 onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { { onShareLink(it) } },
-                dragHandleModifier = Modifier.dragToReorder(
+                // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
+                onSendToWeb = track.takeIf { QueueLink.canSend(it) }?.let { { onSendToWeb(listOf(it)) } },
+                dragHandleModifier = if (!reorderable) null else Modifier.dragToReorder(
                     trackId = track.id,
                     listState = listState,
                     indexOf = indexOfTrack,
@@ -221,7 +299,7 @@ private fun PlaylistBody(
         }
     }
 
-        // What you can do with what you ticked. Two buttons for the owner's three actions: the
+        // What you can do with what you ticked. Two buttons for three actions: the
         // picker behind "Add to playlist..." offers an existing playlist *or* a new one, so
         // "make a new playlist from these" is in there rather than missing (`docs/BACKLOG.md` A4).
         if (selecting) {
@@ -257,6 +335,14 @@ private fun PlaylistBody(
                         },
                     )
                     LabelledAction(
+                        icon = PlayerIcons.Web,
+                        label = stringResource(R.string.action_send_to_web),
+                        onClick = {
+                            onSendToWeb(tracks.filter { it.id in selected })
+                            selected = emptySet()
+                        },
+                    )
+                    LabelledAction(
                         icon = PlayerIcons.Remove,
                         label = stringResource(R.string.action_delete),
                         onClick = {
@@ -283,17 +369,16 @@ private fun PlaylistBody(
         }
     }
 
-    // Not while selecting: it floats over the bottom-right corner, which is where the actions are,
-    // and following the playing track is not what you are doing when you are choosing rows.
-    if (enabled && !selecting) {
-        FollowTrackButton(
-            listState = listState,
-            currentIndex = currentIndex,
-            contentPadding = contentPadding,
-            following = following,
-            onFollowingChange = { following = it },
-        )
-    }
+    // **No follow-track button**: a small FAB you switch on is switched off again by the first
+    // drag. The list simply keeps the playing row on screen, one row at a time and only when it
+    // would leave -- but not while ticking rows or dragging one, because a list that moves under a
+    // working finger fights it.
+    KeepRowInView(
+        listState = listState,
+        index = currentIndex,
+        key = followKey,
+        active = enabled && !selecting && draggingId == null,
+    )
 
     showingInfo?.let { track ->
         TrackInfoDialog(track = track, onDismiss = { showingInfo = null })
@@ -364,6 +449,7 @@ private fun TrackRow(
     index: Int,
     track: TrackRef,
     playing: Boolean,
+    loading: Boolean,
     enabled: Boolean,
     dragging: Boolean,
     dragOffset: Float,
@@ -378,8 +464,17 @@ private fun TrackRow(
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareLink: (() -> Unit)?,
-    dragHandleModifier: Modifier,
+    onSendToWeb: (() -> Unit)?,
+    /**
+     * How the handle takes a drag, or **null where there is nothing to reorder**.
+     *
+     * The Random view is a record of what the dice gave, in the order it gave it. There is no
+     * arrangement to express, so the handle is not drawn rather than drawn dead — a control that
+     * answers nothing is worse than one that is not there (`docs/PLAN_RANDOM.md`).
+     */
+    dragHandleModifier: Modifier?,
 ) {
+    val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
 
     val label = SupportedFormats.labelFor(track.fileNameOrTitle)
@@ -401,12 +496,15 @@ private fun TrackRow(
         },
         leadingContent = {
             // The checkbox takes the ordinal's slot, which is already reserved and already this
-            // size -- so entering selection moves nothing (`docs/ARCHITECTURE.md` §17). The owner
-            // defended the ordinal for telling him where he is in three hundred rows; while
+            // size -- so entering selection moves nothing (`docs/ARCHITECTURE.md` §17). The
+            // ordinal earns its place by saying where you are in three hundred rows; while
             // selecting, what matters is which rows are ticked.
             Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
                 if (selecting) {
-                    Checkbox(checked = ticked, onCheckedChange = { onToggle() })
+                    Checkbox(
+                        checked = ticked,
+                        onCheckedChange = { on -> haptics.toggle(on); onToggle() },
+                    )
                 } else if (playing) {
                     Icon(
                         imageVector = PlayerIcons.Play,
@@ -461,6 +559,13 @@ private fun TrackRow(
                                     onClick = { menuOpen = false; share() },
                                 )
                             }
+                            onSendToWeb?.let { send ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_send_to_web)) },
+                                    leadingIcon = { Icon(PlayerIcons.Web, contentDescription = null) },
+                                    onClick = { menuOpen = false; send() },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_delete)) },
                                 leadingIcon = { Icon(PlayerIcons.Remove, contentDescription = null) },
@@ -468,14 +573,16 @@ private fun TrackRow(
                             )
                         }
                     }
-                    // Delete used to sit here, one thumb-width from the row you tap to play. Behind
-                    // the menu it needs a deliberate second press.
-                    Icon(
-                        imageVector = PlayerIcons.DragHandle,
-                        contentDescription = stringResource(R.string.a11y_reorder, track.title),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = dragHandleModifier.padding(horizontal = 8.dp),
-                    )
+                    // Delete is not out here, one thumb-width from the row you tap to play.
+                    // Behind the menu it needs a deliberate second press.
+                    dragHandleModifier?.let { handle ->
+                        Icon(
+                            imageVector = PlayerIcons.DragHandle,
+                            contentDescription = stringResource(R.string.a11y_reorder, track.title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = handle.padding(horizontal = 8.dp),
+                        )
+                    }
                 }
             }
         },
@@ -491,6 +598,27 @@ private fun TrackRow(
             // for every row a fling brings past. Browse's rows have no such modifier, which is why
             // three hundred of them scroll smoothly while twenty-two of these did not. At most one
             // row is ever dragged, so at most one layer is ever needed.
+            // **A row being fetched breathes.** It is already marked as the one
+            // that was chosen; what a download has to add is "still working". Guarded like the drag
+            // layer above, and for the same reason: at most one row is ever being fetched.
+            .then(
+                if (!loading) {
+                    Modifier
+                } else {
+                    val breath = rememberInfiniteTransition(label = "fetching").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0.45f,
+                        animationSpec = infiniteRepeatable(
+                            // Half a cycle each way, so a breath is about a second: slow enough to
+                            // read as working rather than as a blinking fault.
+                            animation = tween(durationMillis = 550, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "breath",
+                    )
+                    Modifier.graphicsLayer { alpha = breath.value }
+                }
+            )
             .then(
                 if (dragging) {
                     Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset }
@@ -500,8 +628,27 @@ private fun TrackRow(
             )
             .combinedClickable(
                 enabled = enabled,
-                onClick = { if (selecting) onToggle() else onPlay() },
-                onLongClick = { if (!selecting) onStartSelecting() },
+                // **Choosing a tune is the firm one** — it is the press this whole screen exists
+                // for. While selecting, the same tap is a tick in a box, so it
+                // feels like the checkbox beside it rather than like starting a tune.
+                onClick = {
+                    if (selecting) {
+                        haptics.toggle(!ticked)
+                        onToggle()
+                    } else {
+                        haptics.press()
+                        onPlay()
+                    }
+                },
+                // The loose end `docs/BACKLOG.md` A8 left open: a long press with no answer feels
+                // like a press that missed, and this one silently changes what every other tap on
+                // the screen will do.
+                onLongClick = {
+                    if (!selecting) {
+                        haptics.gestureEnd()
+                        onStartSelecting()
+                    }
+                },
             ),
     )
 }
@@ -513,9 +660,19 @@ private fun TrackRow(
  * own. This says where the track came from and what it is, which is what "which one is this" needs.
  */
 
+/**
+ * The first screen of a fresh install, and the last one anybody should be stuck on.
+ *
+ * **What it offers depends on whether there is anything to browse.** With an index or a granted
+ * folder, Browse is the way on. With neither, Browse leads to a list of archives that all say "no
+ * index" — which is precisely what the first testers met, and why nobody found the music
+ * (`docs/BACKLOG.md` A46). So on an empty phone the offer is the download sheet itself.
+ */
 @Composable
 private fun EmptyPlaylist(
     onBrowse: () -> Unit,
+    onPickDownloads: () -> Unit,
+    canBrowse: Boolean,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -533,28 +690,34 @@ private fun EmptyPlaylist(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = stringResource(R.string.playlist_empty_body),
+                text = stringResource(
+                    if (canBrowse) R.string.playlist_empty_body else R.string.playlist_empty_body_nothing_held
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             // The same pair the top bar's actions and the follow-track button use, rather than
             // the primary colour a bare `Button` defaults to. This is the same *offer* as Browse
-            // up there -- the owner asked for them to look alike, and two controls that do the
-            // same thing should not be told apart by their colour.
+            // up there, and two controls that do the same thing should not be told apart by
+            // their colour.
             Button(
-                onClick = onBrowse,
+                onClick = if (canBrowse) onBrowse else onPickDownloads,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ),
             ) {
                 Icon(
-                    imageVector = PlayerIcons.Cloud,
+                    imageVector = if (canBrowse) PlayerIcons.Cloud else PlayerIcons.Download,
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp),
                 )
-                Text(stringResource(R.string.action_browse))
+                Text(
+                    stringResource(
+                        if (canBrowse) R.string.action_browse else R.string.download_pick_open
+                    )
+                )
             }
         }
     }
@@ -572,7 +735,6 @@ private fun EmptyPlaylist(
  */
 @Composable
 private fun AwayScrim(
-    randomMode: Boolean,
     externalMode: Boolean,
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
@@ -590,36 +752,26 @@ private fun AwayScrim(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Three ways to be away from the playlist now, and the third does not behave like the
-            // other two: a file handed to us by another app has no next and no previous, so the
-            // scrim must not promise one.
+            // Two ways left, since Random took a screen of its own. They differ in what next
+            // means: a file handed to us by another app has none at all, so the scrim must not
+            // promise one.
             Icon(
-                imageVector = when {
-                    externalMode -> PlayerIcons.Folder
-                    randomMode -> PlayerIcons.Dice
-                    else -> PlayerIcons.Search
-                },
+                imageVector = if (externalMode) PlayerIcons.Folder else PlayerIcons.Search,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
                 text = stringResource(
-                    when {
-                        externalMode -> R.string.external_playing_title
-                        randomMode -> R.string.random_playing_title
-                        else -> R.string.search_playing_title
-                    }
+                    if (externalMode) R.string.external_playing_title
+                    else R.string.search_playing_title
                 ),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
                 text = stringResource(
-                    when {
-                        externalMode -> R.string.external_playing_body
-                        randomMode -> R.string.random_playing_body
-                        else -> R.string.search_playing_body
-                    }
+                    if (externalMode) R.string.external_playing_body
+                    else R.string.search_playing_body
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

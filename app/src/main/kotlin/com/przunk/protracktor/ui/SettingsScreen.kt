@@ -16,6 +16,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -35,6 +37,7 @@ import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.engine.NativeEngine
+import com.przunk.protracktor.player.FallbackLength
 
 /**
  * The things you set once and stop thinking about.
@@ -72,6 +75,8 @@ fun SettingsScreen(
     onThemeSelected: (AppTheme) -> Unit,
     onDynamicColourChanged: (Boolean) -> Unit,
     onToggleAllSubsongs: () -> Unit,
+    fallbackLengthSeconds: Int,
+    onFallbackLengthChanged: (Int) -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
@@ -80,6 +85,7 @@ fun SettingsScreen(
     onClearFavourites: () -> Unit,
     onDeleteReplays: () -> Unit,
 ) {
+    val haptics = rememberHaptics()
     val context = LocalContext.current
     // Asked of the package manager rather than of `BuildConfig`, which this build does not
     // generate — and which would report what was compiled rather than what is installed.
@@ -111,14 +117,65 @@ fun SettingsScreen(
                     )
                 },
                 trailingContent = {
-                    Switch(checked = playAllSubsongs, onCheckedChange = { onToggleAllSubsongs() })
+                    Switch(
+                        checked = playAllSubsongs,
+                        onCheckedChange = { on -> haptics.toggle(on); onToggleAllSubsongs() },
+                    )
                 },
             )
         }
 
-        // Two settings, one shape. Both are "pick one of a handful", both show every option and
-        // the current answer at once, and both used to be a dialog -- which cost a tap to find out
-        // what the options were and then hid the answer again behind a summary line.
+        // **The setting that stops a tune nobody can measure** (`docs/STATUS.md` C56). It sits
+        // directly under the subsong switch because both answer "what happens next", and a person
+        // who has just met a SID that would not end looks in Playback first.
+        item {
+            // Dragged locally and committed when the finger lifts. Writing on every step would put
+            // eight rows through the database for one gesture, and the label has to follow the
+            // thumb rather than the stored value or the slider reads as laggy.
+            var dragging by remember(fallbackLengthSeconds) { mutableStateOf(fallbackLengthSeconds) }
+            val minutes = dragging / FallbackLength.STEP_SECONDS
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_fallback_length)) },
+                supportingContent = {
+                    Column {
+                        Text(
+                            stringResource(R.string.settings_fallback_length_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            pluralStringResource(R.plurals.minutes, minutes, minutes),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        Slider(
+                            value = dragging.toFloat(),
+                            // **Snapped to whole minutes, not truncated.** A stepped Slider hands
+                            // back a float that is only nearly its notch -- 239.99997 for four
+                            // minutes -- and `toInt()` on that stores 239 seconds while the label,
+                            // which divides by 60, still reads "3 minutes". Rounding to the step
+                            // makes the number stored the number shown.
+                            onValueChange = {
+                                dragging = Math.round(it / FallbackLength.STEP_SECONDS) *
+                                    FallbackLength.STEP_SECONDS
+                            },
+                            onValueChangeFinished = {
+                                haptics.toggle(true)
+                                onFallbackLengthChanged(dragging)
+                            },
+                            valueRange = FallbackLength.RANGE_SECONDS.first.toFloat()..
+                                FallbackLength.RANGE_SECONDS.last.toFloat(),
+                            // One notch per minute. `steps` counts the ones *between* the ends,
+                            // which is the off-by-one every Slider in every codebase gets wrong.
+                            steps = FallbackLength.STEPS - 2,
+                        )
+                    }
+                },
+            )
+        }
+
+        // Two settings, one shape. Both are "pick one of a handful", and both show every option
+        // and the current answer at once rather than behind a dialog, which would cost a tap to
+        // find out what the options are and then hide the answer again behind a summary line.
         item {
             SettingChoice(
                 label = stringResource(R.string.settings_language),
@@ -154,16 +211,18 @@ fun SettingsScreen(
                         )
                     },
                     trailingContent = {
-                        Switch(checked = dynamicColour, onCheckedChange = onDynamicColourChanged)
+                        Switch(
+                            checked = dynamicColour,
+                            onCheckedChange = { on -> haptics.toggle(on); onDynamicColourChanged(on) },
+                        )
                     },
                 )
             }
         }
 
-        // **Its own group, below the palette**, on the owner's instruction (2026-09-09). It had
-        // been sitting under Playback between the language picker and the appearance heading,
-        // which is where it least belongs: it is not a preference about how music sounds, it is
-        // the address of a second copy of the app.
+        // **Its own group, below the palette.** Under Playback it would sit between the language
+        // picker and the appearance heading, which is where it least belongs: it is not a
+        // preference about how music sounds, it is the address of a second copy of the app.
         item { HorizontalDivider(); Section(R.string.settings_web_player_section) }
 
         // Text rather than a choice, because the answer is an address and there is no list of them.
@@ -183,11 +242,10 @@ fun SettingsScreen(
                         )
                         OutlinedTextField(
                             value = editing,
-                            // **Committed on every keystroke**, and the first version was not: it
-                            // saved only on the keyboard's Done, so typing an address and tapping
-                            // away lost it silently — which is exactly what the owner met. A
-                            // half-typed address costs nothing, because it is read when something
-                            // is sent and not before.
+                            // **Committed on every keystroke.** Saving only on the keyboard's
+                            // Done loses an address silently when it is typed and tapped away
+                            // from. A half-typed address costs nothing, because it is read when
+                            // something is sent and not before.
                             onValueChange = { editing = it; onWebPlayerChanged(it) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

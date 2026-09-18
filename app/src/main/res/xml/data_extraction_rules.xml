@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing this app holds leaves the phone, and nothing comes back on a reinstall.
+
+  **Why, rather than a preference.** Uninstalling is how a person says "take this off my phone",
+  and Android's Auto Backup quietly undoes that: reinstall, and the database returns from Google
+  Drive with the playlists, the history and whatever indexes fitted in the quota. That was reported
+  as a defect, and it is one — the owner cleared the app and met an old playlist.
+
+  Three more reasons, each independent of that:
+
+  - **Most of the database is a copy of somebody else's archive.** Half a million catalogue rows
+    are re-downloadable by design, and backing them up spends the user's Drive on something the
+    Settings screen already offers to throw away.
+  - **A restored folder grant is dead.** Storage Access Framework permissions belong to the
+    installation that asked for them, so restored `granted_folders` rows name folders this app can
+    no longer open.
+  - **A restored database is a schema nobody tested.** Backup and restore cross versions freely,
+    and `SchemaSql`'s migrations are exercised forwards from the version the phone had — not from
+    whichever one the backup came from.
+
+  Playlists somebody wants to keep have an export in the app, which is a path they choose rather
+  than one that happens to them.
+
+  `android:allowBackup="false"` in the manifest turns off cloud backup; this file is what turns off
+  device-to-device transfer as well, which that flag does not cover from Android 12 onwards.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </device-transfer>
+</data-extraction-rules>

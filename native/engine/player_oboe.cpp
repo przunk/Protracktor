@@ -3,11 +3,10 @@
 
 // Android's half of the engine: the Oboe callback, and the JNI surface above it.
 //
-// **Everything Android-specific in the native code is in this file**, which is the point of it
-// existing. `engine.cpp` next door decodes and knows nothing about phones; this drives it from an
-// audio callback and exposes fifteen functions to Kotlin. `docs/ARCHITECTURE.md` §4 is the rule
-// this arrangement comes from -- PCM never crosses the boundary -- and `docs/OPEN_QUESTIONS.md` Q9
-// is the argument about whether the boundary should be a process instead.
+// Everything Android-specific in the native code is here. `engine.cpp` decodes and knows nothing
+// about phones; this drives it from an audio callback and exposes sixteen functions to Kotlin.
+// PCM never crosses the boundary (`docs/ARCHITECTURE.md` §4); whether it should be a separate
+// process instead is `docs/OPEN_QUESTIONS.md` Q9.
 
 #include "engine.h"
 #include "log.h"
@@ -16,6 +15,7 @@
 #include <oboe/Oboe.h>
 
 #include <atomic>
+#include <exception>
 #include <mutex>
 #include <cstdint>
 #include <memory>
@@ -28,6 +28,35 @@ namespace {
 
 using protracktor::Backend;
 using protracktor::openBackend;
+
+/**
+ * Nothing thrown by a decoder may leave this file (`docs/STATUS.md` C42, C55).
+ *
+ * An exception reaching the JVM through a JNI frame, or reaching Oboe's real-time thread, is
+ * `std::terminate`: the process ends with no message. Decoders are allowed to throw on malformed
+ * files, which a public archive has plenty of.
+ *
+ * `openBackend` catches what *choosing* a backend throws; this covers everything after -- describe,
+ * render, seek, subsong, length. The fallback is what each call already means by failure, so Kotlin
+ * needs no new vocabulary: no handle, `false`, an empty string, zero. The reason goes to logcat.
+ */
+template <class T, class Work>
+T guarded(const char *what, Work &&work, T fallback) {
+    try {
+        return work();
+    } catch (const std::exception &e) {
+        LOGE("%s threw and was contained: %s", what, e.what());
+        return fallback;
+    } catch (...) {
+        LOGE("%s threw something that is not an exception and was contained", what);
+        return fallback;
+    }
+}
+
+template <class Work>
+void guardedVoid(const char *what, Work &&work) {
+    guarded<int>(what, [&] { work(); return 0; }, 0);
+}
 
 class Player : public oboe::AudioStreamDataCallback {
 public:
@@ -47,11 +76,9 @@ public:
     /**
      * How many tunes are in the file, from a value the backend published rather than by asking it.
      *
-     * **`docs/review-round-8.md` R2, and it is `docs/review.md` R6 with one case missed.** This used
-     * to call straight through, and Kotlin calls it three lines after `start()` -- so
-     * `get_num_subsongs()` and `gme_track_count()` ran on an object the audio callback was reading,
-     * which is the exact thing libopenmpt's header forbids. The count cannot change for the life of
-     * a file, so publishing it once in the constructor is the whole fix.
+     * Asking the backend here would read it from the control thread while the audio callback is
+     * reading it too, which libopenmpt's header forbids (`docs/review-round-8.md` R2). The count
+     * cannot change for the life of a file, so it is published once in the constructor.
      */
     int subsongCount() const { return subsongs_.load(std::memory_order_acquire); }
 
@@ -62,27 +89,29 @@ public:
      * here: that callback is the only thread which touches the backend, and a decoder cannot be
      * changed underneath a read in progress.
      *
-     * **But a finished tune has no callback left to hand it to.** When a backend runs out,
-     * `onAudioReady` returns `Stop` and Oboe calls it no more -- `stream_` is still there, it is
-     * simply never entered again. A request stored then would sit forever, `finished_` would stay
-     * true, and the poll on the Kotlin side would ask for the next tune again and again: every
-     * subsong of the file "played" instantly and in silence, which is exactly what the owner saw.
-     * So when nothing is running, the switch happens here and the stream is started again.
+     * A finished tune has no callback left to hand it to: when a backend runs out, `onAudioReady`
+     * returns `Stop` and Oboe never enters it again, though `stream_` is still there. A request
+     * stored then would sit forever. So when nothing is running, the switch happens on this thread
+     * and the stream is started again.
      */
     void requestSubsong(int index) {
-        if (running()) {
-            pendingSubsong_.store(index, std::memory_order_release);
-            return;
-        }
-        stop();
-        if (backend_->selectSubsong(index)) {
+        // **Under the lock, on this thread, running or not.** Switching tune is the same unbounded
+        // work as a seek -- several backends reach tune five by running through four -- and it was
+        // handed to the callback for the same reason and with the same consequence. The callback
+        // plays silence while this holds the lock, which is a gap of a buffer or two where the old
+        // way risked a stalled stream and a frozen app.
+        const bool wasRunning = running();
+        {
+            const std::lock_guard<std::mutex> held(decoderGuard_);
+            if (!backend_->selectSubsong(index)) return;
             finished_.store(false, std::memory_order_release);
-            // Stopped, so this thread owns the backend and may ask it directly.
             publishPosition();
             publishDuration();
             publishDescribe();
-            start();
         }
+        // A finished tune has no callback left to hand anything to, so the stream needs starting
+        // for the new tune to be heard.
+        if (!wasRunning) start();
     }
 
     /**
@@ -93,35 +122,39 @@ public:
      */
     bool running() const { return stream_ != nullptr && !isFinished(); }
 
-    // Not locked, and deliberately so. Oboe's stop() blocks until an in-flight callback returns, and
-    // every control path below stops the stream before touching the backend -- so the callback is
-    // the only reader while it runs, and never concurrent with a writer. A mutex here would be a
-    // lock on the audio thread bought for nothing.
+    /**
+     * **The decoder is locked, and the audio thread never waits for it.**
+     *
+     * `Backend::seek` is unbounded work for every emulator here (`docs/ARCHITECTURE.md` §5), so
+     * it cannot happen on a thread with milliseconds to answer in. Seeking is done by its caller
+     * under the lock; this takes the lock only if it is free.
+     *
+     * Failing to take it is not an error and never blocks: somebody is seeking, and a buffer of
+     * silence is the right thing to play meanwhile. `try_lock` on an uncontended mutex is one
+     * atomic compare-and-swap.
+     */
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *stream, void *audioData,
                                           int32_t numFrames) override {
         auto *out = static_cast<float *>(audioData);
 
-        // A seek requested from another thread is applied HERE rather than there. A decoder cannot
-        // be moved under a read in progress, and the audio callback is the only thread that reads
-        // it, so handing the request over and letting the callback act on it removes the race
-        // without stopping the stream and clicking.
-        const int subsong = pendingSubsong_.exchange(-1, std::memory_order_acq_rel);
-        if (subsong >= 0 && backend_->selectSubsong(subsong)) {
-            finished_.store(false, std::memory_order_release);
-            // A different tune is a different length **and a different name**, and this is the
-            // thread allowed to ask for either.
-            publishDuration();
-            publishDescribe();
+        std::unique_lock<std::mutex> held(decoderGuard_, std::try_to_lock);
+        if (!held.owns_lock()) {
+            // Somebody has the decoder. Silence for this buffer, and the stream stays alive: a
+            // stalled stream cannot be restarted from here and wedges the player.
+            std::memset(out, 0, static_cast<std::size_t>(numFrames) * 2 * sizeof(float));
+            return oboe::DataCallbackResult::Continue;
         }
 
-        const double seekTo = pendingSeek_.exchange(NO_SEEK, std::memory_order_acq_rel);
-        if (seekTo >= 0.0 && backend_->canSeek()) {
-            backend_->seek(seekTo);
-            finished_.store(false, std::memory_order_release);
-        }
-
-        const std::size_t rendered =
-            backend_->render(stream->getSampleRate(), static_cast<std::size_t>(numFrames), out);
+        // The one guard that cannot sit at the JNI boundary: this is Oboe's real-time thread, and
+        // an exception here unwinds into Oboe's C callback and ends the process. A throw is treated
+        // as a decoder that ran out -- the tail of this function silences the buffer and stops the
+        // stream, and Kotlin's poll moves to the next tune.
+        const std::size_t rendered = guarded<std::size_t>(
+            "render", [&] {
+                return backend_->render(stream->getSampleRate(),
+                                        static_cast<std::size_t>(numFrames), out);
+            },
+            0);
 
         // Ducking is applied here rather than by stopping the stream. A notification arriving should
         // lower the music for a moment, not end it -- and the only place a gain can be applied
@@ -153,10 +186,26 @@ public:
 
     bool isFinished() const { return finished_.load(std::memory_order_acquire); }
 
-    /** Reads the backend's own numbers. **Audio thread only**, or at open before it starts. */
-    void publishPosition() { position_.store(backend_->positionSeconds(), std::memory_order_release); }
-    void publishDuration() { duration_.store(backend_->durationSeconds(), std::memory_order_release); }
-    void publishSubsongs() { subsongs_.store(backend_->subsongCount(), std::memory_order_release); }
+    /**
+     * Reads the backend's own numbers. **Audio thread only**, or at open before it starts.
+     *
+     * Guarded at the definition rather than at each of the seven call sites, one of which is inside
+     * the audio callback where a throw would end the process. Keeping the last published value is
+     * the right fallback: a number that has stopped moving shows as a stalled progress bar, and the
+     * tune ends on `render` returning nothing a buffer later anyway.
+     */
+    void publishPosition() {
+        guardedVoid("positionSeconds",
+                    [&] { position_.store(backend_->positionSeconds(), std::memory_order_release); });
+    }
+    void publishDuration() {
+        guardedVoid("durationSeconds",
+                    [&] { duration_.store(backend_->durationSeconds(), std::memory_order_release); });
+    }
+    void publishSubsongs() {
+        guardedVoid("subsongCount",
+                    [&] { subsongs_.store(backend_->subsongCount(), std::memory_order_release); });
+    }
 
     /**
      * Takes the backend's description and keeps it, so nobody else has to ask the backend.
@@ -167,11 +216,15 @@ public:
      * `docs/review-round-8.md` R3 is about. A lock held for one string copy, a few times a
      * listening session, is a smaller price than a rule nobody can see from the call site.
      *
-     * It is also what makes a subsong's own title reach the screen: a GBS names each of its tunes
-     * and the phone was showing the first one's for all of them (R4).
+     * It is also what gets a subsong's own title to the screen: a GBS names each of its tunes
+     * (`docs/review-round-8.md` R4).
      */
     void publishDescribe() {
-        std::string text = backend_->describe();
+        // `describe()` walks a decoder's instrument and sample tables, which on a truncated file
+        // is the first place a length read past the end becomes a throw (`docs/STATUS.md` C42). An
+        // unreadable description costs a line of metadata, not the process.
+        std::string text = guarded<std::string>("describe", [&] { return backend_->describe(); },
+                                                std::string());
         const std::lock_guard<std::mutex> held(describeGuard_);
         describe_ = std::move(text);
     }
@@ -187,15 +240,13 @@ public:
     void seek(double seconds) {
         if (!backend_->canSeek()) return;
         const double target = seconds < 0.0 ? 0.0 : seconds;
-        // `running()`, not `stream_`: seeking a tune that has just ended would otherwise store a
-        // request for a callback that will never run again. Same trap as the subsong switch above.
-        if (running()) {
-            pendingSeek_.store(target, std::memory_order_release);
-        } else {
-            backend_->seek(target);
-            finished_.store(false, std::memory_order_release);
-            publishPosition();
-        }
+        // **On this thread, holding the lock**, however long it takes. The callback finds the lock
+        // taken and plays silence meanwhile; nothing waits on anything that has a deadline. The
+        // caller must not be the main thread -- `NativeEngine.Track.seekTo` says so and keeps to it.
+        const std::lock_guard<std::mutex> held(decoderGuard_);
+        backend_->seek(target);
+        finished_.store(false, std::memory_order_release);
+        publishPosition();
     }
 
     /** Back to the beginning and playing. For repeat-one, and for replaying a finished tune. */
@@ -236,20 +287,13 @@ public:
             stream_.reset();
             return false;
         }
-        // **The one assumption in this chain nobody has ever measured.** The comment above says
-        // "Oboe resamples if need be", and if it ever does not, `getSampleRate()` comes back as the
-        // device's rate, the callback hands that number to a backend that ignores it, and 44,100
-        // samples play at 48,000 -- 8.8% fast, about a semitone and a half sharp. That is not a
-        // hypothetical: it is exactly the defect the web build shipped with until 2026-09-08,
-        // found by the owner saying a SID "sounded quicker than I remember".
+        // If Oboe does not resample, `getSampleRate()` is the device's rate, the callback hands
+        // that number to a backend that ignores it, and 44,100 samples play at 48,000 -- 8.8%
+        // fast, about a semitone and a half sharp (`docs/STATUS.md` C26).
         //
-        // He said the same thing about two SPCs on 2026-09-09. A log line is what turns "I think
-        // it sounds fast" into a fact, and it costs nothing on a path that runs once per track.
-        // **Kept as a string as well as logged, because logcat is not a channel the owner can
-        // reach.** The tag here is `protracktor` and the Kotlin side's is `Protracktor`, so
-        // filtering on the obvious one shows everything except this — which is what happened when
-        // he went looking. The app asks for this note straight after starting and says it out loud
-        // once, which is a diagnosis a person can read on the device that has the problem.
+        // Kept as a string as well as logged, because logcat is not a channel a listener can
+        // reach: this file's tag is `protracktor` and Kotlin's is `Protracktor`, so filtering on
+        // one hides the other. The app asks for the note after starting and shows it once.
         rateNote_.clear();
         if (preferred > 0 && stream_->getSampleRate() != preferred) {
             const double fast =
@@ -331,15 +375,17 @@ private:
     std::atomic<bool> finished_{false};
     std::atomic<float> gain_{1.0f};
 
-    // -1 means "nothing requested". A sentinel rather than a second flag: one atomic exchange in
-    // the callback both reads the request and clears it.
-    static constexpr double NO_SEEK = -1.0;
-    std::atomic<double> pendingSeek_{NO_SEEK};
+    /**
+     * Held by whoever is touching the decoder. **The audio callback only ever tries.**
+     *
+     * The two requests that used to be queued for the callback -- a seek and a subsong switch --
+     * are done by their caller under this instead, because both are unbounded and the callback is
+     * not allowed to be. Nothing with a deadline ever blocks on it.
+     */
+    mutable std::mutex decoderGuard_;
     /** Published by the audio thread so the poll never touches a backend that is rendering. */
     std::atomic<double> position_{0.0};
     std::atomic<double> duration_{0.0};
-    /** -1 means nothing pending. Applied by the audio callback, like a seek. */
-    std::atomic<int> pendingSubsong_{-1};
 };
 
 Player *asPlayer(jlong handle) { return reinterpret_cast<Player *>(handle); }
@@ -353,23 +399,39 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
                                                           jstring fileName,
                                                           jobjectArray errorOut) {
     const jsize length = env->GetArrayLength(data);
-    std::vector<char> bytes(static_cast<std::size_t>(length));
-    env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
 
     const char *nameChars = env->GetStringUTFChars(fileName, nullptr);
     const std::string name = nameChars ? nameChars : "";
     env->ReleaseStringUTFChars(fileName, nameChars);
 
-    // The reason is a local and goes back with this call, not into a global for somebody to
-    // collect afterwards. It used to be one process-wide std::string; that was fine while one
-    // thread opened files at a time, and became a data race the moment library scanning was made
-    // concurrent with playback -- ThreadSanitizer confirmed it (`docs/review.md` R2). Two threads
-    // clearing and assigning one std::string is undefined behaviour, not merely a mixed-up message.
+    // A local, and it goes back with this call. A process-wide string here is a data race as soon
+    // as scanning runs concurrently with playback, and two threads assigning one `std::string` is
+    // undefined behaviour rather than merely a mixed-up message (`docs/review.md` R2).
     std::string error;
 
-    // No backend recognising the bytes is reported as a handle of 0. The caller says so to the user
-    // rather than failing silently.
-    auto backend = openBackend(std::move(bytes), name, error);
+    // The one guarded call with somewhere to put the reason: it already carries a sentence back,
+    // so a throw is written into it rather than left in logcat alone.
+    //
+    // `openBackend` catches each backend's own refusal, so what reaches here is what it does not:
+    // `std::bad_alloc` from reading a file too big for the heap, and anything thrown that is not a
+    // `std::exception` at all.
+    std::unique_ptr<Backend> backend;
+    try {
+        // Copied out of the Java array here rather than above, so that a file too large to fit in
+        // memory refuses with a sentence instead of ending the process.
+        std::vector<char> bytes(static_cast<std::size_t>(length));
+        env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
+
+        // No backend recognising the bytes is reported as a handle of 0. The caller says so to the
+        // user rather than failing silently.
+        backend = openBackend(std::move(bytes), name, error);
+    } catch (const std::exception &e) {
+        LOGE("opening %s threw and was contained: %s", name.c_str(), e.what());
+        error = std::string("the decoder failed while opening it: ") + e.what();
+    } catch (...) {
+        LOGE("opening %s threw something that is not an exception", name.c_str());
+        error = "the decoder failed while opening it";
+    }
 
     if (errorOut && env->GetArrayLength(errorOut) > 0) {
         jstring text = env->NewStringUTF(error.c_str());
@@ -378,7 +440,9 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
     }
 
     if (!backend) return 0;
-    return reinterpret_cast<jlong>(new Player(std::move(backend)));
+    return guarded<jlong>(
+        "starting the player", [&] { return reinterpret_cast<jlong>(new Player(std::move(backend))); },
+        0);
 }
 
 /**
@@ -390,48 +454,58 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
 JNIEXPORT jstring JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSampleRateNote(JNIEnv *env, jclass,
                                                                     jlong handle) {
-    return env->NewStringUTF(asPlayer(handle)->rateNote().c_str());
+    return guarded<jstring>(
+        "rateNote", [&] { return env->NewStringUTF(asPlayer(handle)->rateNote().c_str()); },
+        env->NewStringUTF(""));
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeClose(JNIEnv *, jclass, jlong handle) {
-    delete asPlayer(handle);
+    // A decoder that throws while being torn down still has to be let go of: `delete` runs the
+    // destructors either way, and containing the throw is all that is left to do.
+    guardedVoid("close", [&] { delete asPlayer(handle); });
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeStart(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->start() ? JNI_TRUE : JNI_FALSE;
+    return guarded<jboolean>("start", [&] { return asPlayer(handle)->start() ? JNI_TRUE : JNI_FALSE; },
+                             JNI_FALSE);
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeStop(JNIEnv *, jclass, jlong handle) {
-    asPlayer(handle)->stop();
+    guardedVoid("stop", [&] { asPlayer(handle)->stop(); });
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeIsFinished(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->isFinished() ? JNI_TRUE : JNI_FALSE;
+    // A player nobody can ask is a player that has finished: saying so moves to the next tune,
+    // where `JNI_FALSE` would leave a dead one on screen forever.
+    return guarded<jboolean>(
+        "isFinished", [&] { return asPlayer(handle)->isFinished() ? JNI_TRUE : JNI_FALSE; },
+        JNI_TRUE);
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeRestart(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->restart() ? JNI_TRUE : JNI_FALSE;
+    return guarded<jboolean>(
+        "restart", [&] { return asPlayer(handle)->restart() ? JNI_TRUE : JNI_FALSE; }, JNI_FALSE);
 }
 
 JNIEXPORT jint JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSubsongCount(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->subsongCount();
+    return guarded<jint>("subsongCount", [&] { return asPlayer(handle)->subsongCount(); }, 0);
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSelectSubsong(JNIEnv *, jclass, jlong handle,
                                                                    jint index) {
-    asPlayer(handle)->requestSubsong(index);
+    guardedVoid("selectSubsong", [&] { asPlayer(handle)->requestSubsong(index); });
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlong handle, jdouble seconds) {
-    asPlayer(handle)->seek(seconds);
+    guardedVoid("seek", [&] { asPlayer(handle)->seek(seconds); });
 }
 
 
@@ -448,34 +522,39 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeSeek(JNIEnv *, jclass, jlo
  */
 JNIEXPORT jstring JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeBackendsFingerprint(JNIEnv *env, jclass) {
-    return env->NewStringUTF(protracktor::backendsFingerprint().c_str());
+    return guarded<jstring>(
+        "backendsFingerprint",
+        [&] { return env->NewStringUTF(protracktor::backendsFingerprint().c_str()); },
+        env->NewStringUTF(""));
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetDataPath(JNIEnv *env, jclass, jstring path) {
     const char *chars = env->GetStringUTFChars(path, nullptr);
-    protracktor::setSharedDataPath(chars ? chars : "");
+    guardedVoid("setDataPath", [&] { protracktor::setSharedDataPath(chars ? chars : ""); });
     env->ReleaseStringUTFChars(path, chars);
 }
 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetGain(JNIEnv *, jclass, jlong handle, jfloat gain) {
-    asPlayer(handle)->setGain(gain);
+    guardedVoid("setGain", [&] { asPlayer(handle)->setGain(gain); });
 }
 
 JNIEXPORT jstring JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeDescribe(JNIEnv *env, jclass, jlong handle) {
-    return env->NewStringUTF(asPlayer(handle)->describe().c_str());
+    return guarded<jstring>(
+        "describe", [&] { return env->NewStringUTF(asPlayer(handle)->describe().c_str()); },
+        env->NewStringUTF(""));
 }
 
 JNIEXPORT jdouble JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativePositionSeconds(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->positionSeconds();
+    return guarded<jdouble>("positionSeconds", [&] { return asPlayer(handle)->positionSeconds(); }, 0.0);
 }
 
 JNIEXPORT jdouble JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeDurationSeconds(JNIEnv *, jclass, jlong handle) {
-    return asPlayer(handle)->durationSeconds();
+    return guarded<jdouble>("durationSeconds", [&] { return asPlayer(handle)->durationSeconds(); }, 0.0);
 }
 
 }  // extern "C"

@@ -97,3 +97,75 @@ widened.
 
 **It does not hold anything.** A room is a set of listeners and the last message, in memory, gone
 when the process stops. There is no database, no account and no log of what was played.
+
+## Where this should go, and why the address is the problem — surveyed 2026-09-15
+
+*The owner: his script copies a new build, unpacks it, starts a Cloudflare quick tunnel, reads the
+address out of it, writes that into `server.json` and starts the server — and the tunnel comes up on
+**a different random address every time**. Recorded as a direction, not a decision; nothing here is
+built.*
+
+**The thing being tunnelled is two things with opposite requirements**, and every option below is
+really a question about which half goes where.
+
+| | needs | today |
+| --- | --- | --- |
+| the page, the engine, the catalogues | **nothing but static hosting over TLS** | node, on the Pi, behind the tunnel |
+| pairing — `/pair/*` | a process with memory, reachable from the phone | the same node |
+
+The first row is the surprise and it is worth being precise about, because it decides everything:
+
+- The catalogue is fetched **by the browser, straight from Modland and ASMA**. Their CORS is the
+  reason `catalogue.js` is shaped the way it is; nothing is proxied through us.
+- A `#play:` share link is a **URL fragment**. It never reaches a server.
+- The engine needs **no cross-origin isolation** — no `SharedArrayBuffer`, which `processor.js` says
+  in its own comment and is the reason an `AudioWorklet` is enough. So no COOP/COEP headers, and
+  therefore no host is disqualified for being unable to set them.
+
+So the page could sit on any static host today, at a permanent address, and only pairing would still
+need something running. Pairing is not optional and cannot be replaced by a link: it is the only
+route by which **files out of the phone's own storage** reach the page.
+
+### The options, and what each costs
+
+**1. Cloudflare Pages, with the pairing routes as Functions.** The page gets a permanent `pages.dev`
+address and Functions sit on the **same origin** — which removes more than it looks. `/pair/host`
+exists only because the page cannot work out where the phone should post: it knows its own origin,
+and that is usually `localhost`, which from a phone means the phone. Same origin makes the answer
+"me", and the route and the whole `advertisedBase()` question go away with it.
+
+**The catch to settle before choosing this**: `rooms` is a `Map` in the process. Workers are
+stateless, so long polling with held requests wants **Durable Objects**, and whether those are
+within the free plan needs checking against Cloudflare's current pricing rather than assumed. If
+they are not, the fallbacks are short polling through KV (worse, but the protocol already tolerates
+it — `seq` exists exactly so a poller cannot miss a message) or leaving the relay on the Pi.
+
+**2. GitHub Pages.** Fine for the page — static and TLS — and disqualified for the rest: it is
+static *only*, so pairing needs a second host and a second address, which is the problem this
+started as. It would also mean the web build living in a public repository, and the repository is
+still private.
+
+**3. A named Cloudflare tunnel instead of a quick one.** The smallest possible change: a fixed
+hostname, the Pi still serving both halves, the script otherwise untouched. Needs a domain on
+Cloudflare. **This is the one to reach for if the goal is to stop the address moving and nothing
+else** — an hour, and no code changes at all.
+
+**4. The page on Pages, the relay left on the Pi** at a fixed subdomain. Costs cross-origin between
+the two, which is already handled — `serve-web.mjs` sends `access-control-allow-origin: *` on every
+pairing response.
+
+**5. Resolving the moving address through a REST endpoint** (the owner's own suggestion: the app asks
+a service on his DNS, NAT-forwarded to the Pi, where the tunnel currently is). It works, and it is
+the option with the most moving parts: the random tunnel stays and an always-on resolver is added in
+front of it. **And it answers itself** — a resolver has to live at a stable address, and anything
+with a stable address could serve the page directly, which is the thing the resolver was for.
+
+### What a permanent address unlocks
+
+Not only convenience. **`docs/BACKLOG.md` A40** — Protracktor links opening in the app — is parked
+*specifically* on not having a stable address, and a share link that outlives the tunnel it was
+created in is the whole point of that feature. `docs/PLAN_HANDOFF.md` §7 asks "who hosts the relay,
+and is it worth having anything to run at all"; the table above is the shape of that answer.
+
+**The QR pairing stays regardless of where anything is hosted.** A stable address makes links work;
+it does not give a page access to the phone's storage.

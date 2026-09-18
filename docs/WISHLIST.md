@@ -10,6 +10,20 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B32. A row being fetched breathes — DONE 2026-09-14
+
+*Owner, 2026-09-14: while a track is loading it is marked on the list, which is right, "ale powinien
+migać takim fadein/fadeout w oscylacji sekundowej, żeby było widać, że się wczytuje".*
+
+Marking says "this one"; what a download has to add is "still working", and a network fetch is
+seconds. Both runtimes now breathe the row at about a second a cycle — the page in CSS, the phone
+with an animation on the row that is only allocated while one is being fetched, the same guard the
+drag layer has.
+
+**Browse's rows breathe too**, since 2026-09-14: the id of the tune being fetched follows the id of
+the tune playing, which that list already took. It changes when a fetch starts and stops, not five
+times a second, so the recomposition the screen is careful about is not disturbed.
+
 ## B32. Modland's `/incoming/` is not in `allmods.zip`, and neither app can see it
 
 *Owner, 2026-09-10, by finding a file we could not find:*
@@ -429,9 +443,12 @@ day is another case of it**: "random, but only tunes considered good" wants Modl
 favourites, and that arrives as a second scope rather than a second mechanism. Built the same day —
 B27 above, which also corrects the figure this paragraph first carried: 835 playable, not 924.
 
-**Not persisted, deliberately.** After a restart the dice means anything again. A scope that
-outlives the session is an invisible mode, and the subtitle only defends against that while somebody
-is looking at it.
+**Not persisted, deliberately — and then reversed on 2026-09-10.** The rule was that after a restart
+the dice meant anything again, because a scope outliving the session is an invisible mode and the
+subtitle only defends against that while somebody is looking at it. The Random view took that
+argument away: the scope stands on its own screen beside a Filter button, in words, whether or not
+anybody is looking for it. So it is stored with the rest of the player state and survives a restart
+(`docs/PLAN_RANDOM.md`, `docs/SPEC_RANDOM.md` §1).
 
 ### Two things the owner found on the first run
 
@@ -759,9 +776,26 @@ mechanism with B14 and with `docs/BACKLOG.md` A3.
 
 **Built** as the locate button in Now Playing. Not confirmed on a device.
 
-## B14. ~~A follow-the-playing-track toggle~~ — DONE 2026-09-02
+## B14. ~~A follow-the-playing-track toggle~~ — DONE 2026-09-02, **REPLACED 2026-09-10**
 
 *owner asked the question 2026-09-01, and settled it himself 2026-09-02.*
+
+**Replaced by `KeepRowInView`, and the button is gone** (owner, 2026-09-10: "usunąć funkcję follow
+current track … bo on już nie będzie potrzebny"). It came out of the Random view: there the playing
+row is kept on screen as next and previous move it — one row at a time, and only when the row would
+otherwise leave — and he asked for that on every list. Once every list does it unasked, a button to
+switch it on has nothing left to do.
+
+**This reverses the principle the entry below was built on**, and that should be said rather than
+left for the next reader to notice. The FAB's whole argument was *"nothing ever steals the view"*:
+following was opt-in, and the first drag switched it off. The replacement does move the view when
+the track changes. What keeps it from being the thing that argument feared is how little it moves:
+never while the row is visible, one row when it is not, and **never on arrival** — coming back to the
+playlist from Browse leaves you where you were reading, and "Show in playlist" in Now Playing stays
+as the deliberate jump.
+
+What follows is the entry as it was, kept because the two problems it names are real and the second
+of them is exactly what `KeepRowInView` had to solve again.
 
 The wish: press next on shuffle and the playing track is somewhere off screen.
 

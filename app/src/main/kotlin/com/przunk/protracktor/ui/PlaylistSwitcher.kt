@@ -77,10 +77,10 @@ fun PlaylistSwitcher(
                     headlineContent = {
                         Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     },
-                    // The size, where a dot used to say "this is the current one". The dot
-                    // spent a slot on something the row can say by being highlighted, and left the
-                    // question a list of bare names cannot answer: which of these has anything in
-                    // it (`docs/BACKLOG.md` A21).
+                    // The size, rather than a dot marking the current one: highlighting the row
+                    // says that already, and the slot is better spent on the question a list of
+                    // bare names cannot answer -- which of these has anything in it
+                    // (`docs/BACKLOG.md` A21).
                     leadingContent = {
                         Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
                             Text(
@@ -95,10 +95,10 @@ fun PlaylistSwitcher(
                         }
                     },
                     // Everything you can do *to* this playlist, behind the same three dots a
-                    // track row uses in Browse and in the playlist. Rename used to appear only on
-                    // the active row and delete sat next to it unlabelled, while export was a
-                    // button at the bottom that silently meant "the open one" -- three different
-                    // shapes for three things that are all "act on one playlist".
+                    // track row uses in Browse and in the playlist. One shape for everything
+                    // that acts on one playlist, rather than rename on the active row, an
+                    // unlabelled delete beside it and an export button at the bottom that silently
+                    // means "the open one".
                     trailingContent = {
                         Box {
                             IconButton(onClick = { menuFor = playlist.id }) {
@@ -141,7 +141,7 @@ fun PlaylistSwitcher(
                         }
                     },
                     // The whole row, the same way the playing track is marked in the playlist, so
-                    // "which one am I in" is one convention rather than two.
+                    // that "which one is current" is one convention rather than two.
                     colors = if (active) {
                         ListItemDefaults.colors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer

@@ -16,6 +16,7 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.ServiceCompat
 import com.przunk.protracktor.MainActivity
 import com.przunk.protracktor.R
@@ -76,7 +77,14 @@ class PlaybackService : Service() {
                     if (content.title != null) {
                         everHadTrack = true
                         showNotification(content)
-                    } else if (everHadTrack) {
+                    } else if (everHadTrack && !content.playing && !content.loading) {
+                        // **Only when nothing is happening** (`docs/STATUS.md` C43). A state with no
+                        // current track is not the end of playback: it happens while a queue is
+                        // replaced and when a session hands the playlist back, and stopping there
+                        // took the transport away from music that was still playing. Nothing brings
+                        // it back either, because a track ending and the next one starting is the
+                        // controller's own doing and never passes through the transport buttons,
+                        // which are what ask for this service.
                         stopForegroundAndSelf()
                     }
                 }
@@ -137,8 +145,8 @@ class PlaybackService : Service() {
             PlaybackState.ACTION_STOP
         // `canGoNext`, not `queue.hasNext`. The queue is the playlist, and next does not always
         // walk the playlist: in Random it walks the picks, and in a search it walks the results.
-        // Asking the queue meant the notification hid its skip buttons in exactly the mode where
-        // the dock was showing them -- the owner found it in Random, and search had it too.
+        // Asking the queue hides the notification's skip buttons in exactly the modes where the
+        // dock is showing them -- Random and search.
         //
         // Since Android 13 the system builds these buttons from the session's PlaybackState rather
         // than from the notification's own actions, so this line is what decides whether they
@@ -169,6 +177,9 @@ class PlaybackService : Service() {
         fileName = state.current?.fileName.orEmpty(),
         id = state.current?.id.orEmpty(),
         playing = state.playing,
+        // Playing is false while a track is being fetched and opened, which is a gap of seconds on
+        // a slow network -- and a gap this service must not read as "nothing is going on".
+        loading = state.loadingTrack,
     )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -204,6 +215,7 @@ class PlaybackService : Service() {
         val fileName: String,
         val id: String,
         val playing: Boolean,
+        val loading: Boolean,
     )
 
     private fun showNotification(content: NotificationContent) {
@@ -226,6 +238,10 @@ class PlaybackService : Service() {
     }
 
     private fun stopForegroundAndSelf() {
+        // **Said out loud, because C43 had no reproduction.** If the transport goes missing again
+        // while music plays, this line in the log is the difference between "the service stopped"
+        // and "the notification was never posted" -- and they are different faults.
+        Log.i("Protracktor", "playback service: leaving the foreground and stopping")
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         started = false
         stopSelf()

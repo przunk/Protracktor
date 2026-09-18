@@ -6,15 +6,14 @@ package com.przunk.protracktor.player
 /**
  * What Random picks from.
  *
- * **A type rather than a nullable platform id**, because the owner raised two wishes on the same
- * day and they are one feature: "random within a platform" (`docs/WISHLIST.md` B22) and "random,
- * but only tunes considered good". The second is [Favourites], and it arrived as another case here
- * rather than as a second mechanism — which is what the type was for.
+ * **A type rather than a nullable platform id**, because "random within a platform"
+ * (`docs/WISHLIST.md` B22) and "random, but only tunes considered good" are one feature.
+ * [Favourites] is another case here rather than a second mechanism, which is what the type is for.
  *
- * **Not persisted, deliberately.** After a restart the dice means *anything* again. A scope that
- * outlives the session is an invisible mode, and a dice button that quietly remembers a setting has
- * stopped being a dice button; the row's subtitle says what is set while it is set, and that is the
- * whole of the state anybody has to keep in their head.
+ * **Persisted**, which is only safe because it is visible: a scope outliving the session would
+ * otherwise be an invisible mode, and a dice button that quietly remembers a setting has stopped
+ * being a dice button. The Random view shows the scope beside its Filter button for as long as you
+ * are in there (`docs/PLAN_RANDOM.md`). A setting you can see is a setting, not a trap.
  */
 sealed interface RandomScope {
 
@@ -36,4 +35,33 @@ sealed interface RandomScope {
      * is one choice, not two filters (`docs/WISHLIST.md` B27).
      */
     data object Favourites : RandomScope
+}
+
+/**
+ * The name this scope goes under on disk.
+ *
+ * **Its own vocabulary, not the class names.** Renaming a Kotlin type must not silently reset
+ * everybody's saved setting, and a platform id is already a stored identifier used by the search
+ * filter and the catalogue tables.
+ */
+fun RandomScope.stored(): String = when (this) {
+    is RandomScope.Everything -> "everything"
+    is RandomScope.Favourites -> "favourites"
+    is RandomScope.OnPlatform -> "platform:$platformId"
+}
+
+/**
+ * Reads back what [stored] wrote, and answers `Everything` to anything it does not recognise.
+ *
+ * An empty column is a phone upgraded from before this was kept; an unknown word is a value written
+ * by a newer build. Both mean "we do not know what you had", and the honest answer to that is the
+ * dice's own default rather than a crash or a guess.
+ */
+fun storedRandomScope(value: String?): RandomScope = when {
+    value == "favourites" -> RandomScope.Favourites
+    value != null && value.startsWith("platform:") ->
+        value.removePrefix("platform:").takeIf { it.isNotEmpty() }
+            ?.let { RandomScope.OnPlatform(it) }
+            ?: RandomScope.Everything
+    else -> RandomScope.Everything
 }

@@ -48,7 +48,7 @@ android {
         // fixes, minor for a round of work that added capability, major reserved for "publishable".
         // Bumping it per merge was considered and rejected -- twenty merges in a day would make it
         // a second, worse timestamp.
-        versionName = "0.3.0"
+        versionName = "0.6.0"
 
         // Stated explicitly rather than left to whatever the NDK defaults to that month, because
         // native decoder builds are the expensive part of this project and the ABI list drives
@@ -151,6 +151,14 @@ val copySc68Data = tasks.register<Sync>("copySc68Data") {
 android.sourceSets["main"].assets.srcDir(sc68Assets)
 
 tasks.named("preBuild") { dependsOn(copySc68Data) }
+
+// Two tests read files outside the source set: `RuleCasesTest` the shared queue rules and
+// `SupportedFormatsFileTest` the page's format list. Gradle cannot see that, so an edit to either
+// file alone left the test task "up to date" and the check that exists to catch drift never ran.
+tasks.withType<Test>().configureEach {
+    inputs.file(rootProject.file("docs/rules/queue-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("web/src/formats.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+}
 
 dependencies {
     implementation(libs.oboe)

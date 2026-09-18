@@ -1,0 +1,34 @@
+Protracktor is a modern focused player for music created on classic computers and consoles. It keeps your playlists, playback history and place between sessions, and starts small module files without rebuilding your library every time.
+
+Play local music chosen through Android's system folder picker, or explore online archives. Catalogue indexes are stored for offline browsing; tracks are fetched only when you choose them and cached for later playback.
+
+Supported families include:
+• tracker modules such as MOD, XM, S3M and IT
+• ZX Spectrum AY trackers including PT3, PT2, STC, ASC and STP
+• Atari ST YM and many SNDH files
+• Atari 8-bit SAP and related tracker formats
+• Commodore 64 SID, with subsong lengths from the HVSC database
+• Amiga formats including AHX and HVL
+• console and 8-bit computer formats including NSF, GBS, SPC, VGM, HES, AY and KSS
+
+Online archives you can browse:
+• Modland, indexed for offline browsing
+• ASMA, the Atari 8-bit collection
+• The Mod Archive, searched live
+
+Built for listening:
+• multiple named playlists, with favourites
+• background playback and lock-screen or headset controls
+• shuffle with a real back history
+• Random discovery — across everything, one platform, or your favourites — and a browse-the-author digression you can return from
+• every tune inside a file, for formats that hold more than one
+• instrument and sample names, where the author left something in them
+• play history and search
+• share a file, a catalogue link, or a link that plays the tune in a browser
+• Polish and English interface
+
+Protracktor has no ads, accounts, analytics or crash-reporting SDKs. Local library details and playlists stay on your device. Online catalogue searches and downloads contact the selected archive; see the privacy policy for details.
+
+No music is bundled with the app. Online content is provided by independent archives and remains subject to its authors' and publishers' terms. Protracktor is not affiliated with the platform manufacturers or catalogue operators named in compatibility descriptions.
+
+Protracktor is free software licensed under GPL-3.0-or-later. Source code and third-party notices: https://github.com/przunk/protracktor

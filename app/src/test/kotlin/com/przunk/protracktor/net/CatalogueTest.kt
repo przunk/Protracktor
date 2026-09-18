@@ -51,9 +51,9 @@ class CatalogueTest {
             Modland.urlFor("Protracker/4-Mat/elysium.mod"),
             Modland.webUrlFor("Protracker/4-Mat/elysium.mod"),
         )
-        // ASMA publishes one archive and no per-file address, so it says so instead of handing back
-        // an asma:// reference that would mean nothing on anyone else's phone.
-        assertNull(Asma.webUrlFor("asma/Games/Abracadabra.sap"))
+        // ASMA serves every file at its zip entry's own path too (measured 2026-09-11), so its link
+        // is that file -- never the asma:// reference this phone reads it by.
+        assertEquals("https://asma.atari.org/asma/Games/Abracadabra.sap", Asma.webUrlFor("asma/Games/Abracadabra.sap"))
         assertEquals("https://asma.atari.org/", Asma.homeUrl)
     }
 

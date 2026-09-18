@@ -99,6 +99,18 @@ emulators with no way back except re-running from the start. The UI reflects wha
 backend can actually do rather than offering a control that silently does nothing (AGENTS.md §7:
 a press that does nothing and says nothing is a defect).
 
+**And where a backend can seek, the seek is unbounded work and must not happen on the audio
+thread.** Every emulator here reaches a position by running forward to it, so seeking near the end
+of a five-minute tune means emulating five minutes of a 6502 inside a callback that has
+milliseconds to answer in. The stream starves, stops advancing, and the next `close()` blocks
+waiting for a callback that will not return — which on `Dispatchers.Main.immediate` is a frozen
+app. It reached the owner twice on 2026-09-10, both times by dragging the seek bar while a tune was
+still loading.
+
+So a seek runs on its caller's thread under the decoder lock, and the audio callback `try_lock`s:
+failing to take the lock is not an error, it means somebody is seeking, and a buffer of silence is
+the right thing to play meanwhile (`native/engine/player_oboe.cpp`).
+
 ## 6. Startup latency is an indexing problem, not a decoding one
 
 R9's 5–30 second wait is not decode time — a module is kilobytes and renders in milliseconds. It is

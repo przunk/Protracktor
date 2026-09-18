@@ -1,6 +1,7 @@
 # Status
 
-Updated: 2026-09-09 — version 0.3.0, versionCode from the commit count, schema version 10
+Updated: 2026-09-18 — version 0.6.0, round 12: the index no longer depends on what this build
+can play. versionCode is the commit count, schema version 16
 
 ## What works
 
@@ -414,6 +415,668 @@ and whether `develop` should be merged to `master`.
 
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
+
+### C64. ~~Uninstalling did not remove the database~~ — FIXED 2026-09-17
+
+*Owner, 2026-09-17: "po odinstalowaniu aplikacji i zainstalowaniu na nowo mam wrażenie, że baza
+danych zostaje. Miałem starą listę jakąś."*
+
+He was right, and it was not the app's doing: **Android's Auto Backup is on unless a manifest says
+otherwise.** The database goes to Google Drive and comes back on the next install, so an uninstall
+is undone by the platform.
+
+Now `android:allowBackup="false"` plus a `dataExtractionRules` file that excludes every domain from
+device-to-device transfer as well — the flag alone does not cover that from Android 12 onwards.
+
+Four reasons it is off rather than selective, in `res/xml/data_extraction_rules.xml`: most of the
+database is a re-downloadable copy of somebody else's archive; a restored SAF grant is dead, because
+the permission belongs to the installation that asked for it; a restored database is a schema
+nobody tested, since backups cross versions freely; and uninstalling is how a person says "take this
+off my phone". Playlists worth keeping have an export, which is a path somebody chooses rather than
+one that happens to them.
+
+`UninstallLeavesNothingTest` reads the manifest, because a manifest attribute has no test of its own
+and the alternative is finding out on a phone a second time.
+
+### C63. ~~The empty playlist offered Browse on a phone with nothing to browse~~ — FIXED 2026-09-17
+
+*Owner, 2026-09-17: "nie ma co browse jak nie ma indeksów".*
+
+The empty screen said "Nothing here yet" and offered **Browse**, which on a fresh install opens a
+list of archives that all read "no index — tap the arrow". That is where the first round of testers
+stopped (`docs/BACKLOG.md` A46).
+
+It now offers the download sheet instead, and says "Nothing to browse yet" above it — unless there
+is an index or a granted folder, in which case nothing changes. A local-files-only user is not
+pushed towards a 49 MB download.
+
+**The first attempt at the rule was wrong, and shipped in a build the owner tested.**
+`CatalogueSummary.indexed` is `trackCount > 0 || isOnlineOnly`, and The Mod Archive is online-only —
+so `catalogues.any { it.indexed }` is true on every install ever made, including the empty one the
+offer exists for. The rule is `BrowseState.hasSomethingToBrowse` now, with rows rather than
+`indexed`, and `EmptyScreenOfferTest` fails against the old form.
+
+It also needed the controller to read the catalogue summaries and the granted folders **at
+start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
+were loaded only when Browse opened.
+
+### C65. ~~The button was four pixels too short for its own label~~ — FIXED 2026-09-17
+
+*Owner, 2026-09-17, on a build that was supposed to have fixed C62: "settings obcina na dole
+literkę 'g'. podobnie z browse na polskim języku."*
+
+C62 scaled the pill's height with the system text size and left the **base** at 46dp. Its contents
+are 12dp of padding, a 20dp icon, 2dp under it and one line of `labelSmall`, whose line box is
+16sp: **50dp**. Four short, at the *default* text size, on an ordinary phone — which is why fixing
+the scaling did not fix what he was looking at. A descender is the first thing to go, so it read as
+"Settings" with the tail cut off its g.
+
+56dp now for a slim pill and 76dp for a full one, both still scaled, and the slim cap raised to the
+64dp the bar itself is.
+
+**The arithmetic is a test now, not a comment.** `ActionPillFitsTest` adds up what Compose stacks
+inside the pill at seven text sizes and fails if the box is smaller than its contents, or if a slim
+pill grows past the bar that would then clip it. It fails against 46dp. Twice wrong by eye is
+enough.
+
+### C62. ~~Buttons cut their labels in half at a larger text size~~ — FIXED 2026-09-17
+
+Found by the first closed-testing round, on somebody else's phone: **Przeglądaj**, **Ustawienia**
+and **Playlista** drawn with their lower halves missing.
+
+`LabelledAction` fixed its pill at 46dp (slim) or 72dp, and the label is `labelSmall` — **sp, which
+grows with the system text size, inside a box in dp, which does not**. At the size that tester runs,
+the icon and one line of label no longer fit in 46dp, and Compose clips rather than overflows.
+
+The height now follows `fontScale`, so the rule it was written for still holds — one height for
+every pill in a row (C47) — and that one number grows with the words. A slim pill is capped at 56dp
+because `TopAppBar` is 64dp and would clip it in turn, and above 1.25x its padding gives up three
+pixels rather than the descenders. A slim label is one line with ellipsis: a second line in a bar of
+fixed height has nowhere to go.
+
+`PlaylistTopBar`'s name chip already used `defaultMinSize` for exactly this reason and says so in
+its own comment. The pill did not.
+
+### C61. ~~Every notice arrived in English on a Polish phone~~ — FIXED 2026-09-17
+
+Also from the first testing round. The screens were translated; the sentences the app *says* were
+not. Sixty-one of them were built from literals in `PlaybackController` — "Nothing is indexed yet.
+Index a catalogue first." landing on top of a screen that was otherwise Polish throughout.
+
+They are resources now, in both languages, with real plurals: Polish has four plural forms to
+English's two, so "Added 3 tracks" cannot be assembled from a number and a noun.
+
+The default playlist name was the same fault one layer down. `PlaybackController` carried
+`DEFAULT_PLAYLIST_NAME = "Playlist"` while `playlist_default_name` already existed, translated, and
+was read only by the screen — so a new install in Polish opened on a playlist called "Playlist".
+Names created from now on are translated; an existing one is the user's data and is not renamed
+underneath them.
+
+`MessagesAreTranslatedTest` fails on a literal reaching `Message(`, and fails when the two
+`strings.xml` files stop naming the same strings.
+
+### C60. ~~A search matched the whole query as one substring~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: "czy wyszukiwanie może działać tak, że jak wpisuję 'space ninja' to znajduje mi
+też 'space_ninja'?"*
+
+Both players matched the typed query as **one** substring — `LIKE '%space ninja%'` on the phone,
+`title.includes(needle)` on the page — so a single separator in the middle of a filename was enough
+to miss it, and tracker files are named with separators.
+
+**It is not a fuzzy search and does not need to be.** Fuzzy matching answers typos; this is about
+`_` and `-` standing where a person types a space. Splitting the query and requiring **every word,
+anywhere, in any order** covers `space_ninja`, `spaceninja`, `Space Ninja` and `ninja space` alike,
+and a word may be satisfied by any of the columns searched — so `4-mat space` finds 4-Mat's
+`space.mod`.
+
+**What it deliberately does not do is normalise the stored name**, so typing `spaceninja` still
+misses `space_ninja`. That was measured before it was rejected. On 500,000 catalogue rows the worst
+case — a search matching nothing, which is every search still being typed — goes from **36 ms to
+217 ms** in SQL, or costs a normalised column and about twelve megabytes; in the browser, where the
+search runs on every keystroke, from **13 ms to 68 ms**. Splitting the query costs nothing
+measurable: **36.5 ms to 36.8 ms** for two words, because the extra clause short-circuits over the
+same scan.
+
+The rule is `data/SearchTerms.kt` and `rules.js`'s `searchTerms`, with ten shared cases in
+`docs/rules/queue-cases.tsv` that both suites run — including the row that expects the run-on query
+to miss, so the day somebody pays for the other half, a failing test says what changed.
+`SearchTermsTest` runs the SQL the rule builds against a real SQLite and compares it to the rule
+itself, rather than to a hand-written expectation.
+
+### C59. ~~A SID with a known length looped for ever on the web~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16, on Response's "Normal People": it plays to about 3:50, both players say 4:05,
+and in the browser the bar then sits at the end.*
+
+**The 4:05 is right, and measuring it is how the real fault was found.** HVSC's entry for that file
+is `4a2ab3b1574163989e510b70e80314ff=4:05`, the MD5 matches the file byte for byte, and rendering it
+a second at a time shows why: the music fades out at **3:38**, twenty-six seconds of near-silence
+follow, and at **4:05 the tune begins again**. HVSC times the loop, not the last audible note, and
+4:05 is that to the second. Nothing about the length was wrong.
+
+**What was wrong was that the browser did not stop there.** C56's clock checked `duration <= 0`,
+on the reasoning that a format knowing its own length announces the end by running out of audio.
+That is true of a tracker module and **false of the one format the clock was written for**: a SID
+never runs out — it loops. So the moment HVSC's lengths arrived and a SID finally had a duration,
+the clock stopped firing for exactly the tunes it existed to stop, and the bar sat pinned at the end
+while the tune played round again.
+
+A known length is now a reason to stop rather than a reason not to look: the engine's own length
+wins over the fallback, and either ends the tune. The flag is called `endedByClock` rather than
+`fallbackFired`, because it never was only about the fallback. The phone was never affected — it has
+always taken the known length first.
+
+**And the first fix carried a worse bug, found by the owner within the hour**: a SID ending walked
+the queue forward about four tracks. Clearing the guard in `playAt` looked like tidying up after
+the old tune and is not — `playAt` begins *loading* the next one, and the worklet plays the old one
+until the bytes arrive. Its position messages keep coming across that gap, still carrying the old
+tune's clock, and `duration` has just been zeroed so the bar can start at nothing — so the limit
+falls back to three minutes and every one of those messages is past it. The guard reopened and the
+queue advanced once per message until the fetch finished.
+
+The guard is cleared where a tune actually starts, which is `opened` and `subsong`, and nowhere
+else. Three page checks now, and two of them fail against the two rules they replaced.
+
+### C58. ~~Re-indexing was ninety times slower than indexing~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: "jak robię indeksowanie, to w WEB to trwa z 2-3 s. Jak znowu kliknę indeksuj, to
+trwa dużo dłużej, głównie na sorting wisi. Z 20 sekund."*
+
+**The asymmetry was the diagnosis**: the first index has nothing to clear and the second has an
+archive's worth. `catalogue.clear` walked a cursor and called `cursor.delete()` on every record,
+which is the obvious way to write it and two orders of magnitude slower than the alternative,
+because each step is its own request through the transaction.
+
+Measured at 20,000 records, which is the shape Modland produces: **281 ms to write them all, 26,176
+ms to delete them again**. One `IDBObjectStore.delete` over the key range instead — it takes a range
+as happily as a key — brings that to **48 ms**.
+
+It looked like it hung on "sorting" because the label is set before the clear and the next one is
+not set until storing begins. That is now a window of 48 ms rather than 20 seconds, so it is left
+alone; a stage that flashes for a twentieth of a second is noise.
+
+Three page checks guard the thing that made the fast version worth trusting — that the range still
+deletes exactly the right rows. `modlandish:` is in there deliberately: it is the case a
+hand-written prefix scan gets wrong.
+
+### C57. ~~Search kept the last query with none of its results~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-16: going into Search a second time from the playlist — "nie wstecz po
+wyszukiwaniu" — showed the previous search still written in the box.*
+
+**Half the screen was already being cleared.** `BrowseNavigation.enteringDomain` empties `tracks`,
+`groups` and everything else about where you had got to, and the query was not in that list: it was
+asserted to *survive*, in a test that grouped it with the search scope and the downloaded-data
+counts as "things that are not about where you are".
+
+That grouping was the mistake. A scope is a setting and a count is a fact, but **a query is the
+input that produced the results the same function has just thrown away** — so what the owner met was
+his words with nothing underneath, which reads as a search that found nothing rather than as a
+screen waiting for a new one. The query is cleared with its results now, and the test that defended
+the old behaviour says why it changed.
+
+Walking back out of a folder into results does not come through `enteringDomain`, so a search still
+survives being walked away from and returned to.
+
+**And the keyboard comes up with the screen**, which the owner suggested in the same message. Search
+is the one place nobody arrives to look around — they came to type — and two taps stood between
+arriving and typing.
+
+### C56. ~~A SID never ends on the web, and does not on a fresh phone either~~ — FIXED 2026-09-16
+
+*Owner, 2026-09-15: "WEB: nie widzi końca SID (gra w nieskończoność); APK to potrafi."*
+
+**Measured, and the phone's advantage is a database rather than a better engine.** `SidBackend`
+reports `durationSeconds() == 0.0` and always has: a SID is a 6502 program with a play routine, and
+nothing in the file says when it should stop. Four Rob Hubbard tunes through the engine confirm it —
+all four open and play, all four report a length of zero.
+
+So a SID ends only where something *else* supplies the length, and on the phone that is **HVSC's
+song length database**: `PlaybackController` hashes the file, asks `SongLengthStore.forMd5`, and the
+position poll calls `handleTrackEnded()` once the position passes it. About 61,000 rows. The web has
+none of that machinery — no MD5, no store, no watchdog — so `_pt_duration` returns 0, `render` never
+runs short, no `ended` message is ever posted, and the tune runs for ever.
+
+**The phone is not actually immune, and this is the part that matters for a release.** The HVSC
+database is a **manual, opt-in download** on the Browse screen. Until the owner taps it,
+`openSongLengths` is empty, the duration is 0, the watchdog's `known > 0.0` is false, and a SID
+plays for ever on the phone exactly as it does on the web. The string next to the button
+(`song_lengths_none`) says "SID tunes will show no length", which undersells it: they also never
+end, and nothing on screen connects the two. A new install is in this state.
+
+**Three separable pieces of work**, smallest first:
+
+1. **Say what the missing database costs.** A one-line change to `song_lengths_none` and the storage
+   confirmation. Honest immediately, and it makes the other two optional rather than urgent.
+2. **A fallback length for a tune nothing knows** — **decided 2026-09-15**. A setting, with a
+   slider, **3 to 10 minutes, defaulting to 3**. It applies wherever nothing supplies a length, not
+   only to SID: the fault is "a tune that never ends", and a `.sndh` sc68 has no entry for hangs the
+   same way. The default matters more than the range — most people will never open that screen, and
+   three minutes is roughly where a C64 tune's loop has said what it has to say.
+
+   **Both players, and the phone's watchdog already exists**: `known > 0.0 && position >= known`
+   simply needs `known` to fall back to the setting. The web has no watchdog at all and needs one
+   built, which is the larger half of this even though it is the smaller of the two changes.
+3. ~~**Song lengths on the web.**~~ **Done 2026-09-16.** The page fetches HVSC's `Songlengths.md5`
+   from the same address the phone uses, parses it with the same rules, and stores it in IndexedDB.
+   Browse offers the download beside the Modland and ASMA indexes — which is where the owner looked
+   for it — and Settings says how many are held and lets them go.
+
+   **Sharded 256 ways on the first two characters of the MD5**, because a hash is uniform by
+   construction: 61,157 tunes become 256 rows of about 240 each, rather than 61,157 rows to write
+   and 61,157 to delete. Measured end to end against the real 5.2 MB file: **61,157 tunes stored in
+   256 ms, a lookup in 1 ms.**
+
+   **The MD5 is written out**, sixty lines in `web/src/songlengths.js`, because `crypto.subtle` does
+   not offer MD5 and never will — it is broken as a *security* hash, and nothing here is security.
+   HVSC chose it as a key twenty years ago and a lookup has to use the key the database was written
+   with. It is checked against the vectors published with the algorithm, and against the block
+   boundary at 56 and 64 bytes where a hand-written one goes wrong.
+
+   **Hashed before the bytes are handed to the worklet**, which detaches them — the same point the
+   phone hashes at — and only for `.sid`, `.psid` and `.rsid`, since HVSC is a C64 collection and
+   hashing a five-megabyte MP3 to learn that is waste.
+
+   The time tokens now live in `docs/rules/queue-cases.tsv` as thirteen shared cases that both
+   `RuleCasesTest` and `check-page.mjs` run, so the two parsers cannot drift. The fraction is what
+   they are there for: `.5` is half a second, and the field is called milliseconds in places.
+
+   **The fallback length stays.** HVSC knows about the C64 and nothing else, so every other format
+   nobody has measured still needs an answer.
+
+   **Its source is the one the phone uses, and the note here said otherwise for a day.**
+   `hvsc.c64.org` **does** send `Access-Control-Allow-Origin: *`, on a GET and on a preflight, and it
+   answers ranged requests. The 2026-09-15 measurement that said it did not was taken with `curl -I`
+   — a HEAD, which that server answers without the CORS filter. `Vary: Origin` was there in the HEAD
+   response all along, which is exactly the tell that a CORS decision is being made per request, and
+   it was not read.
+
+   **The lesson is the method, not the host**: CORS is a property of the request, so it has to be
+   measured with the request the page will actually make. The catalogue table in
+   `docs/PLAN_CATALOGUES.md` was re-measured with GET afterwards and its verdicts stand — HVSC was
+   the only one the HEAD got wrong, and HVSC was not in that table.
+
+   So the web can do what the phone does. What is left is work rather than a question: 5,205,150
+   bytes to fetch with progress, a parser mirroring `data/SongLengths.kt`, storage in IndexedDB, and
+   an MD5 — which the page does not currently compute at all.
+
+**Not a defect, and asked in the same breath — SID subsongs already work.** The owner asked what
+becomes of them: `SidBackend::subsongCount()` returns `info_->songs()` and `selectSubsong` is
+implemented, so the phone shows the strip, the "play all subsongs" setting applies, and HVSC's entry
+is a length **per subsong** — `openSongLengths.getOrNull(index)` — so switching tune switches length
+too. Three of the four Hubbard files tested carry four tunes each. The web reads the count and
+switches as well. The only thing wrong with SID subsongs is the thing above: without HVSC, each of
+the four plays for ever instead of one after another.
+
+### C55. ~~A `.sap` refused with "wrong file type for this emulator"~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-15: "scene register 5 menu.sap" by Yezus would not play, with that message.*
+
+**Two faults in one report, and only one of them is ours.**
+
+*The file is damaged.* Modland's copy is 7,562 bytes, and its last block claims an end address two
+bytes past that — so ASAP parses the header, finds a valid TYPE B tune by Jakub Karwacki, and then
+cannot load the binary into 6502 memory. Restoring the two bytes makes it play at peak 0.75, which
+is how the truncation was measured rather than guessed. ASMA, which validates what it accepts, does
+not carry the tune at all. **Nothing was made lenient about it**: 111 `.sap` files sampled across 25
+Modland authors all played, so this is one broken file in an archive, not a gap in what we accept.
+
+*The message was ours.* `openBackend` asks the backends in order of how strongly they can claim a
+file — by name, then by magic, then by content — and each one **overwrote** the reason the one
+before had given. `.sap` is claimed by name (`AsapBackend::claimsName`) and ASAP refused it first;
+then game-music-emu, whose `gme_identify_header` knows `SAP\r\n` and whose build here has no Atari
+emulator, refused it too and spoke over ASAP on its way past. The owner was told a decoder's opinion
+about a file it had no business with. **The first refusal is now the one kept**, which by the order
+of the asking is always the decoder with the best claim.
+
+`scripts/check-engine.mjs` holds it: a malformed SAP built in the check — valid header, last block
+two bytes short, exactly the damage above — is refused, and the reason must name ASAP and must not
+name the emulator. The same bytes under a name ASAP does not claim must quote game-music-emu, since
+the rule is "whoever claimed it first", not "never say game-music-emu". Both halves fail against the
+previous code.
+
+### C54. ~~The dock was taller over Random than over the playlist~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-15, with the two screens side by side: "widok random inaczej renderuje pasek dock …
+random jest wyższy jakimś cudem".*
+
+The now-playing card took its height from its tallest child, and over Random that is the keep
+button — an `IconButton`, which carries Material's 48dp touch target, next to a chevron that is a
+bare 24dp icon. The card has a height of its own now, with room for two lines and for that target,
+so the dock is the same over every screen.
+
+### C53. ~~Leaving Random kept playing the random tune~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-15: switching quickly from Random to the playlist, "dalej gra utwór z random, mimo
+że mam podświetlony mój z listy" — the bar, the title and the information all the playlist's, the
+music not.*
+
+`stopPlayback` cancelled the prefetch and closed what was open, but not the **open in flight**. A
+fetch already running finished after the switch and started its tune over a screen naming another.
+It is cancelled with the rest now.
+
+### C52. ~~A crash while Random advanced~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-15: `IndexOutOfBoundsException: Index -1 out of bounds for length 1`, on the main
+thread, during playback or a change of track.*
+
+`advanceRandom` reads the record by index, and it **suspends twice on the way there** — filling the
+queue asks the database. Start the dice again, or leave for the playlist, while it waits, and it
+resumes against a record that is not its own: the cursor back at -1 and the new session's first pick
+already in the list, which is the length of 1 in the message. A session counter is raised wherever a
+session begins or ends and checked after every wait, and the pick is read rather than indexed.
+
+### C51. ~~Next rolled the dice while an author's folder was on screen~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, testing the digression:* in the author's folder "przycisk next/previous powinien
+przesuwać na tej liście (a nie losować random); czyli kontekst się źle przełącza".
+
+A digression leaves the dice's tune playing, and the transport asks about the transient track before
+it asks about a results queue — so next rolled another pick while the author's list filled the
+screen. Walking into the folder now sets that queue **without playing anything**, pointing at the
+tune the jump was made from, and the transport prefers it while a dice is waiting. The dice keeps
+its record and its cursor, and Back still returns to it.
+
+### C50. ~~Browse's rows changed height with the words in them~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: the Random row's icon "nie jest na środku. Jej położenie zależy od wybranego
+filtra", and with two lines of text "rozjeżdża się wszystko na dole o parę pikseli".*
+
+`DomainRow` was a Material `ListItem`, which is as tall as its content. The Random row says what the
+dice is set to, and that sentence is a line longer for some scopes than for others — so the row grew,
+its icon sat above centre, and every row under it moved. The rows are now a fixed height with room
+for two lines, the icon centred in it, and the text ellipsised rather than allowed to push.
+
+### C49. ~~The Random view stayed up while something else was playing~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, from a session he described step by step:* in Random he pressed "more from this
+author", played one of that author's tunes, went back, pressed next on the Random list — and the
+next tune of the **author's folder** played. "Widok random przestał działać efektywnie."
+
+He was right about the cause. Playing from a Browse list moves playback to a results queue, and
+`PlayerUiState.randomMode` goes false with it — but the Random *screen* is a flag in the UI that
+nothing turned off. So the record of the dice stayed on screen while `next` walked the author's
+folder. A file handed over by another app already closed it; a tune played from a list did not.
+
+It closes now on both. Going back lands on the playlist, which says what is playing, as it does for
+any search result. The page never had this fault, because a Browse tune there ended the dice session
+outright — which is the half that changed next: `docs/BACKLOG.md` A41 made the dice **wait** on both
+sides instead, and `docs/SPEC_RANDOM.md` is what the two are held to now.
+
+### C48. ~~The top bar squeezes the playlist's name to fit its buttons~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14, with two screenshots: with Save and Discard showing, "nie mieszczą się i
+rozsuwają", and the chip read "Favo…".* The chip and five pills come to about 450dp on a screen some
+360dp wide, so something had to give and what gave was the name — the one thing the bar is about.
+
+A `TopAppBar` is one fixed-height row and cannot answer that, so the playlist screen no longer uses
+one. Wrapping was tried first and the owner saw what it costs: the bar changed height as Save and
+Discard came and went, and the list under it jumped. `PlaylistTopBar` is **two rows of fixed
+height** instead — the name across the whole width with its count beside it, and under it a slim row
+of actions with Browse at the left edge and Settings at the right. Save and Discard appear beside
+Settings, growing into the gap in the middle, so nothing that was on the bar moves. The pills in
+that row are a shorter variant with a smaller icon: five of them cross a phone with room to spare,
+which a pill wide enough for an icon beside its label could not do.
+
+### C47. ~~Now Playing's buttons are not the same height~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "funkcje/przyciski w now playing mogłyby mieć od razu dwa wiersze wysokości
+(niektóre pastylki są niższe i inne wyższe)".* `LabelledAction` sizes itself to its label, so a
+one-word action was shorter than a two-word one and the row read as ragged.
+
+**Two attempts.** Forcing two lines of label on every pill did make the heights equal and put the
+words against the top and bottom edges, which the owner sent back. What it is now: one height for
+every pill, whatever the name, with the icon and the label centred between real margins. A long name
+still wraps to two lines and changes nothing about the row.
+
+### C46. ~~Adding ticked tracks from search closes the search~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: after adding several ticked tracks to a playlist, the search is gone and the
+playlist is showing behind the glass.* `ProtracktorApp` sets `showBrowse = false` in the Browse
+screen's add action, so adding leaves Browse; what is left on screen is the playlist, covered by the
+scrim because what plays is a search result. Adding now keeps the list it was made from; the
+notice says what went in.
+
+### C45. ~~The seek bar's position dot is nearly invisible~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "nieprzesuwalnego handla na pasku odtwarzania prawie nie widać (kropka, która
+wskazuje aktualny czas) - jest ciemna na ciemnym tle".* `ui/SeekBar.kt` draws the dot by hand
+instead of using `SliderDefaults.Thumb`, which grows while pressed; its colour does not carry on a
+dark background. Ordered sixth of seven in `docs/PLAN_ROUND_9.md`.
+
+**It was the tunes that cannot be seeked.** There the bar drew **no** dot at all -- a deliberate
+answer to "this is progress, not a control" -- and Material's disabled track colours are `onSurface`
+at a third, which on this surface is a line you cannot read. So where the tune had got to could not
+be seen. The dot is now drawn there too, and after one build at half size -- which the owner sent back,
+because the track is inset by the thumb's radius and a smaller circle sits higher, taking the bar
+with it -- it is the same size and in the same place as the one you can drag. The colours are the
+change: the dot in the playing colour, and the disabled track dimmed rather than greyed.
+
+### C44. ~~The playlist list keeps stale counts after "Add to playlist…"~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "dana lista w widoku playlist nie odświeża ilości tracków, dopóki się w nią nie
+wejdzie".* `PlayerUiState.playlists` is read once and nothing re-reads it when a playlist gains
+tracks, so the switcher shows yesterday's number until the playlist is opened.
+
+**Making, renaming and deleting a playlist already re-read the list; the writes that change only its
+contents did not.** `refreshPlaylists()` now follows every one of them: adding to another playlist,
+appending to the one showing, and the debounced write of the queue itself.
+
+### C43. ~~The transport is sometimes missing from the notification~~ — FIXED 2026-09-15
+
+*Owner, 2026-09-14: "czasem z jakiegoś powodu nie widzę paska odtwarzania w notification (słyszę jak
+muza gra ale tego playera nie widać)".* No reproduction yet. `PlaybackService` builds the
+notification with MediaStyle and calls `ServiceCompat.startForeground`; what is not yet known is
+which path leaves playback running without it. First job is a way to tell the cases apart, not a
+guess.
+
+**One path was found and closed.** The service stopped itself whenever the state carried no current
+track — and that is not the end of playback: it happens while a queue is replaced and when Random or
+History hands the playlist back. Audio is the controller's, not the service's, so the music went on
+without a transport; and nothing brought the service back, because a track ending and the next one
+starting never passes through the buttons that ask for it. It now stops only when nothing is playing
+**and** nothing is loading.
+
+**Not proven to be the owner's case**, which was not reproduced then. So `stopForegroundAndSelf`
+logs; that line separates "the service stopped" from "the notification was never posted".
+
+**The rest of it, 2026-09-15, with his repro:** enter Random, play something, go to the home screen,
+and the music stops — the process taken, with no player in the notification at any point. The
+service is started by the view model, and only some of its doors did it: the transport buttons and a
+file handed over by another app. **Entering Random, tapping a row in its record, and playing from a
+Browse list went straight to the controller**, so those tunes played with no foreground service —
+nothing in the notification, and nothing telling the system this process was doing anything. Every
+entry point that can make a sound opens the service now, and `ensureServiceRunning` says so where it
+is defined.
+
+### C42. ~~One file the engine refuses by throwing ends the whole session~~ — GUARDED 2026-09-14 (web), 2026-09-15 (phone)
+
+*Owner, 2026-09-14, from the browser console:* a Startrekker AM file (libopenmpt: "external
+synthesizes instruments … not supported"), then `uncaught exception: 1464664` from `___cxa_throw`
+in `engine.mjs` — and after it **no tune plays at all** until the tab is reloaded. A C++ exception
+escaping `pt_open` leaves the engine unusable, and the worklet with it. Second of seven in
+`docs/PLAN_ROUND_9.md`.
+
+**The file was never reproduced, and the hole was real anyway.** Eight Startrekker AM modules off
+Modland open and render with that same libopenmpt warning, and their `.nt` companions are refused
+cleanly — so the warning is not the failure and the throwing file is still unknown. What was found
+instead: **no entry point of the web engine caught anything**. `openBackend` guards the *choosing*
+of a decoder; describing the file (inside `pt_open`), rendering, seeking, asking a length and
+selecting a subsong were all unguarded, so any throw from any backend went straight out through
+`___cxa_throw` — which is what the owner saw, and why nothing played afterwards.
+
+Now every `pt_*` in `player_wasm.cpp` catches, remembers the reason for `pt_last_error`, and answers
+with a refusal or with silence; and `processor.js` catches whatever is left, answers `failed`, and
+keeps the worklet alive. Checked on one engine instance: a refused file, then a tune that opens and
+renders. **If it happens again, the page will now say what the decoder said** — which is the next
+piece of evidence.
+
+**The phone had the same hole open until 2026-09-15, and worse consequences.** `player_oboe.cpp`
+was written before its web counterpart and never caught anything either: sixteen JNI entry points
+and Oboe's audio callback, all calling straight through to a decoder. On the web an escaping
+exception wedges a worklet and the owner reloads the tab; through a JNI frame, or out of the
+real-time callback, it is `std::terminate` — the process is gone mid-tune with no message and no
+Android crash dialog worth reading. The same shape is in place now: a `guarded` helper, one
+fallback per call that means what the caller already reads as failure (no handle, `false`, an empty
+string, zero), and the reason to logcat.
+
+Three of those places are not merely "the same as the web's":
+
+* **`onAudioReady`.** The one guard that could not have been put at the boundary, because this is
+  Oboe's thread and nothing above it is ours. A throw mid-render is treated as a decoder that ran
+  out — the buffer is silenced and the stream stops, which is what the end of a tune already does,
+  so Kotlin's poll moves to the next one.
+* **`publishDescribe`.** Where the reported crash actually came from: `describe()` walks a decoder's
+  instrument and sample tables, and a truncated file is where a length read past the end turns into
+  a throw. An unreadable description now costs a line of metadata instead of the process.
+* **`nativeOpen`.** The only guarded call with somewhere to put the reason — it already carries a
+  sentence back for the owner — so a `std::bad_alloc` from a file too large for the heap, or
+  anything thrown that is not a `std::exception` at all, is written into it rather than swallowed.
+
+### C41. ~~"Add to playlist…" takes the track out of the playlist it was in~~ — FIXED 2026-09-14
+
+*Owner, 2026-09-14: "add to playlist.. przenosi tracka … w liście źródłowej już tego tracka nie ma!
+a powinien być".* Adding to another playlist must copy, never move.
+`PlaybackController.addToPlaylist(targetPlaylistId, tracks)` writes only the **target**, so the
+source is being rewritten somewhere else on that journey — the caller, the selection, or a stale
+copy written back afterwards. It looks like losing music, so it was first of the seven.
+
+**It was the `tracks` row, and SQLite's REPLACE.** `LibraryStore.replaceTracks` wrote each track
+with `CONFLICT_REPLACE`; a REPLACE is a DELETE and an INSERT; `playlist_tracks.track_id` references
+`tracks(id)` `ON DELETE CASCADE`; and `ProtracktorDatabase.onConfigure` turns foreign keys on. So
+writing the track for the target playlist deleted **every** row that put it in any playlist, and the
+write that followed gave it back to the target alone. A copy behaved as a move. The row is now
+inserted with `CONFLICT_IGNORE` and its fields updated, so it is never deleted. Two tests in
+`SchemaSqlTest` run both forms against a real SQLite: the safe one keeps the track in both
+playlists, the old one empties the source.
+
+### C40. ~~The phone's Now Playing shows only the first line of a module's message~~ — FIXED 2026-09-11
+
+*Found 2026-09-11 while giving the page the phone's Now Playing, not by a listener.*
+
+The engine's `describe` block is `key<TAB>value` lines, and `message` is written **last** because it
+is the one value with line breaks in it (`native/engine/engine.cpp`). `NativeEngine.describe()`
+splits the whole block into lines and keeps those with a tab: the message's first line survives as
+`message`, and every line after it — no tab — is dropped. A line of the message that happens to hold
+a tab becomes a bogus key instead. `NowPlaying.kt` draws the message monospaced "because the
+alignment is part of what they say", and gets one line of it.
+
+The page had the other half of the fault: it read every line as a key, and asked for `comment`,
+which no backend writes, so it showed no message at all. **Fixed on the page on 2026-09-11**
+(`describeFields` takes everything after `message<TAB>`); the phone is left for its own branch, the
+fix being the same few lines in `NativeEngine.describe()`.
+
+**Fixed the same night** on `fix/module-message`: the parsing moved out of `NativeEngine`, which
+loads the native library when touched, into `DescribeBlock`, where a JVM test can reach it — and it
+reads the block by the page's rule. `DescribeBlockTest` holds it to a message of several lines with
+its spacing, a line of it holding a tab, and the word `message` appearing inside another value.
+
+### C39. ~~Round 8's web bundle, first look: four faults~~ — FIXED 2026-09-11
+
+*Owner, 2026-09-11, trying the round 8 bundle in a browser for the first time.*
+
+1. **Random played picks it could not open**, and stopped on them. The index keeps only formats the
+   engine plays, but a file can still be refused, packed or gone, and the page had no answer: the
+   phone has always walked past those (`skipFailedRandomPick`) and the page's Random was built
+   without it. Now it walks past up to eight in a row, as the phone does, and **the failed pick
+   leaves the record** — the record is what played, and it did not.
+2. **The seek bar hung on the last tune's position** — 1:07 — through the next download. It was only
+   ever set by the engine's position reports, which do not come until the new file opens; the phone
+   zeroes it the instant a track is chosen. So does the page now.
+3. **The playlist chip did nothing during Random.** Deliberately — the phone hides it there — and
+   the owner wanted the other thing: *"intuicyjnie wydaje się być możliwe wyjść do playlist"*. It now
+   opens the sheet, and choosing a playlist ends the session and shows that one.
+4. **The page never asked for the re-index it needed.** It did ask, on the root of Browse — but with
+   "From the phone" showing, Browse is a single panel that explains why it is shut, and the sentence
+   was not on it. It is now.
+
+A fifth report — text-only buttons where the app has icon and label — is a standing requirement the
+page did not meet, and is being done on its own branch.
+
+### C38. ~~The Random heading showed over every panel~~ — FIXED 2026-09-11
+
+*Owner, 2026-09-11, on the round 8 bundle: "widok playing at random jest widoczny w każdym panelu".*
+
+The heading is shown and hidden with the `hidden` attribute, and styled `display: flex`. An author
+`display` outranks the browser's own `[hidden] { display: none }`, so it was never hidden: "Playing at
+random", the Filter button and the scope were on screen whatever the page was doing. The same was
+true of the Filter row, and of the Filter button History's heading hides.
+
+**It was suspected during round 8 and dismissed on a bad check.** A search of the stylesheet for a
+`[hidden]` rule found one and stopped — but the page has only *scoped* ones, `.panel[hidden]`,
+`.overlay[hidden]` and the like, each added beside an element's own `display`. The search matched
+`.panel[hidden]` and reported the page covered. The next element forgot its line, as it was always
+going to.
+
+Fixed with one global `[hidden] { display: none !important }`, so the next element cannot forget.
+And jsdom turned out able to see it after all: it runs the page's stylesheet through
+`getComputedStyle`, and a page check now asserts that every element marked hidden is not displayed.
+Run against the unfixed page it names all three.
+
+### C37. ~~Browse threw on "From the phone" once an index was held~~ — FIXED 2026-09-11, same round
+
+*Found by `GOAL.md` round 8 while building item 4; introduced by item 3 of the same round.*
+
+Item 3 added a Random row to Browse's "From the phone" branch, calling the `row` helper — which was
+declared with `const` further down the function. Reading a `const` before its declaration throws, so
+**opening Browse on the phone's list with an index downloaded failed outright**. The page checks
+never reached that state: when they opened that branch no index record existed, so the call was
+skipped. A check now builds exactly that state and asserts it does not throw.
+
+jsdom reads attributes and runs code, but it had never been put in this state, which is how the
+fault passed 195 checks. A related suspicion from the same pass — that the Random heading's
+`display: flex` would outrank `hidden` — was right, and was wrongly dismissed: see C38.
+
+### C36. A next from the keyboard or a media key can be swallowed after a long press — **OPEN**
+
+*Found 2026-09-11 by `GOAL.md` round 8, while a page check was being written, not by a listener.*
+
+`holdToSkipFile` (`web/src/app.js`) swallows the click that follows a long press on next or
+previous, so the press does not count twice. It remembers that it owes a swallow in `held`, and
+forgets only on the next `pointerdown`. A finger always sends `pointerdown` first. **The arrow keys
+and the media keys do not** — they press the button with `$('next').click()` — so after a long press
+that ended without a click (the finger slid off the button before lifting), the next arrow or media
+key press is eaten silently.
+
+Narrow, and reproduced only in jsdom: an earlier check holds next and lifts without a click, and a
+later bare `.click()` on the same button did nothing. The Random checks now tap the way a finger does
+(`pointerdown`, `pointerup`, `click`) rather than clicking bare.
+
+**Not fixed, deliberately.** The obvious repair — forget the owed swallow on `pointerleave` — is
+wrong on touch, where `pointerleave` arrives *after* `pointerup` and *before* the click it was meant
+to swallow, so a long press would then skip a file and step a track both. The event order has to be
+settled on a real touch device before this changes. Recorded so it is not rediscovered as a mystery.
+
+### C35. ~~A Random tune ending skipped several picks at once~~ — FIXED 2026-09-10
+
+*Owner, 2026-09-10, Random on Atari ST:* "jak skończyło grać enchanted land, to od razu przeskoczyło
+po wszystkich (pojawiły się na liście) i zaczął grać zynaps" — five picks on the record at once, the
+sixth playing. Seen again on the 37th pick of a later session, then refusing to reproduce.
+
+**A race between the end-of-track poll and the Random advance.** The poll runs every 200 ms and
+skips only while `playing` is false or a load is running. The playlist and search paths call
+`load()` before returning, so the next tick finds a load in progress. Random did not: `randomNext`
+moves the cursor and publishes the row, then waits on the database for the next read-ahead pick,
+and only after that does `playTransient` clear `playing` and start the load. Every tick inside that
+wait found the same finished track, still "playing", and advanced again — one more row each time.
+
+Every detail of the report follows from that:
+
+- **only at a natural end** — a pressed next leaves a track that is not finished, so the poll never
+  sees one;
+- **five, then two, then none** — the count is the query's duration divided by 200 ms;
+- **worse under a platform filter** — `format IN (…)` cannot use an index, so the scope is scanned
+  and sorted whole (`docs/review-round-8.md` R7 predicted the cost, not this consequence);
+- **gone on the second try** — SQLite's page cache was warm by then.
+
+**Fixed by clearing `playing` before the advance, not after.** The poll's own comment already stated
+the rule — *"every skip sets `playing = false` before the load starts"* — and this path broke it.
+Not reproduced on the host: it needs the phone's database under the phone's timing, so the device
+is the test.
+
+The query itself is still unmeasured and still sorts the scope per pick. That is R7, and it is now
+known to be more than a performance question.
 
 ### C34. ~~The index download choked on the zip's own tail~~ — FIXED 2026-09-10
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fetch ayfly's replay library and build the ZX Spectrum probe against it.
 #
-# `GOAL.md` round 6 item 1: prove a backend on the host before integrating it. ZX Spectrum is the
+# A backend is proved on the host before it is integrated. ZX Spectrum is the
 # largest platform in Modland this build cannot play -- 23,891 files, of which 58 open -- and
 # `./scripts/probe-platforms.py` is what says so.
 #

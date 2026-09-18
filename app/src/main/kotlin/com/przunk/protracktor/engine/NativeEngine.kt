@@ -86,14 +86,8 @@ object NativeEngine {
     class Track internal constructor(private val handle: Long) : AutoCloseable {
         private var closed = false
 
-        /** Metadata as `key\tvalue` lines. Parsed by [describe]. */
-        fun describe(): Map<String, String> = nativeDescribe(handle())
-            .lineSequence()
-            .mapNotNull { line ->
-                val tab = line.indexOf('\t')
-                if (tab <= 0) null else line.substring(0, tab) to line.substring(tab + 1)
-            }
-            .toMap()
+        /** Metadata as `key\tvalue` lines, the module's message whole ([DescribeBlock]). */
+        fun describe(): Map<String, String> = DescribeBlock.parse(nativeDescribe(handle()))
 
         fun start(): Boolean = nativeStart(handle())
 
@@ -110,10 +104,14 @@ object NativeEngine {
         fun restart(): Boolean = nativeRestart(handle())
 
         /**
-         * Moves the playing position.
+         * Moves the playing position. **Not from the main thread.**
          *
-         * Takes effect on the audio thread's next pass rather than immediately, so the position
-         * read straight afterwards may still be the old one.
+         * It used to be handed to the audio callback and applied there, which returned at once and
+         * was the wrong trade: a seek is unbounded work for every emulator behind this — they
+         * reach a position by running forward to it — and doing it inside a callback with a
+         * millisecond budget starved the stream and froze the app. It is now done on the calling
+         * thread while the callback plays silence, so this call blocks for as long as the decoder
+         * needs, which for a long tune is seconds.
          */
         fun seekTo(seconds: Double) = nativeSeek(handle(), seconds)
 

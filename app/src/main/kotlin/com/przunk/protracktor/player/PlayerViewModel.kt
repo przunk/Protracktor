@@ -62,6 +62,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun downloadSongLengths() = controller.downloadSongLengths()
     fun downloadTrackMetadata() = controller.downloadTrackMetadata()
     fun downloadFavourites() = controller.downloadFavourites()
+
+    /** The catalogues, the song lengths and the metadata, in one press (`docs/BACKLOG.md` A46). */
+    fun downloadEverything() = controller.downloadEverything()
+
+    /** Only the boxes that were ticked. `DownloadPlan` decides what each one comes to. */
+    fun downloadSelected(ids: Set<String>) = controller.downloadSelected(ids)
+
+    /** Stops a run. What already landed stays. */
+    fun cancelDownloads() = controller.cancelDownloads()
     fun sendQueueToBrowser() = controller.sendQueueToBrowser()
     fun pairWith(endpoint: String) = controller.pairWith(endpoint)
     fun forgetPairing() = controller.forgetPairing()
@@ -92,6 +101,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun selectSubsong(index: Int) = controller.selectSubsong(index)
 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()
+    fun setFallbackLength(seconds: Int) = controller.setFallbackLength(seconds)
+    fun setWebPlayer(base: String) = controller.setWebPlayer(base)
 
     fun exportPlaylist(id: Long) = controller.exportPlaylist(id)
 
@@ -106,6 +117,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun shareFile(track: TrackRef) = controller.shareFile(track)
 
     fun shareLink(track: TrackRef) = controller.shareLink(track)
+    fun sendToWeb(tracks: List<TrackRef>) = controller.sendToWeb(tracks)
+    fun resumeDice() {
+        // Comes back paused, and a paused transport in the notification is still the player: the
+        // next press of play is on that tune, and it may well come from the notification itself.
+        ensureServiceRunning()
+        controller.resumeDice()
+    }
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the
@@ -113,10 +131,30 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (controller.browse.value.openFormat == null) controller.openFormat(name)
         else controller.openAuthor(name)
     }
-    fun playRandom() = controller.playRandom()
+    // **Every door into playback opens the service first** (`docs/STATUS.md` C43). Music started
+    // from Random or from a Browse list otherwise runs with no foreground service and therefore no
+    // notification, and the system takes the process as soon as the app is left.
+    fun playRandom() {
+        ensureServiceRunning()
+        controller.playRandom()
+    }
+
+    fun openRandom() {
+        ensureServiceRunning()
+        controller.openRandom()
+    }
+
+    fun playRandomAt(index: Int) {
+        ensureServiceRunning()
+        controller.playRandomAt(index)
+    }
+    fun removeRandomAt(index: Int) = controller.removeRandomAt(index)
     fun keepTransient() = controller.keepTransient()
     fun returnToPlaylist() = controller.returnToPlaylist()
-    fun playFromResults(results: List<TrackRef>, index: Int) = controller.playFromResults(results, index)
+    fun playFromResults(results: List<TrackRef>, index: Int) {
+        ensureServiceRunning()
+        controller.playFromResults(results, index)
+    }
     fun setQuery(query: String) = controller.setQuery(query)
     fun setSearchScope(scope: SearchScope) = controller.setSearchScope(scope)
     fun setRandomScope(scope: RandomScope) = controller.setRandomScope(scope)
@@ -161,6 +199,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     /**
      * Starts the service before playback rather than after.
+     *
+     * **Called by every entry point that can make a sound.** A tune playing without it has no
+     * notification, no transport on the lock screen, and nothing telling the system this process is
+     * doing something — so the process goes when the app leaves the screen (`docs/STATUS.md` C43).
      *
      * Android only allows a foreground service to be started while the app is itself in the
      * foreground. Waiting until the user leaves would be waiting until it is no longer permitted.

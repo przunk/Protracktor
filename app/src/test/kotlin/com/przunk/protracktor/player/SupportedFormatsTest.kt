@@ -13,7 +13,7 @@ import org.junit.Test
  *
  * This list is not a preference. It decides whether a file is scanned, indexed or offered at all,
  * and a backend that can play something it is never handed is a backend that might as well be
- * absent — which is exactly what happened to OctaMED and Oktalyzer until 2026-09-04.
+ * absent, which is what an unlisted OctaMED or Oktalyzer amounts to.
  */
 class SupportedFormatsTest {
 
@@ -52,14 +52,14 @@ class SupportedFormatsTest {
     /**
      * The console dumps that dominate what we cannot play stay out.
      *
-     * Measured 2026-09-04 alongside the OctaMED finding: `.minigsf`, `.mini2sf` and `.minipsf` are
-     * 66,000 Modland files and no backend here opens one. Listing them would fill a scan with
+     * Measured: `.minigsf`, `.mini2sf` and `.minipsf` are 66,000 Modland files and no backend here
+     * opens one. Listing them would fill a scan with
      * rows that cannot play, which is the failure the list exists to prevent.
      */
     @Test
     fun `formats nothing here plays are not claimed`() {
-        // `x.pt3` was on this list until 2026-09-07 and is now claimed: ZXTune plays it, along with
-        // the rest of the ZX Spectrum trackers. The `*SF` family stays, being console emulators.
+        // `x.pt3` is deliberately absent from this list: ZXTune plays it, along with the rest of
+        // the ZX Spectrum trackers. The `*SF` family stays, being console emulators.
         for (name in listOf("x.minigsf", "x.mini2sf", "x.minipsf", "x.mbm", "x.ptcop")) {
             assertFalse(name, SupportedFormats.looksPlayable(name))
         }
@@ -97,10 +97,9 @@ class SupportedFormatsTest {
      * game-music-emu refuses packed GYM unconditionally — the message is in its source with no
      * build option behind it — so listing the name indexed 265 files that cannot open.
      *
-     * `ahx` and `hvl` were here too, for the same reason: listed from the first day on the belief
-     * that libopenmpt handled them, measured 0 of 12 and 0 of 6 on 2026-09-04, removed. They are
-     * claimed again as of 2026-09-05, and the test below is what that costs — the condition was
-     * "when something loads them", and HivelyTracker does.
+     * `ahx` and `hvl` belong here whenever nothing loads them: libopenmpt does not, measured 0 of 12
+     * and 0 of 6. They are claimed because HivelyTracker does, which is the condition -- a name is
+     * claimed when something loads it, and the test below is what that costs.
      */
     @Test
     fun `formats no backend loads are not claimed`() {
@@ -135,8 +134,8 @@ class SupportedFormatsTest {
      * The two questions the list answers, and why they are two.
      *
      * `extensions` is what a catalogue index is filtered through **and** what `fingerprint` is
-     * computed from, so a name added there marks every stored index stale — the owner re-downloads
-     * Modland's 40 MB. No archive here holds an MP3, so `.mp3` earns its place in one question and
+     * computed from, so a name added there marks every stored index stale and costs everyone a 40 MB
+     * download. No archive here holds an MP3, so `.mp3` earns its place in one question and
      * not the other (`docs/BACKLOG.md` A29).
      */
     @Test
@@ -154,8 +153,8 @@ class SupportedFormatsTest {
     fun `adding mp3 did not change what a stored index is measured against`() {
         // The fingerprint is the promise that an index is still current. It is computed from
         // `extensions` and `prefixes`, and `.mp3` is in neither — so every index on every device
-        // stayed valid on the day MP3 arrived. If this ever fails, somebody moved the name and owes
-        // the owner a 40 MB download.
+        // stayed valid on the day MP3 arrived. If this ever fails, somebody moved the name and
+        // every device owes Modland a 40 MB download.
         assertFalse("mp3" in SupportedFormats.extensions)
         assertFalse("mp3" in SupportedFormats.prefixes)
     }

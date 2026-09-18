@@ -23,13 +23,13 @@ import com.przunk.protracktor.player.BrowseState
  *
  * 1. **Each level keeps its own position.** One [LazyListState] per level key, so descending and
  *    returning restores the offset rather than inheriting somebody else's.
- * 2. **Coming back puts the row you came *from* on screen.** An offset is not "where I was" once
- *    the list underneath has changed -- a rescan, a re-index, a different sort. The row's own key
- *    is, so that is what is remembered and what is looked for first.
+ * 2. **Coming back puts the row you came *from* on screen.** An offset stops naming the same
+ *    place once the list underneath has changed -- a rescan, a re-index, a different sort. The
+ *    row's own key does not, so that is what is remembered and what is looked for first.
  *
  * Lives for the life of the Browse session and dies with it, which is deliberate: leaving Browse
- * and coming back should start at the top (`docs/STATUS.md` C6), and state that outlives its screen
- * is how that defect happened in the first place.
+ * and coming back should start at the top (`docs/STATUS.md` C6), and state outliving its screen is
+ * how that goes wrong.
  */
 @Stable
 internal class BrowseScroll {

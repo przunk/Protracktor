@@ -108,6 +108,67 @@ parser.
 - Holds archived `.lha` files rather than bare modules, so this one needs **archive extraction**
   before it needs anything else. libopenmpt unpacks some containers itself; `.lha` is not among them.
 
+### The wall this plan did not know about — CORS, measured 2026-09-15
+
+*The owner, 2026-09-15, listed what the ZXTune app offers and asked whether to add any of them:
+amp.dascene.net, aminet.net, asma.atari.org, abrimaal.pro-e.pl/aygor, prg.dtu.dk, Josh W, modland,
+ocremix.org, files.scene.org, modarchive.org, vgmrips.net, downloads.khinsider.com, zxart.ee,
+zxtunes.com.*
+
+**Everything above was decided before the browser player existed**, and the browser changes the
+question completely. The phone fetches over HTTP and no server can stop it. **The page cannot**: a
+fetch from `protracktor.pages.dev` to an archive is cross-origin, and without
+`Access-Control-Allow-Origin` the browser refuses it before the request is even useful. This is not
+a thing to design around — it is the archive's decision and it is binary.
+
+**Measure it with the request the page will make.** These were first taken with `curl -I`, and a
+HEAD is not what a page sends: at least one server — HVSC, which is not in this table — answers a
+HEAD without its CORS filter and a GET with `Access-Control-Allow-Origin: *`, so the HEAD said no
+about a host that says yes (`docs/STATUS.md` C56). The tell is `Vary: Origin` in the response: it
+means a CORS decision is being made per request. The table below was re-measured with a ranged GET
+carrying an `Origin`, and every verdict held.
+
+Measured against every host the owner named:
+
+| | CORS | note |
+| --- | --- | --- |
+| **modland.com** | **yes, `*`** | in use — and it allows `Range` too, which is why seeking works |
+| **asma.atari.org** | **yes, `*`** | in use |
+| amp.dascene.net | no | and `robots.txt` says no as well — see above |
+| aminet.net | no | `.lha` containers besides |
+| abrimaal.pro-e.pl/aygor | no | plain HTTP, no TLS — a page on HTTPS cannot fetch it at all |
+| prg.dtu.dk | no | an HVSC mirror; the header on the server root is **not** on its `/HVSC/` paths |
+| modarchive.org | no | the live-search integration already built is phone-only for this reason |
+| ocremix.org | no | MP3 remixes rather than chip music — off what this player is for |
+| files.scene.org | no | |
+| zxart.ee | no | `/eng/music/` is a 404; and useless before A32 |
+| zxtunes.com | no | no API at `/api.php`; and useless before A32 |
+| vgmrips.net | — | **gone**: 410 on the root and on `/packs/` |
+| downloads.khinsider.com | — | 403 to an ordinary client; rips rather than chip music |
+
+**So the two archives that serve CORS are the two we already have.** That is not a coincidence worth
+celebrating — it is the reason they were picked — but it does mean **any third catalogue is
+phone-only**, and `docs/SPEC_RANDOM.md`'s principle that the two players behave the same would take
+its first real break.
+
+**Proxying is the obvious idea and it is the wrong one.** A Worker that fetches an archive and adds
+the header would make us the party distributing other people's music, which is the exact line
+`docs/LICENSES.md` spends its length staying on the right side of. Downloading *from the project
+that publishes it* is what keeps this clean; re-serving it is not.
+
+**What to do with that**, in order of what it buys:
+
+1. **Nothing, for now.** The 2026-09-04 recommendation below still holds and the numbers behind it
+   got stronger, not weaker: **A32 alone is 26,537 more playable tunes in the browser** out of the
+   archive already indexed, which beats any archive on this list at a fraction of the work.
+2. **If a third catalogue is wanted anyway, HVSC is the one** — the definitive SID collection, the
+   format Modland covers worst, and the archive whose song-length database the app already depends
+   on. Phone-only, and honest about it.
+3. **Ask the ones worth asking.** ASMA and Modland send the header because somebody there decided
+   to. A short mail to an archive that does not is cheaper than a parser and cannot be refused in a
+   way that leaves us worse off. `docs/PLAY_STORE.md` has the rule for what may be quoted back
+   afterwards.
+
 ---
 
 ## UnExoticA — the gap Modland does not cover

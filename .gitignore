@@ -43,3 +43,9 @@ docs/letters/
 # Written by scripts/serve-web.mjs on first run. Machine-specific: a port and the address the QR
 # code advertises, which is different on every machine that runs it.
 /server.json
+
+# The owner's screenshots. He drops them in `user/` to show what a screen looks like -- they are how
+# a bug report arrives here, not something the repository needs to keep, and three of them were
+# committed by accident and carried around until 2026-09-15. The music files in `user/` stay
+# tracked: those are test material the checks and probes are run against.
+user/Screenshot*

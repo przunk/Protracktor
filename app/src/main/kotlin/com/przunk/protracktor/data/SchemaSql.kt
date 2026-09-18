@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 12
+    const val VERSION = 16
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -59,6 +59,12 @@ object SchemaSql {
         )
         """.trimIndent(),
 
+        // **Version 1's indexes, and they do not stay this shape.** `playable` arrives at version
+        // 15 and these are rebuilt as partial indexes over it there -- which they cannot be here,
+        // because `CREATE` is version 1 plus every migration in order and the column does not
+        // exist yet. A fresh install therefore builds these, drops them a moment later and builds
+        // the partial ones, which costs nothing on an empty table and keeps one description of the
+        // schema rather than two.
         "CREATE INDEX idx_catalogue_browse ON catalogue_tracks(catalogue_id, format, author, title)",
         "CREATE INDEX idx_catalogue_title ON catalogue_tracks(catalogue_id, title)",
     )
@@ -199,12 +205,11 @@ object SchemaSql {
      *
      * A catalogue index is filtered **at index time** to the formats a backend can play, so an
      * index built before a backend existed is permanently missing that backend's formats — and it
-     * looks empty rather than stale. The owner met this on 2026-09-03: his Modland index predated
-     * libsidplayfp, so 60,572 C64 tunes were simply absent and nothing said why.
+     * looks empty rather than stale. A Modland index predating libsidplayfp is missing 60,572 C64
+     * tunes with nothing to say why.
      *
-     * `docs/BACKLOG.md` A7 had been carrying this as a note asking a human to remember, while the
-     * local library index (version 8) already recorded its decoder set and offered a rescan. This
-     * closes that asymmetry.
+     * The local library index (version 8) already recorded its decoder set and offered a rescan;
+     * this closes that asymmetry (`docs/BACKLOG.md` A7).
      */
     private val CATALOGUE_BACKENDS_V9: List<String> = listOf(
         "ALTER TABLE catalogues ADD COLUMN backends TEXT NOT NULL DEFAULT ''",
@@ -215,8 +220,8 @@ object SchemaSql {
      *
      * A setting rather than a property of a track, and stored with the other playback modes for the
      * same reason shuffle and repeat are: it applies to whatever plays next, not to one row. Off by
-     * default, which the owner chose — a file reporting 256 subsongs would otherwise take over a
-     * listening session the first time one appeared.
+     * default — a file reporting 256 subsongs would otherwise take over a listening session the
+     * first time one appeared.
      */
     /**
      * Author, publisher, album and year by file hash, added at version 11.
@@ -269,6 +274,91 @@ object SchemaSql {
 
     private val PLAY_ALL_SUBSONGS_V10: List<String> = listOf(
         "ALTER TABLE player_state ADD COLUMN play_all_subsongs INTEGER NOT NULL DEFAULT 0",
+    )
+
+    /**
+     * What Random picks from, added at version 13.
+     *
+     * A word rather than a set of columns: the scope is one choice of three shapes, and two of them
+     * carry nothing. `RandomScope.stored()` owns the vocabulary. Empty means "never set", which
+     * reads back as Everything -- the same answer an upgraded phone gives.
+     */
+    private val RANDOM_SCOPE_V13: List<String> = listOf(
+        "ALTER TABLE player_state ADD COLUMN random_scope TEXT NOT NULL DEFAULT ''",
+    )
+
+    /**
+     * How long to play a tune nothing knows the length of, added at version 14.
+     *
+     * **Seconds, and zero means "never set"** -- which reads back as the default, the same answer an
+     * upgraded phone gives. Stored rather than derived because it is a preference: `docs/STATUS.md`
+     * C56 is the fault it exists for, where a SID with no HVSC entry played for ever because
+     * nothing in the file, and nothing in the app, ever said to stop.
+     */
+    private val FALLBACK_LENGTH_V14: List<String> = listOf(
+        "ALTER TABLE player_state ADD COLUMN fallback_length_seconds INTEGER NOT NULL DEFAULT 0",
+    )
+
+    /**
+     * What a catalogue row is filed under, and whether this build can play it, added at version 15.
+     *
+     * **The index stops being a function of the decoder set** (`docs/ROADMAP_FORMATS.md` step 0).
+     * It used to hold only rows `SupportedFormats` accepted, so adding a format changed what an
+     * index should contain and every user downloaded Modland's 40 MB again — a toll charged once
+     * per format, and the roadmap has four items that would each have charged it.
+     *
+     * `ext` and `pre` are the two halves of a filename `SupportedFormats` judges, stored as they
+     * are: they depend on the name and not on the list. `playable` is the judgement, and it is
+     * re-decided for every row by one `UPDATE` when the list changes — 228ms over 516,107 rows,
+     * measured — with no network at all.
+     *
+     * **This migration cannot backfill the rows that were dropped**, because they were never
+     * downloaded. Every existing index is one download short of complete and is marked for a final
+     * refresh; after that there is not another.
+     */
+    private val CATALOGUE_PLAYABLE_V15: List<String> = listOf(
+        "ALTER TABLE catalogue_tracks ADD COLUMN ext TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE catalogue_tracks ADD COLUMN pre TEXT NOT NULL DEFAULT ''",
+        // 1, not 0. An index written before this migration holds **only** playable rows, so every
+        // row in it is playable -- and defaulting to 0 would empty Browse for anybody who did not
+        // re-index immediately.
+        "ALTER TABLE catalogue_tracks ADD COLUMN playable INTEGER NOT NULL DEFAULT 1",
+        // **Whether this index holds the whole archive or only what an older build accepted.**
+        //
+        // The distinction is the one thing a recompute cannot paper over: an index written before
+        // version 15 contains exactly the rows the format list of the day let through, so a format
+        // added afterwards has no rows here to be re-decided and a download is genuinely needed. An
+        // index written since holds everything, and never needs one again.
+        //
+        // 0 for everything that already exists, which is the truth about all of it.
+        "ALTER TABLE catalogues ADD COLUMN complete INTEGER NOT NULL DEFAULT 0",
+        // Rebuilt over the playable rows only, now that the table holds every row. Measured at
+        // Modland's size: 129.0 MB with full indexes, 112.8 MB with these, against 83.3 MB for the
+        // old shape that held 344,071 rows instead of 516,107. The recompute pays for it — 228ms
+        // becomes 1.7s with these to maintain — and it is rare and offline, which the download it
+        // replaces was neither.
+        "DROP INDEX IF EXISTS idx_catalogue_browse",
+        "DROP INDEX IF EXISTS idx_catalogue_title",
+        "CREATE INDEX idx_catalogue_browse ON catalogue_tracks(catalogue_id, format, author, title) " +
+            "WHERE playable = 1",
+        "CREATE INDEX idx_catalogue_title ON catalogue_tracks(catalogue_id, title) WHERE playable = 1",
+    )
+
+    /**
+     * How many rows a catalogue holds, beside how many of them play, added at version 16.
+     *
+     * **Because version 15 made those two different numbers and nothing said so.** The owner met it
+     * the morning after: a snackbar reporting 500,000-odd tracks indexed over a row reporting
+     * 341,842, with nothing to connect them. `track_count` is what this build can open; this is
+     * what the archive has.
+     *
+     * Backfilled by counting, so an index already stored gets its number without being downloaded
+     * again — which is the whole point of the version before this one.
+     */
+    private val CATALOGUE_ARCHIVE_COUNT_V16: List<String> = listOf(
+        "ALTER TABLE catalogues ADD COLUMN archive_count INTEGER NOT NULL DEFAULT 0",
+        "UPDATE catalogues SET archive_count = " +
+            "(SELECT COUNT(*) FROM catalogue_tracks t WHERE t.catalogue_id = catalogues.id)",
     )
 
     /** What a fresh install gets: version 1's tables plus every migration since. */
@@ -328,7 +418,8 @@ object SchemaSql {
     ) + CATALOGUES_V2 + TRACK_SIZE_V3 + TRACK_FILE_NAME_V4 + TRACK_AUTHOR_V5 + SONG_LENGTHS_V6 +
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
-        MODLAND_FAVOURITES_V12
+        MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
+        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16
 
 
 
@@ -351,6 +442,10 @@ object SchemaSql {
         10 to PLAY_ALL_SUBSONGS_V10,
         11 to TRACK_METADATA_V11,
         12 to MODLAND_FAVOURITES_V12,
+        13 to RANDOM_SCOPE_V13,
+        14 to FALLBACK_LENGTH_V14,
+        15 to CATALOGUE_PLAYABLE_V15,
+        16 to CATALOGUE_ARCHIVE_COUNT_V16,
     )
 
     /**
@@ -391,8 +486,8 @@ object SchemaSql {
      * list it used to carry was written at version 1 and named five tables; [CREATE] makes twelve.
      * Seven migrations added tables that nothing removed, so the recreate ran `CREATE TABLE
      * catalogues` against a `catalogues` that still existed and threw -- **on every start**, which
-     * is the state the whole method exists to prevent. Verified against a real SQLite on
-     * 2026-09-08: `[SQLITE_ERROR] table catalogues already exists`.
+     * is the state the whole method exists to prevent. Against a real SQLite:
+     * `[SQLITE_ERROR] table catalogues already exists`.
      *
      * Asking the file is the fix, and it is the fix rather than a longer list because a longer list
      * would go stale the same way, quietly, and only on somebody's phone.

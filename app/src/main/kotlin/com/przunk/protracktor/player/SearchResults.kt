@@ -13,8 +13,8 @@ package com.przunk.protracktor.player
  * — a `LazyColumn` keyed by track id throws `IllegalArgumentException` on a repeated key, which is
  * a hard crash on the main thread with a rendering stack trace that says nothing about search.
  *
- * That crash was real, on 2026-09-04, and the sequence is worth keeping because it is so ordinary:
- * find a Modland track by searching, add it to a playlist, search for it again. The playlist scan
+ * The sequence that produces it is entirely ordinary: find a Modland track by searching, add it to
+ * a playlist, search for it again. The playlist scan
  * finds it because it is now in a playlist; the catalogue search finds it because it is still in
  * Modland; both carry the same id, because for a catalogue track the id **is** its URL. The old
  * code de-duplicated the first two sources against each other and then concatenated the other two.
@@ -27,7 +27,7 @@ object SearchResults {
      * There has always been a cap -- 200 on the scanned library and 300 on the catalogues -- and
      * the trouble was that it was silent and that the two numbers were different for no reason.
      * Searching ".sap" returned 506 and ".mod" returned 308, which are 200+300+6 and 300+8: the
-     * caps, not the archive. The owner read that as the search being broken, and he was right to.
+     * caps, not the archive -- which reads as a broken search.
      *
      * Two thousand, and the count of what was left out is now shown. The number is not a guess
      * about memory -- a `TrackRef` is small and the list is drawn lazily, so ten times this would

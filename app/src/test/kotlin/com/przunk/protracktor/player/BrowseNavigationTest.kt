@@ -61,6 +61,22 @@ class BrowseNavigationTest {
     }
 
     @Test
+    fun `entering Search forgets the words as well as the results`() {
+        // Entering Search a second time must not show the previous words still written in the
+        // box: `tracks` is emptied here, so a query left behind is a query with nothing under it,
+        // which reads as a search that found nothing rather than as a screen waiting for a new
+        // one.
+        val searched = BrowseState(
+            domain = BrowseDomain.SEARCH,
+            query = "zoolook",
+            tracks = listOf(),
+        )
+        val fresh = BrowseNavigation.enteringDomain(searched, BrowseDomain.SEARCH)
+        assertEquals("", fresh.query)
+        assertTrue(fresh.tracks.isEmpty())
+    }
+
+    @Test
     fun `choosing a domain by hand ends a jump`() {
         // A jump is a place you were put by "more from this author", and back from one returns to
         // the playlist (`docs/ARCHITECTURE.md` §17). Walking somewhere yourself ends that.
@@ -70,15 +86,18 @@ class BrowseNavigationTest {
     @Test
     fun `things that are not about where you are survive`() {
         val withSettings = deepInsideOnline.copy(
-            query = "elysium",
             searchScope = SearchScope.ByPlatform(setOf("amiga")),
             songLengthCount = 61157,
         )
         val fresh = BrowseNavigation.enteringDomain(withSettings, BrowseDomain.ONLINE)
         // Search scope and downloaded-data counts are the user's settings and the app's facts, not
         // a position in a hierarchy. Clearing them here would be a second bug wearing C6's clothes.
-        assertEquals("elysium", fresh.query)
         assertEquals(SearchScope.ByPlatform(setOf("amiga")), fresh.searchScope)
         assertEquals(61157, fresh.songLengthCount)
+
+        // **The query is deliberately not asserted here.** A scope is a setting and a count is a
+        // fact; a query is neither -- it is the input that produced the results this function has
+        // just thrown away, so keeping it would leave the two halves of one screen disagreeing.
+        // The test above owns it.
     }
 }

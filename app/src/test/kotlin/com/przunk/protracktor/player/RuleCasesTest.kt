@@ -14,7 +14,7 @@ import org.junit.Test
  * **`docs/rules/queue-cases.json` is the reference, and neither implementation is**
  * (`docs/PLAN_WEB_LIBRARY.md` S1). The rules live twice because a browser cannot run Kotlin; what
  * this stops is them being decided twice. C23, C30 and C31 were each one screen doing what the
- * other did not, all three found by the owner rather than by a test, all three inside a week.
+ * other did not, none of them caught by a test, all three inside a week.
  *
  * A rule changed here and not in `web/src/rules.js` fails **there**, and the other way round. That
  * is the whole mechanism and it is why the cases are data rather than code.
@@ -99,6 +99,32 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `what a search matches agrees with the shared cases`() = each("searchMatch") { case ->
+        // The page decides the same thing in `rules.js`. Both sides split the query and look for
+        // every word; the row that expects `no` for a run-on query is there on purpose.
+        val author = case.getValue("author").takeIf { it != "-" } ?: ""
+        assertEquals(
+            case.why(),
+            case.bool("expect"),
+            com.przunk.protracktor.data.SearchTerms.matchesAny(
+                case.getValue("query"), case.getValue("title"), author,
+            ),
+        )
+    }
+
+    @Test
+    fun `HVSC's time tokens agree with the shared cases`() = each("songLengthTime") { case ->
+        // The page reads the same tokens in `web/src/songlengths.js`, and a SID's whole length
+        // comes from getting them right -- there is nothing in the file to fall back on.
+        val expected = case.getValue("expect").takeIf { it != "-" }?.toDouble()
+        assertEquals(
+            case.why(),
+            expected,
+            com.przunk.protracktor.data.SongLengths.parseTime(case.getValue("token")),
+        )
+    }
+
+    @Test
     fun `next agrees with the shared cases`() = each("next") { case ->
         val queue = queueAt(case.int("tracks"), case.int("at"), repeatOf(case["repeat"]))
         // `onTrackEnded` is the rule; `next()` is the button, and it deliberately ignores
@@ -154,6 +180,16 @@ class RuleCasesTest {
             case.why(),
             "https://modland.com/pub/modules/" + case.getValue("expect"),
             com.przunk.protracktor.net.Modland.urlFor(path),
+        )
+    }
+
+    /** ASMA's file address, the same way: the zip entry's path, escaped by the rule Modland uses. */
+    @Test
+    fun `the ASMA address agrees with the shared cases`() = each("asmaUrl") { case ->
+        assertEquals(
+            case.why(),
+            "https://asma.atari.org/" + case.getValue("expect"),
+            com.przunk.protracktor.net.Asma.fileUrlFor(case.getValue("path")),
         )
     }
 

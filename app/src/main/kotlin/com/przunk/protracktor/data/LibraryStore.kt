@@ -18,6 +18,13 @@ data class SavedPlayerState(
     val repeat: RepeatMode,
     /** Whether to play every tune inside a file rather than only the first. */
     val playAllSubsongs: Boolean = false,
+    /** What Random picks from, as `RandomScope.stored()` writes it. Empty means never set. */
+    val randomScope: String = "",
+    /**
+     * How long to play a tune whose length nothing knows, in seconds. Zero means never set, which
+     * reads back as the default (`docs/STATUS.md` C56).
+     */
+    val fallbackLengthSeconds: Int = 0,
 )
 
 data class SavedPlaylist(
@@ -176,28 +183,32 @@ class LibraryStore(context: Context) {
         // once rather than remembered at five call sites -- one of which, importing an M3U, takes
         // a text file anybody can write.
         //
-        // It is not a tidiness rule. A playlist row is a `LazyColumn` item keyed by track id, and
-        // a repeated key throws on the main thread while drawing; the same shape of duplicate in
-        // search results crashed the app on 2026-09-04. Note the old code would not even have
-        // stored the repeat -- `playlist_tracks` conflicts on the same track id and the second
-        // insert replaced the first, leaving a gap in `position` and a list shorter than the
-        // caller thinks. Quietly wrong instead of loudly wrong.
+        // Not a tidiness rule: a playlist row is a `LazyColumn` item keyed by track id, and a
+        // repeated key throws on the main thread while drawing. Storing the repeat is no better --
+        // `playlist_tracks` conflicts on the track id, the second insert replaces the first, and
+        // what is left is a gap in `position` and a list shorter than the caller thinks.
         val unique = tracks.distinctBy { it.id }
         helper.writableDatabase.transaction {
             delete("playlist_tracks", "playlist_id = ?", arrayOf(playlistId.toString()))
             unique.forEachIndexed { position, track ->
+                // **Never REPLACE this row** (`docs/STATUS.md` C41). SQLite's REPLACE is a DELETE
+                // and an INSERT, `playlist_tracks.track_id` references it `ON DELETE CASCADE`, and
+                // foreign keys are on -- so re-writing a track already in another playlist deletes
+                // its place there, and copying to a playlist becomes moving. Insert if it is new,
+                // then update the fields: the row itself stays.
+                val fields = ContentValues().apply {
+                    put("title", track.title)
+                    put("subtitle", track.subtitle)
+                    put("size", track.sizeBytes)
+                    put("file_name", track.fileNameOrTitle)
+                    put("author", track.author)
+                }
                 insertWithOnConflict(
                     "tracks", null,
-                    ContentValues().apply {
-                        put("id", track.id)
-                        put("title", track.title)
-                        put("subtitle", track.subtitle)
-                        put("size", track.sizeBytes)
-                        put("file_name", track.fileNameOrTitle)
-                        put("author", track.author)
-                    },
-                    android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
+                    ContentValues(fields).apply { put("id", track.id) },
+                    android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE,
                 )
+                update("tracks", fields, "id = ?", arrayOf(track.id))
                 insertWithOnConflict(
                     "playlist_tracks", null,
                     ContentValues().apply {
@@ -215,7 +226,8 @@ class LibraryStore(context: Context) {
 
     suspend fun loadPlayerState(): SavedPlayerState? = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT active_playlist_id, current_track_id, shuffle, repeat_mode, play_all_subsongs " +
+            "SELECT active_playlist_id, current_track_id, shuffle, repeat_mode, play_all_subsongs, " +
+                "random_scope, fallback_length_seconds " +
                 "FROM player_state WHERE id = 0",
             null,
         ).use { row ->
@@ -227,6 +239,8 @@ class LibraryStore(context: Context) {
                 // An unknown mode from a newer build must not crash an older one.
                 repeat = runCatching { RepeatMode.valueOf(row.getString(3)) }.getOrDefault(RepeatMode.OFF),
                 playAllSubsongs = row.getInt(4) != 0,
+                randomScope = if (row.isNull(5)) "" else row.getString(5),
+                fallbackLengthSeconds = row.getInt(6),
             )
         }
     }
@@ -240,6 +254,8 @@ class LibraryStore(context: Context) {
                 put("shuffle", if (state.shuffle) 1 else 0)
                 put("repeat_mode", state.repeat.name)
                 put("play_all_subsongs", if (state.playAllSubsongs) 1 else 0)
+                put("random_scope", state.randomScope)
+                put("fallback_length_seconds", state.fallbackLengthSeconds)
             },
             "id = 0", null,
         )

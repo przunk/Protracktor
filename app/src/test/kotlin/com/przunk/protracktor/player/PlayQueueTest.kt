@@ -196,9 +196,9 @@ class PlayQueueTest {
 
     @Test
     fun `a queue built empty and filled afterwards can play`() {
-        // The crash of 2026-08-31: order was a constructor property defaulting to tracks.indices,
-        // and copy() does not re-evaluate default arguments. A queue created empty and then given
-        // tracks kept the empty order, so the first next() indexed into nothing.
+        // `order` must not be a constructor property defaulting to tracks.indices: copy() does
+        // not re-evaluate default arguments, so a queue created empty and then given tracks keeps
+        // the empty order and the first next() indexes into nothing.
         val filled = PlayQueue(tracks = emptyList())
             .withTracks((0 until 3).map { TrackRef(id = "t$it", title = "Track $it") })
 
