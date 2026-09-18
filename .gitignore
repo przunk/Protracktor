@@ -45,7 +45,17 @@ docs/letters/
 /server.json
 
 # The owner's screenshots. He drops them in `user/` to show what a screen looks like -- they are how
-# a bug report arrives here, not something the repository needs to keep, and three of them were
-# committed by accident and carried around until 2026-09-15. The music files in `user/` stay
-# tracked: those are test material the checks and probes are run against.
-user/Screenshot*
+# a bug report arrives here, not something the repository needs to keep.
+#
+# **By kind, not by name.** `user/Screenshot*` was the rule until 2026-09-18 and it only ever
+# matched what his phone happens to call a file; four screenshots named `9tDUM-wZ.jpg` and one saved
+# from a browser walked straight past it into a merge commit. An image in `user/` is a bug report
+# whatever it is called.
+#
+# The music files in `user/` stay tracked: those are test material the checks and probes are run
+# against.
+user/*.png
+user/*.jpg
+user/*.jpeg
+user/*.webp
+user/tests/
