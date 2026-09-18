@@ -145,7 +145,7 @@ PRZUNK_UPLOAD_KEY_ALIAS=…
 PRZUNK_UPLOAD_KEY_PASSWORD=…
 ```
 
-The same property names the workshop's other projects use, and **the owner decided on 2026-08-31
+The same property names the workshop's other projects use, and **it was decided on 2026-08-31
 that Protracktor shares their keystore** rather than getting its own. A separate key was considered
 because a GPL-3 app may end up on F-Droid; sharing won because one key across the workshop is one
 thing to keep safe instead of five.
@@ -162,7 +162,7 @@ is otherwise invisible until an upload is rejected.
 ./scripts/build-bundle.sh [extra gradle args…]
 ```
 
-Written 2026-09-02, adapted from Kratkoza's with the owner's permission — both projects sign with
+Written 2026-09-02, adapted from Kratkoza's — both projects sign with
 the same workshop upload key through the same `PRZUNK_UPLOAD_*` Gradle properties, so the mechanism
 is deliberately identical rather than merely similar.
 
@@ -243,13 +243,13 @@ commit count the same way Gradle does — the two expressions have to agree, and
 
 ## Which build to hand over
 
-**Release.** Since 2026-09-03, the APK given to the owner for testing is the release build:
+**Release.** Since 2026-09-03, the APK handed over for testing is the release build:
 
 ```
 ./scripts/build-release.sh
 ```
 
-It is what he will actually experience — a debug build is `debuggable=true`, which costs a great
+It is what a tester actually experiences — a debug build is `debuggable=true`, which costs a great
 deal of ART optimisation and once produced twenty seconds of stutter that did not exist in release
 (`docs/STATUS.md` C10). It also goes through R8, so a missing keep rule or a stripped resource
 surfaces at hand-over rather than at a release.

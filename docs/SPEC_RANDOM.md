@@ -5,8 +5,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Random, as the phone does it, and what the page must match
 
-*Written 2026-09-15 at the owner's request, after testing the digression in the browser: "spisz
-funkcjonalność APK w zakresie random; spisz wymagania dla WEB (mają być takie same)".*
+*Written 2026-09-15, after testing the digression in the browser: the phone's Random, set down as
+requirements the page must match.*
 
 `docs/PLAN_RANDOM.md` holds the design and the decisions behind it. This is the behaviour as built,
 so the two runtimes can be held to one list rather than to a memory of a conversation.
@@ -94,10 +94,10 @@ And two the page states in its own way, which is allowed because the shapes diff
 
 ## 3. Where the page fell short, 2026-09-15 — found and fixed the same day
 
-Kept because it shows how the list above is meant to be used: each thing the owner saw, against the
+Kept because it shows how the list above is meant to be used: each thing seen on a device, against the
 requirement it broke.
 
-| What he saw | Requirement |
+| What was seen | Requirement |
 |---|---|
 | In the author's folder, next played another random pick | "The folder becomes the transport at once" |
 | Back in the folder climbed to the format above it | "Above it, Back is the way to the dice" |

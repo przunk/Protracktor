@@ -1,6 +1,6 @@
 # Code review, round 8 — 2026-09-10
 
-*Asked for by the owner: read the **code**, not the documents, and look for plain defects,
+*Asked for: read the **code**, not the documents, and look for plain defects,
 inconsistencies, and architecture that is fragile or unpleasant. Findings first, in the order I
 would act on them; what I then did is marked on each.*
 
@@ -171,7 +171,7 @@ out of it and each is tested because it is out. The next three are readable from
 
 Each could move behind an interface the controller holds, with its own state class, and each would
 then be testable without a phone. **Not started**, because it is a day's work with no user-visible
-result, and because doing it while the owner is testing daily would put a large diff between him and
+result, and because doing it during daily testing would put a large diff between the tester and
 every bug report. It is a decision, not a defect.
 
 ---

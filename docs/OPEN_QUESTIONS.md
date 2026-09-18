@@ -7,7 +7,7 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ## Q1 — Navigation model (R7)
 
-**Decided 2026-08-31.** The owner delegated the choice and fixed one requirement: a player bar
+**Decided 2026-08-31.** The choice was delegated with one requirement fixed: a player bar
 docked at the bottom of every screen carrying previous / play / next / shuffle / repeat-one.
 
 ### The shape
@@ -105,7 +105,7 @@ needs a careful look).
 **Decided 2026-08-31: (a).** (b) is disqualified by what MediaStore indexes.
 
 Remote catalogues were added alongside this, not instead of it — see `docs/ARCHITECTURE.md` §8.
-SAF is still what reaches the owner's existing collection on disk.
+SAF is still what reaches a collection already on disk.
 
 ## Q4 — Track duration where the format has none
 
@@ -156,7 +156,7 @@ Recommendation: **(c)**. Threshold to be measured once something plays.
 
 ## Q9 — Should the decoders run in their own process?
 
-*Raised 2026-09-08 by a C++ engineer the owner showed the project to, whose first reaction to JNI
+*Raised 2026-09-08 by a C++ engineer shown the project, whose first reaction to JNI
 was "fuuj". The reaction is about the API; the argument underneath it is about architecture, and it
 is a real one: **two programs talking over shared memory or a socket, rather than one program with a
 foreign-function bridge inside it.***
@@ -237,18 +237,18 @@ neither, and just an APK. No decision needed yet; noted so it is not a surprise.
 
 ## Q8 — ~~Should a playlist edit need saving at all?~~ — ANSWERED 2026-09-06
 
-*Raised by the owner, 2026-09-04: he leaves the app without noticing the list was never saved.*
+*Raised 2026-09-04: leaving the app without noticing the list was never saved.*
 
 Editing the active playlist builds a **draft**: reordering and removal change `queue` and set
 `dirty`, and nothing reaches the database until Save. Discard throws the draft away. Adding to a
 *different* playlist writes immediately, which is already the opposite rule in the same app.
 
-**What he actually reported is not "the marker is too subtle".** It is that the marker exists at
+**What was reported is not "the marker is too subtle".** It is that the marker exists at
 all: a person who reorders a list and walks away has, in their own mind, reordered the list. Every
 music player they have ever used behaves that way. The draft is asking them to remember a step whose
 purpose is invisible from where they stand.
 
-Three ways out, and the middle one is his suggestion:
+Three ways out, and the middle one was the suggestion:
 
 - **(a) Keep the draft, mark it harder.** Cheapest, and it treats the symptom. If the current
   marker is missed, a louder one is a bet that the next one will not be.
@@ -259,10 +259,9 @@ Three ways out, and the middle one is his suggestion:
 - **(c) Save on leaving the screen**, silently. Removes the question without changing what the
   buttons mean, but "when did that happen" becomes the new invisible step.
 
-**Answered 2026-09-06, and with a fourth option none of the three above had.** The owner:
-
-> dodawanie do playlisty "spoza playlisty" (np. w wyszukiwaniu) powinno dodawać do niej bez
-> konieczności zapisywania (zrobić autosave). Save rezerwujemy na operacje typu remove/reorder
+**Answered 2026-09-06, and with a fourth option none of the three above had:** adding to a playlist
+from *outside* it — a search, a folder — saves itself, and Save is reserved for removing and
+reordering.
 
 **Split by the kind of edit, not by when it happens.** An add arrives from *outside* the list — a
 search result, a folder, another playlist — and nothing about it is provisional: you asked for a
@@ -286,15 +285,15 @@ cannot see.
 
 ## Q10 — How a release is built, and from which branch — **ANSWERED 2026-09-11**
 
-**The owner: "na razie z develop, ale jak wydamy 1 wersję, to będzie z mastera."** Releases are built
+**Answered: from `develop` until version 1, from `master` afterwards.** Releases are built
 from `develop` until version 1 ships; from then on, from `master`. The two defects found in the script
 while answering — no refusal on a dirty tree, and a stale message about bumping a versionCode that
 is counted, not typed — stand on their own and are worth fixing either way.
 
 ### Original entry
 
-*Raised 2026-09-10, when the owner asked whether `scripts/build-bundle.sh` builds from `master` or
-from the current branch. Added to the decisions at his request; nothing is changed until he chooses.*
+*Raised 2026-09-10: does `scripts/build-bundle.sh` build from `master` or from the current branch?
+Recorded as a decision; nothing changes until it is made.*
 
 ### What the script does today
 
