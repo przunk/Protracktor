@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A48. Two seconds pass before the playlist appears — **noted 2026-09-17**
+## A48. Two seconds pass before the playlist appears — **measured, one cause fixed 2026-09-18**
 
 *Owner, 2026-09-17, on the round-12 build: "po uruchomieniu przez 5 sekund miałem pustą listę z
 prośbą o pobranie indeksu, ale czekając te 5 s pojawiła się lista. przy drugim odpaleniu to trwało
@@ -40,9 +40,38 @@ in the order worth measuring:
 - **`summaries()` and `grantedFolders()`**, added for the empty screen's question — small, but they
   are now on the path and should be ruled in or out rather than assumed innocent.
 
-**Measure before changing anything.** One timing log around each, read once on a real phone, and
-then fix whichever it is. Guessing which of five things costs two seconds is how an afternoon
-disappears.
+### What the measurement said
+
+Built a `catalogue_tracks` of **516,000 rows** on this machine and timed the launch path against it.
+Desktop SQLite, so these are a floor; a phone's storage is several times slower.
+
+| | |
+| --- | --- |
+| `pruneUnknownCatalogues`, the delete over `catalogue_tracks` | **55.6 ms** |
+| the same against the `catalogues` table | 0.0 ms |
+| `summaries()` | 0.0 ms |
+| asking *whether* anything is stale, from `catalogues` | **0.0 ms** |
+| the v16 `archive_count` backfill, which ran once | 27.7 ms |
+
+**`catalogue_id NOT IN (…)` cannot use an index.** A negation indexes nothing, and since v15 the two
+browse indexes are partial (`WHERE playable = 1`), so they could not serve it even if it were
+positive. `EXPLAIN QUERY PLAN` says `SCAN catalogue_tracks`: half a million rows, **inside a write
+transaction**, on the one connection every other read at launch is queueing behind — `restore()`
+and `summaries()` both wait for it.
+
+**Fixed:** ask the `catalogues` table first, which is one row per catalogue and answers in no
+measurable time, and do the delete only when there is something to delete — which is almost never.
+`LaunchDoesNotScanTheIndexTest` holds it there as a query plan rather than a stopwatch, so it means
+the same thing on any machine.
+
+**Also fixed, while reading:** `restore()` asked `store.playlists()` twice.
+
+### What is left
+
+The rest of the two seconds is unaccounted for and the remaining candidates are unchanged:
+`tracksIn` for a long playlist, `enforceBudget()` walking the cache directory, and cold pages in a
+112 MB database. **Do not guess at those either** — the next step is a timing log around each, read
+once on a phone.
 
 ## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
 

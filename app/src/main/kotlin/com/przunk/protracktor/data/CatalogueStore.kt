@@ -184,6 +184,26 @@ class CatalogueStore(context: Context) {
         val known = Catalogue.all.map { it.id }
         val placeholders = known.joinToString(",") { "?" }
         val ids = known.toTypedArray()
+
+        // **Asked before it is done, because the asking is free and the doing is not.**
+        //
+        // This runs at every launch, and `catalogue_id NOT IN (...)` over `catalogue_tracks` is a
+        // full scan: nothing indexes a negation, and since v15 the two browse indexes are partial
+        // (`WHERE playable = 1`) so they could not serve it even if it were positive. Measured on
+        // 516,000 rows: **55.6 ms on a desktop**, in a write transaction, on the one connection
+        // every other read at launch is queueing behind — and a phone's storage is several times
+        // slower than that (`docs/BACKLOG.md` A48).
+        //
+        // The `catalogues` table has one row per catalogue and answers the same question in
+        // **0.0 ms**. A catalogue that has rows but no row of its own is not reachable by anything
+        // this app does: `replaceIndex` writes both in one transaction and this deletes both in
+        // one. If that is ever untrue, it is a defect in whatever broke the pair, and scanning half
+        // a million rows at every launch is not the way to find out.
+        val stale = helper.readableDatabase
+            .rawQuery("SELECT EXISTS(SELECT 1 FROM catalogues WHERE id NOT IN ($placeholders))", ids)
+            .use { row -> row.moveToFirst() && row.getInt(0) == 1 }
+        if (!stale) return@withContext
+
         helper.writableDatabase.transaction {
             delete("catalogue_tracks", "catalogue_id NOT IN ($placeholders)", ids)
             delete("catalogues", "id NOT IN ($placeholders)", ids)

@@ -887,11 +887,14 @@ class PlaybackController private constructor(private val context: Context) {
     private fun restore() {
         scope.launch {
             val saved = store.loadPlayerState()
+            // Read once and used twice. `defaultPlaylistId` can create one, so the list is read
+            // again only when it did; asking the database the same question twice at launch is a
+            // query nobody needs on the path A48 is about.
             val known = store.playlists()
             // The stored active playlist, unless it has since been deleted.
-            playlistId = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
-                ?: store.defaultPlaylistId(defaultPlaylistName)
-            val playlists = store.playlists()
+            val stored = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
+            playlistId = stored ?: store.defaultPlaylistId(defaultPlaylistName)
+            val playlists = if (stored != null) known else store.playlists()
             val tracks = store.tracksIn(playlistId)
 
             _state.update { current ->
