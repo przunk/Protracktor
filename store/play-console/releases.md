@@ -6,7 +6,7 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
-## 0.6.0 — versionCode 725
+## 0.6.0 — versionCode 727
 
 Closed testing. Round 12: the index stops depending on what this build can play.
 
@@ -15,7 +15,7 @@ Closed testing. Round 12: the index stops depending on what this build can play.
 | Artifact | *`./scripts/build-bundle.sh`; fill in on upload* |
 | Size | |
 | SHA-256 | |
-| versionCode | 725 — `git rev-list --count HEAD`, not written by hand |
+| versionCode | 727 — `git rev-list --count HEAD`, not written by hand |
 | versionName | 0.6.0 |
 | Commit | *the commit `v0.6.0` points at* |
 | Tag | `v0.6.0` |
@@ -25,6 +25,10 @@ Closed testing. Round 12: the index stops depending on what this build can play.
 The migration adds `ext`, `pre` and `playable` to `catalogue_tracks`, rebuilds the two browse
 indexes as partial ones, and backfills `archive_count` with a `COUNT(*)` per catalogue — which on a
 full Modland index is a few seconds of first launch. The release notes say so in both languages.
+
+**It also carries C66**, found by a tester on 0.5.0 after the tag was first written: the
+previous-track button drew a wedge on his phone and correctly on every device here. Six icon paths
+in both players depended on a reading of the SVG close that renderers disagree about.
 
 **Nothing new is shipped inside the APK**: round 12 touched one host probe (`native/probe/zxtune`,
 never packaged) and no dependency. `docs/LICENSES.md` is unchanged, and UADE is still a
