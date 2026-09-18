@@ -1,5 +1,5 @@
-From the first round of testers.
+The index now keeps everything an archive lists, and notes beside each track whether this build can play it. Adding a decoder later costs a moment of local work instead of downloading the whole index again.
 
-One press now fetches the archives: pick what you want, see what each costs, and stop it half way if you change your mind. An empty playlist offers that instead of sending you to a Browse screen with nothing in it.
+The first launch after updating rearranges what is already downloaded, so it may take a few seconds. Nothing is lost and nothing is fetched.
 
-Every message the app shows is in your language now, not only the screens around it. Buttons are tall enough for accented letters and for larger system text. Uninstalling removes the app's data, as it should.
+Indexing now reports both numbers: how much the archive holds, and how much of it plays here. Large numbers read as numbers everywhere.

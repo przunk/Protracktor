@@ -1,8 +1,7 @@
 # Status
 
-Updated: 2026-09-17 — version 0.5.0, the first round of tester fixes; 0.4.0 (versionCode 679,
-tag `v0.4.0`) is what is in closed testing until this one is uploaded. versionCode is the
-commit count, schema version 14
+Updated: 2026-09-18 — version 0.6.0, round 12: the index no longer depends on what this build
+can play. versionCode is the commit count, schema version 16
 
 ## What works
 
