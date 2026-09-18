@@ -14,7 +14,7 @@ when reality disagrees.
 | --- | --- | --- |
 | Language | Kotlin | — |
 | UI | Jetpack Compose, Material 3 Expressive | R8 |
-| `minSdk` | 29 (Android 10) | Below this, scoped storage and the current media APIs both become a fight. The owner's own device is API 36; 29 exists so other people can install it. |
+| `minSdk` | 29 (Android 10) | Below this, scoped storage and the current media APIs both become a fight. The development device is API 36; 29 exists so other people can install it. |
 | `targetSdk` | 36 (Android 16) | Owner's device generation. |
 | Native | NDK 29.0.14206865, CMake 3.31.6 | Pinned. A native toolchain that changes underneath you produces failures nobody can reproduce. |
 
@@ -33,9 +33,9 @@ with our own UI framework. GPL-3 additionally carries an explicit patent grant t
 
 This requires every GPL dependency to be "**or later**" so it can be taken to 3. That is verified
 per dependency at integration time and recorded in `docs/LICENSES.md`. A GPL-2-only dependency
-would invalidate this decision and must be raised with the owner rather than worked around.
+would invalidate this decision and must be raised rather than worked around.
 
-Consequence accepted by the owner: when the repository goes public, sources must stay available.
+Consequence accepted: when the repository goes public, sources must stay available.
 F-Droid is the natural channel. Google Play does not object to GPL-3 (the App Store conflict people
 remember is Apple's, and does not apply).
 
@@ -104,7 +104,7 @@ thread.** Every emulator here reaches a position by running forward to it, so se
 of a five-minute tune means emulating five minutes of a 6502 inside a callback that has
 milliseconds to answer in. The stream starves, stops advancing, and the next `close()` blocks
 waiting for a callback that will not return — which on `Dispatchers.Main.immediate` is a frozen
-app. It reached the owner twice on 2026-09-10, both times by dragging the seek bar while a tune was
+app. It was hit twice on 2026-09-10, both times by dragging the seek bar while a tune was
 still loading.
 
 So a seek runs on its caller's thread under the decoder lock, and the audio callback `try_lock`s:
@@ -132,14 +132,14 @@ filesystem to exist at launch, so opening the app cannot destroy the view.
 Shuffle order and history (R5), queue and cursor semantics, repeat scope within a playlist (R6),
 duration policy — these are pure Kotlin, testable without an emulator, and they are the parts most
 worth testing. There is no emulator in this environment (AGENTS.md §3), so anything that can only
-be verified by running the UI is verified by the owner on a real phone, and everything else is
+be verified by running the UI is verified on a real phone, and everything else is
 verified by tests that run here.
 
 What has been pulled out this way, and why each earned it: `PlayQueue`, `SchemaSql`, `SongLengths`,
 `CacheBudget`, `BrowseNavigation`, `BrowseScroll`, `TrackEditing`, `PlaylistFile`,
 `SupportedFormats` and — since 2026-09-04 — `SubsongAdvance`.
 
-It also made the correction cheap. When the owner said repeat-one was still advancing, the fix was
+It also made the correction cheap. When repeat-one was reported as still advancing, the fix was
 one line in `SubsongAdvance` and a rewritten test that says why the old rule was wrong — rather than
 a change inside a method nothing can exercise here.
 
@@ -151,7 +151,7 @@ lines of object and six tests is a cheap way to stop a third time.
 
 ## 8. Two kinds of source behind one index
 
-Decided 2026-08-31, after the owner asked whether online catalogues with a local cache were
+Decided 2026-08-31, after the question of whether online catalogues with a local cache were
 possible. They are, and the measurements below were taken rather than assumed.
 
 | Source | Index | File |
@@ -275,7 +275,7 @@ us. Same step.
 
 ## 11. Browse has domains, and online catalogues live in the database
 
-Decided 2026-09-01, after the owner asked for Browse to start with *where to look* rather than with
+Decided 2026-09-01, after what was asked for was Browse to start with *where to look* rather than with
 "add a folder".
 
 Four domains: **local filesystem**, **online catalogues**, **random**, **search**. Below that it is
@@ -302,7 +302,7 @@ player branches on the scheme and nothing else in the app has to know the differ
 
 ### The cache is not an optimisation
 
-A measured Modland fetch took four seconds for 212 KB, and the owner's own local library sits on an
+A measured Modland fetch took four seconds for 212 KB, and a local library may sit on an
 network, so "read the file" is a round trip either way. Fetched bytes are cached by a hash
 of the URL — hashed rather than sanitised, because real Modland paths carry spaces, slashes, `@` and
 `$`, and any escaping scheme would eventually collide. Downloads land through a temporary file, so
@@ -480,14 +480,14 @@ track URL *is* the link. ASMA publishes one archive and has no per-file address 
 deliberate: an `asma://` reference means nothing on anyone else's phone, and an action that appears
 to work is worse than one that says what it can do.
 
-The owner settled the open part on 2026-09-02: **a link points at the file**, the same bytes that
+The open part was settled on 2026-09-02: **a link points at the file**, the same bytes that
 are playing, and what the recipient does with it is theirs to decide. That is what Modland's link
 already was, and it is what ASMA cannot offer — which is why ASMA's share is a collection and a
 path rather than a worse link.
 
 ## 17. How a list behaves
 
-Settled with the owner on 2026-09-02, after he said list handling was what irritated him most about
+Settled on 2026-09-02, after list handling was named as the most irritating thing about
 the app. The complaint that started it: **tapping a track selected it instead of playing it**, which
 is a thing almost nobody does.
 
@@ -506,7 +506,7 @@ cost is real and was accepted deliberately: adding several tracks now takes a lo
 where it used to take a tick. In exchange the common case — hear this one — drops from two taps to
 one, and listening is more frequent than collecting.
 
-**Back clears the selection to nothing.** The owner suggested keeping the first or playing track
+**Back clears the selection to nothing.** Keeping the first or playing track was suggested
 ticked; this does not, because *playing* and *selected* are different states and only one of them is
 a mode. A cancel that leaves something behind reads as an app that did not quite listen.
 
@@ -536,7 +536,7 @@ long-pressing a row made the list grow under the very finger that had pressed it
 ### What is not numbered
 
 Rows in Browse carry no ordinal. In the playlist the number answers "where am I in *my* list of
-three hundred", which the owner defended and is right; in Browse it would only say "row n of
+three hundred", which was defended and is right; in Browse it would only say "row n of
 somebody else's archive". The space goes to the checkbox instead, so rows do not change width when
 selection begins.
 
@@ -765,7 +765,7 @@ whole reason for the choice: `docs/OPEN_QUESTIONS.md` Q1 describes a navigation 
 alternative and fights the dock as soon as it scrolls.
 
 **A labelled gear, not an overflow menu.** A menu holding a single item is worse than the button it
-hides. The first version used an unlabelled gear; the owner rejected it on 2026-09-04, consistently
+hides. The first version used an unlabelled gear; it was rejected on 2026-09-04, consistently
 with the application's rule that an action has both an icon and its name. Browse sits on the left,
 beside the playlist chooser with a 12 dp gap, while Settings stays on the right. This keeps the two
 ways of choosing what plays together without making them look like one compound control.
@@ -802,7 +802,7 @@ the same string an index records to know it is stale — and where the source is
 
 ## 20. Where the time goes on screen
 
-Changed 2026-09-03, at the owner's suggestion and in his layout:
+Changed 2026-09-03, to this layout:
 
 ```
 0:36  ─────────●──────────────  2:20

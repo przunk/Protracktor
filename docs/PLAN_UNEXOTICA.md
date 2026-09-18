@@ -1,6 +1,6 @@
 # UnExoticA — Amiga game soundtracks, behind a switch
 
-*Built 2026-09-09, on the owner's instruction and before the archive's maintainers have answered
+*Built 2026-09-09, on instruction and before the archive's maintainers have answered
 the letter in `docs/letters/2026-09-08-exotica-unexotica.md`. That order is deliberate and this
 document exists to make it reversible.*
 
@@ -19,10 +19,9 @@ that robots.txt governs crawlers rather than a user's own client fetching a file
 it is a volunteer archive's bandwidth and a published app would point every user at it, so the
 question was asked rather than assumed.
 
-The owner's decision on 2026-09-09: *"czekam na maila ale możemy przed publikacją używać już wersji,
-która spełni moje osobiste marzenia… W razie czego wyłączymy funkcję lub ją usuniemy. Proponuję
-dodać jako zależność/funkcję łatwousuwalną."* Nothing is published, no user but him is pointed at
-the archive, and the feature comes out if the answer is no.
+Decided on 2026-09-09: build it while the reply is awaited, behind a switch, and take it out if the
+answer is no. Nothing is published, no user is pointed at the archive, and removal has to stay
+cheap.
 
 **What that requires of the code is the only interesting constraint here**, and it is why this
 document is not just a note in `docs/PLAN_CATALOGUES.md`.
@@ -115,7 +114,7 @@ two values) and **author = the game**, prettified from the `.lha` name: `Total_R
 Recall`.
 
 The composer loses its slot, and that is the trade. The archive is organised around games, the
-owner's question was about a game, and "more from this author" then means "the rest of this
+question asked was about a game, and "more from this author" then means "the rest of this
 soundtrack", which is the useful reading here. The composer is still in every stored path, and most
 of these modules carry their author internally where the decoder can read it.
 
@@ -135,7 +134,7 @@ defensiveness — it is the difference between the feature working and not.
 ## Still open
 
 - **Nothing has been played on the phone yet.** The extraction is verified on the host and the
-  build is green; the first real listen is the owner's.
+  build is green; the first real listen is on a device.
 - **The index and the archives can drift.** songdb holds a snapshot, not ExoticA's live tree. A
   member the index names and the archive does not hold is logged as
   `UnExoticA: <member> is not in <url>`; if that appears at all, this is why.

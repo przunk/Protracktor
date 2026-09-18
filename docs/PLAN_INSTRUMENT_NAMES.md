@@ -5,18 +5,18 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Instrument and sample names in Now Playing
 
-*Asked for by the owner on 2026-09-11, right after C40 (the whole module message) was merged:
-"czy da się pokazać nazwy instrumentów też? czasem autorzy w instrumentach kodują treść".* Written
-down before any code, at his request, so it can be picked up cold by whoever builds it.
+*Asked for on 2026-09-11, right after C40 (the whole module message) was merged: show the instrument
+names too, because authors sometimes write their message into them.* Written down before any code,
+so it can be picked up cold by whoever builds it.
 
-**Status: built 2026-09-11, waiting for the owner's test.** Branch: `feature/instrument-names` (this
+**Status: built 2026-09-11, waiting for a device test.** Branch: `feature/instrument-names` (this
 file is its first commit).
 
 **Checked on real files with the rebuilt web engine** before the phone: `zoolook.mod` (Modland,
 Jogeir Liljedahl) gives `sample_names` = "by jogeir liljedahl", two empty names, "original by
 j.m.jarre" -- and none of its 27 trailing empty names, and no `instrument_names` line, a MOD having
 no instruments. `aces high.ahx` (Modland, 451) gives 38 instrument names that are a whole letter,
-from "Put into tracker by (451) back in 2014" to ASCII art: the owner's point, in one file. The first
+from "Put into tracker by (451) back in 2014" to ASCII art: the whole point, in one file. The first
 name is "Put into tracker", so HivelyTracker's instruments are 1-based as the loader says.
 
 ---
@@ -29,9 +29,9 @@ and authors still use the instrument and sample names as well. Today the page an
 the message (`message_raw`) and nothing else, so for most MODs the text the author left is not
 shown anywhere.
 
-## What was agreed (the owner's three worries, answered)
+## What was agreed (three worries, answered)
 
-**"Nie będzie za dużo tekstu?"** It would be, shown flat. So:
+**Would it be too much text?** It would be, shown flat. So:
 
 - a section at the bottom of Now Playing, **collapsed by default**, opened with a tap: "Sample names
   (31)" / "Instrument names (12)", an icon with its label, like every control here;
@@ -42,12 +42,12 @@ shown anywhere.
 - XM and IT have both lists: **show both when they differ**, one when they are the same or one is
   empty.
 
-**"Nie będzie się rozjeżdżać?"** Names are short (22 characters in MOD and XM, a few more in IT)
+**Would it break the layout?** Names are short (22 characters in MOD and XM, a few more in IT)
 and are drawn **monospaced, one per line, never wrapped**; a line too wide for the screen scrolls
 sideways inside its own box. The page already draws the message this way (`.np-message pre`); the
 phone's section gets `horizontalScroll`. Rows are numbered as a tracker numbers them: 01, 02, and on.
 
-**"Nie zepsujemy tym czegoś?"** The risk is in three places, each with its guard:
+**Could it break something else?** The risk is in three places, each with its guard:
 
 1. **The describe block's shape.** `message` must stay the **last** field, because it is the only
    value with line breaks in it (`docs/STATUS.md` C40, `DescribeBlock`, the page's `describeFields`).
@@ -58,7 +58,7 @@ phone's section gets `horizontalScroll`. Rows are numbered as a tracker numbers 
    overwritten. Both parsers ignore keys they do not know, so indexing, titles, authors and the
    songdb merge are untouched.
 3. **A native rebuild on both runtimes.** The change is inside `describe()` only, not playback. The
-   JVM tests cannot see native code, so the owner checks it on the phone before anything merges.
+   JVM tests cannot see native code, so it is checked on a phone before anything merges.
 
 ## Build steps
 
@@ -118,9 +118,9 @@ phone's section gets `horizontalScroll`. Rows are numbered as a tracker numbers 
 ### 5. Handover
 
 A release APK (`scripts/build-release.sh`) and the web bundle (`scripts/package-web.sh`, after
-`scripts/build-web-engine.sh`). The owner tests on the phone and in the browser with a MOD with text
+`scripts/build-web-engine.sh`). Tested on the phone and in the browser with a MOD with text
 in its samples, an XM with both lists, an AHX or HVL, and a SID, which must show nothing new. Merge
-into `develop` only when he says so.
+into `develop` only on approval.
 
 ## Out of scope
 

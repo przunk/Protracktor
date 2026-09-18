@@ -4,7 +4,7 @@ What the store asks for, answered. Written 2026-09-04 as `GOAL.md` round 6 item 
 
 **Publishing itself is not in here and is not an agent's to do.** The account, the upload key and
 the name on the listing are the owner's (`AGENTS.md` §3). This is the paperwork that has to be right
-before he presses anything, in a form he can copy.
+before anything is pressed, in a form that can be copied.
 
 ## The data-safety declaration
 
@@ -90,7 +90,7 @@ to keep locally; not ours to publish. It is in `.gitignore` as of 2026-09-05, wh
 being added.
 
 **Ignoring is not removing.** Five letters are already committed across ten commits, and anybody
-cloning a public repository gets every version of every file that was ever in it. The owner's
+cloning a public repository gets every version of every file that was ever in it. The
 decision, 2026-09-05: **rewrite the history and force-push.**
 
 ### The recipe, tried on a copy first
@@ -122,7 +122,7 @@ knowing before running it for real:
 
 ### What the rewrite did not remove, and what was done about it — settled 2026-09-15
 
-The letters were drafts in the owner's own words. **The substance around them was other people's**,
+The letters were drafts of correspondence. **The substance around them was other people's**,
 and filtering `docs/letters` left all of that in place: `docs/LICENSES.md` and
 `docs/PLAN_FORMATS.md` reported what UADE's two maintainers had written in a private reply — the
 `players/` licence position, the invitation to fetch the binaries from zakalwe.fi, the limit on what
@@ -160,12 +160,12 @@ quotation. `docs/letters/` itself is absent from every commit on every branch, l
 remote, which was checked rather than assumed.
 
 **Nothing is public yet**: the GitHub repository is private, so no version of any of this has left
-the owner's machines. That is what makes the cleanup above complete rather than mitigating, and it
+local machines. That is what makes the cleanup above complete rather than mitigating, and it
 is also why **no further history rewrite is planned**. Two things were raised as candidates on
-2026-09-15 and the owner decided against both:
+2026-09-15, and both were decided against:
 
-* **The three screenshots** of his own phone, committed by accident and removed from the tree that
-  day. His call: not a problem — some version of those screens goes on the store listing anyway.
+* **The three phone screenshots**, committed by accident and removed from the tree that day.
+  Judged not a problem — some version of those screens goes on the store listing anyway.
 * **The contact address**, for the reason two paragraphs up.
 
 So the repository goes public with its history intact when the owner is ready. The standing warning

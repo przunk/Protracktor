@@ -1,7 +1,7 @@
 # Plan: a web version
 
 Written 2026-09-08, expanding `docs/WISHLIST.md` **B5** — *"the same music in a browser, sharing
-state with the phone through an account"*, raised by the owner on 2026-09-01 and left as a thought.
+state with the phone through an account"*, raised on 2026-09-01 and left as a thought.
 
 **Nothing here is decided.** This document exists because B5 itself said the idea *"would change
 decisions we are making today"*, and a sentence like that is worth either acting on or striking. It
@@ -69,7 +69,7 @@ most of the value of writing this down.
 
 **They are also the right order**, and each one is worth having if the next never happens. W1 is a
 weekend and answers the only question that can kill the whole idea — *do our decoders run in a
-browser at an acceptable cost*. W2 is where it becomes the thing the owner described. W3 is a
+browser at an acceptable cost*. W2 is where it becomes the thing that was asked for. W3 is a
 different kind of project with running costs, a privacy policy and somebody else's data in it, and
 it should not be started to find out whether W1 works.
 
@@ -437,7 +437,7 @@ settled on for the APK carries over unchanged; it should be restated there rathe
 | --- | --- | --- | --- |
 | **A. Kotlin Multiplatform** | share the domain, compile it to Kotlin/Wasm, rewrite the stores, drive the decoder wasm through JS glue | the ~5,000 lines of §3 and their 21 test files are literally reused; one bug fixed once | Kotlin/Wasm's web target is **Beta** (*read*, 2026); Kotlin/Wasm and Emscripten are two separate wasm modules that must talk through JavaScript, and the audio worklet is on the far side of that glue — the exact boundary §5 says must not have glue in it |
 | **B. A separate web app** | TypeScript, decoders via Emscripten, domain reimplemented | no toolchain risk; the audio worklet owns the decoder directly; a small W1 is genuinely a weekend | the domain is written twice and drifts, which `AGENTS.md` §8 names as the thing that rots quietly — a rule changed on the phone and not in the browser will not be noticed by anyone until a user sees it |
-| **C. Neither yet — do the server first** | build **B19** (hosted catalogue indexes) and let the phone use it; the browser client comes later against an interface that already exists | it is useful to the phone **today** — a 40 MB index download is the app's largest single cost, and B19 exists as a wish for that reason alone; it also settles §6's two proxy endpoints as a side effect | it is not a web player, and if the owner wants a web player this does not produce one |
+| **C. Neither yet — do the server first** | build **B19** (hosted catalogue indexes) and let the phone use it; the browser client comes later against an interface that already exists | it is useful to the phone **today** — a 40 MB index download is the app's largest single cost, and B19 exists as a wish for that reason alone; it also settles §6's two proxy endpoints as a side effect | it is not a web player, and if what is wanted is a web player this does not produce one |
 
 **Recommendation: W1 as a throwaway on route B, then decide.**
 
@@ -499,7 +499,7 @@ than invent an answer.
 - **Is a proxied scrape still a user's own client?** Raised by the reviewing session on 2026-09-08,
   and it is the sharpest question here. §6 leaves the proxy carrying exactly one thing — the Mod
   Archive search — but that is the case where every browser's request arrives at their server **from
-  our address rather than the user's**. The owner reasoned about this shape for UnExoticA and
+  our address rather than the user's**. The same shape was reasoned about for UnExoticA and
   concluded that a user's own client is not a crawler; that argument is sound and it **stops working
   the moment we are in the middle**. It should be a stated question with an answer, not something
   discovered after the traffic exists.
@@ -508,8 +508,8 @@ than invent an answer.
 
 ## 13. The implementation plan
 
-Written 2026-09-08 after the owner asked for one. Seven stages, each with a **deliverable**, a
-**way it is checked**, **what it needs from him**, and **what would make us stop**. The order is not
+Written 2026-09-08 after what was asked for was one. Seven stages, each with a **deliverable**, a
+**way it is checked**, **what it needs from a device**, and **what would make us stop**. The order is not
 decoration: every stage is useful if the next never happens, and the two that could kill the idea
 come before the two that cost the most.
 
@@ -524,9 +524,9 @@ waits for a domain that does not exist yet.
 shared file keeps the backends, the registry and the dispatch.
 
 - **Deliverable:** identical APK behaviour, one file fewer concern.
-- **Checked by:** the 184 unit tests, a release build, and **the owner on his device** — this is the
+- **Checked by:** the 184 unit tests, a release build, and **a real device** — this is the
   heart of playback and nothing else in this plan touches the phone.
-- **Needs him:** one test round.
+- **Needs a device:** one test round.
 - **Stop if:** the split cannot be made without changing behaviour. Then the web port is a fork of
   the engine rather than a second target, and that is a different and worse project.
 
@@ -540,7 +540,7 @@ of the Oboe class.
 - **Checked by:** `scripts/probe-web.mjs` in node — the host-probe rule (`AGENTS.md` §7) applied to
   wasm. Real Modland files in, per-file open/decode/peak/realtime out. Proven possible today against
   somebody else's build: 518× realtime, peak 0.607.
-- **Needs him:** nothing.
+- **Needs a device:** nothing.
 - **Stop if:** our `engine.cpp` needs forking to compile under `emcc`. Report and stop; do not fork.
 
 ### S2 — The rest of the backends, one at a time, each with a number
@@ -551,7 +551,7 @@ files from the archives, and recorded the way `PLAN_FORMATS.md` records a native
 - **Deliverable:** a coverage table and a total byte count.
 - **Checked by:** the same probe. reSIDfp and sc68 are the ones whose realtime factor is worth
   watching; libopenmpt's 518× says nothing about them.
-- **Needs him:** nothing.
+- **Needs a device:** nothing.
 - **Stop if:** the total goes past a few megabytes compressed, or a backend cannot reach realtime with
   margin. Either is a reason to ship without it, not to abandon the stage.
 - **ZXTune is not in this list.** No precedent exists, it is the largest C++ here and it fought the
@@ -563,10 +563,10 @@ A static page: title, transport, position, queue. An `AudioWorkletProcessor` imp
 Plays a list of Modland URLs it is given. No browsing, no search, no settings — `PLAN_HANDOFF.md`
 §5a says why.
 
-- **Deliverable:** `web/src`, `scripts/serve-web.sh`, and a URL he opens.
-- **Checked by:** **him, and only him.** Does it play, does it glitch, does seeking work. `http://localhost`
+- **Deliverable:** `web/src`, `scripts/serve-web.sh`, and a URL to open.
+- **Checked by:** **a person, on a real browser.** Does it play, does it glitch, does seeking work. `http://localhost`
   is a secure context, so no certificate and no headers are needed.
-- **Needs him:** the first real test round of the whole idea.
+- **Needs a device:** the first real test round of the whole idea.
 - **Stop if:** it glitches and the cause is the worklet rather than a bug. That is the one failure
   no measurement here can predict.
 
@@ -575,9 +575,9 @@ Plays a list of Modland URLs it is given. No browsing, no search, no settings �
 Phone: "send this queue to the browser" builds a URL with the queue compressed into the fragment and
 hands it to the share sheet. Page: reads the fragment, builds the queue, plays.
 
-- **Deliverable:** his playlist, playing at his desk.
-- **Checked by:** him, end to end, from phone to browser.
-- **Needs him:** one round, and the answer to whether copy-paste per handoff is tolerable.
+- **Deliverable:** a playlist from the phone, playing on a desk.
+- **Checked by:** a person, end to end, from phone to browser.
+- **Needs a decision:** one round, and whether copy-paste per handoff is tolerable.
 - **Measured already:** 50 tracks compress to 1,992 characters — inside the limit that is safe
   everywhere. No server is involved in the handoff at all.
 
@@ -587,7 +587,7 @@ Only if S4's copy-paste grates. `web/relay/`: rooms, one-directional, holding no
 shows an eight-digit code, the phone takes it. Requires HTTPS from outside, so it arrives with the
 hosting conversation rather than before it.
 
-- **Stop if:** his work network blocks the relay. H1 survives that; H2 does not, which is the third
+- **Stop if:** the network at the other end blocks the relay. H1 survives that; H2 does not, which is the third
   reason H1 comes first.
 
 ### S6 — Everything else, deliberately not planned
@@ -595,10 +595,10 @@ hosting conversation rather than before it.
 Browsing catalogues in the browser, the local library through the File System Access API, favourites
 and history syncing, WebRTC. Each is a decision (`PLAN_WEB.md` §12), not a next step.
 
-### What the owner is on the hook for
+### What only a person can answer
 
 Four things, and nothing else: **the S0 device test**, **whether S3 glitches**, **whether S4 works
-end to end**, and eventually **whether his work network permits any of it** — the last being the one
+end to end**, and eventually **whether the network at the other end permits any of it** — the last being the one
 question that can invalidate the whole thing and the one nobody else can answer.
 
 Everything before S3 needs no browser, no host, no network and no account, because the host-probe
@@ -701,13 +701,13 @@ a slow laptop is safe. Everything else has at least 86×.
 
 ### S3, and the defect a measurement could not have found
 
-The page played on the owner's machine at the first attempt that got past the worklet's missing
+The page played on a real machine at the first attempt that got past the worklet's missing
 globals, and the answer to the question S3 exists for — *does it glitch* — was no, including the
-SID. Then he said something that mattered more:
+SID. Then something that mattered more:
 
-> *"Mam wrażenie, że gra nieco szybciej niż pamiętam."* — of `Crazy_Comets.sid`, a tune he knows.
+> It sounds slightly faster than it should — of `Crazy_Comets.sid`, a tune the listener knows well.
 
-He was right, and the cause is exact. **Six of the seven backends emulate a machine with a fixed
+That was right, and the cause is exact. **Six of the seven backends emulate a machine with a fixed
 clock and produce 44,100 samples a second whatever rate they are asked for.** A browser's default
 `AudioContext` runs at 48,000, and there is no resampler between an `AudioWorkletProcessor` and the
 output — so those samples played **8.84% fast**, about a semitone and a half sharp.
@@ -733,7 +733,7 @@ The phone packs the playlist into a URL fragment, appends the page's address and
 share sheet. **No server is involved in the handoff at all**, and a fragment never reaches one, so
 the page's own host does not learn what is on the list.
 
-Three defects came out of the owner's first two attempts, and each is worth keeping:
+Three defects came out of the first two attempts, and each is worth keeping:
 
 1. **A link opened in a tab that already had the page did nothing.** Only the fragment changed, so
    the browser fired `hashchange` rather than reloading, and the page read the fragment once at
@@ -742,7 +742,7 @@ Three defects came out of the owner's first two attempts, and each is worth keep
    `downloads.php?moduleid=123#tune.mod` — the path is a script, the query is a number, and the
    filename is only in the fragment. **Not cosmetic:** four backends identify a format by its
    extension and were being handed a name with none.
-3. **And the phone's title did not travel.** The owner saw `lotus3_4.mod` where his phone said
+3. **And the phone's title did not travel.** The browser showed `lotus3_4.mod` where the phone said
    `L3_CD4-SpaceNinja`, because only the address was sent. The link carries `address<tab>title` now,
    and only when the title adds something — a Modland row whose title is its filename sends nothing
    extra, which is most of a real queue, so the 2,000-character measurement still holds.

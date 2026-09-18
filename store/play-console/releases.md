@@ -12,14 +12,21 @@ Closed testing. Round 12: the index stops depending on what this build can play.
 
 | | |
 | --- | --- |
-| Artifact | *`./scripts/build-bundle.sh`; fill in on upload* |
-| Size | |
-| SHA-256 | |
+| Artifact | `dist/protracktor-0.6.0-731.aab` |
+| Size | 19,046,727 bytes |
+| SHA-256 | `0aa47152c827e72e97a08f287941ff4b5384f4a70c34379abc9eebb6d0a60433` |
 | versionCode | 731 — `git rev-list --count HEAD`, not written by hand |
 | versionName | 0.6.0 |
-| Commit | *the commit `v0.6.0` points at* |
+| Commit | `15bc8d9` |
 | Tag | `v0.6.0` |
-| Built | |
+| Built | 2026-09-18 |
+
+**Signer**: the same upload key as 0.4.0 and 0.5.0 —
+`E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**Checked in the bundle rather than assumed**: versionCode 731, versionName 0.6.0,
+`com.przunk.protracktor`, minSdk 29, targetSdk 36, not debuggable, `allowBackup` false, the same six
+permissions as before, and every 64-bit library aligned to 16 KB pages.
 
 **Schema 14 → 16, and it is the first release that migrates a database anybody else is holding.**
 The migration adds `ext`, `pre` and `playable` to `catalogue_tracks`, rebuilds the two browse

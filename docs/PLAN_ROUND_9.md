@@ -3,13 +3,13 @@ SPDX-FileCopyrightText: 2026 Przunk
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# Round 9 — seven things the owner found, in the order they will be done
+# Round 9 — seven things found by testing, in the order they will be done
 
-*Reported by the owner on 2026-09-14, after testing the web player and the phone. Written down and
-ordered before any of it is built, at his request: "zapisz wszystkie problemy najpierw i posortuj
+*Reported on 2026-09-14, after testing the web player and the phone. Written down and
+ordered before any of it is built: every problem written down first and sorted
 sobie do realizacji". Branch: `feature/round-9`, all seven on it.*
 
-**All seven are built, in this order, one commit each.** Two carry a caveat the owner should know:
+**All seven are built, in this order, one commit each.** Two carry a caveat worth knowing:
 C42's file was never reproduced (the hole it exposed was real and is closed), and C43 had one cause
 removed but no reproduction either, so it stays watched with a log line to catch it.
 
@@ -19,7 +19,7 @@ The defects live in `docs/STATUS.md` (C41–C45) and the two new pieces of work 
 ## The order, and why it is this one
 
 1. **C41 — APK: "Add to playlist…" looks like it moves the track.** First because it is the one that
-   looks like losing music: the track is gone from the list he started in.
+   looks like losing music: the track is gone from the list it started in.
 2. **C42 — WEB: a file the engine refuses by throwing kills every later tune.** Second because one
    bad file ends the session until the tab is reloaded.
 3. **C44 — APK: the playlist list does not refresh its counts after an add.** Third because it is
@@ -36,9 +36,6 @@ The defects live in `docs/STATUS.md` (C41–C45) and the two new pieces of work 
 
 ### 1. C41 — "Add to playlist…" takes the track out of the list it was in
 
-*Owner: "add to playlist.. przenosi tracka … w liście źródłowej już tego tracka nie ma! a powinien
-być; ta funkcja powinna dodawać do innej playlisty nie zabierając tracka z aktualnej."*
-
 Read first: `PlaybackController.addToPlaylist(targetPlaylistId, tracks)` (around line 2879) — it
 reads the **target's** tracks, appends what is not there and calls `store.replaceTracks(target)`.
 **It does not touch the source**, so the disappearance comes from somewhere else on that journey:
@@ -50,7 +47,7 @@ test over the store rather than by eye.
 
 ### 2. C42 — one refused file and the engine is done for
 
-*Owner, from the browser console:* a Startrekker AM file, libopenmpt warning that external
+A Startrekker AM file, libopenmpt warning that external
 synthesiser instruments are not supported, then `uncaught exception: 1464664` out of
 `___cxa_throw` in `engine.mjs`, and after that **no tune plays at all**.
 
@@ -64,13 +61,11 @@ Done when: that file is refused with a sentence, and the tune after it plays.
 
 **Android had the same unguarded boundary** (`player_oboe.cpp`: `nativeOpen`, `nativeDescribe` and
 the rest called straight into a backend). There an escaping C++ exception ends the process rather
-than a session. It was not part of this item -- the owner reported the browser -- and it was done on
+than a session. It was not part of this item -- the report was about the browser -- and it was done on
 its own branch on 2026-09-15: sixteen JNI entry points and Oboe's audio callback, the last of which
 could never have been guarded from the boundary. `docs/STATUS.md` C42 has what was found.
 
 ### 3. C44 — the playlist list keeps stale counts
-
-*Owner: "dana lista w widoku playlist nie odświeża ilości tracków, dopóki się w nią nie wejdzie."*
 
 `PlayerUiState.playlists` is filled where the playlists are read (around line 781) and nothing
 re-reads it after `addToPlaylist(target, …)` writes. Refresh it there, on every path that changes
@@ -78,36 +73,23 @@ what a playlist holds.
 
 ### 4. A35 — the web's track menu has no "Add to playlist"
 
-*Owner: "3 kropki (ustawienia) tracka nie mają opcji add to playlist jak w APK -> ma działać tak
-samo jak w APK."* The page's row menu offers Select, Save the file, Copy a link, Share with
-Protracktor, More from this author, Information — and adding is only reachable by ticking rows
-first. The phone's row menu has "Add to playlist…" straight away, opening the picker for one track.
-Add it in the same place and with the same picker (`openAddTo([entry])`).
-
 ### 5. C45 — the position dot on the seek bar
-
-*Owner: "nieprzesuwalnego handla na pasku odtwarzania prawie nie widać (kropka, która wskazuje
-aktualny czas) — jest ciemna na ciemnym tle."* `ui/SeekBar.kt` draws it by hand rather than with
-`SliderDefaults.Thumb` (around line 110) and takes its colours around line 133. Make it read on a
-dark background, both while playing and while stopped.
 
 ### 6. C43 — no transport in the notification, sometimes
 
-*Owner: "czasem z jakiegoś powodu nie widzę paska odtwarzania w notification (słyszę jak muza gra
-ale tego playera nie widać)."* `PlaybackService` builds it with the platform builder and MediaStyle
+`PlaybackService` builds it with the platform builder and MediaStyle
 and calls `ServiceCompat.startForeground` (around line 212). **No reproduction yet**, so: read the
 paths that build and cancel it, look for the ones where playback starts without the service in the
-foreground, and add what is needed to tell the two apart in a log the owner can send. A guess with
+foreground, and add what is needed to tell the two apart in a log that can be sent. A guess with
 no evidence is worth less here than a way to catch it.
 
 ### 7. A36 — a gear beside shuffle
 
-*Owner: "możesz dodać koło zębate, które otworzy ustawienia WEB po lewej stronie od shuffle (w
-przyszłości użyjemy)."* A gear to the **left of shuffle** in the dock, opening a settings panel of
+A gear to the **left of shuffle** in the dock, opening a settings panel of
 the page's own. It may hold little at first — what is already there and worth showing is the
-storage line and the engine's backends — but the way in is what he asked for.
+storage line and the engine's backends — but the way in is what was asked for.
 
 ## The rules for all of it
 
 English in the repository, Polish in conversation. One branch, `feature/round-9`, a commit per
-piece. Nothing merges until he has tested it. Handover is a release APK and a web bundle.
+piece. Nothing merges until it has been tested on a device. Handover is a release APK and a web bundle.

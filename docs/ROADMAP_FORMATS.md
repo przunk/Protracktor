@@ -1,6 +1,6 @@
 # What we cannot play yet, in the order worth doing it
 
-*Written 2026-09-16, when the owner asked for a roadmap over the gaps rather than another list of
+*Written 2026-09-16, when what was asked for was a roadmap over the gaps rather than another list of
 them. `docs/PLAN_FORMATS.md` is the history and the measurements; this is what to do next and what
 each thing costs.*
 
@@ -47,7 +47,7 @@ another. The migration's `playable DEFAULT 1` is what keeps such an index workin
 holds only playable rows by construction, and defaulting to 0 would have emptied Browse.
 
 The class of defect it removes is worth as much as the toll. The fingerprint existed because an
-index built by an older decoder set is missing files **and looks current** — the owner lost 60,572
+index built by an older decoder set is missing files **and looks current** — one such index cost 60,572
 C64 tunes to exactly that. An index that holds everything cannot be wrong about what this build
 plays; it can only be out of date about the archive, which is a different and much more visible
 thing.
@@ -157,7 +157,7 @@ before writing a format off.**
 
 **The trap, if any of the three is ever done.** All three names are claimed *today* for the files
 that do work, so a new decoder is tried **alongside** the existing one, never instead of it — and
-`openBackend`'s first-refusal-wins rule (`docs/STATUS.md` C55) decides which reason the owner is
+`openBackend`'s first-refusal-wins rule (`docs/STATUS.md` C55) decides which reason the listener is
 shown when both refuse.
 
 ## Step 5 — the two that are not worth it, for different reasons

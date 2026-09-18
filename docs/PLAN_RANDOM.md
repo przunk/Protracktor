@@ -5,8 +5,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Random, as a view rather than a scrim
 
-Agreed with the owner on 2026-09-10, in conversation, before any of it was built. **The APK first,
-because the view has somewhere to stand there, and the web takes the same shape after** — he asked
+Agreed on 2026-09-10, before any of it was built. **The APK first,
+because the view has somewhere to stand there, and the web takes the same shape after** — asked
 for the two to be as alike as they can be, so the design is written once for both.
 
 **This is the design and the reasoning. What the two runtimes actually do is
@@ -31,7 +31,7 @@ own: a file another app handed over, and a search result playing.)
 The scope was chosen by **long-pressing** the Random row in Browse. Nothing on screen advertised
 this. `a11y_choose_random_scope` existed, so a screen reader announced it and an eye did not.
 
-What the owner already rated as working, and which none of this changed: press the dice and music
+What already worked, and which none of this changed: press the dice and music
 plays; the scope can be narrowed; forward and back work; the plus keeps a tune; the file's
 information is there; the playlist gets out of the way.
 
@@ -51,25 +51,25 @@ session. One track played, one row. Five played, five rows.
 - **A way back to the playlist in the corner.** The scrim put it in the middle with a label because
   there was nothing else on screen; with a list there, the corner is right.
 - **Rows carry the ordinary track actions, including delete.** No reorder — the order is the dice's,
-  not yours, so there is nothing to express. Delete stays because *"jak jest to spoko, nie trzeba
-  używać; jak nie ma, to nie można używać, co jest gorsze"* — and pruning the record before adding
-  the rest to a playlist is a real use.
+  not yours, so there is nothing to express. Delete stays on the principle that an action
+  nobody has to use costs nothing, and one that is missing cannot be used at all — and pruning the
+  record before adding the rest to a playlist is a real use.
 - **Entering plays.** No second press. The list arrives empty and immediately has one row in it.
 
 ## What was decided, and what it cost to decide
 
 **Entering afresh starts a new list.** Not resumed. The argument against — you go to check the
-playlist, come back, and the record of the last quarter hour is gone — was heard and answered:
-*"odtworzone są w historii, więc nic nie ginie."* Which is the same answer as the next point.
+playlist, come back, and the record of the last quarter hour is gone — was heard and answered: everything
+played is in History, so nothing is lost. Which is the same answer as the next point.
 
-**The Random view is the session's history, not a second thing like it.** *"Widok random z danej
-sesji pokazuje… historię sesji random, więc tak, to jest to samo."* One mechanism serves this and
+**The Random view is the session's history, not a second thing like it.** The view of a session
+*is* that session's history. One mechanism serves this and
 `PLAN_WEB_LIBRARY.md` S6, and the only differences either of us could name are which actions a row
 offers — no reorder here — and whatever a future one adds. **Building two would have been waste,
 and the plan had two in it.**
 
-**The list is not kept between runs.** It would grow without end and there is a history for that:
-*"niech sobie z historii ludzie czytają, ja tego nie potrzebuję."*
+**The list is not kept between runs.** It would grow without end, and History is what exists for
+reading back over sessions.
 
 **The scope is kept between runs — and only because this design makes it visible.** It used not to
 be, for a reason worth keeping because it is now spent: *"a scope that outlives the session is an
@@ -96,14 +96,14 @@ click rather than after it. Free on the phone, deliberate on the web.
 
 **There is no ceiling on the list, and one day there will have to be.** `randomHistory` has never had
 one because nobody has ever looked at it. A session running for an hour is hundreds of rows held in
-memory and unscrollable in practice. *"Na razie brak sufitu nie jest problemem, ale pewnie będzie
-kiedyś"* — recorded here as important rather than urgent, and it is the same question for the
+memory and unscrollable in practice. No ceiling is not a problem yet and probably will be one
+day — recorded here as important rather than urgent, and it is the same question for the
 history in `PLAN_WEB_LIBRARY.md` S6, since they are the same list.
 
 ## Where this ended up
 
 Built on the phone over builds 519–532 and on the page as `docs/PLAN_WEB_LIBRARY.md` S5, and then
 twice more: the **digression** (A41), where the dice waits while you browse an author and Back
-returns to it paused, and the round of corrections the owner's testing produced on 14–15 September,
+returns to it paused, and the round of corrections that testing produced on 14–15 September,
 which `docs/STATUS.md` C49–C54 and `docs/SPEC_RANDOM.md` §3 record. **The behaviour both runtimes
 owe each other is the spec; this file is why it is shaped that way.**
