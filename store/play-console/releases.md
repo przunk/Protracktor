@@ -6,6 +6,30 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 0.6.0 — versionCode 723
+
+Closed testing. Round 12: the index stops depending on what this build can play.
+
+| | |
+| --- | --- |
+| Artifact | *`./scripts/build-bundle.sh`; fill in on upload* |
+| Size | |
+| SHA-256 | |
+| versionCode | 723 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 0.6.0 |
+| Commit | *the commit `v0.6.0` points at* |
+| Tag | `v0.6.0` |
+| Built | |
+
+**Schema 14 → 16, and it is the first release that migrates a database anybody else is holding.**
+The migration adds `ext`, `pre` and `playable` to `catalogue_tracks`, rebuilds the two browse
+indexes as partial ones, and backfills `archive_count` with a `COUNT(*)` per catalogue — which on a
+full Modland index is a few seconds of first launch. The release notes say so in both languages.
+
+**Nothing new is shipped inside the APK**: round 12 touched one host probe (`native/probe/zxtune`,
+never packaged) and no dependency. `docs/LICENSES.md` is unchanged, and UADE is still a
+recommendation awaiting a decision (`docs/BACKLOG.md` A44), not code.
+
 ## 0.5.0 — versionCode 702
 
 Closed testing, the second build. What the first round of testers found.
