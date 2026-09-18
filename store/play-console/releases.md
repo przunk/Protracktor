@@ -6,7 +6,7 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
-## 0.6.0 — versionCode 723
+## 0.6.0 — versionCode 725
 
 Closed testing. Round 12: the index stops depending on what this build can play.
 
@@ -15,7 +15,7 @@ Closed testing. Round 12: the index stops depending on what this build can play.
 | Artifact | *`./scripts/build-bundle.sh`; fill in on upload* |
 | Size | |
 | SHA-256 | |
-| versionCode | 723 — `git rev-list --count HEAD`, not written by hand |
+| versionCode | 725 — `git rev-list --count HEAD`, not written by hand |
 | versionName | 0.6.0 |
 | Commit | *the commit `v0.6.0` points at* |
 | Tag | `v0.6.0` |
