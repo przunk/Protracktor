@@ -146,6 +146,16 @@ if [ -f web/vendor/engine.mjs ]; then
     echo "🔊 $engine_checks engine checks passed"
 fi
 
+# The icons, both players' sets, walked rather than looked at. A path whose shape depends on where
+# the pen sits after `z` draws correctly here and wrongly on somebody else's phone
+# (`docs/STATUS.md` C66), which is not a thing an eye or a screenshot will catch.
+if ! icon_output=$(node scripts/check-icons.mjs 2>&1); then
+    echo "❌ Icon checks failed:"
+    echo "$icon_output" | sed 's/^/   /'
+    exit 1
+fi
+echo "$icon_output" | tail -1
+
 # The server, over a real socket. Needs no npm -- it is node and the standard library -- and it is
 # separate from the page checks because the bug it exists for (`docs/STATUS.md` C29) lives in the
 # address a file is served at, which jsdom never sees.

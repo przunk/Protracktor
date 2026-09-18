@@ -460,6 +460,35 @@ It also needed the controller to read the catalogue summaries and the granted fo
 start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
 were loaded only when Browse opened.
 
+### C66. ~~The previous-track button drew a wedge on somebody else's phone~~ — FIXED 2026-09-18
+
+*A tester's screenshots of 0.5.0, 2026-09-18: the control left of play drawn as a bar and a
+half-filled wedge. Correct on the owner's phone, on every emulator here, and in every browser.*
+
+**SVG says the current point after a close returns to the start of the subpath that was closed.
+Some renderers leave it at the last point drawn.** The two readings agree for every circle and
+every loop that ends where it began -- which is most of an icon set, and why nothing else looked
+wrong -- and disagree the moment a subpath ends somewhere else.
+
+`SkipPrevious` was `M6 6h2v12H6zm3.5 6l8.5 6V6z`. The bar begins at (6,6) and ends at (6,18), so on
+his phone the triangle started twelve units lower and drew the wedge he photographed.
+
+**Five more were the same shape**, found by walking every path in both players rather than by
+looking at them: `Filter` on the phone and on the page, the page's own previous and next, and the
+page's pause glyph. Browsers read the spec correctly, so those were right today and fragile
+tomorrow.
+
+Fixed by moving absolutely after a close: `zM` means one thing everywhere, `zm` means two.
+
+`scripts/check-icons.mjs` walks all 108 paths in `PlayerIcons.kt`, `web/src/app.js` and
+`web/src/index.html` -- joining the fragments first, because one of the fragile ones hid its `z` at
+the end of one string and its `m` at the start of the next -- and fails on any path whose shape
+depends on the reading. It fails against the old `SkipPrevious`.
+
+**Worth remembering beyond icons:** this is the first defect here that no device in this workshop
+could reproduce. It was found by making the rule explicit and checking it, which is the only way
+"works on mine" ever ends.
+
 ### C65. ~~The button was four pixels too short for its own label~~ — FIXED 2026-09-17
 
 *Owner, 2026-09-17, on a build that was supposed to have fixed C62: "settings obcina na dole
