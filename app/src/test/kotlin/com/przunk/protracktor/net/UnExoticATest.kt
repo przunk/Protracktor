@@ -25,7 +25,7 @@ class UnExoticATest {
     ).joinToString("\t")
 
     private fun parse(text: String) =
-        UnExoticA.parseIndex(text.toByteArray(), keep = { true })
+        UnExoticA.parseIndex(text.toByteArray())
 
     @Test
     fun `an eleven column row becomes a track and a four column row does not`() {
@@ -67,12 +67,12 @@ class UnExoticATest {
     }
 
     @Test
-    fun `the filter is offered the member name, not the path`() {
-        // `keep` decides whether a backend could play it, and it judges by extension or prefix.
-        // Handing it the whole path would have it judging "Game" and dropping everything.
-        val seen = mutableListOf<String>()
-        UnExoticA.parseIndex(row.toByteArray()) { name -> seen += name; false }
-        assertEquals(listOf("mod.ingame_2"), seen)
+    fun `a row is titled by its member name, not by its path`() {
+        // This used to be about the `keep` filter, which judged by extension or prefix and would
+        // have judged "Game" if handed the path. The filter is gone -- an index keeps every row now
+        // (`docs/ROADMAP_FORMATS.md` step 0) -- and the property it protected matters more than
+        // before: `ext` and `pre` are computed from this title, and they decide what is offered.
+        assertEquals(listOf("mod.ingame_2"), parse(row).map { it.title })
     }
 
     @Test

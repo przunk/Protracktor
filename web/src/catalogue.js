@@ -149,27 +149,6 @@ export function indexFingerprint(engineFingerprint, table) {
   return `${engineFingerprint}|names:${(hash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
-/**
- * The index lines worth keeping, and a count of what was left out and why.
- *
- * [total] is every tune Modland lists; [phoneOnly] is the part the phone keeps and this engine
- * cannot open. Both are what lets Browse say plainly how much of Modland is here and why the rest
- * is not, which is the condition on which anything is left out at all.
- */
-export function filterIndex(text, keep, phone = () => true) {
-  const kept = [];
-  let total = 0;
-  let phoneOnly = 0;
-  for (const line of text.split('\n')) {
-    const tab = line.indexOf('\t');
-    if (tab <= 0) continue;
-    total++;
-    const fileName = line.slice(line.lastIndexOf('/') + 1);
-    if (keep(fileName)) kept.push(line);
-    else if (phone(fileName)) phoneOnly++;
-  }
-  return { text: kept.join('\n'), total, phoneOnly };
-}
 
 /** The shard a title belongs to. Lower-cased and padded, so every title has exactly one. */
 function shardOf(title) { return title.toLowerCase().slice(0, 2).padEnd(2, ' '); }
@@ -232,11 +211,12 @@ async function unzipOnly(bytes) {
  * flushing on change would mean merging, and merging 3,727 records to save 55 MB is the wrong
  * trade on a machine that offered 473 GB.
  */
-export function toRecords(text, source = MODLAND) {
+export function toRecords(text, source = MODLAND, isPlayable = () => true) {
   const key = keyFor(source);
   const buckets = new Map();
   const formats = new Map();
   let tracks = 0;
+  let total = 0;
 
   for (const line of text.split('\n')) {
     const tab = line.indexOf('\t');
@@ -256,11 +236,22 @@ export function toRecords(text, source = MODLAND) {
     const bucket = `${format}/${author}`;
     let held = buckets.get(bucket);
     if (!held) { held = []; buckets.set(bucket, held); }
-    held.push({ t: title, s: size });
-    formats.set(format, (formats.get(format) ?? 0) + 1);
-    tracks++;
+    // **Every row the archive lists, with the verdict beside it** (`docs/ROADMAP_FORMATS.md` step
+    // 0). The index used to keep only what this build could open, which made it a function of the
+    // format list -- so adding one format meant fetching the whole index again, on every device.
+    const p = isPlayable(title) ? 1 : 0;
+    held.push({ t: title, s: size, p });
+    total++;
+    if (p) {
+      formats.set(format, (formats.get(format) ?? 0) + 1);
+      tracks++;
+    }
   }
 
+  // **The buckets hold everything; everything derived from them holds only what plays.** That is
+  // the whole shape of this: browsing, searching and the dice read the derived records and never
+  // have to think about it, and a format added later is a local rebuild of these from buckets that
+  // are already here (`refreshPlayable`) rather than a download.
   const records = [];
   const authorsByFormat = new Map();
   for (const [bucket, held] of buckets) {
@@ -268,9 +259,13 @@ export function toRecords(text, source = MODLAND) {
     const format = bucket.slice(0, slash);
     const author = bucket.slice(slash + 1);
     records.push({ key: key.tracks(format, author), tracks: held });
+    const count = held.reduce((n, entry) => n + (entry.p ? 1 : 0), 0);
+    // An author with nothing playable is not an author to offer. The bucket stays; the listing
+    // does not mention it.
+    if (count === 0) continue;
     let authors = authorsByFormat.get(format);
     if (!authors) { authors = []; authorsByFormat.set(format, authors); }
-    authors.push({ name: author, count: held.length });
+    authors.push({ name: author, count });
   }
 
   // Titles, sharded. Each entry carries what a hit needs to become playable and to say where it
@@ -280,7 +275,8 @@ export function toRecords(text, source = MODLAND) {
     const slash = bucket.indexOf('/');
     const format = bucket.slice(0, slash);
     const author = bucket.slice(slash + 1);
-    for (const { t } of held) {
+    for (const { t, p } of held) {
+      if (!p) continue;
       const shard = shardOf(t);
       let entries = shards.get(shard);
       if (!entries) { entries = []; shards.set(shard, entries); }
@@ -300,7 +296,7 @@ export function toRecords(text, source = MODLAND) {
       .sort((a, b) => collator.compare(a.name, b.name)),
   });
 
-  return { records, tracks, buckets: buckets.size, formats: formats.size };
+  return { records, tracks, total, buckets: buckets.size, formats: formats.size };
 }
 
 /**
@@ -312,7 +308,7 @@ export function toRecords(text, source = MODLAND) {
  * can be 60,572 C64 tunes with nothing on screen to say why.
  */
 export async function downloadModland({
-  fingerprint = '', keep = () => true, phone = () => true, onProgress = null,
+  fingerprint = '', isPlayable = () => true, onProgress = null,
 } = {}) {
   onProgress?.({ stage: 'fetching' });
   const response = await fetch(INDEX_URL);
@@ -323,17 +319,19 @@ export async function downloadModland({
   const text = await unzipOnly(bytes);
 
   onProgress?.({ stage: 'sorting' });
-  const { text: kept, total, phoneOnly } = filterIndex(text, keep, phone);
-  const { records, tracks, buckets, formats } = toRecords(kept);
+  const { records, tracks, total, buckets, formats } = toRecords(text, MODLAND, isPlayable);
   const key = keyFor(MODLAND);
 
   await catalogue.clear(`${MODLAND}:`);
-  await catalogue.putAll(records, 2000, (done, total) => onProgress?.({ stage: 'storing', done, total }));
+  await catalogue.putAll(records, 2000, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
   await catalogue.putAll([{
-    key: key.meta, tracks, total, phoneOnly, buckets, formats, fingerprint, at: Date.now(),
+    // **`complete`, the way the phone's `catalogues` row records it.** An index written before step
+    // 0 holds only what an older build accepted, so a format added afterwards genuinely is missing
+    // rows here and no local pass can supply them. One written since holds the archive.
+    key: key.meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
   }]);
-  onProgress?.({ stage: 'done', tracks, total, phoneOnly, buckets, formats });
-  return { tracks, total, phoneOnly, buckets, formats };
+  onProgress?.({ stage: 'done', tracks, total, buckets, formats });
+  return { tracks, total, buckets, formats };
 }
 
 /**
@@ -355,7 +353,7 @@ export async function downloadModland({
  * size comes from a HEAD instead, which needs no asking, and the tail is then an ordinary range. A
  * browser too old to safelist even that gets the whole archive, which is slow and always allowed.
  */
-export async function downloadAsma({ fingerprint = '', keep = () => true, onProgress = null } = {}) {
+export async function downloadAsma({ fingerprint = '', isPlayable = () => true, onProgress = null } = {}) {
   onProgress?.({ stage: 'fetching the list' });
   // The end record is 22 bytes and may be followed by a comment of up to 64 KB.
   let tail;
@@ -401,12 +399,11 @@ export async function downloadAsma({ fingerprint = '', keep = () => true, onProg
   }
 
   onProgress?.({ stage: 'sorting' });
-  const { text: kept, total } = filterIndex(lines.join('\n'), keep);
-  const { records, tracks, buckets, formats } = toRecords(kept, ASMA);
+  const { records, tracks, total, buckets, formats } = toRecords(lines.join('\n'), ASMA, isPlayable);
   await catalogue.clear(`${ASMA}:`);
   await catalogue.putAll(records, 2000, (done, all) => onProgress?.({ stage: 'storing', done, total: all }));
   await catalogue.putAll([{
-    key: keyFor(ASMA).meta, tracks, total, phoneOnly: 0, buckets, formats, fingerprint, at: Date.now(),
+    key: keyFor(ASMA).meta, tracks, total, buckets, formats, fingerprint, complete: true, at: Date.now(),
   }]);
   onProgress?.({ stage: 'done', tracks, total, buckets, formats });
   return { tracks, total, buckets, formats };
@@ -539,13 +536,108 @@ export async function drawTrack(table, random = Math.random) {
 /** One bucket, as tracks the queue understands. */
 export async function tracksIn(format, author, source = MODLAND) {
   const found = await catalogue.get(keyFor(source).tracks(format, author));
-  return (found?.tracks ?? []).map(({ t, s }) => ({
+  // The bucket holds the folder as the archive has it; this is a list to play from. An index
+  // written before step 0 has no `p` at all, and every row in it was playable by construction —
+  // hence `!== 0` rather than a truth test.
+  return (found?.tracks ?? []).filter(({ p }) => p !== 0).map(({ t, s }) => ({
     url: urlFor(format, author, t, source),
     name: t,
     file: t,
     meta: metaFor(source, format, author),
     size: s,
   }));
+}
+
+/**
+ * Re-decides what a stored index offers, without fetching anything.
+ *
+ * **The page's half of `docs/ROADMAP_FORMATS.md` step 0**, and the phone's `refreshPlayable` is the
+ * other. A stored index holds every row the archive lists, so a format this build has learnt since
+ * the download is a question the stored rows can already answer. It used to mean fetching Modland's
+ * 5.76 MB again, on every device, once per format added.
+ *
+ * The buckets are the truth and everything else is derived from them — the searchable title shards,
+ * the author lists, the format counts — so this rewrites the derived records rather than trying to
+ * patch them. That is also why the buckets carry `p` and the derived records do not need to.
+ *
+ * **Does nothing to an index written before step 0**, and cannot: those hold only the rows an older
+ * build accepted, and no local pass can supply what was never downloaded. They say so
+ * (`complete`), and Browse offers them the one download that ends this for good.
+ *
+ * @returns how many tunes are offered afterwards, or null when there was nothing to do.
+ */
+export async function refreshPlayable(source = MODLAND, isPlayable = () => true) {
+  const key = keyFor(source);
+  const held = await catalogue.get(key.meta);
+  if (!held?.complete) return null;
+
+  const buckets = await catalogue.byPrefix(`${source}:tracks:`);
+  if (buckets.length === 0) return null;
+
+  // Rebuilt from the buckets, exactly as `toRecords` derives them, so the two cannot drift: one
+  // line of text becomes one bucket entry becomes one row of everything else.
+  const records = [];
+  const authorsByFormat = new Map();
+  const formats = new Map();
+  const shards = new Map();
+  let tracks = 0;
+  let total = 0;
+
+  for (const bucket of buckets) {
+    const [format, ...rest] = bucket.key.slice(`${source}:tracks:`.length).split("/");
+    const author = rest.join('/');
+    let count = 0;
+    for (const entry of bucket.tracks ?? []) {
+      entry.p = isPlayable(entry.t) ? 1 : 0;
+      total++;
+      if (!entry.p) continue;
+      count++;
+      tracks++;
+      formats.set(format, (formats.get(format) ?? 0) + 1);
+      const shard = shardOf(entry.t);
+      let entries = shards.get(shard);
+      if (!entries) { entries = []; shards.set(shard, entries); }
+      entries.push([entry.t, format, author]);
+    }
+    records.push({ key: bucket.key, tracks: bucket.tracks });
+    if (count === 0) continue;
+    let authors = authorsByFormat.get(format);
+    if (!authors) { authors = []; authorsByFormat.set(format, authors); }
+    authors.push({ name: author, count });
+  }
+
+  const collator = new Intl.Collator(undefined, { sensitivity: 'base' });
+  for (const [shard, entries] of shards) records.push({ key: key.titles(shard), entries });
+  for (const [format, authors] of authorsByFormat) {
+    authors.sort((a, b) => collator.compare(a.name, b.name));
+    records.push({ key: key.authors(format), authors });
+  }
+  records.push({
+    key: key.formats,
+    formats: [...formats].map(([name, count]) => ({ name, count }))
+      .sort((a, b) => collator.compare(a.name, b.name)),
+  });
+
+  // **The old derived records go first.** A format removed leaves a title shard and an author list
+  // that this pass never rebuilds, and writing over the survivors would leave the rest standing --
+  // tunes findable in search that Browse no longer lists.
+  await catalogue.clear(`${source}:titles:`);
+  await catalogue.clear(`${source}:authors:`);
+  await catalogue.putAll(records, 2000);
+  await catalogue.putAll([{ ...held, tracks, total, formats: formats.size, at: Date.now() }]);
+  return tracks;
+}
+
+/**
+ * Records which format list judged this index, so the judging is not repeated every time.
+ *
+ * Separate from `refreshPlayable` because the two answer to different things: that one rebuilds
+ * what is offered, this one remembers that it was rebuilt.
+ */
+export async function stampIndex(source = MODLAND, fingerprint = '') {
+  const held = await catalogue.get(keyFor(source).meta);
+  if (!held) return;
+  await catalogue.putAll([{ ...held, fingerprint }]);
 }
 
 /** Where a tune lives, as the row's second line says it: `Modland/Protracker/4-Mat`. */

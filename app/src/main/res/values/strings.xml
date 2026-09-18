@@ -58,6 +58,7 @@
     <string name="storage_cache">Fetched music</string>
     <string name="storage_cache_detail">%1$d MB of %2$d MB, oldest deleted first</string>
     <string name="storage_index">%1$s index</string>
+    <string name="catalogue_playable_of">%1$,d of %2$,d playable</string>
     <string name="catalogue_count_and_size">%1$s · %2$d MB on this phone</string>
     <string name="storage_index_and_archive">%1$s, including a %2$d MB archive</string>
     <string name="storage_megabytes">%1$d MB</string>
@@ -347,9 +348,15 @@
     <string name="notice_index_deleted">Index deleted. Download it again any time.</string>
     <string name="notice_index_download_failed">Could not download the %1$s index.</string>
     <string name="notice_archive_store_failed">Could not store the %1$s archive.</string>
-    <plurals name="notice_indexed_tracks">
-        <item quantity="one">Indexed %1$d track from %2$s.</item>
-        <item quantity="other">Indexed %1$d tracks from %2$s.</item>
+    <plurals name="notice_indexed_all">
+        <item quantity="one">Indexed the one track %2$s lists.</item>
+        <item quantity="other">Indexed all %1$d tracks from %2$s.</item>
+    </plurals>
+    <!-- Two numbers on purpose: the index keeps everything the archive lists, and this build plays
+         some of it. See docs/ROADMAP_FORMATS.md step 0. -->
+    <plurals name="notice_indexed_partly">
+        <item quantity="one">Indexed %1$d track from %2$s; %3$d of them play on this build. The rest stay indexed, so a format added later needs no new download.</item>
+        <item quantity="other">Indexed %1$d tracks from %2$s; %3$d of them play on this build. The rest stay indexed, so a format added later needs no new download.</item>
     </plurals>
     <string name="notice_song_lengths_failed">Could not download the song lengths.</string>
     <string name="notice_song_lengths_empty">The song length database was empty.</string>

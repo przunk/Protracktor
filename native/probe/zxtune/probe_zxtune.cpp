@@ -53,6 +53,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -138,8 +139,14 @@ int main(int argc, char** argv)
         auto props = Parameters::Container::Create();
         found = factory->CreateModule(*props, *data, props);
       }
-      catch (const std::exception&)
+      catch (const std::exception& e)
       {
+        // **Said out loud when asked**, because "reject:load" is every refusal wearing one face
+        // and the question is always which decoder objected to what. `PROBE_ZXTUNE_WHY=1`.
+        if (std::getenv("PROBE_ZXTUNE_WHY"))
+        {
+          std::cerr << "  " << name << " refused: " << e.what() << '\n';
+        }
       }
     }
     else

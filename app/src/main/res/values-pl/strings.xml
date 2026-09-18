@@ -216,6 +216,7 @@
     <string name="storage_cache">Pobrana muzyka</string>
     <string name="storage_cache_detail">%1$d MB z %2$d MB, najstarsze usuwane najpierw</string>
     <string name="storage_index">Indeks %1$s</string>
+    <string name="catalogue_playable_of">%1$,d z %2$,d do zagrania</string>
     <string name="catalogue_count_and_size">%1$s · %2$d MB na telefonie</string>
     <string name="storage_index_and_archive">%1$s, w tym archiwum %2$d MB</string>
     <string name="storage_megabytes">%1$d MB</string>
@@ -362,11 +363,17 @@
     <string name="notice_index_deleted">Indeks usunięty. Możesz go pobrać ponownie w każdej chwili.</string>
     <string name="notice_index_download_failed">Nie udało się pobrać indeksu %1$s.</string>
     <string name="notice_archive_store_failed">Nie udało się zapisać archiwum %1$s.</string>
-    <plurals name="notice_indexed_tracks">
-        <item quantity="one">Zaindeksowano %1$d utwór z %2$s.</item>
-        <item quantity="few">Zaindeksowano %1$d utwory z %2$s.</item>
-        <item quantity="many">Zaindeksowano %1$d utworów z %2$s.</item>
-        <item quantity="other">Zaindeksowano %1$d utworu z %2$s.</item>
+    <plurals name="notice_indexed_all">
+        <item quantity="one">Zaindeksowano jedyny utwór, jaki wymienia %2$s.</item>
+        <item quantity="few">Zaindeksowano wszystkie %1$d utwory z %2$s.</item>
+        <item quantity="many">Zaindeksowano wszystkie %1$d utworów z %2$s.</item>
+        <item quantity="other">Zaindeksowano wszystkie %1$d utworu z %2$s.</item>
+    </plurals>
+    <plurals name="notice_indexed_partly">
+        <item quantity="one">Zaindeksowano %1$d utwór z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
+        <item quantity="few">Zaindeksowano %1$d utwory z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
+        <item quantity="many">Zaindeksowano %1$d utworów z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
+        <item quantity="other">Zaindeksowano %1$d utworu z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
     </plurals>
     <string name="notice_song_lengths_failed">Nie udało się pobrać długości utworów.</string>
     <string name="notice_song_lengths_empty">Baza długości utworów była pusta.</string>

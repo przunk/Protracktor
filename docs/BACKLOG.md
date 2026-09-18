@@ -15,6 +15,64 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A48. Two seconds pass before the playlist appears — **measured, one cause fixed 2026-09-18**
+
+*Owner, 2026-09-17, on the round-12 build: "po uruchomieniu przez 5 sekund miałem pustą listę z
+prośbą o pobranie indeksu, ale czekając te 5 s pojawiła się lista. przy drugim odpaleniu to trwało
+2s."*
+
+**The wrong screen was a defect and is fixed** (the empty playlist now says nothing until it knows
+what it is talking about). **The two seconds are not fixed, and this is that.**
+
+The five seconds on the first run are explained: that launch ran the migration from schema 14 to 16,
+and `CATALOGUE_ARCHIVE_COUNT_V16` is a `COUNT(*)` per catalogue over `catalogue_tracks` — half a
+million rows on his phone. One-off, and the price of the round's own change.
+
+The two seconds after that are not explained, and are what a person meets every time. Candidates,
+in the order worth measuring:
+
+- **`restore()`** reads the playlist and every track in it. A few hundred rows, joined and turned
+  into `TrackRef`s on the main dispatcher's turn.
+- **`pruneUnknownCatalogues()`** at start-up: a delete against a table of half a million rows, and
+  the only one of these that writes.
+- **`enforceBudget()`** walks the fetched-file cache directory.
+- **The database is 112 MB** and the first query after an upgrade reads cold pages.
+- **`summaries()` and `grantedFolders()`**, added for the empty screen's question — small, but they
+  are now on the path and should be ruled in or out rather than assumed innocent.
+
+### What the measurement said
+
+Built a `catalogue_tracks` of **516,000 rows** on this machine and timed the launch path against it.
+Desktop SQLite, so these are a floor; a phone's storage is several times slower.
+
+| | |
+| --- | --- |
+| `pruneUnknownCatalogues`, the delete over `catalogue_tracks` | **55.6 ms** |
+| the same against the `catalogues` table | 0.0 ms |
+| `summaries()` | 0.0 ms |
+| asking *whether* anything is stale, from `catalogues` | **0.0 ms** |
+| the v16 `archive_count` backfill, which ran once | 27.7 ms |
+
+**`catalogue_id NOT IN (…)` cannot use an index.** A negation indexes nothing, and since v15 the two
+browse indexes are partial (`WHERE playable = 1`), so they could not serve it even if it were
+positive. `EXPLAIN QUERY PLAN` says `SCAN catalogue_tracks`: half a million rows, **inside a write
+transaction**, on the one connection every other read at launch is queueing behind — `restore()`
+and `summaries()` both wait for it.
+
+**Fixed:** ask the `catalogues` table first, which is one row per catalogue and answers in no
+measurable time, and do the delete only when there is something to delete — which is almost never.
+`LaunchDoesNotScanTheIndexTest` holds it there as a query plan rather than a stopwatch, so it means
+the same thing on any machine.
+
+**Also fixed, while reading:** `restore()` asked `store.playlists()` twice.
+
+### What is left
+
+The rest of the two seconds is unaccounted for and the remaining candidates are unchanged:
+`tracksIn` for a long playlist, `enforceBudget()` walking the cache directory, and cold pages in a
+112 MB database. **Do not guess at those either** — the next step is a timing log around each, read
+once on a phone.
+
 ## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
 
 *Owner, 2026-09-17: opening `Zalza/akes lekhorna.mod` shows the title as* **"�kes lekh�rna (za)"**,
@@ -136,6 +194,44 @@ Two things to settle when it is picked up:
 - **What the web does**, since it offers the same jump from the same two places
   (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
   differ — A43 is in the same corner of the same screen and the two may as well be one branch.
+
+## A44. UADE's process model — **the owner's to confirm, recommended 2026-09-17**
+
+Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
+guess it. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
+licence (`players/` downloaded from the page upstream publishes for it, never shipped), and the
+song database it also needs (`conf/song.conf`, GPL-2-or-later — **not** `conf/songdb` beside it,
+which is CC BY-NC-SA and cannot ship in a store app).
+
+**The recommendation is fork+exec**, with `uadecore` inside `lib/<abi>/`, and it is a recommendation
+rather than a preference because it was measured. The alternative — running `uadecore` as a thread
+in our own process, where "the seam is one function" — founders on `uade.c:476`:
+
+```c
+f = lookup_amiga_file_cache(nameptr);
+if (f == NULL) {
+        uadecore_send_debug("load: request error: %s", nameptr);
+        exit(1);
+}
+```
+
+That fires when the **emulated Amiga program asks for a file that is not there** — a replay routine
+wanting a sample that a damaged module does not carry, which is the same population of files that
+produced C42 and C55. `exit()` is not an exception, so the guard on the engine boundary catches
+nothing and the app simply disappears. Forty of the 51 exits are in that one command loop.
+
+**What confirming it costs, so the trade is visible:**
+
+| | |
+| --- | --- |
+| APK | +1.8 MB — `uadecore` 1.6 MB, `libuade` 0.17 MB |
+| the browser | **cannot have UADE at all**: `fork` and `exec` do not exist in WebAssembly |
+| so | ~29,000 tunes the phone plays and the page does not, which Browse must say out loud |
+| the alternative | patching 51 exits, which is forking a library `docs/ARCHITECTURE.md` §3 says we do not fork |
+
+**Not blocked on anything else.** Say yes and the work is the integration; say no and it is the same
+integration with a fork of UADE in front of it. `docs/PLAN_FORMATS.md` has the full reading.
+
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
 

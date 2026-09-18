@@ -105,7 +105,7 @@ object UnExoticA : Catalogue(
      * Columns used: 6 is the module format, 8 the uncompressed size, 11 the path. The rest are a
      * hash, subsong numbering, song lengths and checksums.
      */
-    override fun parseIndex(bytes: ByteArray, keep: (String) -> Boolean): List<CatalogueEntry> {
+    override fun parseIndex(bytes: ByteArray): List<CatalogueEntry> {
         val entries = ArrayList<CatalogueEntry>(9000)
         bytes.toString(Charsets.UTF_8).lineSequence().forEach { line ->
             val columns = line.split('\t')
@@ -114,7 +114,6 @@ object UnExoticA : Catalogue(
             if (!path.contains(".lha/")) return@forEach
 
             val title = path.substringAfterLast('/')
-            if (!keep(title)) return@forEach
 
             entries += CatalogueEntry(
                 path = path,

@@ -304,6 +304,17 @@ data class BrowseState(
     val indexing: Map<String, String> = emptyMap(),
     /** Non-null while a folder is being scanned: files probed so far, and how many there are. */
     val scanProgress: Pair<Int, Int>? = null,
+    /**
+     * True once the app has read what this phone holds: the catalogue summaries and the folders.
+     *
+     * **Nothing may be concluded from an empty [catalogues] before this is true.** Both are read
+     * from the database after launch, so for the first moment of every session they are empty --
+     * and a screen that asks "is anything indexed?" gets "no" from a question that has not been
+     * answered yet. That showed as an offer to download an index, on a phone with half a million
+     * tracks in it, for the two seconds before the list arrived.
+     */
+    val knowsWhatIsHeld: Boolean = false,
+
     /** True when the open folder has never been scanned. */
     val folderUnscanned: Boolean = false,
     /** True when the open folder's index was built by a different set of decoders. */
@@ -754,13 +765,37 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             val summaries = catalogues.summaries()
             val granted = store.grantedFolders()
-            _browse.update { it.copy(catalogues = summaries, folders = granted) }
+            _browse.update {
+                it.copy(catalogues = summaries, folders = granted, knowsWhatIsHeld = true)
+            }
         }
 
         // A catalogue that is no longer offered leaves its rows behind, and rows
         // nothing lists are rows in every global search. Once at start-up, next to the cache sweep
         // and for the same reason.
         scope.launch(Dispatchers.IO) { runCatching { catalogues.pruneUnknownCatalogues() } }
+
+        // **What a format added since the last run costs: one statement, and no network**
+        // (`docs/ROADMAP_FORMATS.md` step 0). An index holds every row the archive lists, so a
+        // change to `SupportedFormats` is a question the stored rows can already answer —
+        // 228ms over 516,107 of them, measured — where it used to mean re-downloading Modland's
+        // 40 MB on every device.
+        //
+        // Run only when the stamp actually moved. Recomputing on every start would be 228ms of
+        // nothing, every time, for a list that changes with a release.
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val current = NativeEngine.backendsFingerprint()
+                if (catalogues.summaries().any { it.indexedAt != null && it.backends != current }) {
+                    catalogues.refreshPlayable()
+                    // Re-stamped only where the index is whole. A partial one -- written before the
+                    // index stopped being a function of the format list -- is missing rows no
+                    // recompute can conjure, and has to go on saying it needs fetching again.
+                    catalogues.restampComplete(current)
+                    _browse.update { it.copy(catalogues = catalogues.summaries()) }
+                }
+            }
+        }
 
         scope.launch(Dispatchers.IO) {
             runCatching {
@@ -852,11 +887,14 @@ class PlaybackController private constructor(private val context: Context) {
     private fun restore() {
         scope.launch {
             val saved = store.loadPlayerState()
+            // Read once and used twice. `defaultPlaylistId` can create one, so the list is read
+            // again only when it did; asking the database the same question twice at launch is a
+            // query nobody needs on the path A48 is about.
             val known = store.playlists()
             // The stored active playlist, unless it has since been deleted.
-            playlistId = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
-                ?: store.defaultPlaylistId(defaultPlaylistName)
-            val playlists = store.playlists()
+            val stored = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
+            playlistId = stored ?: store.defaultPlaylistId(defaultPlaylistName)
+            val playlists = if (stored != null) known else store.playlists()
             val tracks = store.tracksIn(playlistId)
 
             _state.update { current ->
@@ -2218,24 +2256,35 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val entries = withContext(Dispatchers.Default) {
-                // By name, and here that is right rather than a shortcut. A catalogue index is a
-                // list of filenames on somebody else's server; deciding by content would mean
-                // downloading half a million files to find out. The local library is the opposite
-                // case and is scanned by opening (`docs/BACKLOG.md` A6).
-                // **`inCatalogueIndex`, not `looksPlayable`.** The wider question includes names
-                // this build plays only as local files -- MP3 -- and no archive here holds one, so
-                // asking it would put rows in an index that can never be fetched.
-                catalogue.parseIndex(bytes) { name -> SupportedFormats.inCatalogueIndex(name) }
+                // **Everything the archive lists, and nothing decided here**
+                // (`docs/ROADMAP_FORMATS.md` step 0). What this build can play is written beside
+                // each row as it is stored and re-decided locally when the format list changes, so
+                // the index is no longer a function of the decoders — and adding a format no longer
+                // costs every user the whole 40 MB again.
+                catalogue.parseIndex(bytes)
             }
-            catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
+            val playable =
+                catalogues.replaceIndex(catalogue, entries, NativeEngine.backendsFingerprint())
             endDownload(catalogue.id)
             _browse.update { it.copy(catalogues = catalogues.summaries()) }
+            // **Both numbers, because there are now two** (`docs/ROADMAP_FORMATS.md` step 0).
+            // The index keeps everything the archive lists and the app offers what it can open, so
+            // saying only the first makes the count on the catalogue's own row look wrong -- a
+            // snackbar saying 500,000-odd over a row saying 341,842.
             return Fetched(
                 true,
                 Message(
-                    context.resources.getQuantityString(
-                        R.plurals.notice_indexed_tracks, entries.size, entries.size, catalogue.displayName,
-                    )
+                    if (playable >= entries.size) {
+                        context.resources.getQuantityString(
+                            R.plurals.notice_indexed_all, entries.size, entries.size,
+                            catalogue.displayName,
+                        )
+                    } else {
+                        context.resources.getQuantityString(
+                            R.plurals.notice_indexed_partly, entries.size, entries.size,
+                            catalogue.displayName, playable,
+                        )
+                    }
                 ),
             )
         }
