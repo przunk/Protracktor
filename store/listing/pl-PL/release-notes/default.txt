@@ -1,5 +1,5 @@
-Indeks trzyma teraz wszystko, co wymienia archiwum, i przy każdym utworze zapisuje, czy ta wersja go otworzy. Dodanie dekodera będzie kosztowało chwilę pracy na telefonie, a nie ponowne pobranie całego indeksu.
+Indeks trzyma teraz wszystko, co wymienia archiwum, i przy każdym utworze zapisuje, czy ta wersja go otworzy. Dodanie dekodera będzie kosztowało chwilę pracy na telefonie, a nie ponowne pobranie indeksu.
 
 Pierwsze uruchomienie po aktualizacji przestawia to, co już pobrane, więc może potrwać kilka sekund. Nic nie ginie i nic się nie pobiera.
 
-Indeksowanie podaje teraz obie liczby: ile ma archiwum i ile z tego zagra tutaj. Duże liczby są wszędzie czytelnie rozdzielone.
+Indeksowanie podaje obie liczby: ile ma archiwum i ile z tego zagra tutaj. Utwory konsolowe nie podają już długości, której plik nigdy nie zadeklarował.
