@@ -1,8 +1,8 @@
 # Plan: the browser as a second player, not a second screen
 
-*Asked for by the owner, 2026-09-10: **"web powinien mieć możliwość przeglądania archiwów… podział
-playlisty (zawsze dostępna from the phone + customowe), przeglądanie katalogów online tak jak na
-telefonie… ostatecznie też random i historia ma działać — słowem ma działać jak w apk."***
+*Asked for on 2026-09-10: the page should browse the archives, hold several playlists ("From the
+phone" always among them), walk the online catalogues the way the phone does, and in the end offer
+Random and History too — in short, work like the app.*
 
 ---
 
@@ -54,7 +54,7 @@ not fine on a phone browser — and the page is opened on a phone often enough (
 pairing code is for). **Nothing may hold the whole index in memory at once**; it has to stream from
 the zip into storage in batches.
 
-### Measured by the owner, 2026-09-10, on two machines
+### Measured, 2026-09-10, on two machines
 
 `web/tools/storage-check.html`, 60,000 records of Modland's real shape:
 
@@ -119,7 +119,7 @@ browses with no server involved. It is what the phone does, one layer down.
 **On the server (`serve-web.mjs`).** The Pi already holds the page and the pairing rooms; it could
 hold the index and answer queries. Much less code in the page and instantly fast on a phone.
 
-**Settled: in the browser**, by his measurement above — 2.6 seconds for the whole index — and by
+**Settled: in the browser**, by the measurement above — 2.6 seconds for the whole index — and by
 what the server would otherwise become. `serve-web.mjs`
 is three hundred lines of static files and pairing — small enough that the whole of it is read
 before it is changed. Putting half a million rows and a query language in it makes it a database
@@ -174,11 +174,11 @@ Stores: `playlists`, `tracks`, `history`, `settings`, and later `catalogue`. Ask
 `navigator.storage.persist()` — without it a browser may evict the lot under pressure, which for a
 playlist somebody built by hand is data loss rather than a cache miss.
 
-**Playlists as the owner described them**, and the rule he added on 2026-09-10 after using it —
-*"te funkcje powinny działać tylko jak przełączę listę"*: **browsing never writes into the phone's
+**Playlists as described**, and the rule added on 2026-09-10 after using it —
+The rule set for it: **browsing never writes into the phone's
 playlist.** Pressing a tune found by browsing while that one is showing does nothing but say to
 switch or make one. A page that quietly rewrote it would make the two devices disagree about what
-he built.
+it was built.
 
 
 - **"From the phone"** — always present, cannot be deleted, and **replaced wholesale** by each
@@ -210,26 +210,23 @@ yesterday must not win.
 Checked against a real IndexedDB — `fake-indexeddb` is a dependency of `web/` for the same reason
 jsdom is, because a stub of storage would let a broken store pass.
 
-- **Still to be checked by him:** on the Pi, across a browser restart.
+- **Still to be checked on a device:** on the Pi, across a browser restart.
 
-### S2a. Editing a playlist of his own — **built 2026-09-11**
+### S2a. Editing one of the reader's own playlists — **built 2026-09-11**
 
-*Owner, 2026-09-11: "w widoku mojej playlisty webowej nie mogę usuwać utworów. Powinno to działać tak
-jak na telefonie. Tylko lista from the phone powinna być niemodyfikowalna."*
-
-A row of one of his own playlists offers **Remove from this playlist**; "From the phone" offers
+A row of one of the reader's own playlists offers **Remove from this playlist**; "From the phone" offers
 nothing of the kind, being what the phone sent. The phone's rules (`removeTracks`): no question
 first, and removing what is playing stops it rather than starting something else. An **Undo**
 snackbar puts it back where it was, for six seconds.
 
-**Edits wait for Save, as on the phone** — his decision the same day. Removing rows, or replacing
+**Edits wait for Save, as on the phone** — decided the same day. Removing rows, or replacing
 the list from Browse or the paste box, changes what is on screen and not what is stored; Save and
 Discard appear in the top bar only while an edit waits, and a switch, a new playlist or a queue from
 the phone asks the phone's *Unsaved changes* first. Closing the tab asks the browser to ask. Where
 playback has got to is saved as it goes, but only while the list is the saved one.
 
-**Ticking many rows, as on the phone** — also his decision the same day. A long press, or Select in
-the row menu, starts it; a bar offers Add to playlist and, in a playlist of his own, Delete, which is
+**Ticking many rows, as on the phone** — also decided the same day. A long press, or Select in
+the row menu, starts it; a bar offers Add to playlist and, in one of the reader's own playlists, Delete, which is
 one edit with one undo. Adding writes another playlist at once and skips what it already holds.
 
 Every item of the row menu has its icon now, the phone's paths — the page's menu was text alone.
@@ -241,7 +238,7 @@ Modland first, because it is the one that matters and the one whose numbers are 
 Stream `allmods.zip` through `DecompressionStream('gzip'/'deflate')` — already used for the queue
 link — and write in batches with a progress count. **Never materialise the whole thing.**
 
-**Not a row per track, and the owner's measurement is why.** An index on `(format, author)` costs
+**Not a row per track, and a measurement is why.** An index on `(format, author)` costs
 about a quarter of the write throughput, and it exists only to answer "which tracks are under this author" — a
 question with a fixed, tiny answer set. Counted in Modland, 2026-09-10:
 
@@ -258,7 +255,7 @@ fewer writes and no index at all** — the key *is* the lookup, which is the str
 have built anyway.
 
 **Measured rather than divided, and the measurement was kinder than the division.** 43,715 real
-buckets, Modland's whole content, on the slower of his two machines: **2.6 seconds** against the 41
+buckets, Modland's whole content, on the slower of two machines: **2.6 seconds** against the 41
 a record per track costs. Dividing had predicted three and a half.
 
 Two more things fall out of it rather than being designed:
@@ -276,7 +273,7 @@ That belongs in a worker and it belongs behind a measurement before it is promis
 The staleness rule is the phone's and is not optional: `SupportedFormats.fingerprint` decides
 whether a stored index is still current, and the page must record and check the same string — the
 engine reports it through `pt_backends`. An index built before a decoder arrived is missing files
-and looks empty rather than out of date, which cost the owner 60,572 C64 tunes once already.
+and looks empty rather than out of date, which cost 60,572 C64 tunes once already.
 
 ASMA is the same shape with a different trade: its "index" **is** the archive, 20 MB, and once it is
 in the browser its tracks need no network at all.
@@ -299,18 +296,15 @@ everything outside `A-Za-z0-9.-*_`; `encodeURIComponent` keeps seven more charac
 `(` and `)` among them. Both URLs fetch the same file, so it would have gone unnoticed until
 something compared them as strings — and a queue decided the phone's copy of a track and the page's
 were two different tracks. `[modlandUrl]` in `docs/rules/queue-cases.tsv` now holds six cases,
-including `!!uu !! !!.it` because the owner played it, and both sides are checked against them.
+including `!!uu !! !!.it` because Modland really contains it, and both sides are checked against them.
 
 The staleness rule is the phone's: the engine's fingerprint is recorded when an index is built and
 compared when one is read, and a mismatch says so rather than showing a short list.
 
-- **Still to be checked by him:** the download itself, on the Pi.
+- **Still to be checked on a device:** the download itself, on the Pi.
 - **ASMA:** built 2026-09-11, without its 20 MB archive — S7.
 
 ### S3a. Only what the browser can play — **built 2026-09-11**
-
-*The owner, 2026-09-10: "nie indeksujmy utworów, których nie zagramy. Trzeba to będzie jawnie
-napisać w wyszukiwaniu/browse."* `GOAL.md` round 8, item 1.
 
 **The list is one file now**, `web/src/formats.tsv`: every name the phone's index keeps, with the
 decoders that open it. `SupportedFormatsFileTest` fails the moment it and `SupportedFormats`
@@ -330,7 +324,7 @@ Measured with the page's own functions on the real `allmods.txt`, 2026-09-11:
 | **the browser's engine** | **315,294** | **26,537** | **32,212** | **90** | **~32.0 MB** |
 
 `toRecords` took 450 ms against 917 ms before, in node. The JSON size is a proxy for bytes on disk,
-not a measurement of them; IndexedDB's own figure and its write time need a browser, and the owner's
+not a measurement of them; IndexedDB's own figure and its write time need a browser, and a real machine's
 last were 18 MB and 2.6 s for the unfiltered index. **The index should shrink by about two fifths.**
 
 After filtering, the buckets Random draws from (S5): 32,212, median 2, largest 3,615, 41% holding
@@ -381,23 +375,23 @@ so there is nothing to scope; when ASMA arrives that changes and the cases file 
 
 **Undone by S4c.** Browse no longer writes into any playlist, so there is nothing left for it to
 protect "From the phone" from: Browse opens whole whichever list is showing, and Add on the phone's
-list asks which of his own playlists to put the tune in. **The paste box keeps its refusal** —
+list asks which of the reader's own playlists to put the tune in. **The paste box keeps its refusal** —
 pasting still replaces the list on screen, and that list must not be the phone's. What follows is
 the section as it was built.
 
-*Asked for by the owner in two goes, and the second one is the interesting half.*
+*Asked for in two goes, and the second one is the interesting half.*
 
 Browse plays into the playlist that is showing. "From the phone" is replaced wholesale by each
 handoff (S2), so writing into it means the next scan silently throws the writing away — and worse,
-the queue he is looking at is not the queue the phone thinks he has.
+the queue on screen is not the queue the phone thinks it sent.
 
-The first version refused **after the press**: he walked three levels down, chose a tune, and got a
+The first version refused **after the press**: three levels down, a tune chosen, and then a
 paragraph. *"browse powinno byc zablokowane z podpisem dla phone playlist"* — shut it before it is
 walked into. So now:
 
 - the Browse button carries `aria-disabled` and a tooltip saying which way out;
 - opening it shows the caption and **no archives at all** — one row, which offers to make an empty
-  playlist and drops him into Browse with it;
+  playlist and opens Browse on it;
 - the search field is gone, there being nothing it could usefully fill;
 - `playFromBrowse` keeps its refusal as the second line of defence, and a check still drives it;
 - **and the paste box does the same** — it went through the other door, writing straight into the
@@ -409,14 +403,14 @@ cannot say why it is shut. "Nothing happens" is the worst of the three answers.
 
 **One bug fell out of it.** Boot restored a stored playlist only when it had tracks, which was true
 while every playlist arrived full from the phone. Make an empty one, reload, and it was gone — back
-to "From the phone", with the tab he had just unblocked shut again. An empty playlist is now
+to "From the phone", with the tab just unblocked shut again. An empty playlist is now
 restored like any other.
 
 ### S4c. Browse plays without touching the playlist — **built 2026-09-11**
 
-*`docs/BACKLOG.md` A33, decided by the owner the day it was raised.* Until now a folder or a search
-result replaced the playlist that was showing, and the owner met it the way it reads: a search, one
-tune pressed, and the playlist he had built was gone under forty results. The phone never did that.
+*`docs/BACKLOG.md` A33, decided the day it was raised.* Until now a folder or a search
+result replaced the playlist that was showing, and it reads exactly as it behaves: a search, one
+tune pressed, and the playlist built earlier gone under forty results. The phone never did that.
 
 - **Pressing a tune plays it through a session**, the one History and Random already use: the list
   it came from (the folder, the results, History) is what next and previous walk, the playlist waits
@@ -428,15 +422,12 @@ tune pressed, and the playlist he had built was gone under forty results. The ph
 - **Every tune row has Add beside it, icon and label, and its menu**: add to another playlist,
   information, the author's other tunes (the phone's "Show neighbours"), save the file, copy a link.
 - **Add appends to the playlist that is showing, or waiting under a session, and waits for Save** —
-  the save model the owner asked for on 2026-09-11. A tune already there is not added twice, and its
+  the save model what was asked for was on 2026-09-11. A tune already there is not added twice, and its
   row says "Added". On "From the phone", which is never written to, Add asks which playlist instead.
 
-Not built: ticking many Browse rows at once. The phone has it; the owner did not ask for it here.
+Not built: ticking many Browse rows at once. The phone has it; it was not asked for here.
 
 ### S4b. Every list behaves like the phone's — **built 2026-09-11**
-
-*The owner: "pamiętaj też, żeby listy działały tak jak w apk (nasze ostatnie poprawki)."* `GOAL.md`
-round 8, item 2 — before Random and History, so both are born obeying it.
 
 The phone reached its rule in five builds on 2026-09-10 (`ui/ListScrolling.kt`): keep the playing
 row in view, **one row at a time and only when it would leave**, and **never on arrival**. The page
@@ -463,7 +454,7 @@ deliberate jump.
 
 jsdom lays nothing out: the checks prove *whether* the page asks to scroll and with what options —
 once on a new playing row, never on arrival or redraw, Browse only while open — and cannot prove
-where the row lands. That is the owner's to judge.
+where the row lands. That is a judgement to make on use.
 
 ### S5. Random — **built 2026-09-11**
 
@@ -496,7 +487,7 @@ builds 519–532, is the specification. What the page does, and where it had to 
   elsewhere — the phone, a playlist, Browse — ends the session and becomes what is showing.
 - The **Filter** button is there and says *Everything*; the chips the phone has need `Platforms.kt`
   shared and a favourites download, both out of this round.
-- **Two differences from the phone, both the owner's after first use** (`docs/STATUS.md` C39): the
+- **Two differences from the phone, both decided after first use** (`docs/STATUS.md` C39): the
   playlist chip stays usable during a session and choosing a playlist leaves it; and a pick that
   will not open leaves the record instead of staying in it.
 
@@ -509,7 +500,7 @@ What follows is the decision record from before it was built.
 #### What was decided on 2026-09-10
 
 **The shape of the screen is in `docs/PLAN_RANDOM.md`**, agreed the same day and written for
-the APK and the browser together because he wants the two as alike as they can be. What
+the APK and the browser together, because the two should be as alike as they can be. What
 follows here is the web-specific half: what the dice picks from, and the measurements behind
 it.
 
@@ -548,7 +539,7 @@ likely as Richard Bayliss with 1,298.
 
 #### What was decided
 
-**1. Uniform over tracks.** *"Mnie interesują utwory, nie autorzy"* (owner). The per-author
+**1. Uniform over tracks**, because what is being picked is a tune rather than an author. The per-author
 alternative was a real option — it is the shape that favours discovery — and it was declined on
 its merits rather than on cost, since both are free: the counts already sit in the
 `authors(format)` records, 339 lists that the author search already sweeps in full. A cumulative
@@ -556,7 +547,7 @@ table over them is built once and kept in memory; a roll is one random number an
 
 **2. Transient, with its own history.** The dice does not write into the playlist that is showing,
 the same rule Browse and the paste box grew on 2026-09-10 and for a stronger reason: you roll it
-repeatedly. `Previous` walks back through what the dice gave, not through the playlist. *The owner
+repeatedly. `Previous` walks back through what the dice gave, not through the playlist. *It was
 wants to talk about this part further before it is built.*
 
 **3. `Everything` first.** The web has only Modland indexed. `OnPlatform` needs the format →
@@ -569,15 +560,15 @@ every tune comes over the network and a pick that has not been fetched is an aud
 
 #### And a decision that reaches past Random
 
-**Stop indexing what we cannot play.** *"Nie indeksujmy utworów, których nie zagramy"* (owner).
+**Stop indexing what we cannot play.**
 This makes the dice's filter unnecessary, and it fixes browse and search at the same time — today
 they list tunes the browser will refuse.
 
 Two things it costs, and both must be handled rather than absorbed:
 
 - **A re-download of the index.** Changing what is stored changes what a stored index means, so
-  every browser holding one has to fetch Modland again. He has done that twice already today.
-- **The absence has to be said out loud.** *"Trzeba to będzie jawnie napisać w wyszukiwaniu/browse"*
+  every browser holding one has to fetch Modland again. That has happened twice in one day.
+- **The absence has to be said out loud**, in search and in Browse
   — a catalogue that quietly holds 61% of what its name promises is worse than one that says which
   61%. The phone has the same gap and does not say so either.
 
@@ -601,7 +592,7 @@ oldest forgotten. A stamp that only increases orders two plays in one millisecon
 - **It plays transiently**, through the session Random built, with a heading that says *Playing from
   your history* and a way back. The goal asked for that, and it is how the phone's Browse lists
   play — but the page's folder and search lists still replace the playlist showing. The mismatch is
-  the owner's to settle: `docs/BACKLOG.md` A33.
+  still to settle: `docs/BACKLOG.md` A33.
 - A tune the phone handed over as **bytes is recorded and marked**, not offered for a replay the
   page cannot give — the bytes are never kept.
 - The Random record stays its own list for the session and is not persisted; the plays that fill it
@@ -611,7 +602,7 @@ oldest forgotten. A stamp that only increases orders two plays in one millisecon
 phone" with an index held threw — a helper read before its `const` (`docs/STATUS.md` C37). Fixed
 here, with a check that builds that state. A second suspicion — that the Random heading's
 `display: flex` would beat `hidden` — was right and was dismissed on a check that matched a scoped
-rule; the owner found it on the first bundle (`docs/STATUS.md` C38).
+rule; it was found on the first bundle (`docs/STATUS.md` C38).
 
 What follows is what was written before it was built.
 
@@ -656,7 +647,7 @@ desk.
 
 ---
 
-## What the owner still has to decide
+## What is still to decide
 
 1. **The relay, and therefore UnExoticA and The Mod Archive in the browser** — it changes who
    fetches from ExoticA, and they have not answered the first letter yet.
@@ -664,7 +655,7 @@ desk.
    256–473 GB offered, persistence granted on both machines. The page reports; it does not ration. Whether it *asks* before the
    first 5.76 MB download is still worth a word, and the answer is probably yes, once.
 3. **Whether "From the phone" is one playlist or the newest of several.** Replacing it wholesale is
-   simplest and is what he described; keeping the last few would let him go back to yesterday's
+   simplest and is what was described; keeping the last few would allow going back to yesterday's
    queue, and the phone has no equivalent.
 4. **Order.** S1 → S2 → S3 is the spine and each is testable on its own. S4–S6 can come in any
    order after S3, and S7 may never come.
@@ -673,14 +664,11 @@ desk.
 
 ## What is not in this plan
 
-Accounts, sync, and a server that holds his music — `docs/WISHLIST.md` B5 raised that in September
+Accounts, sync, and a server that holds the music — `docs/WISHLIST.md` B5 raised that in September
 and it is a different project. Everything above works with a static page, a browser's own storage,
 and archives that already say a browser may read them.
 
 ### S7. ASMA — **built 2026-09-11**
-
-*Owner, 2026-09-11: "proponuję dodać obsługę ASMA do web". Agreed with two answers from him: the
-list only, not the archive, and the phone's half at the same time.*
 
 **The premise everything here rested on was wrong, and a curl said so.** The phone was built
 believing ASMA publishes one 20 MB zip and no per-file address — `Catalogue.webUrlFor` returned null

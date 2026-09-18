@@ -130,8 +130,8 @@ option) any later version". Compatible with GPL-3.
 
 **No Commodore ROMs are shipped and none are needed for the files tested.** KERNAL, BASIC and
 CHARGEN are Commodore's and cannot be distributed. Thirty random Modland SIDs all played without
-them and none was BASIC-compatible, so the question the owner was asked to decide turns out to be
-much smaller than it looked. It is still his to decide if a tune ever needs them.
+them and none was BASIC-compatible, so the question turns out to be much smaller than it
+looked. It is still a decision to make if a tune ever needs them.
 
 **HivelyTracker V1_9**, read from `LICENSE` in the tag tarball on 2026-09-05:
 
@@ -222,7 +222,7 @@ to have it, and the storage screen can throw it away again.
 **Raised 2026-09-01. Not a blocker today; not something to publish without an answer either.**
 
 sc68 does not play SNDH from the tune alone. Each one names a small 68000 replay routine that ships
-in sc68's replay directory, and sc68 opens it by path — which is why every SNDH in the owner's
+in sc68's replay directory, and sc68 opens it by path — which is why every SNDH in a
 library loaded and then played silence until those files were packaged. **99 of them are now in the
 APK** (3.0.0b's `file68/data68/Replay/`, up from 2.2.1's 84 — part of why more SNDH files play).
 
@@ -270,7 +270,7 @@ APK — which is where the doubt actually lives.
 ### Decided 2026-09-04: option 3, for sc68 and UADE alike
 
 **And two letters, because the only genuinely clean route is to ask.** The drafts and the replies
-stay on the owner's machine: `docs/letters/` is gitignored and was taken out of the history on
+stay off the repository: `docs/letters/` is gitignored and was taken out of the history on
 2026-09-05, because other people's replies are not ours to publish.
 
 | | sent | to | status |

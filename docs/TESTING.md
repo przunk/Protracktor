@@ -10,12 +10,12 @@ once:
 
 - **the process dying** — an exception out of a JNI frame or an audio callback is `std::terminate`,
   and there is no test host to observe it from;
-- **the foreground service** — whether a notification survives the owner leaving the app, which is
+- **the foreground service** — whether a notification survives leaving the app, which is
   Android's decision and depends on the device;
 - **audio in a real output** — glitching, sample rate, ducking under a notification;
 - **anything about how it looks**, which is the whole of the UI.
 
-So a handover build is not "tested" when the suite is green. This is what the owner checks, and it
+So a handover build is not "tested" when the suite is green. This is what a person checks on a device, and it
 is written down so it is the same list every time rather than whatever anybody remembers.
 
 ## Every build

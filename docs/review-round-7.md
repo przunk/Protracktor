@@ -25,7 +25,7 @@ the list. Counted rather than guessed:
 
 That is an out-of-memory crash on a modest device, during a 15 MB download, on the one code path
 nobody had run. **Every test here runs on the JVM against a handful of rows**, so nothing would
-have caught it before the owner did — and HVSC's database, which this was modelled on, is a sixth
+have caught it before a device did — and HVSC's database, which this was modelled on, is a sixth
 the size and got away with it.
 
 `SongDbMetadata.parse` now returns a lazy `Sequence`, and `TrackMetadataStore.replaceAllFrom` parses
@@ -51,7 +51,7 @@ a test pins the shared rule.
 This is the one worth remembering, because it is the same surprise the code was written to remove.
 `pendingRetry` remembers what to try again after a failed open. It was cleared on success and never
 otherwise — so: a search result fails, the user switches playlist, presses play, and gets **the
-abandoned track instead of the playlist**. Exactly the substitution the owner had reported that
+abandoned track instead of the playlist**. Exactly the substitution reported that
 morning, arriving from the other side.
 
 Cleared in `stopPlayback`, which is what every "the user moved on" path already calls — switching

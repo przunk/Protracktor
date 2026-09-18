@@ -3,7 +3,7 @@
 *Where to go next is `docs/ROADMAP_FORMATS.md`, written 2026-09-16: the same gaps, ordered by what
 they are worth against what they cost. This file is the history and the measurements behind it.*
 
-Written 2026-09-01, ahead of the owner sending this as its own goal.
+Written 2026-09-01, ahead of this coming back as its own goal.
 
 Each backend is its own risk and its own commit. The order below is by value per unit of pain, and
 the first item is not a new format at all.
@@ -69,7 +69,7 @@ through the exact backend logic on the host:
 | fails `api68_load_mem` | 9 | 30% |
 
 **sc68 2.2.1 is from 2003 and its SNDH support is partial.** Roughly half. No amount of wiring on
-our side changes that, and the owner has hit the failing half twice in a row.
+our side changes that, and the failing half has been hit twice in a row.
 
 ### The fix is sc68 3.0.0b, and it is reachable
 
@@ -147,7 +147,7 @@ Four things the plan did not foresee:
 
 ### Why not write our own
 
-Asked by the owner on 2026-09-01, and worth recording because the answer is not obvious.
+Asked on 2026-09-01, and worth recording because the answer is not obvious.
 
 It would mean a 68000 emulator, a YM2149, the MFP 68901 timers, and SNDH parsing. The CPU is the
 *easy* part — Musashi is MIT-licensed and proven, so nobody needs to write one. The hard part is
@@ -156,14 +156,14 @@ cycle-accurate, plus the envelope and "SID voice" tricks composers abused on the
 
 Months of work, and the failure modes are subtle — wrong tempo, missing effects — rather than
 obvious. It would also be writing sc68 again with a borrowed CPU. The author has already done it and
-says his version is almost perfect; the sensible move is to take his.
+says that version is almost perfect; the sensible move is to take it.
 
 ### Meanwhile
 
 The failure message now names which backend refused and what it said, instead of claiming the format
 is unsupported. A file no backend claims and a file a backend claimed and then choked on are
 different problems and were indistinguishable from outside — it took a host probe to tell them apart,
-which is not a thing the owner can do.
+which is not a thing this project can do.
 
 ## 0b. libopenmpt — measured 2026-09-04, having carried the library unmeasured
 
@@ -191,7 +191,7 @@ and the `.mmd0`/`.mmd1` added that morning.
 | `.med` | 1/12 | 140 | magic `MED\x04` — **Music Editor**, the older Amiga format, not MMD |
 | `.dmf` | 4/16 | 2,186 | **1,807 are DefleMask**, 366 X-Tracker; libopenmpt implements the second |
 
-`.dmf` joined this table on 2026-09-07, after the owner found a DefleMask file that would not open.
+`.dmf` joined this table on 2026-09-07, after a DefleMask file would not open.
 Measured the same way: **1,807 of Modland's 2,186 are DefleMask and 366 are X-Tracker**, and
 libopenmpt implements the second. The extension stays claimed for the reason `.ftm` and `.psm` do —
 dropping it would throw away the 366 that work — and DefleMask would need a decoder of its own,
@@ -218,7 +218,7 @@ running.
 
 **The ROM question, answered with a number.** Thirty random Modland SIDs were played on the host
 with **no ROMs supplied at all**: 30 played, 0 were silent, 0 failed, and 0 were BASIC-compatible.
-The decision the owner was asked to make is therefore much smaller than it looked — it only matters
+The decision to be made is therefore much smaller than it looked — it only matters
 for tunes that call into KERNAL or BASIC, and none of a thirty-file sample did. It remains his
 decision if one ever turns up.
 
@@ -496,7 +496,7 @@ md5 table for SID lengths (`docs/ARCHITECTURE.md` §14), game-music-emu reportin
 for KSS and HES whatever the file holds, and a timed search for the first audible track. Worth a
 serious look before any UADE work starts, and possibly worth a look regardless of UADE.
 
-**Nothing was reported upstream.** The owner closed the correspondence on 2026-09-05 and the draft
+**Nothing was reported upstream.** The correspondence was closed on 2026-09-05 and the draft
 sits unsent in `docs/letters/`. Both maintainers volunteered all of the above without being asked
 twice, which is the part worth remembering.
 
@@ -624,7 +624,7 @@ by successful directories in the current top-25 sample.
 ### What this measurement recommends
 
 **Not integrating UADE yet, and doing the cheap thing first.** Setting out the trade rather than
-the conclusion, because the conclusion is the owner's:
+the conclusion, because the conclusion is a decision, not a measurement:
 
 - the current top-25 sample finds successful formats covering **5,799 Modland files** that nothing
   in the app claims — a measured lower bound, not the tens of thousands A5 assumed;
@@ -649,7 +649,7 @@ corpus.
 
 ## 5. Modizer as a map — surveyed 2026-09-05
 
-<https://github.com/yoyofr/modizer>, an iOS chiptune player, raised by the owner as worth looking at.
+<https://github.com/yoyofr/modizer>, an iOS chiptune player, raised as worth looking at.
 It bundles **48 decoder libraries** and its README links each one to its own upstream. That map is
 the value here, and it lines up almost exactly with what we measured as unplayable.
 
@@ -877,7 +877,7 @@ Compiling the whole AY path with everything else missing, and collecting what it
 answer is **one** third-party dependency: **`fmt`**, MIT. (`src/sound/impl/resampler.cpp` reaches
 for `lazyusf2`, an N64 emulator, and is not needed — Oboe does our rate conversion.)
 
-**Size, which is the owner's question.** The repository is 182 MB and almost none of it would ship:
+**Size, which was the question asked.** The repository is 182 MB and almost none of it would ship:
 
 | | |
 | --- | --- |
@@ -972,13 +972,13 @@ in the search filter stops being greyed out; and changing `SupportedFormats` cha
 `.ay` stays with game-music-emu. ZXTune's own reader for it is `ayemul`, the one plugin whose
 licence cannot be taken.
 
-### The owner ran it, and found the list promising more than the code delivered
+### Running it found the list promising more than the code delivered
 
 `SupportedFormats` and the backend's `worthTrying` claimed **thirteen** names. `ZxTuneBackend`
 implemented **ten**. So `.psm`, `.ftc` and `.gtr` were offered, taken, refused — and the app said
 *"is a format Protracktor cannot play yet"*, which is the message for a missing decoder and was true
 only because a list of factories was three lines short. `.pt1` was a fourth instance, found a moment
-later by the probe rather than by him.
+later by the probe rather than by hand.
 
 **The probe now measures what `SupportedFormats` promises**, which is the only guard that crosses
 the language boundary: the format list is Kotlin and the decoders are C++, so no unit test can
@@ -988,7 +988,7 @@ The seven failures are honest and worth reading. Six are `.psm` files from Modla
 MASI* directory, which ZXTune's Pro Sound Maker decoder correctly refuses — in the app those fall
 through to libopenmpt and play, which is a fallback the probe does not have. One `.ftc` did not load.
 
-### And a second thing he found, which was not about ZX Spectrum at all
+### And a second finding, which was not about ZX Spectrum at all
 
 `Could not read ice.pt2` — then it played on the second attempt. That message comes from the path
 where the file never arrived, `bytes == null`, before any decoder sees it: a transient fetch failure
@@ -1001,7 +1001,7 @@ reported identically — worth a defect of its own rather than a note here.
 
 ### `.stc` — some files, not the platform, and not our doing
 
-The owner reported `.stc` not playing, then narrowed it himself: `#######.stc` and `(letsgo).stc`
+`.stc` was reported as not playing, then narrowed down: `#######.stc` and `(letsgo).stc`
 play, `&SFTDEMO.stc` does not, and the message is *"Spectrum is a format Protracktor cannot play
 yet"* — the decoder refusing, not the network.
 
@@ -1082,7 +1082,7 @@ they arrive with a seek bar and need no song-length database. Overall for the wh
 
 **`.vtx` was added to `SupportedFormats` and `.ym` moved.** `.ym` had been sitting in the Atari ST
 group since the start, on the assumption sc68 handled it; nothing did. `.vtx` is a new name and so
-changes `SupportedFormats.fingerprint`, which marks every stored index stale — the owner
+changes `SupportedFormats.fingerprint`, which marks every stored index stale — everyone
 re-downloads Modland's 40 MB. C20 argued against paying that price to *remove* dead rows; paying it
 for 879 files that play is the other side of the same bargain.
 

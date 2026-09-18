@@ -12,9 +12,6 @@ been overtaken by work already done, it says so.
 
 ## B32. A row being fetched breathes — DONE 2026-09-14
 
-*Owner, 2026-09-14: while a track is loading it is marked on the list, which is right, "ale powinien
-migać takim fadein/fadeout w oscylacji sekundowej, żeby było widać, że się wczytuje".*
-
 Marking says "this one"; what a download has to add is "still working", and a network fetch is
 seconds. Both runtimes now breathe the row at about a second a cycle — the page in CSS, the phone
 with an animation on the row that is only allocated while one is being fetched, the same guard the
@@ -24,9 +21,7 @@ drag layer has.
 the tune playing, which that list already took. It changes when a fetch starts and stops, not five
 times a second, so the recomposition the screen is careful about is not disturbed.
 
-## B34. Hiding the file extension in a name, as a setting — **shelved by the owner, 2026-09-18**
-
-*Owner, 2026-09-18, after reading what it would cost: not now, and not to be raised again.*
+## B34. Hiding the file extension in a name, as a setting — **shelved, 2026-09-18**
 
 **Do not build it, and do not bring it up.** Not in a round's plan, not as a suggestion beside a
 related change, not as "while we are in this file anyway". If it is ever wanted the owner will say
@@ -67,9 +62,6 @@ name alone when stripping would make it a duplicate of a sibling, and must not c
 matches. Those three are the whole of the work; the checkbox is the easy part.
 
 ## B33. Modland's `/incoming/` is not in `allmods.zip`, and neither app can see it
-
-*Owner, 2026-09-10, by finding a file we could not find:*
-`ftp.modland.com/incoming/warehouse/MOD/games/Top Gear 2 (OCS & AGA)/topgear2.mod`
 
 **Not a search defect — a data one.** `allmods.zip` is the whole of what both apps know about
 Modland, and it describes exactly one tree. Checked, rather than assumed:
@@ -120,8 +112,6 @@ without indexing any of them.
 
 ## B31. Drag a file onto the web player to add it
 
-*Owner, 2026-09-10.*
-
 **The one way of getting a file into a page that everybody already knows.** The page takes music
 from a phone link, a pasted address and Browse; a file sitting on the desk of the machine the page
 is open on has no way in at all short of that machine being the phone.
@@ -144,8 +134,6 @@ Cheap, obvious, and the sort of thing whose absence gets noticed on the first da
 uses the page.
 
 ## B30. ASMA ships a STIL, and we do not read it
-
-*Owner, 2026-09-10, as a curiosity: `asma.atari.org/asma/Docs/STIL.txt`.*
 
 **266 KB, and it is exactly the thing this app keeps having to go elsewhere for.** 1,973 entries
 keyed by the same path our ASMA index already holds — `/Composers/Aki/Robots.sap` — carrying what
@@ -176,17 +164,17 @@ Counted 2026-09-10: 883 lines carry one of those field names across 1,973 entrie
 
 ## B29. The documents need a list a person can read at a glance
 
-*Owner, 2026-09-10: **"muszę mieć czytelne dla człowieka checkboxy na początku pliku wishlist/status
-żeby wiedzieć co jest do zrobienia i co jest zrobione"**. A change to `AGENTS.md` as much as to the
-files, because the rule has to hold for whoever writes the next entry.*
+**Every list needs a human-readable state at the top**: what is to do and what is done, without
+reading the whole file. A change to `AGENTS.md` as much as to the files, because the rule has to
+hold for whoever writes the next entry.
 
 `docs/STATUS.md` is now past a thousand lines and `docs/WISHLIST.md` and `docs/BACKLOG.md` are not
 far behind. Everything in them is findable and nothing in them is **scannable**: to learn what is
 open you read every heading, and the strikethrough that marks a finished entry only shows once you
 are level with it.
 
-**What he asked for, clarified 2026-09-10: only what is open.** *"Nie muszę szukać po pliku, który
-ma 2000 wierszy, jakie bugi zostały. Chcę mieć 10 bugów w 10 wierszach krótko."* Not a checklist with
+**Clarified 2026-09-10: only what is open.** Ten open items in ten lines, not a search through two
+thousand. Not a checklist with
 `[x]` beside the finished ones — those should not be on the list at all. A done entry keeps its
 struck-through heading where it is, because the reasoning in it is the point of keeping it; it simply
 stops appearing at the top.
@@ -194,7 +182,7 @@ stops appearing at the top.
 **The numbers say the idea works.** Counted 2026-09-10: **2 open defects, 7 open backlog items, 12
 wishes** — twenty-one lines for the whole project, against three files totalling some three thousand.
 
-**One list or three?** He said "wishlist/status", but the same argument makes one list at the top of
+**One list or three?** The request named the wishlist and the status file, but the same argument makes one list at the top of
 `docs/STATUS.md` covering C, A and B better than three: the state of the project on one screen rather
 than on three. Worth deciding before it is written.
 
@@ -215,7 +203,7 @@ done, and how many of each.
 ## B28. The Mod Archive gives us no artist
 
 *Found 2026-09-08 while working out why "more from this author" did nothing for one of its tracks
-(`docs/STATUS.md` C19). Not the owner's request — a consequence he should get to decide about.*
+(`docs/STATUS.md` C19). Not part of the request — a consequence somebody has to decide about.*
 
 **Every tune from The Mod Archive has an empty author, everywhere in the app.** The parser sets
 `author = ""` and it is not being lazy: a search result row carries a title, a format icon and a
@@ -248,9 +236,6 @@ That should be measured before either of the above is built.
 ---
 
 ## B27. ~~Random, but only tunes considered good~~ — DONE 2026-09-08
-
-*owner, 2026-09-08: "random good" — raised in the same breath as B22, which is why the scope became
-a type rather than a nullable platform id.*
 
 **The app has no opinion, and inventing one would be worse than having none.** It records no plays
 that mean anything yet, no ratings, no skips-as-signal; a "good" score derived from what happens to
@@ -290,9 +275,7 @@ platform: it cuts across all of them. It is deliberately not combinable with one
 is Amiga tracker music almost entirely (562 ProTracker, 198 Fasttracker 2, 46 AHX of the 835), so
 `Favourites ∩ C64` would be a chip that returns nothing.
 
-### Found on the owner's first run: the chip was dead
-
-*owner, 2026-09-08: "favourites random jest nieaktywny".*
+### Found on the first run: the chip was dead
 
 **The same mistake as the platform chips, two commits later.** `favouriteCount` was set by
 `refreshCatalogues`, which the Browse *root* does not call — and the scope sheet opens from the
@@ -301,7 +284,7 @@ downloaded" whatever was on the device. The root now recounts it, unguarded: it 
 a thousand rows rather than the grouped scan of half a million the platform counts need, and zero is
 a real answer here, so a guard on emptiness could never tell "no favourites" from "not asked yet".
 
-**And a disabled chip has to say why** — the owner asked for that once already, about the search
+**And a disabled chip has to say why** — asked for once already, about the search
 filter. Here it can do better than explain, because what it needs is a 142 KB download the sheet can
 start: the line under the chips offers it, turns to "Downloading…", and disappears when the chip
 comes alive. Zero has two causes, so there are two sentences — list not downloaded, or downloaded
@@ -317,8 +300,6 @@ nothing otherwise reads as a download that worked and a chip that stayed dead.
 ---
 
 ## B21. ~~The player notification is grey, tall and belongs to nothing~~ — DONE 2026-09-06
-
-*owner, 2026-09-05: the controls themselves are fine; the bar around them is the problem.*
 
 **Both complaints have the same cause, and it is one we can fix.** Since Android 12 a `MediaStyle`
 notification takes its colour from the artwork it is given — `setColorized` on its own does nothing
@@ -343,7 +324,7 @@ obstacle. What could fill it:
 layout is for, so filling it is the closest thing to a fix.
 
 **Worth measuring before choosing:** whether `setColorized(true)` plus artwork actually recolours on
-the owner's Android version, and how a generated bitmap looks at the two sizes the shade and the
+the Android version in use, and how a generated bitmap looks at the two sizes the shade and the
 lock screen use. Both are questions a device answers in ten minutes and a document cannot.
 
 **Related:** `docs/STATUS.md` C12, where the same notification lost its skip buttons because Android
@@ -375,21 +356,18 @@ degrees apart, so the alternation was the hash's pattern rather than the music's
 on the end of FNV scatters them, and the hue distribution was checked over 20,000 names before that
 was believed.
 
-**Not proven, and it needs the owner's phone:** whether `setColorized(true)` is honoured on his
+**Not proven, and it needs a phone:** whether `setColorized(true)` is honoured on that
 Android version. Several manufacturers ignore it. The design does not depend on it — the square is
 coloured either way — but the "grey" half of the complaint does.
 
 ## B26. ~~The cache belongs in Settings, not in Browse~~ — DONE, and the premise had gone stale
-
-*owner, 2026-09-07: show the app's cache in Settings and let it be cleared — "may we already have
-this?"*
 
 **We do, and that is the finding.** Browse has a **Storage on this phone** screen: it reports the
 fetched-music cache against its 512 MB ceiling, each catalogue's index, any downloaded archive, the
 sc68 replay routines and the database, and it can throw away everything that can be fetched again.
 `CacheBudget` and `Q5` settled the policy behind it — oldest deleted first.
 
-**So this is not a missing feature, it is a misplaced one.** He went to Settings, which is where a
+**So this is not a missing feature, it is a misplaced one.** Settings is where it was looked for, and where a
 person looks for "how much room is this app taking", and found nothing. Storage is filed under
 Browse because that is where downloading happens, which is our reasoning rather than his.
 
@@ -405,7 +383,7 @@ Three ways out, and the third is probably right:
 ### Checked 2026-09-08 before starting: it had already moved
 
 `StorageSection` is called from `SettingsScreen` and from nowhere else. The screen this entry says
-lives in Browse lives in Settings, which is where the owner looked and where he said it belonged;
+lives in Browse lives in Settings, which is where it was looked for and where it belongs;
 the entry describes a state that no longer existed when it was written down.
 
 **What was actually missing was smaller and worse.** The two newest downloads — the songdb metadata
@@ -417,9 +395,6 @@ removed, and deleting the favourites puts Random back to `Everything` — a scop
 that has just gone would draw nothing, and the chip that set it is disabled the moment it goes.
 
 ## B25. A swipe on a track row — to discuss
-
-*owner, 2026-09-07, relaying a colleague's suggestion: swipe a row to "add to the play queue", the
-way Spotify does. His own preference is "add to playlist", or nothing.*
 
 **Two things make this a conversation rather than a task.**
 
@@ -438,12 +413,10 @@ those rows do not reorder, so they carry two gestures rather than four, and "add
 genuinely the dominant action there. The same gesture is right in one list and wrong in another
 because the lists differ in both respects.
 
-**Deferred by the owner on the day it was raised.** Recorded so the reasoning survives the
+**Deferred on the day it was raised.** Recorded so the reasoning survives the
 conversation.
 
 ## B22. ~~Random, but within something~~ — DONE 2026-09-08
-
-*owner, 2026-09-05: random for a particular platform, author or other domain.*
 
 **Most of this already exists in the query.** `CatalogueStore.randomSample` takes a set of catalogue
 ids and appends `ORDER BY RANDOM() LIMIT n`; the rows it draws from carry `catalogue_id`, `format`
@@ -473,14 +446,14 @@ transport gained it that morning), and **the control states its own scope in wor
 field's label, which is what made an empty selection safe again).
 
 So: tap the dice to play something, **hold it to choose where from**, and the row says which —
-`Random · Amiga`. Nothing new appears at rest, which matters in a screen the owner has already
+`Random · Amiga`. Nothing new appears at rest, which matters in a screen already
 called cluttered once; and the scope cannot become an invisible mode, because the row is where you
 would go to press it anyway.
 
 **The picker is the search filter's chips, whole** — same `Platforms` table, same counts, same rule
 that a platform with nothing indexed is drawn disabled. One vocabulary for "which machine".
 
-`RandomScope` is a type rather than a nullable platform id, because **the owner's other wish that
+`RandomScope` is a type rather than a nullable platform id, because **the other wish that
 day is another case of it**: "random, but only tunes considered good" wants Modland's own
 favourites, and that arrives as a second scope rather than a second mechanism. Built the same day —
 B27 above, which also corrects the figure this paragraph first carried: 835 playable, not 924.
@@ -492,7 +465,7 @@ argument away: the scope stands on its own screen beside a Filter button, in wor
 anybody is looking for it. So it is stored with the rest of the player state and survives a restart
 (`docs/PLAN_RANDOM.md`, `docs/SPEC_RANDOM.md` §1).
 
-### Two things the owner found on the first run
+### Two things found on the first run
 
 **The chips were all disabled**, because the counts they read are fetched when the *search* screen
 opens and this sheet opens from the Browse root. Every platform read as "nothing indexed" and the
@@ -511,9 +484,6 @@ fetched before it is wanted. Choosing "Amiga" without discarding those would pla
 first — a change that looks ignored. `setRandomScope` throws the read-ahead away.
 
 ## B23. ~~Search by platform, not by service~~ — DONE 2026-09-06
-
-*owner, 2026-09-05: the online section should offer AMIGA, C64 and so on rather than Modland, ASMA
-and The Mod Archive — searching every service available, but narrowed to a platform or format.*
 
 **This is the better model and it is worth saying why.** A person looking for C64 music does not
 care which archive holds it; the service names are our plumbing showing through. The current filter
@@ -544,9 +514,9 @@ is *not* playable yet without pretending otherwise.
 ### Built 2026-09-06 — one scope, said out loud
 
 **The design changed shape in conversation and came out better than either starting point.** The
-owner's objection was that the filter was "napierdzielone" — up to five chips in two rows — and his
+objection was that the filter was cluttered — up to five chips in two rows — and the
 answer was three large tiles: `LOCAL LIBRARY`, `ONLINE CATALOGUES`, `BY PLATFORM`. The design's real
-move, though, was his second one: **the search field's own label states the scope** — `Everywhere`,
+move, though, was the second one: **the search field's own label states the scope** — `Everywhere`,
 `Amiga`, `Online: Modland, Aminet`.
 
 That is what made the rest fall out. The earlier sketches kept running into "what does ONLINE *and*
@@ -625,7 +595,7 @@ landed — and one did land the day before.
 
 ## B24. ~~Open a chiptune link with Protracktor~~ — DONE 2026-09-08, the file half
 
-*owner, 2026-09-05: somebody sends a link to `Nukes_Chiptune.sndh`, he taps it, and his player opens
+*Raised 2026-09-05: somebody sends a link to `Nukes_Chiptune.sndh`, it is tapped, and this player opens
 and plays it.*
 
 **The playing half is nearly free.** `RemoteFiles.fetch` already takes any URL and `playTransient`
@@ -641,14 +611,14 @@ mechanism, and it splits into two cases that behave nothing alike:
 - **A file** — tapped in a file manager, a chat app, a download. Arrives as `content://` with a mime
   type, and the mime type is almost always `application/octet-stream`, so it identifies nothing.
   Matching has to be by extension.
-- **A web link** — the case he actually described. Arrives as `https://…/Nukes_Chiptune.sndh`.
+- **A web link** — the case actually described. Arrives as `https://…/Nukes_Chiptune.sndh`.
 
 **Android's `pathPattern` is not a regular expression**, and this is the trap: its `.*` does not
 backtrack, so the natural `.*\.sndh` fails on any path containing an earlier dot — which a real
 URL usually has. The workarounds are a pattern per dot-count, or `pathAdvancedPattern`, which is
 API 31+ and `minSdk` here is 29.
 
-**And the web-link case cannot do what he pictured, on any modern Android.** Since Android 12 an
+**And the web-link case cannot do what it looks like it should, on any modern Android.** Since Android 12 an
 unverified web link opens the browser without offering a chooser at all. Being offered requires
 App Links — an `assetlinks.json` served from the domain — and we do not own `modland.com` or
 anybody else's archive. What remains is the user going into *Open by default → Add link* for the
@@ -662,7 +632,7 @@ belongs in whatever text offers it.
 
 **Worth checking on a device before committing to either**, because both claims above are about
 platform behaviour that varies with version and manufacturer: whether a `content://` open reaches us
-with a usable name, and what a tapped `.sndh` link actually does on his phone today.
+with a usable name, and what a tapped `.sndh` link actually does on a phone today.
 
 ### Built 2026-09-08 — and the entry's own advice was taken
 
@@ -693,8 +663,7 @@ uppercase `pathPattern`s, which would double the largest block in the manifest t
 
 ## B20. ~~The year a tune was released~~ — DONE 2026-09-06 for Now Playing and the dock
 
-*owner, 2026-09-04: "fajnie by było gdyby dało się zobaczyć rok wydania utworu (np. w info o
-utworze, w liście albo wyszukiwaniu)".*
+Raised 2026-09-04: show a tune's release year — in its information, in a list, or in search.
 
 **Half of this is nearly free and the other half is not, and the difference is worth stating before
 anyone starts.**
@@ -750,7 +719,7 @@ search filter built the day before and which needs no backend to answer.
 
 ### Why most tunes have no year, and it is not our doing
 
-The owner's first observation on using it: plenty of tracks show nothing. That is the format, not the
+The first observation on using it: plenty of tracks show nothing. That is the format, not the
 reading, and it is worth writing down so nobody investigates it twice.
 
 **The formats that can carry a date are the minority.** libopenmpt's `date` is the module's
@@ -768,7 +737,7 @@ of this one.
 
 ### The other half, 2026-09-07 — a year for the formats that cannot carry one
 
-The owner pointed at `mvtiaine/audacious-uade-tools`, which publishes author, publisher, album and
+`mvtiaine/audacious-uade-tools` publishes author, publisher, album and
 year for 380,282 hashes. **67,601 of the Modland files this app claims gain a release year** — and
 the formats that gain most are exactly the ones with nowhere in the file to record it: 40,161
 ProTracker, 11,733 Fasttracker 2, 5,920 Impulsetracker.
@@ -788,8 +757,6 @@ Playing is what will say whether that is worth it.
 
 ## B19. Server-hosted periodically updated catalogue indexes (Cloudflare / Google Cloud)
 
-*owner, 2026-09-02.*
-
 Instead of relying solely on archives providing their own monolithic index files or querying third-party
 APIs directly from every device, maintain a server worker/job (e.g. on Google Cloud or Cloudflare Workers/R2)
 that aggregates, scrapes, or indexes archives (like The Mod Archive, Aminet, etc.) and exposes clean,
@@ -808,8 +775,6 @@ fast. Live search provides immediate utility, but full browsing requires the ser
 
 ## B13. ~~Tapping the player bar scrolls the list to that track~~ — DONE 2026-09-02
 
-*owner, 2026-09-01.*
-
 The dock says what is playing; the list does not say where it is. Tapping the identity row — or the
 Now Playing it opens — should take you to that row in the playlist.
 
@@ -820,12 +785,12 @@ mechanism with B14 and with `docs/BACKLOG.md` A3.
 
 ## B14. ~~A follow-the-playing-track toggle~~ — DONE 2026-09-02, **REPLACED 2026-09-10**
 
-*owner asked the question 2026-09-01, and settled it himself 2026-09-02.*
+Asked 2026-09-01 and settled 2026-09-02.
 
-**Replaced by `KeepRowInView`, and the button is gone** (owner, 2026-09-10: "usunąć funkcję follow
-current track … bo on już nie będzie potrzebny"). It came out of the Random view: there the playing
+**Replaced by `KeepRowInView`, and the button is gone**, withdrawn on 2026-09-10 as no longer
+needed. It came out of the Random view: there the playing
 row is kept on screen as next and previous move it — one row at a time, and only when the row would
-otherwise leave — and he asked for that on every list. Once every list does it unasked, a button to
+otherwise leave — and that is wanted on every list. Once every list does it unasked, a button to
 switch it on has nothing left to do.
 
 **This reverses the principle the entry below was built on**, and that should be said rather than
@@ -841,7 +806,7 @@ of them is exactly what `KeepRowInView` had to solve again.
 
 The wish: press next on shuffle and the playing track is somewhere off screen.
 
-**The owner's design, and it is better than the chip I proposed.** A floating button, bottom-right
+**The agreed design, and it is better than the chip first proposed.** A floating button, bottom-right
 over the list, labelled to say what it does — *follow track on list*. Off by default. Tap it and the
 list starts following playback, and the button disappears because it has nothing left to offer.
 Scroll the list by hand and following stops and the button comes back.
@@ -861,26 +826,22 @@ It composes with B13 (tap the player bar to jump once) rather than replacing it.
   Animate when the target is near, jump when it is far.
 
 **Built**, both bites included: a real drag is told from our own scrolling through `DragInteraction`,
-and a far target jumps rather than animating. The owner then asked for the button to be subtler,
+and a far target jumps rather than animating. The button was then asked to be subtler,
 which was done the same day. Not confirmed on a device.
 
 ## B1. ~~Play a track from the search results~~ — DONE 2026-09-02
 
-*owner, raised twice, 2026-09-01.*
-
-Already written up in `docs/BACKLOG.md` A1; repeated here because he has now asked for it twice, which is a signal about
+Already written up in `docs/BACKLOG.md` A1; repeated here because it has been asked for twice, which is a signal about
 priority rather than a duplicate. **Built** — the results become the queue while you are in them, so
 next and previous walk what you found and the playlist is untouched.
 
 ## B2. ~~Jump to a tune's neighbours~~ — DONE 2026-09-02 for catalogue tracks
 
-*owner, 2026-09-01.*
-
 Something plays at random, it is good, and the question is "what else did they write". An action — from the row's overflow menu or from the
 Now Playing — that opens the browser **at the place the track came from**: the author's folder
 in Modland, the folder on disk.
 
-His refinement is the good part: for a **local** file this should not open the browser at all, it
+The refinement is the good part: for a **local** file this should not open the browser at all, it
 should just show the path. There is nothing to browse to that the user does not already have.
 
 Depends on knowing where a track came from, which `TrackRef.subtitle` already carries for both
@@ -889,15 +850,11 @@ reader.
 
 ## B3. ~~Show the catalogue path in Information~~ — DONE 2026-09-02
 
-*owner, 2026-09-01.*
-
 A Modland track's information should read `Modland/Przunk/name.mod`. Today the dialog shows what is in `subtitle`, which for a
 catalogue track is `format · author` — right for a row, wrong for an information panel. Same
 underlying inconsistency as the wish above.
 
 ## B15. ~~History should say when~~ — DONE 2026-09-03
-
-*owner, 2026-09-02, after using B8.*
 
 The list says what was played and in what order, and not **when**. "That tune two days ago" is the
 question history exists to answer, and a date and time is most of the answer — the ordering alone
@@ -907,8 +864,8 @@ Cheap: `played_at` is already stored, to the millisecond. What needs deciding is
 "yesterday, 21:14" reads better than a date for anything recent and worse for anything old, and
 grouping the list under day headings may be better than putting a timestamp on every row.
 
-**Raised again 2026-09-03**, and it is what the owner wanted from history all along: asked whether
-replaying should reorder the list (`docs/BACKLOG.md` A18) he said no, and *"what I care about more
+**Raised again 2026-09-03**, and it is what history is for: asked whether
+replaying should reorder the list (`docs/BACKLOG.md` A18) the answer was no, and *"what I care about more
 is the date and time in history."*
 
 **Built** with `DateUtils.getRelativeDateTimeString`, so it reads "yesterday, 21:14" while that is
@@ -919,13 +876,10 @@ them.
 
 ## B16. ~~The share-file and share-link icons are the same~~ — DONE 2026-09-02
 
-*owner, 2026-09-02.* Both used `PlayerIcons.Share`. The link has its own now — two actions that do
+Both used `PlayerIcons.Share`. The link has its own now — two actions that do
 different things should not be told apart only by their labels.
 
 ## B17. A mis-tap in an online list now costs a download
-
-*owner, 2026-09-02, raised as a consequence of `docs/ARCHITECTURE.md` §17 and deliberately not acted
-on.*
 
 Once tapping a row plays it, tapping the wrong row in a Modland folder fetches a file. These are
 kilobytes so it is not a disaster, and before the change a mis-tap cost nothing at all.
@@ -935,8 +889,6 @@ starts, cancelling the fetch when another row is tapped within a moment, or simp
 The middle one is probably right and is nearly free — `openJob` is already cancelled on a new load.
 
 ## B18. ~~Add a track to a *different* playlist, from its menu~~ — DONE 2026-09-02
-
-*owner, 2026-09-02.*
 
 Every row now has a three-dot menu whose **Add to the playlist** means the active one. This is the
 other half: put this tune in one of the others without leaving what you are doing to switch
@@ -951,8 +903,6 @@ a new playlist on the fly from the picker.
 **Related:** `docs/BACKLOG.md` A4 candidate bulk actions share this picker machinery.
 
 ## B19. Should an export carry the music, not just the list?
-
-*owner, 2026-09-03, raised while looking at the export that had just been built.*
 
 Today an export is a list of references (`docs/BACKLOG.md` A25). A **zip holding the actual files**
 would make a playlist self-contained: it would open on a phone that has never seen those tunes, and
@@ -976,9 +926,8 @@ Worth weighing when it is:
 
 ## B4. ~~Play MP3 too~~ — MOVED to `docs/BACKLOG.md` A29 on 2026-09-09
 
-*Raised by the owner 2026-09-01 as a wish; promoted by him on 2026-09-09 — **"ma być w todo (to nie
-życzenie)"**. The reasoning below moved with it and is kept here only so the number is not a dead
-link.*
+*Raised 2026-09-01 as a wish and promoted to work on 2026-09-09 — it is a requirement, not a wish.
+The reasoning below moved with it and is kept here only so the number is not a dead link.*
 
 Likely simple, and there is a neat route: `minimp3` is a
 single public-domain header, which is a fourth backend of about fifty lines rather than a whole
@@ -992,8 +941,6 @@ behind "play this file" rather than in the library scan.
 
 ## B5. A web player, with favourites and history synced to an account
 
-*owner, 2026-09-01.*
-
 The same music in a browser, sharing state with the phone through a Google or Cloudflare account. Recorded
 as a thought to return to, not a plan.
 
@@ -1004,7 +951,7 @@ different kind of project from an app that reads files off a phone. The parts th
 over unchanged are the ones already kept free of Android: `PlayQueue`, and the schema in
 `SchemaSql`.
 
-**Expanded 2026-09-08 into `docs/PLAN_WEB.md`**, at the owner's word, and two of the sentences above
+**Expanded 2026-09-08 into `docs/PLAN_WEB.md`**, and two of the sentences above
 did not survive it. Left standing rather than edited, because the plan explains what was wrong:
 
 - **sc68 does have a WebAssembly build** — and one based on 3.0.0b, the version we moved to two days
@@ -1032,16 +979,12 @@ already is.
 
 ## B6. Fold hard-panned channels together
 
-*owner, 2026-09-01.*
-
-Amiga modules pan channels hard left and right by convention, and on his phone one "speaker" is the screen vibrator: half the music is
+Amiga modules pan channels hard left and right by convention, and on some phones one "speaker" is the screen vibrator: half the music is
 effectively inaudible. Wanted is a mix control — full stereo, narrowed, or mono — applied in the
 render callback where the gain already is. Note that libopenmpt has a stereo-separation setting of
 its own, so part of this may be a backend option rather than a mix of ours.
 
 ## B7. Full metadata for any supported file
-
-*owner, 2026-09-01.*
 
 An info button or a long press, showing everything the backend knows about a track rather than the handful of fields the player
 screen has room for. Should work on any file the current version can open, not only on what is
@@ -1049,22 +992,18 @@ playing.
 
 ## B8. ~~A history of what was played~~ — DONE 2026-09-02
 
-*owner, 2026-09-01.*
-
 Somewhere in settings. Note that `PlayQueue` already keeps a history, but only within a session and only for the active playlist;
 a real one is a table of plays with timestamps, which is a small schema change and a screen.
 There is no settings screen yet either.
 
 ## B9. Optional visualiser on the main screen
 
-*owner, 2026-08-31.*
-
 R4 makes metadata the default; the visualiser returns as something the user switches on. Worth doing properly (a real scope or
 per-channel VU driven by the render callback) rather than the "stiff" one being replaced.
 
 ## B10. ~~Online catalogue browsing — the rest of the archives~~ — SAME AS A7, folded 2026-09-02
 
-*Claude, 2026-08-31. Spotted as a duplicate by the owner 2026-09-02, and he was right.*
+*Spotted as a duplicate on 2026-09-02, correctly.*
 
 This and `docs/BACKLOG.md` A7 are one item under two names: I raised it here as a wish on 2026-08-31
 and it became agreed work as A7 the next day, without anyone striking the wish. **A7 is the live

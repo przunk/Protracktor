@@ -60,7 +60,7 @@ backend's *interface* would have caught it; one that mirrors its *purpose* did n
 **Correction.** Loop until the buffer is full or the track genuinely ends, with a bound of eight
 consecutive empty passes so an idle decoder costs one silent buffer rather than a locked-up device.
 
-**Status:** **fixed**, guarded, and **confirmed on a device** — the owner played SNDH on
+**Status:** **fixed**, guarded, and **confirmed on a device** — SNDH played on
 2026-09-03. `native/probe/sc68/probe_render.c` mirrors the backend's *contract* rather than its
 purpose: it asks whether the **first** buffer comes back full. Five of five files answer `full` with
 the fix and `short:0` with the single-call logic restored, which was checked rather than assumed.
@@ -224,5 +224,5 @@ more moving parts than they remove.
 - Anything about **how it feels**: gesture timing, whether a list jumps under a thumb, whether a
   scan of a real library is bearable. Every defect this project has actually shipped was
   found that way.
-- **R9 (instant start)** on the owner's network share, which is `docs/STATUS.md` C3 and needs his
+- **R9 (instant start)** on a network share, which is `docs/STATUS.md` C3 and needs a
   hardware.

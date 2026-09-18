@@ -1,9 +1,9 @@
 # Plan: sending music from the phone to a browser
 
-Written 2026-09-08, taking over from `docs/PLAN_WEB.md` at the owner's request.
+Written 2026-09-08, taking over from `docs/PLAN_WEB.md`.
 
-> *"moje marzenie: odpalić w pracy w przeglądarce naszego playera i mieć możliwość wysyłania muzyki
-> z telefonu do kompa. Najlepiej jakiś płytki pairing bez kont."*
+> Open this player in a browser at work, and be able to send music to it from the phone — with the
+> shallowest possible pairing and no accounts.
 
 **The answer is yes, and the shallow version is shallower than the wish assumes** — because the
 thing that has to travel is not music. Two of the three steps below need no server at all.
@@ -64,7 +64,7 @@ one here, not the compromise.
 
 ### H1 — a link, and no pairing at all
 
-The phone packs the queue into a URL fragment and hands it to whatever channel the owner already
+The phone packs the queue into a URL fragment and hands it to whatever channel the user already
 uses to talk to himself: a message, an email, a note. The browser opens it and plays.
 
 - **No server, no pairing, no account, nothing to keep running.**
@@ -104,7 +104,7 @@ one needs a short expiry and a guess limit — worth avoiding by simply not offe
 the phone must be the one that *acts* — "send to my browser" is a deliberate press, not background
 sync. Making the browser able to pull from a sleeping phone means a push service, which means
 registration and identifiers, which is the account this design exists to avoid. The wish as written
-is an act ("wysyłać z telefonu"), so this limit costs nothing today; it should be recorded before
+is an act — sending, from the phone — so this limit costs nothing today; it should be recorded before
 somebody tries to make it symmetric.
 
 ### H3 — WebRTC, and why not yet
@@ -149,12 +149,12 @@ removes the server-side data, the privacy policy change, the password reset, the
 the breach, and it is roughly a tenth of the work.
 
 What it does *not* give: state that arrives at the browser when the phone is off, and a second
-device that stays in step without being asked. If either of those is what the owner actually wants,
+device that stays in step without being asked. If either of those is what is actually wanted,
 that is W3 and it should be chosen deliberately (`PLAN_WEB.md` §11.5), not arrived at.
 
 ---
 
-## 5a. Three answers the owner asked for, 2026-09-08
+## 5a. Three answers what was asked for was, 2026-09-08
 
 ### Pairing: a typed code first, the QR later and for free
 
@@ -243,10 +243,10 @@ player and the cause is three commits back.
 
 ## 5b. Built 2026-09-08: scan a code, and the browser has the playlist
 
-The owner rejected the link as *"pain in the ass"* the moment he had used it twice, which is the
+The link was rejected after two uses, which is the
 right verdict and arrived faster than this document expected. H2 was built the same evening.
 
-**One correction to the shape he proposed, and it made it cheaper.** He pictured the page exposing
+**One correction to the shape first proposed, and it made it cheaper.** That version had the page exposing
 an endpoint the phone posts to. A browser page cannot: it may open a connection and never accept
 one. So the code carries the address of **the server the page is listening to** — and today that is
 the same process already serving the page, so pairing needed no new infrastructure at all. Three
@@ -260,7 +260,7 @@ routes: `/pair/host`, `/pair/<room>` and `/pair/<room>/events`.
 - **The code stays on screen**, shrunk once something is playing rather than hidden: it is how the
   next playlist arrives.
 - **A pairing is stored only after it has worked.** The first version stored the address before
-  trying it; the owner scanned with his firewall still closed, the send failed, the address was kept
+  trying it; a scan with the firewall still closed made the send fail, and the address was kept
   anyway, and every later press used a pairing that had never once succeeded — with no way back to
   the scanner. A stored pairing is a claim that a browser is reachable and the only evidence is
   having reached one. "Reached it, no page listening" still stores, because that is a different
@@ -285,7 +285,7 @@ address in the code is right and the connection still fails, which is the worst 
 
 ## 5c. Measured 2026-09-09: server-sent events do not survive a Cloudflare quick tunnel
 
-The owner put the server on a Raspberry Pi 25 km away and reached it through
+The server went on a Raspberry Pi 25 km away, reached through
 `cloudflared tunnel --url`. Pairing worked, the phone reported "sent 19 tracks", and **the page never
 saw them**.
 
@@ -318,8 +318,8 @@ Not built yet — found at half past midnight, and this is the kind of change to
 *not* be a second front end, and that argument still stands — what changed is that it now **looks**
 like the app without doing what the app does.
 
-**It wears his colours, sampled rather than guessed.** His phone runs dynamic colour, so it does not
-show the Material 3 baseline at all; the palette was read out of his screenshots pixel by pixel
+**It wears the app's colours, sampled rather than guessed.** A phone running dynamic colour does not
+show the Material 3 baseline at all; the palette was read out of screenshots pixel by pixel
 (`docs/reference/app-colours.json`), and the baseline is kept beside it for a phone with dynamic
 colour off. The type scale came from the Compose sources instead — knowing that a track title is
 `titleMedium` beats measuring a downscaled PNG.
@@ -348,11 +348,8 @@ silence.
 
 ## 5e. Built 2026-09-11: Share with Protracktor — one tune, as a link that plays it
 
-*Built as "Send to Protracktor web"; the owner renamed it "Share with Protracktor" the same
+*Built as "Send to Protracktor web"; renamed to "Share with Protracktor" the same
 night, which says what it is for — handing a tune to somebody — rather than where it lands.*
-
-*Owner, 2026-09-11: an option on a track, on any list, on the phone and on the page, that sends a
-link to the web player which opens straight onto that one tune playing.*
 
 **H1's link, with a mark on it.** A queue link is `<page>/#<packed>`; this one is
 `<page>/#play:<packed>`, the packing unchanged (`QueueLink.trackLink`) and holding one line. `:` is
@@ -388,8 +385,8 @@ Audio and Video"), in which case the tune simply plays. Otherwise the tune is fe
 anyway, the dock says "Tap anywhere to play" and the button offers play (not pause, not stop),
 and **the first touch or key anywhere on the page** starts it. Chrome runs no worklet until the
 context does, so there the tune only opens at that touch; the dock says so from the moment the
-context is born suspended rather than sitting on "fetching…", as it did the first time the owner
-tried it on his phone — not only Play, which the owner asked for as "startuje od razu". Play and the
+context is born suspended rather than sitting on "fetching…", as it did on the first try from a phone — and any
+touch starts it, not only Play. Play and the
 space bar are left to start it themselves, or their click would be a second press that paused it.
 
 ## 6. Order of work
@@ -405,7 +402,7 @@ W1/W2/W3 and the reason to trust the order.
 
 ---
 
-## 7. Decisions that are the owner's
+## 7. Decisions that are not the implementation's to make
 
 - **Is the work browser meant to play his *playlists*, or to be handed *one tune at a time*?** H1
   serves the first well and the second clumsily; H2 serves both. This is the question that picks the

@@ -1,10 +1,10 @@
 # Review — round 11
 
-*A shallow pass over round 11's own diff, asked for by the owner when the work was done: C56's
+*A shallow pass over round 11's own diff, asked for when the work was done: C56's
 fallback length, A32's ZXTune in the browser, and the refreshed Play listing. 43 files, ~1,590 lines
 added.*
 
-**Shallow, and it still found two faults that would have reached him** — both in work committed as
+**Shallow, and it still found two faults that would have reached a phone** — both in work committed as
 finished earlier in the same session. That is the argument for doing this at all: the tests were
 green before the review and green after, because neither fault was a thing a test had been written
 for.

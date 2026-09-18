@@ -110,11 +110,6 @@ parser.
 
 ### The wall this plan did not know about — CORS, measured 2026-09-15
 
-*The owner, 2026-09-15, listed what the ZXTune app offers and asked whether to add any of them:
-amp.dascene.net, aminet.net, asma.atari.org, abrimaal.pro-e.pl/aygor, prg.dtu.dk, Josh W, modland,
-ocremix.org, files.scene.org, modarchive.org, vgmrips.net, downloads.khinsider.com, zxart.ee,
-zxtunes.com.*
-
 **Everything above was decided before the browser player existed**, and the browser changes the
 question completely. The phone fetches over HTTP and no server can stop it. **The page cannot**: a
 fetch from `protracktor.pages.dev` to an archive is cross-origin, and without
@@ -128,7 +123,7 @@ about a host that says yes (`docs/STATUS.md` C56). The tell is `Vary: Origin` in
 means a CORS decision is being made per request. The table below was re-measured with a ranged GET
 carrying an `Origin`, and every verdict held.
 
-Measured against every host the owner named:
+Measured against every host named:
 
 | | CORS | note |
 | --- | --- | --- |
@@ -173,7 +168,7 @@ that publishes it* is what keeps this clean; re-serving it is not.
 
 ## UnExoticA — the gap Modland does not cover
 
-*Raised by the owner, 2026-09-07: he went looking for an Amiga game soundtrack, found only the SNES
+*Raised 2026-09-07: looking for an Amiga game soundtrack turned up only the SNES
 rip under Nintendo SPC, and asked where the Amiga one lives.*
 
 **Modland is organised by musician and is mostly demoscene**, not game rips. That is the shape of
@@ -207,11 +202,9 @@ crawlers rather than a user's own client fetching a file they asked for, and the
 the latter. But it is a volunteer archive's bandwidth and every user would be pointed at it, so the
 answer is theirs to give rather than ours to infer — the same move that worked with UADE.
 
-**The owner decided on 2026-09-09 to build it before the reply**, for his own use and behind a
-switch: *"czekam na maila ale możemy przed publikacją używać już wersji, która spełni moje osobiste
-marzenia… W razie czego wyłączymy funkcję lub ją usuniemy. Proponuję dodać jako
-zależność/funkcję łatwousuwalną."* That is a different bargain from the one this section was written
-under — nothing is published, no user but him is pointed at the archive, and if the answer is no the
+**Decided on 2026-09-09: build it before the reply arrives**, for private use and behind a switch,
+to be turned off or taken out if the answer is no. That is a different bargain from the one this section was written
+under — nothing is published, no user is pointed at the archive, and if the answer is no the
 feature comes out. What it requires of the implementation is that "comes out" be cheap and honest:
 one flag, one source file per layer, no rows of theirs left in anybody's database. That constraint
 is the design, and it is written down in §UnExoticA of `docs/PLAN_UNEXOTICA.md`.

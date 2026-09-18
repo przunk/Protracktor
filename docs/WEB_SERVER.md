@@ -1,6 +1,6 @@
 # Running the web player on another machine
 
-*Written 2026-09-08, when the owner asked to put it on a Raspberry Pi.*
+*Written 2026-09-08, when it went on a Raspberry Pi.*
 
 The page and the pairing service are one small node program. It needs **node and nothing else** —
 no build tools, no Emscripten, no Android SDK. The engine is compiled to WebAssembly on a
@@ -100,9 +100,7 @@ when the process stops. There is no database, no account and no log of what was 
 
 ## Where this should go, and why the address is the problem — surveyed 2026-09-15
 
-*The owner: his script copies a new build, unpacks it, starts a Cloudflare quick tunnel, reads the
-address out of it, writes that into `server.json` and starts the server — and the tunnel comes up on
-**a different random address every time**. Recorded as a direction, not a decision; nothing here is
+*a different random address every time**. Recorded as a direction, not a decision; nothing here is
 built.*
 
 **The thing being tunnelled is two things with opposite requirements**, and every option below is
@@ -154,8 +152,8 @@ else** — an hour, and no code changes at all.
 the two, which is already handled — `serve-web.mjs` sends `access-control-allow-origin: *` on every
 pairing response.
 
-**5. Resolving the moving address through a REST endpoint** (the owner's own suggestion: the app asks
-a service on his DNS, NAT-forwarded to the Pi, where the tunnel currently is). It works, and it is
+**5. Resolving the moving address through a REST endpoint** (a suggestion worth recording: the app asks
+a service on a personal DNS, NAT-forwarded to the Pi, where the tunnel currently is). It works, and it is
 the option with the most moving parts: the random tunnel stays and an always-on resolver is added in
 front of it. **And it answers itself** — a resolver has to live at a stable address, and anything
 with a stable address could serve the page directly, which is the thing the resolver was for.
