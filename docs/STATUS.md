@@ -460,6 +460,27 @@ It also needed the controller to read the catalogue summaries and the granted fo
 start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
 were loaded only when Browse opened.
 
+### C69. ~~Play refused every deep link: the paths did not start at the root~~ — FIXED 2026-09-18, branch
+
+*Play Console, on the published build: "Deep link not working. Users will not go directly to your
+app… Add a `/` to the beginning of the android:path attribute in the `<data>` tag."*
+
+All **111** `pathPattern` entries began `.*\.mod`, `.*\..*\.xm` and so on. A path always begins
+with `/` — a `content://` one is `/document/…`, a `file://` one is absolute, an `http(s)` one starts
+at the root — and Play refuses a pattern that does not say so.
+
+**Checked rather than assumed to be harmless.** Android's `PatternMatcher` simple glob was
+reimplemented and both forms run against four real paths: a picker's content URI, a short path, a
+path with an earlier dot, and a Modland URL. Every one matches the same pattern before and after,
+through the same one of the three variants. The slash costs nothing and satisfies the report.
+
+`ManifestPathPatternsTest` fails on a pattern without it. There are over a hundred, three per
+extension because `pathPattern`'s `.*` does not backtrack, and one missing slash among them is not
+something anybody will see by reading.
+
+**This reaches users only in the next release**, as the report says: the links start working when
+somebody updates.
+
 ### C68. ~~With no length, the bar sat at the end and the total read 0:00~~ — FIXED 2026-09-18, branch
 
 *Owner, 2026-09-18, on the build that fixed C67: "player mówi 0:00 max, zaraz po kliknięciu play
