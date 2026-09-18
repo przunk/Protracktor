@@ -24,12 +24,17 @@ drag layer has.
 the tune playing, which that list already took. It changes when a fetch starts and stops, not five
 times a second, so the recomposition the screen is careful about is not disturbed.
 
-## B34. Hiding the file extension in a name, as a setting
+## B34. Hiding the file extension in a name, as a setting — **shelved by the owner, 2026-09-18**
 
-*Owner, 2026-09-18.*
+*Owner, 2026-09-18, after reading what it would cost: not now, and not to be raised again.*
 
-**The wish is right and the switch is the wrong shape for it.** Worth writing down why, because the
-reasoning decides what to build rather than whether to.
+**Do not build it, and do not bring it up.** Not in a round's plan, not as a suggestion beside a
+related change, not as "while we are in this file anyway". If it is ever wanted the owner will say
+so; until then this entry exists to answer the question, not to keep asking it.
+
+The reasoning below is kept because it is the useful part — it says what any future version would
+have to survive, and two of the alternatives are worth doing on their own terms if the subject ever
+comes back.
 
 **Where the extension even comes from.** A row shows the tune's own title when the app knows one —
 which it does for a local file after a scan, and for a catalogue row only once the file has been
