@@ -6,7 +6,7 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
-## 0.6.0 — versionCode 727
+## 0.6.0 — versionCode 731
 
 Closed testing. Round 12: the index stops depending on what this build can play.
 
@@ -15,7 +15,7 @@ Closed testing. Round 12: the index stops depending on what this build can play.
 | Artifact | *`./scripts/build-bundle.sh`; fill in on upload* |
 | Size | |
 | SHA-256 | |
-| versionCode | 727 — `git rev-list --count HEAD`, not written by hand |
+| versionCode | 731 — `git rev-list --count HEAD`, not written by hand |
 | versionName | 0.6.0 |
 | Commit | *the commit `v0.6.0` points at* |
 | Tag | `v0.6.0` |
@@ -26,9 +26,12 @@ The migration adds `ext`, `pre` and `playable` to `catalogue_tracks`, rebuilds t
 indexes as partial ones, and backfills `archive_count` with a `COUNT(*)` per catalogue — which on a
 full Modland index is a few seconds of first launch. The release notes say so in both languages.
 
-**It also carries C66**, found by a tester on 0.5.0 after the tag was first written: the
-previous-track button drew a wedge on his phone and correctly on every device here. Six icon paths
-in both players depended on a reading of the SVG close that renderers disagree about.
+**It also carries three defects found after the tag was first written.** C66: the previous-track
+button drew a wedge on a tester's phone and correctly on every device here — six icon paths in both
+players depended on a reading of the SVG close that renderers disagree about. C67: every console
+tune whose file states no length claimed exactly 2:30, because game-music-emu's `play_length` is a
+default when nothing is known and we read it as a measurement. C68: with that gone, the bar and the
+total had to learn what an unknown length looks like.
 
 **Nothing new is shipped inside the APK**: round 12 touched one host probe (`native/probe/zxtune`,
 never packaged) and no dependency. `docs/LICENSES.md` is unchanged, and UADE is still a

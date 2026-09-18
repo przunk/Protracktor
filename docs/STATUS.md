@@ -460,6 +460,63 @@ It also needed the controller to read the catalogue summaries and the granted fo
 start-up**: the empty playlist has to choose before anybody has opened Browse, and until now both
 were loaded only when Browse opened.
 
+### C68. ~~With no length, the bar sat at the end and the total read 0:00~~ — FIXED 2026-09-18, branch
+
+*Owner, 2026-09-18, on the build that fixed C67: "player mówi 0:00 max, zaraz po kliknięciu play
+pasek odtwarzania trafia na koniec, a czas po lewej rośnie."*
+
+Both halves of C67's other side, and both were waiting to be found the moment a tune honestly
+reported no length.
+
+**The bar.** `SeekBar` floors the range at a thousandth of a second so the slider cannot divide by
+zero. With a real duration that floor is invisible; with none it *is* the range, so the first tick
+put the thumb at the far end. It now draws an empty bar and refuses the drag — a position is asked
+for as a fraction of a length, and there is no length.
+
+**The total.** `formatTime(0.0)` is "0:00", which where a total belongs says the tune is over before
+it starts. `formatTotal` prints dashes instead. Elapsed zero is still "0:00", because that one is
+true.
+
+**What is not a defect:** the tune faded at 2:30 and ended around 2:35. That is `applyFade`, still
+set from game-music-emu's `play_length` on purpose (C67) — a looping tune nothing can measure fades
+out somewhere rather than running until the fallback cuts it dead.
+
+**What is still missing** is a bar that moves. The app learns the real length every time such a
+tune plays to its end and then throws it away; `docs/BACKLOG.md` A50 is the owner's proposal to
+write it down.
+
+### C67. ~~Console tunes with no length all claimed 2:30~~ — FIXED 2026-09-18, branch
+
+*Owner, 2026-09-18: `stars through the clouds.nsf` (Nintendo Sound Format / Tadpole) "gra przez
+około 30s, długość pokazuje 2:30, a po 30s przeskakuje do innego utworu. Czy to nasz błąd?"*
+
+**Half of it was, and the interesting half was not.**
+
+Measured on that exact file, through this engine: **reported duration 150.0 s, last audible sample
+at 29.4 s, the library ended the tune at 30.5 s.** So the tune really is thirty seconds long and
+moving on was right. What was wrong was the number over it.
+
+game-music-emu's own header says what `play_length` is:
+
+> Length if available, otherwise intro_length+loop_length*2 if available, otherwise **a default of
+> 150000** (2.5 minutes).
+
+`durationSeconds()` returned it whatever its provenance, so every NSF, AY, KSS and GBS that states
+no length — and the formats have nowhere to state one — reported exactly 2:30. A default presented
+as a measurement, which is the same fault as a SID playing for ever because nothing knew its length
+(C56), wearing the opposite coat.
+
+It now asks the fields that admit to not knowing: `length` is "total length, **if file specifies
+it**", and the loop fields are -1 when unknown. With none of them known the app is told nothing, and
+an unmeasured tune takes the path it already had. Checked both ways on real files: an SPC with an
+ID666 length still reports 120.0 s, the NSF now reports none.
+
+`applyFade` still uses `play_length` on purpose: a looping tune nothing can measure should fade out
+somewhere rather than run until the fallback cuts it dead. What changed is only what the app claims
+to know.
+
+`scripts/check-engine.mjs` builds an NSF with no length in it and fails if a duration comes back.
+
 ### C66. ~~The previous-track button drew a wedge on somebody else's phone~~ — FIXED 2026-09-18
 
 *A tester's screenshots of 0.5.0, 2026-09-18: the control left of play drawn as a bar and a

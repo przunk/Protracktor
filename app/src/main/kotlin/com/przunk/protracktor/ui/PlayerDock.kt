@@ -103,7 +103,7 @@ fun PlayerDock(
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                 )
                 Text(
-                    text = formatTime(state.durationSeconds),
+                    text = formatTotal(state.durationSeconds),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -362,6 +362,19 @@ internal fun formatTime(seconds: Double): String {
     val total = seconds.toInt()
     return "%d:%02d".format(total / 60, total % 60)
 }
+
+/**
+ * A tune's length, or dashes when nothing knows it.
+ *
+ * **Zero is not a length**, and "0:00" printed where a total belongs says the tune is over before
+ * it starts. Formats with nowhere to record a length are ordinary here -- an NSF, an AY, a SID with
+ * no HVSC entry -- so this is the common case rather than the odd one (`docs/STATUS.md` C67, C68).
+ *
+ * Deliberately not the same as [formatTime]: an *elapsed* zero is a real zero and reads correctly
+ * on the left of the bar.
+ */
+internal fun formatTotal(seconds: Double): String =
+    if (seconds > 0.0) formatTime(seconds) else "--:--"
 
 /**
  * Skip forward or back: a press moves by tune, a hold moves by file.

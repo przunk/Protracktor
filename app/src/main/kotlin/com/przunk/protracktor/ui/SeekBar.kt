@@ -52,8 +52,15 @@ fun SeekBar(
     label: String? = null,
 ) {
     var scrubbing by remember { mutableStateOf<Float?>(null) }
+
+    // **A tune of unknown length has no fraction to draw.** The floor below keeps the slider from
+    // dividing by zero, and with a real duration it is invisible -- but with none it made the
+    // range a thousandth of a second, so the thumb sat at the far end from the first tick while
+    // the elapsed time counted up beside it (`docs/STATUS.md` C68). An empty bar is the honest
+    // picture: something is playing, and how far through it is unknown.
+    val measured = durationSeconds > 0.0
     val range = durationSeconds.toFloat().coerceAtLeast(0.001f)
-    val shown = (scrubbing ?: positionSeconds.toFloat()).coerceIn(0f, range)
+    val shown = if (measured) (scrubbing ?: positionSeconds.toFloat()).coerceIn(0f, range) else 0f
     val interaction = remember { MutableInteractionSource() }
 
     // **The thumb is felt, not just seen.** Three parts, and all three are needed for that: a
@@ -87,7 +94,10 @@ fun SeekBar(
             haptics.gestureEnd()
         },
         valueRange = 0f..range,
-        enabled = enabled,
+        // Nothing to drag towards: a position is asked for as a fraction of a length, and there is
+        // no length. The dot goes with it, for the same reason it goes on a backend that cannot
+        // seek (`docs/STATUS.md` C45).
+        enabled = enabled && measured,
         interactionSource = interaction,
         modifier = modifier
             .fillMaxWidth()

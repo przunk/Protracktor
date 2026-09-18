@@ -15,6 +15,60 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A50. A length learnt by playing it once — **the owner's idea, 2026-09-18**
+
+*Owner, 2026-09-18, on the NSF whose length nothing states: "skoro wiemy kiedy kończy się utwór, to
+może pisać na końcu zamiast 0:00 rzeczywisty czas i sprawić żeby pasek szedł?"*
+
+**The right answer, and bigger than the defect it comes from.** C67 stopped the app claiming a
+length no file ever stated; C68 stopped the bar pinning itself at the end when there is none. What
+neither does is give the bar something to draw — an unmeasured tune plays with an empty bar and a
+counter, which is honest and unsatisfying.
+
+But the app *does* learn the length, exactly once, every time such a tune plays to its end: the
+engine returns a short render and `handleTrackEnded` runs. **Write it down and the second play has a
+real total and a moving bar** — and it is a measurement of this file on this device, not a
+library's default.
+
+**The shape of it, as far as it is thought through:**
+
+- A table keyed the way the song lengths are (`SongLengthStore` is the model), holding seconds and
+  the date they were observed.
+- Written **only on a natural end**, never on a skip, a stop, or an error: those measure the
+  listener, not the tune.
+- Read in `load()` when the backend reports nothing, and used exactly where an HVSC length is used
+  today, so the fallback, the end-of-tune path and the bar all work already.
+- **Not** written for a tune the fallback cut off, or the length recorded would be the setting
+  rather than the music.
+- Subsongs are separate tunes and need separate rows.
+
+**What it costs**: a schema version, a store, one call at the end of a track and one at its start,
+and its own tests. **What it buys**: every format with nowhere to write a length — NSF, AY, KSS,
+GBS, SNDH without sc68's database, SID without HVSC — gets a real one after a single listen.
+
+## A49. The owner's own words are still quoted in the documentation — **noted 2026-09-18**
+
+*Owner, 2026-09-18: "usunięcie z dokumentacji moich cytatów, typu: The owner, late on 2026-09-10,
+after a day spent getting Random right on the phone: '…'; takich rzeczy nie powinno być w repo."*
+
+A37 did this for the **code** and stopped at the door of `docs/`. The same sentences are still
+there, and now the repository is public.
+
+**How much:** about **111** lines across a dozen files carry an attribution like "Owner, 2026-09-14"
+or a quoted request, and roughly **117** carry an italicised quotation. `docs/STATUS.md`,
+`docs/BACKLOG.md`, `docs/WISHLIST.md`, the plans and `docs/review-round-*.md` all have them.
+
+**The calibration A37 arrived at applies unchanged**: keep the finding, drop the provenance. A
+defect is what the code did and what it should do; who noticed it on which evening is what git
+history is for. Where a quote *is* the decision — a rule the owner set — state the rule.
+
+**Two things to decide while doing it**, not after:
+
+- **`docs/letters/`** is correspondence with archive maintainers, quoted on purpose because it is
+  evidence of what was asked and answered. That is not the same thing and should stay.
+- The **dates on measurements** stay too: "measured 2026-09-11, 6,780 entries" is provenance of a
+  fact, not of a person.
+
 ## A48. Two seconds pass before the playlist appears — **measured, one cause fixed 2026-09-18**
 
 *Owner, 2026-09-17, on the round-12 build: "po uruchomieniu przez 5 sekund miałem pustą listę z

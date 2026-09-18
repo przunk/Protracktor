@@ -139,6 +139,43 @@ const malformedSap = (() => {
   if (handle) M._pt_close(handle);
 }
 
+
+// --- a length nobody stated is not a length ------------------------------------------------------
+//
+// game-music-emu's `play_length` is documented in its own header as "Length if available, otherwise
+// intro_length+loop_length*2 if available, **otherwise a default of 150000** (2.5 minutes)". Read as
+// a measurement it makes every NSF, AY, KSS and GBS without a length claim to be exactly 2:30 --
+// and the app drew a progress bar promising that over a tune that stops when it stops
+// (`docs/STATUS.md` C67).
+//
+// A file the format gives nowhere to write a length: the header, and a page of 6502 that returns
+// immediately. What it must report is nothing.
+{
+  const nsf = Buffer.alloc(128 + 256);
+  nsf.write('NESM\x1a', 0, 'latin1');
+  nsf[5] = 1;                       // version
+  nsf[6] = 1;                       // one song
+  nsf[7] = 1;                       // starting song
+  nsf.writeUInt16LE(0x8000, 8);     // load address
+  nsf.writeUInt16LE(0x8000, 10);    // init
+  nsf.writeUInt16LE(0x8003, 12);    // play
+  nsf.write('check tune', 14, 'latin1');
+  nsf.writeUInt16LE(16666, 110);    // NTSC frame length, in microseconds
+  nsf[128] = 0x60;                  // RTS, so init does nothing
+  nsf[131] = 0x60;                  // RTS, so play does nothing
+
+  const { handle, error } = open(nsf, 'no-length.nsf');
+  check('an NSF opens', handle !== 0, `said: ${error}`);
+  if (handle) {
+    check(
+      'and a file that states no length reports none, rather than the library default of 2:30',
+      M._pt_duration(handle) === 0,
+      `${M._pt_duration(handle)} s`,
+    );
+    M._pt_close(handle);
+  }
+}
+
 // --- surviving a decoder that refuses ----------------------------------------------------------
 //
 // C42: what matters is not that a bad file fails but that the next good one still works. A throw
