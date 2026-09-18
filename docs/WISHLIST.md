@@ -24,7 +24,44 @@ drag layer has.
 the tune playing, which that list already took. It changes when a fetch starts and stops, not five
 times a second, so the recomposition the screen is careful about is not disturbed.
 
-## B32. Modland's `/incoming/` is not in `allmods.zip`, and neither app can see it
+## B34. Hiding the file extension in a name, as a setting
+
+*Owner, 2026-09-18.*
+
+**The wish is right and the switch is the wrong shape for it.** Worth writing down why, because the
+reasoning decides what to build rather than whether to.
+
+**Where the extension even comes from.** A row shows the tune's own title when the app knows one —
+which it does for a local file after a scan, and for a catalogue row only once the file has been
+opened. Until then the title *is* the filename, so `elysium.mod` is not decoration around a name, it
+is the whole of what is known. Hiding part of it hides part of the only fact in hand.
+
+**Three things the switch would have to survive:**
+
+1. **A name without its extension is often not unique.** Modland holds the same tune in several
+   formats under one author — `elysium.mod` beside `elysium.ahx`. Hide the suffix and the folder
+   shows two identical rows, and the one thing that told them apart is the thing that was hidden.
+2. **Half this archive marks the format at the front, not the back.** `mod.elysium`, `hip.something`
+   — thirteen prefixes in `SupportedFormats`, and an Amiga listing is full of them. "Hide the
+   extension" really means "hide the format marker wherever it is", and a setting that tidies
+   suffixes while leaving prefixes is a setting that looks broken on the Amiga half.
+3. **Search matches what is stored, not what is drawn.** Type `mod` with the setting on and rows
+   come back with nothing visible to explain the match.
+
+**What would be better than a setting**, in increasing order of effort:
+
+- **Hide it where it is redundant and cannot collide**: inside one catalogue folder every row shares
+  a format, the header already says which, and if no two names collide once stripped, the suffix
+  earns nothing. That is a rule, not a preference, and it needs no screen in Settings.
+- **Show the tune's real name instead.** The songdb metadata already downloaded for A34 answers
+  "what is this called" by hash — for a file that has been fetched. Every row whose title is really
+  a filename is a row waiting for that answer, and the extension question disappears with it.
+
+**If it is wanted as a switch anyway**, it must strip prefixes as well as suffixes, must leave a
+name alone when stripping would make it a duplicate of a sibling, and must not change what search
+matches. Those three are the whole of the work; the checkbox is the easy part.
+
+## B33. Modland's `/incoming/` is not in `allmods.zip`, and neither app can see it
 
 *Owner, 2026-09-10, by finding a file we could not find:*
 `ftp.modland.com/incoming/warehouse/MOD/games/Top Gear 2 (OCS & AGA)/topgear2.mod`
