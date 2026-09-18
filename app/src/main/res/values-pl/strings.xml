@@ -19,10 +19,10 @@
     <string name="playlist_empty_body_nothing_held">Nie ma jeszcze czego przeglądać. Pobierz katalog, a dostaniesz pół miliona utworów do przejrzenia — bez sieci.</string>
 
     <plurals name="track_count">
-        <item quantity="one">%d utwór</item>
-        <item quantity="few">%d utwory</item>
-        <item quantity="many">%d utworów</item>
-        <item quantity="other">%d utworu</item>
+        <item quantity="one">%,d utwór</item>
+        <item quantity="few">%,d utwory</item>
+        <item quantity="many">%,d utworów</item>
+        <item quantity="other">%,d utworu</item>
     </plurals>
 
     <string name="dock_idle_title">Nic nie gra</string>
@@ -65,13 +65,13 @@
     <string name="scope_label_online">Online</string>
     <string name="scope_label_online_some">Online: %1$s</string>
     <string name="scope_label_all_platforms">Wszystkie platformy</string>
-    <string name="scope_label_more">%1$s +%2$d</string>
-    <string name="browse_search_capped">Pokazano %1$d z około %2$d dopasowań — zawęź wyszukiwanie lub przeglądaj według formatu.</string>
+    <string name="scope_label_more">%1$s +%2$,d</string>
+    <string name="browse_search_capped">Pokazano %1$,d z około %2$,d dopasowań — zawęź wyszukiwanie lub przeglądaj według formatu.</string>
     <plurals name="browse_add_selected">
-        <item quantity="one">Dodaj %d utwór</item>
-        <item quantity="few">Dodaj %d utwory</item>
-        <item quantity="many">Dodaj %d utworów</item>
-        <item quantity="other">Dodaj %d utworu</item>
+        <item quantity="one">Dodaj %,d utwór</item>
+        <item quantity="few">Dodaj %,d utwory</item>
+        <item quantity="many">Dodaj %,d utworów</item>
+        <item quantity="other">Dodaj %,d utworu</item>
     </plurals>
 
     <string name="action_discard">Odrzuć</string>
@@ -168,13 +168,13 @@
     <string name="settings_fallback_length">Gdy nic nie zna długości</string>
     <string name="settings_fallback_length_detail">SID albo SNDH spoza bazy nie niesie własnej długości. Bez tego taki utwór grałby, dopóki byś go nie pominął.</string>
     <plurals name="minutes">
-        <item quantity="one">%1$d minuta</item>
-        <item quantity="few">%1$d minuty</item>
-        <item quantity="many">%1$d minut</item>
-        <item quantity="other">%1$d minuty</item>
+        <item quantity="one">%1$,d minuta</item>
+        <item quantity="few">%1$,d minuty</item>
+        <item quantity="many">%1$,d minut</item>
+        <item quantity="other">%1$,d minuty</item>
     </plurals>
     <plurals name="song_lengths_count">
-        <item quantity="one">%1$d utwór</item>
+        <item quantity="one">%1$,d utwór</item>
         <item quantity="few">%1$,d utwory</item>
         <item quantity="many">%1$,d utworów</item>
         <item quantity="other">%1$,d utworu</item>
@@ -212,33 +212,33 @@
     <string name="settings_licence">Licencja</string>
     <string name="settings_licence_detail">GNU GPL w wersji 3 lub nowszej. Kod źródłowy: github.com/przunk/protracktor.</string>
     <string name="storage_title">Miejsce na tym telefonie</string>
-    <string name="storage_database">Playlisty, historia i indeksy, które nie są plikami: %1$d MB. Zostaje, bo są tu twoje własne listy.</string>
+    <string name="storage_database">Playlisty, historia i indeksy, które nie są plikami: %1$,d MB. Zostaje, bo są tu twoje własne listy.</string>
     <string name="storage_cache">Pobrana muzyka</string>
-    <string name="storage_cache_detail">%1$d MB z %2$d MB, najstarsze usuwane najpierw</string>
+    <string name="storage_cache_detail">%1$,d MB z %2$,d MB, najstarsze usuwane najpierw</string>
     <string name="storage_index">Indeks %1$s</string>
     <string name="catalogue_playable_of">%1$,d z %2$,d do zagrania</string>
-    <string name="catalogue_count_and_size">%1$s · %2$d MB na telefonie</string>
-    <string name="storage_index_and_archive">%1$s, w tym archiwum %2$d MB</string>
-    <string name="storage_megabytes">%1$d MB</string>
+    <string name="catalogue_count_and_size">%1$s · %2$,d MB na telefonie</string>
+    <string name="storage_index_and_archive">%1$s, w tym archiwum %2$,d MB</string>
+    <string name="storage_megabytes">%1$,d MB</string>
     <string name="storage_confirm_title">Usunąć: %1$s?</string>
     <string name="storage_confirm_index">Można go pobrać ponownie z tego ekranu. Do tego czasu tego katalogu nie da się przeglądać ani przeszukiwać, a jego utwory nie zagrają.</string>
     <string name="storage_confirm_track_metadata">Można je pobrać ponownie z Browse. Do tego czasu większość utworów nie pokaże roku ani autora.</string>
     <string name="storage_confirm_favourites">Można je pobrać ponownie z Browse. Do tego czasu nie da się zawęzić losowania do ulubionych.</string>
     <plurals name="favourites_listed">
-        <item quantity="few">%1$d utwory</item>
-        <item quantity="many">%1$d utworów</item>
-        <item quantity="one">%1$d utwór</item>
-        <item quantity="other">%1$d utworów</item>
+        <item quantity="few">%1$,d utwory</item>
+        <item quantity="many">%1$,d utworów</item>
+        <item quantity="one">%1$,d utwór</item>
+        <item quantity="other">%1$,d utworów</item>
     </plurals>
     <string name="storage_confirm_song_lengths">Można je pobrać ponownie z tego ekranu. Do tego czasu utwory SID nie pokażą czasu trwania i skończą się dopiero po czasie ustawionym w Ustawieniach.</string>
     <string name="a11y_delete_storage">Usuń: %1$s</string>
     <plurals name="subsongs_count">
-        <item quantity="one">%1$d utwór</item>
-        <item quantity="few">%1$d utwory</item>
-        <item quantity="many">%1$d utworów</item>
-        <item quantity="other">%1$d utworu</item>
+        <item quantity="one">%1$,d utwór</item>
+        <item quantity="few">%1$,d utwory</item>
+        <item quantity="many">%1$,d utworów</item>
+        <item quantity="other">%1$,d utworu</item>
     </plurals>
-    <string name="subsongs_position">Utwór %1$d z %2$d</string>
+    <string name="subsongs_position">Utwór %1$,d z %2$,d</string>
     <string name="subsongs_all">Wszystkie</string>
     <string name="subsongs_first_only">Tylko pierwszy</string>
     <string name="a11y_expand_player">Otwórz odtwarzacz</string>
@@ -246,52 +246,52 @@
     <string name="action_export_playlist">Eksportuj</string>
     <string name="action_scan_folder">Przeskanuj ten folder</string>
     <string name="scan_listing">Listowanie folderu…</string>
-    <string name="scan_progress">Otwieranie plików: %1$d z %2$d</string>
+    <string name="scan_progress">Otwieranie plików: %1$,d z %2$,d</string>
     <string name="folder_unscanned">Jeszcze nieskanowany. Skanowanie otwiera każdy plik, żeby sprawdzić, czym naprawdę jest, zamiast ufać nazwie.</string>
     <string name="folder_stale">Ten folder skanowano innym zestawem dekoderów. Pliki, które wtedy nie grały, mogą grać teraz.</string>
     <string name="action_to_playlist">Playlista</string>
     <string name="action_add_track">Dodaj do playlisty</string>
     <string name="a11y_track_menu">Akcje dla %1$s</string>
     <plurals name="browse_selected">
-        <item quantity="one">%d zaznaczony</item>
-        <item quantity="few">%d zaznaczone</item>
-        <item quantity="many">%d zaznaczonych</item>
-        <item quantity="other">%d zaznaczonego</item>
+        <item quantity="one">%,d zaznaczony</item>
+        <item quantity="few">%,d zaznaczone</item>
+        <item quantity="many">%,d zaznaczonych</item>
+        <item quantity="other">%,d zaznaczonego</item>
     </plurals>
 
     <string name="action_add_to_playlist">Dodaj do playlisty…</string>
     <string name="action_add_to_other_playlist">Dodaj do innej playlisty…</string>
     <string name="dialog_add_to_playlist_title">Dodaj do playlisty</string>
     <plurals name="dialog_add_tracks_to_playlist_title">
-        <item quantity="one">Dodaj %d utwór do playlisty</item>
-        <item quantity="few">Dodaj %d utwory do playlisty</item>
-        <item quantity="many">Dodaj %d utworów do playlisty</item>
-        <item quantity="other">Dodaj %d utworu do playlisty</item>
+        <item quantity="one">Dodaj %,d utwór do playlisty</item>
+        <item quantity="few">Dodaj %,d utwory do playlisty</item>
+        <item quantity="many">Dodaj %,d utworów do playlisty</item>
+        <item quantity="other">Dodaj %,d utworu do playlisty</item>
     </plurals>
     <string name="playlist_active_indicator">Bieżąca playlista</string>
     <string name="notice_added_to_named_playlist">Dodano „%1$s” do playlisty %2$s.</string>
     <string name="notice_already_in_playlist">„%1$s” znajduje się już na playliście %2$s.</string>
     <plurals name="notice_added_count_to_playlist">
-        <item quantity="one">Dodano %1$d utwór do playlisty %2$s.</item>
-        <item quantity="few">Dodano %1$d utwory do playlisty %2$s.</item>
-        <item quantity="many">Dodano %1$d utworów do playlisty %2$s.</item>
-        <item quantity="other">Dodano %1$d utworu do playlisty %2$s.</item>
+        <item quantity="one">Dodano %1$,d utwór do playlisty %2$s.</item>
+        <item quantity="few">Dodano %1$,d utwory do playlisty %2$s.</item>
+        <item quantity="many">Dodano %1$,d utworów do playlisty %2$s.</item>
+        <item quantity="other">Dodano %1$,d utworu do playlisty %2$s.</item>
     </plurals>
     <string name="notice_all_already_in_playlist">Wszystkie utwory znajdują się już na playliście %1$s.</string>
     <string name="catalogue_online_search">Wyszukiwanie online</string>
     <plurals name="replays_count">
-        <item quantity="one">%1$d procedura odtwarzająca</item>
-        <item quantity="few">%1$d procedury odtwarzające</item>
-        <item quantity="many">%1$d procedur odtwarzających</item>
-        <item quantity="other">%1$d procedury odtwarzającej</item>
+        <item quantity="one">%1$,d procedura odtwarzająca</item>
+        <item quantity="few">%1$,d procedury odtwarzające</item>
+        <item quantity="many">%1$,d procedur odtwarzających</item>
+        <item quantity="other">%1$,d procedury odtwarzającej</item>
     </plurals>
     <string name="track_metadata_title">Metadane utworów (songdb)</string>
     <string name="track_metadata_none">Nie pobrano — większość utworów nie pokaże roku ani autora</string>
     <plurals name="track_metadata_count">
-        <item quantity="few">%1$d opisane utwory</item>
-        <item quantity="many">%1$d opisanych utworów</item>
-        <item quantity="one">%1$d opisany utwór</item>
-        <item quantity="other">%1$d opisanych utworów</item>
+        <item quantity="few">%1$,d opisane utwory</item>
+        <item quantity="many">%1$,d opisanych utworów</item>
+        <item quantity="one">%1$,d opisany utwór</item>
+        <item quantity="other">%1$,d opisanych utworów</item>
     </plurals>
     <string name="a11y_download_track_metadata">Pobierz metadane utworów</string>
     <string name="domain_random_title_scoped">Losowo · %1$s</string>
@@ -318,10 +318,10 @@
     <string name="favourites_title">Ulubione Modlandu</string>
     <string name="favourites_none">Nie pobrano — po pobraniu można losować tylko z nich</string>
     <plurals name="favourites_count">
-        <item quantity="few">%1$d ulubione w twoim indeksie</item>
-        <item quantity="many">%1$d ulubionych w twoim indeksie</item>
-        <item quantity="one">%1$d ulubiony w twoim indeksie</item>
-        <item quantity="other">%1$d ulubionych w twoim indeksie</item>
+        <item quantity="few">%1$,d ulubione w twoim indeksie</item>
+        <item quantity="many">%1$,d ulubionych w twoim indeksie</item>
+        <item quantity="one">%1$,d ulubiony w twoim indeksie</item>
+        <item quantity="other">%1$,d ulubionych w twoim indeksie</item>
     </plurals>
     <string name="a11y_download_favourites">Pobierz ulubione Modlandu</string>
 
@@ -342,18 +342,18 @@
     <string name="notice_page_not_open">Udało się połączyć, ale strona odtwarzacza nie jest tam otwarta.</string>
     <string name="notice_browser_unreachable">Nie udało się połączyć z przeglądarką (%1$s). Naciśnij ponownie, aby zeskanować kod; przytrzymaj, aby wysłać odnośnik.</string>
     <plurals name="notice_sent_to_browser">
-        <item quantity="one">Wysłano %1$d utwór do przeglądarki.</item>
-        <item quantity="few">Wysłano %1$d utwory do przeglądarki.</item>
-        <item quantity="many">Wysłano %1$d utworów do przeglądarki.</item>
-        <item quantity="other">Wysłano %1$d utworu do przeglądarki.</item>
+        <item quantity="one">Wysłano %1$,d utwór do przeglądarki.</item>
+        <item quantity="few">Wysłano %1$,d utwory do przeglądarki.</item>
+        <item quantity="many">Wysłano %1$,d utworów do przeglądarki.</item>
+        <item quantity="other">Wysłano %1$,d utworu do przeglądarki.</item>
     </plurals>
-    <string name="notice_sent_some_too_big">Wysłano %1$d utworów; %2$d plików z telefonu było za dużych.</string>
+    <string name="notice_sent_some_too_big">Wysłano %1$,d utworów; %2$,d plików z telefonu było za dużych.</string>
     <string name="notice_link_none_sendable">Nic z tego nie da się wysłać: plik na tym telefonie nie ma adresu, który przeglądarka mogłaby otworzyć.</string>
-    <string name="notice_link_truncated">Wysyłanie %1$d. Odnośnik był za długi, aby unieść nazwy %2$d plików, które zostały na telefonie, więc nie ma ich na liście po drugiej stronie.</string>
+    <string name="notice_link_truncated">Wysyłanie %1$,d. Odnośnik był za długi, aby unieść nazwy %2$,d plików, które zostały na telefonie, więc nie ma ich na liście po drugiej stronie.</string>
     <string name="notice_send_mp3">MP3 nigdy nie jedzie do przeglądarki: jest za duże.</string>
     <string name="notice_send_one_local">Tego nie da się wysłać: plik na tym telefonie nie ma adresu, który przeglądarka mogłaby otworzyć.</string>
     <string name="notice_send_none">Nic z tego nie da się wysłać: przeglądarka nie ma adresu, pod którym mogłaby to otworzyć.</string>
-    <string name="notice_send_partial">Wysyłanie %1$d. Pozostałe %2$d nie mają adresu, który przeglądarka mogłaby otworzyć.</string>
+    <string name="notice_send_partial">Wysyłanie %1$,d. Pozostałe %2$,d nie mają adresu, który przeglądarka mogłaby otworzyć.</string>
     <string name="notice_no_author_live">%1$s jest przeszukiwane na żywo i nie podaje autora, więc nie ma dokąd przejść.</string>
     <string name="notice_not_in_index">Tego utworu nie ma w indeksie %1$s. Zaindeksuj go, aby przejść do autora.</string>
     <string name="notice_history_cleared">Historia wyczyszczona.</string>
@@ -365,42 +365,42 @@
     <string name="notice_archive_store_failed">Nie udało się zapisać archiwum %1$s.</string>
     <plurals name="notice_indexed_all">
         <item quantity="one">Zaindeksowano jedyny utwór, jaki wymienia %2$s.</item>
-        <item quantity="few">Zaindeksowano wszystkie %1$d utwory z %2$s.</item>
-        <item quantity="many">Zaindeksowano wszystkie %1$d utworów z %2$s.</item>
-        <item quantity="other">Zaindeksowano wszystkie %1$d utworu z %2$s.</item>
+        <item quantity="few">Zaindeksowano wszystkie %1$,d utwory z %2$s.</item>
+        <item quantity="many">Zaindeksowano wszystkie %1$,d utworów z %2$s.</item>
+        <item quantity="other">Zaindeksowano wszystkie %1$,d utworu z %2$s.</item>
     </plurals>
     <plurals name="notice_indexed_partly">
-        <item quantity="one">Zaindeksowano %1$d utwór z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
-        <item quantity="few">Zaindeksowano %1$d utwory z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
-        <item quantity="many">Zaindeksowano %1$d utworów z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
-        <item quantity="other">Zaindeksowano %1$d utworu z %2$s; %3$d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
+        <item quantity="one">Zaindeksowano %1$,d utwór z %2$s; %3$,d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
+        <item quantity="few">Zaindeksowano %1$,d utwory z %2$s; %3$,d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
+        <item quantity="many">Zaindeksowano %1$,d utworów z %2$s; %3$,d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
+        <item quantity="other">Zaindeksowano %1$,d utworu z %2$s; %3$,d z nich gra w tej wersji. Reszta zostaje w indeksie, więc dodanie formatu nie będzie wymagało nowego pobierania.</item>
     </plurals>
     <string name="notice_song_lengths_failed">Nie udało się pobrać długości utworów.</string>
     <string name="notice_song_lengths_empty">Baza długości utworów była pusta.</string>
     <plurals name="notice_song_lengths_done">
-        <item quantity="one">Długości dla %1$d utworu SID.</item>
-        <item quantity="few">Długości dla %1$d utworów SID.</item>
-        <item quantity="many">Długości dla %1$d utworów SID.</item>
-        <item quantity="other">Długości dla %1$d utworu SID.</item>
+        <item quantity="one">Długości dla %1$,d utworu SID.</item>
+        <item quantity="few">Długości dla %1$,d utworów SID.</item>
+        <item quantity="many">Długości dla %1$,d utworów SID.</item>
+        <item quantity="other">Długości dla %1$,d utworu SID.</item>
     </plurals>
     <string name="notice_track_metadata_failed">Nie udało się pobrać metadanych utworów.</string>
     <string name="notice_track_metadata_empty">Metadane utworów były puste.</string>
     <plurals name="notice_track_metadata_done">
-        <item quantity="one">Metadane dla %1$d utworu.</item>
-        <item quantity="few">Metadane dla %1$d utworów.</item>
-        <item quantity="many">Metadane dla %1$d utworów.</item>
-        <item quantity="other">Metadane dla %1$d utworu.</item>
+        <item quantity="one">Metadane dla %1$,d utworu.</item>
+        <item quantity="few">Metadane dla %1$,d utworów.</item>
+        <item quantity="many">Metadane dla %1$,d utworów.</item>
+        <item quantity="other">Metadane dla %1$,d utworu.</item>
     </plurals>
     <string name="notice_favourites_failed">Nie udało się pobrać ulubionych.</string>
     <string name="notice_favourites_empty">Lista ulubionych była pusta.</string>
-    <string name="notice_favourites_playable">%1$d z %2$d ulubionych jest w twoim indeksie Modland.</string>
-    <string name="notice_favourites_need_index">Pobrano %1$d ulubionych. Zaindeksuj Modland, aby je odtwarzać.</string>
+    <string name="notice_favourites_playable">%1$,d z %2$,d ulubionych jest w twoim indeksie Modland.</string>
+    <string name="notice_favourites_need_index">Pobrano %1$,d ulubionych. Zaindeksuj Modland, aby je odtwarzać.</string>
     <string name="notice_replays_failed">Nie udało się pobrać procedur odtwarzających.</string>
     <plurals name="notice_replays_done">
-        <item quantity="one">Pobrano %1$d procedurę odtwarzającą. Pliki .sc68 powinny już grać.</item>
-        <item quantity="few">Pobrano %1$d procedury odtwarzające. Pliki .sc68 powinny już grać.</item>
-        <item quantity="many">Pobrano %1$d procedur odtwarzających. Pliki .sc68 powinny już grać.</item>
-        <item quantity="other">Pobrano %1$d procedury odtwarzającej. Pliki .sc68 powinny już grać.</item>
+        <item quantity="one">Pobrano %1$,d procedurę odtwarzającą. Pliki .sc68 powinny już grać.</item>
+        <item quantity="few">Pobrano %1$,d procedury odtwarzające. Pliki .sc68 powinny już grać.</item>
+        <item quantity="many">Pobrano %1$,d procedur odtwarzających. Pliki .sc68 powinny już grać.</item>
+        <item quantity="other">Pobrano %1$,d procedury odtwarzającej. Pliki .sc68 powinny już grać.</item>
     </plurals>
     <string name="notice_random_gave_up">Kilka losowań z rzędu nie chciało się otworzyć. Zatrzymuję się tutaj.</string>
     <string name="notice_random_nothing_indexed">Nic nie jest jeszcze zaindeksowane. Najpierw zaindeksuj katalog.</string>
@@ -413,45 +413,45 @@
     <string name="notice_nothing_playable">Nie znaleziono tam nic do odtworzenia.</string>
     <string name="notice_all_already_here">Już jest na tej playliście.</string>
     <plurals name="notice_added_count">
-        <item quantity="one">Dodano %1$d utwór.</item>
-        <item quantity="few">Dodano %1$d utwory.</item>
-        <item quantity="many">Dodano %1$d utworów.</item>
-        <item quantity="other">Dodano %1$d utworu.</item>
+        <item quantity="one">Dodano %1$,d utwór.</item>
+        <item quantity="few">Dodano %1$,d utwory.</item>
+        <item quantity="many">Dodano %1$,d utworów.</item>
+        <item quantity="other">Dodano %1$,d utworu.</item>
     </plurals>
-    <string name="notice_added_some_already">Dodano %1$d; %2$d już tam było.</string>
-    <string name="notice_added_some_already_named">Dodano %1$d do playlisty %2$s; %3$d już tam było.</string>
+    <string name="notice_added_some_already">Dodano %1$,d; %2$,d już tam było.</string>
+    <string name="notice_added_some_already_named">Dodano %1$,d do playlisty %2$s; %3$,d już tam było.</string>
     <string name="notice_removed_one">Usunięto %1$s</string>
     <plurals name="notice_removed_count">
-        <item quantity="one">Usunięto %1$d utwór</item>
-        <item quantity="few">Usunięto %1$d utwory</item>
-        <item quantity="many">Usunięto %1$d utworów</item>
-        <item quantity="other">Usunięto %1$d utworu</item>
+        <item quantity="one">Usunięto %1$,d utwór</item>
+        <item quantity="few">Usunięto %1$,d utwory</item>
+        <item quantity="many">Usunięto %1$,d utworów</item>
+        <item quantity="other">Usunięto %1$,d utworu</item>
     </plurals>
-    <string name="notice_scanned">Przeskanowano %1$s: %2$d do odtworzenia z %3$d.</string>
+    <string name="notice_scanned">Przeskanowano %1$s: %2$,d do odtworzenia z %3$,d.</string>
     <plurals name="notice_imported">
-        <item quantity="one">Zaimportowano %1$d utwór do „%2$s”.</item>
-        <item quantity="few">Zaimportowano %1$d utwory do „%2$s”.</item>
-        <item quantity="many">Zaimportowano %1$d utworów do „%2$s”.</item>
-        <item quantity="other">Zaimportowano %1$d utworu do „%2$s”.</item>
+        <item quantity="one">Zaimportowano %1$,d utwór do „%2$s”.</item>
+        <item quantity="few">Zaimportowano %1$,d utwory do „%2$s”.</item>
+        <item quantity="many">Zaimportowano %1$,d utworów do „%2$s”.</item>
+        <item quantity="other">Zaimportowano %1$,d utworu do „%2$s”.</item>
     </plurals>
-    <string name="notice_imported_partial">Zaimportowano %1$d z %2$d do „%3$s”; reszty nie ma na tym urządzeniu.</string>
+    <string name="notice_imported_partial">Zaimportowano %1$,d z %2$,d do „%3$s”; reszty nie ma na tym urządzeniu.</string>
     <string name="notice_freed_nothing">Nie było czego usuwać.</string>
     <string name="notice_freed_under_a_megabyte">Zwolniono mniej niż 1 MB.</string>
-    <string name="notice_freed_megabytes">Zwolniono %1$d MB.</string>
+    <string name="notice_freed_megabytes">Zwolniono %1$,d MB.</string>
     <string name="notice_audio_busy">Dźwięku używa coś innego.</string>
     <string name="notice_audio_device_failed">Nie udało się otworzyć urządzenia dźwiękowego</string>
-    <string name="download_all_body">Wybierz, co pobrać — do %1$d MB. Zapisujemy to na telefonie, więc późniejsze przeglądanie nie wymaga sieci.</string>
+    <string name="download_all_body">Wybierz, co pobrać — do %1$,d MB. Zapisujemy to na telefonie, więc późniejsze przeglądanie nie wymaga sieci.</string>
     <string name="download_pick_open">Pobierz muzykę do przeglądania</string>
     <string name="download_all_running">Pobieranie wszystkiego</string>
     <string name="notice_all_downloaded">Pobrano wszystko. Przeglądaj do woli.</string>
-    <string name="notice_all_downloaded_partly">Pobrano %1$d, %2$d się nie udało. Spróbuj ponownie w Przeglądaj.</string>
-    <string name="notice_downloads_stopped">Zatrzymano. %1$d z nich się skończyło i zostaje.</string>
+    <string name="notice_all_downloaded_partly">Pobrano %1$,d, %2$,d się nie udało. Spróbuj ponownie w Przeglądaj.</string>
+    <string name="notice_downloads_stopped">Zatrzymano. %1$,d z nich się skończyło i zostaje.</string>
     <string name="download_pick_title">Co pobrać</string>
     <string name="download_pick_modland">Modland — pół miliona utworów, razem z długościami SID i listą ulubionych</string>
     <string name="download_pick_metadata">Metadane utworów — kto napisał i kiedy</string>
-    <string name="download_pick_size">%1$d MB</string>
+    <string name="download_pick_size">%1$,d MB</string>
     <string name="download_pick_held">Już na tym telefonie</string>
-    <string name="action_download_selected">Pobierz %1$d MB</string>
+    <string name="action_download_selected">Pobierz %1$,d MB</string>
     <string name="action_stop_downloads">Przerwij</string>
     <string name="a11y_download_pick">Wybierz, co pobrać</string>
 </resources>

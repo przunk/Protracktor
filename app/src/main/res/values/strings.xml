@@ -19,8 +19,8 @@
     <string name="playlist_empty_body_nothing_held">Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline.</string>
 
     <plurals name="track_count">
-        <item quantity="one">%d track</item>
-        <item quantity="other">%d tracks</item>
+        <item quantity="one">%,d track</item>
+        <item quantity="other">%,d tracks</item>
     </plurals>
 
     <string name="dock_idle_title">Nothing playing</string>
@@ -54,29 +54,29 @@
     <string name="settings_licence">Licence</string>
     <string name="settings_licence_detail">GNU GPL version 3 or later. The source is at github.com/przunk/protracktor.</string>
     <string name="storage_title">Storage on this phone</string>
-    <string name="storage_database">Playlists, history and the indexes that are not files: %1$d MB. Kept, because your own lists are in here.</string>
+    <string name="storage_database">Playlists, history and the indexes that are not files: %1$,d MB. Kept, because your own lists are in here.</string>
     <string name="storage_cache">Fetched music</string>
-    <string name="storage_cache_detail">%1$d MB of %2$d MB, oldest deleted first</string>
+    <string name="storage_cache_detail">%1$,d MB of %2$,d MB, oldest deleted first</string>
     <string name="storage_index">%1$s index</string>
     <string name="catalogue_playable_of">%1$,d of %2$,d playable</string>
-    <string name="catalogue_count_and_size">%1$s · %2$d MB on this phone</string>
-    <string name="storage_index_and_archive">%1$s, including a %2$d MB archive</string>
-    <string name="storage_megabytes">%1$d MB</string>
+    <string name="catalogue_count_and_size">%1$s · %2$,d MB on this phone</string>
+    <string name="storage_index_and_archive">%1$s, including a %2$,d MB archive</string>
+    <string name="storage_megabytes">%1$,d MB</string>
     <string name="storage_confirm_title">Delete %1$s?</string>
     <string name="storage_confirm_index">It can be downloaded again from this screen. Until then, this catalogue cannot be browsed or searched, and its tracks will not play.</string>
     <string name="storage_confirm_track_metadata">It can be downloaded again from Browse. Until then, most tunes will show no year or author.</string>
     <string name="storage_confirm_favourites">It can be downloaded again from Browse. Until then, Random cannot be scoped to the favourites.</string>
     <plurals name="favourites_listed">
-        <item quantity="one">%1$d tune</item>
-        <item quantity="other">%1$d tunes</item>
+        <item quantity="one">%1$,d tune</item>
+        <item quantity="other">%1$,d tunes</item>
     </plurals>
     <string name="storage_confirm_song_lengths">They can be downloaded again from this screen. Until then, SID tracks show no duration and end only at the fallback length set in Settings.</string>
     <string name="a11y_delete_storage">Delete %1$s</string>
     <plurals name="subsongs_count">
-        <item quantity="one">%1$d tune</item>
-        <item quantity="other">%1$d tunes</item>
+        <item quantity="one">%1$,d tune</item>
+        <item quantity="other">%1$,d tunes</item>
     </plurals>
-    <string name="subsongs_position">Tune %1$d of %2$d</string>
+    <string name="subsongs_position">Tune %1$,d of %2$,d</string>
     <string name="subsongs_all">All tunes</string>
     <string name="subsongs_first_only">First only</string>
     <string name="a11y_expand_player">Open the player</string>
@@ -84,7 +84,7 @@
     <string name="action_export_playlist">Export</string>
     <string name="action_scan_folder">Scan this folder</string>
     <string name="scan_listing">Listing the folder…</string>
-    <string name="scan_progress">Opening files: %1$d of %2$d</string>
+    <string name="scan_progress">Opening files: %1$,d of %2$,d</string>
     <string name="folder_unscanned">Not scanned yet. Scanning opens every file to find out what it really is, rather than trusting its name.</string>
     <string name="folder_stale">This folder was scanned with a different set of decoders. Files that could not be played then may play now.</string>
     <string name="action_to_playlist">Playlist</string>
@@ -128,13 +128,13 @@
     <string name="scope_label_online">Online</string>
     <string name="scope_label_online_some">Online: %1$s</string>
     <string name="scope_label_all_platforms">All platforms</string>
-    <string name="scope_label_more">%1$s +%2$d</string>
+    <string name="scope_label_more">%1$s +%2$,d</string>
     <!-- A search returns at most 2,000 rows per source. Saying so, with the real total, is the
          difference between a limit and a list that looks wrong. -->
-    <string name="browse_search_capped">Showing %1$d of about %2$d matches — narrow the search, or browse by format.</string>
+    <string name="browse_search_capped">Showing %1$,d of about %2$,d matches — narrow the search, or browse by format.</string>
     <plurals name="browse_add_selected">
-        <item quantity="one">Add %d track</item>
-        <item quantity="other">Add %d tracks</item>
+        <item quantity="one">Add %,d track</item>
+        <item quantity="other">Add %,d tracks</item>
     </plurals>
 
     <string name="action_discard">Discard</string>
@@ -170,9 +170,9 @@
     <string name="catalogue_stale">Indexed with older decoders — re-index to see formats added since.</string>
     <string name="catalogue_not_indexed">Not indexed yet — tap the arrow to download its index</string>
     <plurals name="browse_selected">
-        <item quantity="one">%1$d selected</item>
-        <item quantity="few">%1$d selected</item>
-        <item quantity="other">%1$d selected</item>
+        <item quantity="one">%1$,d selected</item>
+        <item quantity="few">%1$,d selected</item>
+        <item quantity="other">%1$,d selected</item>
     </plurals>
     <string name="a11y_track_menu">Actions for %1$s</string>
     <string name="action_share_file">Share the file</string>
@@ -189,18 +189,18 @@
     <string name="track_metadata_title">Track metadata (songdb)</string>
     <string name="track_metadata_none">Not downloaded — most tunes will show no year or author</string>
     <plurals name="track_metadata_count">
-        <item quantity="one">%1$d tune described</item>
-        <item quantity="other">%1$d tunes described</item>
+        <item quantity="one">%1$,d tune described</item>
+        <item quantity="other">%1$,d tunes described</item>
     </plurals>
     <string name="a11y_download_track_metadata">Download the track metadata</string>
     <string name="settings_fallback_length">When nothing knows the length</string>
     <string name="settings_fallback_length_detail">A SID or an unlisted SNDH carries no length of its own. Without this, one would play until you skipped it.</string>
     <plurals name="minutes">
-        <item quantity="one">%1$d minute</item>
-        <item quantity="other">%1$d minutes</item>
+        <item quantity="one">%1$,d minute</item>
+        <item quantity="other">%1$,d minutes</item>
     </plurals>
     <plurals name="song_lengths_count">
-        <item quantity="one">%1$d tune</item>
+        <item quantity="one">%1$,d tune</item>
         <item quantity="other">%1$,d tunes</item>
     </plurals>
     <string name="a11y_download_song_lengths">Download the HVSC song length database</string>
@@ -260,21 +260,21 @@
     <string name="action_add_to_other_playlist">Add to another playlist…</string>
     <string name="dialog_add_to_playlist_title">Add to playlist</string>
     <plurals name="dialog_add_tracks_to_playlist_title">
-        <item quantity="one">Add %d track to playlist</item>
-        <item quantity="other">Add %d tracks to playlist</item>
+        <item quantity="one">Add %,d track to playlist</item>
+        <item quantity="other">Add %,d tracks to playlist</item>
     </plurals>
     <string name="playlist_active_indicator">Current playlist</string>
     <string name="notice_added_to_named_playlist">Added \"%1$s\" to %2$s.</string>
     <string name="notice_already_in_playlist">\"%1$s\" is already in %2$s.</string>
     <plurals name="notice_added_count_to_playlist">
-        <item quantity="one">Added %1$d track to %2$s.</item>
-        <item quantity="other">Added %1$d tracks to %2$s.</item>
+        <item quantity="one">Added %1$,d track to %2$s.</item>
+        <item quantity="other">Added %1$,d tracks to %2$s.</item>
     </plurals>
     <string name="notice_all_already_in_playlist">All tracks are already in %1$s.</string>
     <string name="catalogue_online_search">Live online search</string>
     <plurals name="replays_count">
-        <item quantity="one">%1$d replay routine</item>
-        <item quantity="other">%1$d replay routines</item>
+        <item quantity="one">%1$,d replay routine</item>
+        <item quantity="other">%1$,d replay routines</item>
     </plurals>
     <string name="domain_random_title_scoped">Random · %1$s</string>
     <string name="domain_random_body_scoped">Hold to change what it picks from</string>
@@ -305,8 +305,8 @@
     <string name="favourites_title">Modland favourites</string>
     <string name="favourites_none">Not downloaded — Random can be scoped to them once it is</string>
     <plurals name="favourites_count">
-        <item quantity="one">%1$d favourite in your index</item>
-        <item quantity="other">%1$d favourites in your index</item>
+        <item quantity="one">%1$,d favourite in your index</item>
+        <item quantity="other">%1$,d favourites in your index</item>
     </plurals>
     <string name="a11y_download_favourites">Download the Modland favourites</string>
 
@@ -329,16 +329,16 @@
     <string name="notice_page_not_open">Reached it, but the player page is not open there.</string>
     <string name="notice_browser_unreachable">Could not reach the browser (%1$s). Press again to scan a code; hold to send a link.</string>
     <plurals name="notice_sent_to_browser">
-        <item quantity="one">Sent %1$d track to the browser.</item>
-        <item quantity="other">Sent %1$d tracks to the browser.</item>
+        <item quantity="one">Sent %1$,d track to the browser.</item>
+        <item quantity="other">Sent %1$,d tracks to the browser.</item>
     </plurals>
-    <string name="notice_sent_some_too_big">Sent %1$d tracks; %2$d local files were too big to send.</string>
+    <string name="notice_sent_some_too_big">Sent %1$,d tracks; %2$,d local files were too big to send.</string>
     <string name="notice_link_none_sendable">None of these can be sent: a file on this phone has no address a browser could open.</string>
-    <string name="notice_link_truncated">Sending %1$d. The link was too long to carry the names of %2$d files that stayed on this phone, so they are missing from the list at the other end.</string>
+    <string name="notice_link_truncated">Sending %1$,d. The link was too long to carry the names of %2$,d files that stayed on this phone, so they are missing from the list at the other end.</string>
     <string name="notice_send_mp3">An MP3 is never sent to the browser: it is too big to travel.</string>
     <string name="notice_send_one_local">This one cannot be sent: a file on this phone has no address a browser could open.</string>
     <string name="notice_send_none">None of these can be sent: a browser has no address it could open them at.</string>
-    <string name="notice_send_partial">Sending %1$d. The other %2$d have no address a browser could open.</string>
+    <string name="notice_send_partial">Sending %1$,d. The other %2$,d have no address a browser could open.</string>
     <string name="notice_no_author_live">%1$s is searched live and lists no author, so there is nowhere to jump to.</string>
     <string name="notice_not_in_index">That track is not in the %1$s index. Index it to jump to the author.</string>
     <string name="notice_history_cleared">History cleared.</string>
@@ -350,34 +350,34 @@
     <string name="notice_archive_store_failed">Could not store the %1$s archive.</string>
     <plurals name="notice_indexed_all">
         <item quantity="one">Indexed the one track %2$s lists.</item>
-        <item quantity="other">Indexed all %1$d tracks from %2$s.</item>
+        <item quantity="other">Indexed all %1$,d tracks from %2$s.</item>
     </plurals>
     <!-- Two numbers on purpose: the index keeps everything the archive lists, and this build plays
          some of it. See docs/ROADMAP_FORMATS.md step 0. -->
     <plurals name="notice_indexed_partly">
-        <item quantity="one">Indexed %1$d track from %2$s; %3$d of them play on this build. The rest stay indexed, so a format added later needs no new download.</item>
-        <item quantity="other">Indexed %1$d tracks from %2$s; %3$d of them play on this build. The rest stay indexed, so a format added later needs no new download.</item>
+        <item quantity="one">Indexed %1$,d track from %2$s; %3$,d of them play on this build. The rest stay indexed, so a format added later needs no new download.</item>
+        <item quantity="other">Indexed %1$,d tracks from %2$s; %3$,d of them play on this build. The rest stay indexed, so a format added later needs no new download.</item>
     </plurals>
     <string name="notice_song_lengths_failed">Could not download the song lengths.</string>
     <string name="notice_song_lengths_empty">The song length database was empty.</string>
     <plurals name="notice_song_lengths_done">
-        <item quantity="one">Song lengths for %1$d SID tune.</item>
-        <item quantity="other">Song lengths for %1$d SID tunes.</item>
+        <item quantity="one">Song lengths for %1$,d SID tune.</item>
+        <item quantity="other">Song lengths for %1$,d SID tunes.</item>
     </plurals>
     <string name="notice_track_metadata_failed">Could not download the track metadata.</string>
     <string name="notice_track_metadata_empty">The track metadata was empty.</string>
     <plurals name="notice_track_metadata_done">
-        <item quantity="one">Metadata for %1$d tune.</item>
-        <item quantity="other">Metadata for %1$d tunes.</item>
+        <item quantity="one">Metadata for %1$,d tune.</item>
+        <item quantity="other">Metadata for %1$,d tunes.</item>
     </plurals>
     <string name="notice_favourites_failed">Could not download the favourites.</string>
     <string name="notice_favourites_empty">The favourites list was empty.</string>
-    <string name="notice_favourites_playable">%1$d of %2$d favourites are in your Modland index.</string>
-    <string name="notice_favourites_need_index">%1$d favourites downloaded. Index Modland to play them.</string>
+    <string name="notice_favourites_playable">%1$,d of %2$,d favourites are in your Modland index.</string>
+    <string name="notice_favourites_need_index">%1$,d favourites downloaded. Index Modland to play them.</string>
     <string name="notice_replays_failed">Could not download the replay routines.</string>
     <plurals name="notice_replays_done">
-        <item quantity="one">%1$d replay routine downloaded. .sc68 files should play now.</item>
-        <item quantity="other">%1$d replay routines downloaded. .sc68 files should play now.</item>
+        <item quantity="one">%1$,d replay routine downloaded. .sc68 files should play now.</item>
+        <item quantity="other">%1$,d replay routines downloaded. .sc68 files should play now.</item>
     </plurals>
     <string name="notice_random_gave_up">Several picks in a row would not open. Stopping here.</string>
     <string name="notice_random_nothing_indexed">Nothing is indexed yet. Index a catalogue first.</string>
@@ -390,39 +390,39 @@
     <string name="notice_nothing_playable">Nothing playable found there.</string>
     <string name="notice_all_already_here">Already in this playlist.</string>
     <plurals name="notice_added_count">
-        <item quantity="one">Added %1$d track.</item>
-        <item quantity="other">Added %1$d tracks.</item>
+        <item quantity="one">Added %1$,d track.</item>
+        <item quantity="other">Added %1$,d tracks.</item>
     </plurals>
-    <string name="notice_added_some_already">Added %1$d; %2$d already there.</string>
-    <string name="notice_added_some_already_named">Added %1$d to %2$s; %3$d already there.</string>
+    <string name="notice_added_some_already">Added %1$,d; %2$,d already there.</string>
+    <string name="notice_added_some_already_named">Added %1$,d to %2$s; %3$,d already there.</string>
     <string name="notice_removed_one">Removed %1$s</string>
     <plurals name="notice_removed_count">
-        <item quantity="one">Removed %1$d track</item>
-        <item quantity="other">Removed %1$d tracks</item>
+        <item quantity="one">Removed %1$,d track</item>
+        <item quantity="other">Removed %1$,d tracks</item>
     </plurals>
-    <string name="notice_scanned">Scanned %1$s: %2$d playable of %3$d.</string>
+    <string name="notice_scanned">Scanned %1$s: %2$,d playable of %3$,d.</string>
     <plurals name="notice_imported">
-        <item quantity="one">Imported %1$d track into \"%2$s\".</item>
-        <item quantity="other">Imported %1$d tracks into \"%2$s\".</item>
+        <item quantity="one">Imported %1$,d track into \"%2$s\".</item>
+        <item quantity="other">Imported %1$,d tracks into \"%2$s\".</item>
     </plurals>
-    <string name="notice_imported_partial">Imported %1$d of %2$d into \"%3$s\"; the rest are not on this device.</string>
+    <string name="notice_imported_partial">Imported %1$,d of %2$,d into \"%3$s\"; the rest are not on this device.</string>
     <string name="notice_freed_nothing">There was nothing to delete.</string>
     <string name="notice_freed_under_a_megabyte">Freed less than 1 MB.</string>
-    <string name="notice_freed_megabytes">Freed %1$d MB.</string>
+    <string name="notice_freed_megabytes">Freed %1$,d MB.</string>
     <string name="notice_audio_busy">Something else is using the audio.</string>
     <string name="notice_audio_device_failed">Could not open the audio device</string>
-    <string name="download_all_body">Pick what to fetch — up to %1$d MB. It is stored on this phone, so browsing it afterwards needs no network.</string>
+    <string name="download_all_body">Pick what to fetch — up to %1$,d MB. It is stored on this phone, so browsing it afterwards needs no network.</string>
     <string name="download_pick_open">Get some music to browse</string>
     <string name="download_all_running">Downloading everything</string>
     <string name="notice_all_downloaded">Everything downloaded. Browse is full.</string>
-    <string name="notice_all_downloaded_partly">%1$d downloaded, %2$d could not be fetched. Try those again from Browse.</string>
-    <string name="notice_downloads_stopped">Stopped. %1$d of them finished and are kept.</string>
+    <string name="notice_all_downloaded_partly">%1$,d downloaded, %2$,d could not be fetched. Try those again from Browse.</string>
+    <string name="notice_downloads_stopped">Stopped. %1$,d of them finished and are kept.</string>
     <string name="download_pick_title">What to download</string>
     <string name="download_pick_modland">Modland — half a million tracks, with the SID song lengths and the favourites list</string>
     <string name="download_pick_metadata">Track metadata — who wrote a tune, and when</string>
-    <string name="download_pick_size">%1$d MB</string>
+    <string name="download_pick_size">%1$,d MB</string>
     <string name="download_pick_held">Already on this phone</string>
-    <string name="action_download_selected">Download %1$d MB</string>
+    <string name="action_download_selected">Download %1$,d MB</string>
     <string name="action_stop_downloads">Stop</string>
     <string name="a11y_download_pick">Choose what to download</string>
 </resources>
