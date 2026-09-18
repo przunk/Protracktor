@@ -965,7 +965,7 @@ async function announceGesture() {
 }
 
 const PLAY_GLYPH = 'M8 5v14l11-7z';
-const PAUSE_GLYPH = 'M6 5h4v14H6zm8 0h4v14h-4z';
+const PAUSE_GLYPH = 'M6 5h4v14H6zM14 5h4v14h-4z';
 const STOP_GLYPH = 'M6 6h12v12H6z';
 
 /**

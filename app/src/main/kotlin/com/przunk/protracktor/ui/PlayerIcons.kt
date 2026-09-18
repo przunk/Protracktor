@@ -296,7 +296,7 @@ object PlayerIcons {
     // Three bars narrowing downwards -- the shape everything else in the world uses for a
     // filter, which is the whole argument for drawing it rather than inventing one.
     val Filter: ImageVector by lazy {
-        icon("Filter", "M3 6h18v2H3zm3 5h12v2H6zm4 5h4v2h-4z")
+        icon("Filter", "M3 6h18v2H3zM6 11h12v2H6zM10 16h4v2h-4z")
     }
 
     val Pause: ImageVector by lazy {
@@ -306,7 +306,7 @@ object PlayerIcons {
         icon("SkipNext", "M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z")
     }
     val SkipPrevious: ImageVector by lazy {
-        icon("SkipPrevious", "M6 6h2v12H6zm3.5 6l8.5 6V6z")
+        icon("SkipPrevious", "M6 6h2v12H6zM9.5 12l8.5 6V6z")
     }
     val Shuffle: ImageVector by lazy {
         icon(
