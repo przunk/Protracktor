@@ -41,6 +41,7 @@ import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.net.WebRemote
 import com.przunk.protracktor.net.Sc68Replays
+import com.przunk.protracktor.net.UadePlayers
 import com.przunk.protracktor.net.UnExoticA
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
@@ -273,6 +274,9 @@ object DownloadKeys {
     const val FAVOURITES = "favourites"
     const val REPLAYS = "replays"
 
+    /** UADE's replay routines. A separate key from sc68's: different archives, different sizes. */
+    const val PLAYERS = "players"
+
     /** The one press that fetches the lot. Its own key, so the offer can show its own spinner. */
     const val EVERYTHING = "everything"
 }
@@ -370,6 +374,13 @@ data class BrowseState(
     val replayCount: Int = 0,
     /** Bytes those replays hold. */
     val replayBytes: Long = 0L,
+    /**
+     * How many of UADE's replay routines are present. Zero until the user fetches them, and while
+     * it is zero the Amiga custom formats do not play at all -- 12 files in 300, measured.
+     */
+    val playerCount: Int = 0,
+    /** Bytes those replay routines hold, with the song database that comes with them. */
+    val playerBytes: Long = 0L,
     /** Which decoders this build has, for telling a stale catalogue index from a current one. */
     val backends: String = "",
 
@@ -513,6 +524,7 @@ class PlaybackController private constructor(private val context: Context) {
 
         private const val SONG_LENGTHS_LABEL = "SID song lengths"
         private const val REPLAYS_LABEL = "Atari ST replay routines"
+        private const val PLAYERS_LABEL = "Amiga replay routines"
 
         private fun archiveCatalogueOf(id: String): Catalogue? =
             Catalogue.all.firstOrNull { it.isArchive && id.startsWith("${it.id}://") }
@@ -804,6 +816,7 @@ class PlaybackController private constructor(private val context: Context) {
                 NativeEngine.setDataPath(
                     com.przunk.protracktor.engine.NativeData.ensureUnpacked(context, version).absolutePath
                 )
+                configureUade(version)
             }
         }
 
@@ -2055,6 +2068,9 @@ class PlaybackController private constructor(private val context: Context) {
             val replays = withContext(Dispatchers.IO) {
                 Sc68Replays.count(context) to Sc68Replays.bytes(context)
             }
+            val players = withContext(Dispatchers.IO) {
+                UadePlayers.count(context) to UadePlayers.bytes(context)
+            }
             _browse.update { current ->
                 current.copy(
                     catalogues = summaries,
@@ -2068,6 +2084,8 @@ class PlaybackController private constructor(private val context: Context) {
                     databaseBytes = database,
                     replayCount = replays.first,
                     replayBytes = replays.second,
+                    playerCount = players.first,
+                    playerBytes = players.second,
                     backends = NativeEngine.backendsFingerprint(),
                 )
             }
@@ -2607,6 +2625,79 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_replays_done, fetched, fetched)))
             }
+            refreshCatalogues()
+        }
+    }
+
+    /**
+     * Tells the engine where UADE's three paths are.
+     *
+     * Called at start-up and again after a download, because until the replay routines are there
+     * the backend answers "not set up" and the Amiga formats are simply absent — asked afresh on
+     * every open, so this is enough and no restart is needed.
+     */
+    private fun configureUade(version: String) {
+        runCatching {
+            val base = NativeData.ensureUadeUnpacked(context, version)
+            NativeEngine.setUadePaths(
+                NativeData.uadeCore(context).absolutePath,
+                base.absolutePath,
+                NativeData.uadeScratch(context).absolutePath,
+            )
+        }
+    }
+
+    /**
+     * Fetches UADE's replay routines: 726 KB from upstream's own repository.
+     *
+     * The same arrangement as sc68's, for the same reason and after the same question was asked of
+     * the people who would know (`docs/LICENSES.md`). Without them UADE plays 12 files in 300.
+     */
+    fun downloadPlayers() {
+        if (!beginDownload(DownloadKeys.PLAYERS, PLAYERS_LABEL)) return
+        scope.launch {
+            val fetched = UadePlayers.download(context) { done, total ->
+                _browse.update {
+                    it.copy(indexing = it.indexing + (DownloadKeys.PLAYERS to "$PLAYERS_LABEL $done/$total"))
+                }
+            }
+            endDownload(DownloadKeys.PLAYERS)
+            if (fetched == null || fetched == 0) {
+                _state.update {
+                    it.copy(message = Message(context.getString(R.string.notice_players_failed)))
+                }
+                return@launch
+            }
+            withContext(backgroundWork) {
+                val version = context.packageManager
+                    .getPackageInfo(context.packageName, 0).longVersionCode.toString()
+                configureUade(version)
+            }
+            _state.update {
+                it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_players_done, fetched, fetched)))
+            }
+            refreshCatalogues()
+        }
+    }
+
+    /** Throws UADE's replay routines away. The Amiga custom formats stop playing until they return. */
+    fun deletePlayers() {
+        scope.launch {
+            val freed = withContext(backgroundWork) {
+                val before = UadePlayers.bytes(context)
+                if (UadePlayers.delete(context)) {
+                    // The copies UADE actually reads go too, or it would go on playing from them
+                    // with nothing on the storage screen saying they were there.
+                    java.io.File(context.filesDir, "uade").deleteRecursively()
+                    before
+                } else {
+                    0L
+                }
+            }
+            val version = context.packageManager
+                .getPackageInfo(context.packageName, 0).longVersionCode.toString()
+            withContext(backgroundWork) { configureUade(version) }
+            _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }
     }

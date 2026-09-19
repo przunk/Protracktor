@@ -45,6 +45,7 @@ fun StorageSection(
     archiveBytes: Map<String, Long>,
     databaseBytes: Long,
     replayCount: Int,
+    playerCount: Int,
     replayBytes: Long,
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
@@ -56,6 +57,7 @@ fun StorageSection(
     onClearTrackMetadata: () -> Unit,
     onClearFavourites: () -> Unit,
     onDeleteReplays: () -> Unit,
+    onDeletePlayers: () -> Unit,
 ) {
     var confirming by remember { mutableStateOf<Confirmation?>(null) }
 
@@ -63,7 +65,7 @@ fun StorageSection(
         !it.isOnlineOnly && (it.trackCount > 0 || (archiveBytes[it.id] ?: 0L) > 0L)
     }
     if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0 && databaseBytes <= 0 &&
-        replayCount <= 0 && trackMetadataCount <= 0 && favouriteCount <= 0
+        replayCount <= 0 && playerCount <= 0 && trackMetadataCount <= 0 && favouriteCount <= 0
     ) return
 
     HorizontalDivider()
@@ -125,6 +127,21 @@ fun StorageSection(
                     title = replaysName,
                     body = R.string.storage_confirm_replays,
                     act = onDeleteReplays,
+                )
+            },
+        )
+    }
+
+    if (playerCount > 0) {
+        val playersName = stringResource(R.string.players_title)
+        StorageRow(
+            title = playersName,
+            detail = pluralStringResource(R.plurals.players_count, playerCount, playerCount),
+            onDelete = {
+                confirming = Confirmation(
+                    title = playersName,
+                    body = R.string.storage_confirm_players,
+                    act = onDeletePlayers,
                 )
             },
         )

@@ -190,6 +190,10 @@
     <string name="replays_title">Procedury odtwarzające Atari ST</string>
     <string name="replays_none">Potrzebne większości plików .sc68. 98 małych plików, około 1,2 MB, pobierane ze strony samego sc68 — to cudzy kod i ta aplikacja go nie rozpowszechnia. SNDH ich nie potrzebuje.</string>
     <string name="storage_confirm_replays">Można je pobrać ponownie z tego ekranu. Do tego czasu większość plików .sc68 zagra ciszą. SNDH to nie dotyczy.</string>
+    <string name="players_title">Procedury odtwarzające Amigi</string>
+    <string name="players_none">Potrzebne dla TFMX, Hippela, Davida Whittakera i pozostałych amigowych formatów autorskich. 178 małych plików, około 726 KB, pobierane z repozytorium samego UADE — to cudzy kod i ta aplikacja go nie rozpowszechnia.</string>
+    <string name="storage_confirm_players">Można je pobrać ponownie z tego ekranu. Do tego czasu amigowe formaty autorskie nie zagrają.</string>
+    <string name="a11y_download_players">Pobierz amigowe procedury odtwarzające</string>
     <string name="settings_title">Ustawienia</string>
     <string name="settings_appearance">Wygląd</string>
     <string name="settings_theme">Motyw</string>
@@ -279,6 +283,12 @@
     </plurals>
     <string name="notice_all_already_in_playlist">Wszystkie utwory znajdują się już na playliście %1$s.</string>
     <string name="catalogue_online_search">Wyszukiwanie online</string>
+    <plurals name="players_count">
+        <item quantity="one">%1$,d procedura odtwarzająca</item>
+        <item quantity="few">%1$,d procedury odtwarzające</item>
+        <item quantity="many">%1$,d procedur odtwarzających</item>
+        <item quantity="other">%1$,d procedury odtwarzającej</item>
+    </plurals>
     <plurals name="replays_count">
         <item quantity="one">%1$,d procedura odtwarzająca</item>
         <item quantity="few">%1$,d procedury odtwarzające</item>
@@ -396,11 +406,18 @@
     <string name="notice_favourites_playable">%1$,d z %2$,d ulubionych jest w twoim indeksie Modland.</string>
     <string name="notice_favourites_need_index">Pobrano %1$,d ulubionych. Zaindeksuj Modland, aby je odtwarzać.</string>
     <string name="notice_replays_failed">Nie udało się pobrać procedur odtwarzających.</string>
+    <string name="notice_players_failed">Nie udało się pobrać amigowych procedur odtwarzających.</string>
     <plurals name="notice_replays_done">
         <item quantity="one">Pobrano %1$,d procedurę odtwarzającą. Pliki .sc68 powinny już grać.</item>
         <item quantity="few">Pobrano %1$,d procedury odtwarzające. Pliki .sc68 powinny już grać.</item>
         <item quantity="many">Pobrano %1$,d procedur odtwarzających. Pliki .sc68 powinny już grać.</item>
         <item quantity="other">Pobrano %1$,d procedury odtwarzającej. Pliki .sc68 powinny już grać.</item>
+    </plurals>
+    <plurals name="notice_players_done">
+        <item quantity="one">Pobrano %1$,d amigową procedurę odtwarzającą. TFMX, Hippel i pozostałe formaty autorskie powinny już grać.</item>
+        <item quantity="few">Pobrano %1$,d amigowe procedury odtwarzające. TFMX, Hippel i pozostałe formaty autorskie powinny już grać.</item>
+        <item quantity="many">Pobrano %1$,d amigowych procedur odtwarzających. TFMX, Hippel i pozostałe formaty autorskie powinny już grać.</item>
+        <item quantity="other">Pobrano %1$,d amigowej procedury odtwarzającej. TFMX, Hippel i pozostałe formaty autorskie powinny już grać.</item>
     </plurals>
     <string name="notice_random_gave_up">Kilka losowań z rzędu nie chciało się otworzyć. Zatrzymuję się tutaj.</string>
     <string name="notice_random_nothing_indexed">Nic nie jest jeszcze zaindeksowane. Najpierw zaindeksuj katalog.</string>

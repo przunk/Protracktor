@@ -535,6 +535,29 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeSetDataPath(JNIEnv *env, j
     env->ReleaseStringUTFChars(path, chars);
 }
 
+/**
+ * Where UADE's three paths are. Called from the same start-up pass as `nativeSetDataPath`.
+ *
+ * Three strings rather than one, because none of them can be derived from the others: the emulator
+ * is an executable in `nativeLibraryDir`, its data is under `filesDir`, and the scratch directory
+ * is where a tune is written so a path exists to open. `engine.h` says why each one is needed.
+ */
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSetUadePaths(JNIEnv *env, jclass,
+                                                                  jstring core, jstring base,
+                                                                  jstring scratch) {
+    const char *coreChars = env->GetStringUTFChars(core, nullptr);
+    const char *baseChars = env->GetStringUTFChars(base, nullptr);
+    const char *scratchChars = env->GetStringUTFChars(scratch, nullptr);
+    guardedVoid("setUadePaths", [&] {
+        protracktor::setUadePaths(coreChars ? coreChars : "", baseChars ? baseChars : "",
+                                  scratchChars ? scratchChars : "");
+    });
+    env->ReleaseStringUTFChars(core, coreChars);
+    env->ReleaseStringUTFChars(base, baseChars);
+    env->ReleaseStringUTFChars(scratch, scratchChars);
+}
+
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetGain(JNIEnv *, jclass, jlong handle, jfloat gain) {
     guardedVoid("setGain", [&] { asPlayer(handle)->setGain(gain); });

@@ -62,6 +62,7 @@ fun SettingsScreen(
     archiveBytes: Map<String, Long>,
     databaseBytes: Long,
     replayCount: Int,
+    playerCount: Int,
     replayBytes: Long,
     catalogues: List<CatalogueSummary>,
     webPlayer: String,
@@ -84,6 +85,7 @@ fun SettingsScreen(
     onClearTrackMetadata: () -> Unit,
     onClearFavourites: () -> Unit,
     onDeleteReplays: () -> Unit,
+    onDeletePlayers: () -> Unit,
 ) {
     val haptics = rememberHaptics()
     val context = LocalContext.current
@@ -262,6 +264,7 @@ fun SettingsScreen(
                 archiveBytes = archiveBytes,
                 databaseBytes = databaseBytes,
                 replayCount = replayCount,
+                playerCount = playerCount,
                 replayBytes = replayBytes,
                 catalogues = catalogues,
                 songLengthCount = songLengthCount,
@@ -273,6 +276,7 @@ fun SettingsScreen(
                 onClearTrackMetadata = onClearTrackMetadata,
                 onClearFavourites = onClearFavourites,
                 onDeleteReplays = onDeleteReplays,
+                onDeletePlayers = onDeletePlayers,
             )
         }
 

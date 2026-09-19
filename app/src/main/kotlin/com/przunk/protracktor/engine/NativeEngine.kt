@@ -27,6 +27,20 @@ object NativeEngine {
     fun setDataPath(path: String) = nativeSetDataPath(path)
 
     /**
+     * Where UADE's emulator, its data and a scratch directory are.
+     *
+     * Three paths because none of them is a build-time constant: `uadecore` is an executable
+     * shipped as `lib/<abi>/libuadecore.so` and found through `applicationInfo.nativeLibraryDir`,
+     * the data directory is under `filesDir`, and the scratch directory is where a tune is written
+     * so that it has a path — which is the only way a multifile song can find its other half.
+     *
+     * Called again after the replay routines are downloaded, because until they are there the
+     * backend answers "not set up" and the Amiga formats are simply absent.
+     */
+    fun setUadePaths(coreFile: String, baseDir: String, scratchDir: String) =
+        nativeSetUadePaths(coreFile, baseDir, scratchDir)
+
+    /**
      * Why the last [open] returned null.
      *
      * Empty when nothing failed. Worth showing: a file no backend claims and a file a backend
@@ -177,6 +191,11 @@ object NativeEngine {
     @JvmStatic private external fun nativeSubsongCount(handle: Long): Int
     @JvmStatic private external fun nativeSelectSubsong(handle: Long, index: Int)
     @JvmStatic private external fun nativeSetDataPath(path: String)
+    @JvmStatic private external fun nativeSetUadePaths(
+        coreFile: String,
+        baseDir: String,
+        scratchDir: String,
+    )
     @JvmStatic private external fun nativeBackendsFingerprint(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String

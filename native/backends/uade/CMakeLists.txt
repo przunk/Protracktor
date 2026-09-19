@@ -111,3 +111,7 @@ target_compile_options(uadecore PRIVATE -w -fno-exceptions -fomit-frame-pointer)
 set_target_properties(uadecore PROPERTIES
     PREFIX "lib" OUTPUT_NAME "uadecore" SUFFIX ".so"
     POSITION_INDEPENDENT_CODE ON)
+
+# The engine links `uade_frontend` and compiles with this on; everything else in the tree is
+# unaffected, and a build without UADE keeps every path through `openBackend` that exists today.
+target_compile_definitions(uade_frontend INTERFACE PROTRACKTOR_WITH_UADE=1)

@@ -382,6 +382,7 @@ fun ProtracktorApp(
                 archiveBytes = browse.archiveBytes,
                 databaseBytes = browse.databaseBytes,
                 replayCount = browse.replayCount,
+                playerCount = browse.playerCount,
                 replayBytes = browse.replayBytes,
                 catalogues = browse.catalogues,
                 // From the collected state, not from the parameter: a successful pairing
@@ -407,6 +408,7 @@ fun ProtracktorApp(
                 onClearTrackMetadata = viewModel::clearTrackMetadata,
                 onClearFavourites = viewModel::clearFavourites,
                 onDeleteReplays = viewModel::deleteReplays,
+                onDeletePlayers = viewModel::deletePlayers,
             )
         } else if (showBrowse) {
             BrowseScreen(
@@ -425,6 +427,7 @@ fun ProtracktorApp(
                 onPickDownloads = { choosingDownloads = true },
                 onDownloadFavourites = viewModel::downloadFavourites,
                 onDownloadReplays = viewModel::downloadReplays,
+                onDownloadPlayers = viewModel::downloadPlayers,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
                 // **Open, not just play.** Starting a tune and dropping back onto a playlist
