@@ -420,6 +420,27 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C70. ~~Random played, and the playlist stayed on screen~~ — FIXED 2026-09-19, branch
+
+Play anything from Browse, then open Random: a tune started and the playlist was still there. The
+Random view opened and closed itself in the same frame.
+
+**Two readings of one question.** The view closes when search results take over playback (C49), and
+it asked `PlayerUiState.searchMode`, which was `resultsQueue != null` and nothing else. Playing a
+dice pick sets `transient` and does not clear the queue Browse was last played from, so that queue
+was still sitting in the state — not driving anything, but answering yes.
+
+The transport had the rule right the whole time. `nextFile` reads `transient != null &&
+!diceWaiting` as "the dice owns this", and `searchMode` now says the same thing, so a queue left
+behind is no longer a queue playing. The dice waiting under an author's list (`docs/BACKLOG.md`
+A41) is still search mode, because there the list really is driving next and previous.
+
+`openRandom` also clears the queue now. The reading was the defect; the stale queue was what fed
+it, and a session that starts should not carry the last source's state — which is what the page has
+always done at the same point (`away = null` in `web/src/app.js`).
+
+`RandomIsNotSearchTest` fails against the old definition.
+
 ### C64. ~~Uninstalling did not remove the database~~ — FIXED 2026-09-17
 
 It was not the app's doing: **Android's Auto Backup is on unless a manifest says
