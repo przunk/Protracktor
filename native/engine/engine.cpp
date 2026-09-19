@@ -2029,6 +2029,12 @@ std::string backendsFingerprint() {
     // build's version would invalidate every index on every device at once.
     o << ";zxtune:none";
 #endif
+#if !PROTRACKTOR_WITH_UADE
+    // The same rule for UADE, and here the absent side is the browser: it has no `fork`, so it can
+    // never have this backend and its index has to know. The phone's fingerprint is unchanged by
+    // UADE arriving, which is what keeps a stored index valid on the day it does.
+    o << ";uade:none";
+#endif
     return o.str();
 }
 

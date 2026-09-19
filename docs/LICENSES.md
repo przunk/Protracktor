@@ -67,7 +67,7 @@ projects' terms rather than ours.
 | HivelyTracker V1_9 | Amiga AHX and HVL | BSD-3-Clause | **yes, 2026-09-05** |
 | ZXTune (c93e81d) | ZX Spectrum AY trackers | LGPL-3.0 | **yes, 2026-09-07** |
 | audacious-uade-tools | metadata, downloaded not shipped | GPL-2.0-**or-later** | **yes, 2026-09-07** |
-| UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
+| UADE 3.05 | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | **yes, 2026-09-19** — `players/` downloaded, not shipped |
 | Oboe 1.10.0 | audio output | Apache-2.0 | no |
 
 **The "or later" matters.** A dependency that turns out to be GPL-2-**only** cannot be combined
@@ -482,6 +482,33 @@ the entire technique. So the options are two, not three:
 
 There is no version of UADE worth shipping that does not answer this question first, which is
 exactly why `docs/BACKLOG.md` A5 put the licence before the code.
+
+### Built 2026-09-19 — option 2, as decided
+
+- **The APK ships three files and no replay routine**: `score`, the 68000 program that runs inside
+  the emulated Amiga; `uaerc`, which configures the machine; and `eagleplayer.conf`, the table that
+  says which player a file needs. All three are UADE's own work in UADE's own tree, 30 KB together.
+- **The 178 replay routines are fetched by the device**, pinned to the same revision the emulator
+  was built from. A replay routine and the emulator that runs it are one program in two halves;
+  fetching HEAD would pair them with a different UADE than the one in the APK.
+- **From GitLab rather than zakalwe.fi, and that is a deviation from the rule above.** The rule was
+  to prefer the page upstream publishes and fall back to GitLab. zakalwe.fi serves `.tar.bz2` and
+  Android has no bzip2 decoder, so honouring it would mean adding a decompression library to the
+  APK to read 726 KB once. GitLab serves the same revision as gzip, which `java.util.zip` already
+  reads, and it is upstream's own repository rather than a mirror — the reply that settled this
+  named GitLab as the more reliably available of the two. Worth revisiting if a bzip2 reader ever
+  arrives for another reason.
+- **The song database comes with them**: `conf/song.conf` from audacious-uade, GPL-2.0-or-later, and
+  **not** `conf/songdb` beside it, which is CC BY-NC-SA 4.0 and could never ship in a store app.
+  It is not fetched either. Without the table several Hippel and TFMX variants are identified as
+  the wrong player, which looks like the format not working.
+- **The notice comes before the download** and says what these are, in the same words sc68's row
+  uses: other people's code, and this app is not the one handing it out.
+- **They can be deleted**, from the same storage section as everything else, with the consequence
+  named: the Amiga custom formats stop playing.
+- **The Delitracker question is still open.** `players/DaveLowe_Deli` is the one binary in the
+  family that has ever been objected to, and it is in what the device fetches. Leaving it out is a
+  choice nobody has made yet; it changes nothing about who is distributing.
 
 ## Data the app downloads, and does not ship
 

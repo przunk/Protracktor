@@ -284,10 +284,10 @@ Two things to settle when it is picked up:
   (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
   differ — A43 is in the same corner of the same screen and the two may as well be one branch.
 
-## A44. UADE's process model — **awaiting a decision, recommended 2026-09-17**
+## A44. UADE's process model — **decided 2026-09-19, fork+exec; integration on `feature/a44-uade`**
 
 Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
-guess it. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
+guess it. The recommendation was taken as it stood. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
 licence (`players/` downloaded from the page upstream publishes for it, never shipped), and the
 song database it also needs (`conf/song.conf`, GPL-2-or-later — **not** `conf/songdb` beside it,
 which is CC BY-NC-SA and cannot ship in a store app).
@@ -320,6 +320,30 @@ nothing and the app simply disappears. Forty of the 51 exits are in that one com
 
 **Not blocked on anything else.** Say yes and the work is the integration; say no and it is the same
 integration with a fork of UADE in front of it. `docs/PLAN_FORMATS.md` has the full reading.
+
+### What the integration turned out to need, 2026-09-19
+
+Measured while building it, because none of it was visible from the decision:
+
+- **Five files upstream's `configure` writes are not in git**, and a cross-compiler cannot ask the
+  questions they answer — they would describe the build machine, not the phone. They are answered
+  for bionic in `native/backends/uade/config/` and copied in by `scripts/fetch-uade.py`. One of
+  them matters: glibc has `canonicalize_file_name` and bionic does not, tested with the NDK's own
+  clang rather than assumed.
+- **The 68000 emulator does not exist as source.** `build68k` and `gencpu` write 80,293 lines of it
+  from `table68k`; they are host programs, so the fetch script runs them and the NDK compiles what
+  they produce. Compiled in eight pieces, as upstream does.
+- **`uadecore` is 1.2 MB stripped on arm64**, 784 KB on armeabi-v7a, 1.2 MB on x86_64 — close to
+  the +1.8 MB the recommendation quoted, and position-independent with 16 KB-aligned segments,
+  both measured on the built file.
+- **The native libraries now extract at install** (`useLegacyPackaging = true`), which is not the
+  modern default and is not a preference: an executable has to be a file on disk, and with the
+  default packaging `nativeLibraryDir` holds nothing. It applies to every library, not only this
+  one, and there is no per-file form of it. The download gets smaller and the install gets bigger.
+- **A song is not always a file.** `uade_play_from_buffer` cannot do multifile and TFMX is
+  `mdat.name` beside `smpl.name`, so the engine writes the tune to a scratch directory and plays it
+  by path. `openBackend` takes companions now; finding them is the caller's, and **that half is not
+  built yet** — single-file formats play, TFMX needs the other half fetched with it.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
