@@ -73,6 +73,10 @@ SOURCES = {
 # Which of the generated files must exist afterwards for the build to have a chance.
 GENERATED = ["src/cpudefs.c", "src/cpuemu.c", "src/cpustbl.c", "src/cputbl.h",
              "src/sd-sound.c", "src/sd-sound.h", "src/sysconfig.h",
+             "src/frontends/common/ossupport.c",
+             "src/frontends/include/uade/ossupport.h",
+             "src/frontends/include/uade/sysincludes.h",
+             "src/frontends/include/uade/compilersupport.h",
              "src/frontends/include/uade/options.h"]
 
 
@@ -120,6 +124,56 @@ def place_configuration() -> None:
     src = VENDOR / "uade" / "src"
     (src / "sd-sound.c").write_text('#include "sd-sound-generic.c"\n')
     (src / "sd-sound.h").write_text('#include "sd-sound-generic.h"\n')
+
+    write_os_support(src)
+
+
+def write_os_support(src: pathlib.Path) -> None:
+    """Assembles `ossupport.c`, `ossupport.h` and `compilersupport.h`.
+
+    Upstream's configure builds these three by concatenating its own files, choosing what to append
+    by compiling three one-line programs. The three were compiled here with the NDK's
+    `aarch64-linux-android29-clang` on 2026-09-19 rather than reasoned about:
+
+        memmem                   compiles -- bionic has it, no replacement
+        canonicalize_file_name   does NOT -- a GNU extension glibc has and bionic does not,
+                                 so upstream's own replacement is appended, as it is on every
+                                 platform that lacks it
+        __builtin_expect         compiles -- likely()/unlikely() mean something
+
+    The pieces are upstream's, taken from `compat/` at build time. Nothing is copied into this
+    repository by hand: a copy would be a fork of two files nobody would remember to update.
+    """
+    common = src / "frontends" / "common"
+    include = src / "frontends" / "include" / "uade"
+    compat = src.parent / "compat"
+
+    (common / "ossupport.c").write_text(
+        "#include <uade/ossupport.h>\n\n"
+        + (common / "unixsupport.c").read_text()
+        + (compat / "canonrep.c").read_text()
+    )
+    (include / "ossupport.h").write_text(
+        "#ifndef _UADE_OSSUPPORT_H_\n"
+        "#define _UADE_OSSUPPORT_H_\n\n"
+        "#include <uade/unixsupport.h>\n"
+        "#include <zakalwe/string.h>\n\n"
+        + (compat / "canonrep.h").read_text()
+        + "\n#endif\n"
+    )
+    # Which system headers the IPC needs. Upstream writes the UNIX pair for everything but
+    # FreeBSD, and bionic is a UNIX in this respect.
+    (include / "sysincludes.h").write_text(
+        "#include <netinet/in.h>\n"
+        "#include <sys/select.h>\n"
+    )
+    (include / "compilersupport.h").write_text(
+        "#ifndef _UADE_COMPILER_SUPPORT_H_\n"
+        "#define _UADE_COMPILER_SUPPORT_H_\n"
+        "#define likely(x)\t__builtin_expect(!!(x), 1)\n"
+        "#define unlikely(x)\t__builtin_expect(!!(x), 0)\n"
+        "#endif\n"
+    )
 
 
 def generate_cpu() -> bool:
