@@ -51,6 +51,7 @@ actually been confirmed on a device.
 | [`docs/PRIVACY.md`](docs/PRIVACY.md) | why that is the only copy, and what leaves the phone in short |
 | [`docs/LICENSES.md`](docs/LICENSES.md) | every third-party component, its licence, and what that obliges us to do |
 | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | what the app has to do, each requirement traced to the complaint it came from |
+| [`docs/PLAN_ROUND_13.md`](docs/PLAN_ROUND_13.md) | the round after 0.7.0: titles, accent-blind search, the dock, folders cached ahead |
 | [`docs/PLAN_SONGDB_LENGTHS.md`](docs/PLAN_SONGDB_LENGTHS.md) | where Amiga tunes get their length, and in what order the sources are asked |
 | [`docs/PLAN_INSTRUMENT_NAMES.md`](docs/PLAN_INSTRUMENT_NAMES.md) | instrument and sample names in Now Playing, planned before any code |
 | [`docs/ROADMAP_FORMATS.md`](docs/ROADMAP_FORMATS.md) | what we cannot play yet, in the order worth doing it, with what each costs |

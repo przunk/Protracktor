@@ -15,6 +15,24 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13**
+
+Opening a Modland author's folder fetches its tracks into the cache one after another, three at a
+time, with a spinner in each row's left slot while it runs. When it may run (Wi-Fi only by
+default), what a cached row shows, and a per-folder limit are D4–D6 in `docs/PLAN_ROUND_13.md`,
+which is the plan.
+
+## A54. The dock's text scrolls when it does not fit — **planned 2026-09-21, round 13**
+
+A dock line that overflows scrolls slowly to the left instead of ending in `…`; one that fits stands
+still, and nothing moves with the system's animations off. D3 in `docs/PLAN_ROUND_13.md`.
+
+## A53. Search ignores accents — **planned 2026-09-21, round 13**
+
+`michal` finds `Michał` and the other way round; `akes lekhorna` finds `Åkes lekhörna`. One fold
+for query and stored text, a sparse folded column (the next free database version after A47's 18), the same rule in the
+browser. D2 in `docs/PLAN_ROUND_13.md`.
+
 ## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18**
 
 **Both halves are working as designed, and the answer is a measurement.**
@@ -128,6 +146,8 @@ safe to paraphrase; "he wanted it because…" is not, and now has nowhere to liv
 
 ## A48. Two seconds pass before the playlist appears — **measured, one cause fixed 2026-09-18**
 
+*In round 13 (2026-09-21): `docs/PLAN_ROUND_13.md` has the steps and the decisions.*
+
 **The wrong screen was a defect and is fixed** (the empty playlist now says nothing until it knows
 what it is talking about). **The two seconds are not fixed, and this is that.**
 
@@ -185,6 +205,8 @@ once on a phone.
 **Corrected 2026-09-21: the analysis below is wrong.** The bytes are `0x86` and `0x94` (CP437), not
 `0xC5` and `0xF6`, and the `�` is made by libopenmpt, not by `NewStringUTF`. What was found and
 built is `docs/STATUS.md` C79; the text below is kept as it was, as the reading that was corrected.
+
+*In round 13 (2026-09-21): `docs/PLAN_ROUND_13.md` has the steps and the decisions.*
 
 Opening `Zalza/akes lekhorna.mod` shows the title as **"�kes lekh�rna (za)"** — diamond
 question marks where two letters should be.
