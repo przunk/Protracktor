@@ -25,6 +25,7 @@ Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` a
 
 **What changed since v0.6.0**: `git log --oneline v0.6.0..v0.7.0`, and
 `docs/STATUS.md` for the defects by number.
+
 ## 0.6.0 — versionCode 731
 
 Closed testing. Round 12: the index stops depending on what this build can play.
