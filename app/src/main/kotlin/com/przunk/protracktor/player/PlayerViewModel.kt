@@ -97,6 +97,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun downloadReplays() = controller.downloadReplays()
     fun deleteReplays() = controller.deleteReplays()
+    fun downloadPlayers() = controller.downloadPlayers()
+    fun deletePlayers() = controller.deletePlayers()
 
     fun selectSubsong(index: Int) = controller.selectSubsong(index)
 

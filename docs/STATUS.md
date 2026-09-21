@@ -14,7 +14,14 @@ A usable player, as far as anything can be called that without a device saying s
   through libsidplayfp (PSID, RSID), seven console families through game-music-emu (NSF, GBS,
   SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
   and KSS routinely hold nothing at track 0), and the Amiga synth trackers through HivelyTracker
-  (AHX, HVL). Backends sit behind one interface and are asked what they can do rather
+  (AHX, HVL). **The Amiga custom formats through UADE** — TFMX, Hippel, David Whittaker, Sonic
+  Arranger and thirty more, once the replay routines are downloaded (`docs/BACKLOG.md` A44).
+  **Heard on a phone: TFMX (`mdat.coolbass` with its samples)**, which exercises the second
+  process, the fetched companion and the file lookup at once. The other 34 names are checked on
+  the host only — 140 of 140 through the unchanged engine, under a parent directory that cannot be
+  listed, as `/data` cannot on a phone. **Not yet on a phone**: the other formats, subsong
+  switching, deleting the routines. No length and no seeking yet: the formats do not state one.
+  The browser cannot have them at all. Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt and HivelyTracker seek, sc68 and libsidplayfp cannot, and the UI
   reflects that.
 - **Ships no code it has no right to.** Of sc68's 99 replay routines the APK carries one — sc68's
@@ -419,6 +426,20 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 **Entries state the defect, not who found it.** What was wrong, how it was proved, and what was
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
+
+### C71. ~~"Get some music to browse" flashed on every visit to Online catalogues~~ — FIXED 2026-09-21, branch
+
+The row appeared for a moment each time Online catalogues opened, on a phone holding every index,
+and then vanished.
+
+The rule offered it while HVSC's song lengths or the track metadata were missing, and read both as
+counts. **Those counts are read only when the screen opens**; before that they are zero, which is
+also what "not downloaded" looks like. So for the frame between opening and the counts arriving,
+the rule saw a phone with nothing on it.
+
+`BrowseState.heldCountsKnown` now says whether the counts are real, and the rule lives in
+`BrowseState.offersDownloadEverything` rather than in the composable, where it can be tested.
+`DownloadOfferTest` fails with the gate removed. In since round 12 (`030d87a`).
 
 ### C70. ~~Random played, and the playlist stayed on screen~~ — FIXED 2026-09-19, branch
 

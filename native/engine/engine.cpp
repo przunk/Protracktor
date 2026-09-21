@@ -53,6 +53,32 @@ void hvl_play_irq(struct hvl_tune *ht);
 #define PROTRACKTOR_WITH_ZXTUNE 1
 #endif
 
+/*
+ * UADE, and the reason it is the second optional one.
+ *
+ * Not a compiler this time but a **process model**: libuade does not decode anything, it forks and
+ * execs `uadecore` and reads rendered audio back over a socketpair. `fork` and `exec` do not exist
+ * in WebAssembly, so the browser cannot have this backend at all -- which is the whole of why the
+ * page will say out loud that these formats are the phone's (`docs/PLAN_FORMATS.md` §4, A44).
+ *
+ * Defaulted **off**, the opposite of ZXTune: the Gradle build asks for it and nothing else does.
+ */
+#ifndef PROTRACKTOR_WITH_UADE
+#define PROTRACKTOR_WITH_UADE 0
+#endif
+
+#if PROTRACKTOR_WITH_UADE
+extern "C" {
+#include <uade/uade.h>
+}
+#include <dirent.h>
+#include <fcntl.h>
+#include <strings.h>
+#include <fstream>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 #if PROTRACKTOR_WITH_ZXTUNE
 // ZXTune. C++ with its own namespaces, so outside the `extern "C"` block above.
 //
@@ -1699,6 +1725,487 @@ private:
 
 #endif  // PROTRACKTOR_WITH_ZXTUNE
 
+#if PROTRACKTOR_WITH_UADE
+/**
+ * UADE: an emulated Amiga running the tune's original replay routine, in a process of its own.
+ *
+ * **Everything unusual about this class follows from one fact**: libuade is a client, not a
+ * decoder. `uade_new_state` opens a socketpair, forks, and execs `uadecore`; rendered audio comes
+ * back over the socket. So an instance here owns a *process*, and the two things that would
+ * normally be free are not:
+ *
+ * - **It plays from a path, not from a buffer.** `uade_play_from_buffer` says in its own header
+ *   that it does not work with multifile songs, and multifile is much of what UADE is for: TFMX is
+ *   `mdat.name` beside `smpl.name`, and asking about the `mdat` alone reports "unsupported" for
+ *   the largest Amiga custom format in Modland. That was measured the wrong way once already
+ *   (`docs/PLAN_FORMATS.md` §4). So the bytes are written to a scratch directory, with whatever
+ *   companions the caller was able to supply beside them, and UADE is given that path.
+ * - **The directory lives as long as the backend does.** The emulated program asks for its files
+ *   *while playing* -- that is how a replay routine loads a sample -- so deleting the scratch
+ *   after `uade_play` returns would break tunes some way in rather than at the start.
+ *
+ * One scratch directory per instance, made with `mkdtemp`. A folder scan runs concurrently with
+ * playback (round 5) and both may reach UADE, so a single shared directory would be two openings
+ * writing over each other's files.
+ */
+class UadeBackend : public Backend {
+public:
+    /**
+     * Where `uadecore` is and where UADE's data directory was put. Set once from Kotlin.
+     *
+     * Neither is knowable at build time. `uadecore` lives in `nativeLibraryDir`, whose path holds
+     * the APK's install cookie, and the data directory is under `filesDir`. The compiled-in
+     * defaults are deliberately paths that cannot exist, so a missed configuration fails loudly
+     * (`native/backends/uade/config/options.h`).
+     */
+    static void setPaths(const std::string &core, const std::string &base,
+                         const std::string &scratch) {
+        std::lock_guard<std::mutex> held(pathMutex());
+        corePath() = core;
+        basePath() = base;
+        scratchPath() = scratch;
+    }
+
+    /**
+     * Whether there is anything to try.
+     *
+     * **The replay routines are downloaded, not shipped** (`docs/LICENSES.md`), so on a fresh
+     * install this is false and UADE is simply not among the backends. Asked before every open
+     * rather than cached: the download can finish while the app is running, and a cached "no"
+     * would mean the formats stayed dead until a restart with nothing on screen explaining it.
+     */
+    static bool available() {
+        const Paths paths = pathsCopy();
+        if (paths.core.empty() || paths.base.empty() || paths.scratch.empty()) return false;
+        // The two files `uade_new_state` itself checks, checked here so a refusal can say which
+        // one is missing instead of libuade printing a warning nobody sees.
+        if (::access(paths.core.c_str(), X_OK) != 0) return false;
+        const std::string uaerc = paths.base + "/uaerc";
+        const std::string score = paths.base + "/score";
+        return ::access(uaerc.c_str(), R_OK) == 0 && ::access(score.c_str(), R_OK) == 0;
+    }
+
+    /**
+     * Opens [bytes], named [name], with [companions] written beside it.
+     *
+     * The companions are whatever the caller could find: the other half of a TFMX song, the sample
+     * file a Sonic Arranger tune names. An empty list is normal and most formats are one file.
+     */
+    UadeBackend(const std::vector<char> &bytes, const std::string &name,
+                const std::vector<protracktor::Companion> &companions) {
+        const Paths paths = pathsCopy();
+        if (paths.core.empty()) throw std::runtime_error("the Amiga decoder (UADE) is not set up");
+        // **Said apart from "does not recognise".** UADE answers a missing player file with the
+        // same zero it gives a file it has never heard of, and prints the difference to stderr,
+        // which on a phone goes nowhere. A tune refused on a phone that had downloaded the
+        // routines could not be told from a tune refused on one that had not, until this.
+        if (!hasPlayers(paths.base)) {
+            throw std::runtime_error("the Amiga replay routines are not where the decoder looks for them");
+        }
+
+        makeScratch(paths.scratch);
+        for (const protracktor::Companion &companion : companions) write(companion.name, companion.bytes);
+
+        // **UADE's reasons, kept.** libuade and uadecore explain a refusal only on stderr and
+        // stdout -- "Could not load player", "load: request error: smpl.x" -- and on a phone both
+        // go nowhere, so every refusal read "does not recognise it" whatever the cause. Both
+        // descriptors point into this instance's scratch directory while the song is opened, and
+        // uadecore inherits them at fork, so its own complaints land there too. The last line is
+        // attached to the refusal (`docs/BACKLOG.md` A44). One opening at a time, because the
+        // descriptors are the process's, not this object's.
+        std::unique_lock<std::mutex> opening(openMutex());
+        const Captured captured(scratch_ + "/.uade-said");
+        // The tune itself last, and its path is the one UADE is asked about. Companions are only
+        // ever *found* by the emulated program, by the name the tune asks for.
+        modulePath_ = write(name, bytes);
+
+        struct uade_config *config = uade_new_config();
+        if (!config) {
+            cleanScratch();
+            throw std::runtime_error("the Amiga decoder (UADE) would not configure itself");
+        }
+        uade_config_set_option(config, UC_BASE_DIR, paths.base.c_str());
+        uade_config_set_option(config, UC_UADECORE_FILE, paths.core.c_str());
+        uade_config_set_option(config, UC_FREQUENCY, "44100");
+        // **One subsong per render stream.** Left to itself UADE moves on to the next subsong when
+        // one ends, inside the same stream -- found on the host, where `mdat.bundesliga manager`
+        // reported 3.5 s after 10 s of rendering because the position had restarted with subsong
+        // two. Here the engine owns that decision: a short render ends the subsong, and whether the
+        // next one follows is the player's "play all subsongs", as it is for every other backend.
+        uade_config_set_option(config, UC_ONE_SUBSONG, nullptr);
+        // **Not `UC_CONTENT_DETECTION`**, despite the name. uade123 exposes it as "detect strictly
+        // by file content", and `get_eagleplayer` then rejects a filename match whenever the bytes
+        // alone did not identify the format. Several real formats are known only by their prefix or
+        // suffix; Hippel COSO was the case that caught this, with the probe reporting 0 of 12 while
+        // uade123 played the same files. UADE's default tries content first and then permits the
+        // filename match, which is what an integrating player needs.
+        state_ = uade_new_state(config);
+        std::free(config);
+        if (!state_) {
+            std::string reason = "the Amiga decoder (UADE) would not start";
+            const std::string said = captured.lastLine();
+            if (!said.empty()) reason += " (UADE: " + said + ")";
+            cleanScratch();
+            throw std::runtime_error(reason);
+        }
+        uade_set_amiga_loader(&UadeBackend::loadAmigaFile, this, state_);
+
+        const int claimed = uade_play(modulePath_.c_str(), -1, state_);
+        if (claimed <= 0) {
+            std::string reason = claimed == 0
+                ? "the Amiga decoder (UADE) does not recognise it"
+                : "the Amiga decoder (UADE) failed while opening it";
+            const std::string said = captured.lastLine();
+            if (!said.empty()) reason += " (UADE: " + said + ")";
+            close();
+            throw std::runtime_error(reason);
+        }
+        if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
+        skipEmptyLeadingSubsongs();
+    }
+
+    ~UadeBackend() override { close(); }
+
+    std::size_t render(int, std::size_t frames, float *out) override {
+        std::size_t written = 0;
+        while (written < frames) {
+            const std::size_t want = std::min(frames - written, kChunkFrames);
+            const ssize_t got = uade_read(chunk_.data(), want * 2 * sizeof(int16_t), state_);
+            // Zero is the song ending; negative is the emulator gone. Both are a short render,
+            // which is what tells the engine the file is over.
+            if (got <= 0) break;
+            const std::size_t samples = static_cast<std::size_t>(got) / sizeof(int16_t);
+            for (std::size_t i = 0; i < samples; ++i) {
+                out[written * 2 + i] = chunk_[i] / 32768.0f;
+            }
+            written += samples / 2;
+        }
+        return written;
+    }
+
+    /**
+     * No, and it is a measurement nobody has made rather than a limitation anybody proved.
+     *
+     * `uade_seek` exists and works by running the emulator forward, which for a five-minute Amiga
+     * tune is real time nobody has timed on a phone. Offering a slider that takes ten seconds to
+     * answer would be offering a control that cannot be honoured (`docs/ARCHITECTURE.md` §5), so
+     * it says no until somebody times it.
+     */
+    bool canSeek() const override { return false; }
+    void seek(double) override {}
+
+    void rewind() override {
+        // Back to the start by playing the file again: the emulator has no other way in, which is
+        // also why there is no seek.
+        if (!state_) return;
+        uade_stop(state_);
+        uade_play(modulePath_.c_str(), subsongs_.cur, state_);
+    }
+
+    double positionSeconds() const override {
+        const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
+        if (!info) return 0.0;
+        // Bytes of 16-bit stereo that the emulator has synthesized for this subsong.
+        return static_cast<double>(info->subsongbytes) / (kSampleRate * 2 * sizeof(int16_t));
+    }
+
+    /**
+     * What the file itself says, and nothing invented.
+     *
+     * Zero when UADE does not know, which is most tunes: an Amiga replay routine has no notion of
+     * a length, and the answers that do arrive come from the song database or from an RMC
+     * container. Reporting a guess here is what `docs/STATUS.md` C67 was about, and the bar and
+     * the total both read a zero correctly now (C68).
+     */
+    double durationSeconds() const override {
+        const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
+        return info ? info->duration : 0.0;
+    }
+
+    int preferredSampleRate() const override { return kSampleRate; }
+
+    int subsongCount() const override { return subsongs_.max - subsongs_.min + 1; }
+
+    /** Zero-based here, whatever UADE numbers them from -- usually one (`engine.h`). */
+    int currentSubsong() const override {
+        const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
+        return (info ? info->subsongs.cur : subsongs_.cur) - subsongs_.min;
+    }
+
+    bool selectSubsong(int index) override {
+        if (!state_ || index < 0 || index >= subsongCount()) return false;
+        const int wanted = subsongs_.min + index;
+        uade_stop(state_);
+        if (uade_play(modulePath_.c_str(), wanted, state_) <= 0) return false;
+        if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
+        return true;
+    }
+
+    std::string describe() const override {
+        const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
+        if (!info) return "UADE";
+        // The format is what the user wants; the player is what tells two Hippel variants apart,
+        // and is the thing to quote back when a file does not work.
+        std::string text = info->formatname[0] ? info->formatname : "Amiga custom";
+        if (info->playername[0]) text += std::string(" (") + info->playername + ")";
+        return text;
+    }
+
+private:
+    static constexpr int kSampleRate = 44100;
+    /** Rendered in pieces so one buffer serves any request; 1024 frames is the engine's own. */
+    static constexpr std::size_t kChunkFrames = 1024;
+
+    struct Paths {
+        std::string core;
+        std::string base;
+        std::string scratch;
+    };
+
+    static Paths pathsCopy() {
+        std::lock_guard<std::mutex> held(pathMutex());
+        return Paths{corePath(), basePath(), scratchPath()};
+    }
+
+    static std::string &corePath() { static std::string p; return p; }
+    static std::string &basePath() { static std::string p; return p; }
+    static std::string &scratchPath() { static std::string p; return p; }
+    static std::mutex &pathMutex() { static std::mutex m; return m; }
+
+    /**
+     * Opens at the first subsong with sound in it, as `GmeBackend` does for HES and KSS.
+     *
+     * Found on the host: `reach for the skies-german.avp` begins with a subsong of half a second of
+     * silence that ends, and the music is subsong one. UADE left to itself walks on to it; this
+     * engine keeps one subsong per stream (see `UC_ONE_SUBSONG`), so without this the tune would
+     * be half a second of nothing and then the next track.
+     *
+     * **Only a subsong that ends silent is skipped.** One that is merely quiet at the start -- a
+     * slow fade-in, a long intro -- is still playing after the look, and is kept. The look is at
+     * most two seconds of emulation per subsong, which UADE renders many times faster than real
+     * time, and at most eight subsongs, so a file of nothing but empty subsongs costs a bounded
+     * moment and then plays its first one anyway.
+     */
+    void skipEmptyLeadingSubsongs() {
+        const int start = subsongs_.cur;
+        int chosen = start;
+        for (int subsong = start; subsong <= subsongs_.max && subsong < start + 8; ++subsong) {
+            if (subsong != start) {
+                uade_stop(state_);
+                if (uade_play(modulePath_.c_str(), subsong, state_) <= 0) break;
+            }
+            bool heard = false;
+            bool ended = false;
+            std::size_t looked = 0;
+            while (looked < static_cast<std::size_t>(kSampleRate) * 2) {
+                const ssize_t got = uade_read(chunk_.data(), kChunkFrames * 2 * sizeof(int16_t), state_);
+                if (got <= 0) { ended = true; break; }
+                const std::size_t samples = static_cast<std::size_t>(got) / sizeof(int16_t);
+                for (std::size_t i = 0; i < samples && !heard; ++i) heard = chunk_[i] != 0;
+                looked += samples / 2;
+                if (heard) break;
+            }
+            if (heard || !ended) { chosen = subsong; break; }
+        }
+        // Back to the start of whichever subsong was chosen: the look consumed audio.
+        uade_stop(state_);
+        uade_play(modulePath_.c_str(), chosen, state_);
+        if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
+    }
+
+    static std::mutex &openMutex() { static std::mutex m; return m; }
+
+    /**
+     * Finds a file the emulated Amiga asks for -- TFMX's `smpl.` beside its `mdat.`.
+     *
+     * **UADE's own search cannot work on a phone.** `uade_find_amiga_file` matches names without
+     * regard to case, as AmigaOS did, and does it by walking the path from `/` and *listing* every
+     * directory on the way. An app on Android may pass through `/data` but may not list it, so the
+     * walk stopped on its second step, the samples were "not found" beside the tune that had just
+     * been written next to them, and the replay routine died: "score died" on the phone for a file
+     * that played on the host. Reproduced on the host with a parent directory of mode 111.
+     *
+     * Everything a song can ask for by a plain name is in this instance's scratch directory,
+     * because this class put it there, so that is the only place looked -- listed, which it may
+     * be, and matched without regard to case. Names on an Amiga volume (`ENV:`, `S:`) are the
+     * players' own configuration under the data directory and go to UADE's search unchanged; so
+     * does anything outside the scratch directory, which nothing here puts there.
+     */
+    static struct uade_file *loadAmigaFile(const char *name, const char *playerdir, void *context,
+                                           struct uade_state *state) {
+        auto *self = static_cast<UadeBackend *>(context);
+        const std::string requested = name ? name : "";
+        if (requested.find(':') != std::string::npos || self->scratch_.empty()) {
+            return uade_load_amiga_file(name, playerdir, state);
+        }
+        // The part to look up: whatever follows the scratch directory in an absolute request, or
+        // the name itself in a relative one.
+        std::string relative = requested;
+        const std::string prefix = self->scratch_ + "/";
+        if (!relative.empty() && relative[0] == '/') {
+            if (relative.compare(0, prefix.size(), prefix) != 0) {
+                return uade_load_amiga_file(name, playerdir, state);
+            }
+            relative = relative.substr(prefix.size());
+        }
+        std::string directory = self->scratch_;
+        std::size_t start = 0;
+        while (start <= relative.size()) {
+            const std::size_t slash = relative.find('/', start);
+            const std::string segment =
+                relative.substr(start, slash == std::string::npos ? std::string::npos : slash - start);
+            if (!segment.empty() && segment != ".") {
+                if (segment == "..") return uade_load_amiga_file(name, playerdir, state);
+                const std::string found = matchIgnoringCase(directory, segment);
+                if (found.empty()) return nullptr;
+                directory += "/" + found;
+            }
+            if (slash == std::string::npos) break;
+            start = slash + 1;
+        }
+        return uade_file_load(directory.c_str());
+    }
+
+    /** The entry in [directory] whose name equals [wanted] ignoring case, or empty. */
+    static std::string matchIgnoringCase(const std::string &directory, const std::string &wanted) {
+        DIR *dir = ::opendir(directory.c_str());
+        if (!dir) return {};
+        std::string match;
+        while (struct dirent *entry = ::readdir(dir)) {
+            if (::strcasecmp(entry->d_name, wanted.c_str()) == 0) {
+                match = entry->d_name;
+                if (match == wanted) break;  // an exact match wins over a case-folded one
+            }
+        }
+        ::closedir(dir);
+        return match;
+    }
+
+    /**
+     * Points stdout and stderr at [path] for as long as it lives, and puts them back after.
+     *
+     * The file is not closed early on purpose: uadecore inherited the descriptor at fork and keeps
+     * writing to it while it plays, and the scratch directory's removal is what ends it.
+     */
+    class Captured {
+    public:
+        explicit Captured(const std::string &path) : path_(path) {
+            std::fflush(stdout);
+            std::fflush(stderr);
+            const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+            if (fd < 0) return;
+            savedOut_ = ::dup(1);
+            savedErr_ = ::dup(2);
+            ::dup2(fd, 1);
+            ::dup2(fd, 2);
+            ::close(fd);
+        }
+        ~Captured() { restore(); }
+
+        /** The last non-empty line written so far, trimmed; empty if nothing was said. */
+        std::string lastLine() const {
+            std::fflush(stdout);
+            std::fflush(stderr);
+            std::ifstream in(path_);
+            std::string line, last;
+            while (std::getline(in, line)) {
+                while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
+                // libuade's own chatter about a config file this app does not use is not a reason.
+                if (!line.empty() && line.find("uadeconfig not loaded") == std::string::npos) last = line;
+            }
+            return last.size() > 160 ? last.substr(0, 160) : last;
+        }
+
+    private:
+        void restore() {
+            std::fflush(stdout);
+            std::fflush(stderr);
+            if (savedOut_ >= 0) { ::dup2(savedOut_, 1); ::close(savedOut_); savedOut_ = -1; }
+            if (savedErr_ >= 0) { ::dup2(savedErr_, 2); ::close(savedErr_); savedErr_ = -1; }
+        }
+        std::string path_;
+        int savedOut_ = -1;
+        int savedErr_ = -1;
+    };
+
+    static bool hasPlayers(const std::string &base) {
+        DIR *dir = ::opendir((base + "/players").c_str());
+        if (!dir) return false;
+        bool found = false;
+        while (struct dirent *entry = ::readdir(dir)) {
+            if (entry->d_name[0] != '.') { found = true; break; }
+        }
+        ::closedir(dir);
+        return found;
+    }
+
+    void makeScratch(const std::string &root) {
+        ::mkdir(root.c_str(), 0700);
+        std::string pattern = root + "/uadeXXXXXX";
+        std::vector<char> buffer(pattern.begin(), pattern.end());
+        buffer.push_back('\0');
+        if (!::mkdtemp(buffer.data())) {
+            throw std::runtime_error("the Amiga decoder (UADE) has nowhere to put the file");
+        }
+        scratch_ = buffer.data();
+    }
+
+    /**
+     * Writes one file into the scratch directory and returns its path.
+     *
+     * **The name matters and is kept**, because for a good part of what UADE plays the filename is
+     * the identification: `mdat.` and `smpl.` prefixes, `.tfx` suffixes, the conventions each
+     * collection settled on. What is not kept is any directory in it -- a name arriving from an
+     * archive index is somebody else's string, and one with a separator in it would write outside
+     * the directory this class is responsible for.
+     */
+    std::string write(const std::string &name, const std::vector<char> &bytes) {
+        std::string leaf = name;
+        const std::size_t slash = leaf.find_last_of("/\\");
+        if (slash != std::string::npos) leaf = leaf.substr(slash + 1);
+        if (leaf.empty() || leaf == "." || leaf == "..") leaf = "tune";
+
+        const std::string path = scratch_ + "/" + leaf;
+        std::ofstream file(path, std::ios::binary);
+        if (!file) throw std::runtime_error("the Amiga decoder (UADE) could not stage the file");
+        file.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+        file.close();
+        if (!file) throw std::runtime_error("the Amiga decoder (UADE) could not stage the file");
+        return path;
+    }
+
+    void close() {
+        if (state_) {
+            uade_stop(state_);
+            uade_cleanup_state(state_);
+            state_ = nullptr;
+        }
+        cleanScratch();
+    }
+
+    /** Removes the scratch directory. One level deep, which is all this class ever creates. */
+    void cleanScratch() {
+        if (scratch_.empty()) return;
+        if (DIR *dir = ::opendir(scratch_.c_str())) {
+            while (struct dirent *entry = ::readdir(dir)) {
+                const std::string leaf = entry->d_name;
+                if (leaf == "." || leaf == "..") continue;
+                ::unlink((scratch_ + "/" + leaf).c_str());
+            }
+            ::closedir(dir);
+        }
+        ::rmdir(scratch_.c_str());
+        scratch_.clear();
+    }
+
+    struct uade_state *state_ = nullptr;
+    struct uade_subsong_info subsongs_ = {0, 0, 0, 0};
+    std::string scratch_;
+    std::string modulePath_;
+    std::vector<int16_t> chunk_ = std::vector<int16_t>(kChunkFrames * 2);
+};
+#endif  // PROTRACKTOR_WITH_UADE
+
 }  // namespace
 
 namespace protracktor {
@@ -1724,13 +2231,30 @@ std::string backendsFingerprint() {
     // build's version would invalidate every index on every device at once.
     o << ";zxtune:none";
 #endif
+#if !PROTRACKTOR_WITH_UADE
+    // The same rule for UADE, and here the absent side is the browser: it has no `fork`, so it can
+    // never have this backend and its index has to know. The phone's fingerprint is unchanged by
+    // UADE arriving, which is what keeps a stored index valid on the day it does.
+    o << ";uade:none";
+#endif
     return o.str();
 }
 
 void setSharedDataPath(const std::string &path) { Sc68Backend::setSharedDataPath(path); }
 
+void setUadePaths(const std::string &coreFile, const std::string &baseDir,
+                  const std::string &scratchDir) {
+#if PROTRACKTOR_WITH_UADE
+    UadeBackend::setPaths(coreFile, baseDir, scratchDir);
+#else
+    (void) coreFile;
+    (void) baseDir;
+    (void) scratchDir;
+#endif
+}
+
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name,
-                                     std::string &error) {
+                                     std::string &error, std::vector<Companion> companions) {
     error.clear();
 
     // **The first refusal is the one kept, and every `error =` below says so.**
@@ -1840,6 +2364,30 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
                 LOGE("minimp3 thought it was an MP3 and refused: %s", mp3.what());
             }
         }
+
+#if PROTRACKTOR_WITH_UADE
+        // **UADE last of all, and only when it has been set up.**
+        //
+        // Last because everything above can say what it is holding and UADE mostly cannot: its
+        // strongest claims are filename conventions, and libopenmpt already plays a good part of
+        // what it would otherwise take -- OctaMED and Oktalyzer are 5,558 Modland files that are
+        // *already* ours (`docs/PLAN_FORMATS.md` §4). Asking it here rather than earlier means
+        // nothing that plays today plays differently.
+        //
+        // And only when set up, because the replay routines are downloaded rather than shipped. On
+        // a phone that has not downloaded them this costs one `access` and the formats are simply
+        // absent, which is what the index and Browse have to say as well.
+        if (UadeBackend::available()) {
+            try {
+                return std::make_unique<UadeBackend>(bytes, name, companions);
+            } catch (const std::exception &uade) {
+                LOGE("UADE refused it: %s", uade.what());
+                if (error.empty()) error = uade.what();
+            }
+        }
+#else
+        (void) companions;
+#endif
 
         if (error.empty()) {
             // The last backend's reason, given the same shape as the other five. libopenmpt throws

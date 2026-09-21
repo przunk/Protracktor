@@ -6,6 +6,7 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.os.Process
 import android.os.SystemClock
 import android.provider.OpenableColumns
@@ -41,6 +42,7 @@ import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.net.WebRemote
 import com.przunk.protracktor.net.Sc68Replays
+import com.przunk.protracktor.net.UadePlayers
 import com.przunk.protracktor.net.UnExoticA
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
@@ -284,6 +286,9 @@ object DownloadKeys {
     const val FAVOURITES = "favourites"
     const val REPLAYS = "replays"
 
+    /** UADE's replay routines. A separate key from sc68's: different archives, different sizes. */
+    const val PLAYERS = "players"
+
     /** The one press that fetches the lot. Its own key, so the offer can show its own spinner. */
     const val EVERYTHING = "everything"
 }
@@ -325,6 +330,17 @@ data class BrowseState(
      * tracks in it, for the two seconds before the list arrived.
      */
     val knowsWhatIsHeld: Boolean = false,
+
+    /**
+     * Whether [songLengthCount] and [trackMetadataCount] have been read, as opposed to still being
+     * their defaults.
+     *
+     * Separate from [knowsWhatIsHeld] because they arrive separately: the summaries are read at
+     * start-up, the counts only when Online catalogues opens. Until then both counts are zero, which
+     * is also what "not downloaded" looks like -- so the download row appeared for the moment
+     * between the screen opening and the counts arriving, and then vanished (`docs/STATUS.md` C71).
+     */
+    val heldCountsKnown: Boolean = false,
 
     /** True when the open folder has never been scanned. */
     val folderUnscanned: Boolean = false,
@@ -381,6 +397,13 @@ data class BrowseState(
     val replayCount: Int = 0,
     /** Bytes those replays hold. */
     val replayBytes: Long = 0L,
+    /**
+     * How many of UADE's replay routines are present. Zero until the user fetches them, and while
+     * it is zero the Amiga custom formats do not play at all -- 12 files in 300, measured.
+     */
+    val playerCount: Int = 0,
+    /** Bytes those replay routines hold, with the song database that comes with them. */
+    val playerBytes: Long = 0L,
     /** Which decoders this build has, for telling a stale catalogue index from a current one. */
     val backends: String = "",
 
@@ -446,6 +469,17 @@ data class BrowseState(
      */
     val hasSomethingToBrowse: Boolean
         get() = catalogues.any { it.trackCount > 0 } || folders.isNotEmpty()
+
+    /**
+     * Whether Online catalogues offers "Get some music to browse".
+     *
+     * While anything is left to download -- a catalogue without its index, HVSC's song lengths, the
+     * track metadata -- and **only once that is known**. Asked before the counts had arrived it
+     * answered yes for a moment on every phone, including those holding everything (C71).
+     */
+    val offersDownloadEverything: Boolean
+        get() = knowsWhatIsHeld && heldCountsKnown &&
+            (catalogues.any { it.requiresIndex } || songLengthCount == 0 || trackMetadataCount == 0)
 }
 
 class PlaybackController private constructor(private val context: Context) {
@@ -524,6 +558,7 @@ class PlaybackController private constructor(private val context: Context) {
 
         private const val SONG_LENGTHS_LABEL = "SID song lengths"
         private const val REPLAYS_LABEL = "Atari ST replay routines"
+        private const val PLAYERS_LABEL = "Amiga replay routines"
 
         private fun archiveCatalogueOf(id: String): Catalogue? =
             Catalogue.all.firstOrNull { it.isArchive && id.startsWith("${it.id}://") }
@@ -815,6 +850,7 @@ class PlaybackController private constructor(private val context: Context) {
                 NativeEngine.setDataPath(
                     com.przunk.protracktor.engine.NativeData.ensureUnpacked(context, version).absolutePath
                 )
+                configureUade(version)
             }
         }
 
@@ -1333,7 +1369,12 @@ class PlaybackController private constructor(private val context: Context) {
             context.contentResolver.openInputStream(Uri.parse(candidate.uri))?.use { it.readBytes() }
         }.getOrNull() ?: return null
 
-        val opened = NativeEngine.open(bytes, candidate.fileName).track ?: return null
+        val companions = siblingDocuments(Uri.parse(candidate.uri)).mapNotNull { (name, uri) ->
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            }.getOrNull()?.let { name to it }
+        }
+        val opened = NativeEngine.open(bytes, candidate.fileName, companions).track ?: return null
         return try {
             val described = opened.describe()
             IndexedFile(
@@ -2066,6 +2107,9 @@ class PlaybackController private constructor(private val context: Context) {
             val replays = withContext(Dispatchers.IO) {
                 Sc68Replays.count(context) to Sc68Replays.bytes(context)
             }
+            val players = withContext(Dispatchers.IO) {
+                UadePlayers.count(context) to UadePlayers.bytes(context)
+            }
             _browse.update { current ->
                 current.copy(
                     catalogues = summaries,
@@ -2079,6 +2123,9 @@ class PlaybackController private constructor(private val context: Context) {
                     databaseBytes = database,
                     replayCount = replays.first,
                     replayBytes = replays.second,
+                    playerCount = players.first,
+                    playerBytes = players.second,
+                    heldCountsKnown = true,
                     backends = NativeEngine.backendsFingerprint(),
                 )
             }
@@ -2618,6 +2665,79 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_replays_done, fetched, fetched)))
             }
+            refreshCatalogues()
+        }
+    }
+
+    /**
+     * Tells the engine where UADE's three paths are.
+     *
+     * Called at start-up and again after a download, because until the replay routines are there
+     * the backend answers "not set up" and the Amiga formats are simply absent — asked afresh on
+     * every open, so this is enough and no restart is needed.
+     */
+    private fun configureUade(version: String) {
+        runCatching {
+            val base = NativeData.ensureUadeUnpacked(context, version)
+            NativeEngine.setUadePaths(
+                NativeData.uadeCore(context).absolutePath,
+                base.absolutePath,
+                NativeData.uadeScratch(context).absolutePath,
+            )
+        }
+    }
+
+    /**
+     * Fetches UADE's replay routines: 726 KB from upstream's own repository.
+     *
+     * The same arrangement as sc68's, for the same reason and after the same question was asked of
+     * the people who would know (`docs/LICENSES.md`). Without them UADE plays 12 files in 300.
+     */
+    fun downloadPlayers() {
+        if (!beginDownload(DownloadKeys.PLAYERS, PLAYERS_LABEL)) return
+        scope.launch {
+            val fetched = UadePlayers.download(context) { done, total ->
+                _browse.update {
+                    it.copy(indexing = it.indexing + (DownloadKeys.PLAYERS to "$PLAYERS_LABEL $done/$total"))
+                }
+            }
+            endDownload(DownloadKeys.PLAYERS)
+            if (fetched == null || fetched == 0) {
+                _state.update {
+                    it.copy(message = Message(context.getString(R.string.notice_players_failed)))
+                }
+                return@launch
+            }
+            withContext(backgroundWork) {
+                val version = context.packageManager
+                    .getPackageInfo(context.packageName, 0).longVersionCode.toString()
+                configureUade(version)
+            }
+            _state.update {
+                it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_players_done, fetched, fetched)))
+            }
+            refreshCatalogues()
+        }
+    }
+
+    /** Throws UADE's replay routines away. The Amiga custom formats stop playing until they return. */
+    fun deletePlayers() {
+        scope.launch {
+            val freed = withContext(backgroundWork) {
+                val before = UadePlayers.bytes(context)
+                if (UadePlayers.delete(context)) {
+                    // The copies UADE actually reads go too, or it would go on playing from them
+                    // with nothing on the storage screen saying they were there.
+                    java.io.File(context.filesDir, "uade").deleteRecursively()
+                    before
+                } else {
+                    0L
+                }
+            }
+            val version = context.packageManager
+                .getPackageInfo(context.packageName, 0).longVersionCode.toString()
+            withContext(backgroundWork) { configureUade(version) }
+            _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }
     }
@@ -3206,12 +3326,23 @@ class PlaybackController private constructor(private val context: Context) {
      * occasionally it is the only thing that says *which* backend gave up — but it is now attached
      * to the file rather than offered as a verdict on the format.
      */
-    private suspend fun describeFailure(ref: TrackRef, fetched: Boolean, reason: String = ""): String {
+    private suspend fun describeFailure(
+        ref: TrackRef,
+        fetched: Boolean,
+        reason: String = "",
+        missingCompanions: List<String> = emptyList(),
+    ): String {
         val name = ref.fileNameOrTitle
         val claimed = SupportedFormats.looksPlayable(name)
-        return when (OpenFailure.kindOf(fetched, claimed, reason)) {
+        val needsPlayers = SupportedFormats.needsUade(name) &&
+            withContext(Dispatchers.IO) { !UadePlayers.present(context) }
+        return when (OpenFailure.kindOf(fetched, claimed, reason, needsPlayers, missingCompanions.isNotEmpty())) {
+            OpenFailure.Kind.COMPANION_MISSING ->
+                context.getString(R.string.open_failed_companion, ref.title, missingCompanions.joinToString())
             OpenFailure.Kind.NOT_FETCHED ->
                 context.getString(R.string.open_failed_not_fetched, ref.title)
+            OpenFailure.Kind.NEEDS_AMIGA_PLAYERS ->
+                context.getString(R.string.open_failed_needs_players, ref.title)
             OpenFailure.Kind.FORMAT_UNSUPPORTED ->
                 context.getString(
                     R.string.open_failed_format,
@@ -3948,11 +4079,21 @@ class PlaybackController private constructor(private val context: Context) {
                 return@launch
             }
 
-            val result = withContext(Dispatchers.IO) { NativeEngine.open(bytes, ref.fileNameOrTitle) }
+            val companions = loadCompanions(ref)
+            val result = withContext(Dispatchers.IO) {
+                NativeEngine.open(bytes, ref.fileNameOrTitle, companions)
+            }
             val opened = result.track
             if (opened == null) {
+                val arrived = companions.map { it.first.lowercase() }.toSet()
+                val missing = Companions.namesFor(ref.fileNameOrTitle.substringAfterLast('/'))
+                    .filter { it.lowercase() !in arrived }
                 _state.update {
-                    it.copy(message = Message(describeFailure(ref, fetched = true, reason = result.error)))
+                    it.copy(
+                        message = Message(
+                            describeFailure(ref, fetched = true, reason = result.error, missingCompanions = missing)
+                        )
+                    )
                 }
                 // **Random walks past a file it cannot open.** A dice roll can land on a `.ym`,
                 // which nothing here opens (`docs/STATUS.md` C20), and stopping dead on it turns
@@ -4154,8 +4295,9 @@ class PlaybackController private constructor(private val context: Context) {
                 // describe() and close() were on the caller's thread, which is the main one --
                 // close() destroys a decoder, and for sc68 that is an emulator being torn down.
                 // All of it belongs on the background thread, not just the open.
+                val companions = loadCompanions(ref)
                 val described = withContext(backgroundWork) {
-                    val opened = NativeEngine.open(bytes, ref.fileNameOrTitle).track
+                    val opened = NativeEngine.open(bytes, ref.fileNameOrTitle, companions).track
                         ?: return@withContext null
                     val text = opened.describe()
                     opened.close()
@@ -4195,6 +4337,72 @@ class PlaybackController private constructor(private val context: Context) {
                 }.getOrNull()
             }
         }
+
+    /**
+     * The other files [ref]'s song needs, read from wherever [ref] itself came from.
+     *
+     * Empty for every single-file format, which is nearly all of them, and that costs one string
+     * comparison. For TFMX it is `smpl.name` beside `mdat.name` (`Companions`), and the source
+     * decides how "beside" is reached: the next URL in the same Modland directory, the next member
+     * of the same UnExoticA archive, the next document in the same granted folder.
+     *
+     * **A companion that cannot be found is not an error here.** The song is still opened without
+     * it, and UADE says it does not recognise it, which is the truth; failing before the decoder is
+     * asked would hide which half was missing.
+     */
+    private suspend fun loadCompanions(ref: TrackRef): List<Pair<String, ByteArray>> {
+        if (Companions.namesFor(ref.fileNameOrTitle.substringAfterLast('/')).isEmpty() &&
+            Companions.siblingPaths(ref.id).isEmpty()
+        ) {
+            return emptyList()
+        }
+        val unexotica = if (UnExoticA.ENABLED) UnExoticA.pathFrom(ref.id) else null
+        return when {
+            unexotica != null -> {
+                val archiveUrl = UnExoticA.archiveUrlFor(unexotica) ?: return emptyList()
+                val member = UnExoticA.split(unexotica)?.second ?: return emptyList()
+                val archive = remoteFiles.fetch(archiveUrl) ?: return emptyList()
+                withContext(backgroundWork) {
+                    Companions.siblingPaths(member).mapNotNull { sibling ->
+                        Lha.extract(archive, sibling)?.let { sibling.substringAfterLast('/') to it }
+                    }
+                }
+            }
+            ref.id.startsWith("http") ->
+                Companions.siblingPaths(ref.id).mapNotNull { url ->
+                    remoteFiles.fetch(url)?.let { bytes ->
+                        Uri.decode(url.substringAfterLast('/')) to bytes
+                    }
+                }
+            ref.id.startsWith("content:") -> withContext(Dispatchers.IO) {
+                siblingDocuments(Uri.parse(ref.id)).mapNotNull { (name, uri) ->
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    }.getOrNull()?.let { name to it }
+                }
+            }
+            else -> emptyList()
+        }
+    }
+
+    /**
+     * The companions of a document in a granted folder, as (name, uri).
+     *
+     * **Best effort, and it says so.** The external-storage provider gives documents ids that are
+     * paths — `primary:Music/TFMX/mdat.unicorn` — so the sibling is the same id with the last
+     * segment renamed. Other providers give opaque ids with nothing to rename, and there this finds
+     * nothing: the tune opens alone and UADE refuses it, rather than this walking a whole folder
+     * tree on every play to look.
+     */
+    private fun siblingDocuments(uri: Uri): List<Pair<String, Uri>> = runCatching {
+        val documentId = DocumentsContract.getDocumentId(uri)
+        val treeId = DocumentsContract.getTreeDocumentId(uri)
+        val tree = DocumentsContract.buildTreeDocumentUri(uri.authority, treeId)
+        Companions.siblingPaths(documentId).map { siblingId ->
+            siblingId.substringAfterLast('/').substringAfterLast(':') to
+                DocumentsContract.buildDocumentUriUsingTree(tree, siblingId)
+        }
+    }.getOrDefault(emptyList())
 
     /**
      * A tune out of an UnExoticA game archive.

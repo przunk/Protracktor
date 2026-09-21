@@ -16,6 +16,43 @@ package com.przunk.protracktor.player
  * Prefixed names matter too: ProTracker files are conventionally `mod.title`, not `title.mod`.
  */
 object SupportedFormats {
+    /**
+     * The names only UADE plays, kept apart so a refusal can tell "this file is broken" from "the
+     * Amiga replay routines have not been downloaded yet" (`OpenFailure`). Part of [extensions]
+     * like every other name; this only remembers which ones they were.
+     */
+    val uadeExtensions: Set<String> = setOf(
+        // The Amiga custom formats, through UADE (`docs/BACKLOG.md` A44). Each name here is one
+        // Modland directory in which 10 or more of 12 sampled files rendered a full first buffer
+        // with sound -- `./scripts/probe-uade.py --formats 60 --play 12`, 2026-09-21, 413 of 720
+        // overall. A name is left out when its files are split between a directory that played and
+        // one that did not: `.dss` is Digital Sound Studio (12/12) and DreamStation (0/12) in
+        // nearly equal parts, `.mon` carries Monotone beside Maniacs Of Noise. So are the two that
+        // mostly failed -- YMST 7/12, Jesper Olsen 2/12 -- because an index full of rows that do
+        // not open is the thing `gym` and `snd` were taken out for.
+        //
+        // **They play only once the replay routines are downloaded** (`docs/LICENSES.md`), like
+        // `.sc68`. Until then the rows are there and the refusal says what is missing.
+        "ml", "cus", "sa", "bp", "bp3", "aon", "dw", "sid2", "dm2", "hipc", "dmu", "prt", "hip",
+        "fred", "mm8", "mm4", "jam", "dl", "dln", "bd", "syn", "mk2", "tw", "bss", "jd", "aps",
+        "avp", "wb", "sm3",
+        // Atari ST, and UADE again: these three directories hold ST replays that run on the
+        // emulated Amiga just as well.
+        "soc", "sog", "hst", "doda",
+    )
+
+    /**
+     * TFMX is `mdat.name` beside `smpl.name`, and only the first is a tune; Modland's Delitracker
+     * Custom uses `cust.` 63 times beside `.cus` 413. Both measured with the rest.
+     */
+    val uadePrefixes: Set<String> = setOf("mdat", "cust")
+
+    /** Whether [fileName] is a name nothing but UADE plays. */
+    fun needsUade(fileName: String): Boolean {
+        val name = fileName.substringAfterLast('/').lowercase()
+        return extensionOf(name) in uadeExtensions || prefixOf(name) in uadePrefixes
+    }
+
 
     /** What the backends handle today. Grows as more are added. */
     val extensions: Set<String> = setOf(
@@ -79,7 +116,7 @@ object SupportedFormats {
         "sid", "psid", "rsid",
         // Containers libopenmpt unpacks itself
         "mmcmp", "pp20", "xpk", "umx",
-    )
+    ) + uadeExtensions
 
     /**
      * Names this build can play that **no catalogue carries**.
@@ -105,7 +142,7 @@ object SupportedFormats {
         "ahx", "hvl",
         "mod", "med", "okt", "dbm", "digi", "stk", "sfx", "ice", "fc", "smod",
         "sndh",
-    )
+    ) + uadePrefixes
 
     /**
      * A short label for what a file is, for the playlist row.

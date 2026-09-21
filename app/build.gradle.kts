@@ -66,6 +66,11 @@ android {
                 // extra libc++_shared.so in the APK, which is the right trade when more than one
                 // native library is coming and they all have to agree anyway.
                 arguments += "-DANDROID_STL=c++_shared"
+
+                // UADE. Defaulted off in native/CMakeLists.txt because it is the one backend the
+                // browser cannot have -- it is a second process, and WebAssembly has no `fork`.
+                // Asked for here, which is the only build that can execute one.
+                arguments += "-DPROTRACKTOR_WITH_UADE=ON"
             }
         }
     }
@@ -96,6 +101,23 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    // **The native libraries are extracted at install**, which is not the modern default and is
+    // not a preference. `uadecore` is an executable shipped as `lib/<abi>/libuadecore.so`, and an
+    // executable has to be a file on disk for `exec` to reach it. With the default packaging the
+    // libraries are mapped straight out of the APK and `nativeLibraryDir` holds nothing, which is
+    // also the one directory an app may execute from since Android 10 -- everywhere it can write,
+    // it may not execute. So this is what UADE costs, stated where it is paid:
+    //
+    //   download  smaller, because the libraries are compressed in the APK again
+    //   installed larger, because they are written out once
+    //
+    // It applies to every library, not only this one; there is no per-file form of it.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 
@@ -152,11 +174,41 @@ android.sourceSets["main"].assets.srcDir(sc68Assets)
 
 tasks.named("preBuild") { dependsOn(copySc68Data) }
 
+// UADE's own three data files, which is everything it needs except the replay routines.
+//
+// `score` is the 68k program that runs *inside* the emulated Amiga and drives the replay routine;
+// `uaerc` configures the emulated machine; `eagleplayer.conf` is the table that says which player a
+// file needs. All three are UADE's own work in UADE's own GPL tree, so they ship.
+//
+// **`players/` does not** -- 178 replay binaries extracted from commercial and shareware Amiga
+// music programs, which UADE's own maintainers said should be downloaded rather than redistributed
+// (`docs/LICENSES.md`, settled 2026-09-04). The app fetches them from the page upstream publishes
+// for exactly that, which leaves the distributing where it belongs. 2.0 MB, and without them UADE
+// plays 12 files in 300.
+val uadeAssets: File = layout.buildDirectory.dir("generated/uade-assets").get().asFile
+
+val copyUadeData = tasks.register<Sync>("copyUadeData") {
+    from(rootProject.file("native/vendor/uade/amigasrc/score")) { include("score") }
+    from(rootProject.file("native/vendor/uade")) {
+        include("uaerc")
+        include("eagleplayer.conf")
+    }
+    into(File(uadeAssets, "uade"))
+}
+
+android.sourceSets["main"].assets.srcDir(uadeAssets)
+
+tasks.named("preBuild") { dependsOn(copyUadeData) }
+
 // Two tests read files outside the source set: `RuleCasesTest` the shared queue rules and
 // `SupportedFormatsFileTest` the page's format list. Gradle cannot see that, so an edit to either
 // file alone left the test task "up to date" and the check that exists to catch drift never ran.
 tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("docs/rules/queue-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    // And `UadecoreCanBeExecutedTest` this build script and UADE's CMake, for the same reason:
+    // three settings that only matter together, none of which any code path mentions.
+    inputs.file(rootProject.file("app/build.gradle.kts")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("native/backends/uade/CMakeLists.txt")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("web/src/formats.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
 }
 

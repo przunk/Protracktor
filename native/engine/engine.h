@@ -71,14 +71,33 @@ public:
 };
 
 /**
+ * Another file belonging to the same song.
+ *
+ * **Because a song is not always a file.** TFMX is `mdat.name` beside `smpl.name`, and a dozen
+ * other Amiga formats name a sample set the replay routine loads while it plays. Only UADE reads
+ * these; every other backend here is handed one file and wants one file, so the list is almost
+ * always empty and costs nothing when it is.
+ *
+ * The caller finds them -- it is the only side that knows whether the neighbours are a folder, an
+ * archive or a catalogue -- and the engine only writes them where the decoder will look.
+ */
+struct Companion {
+    std::string name;
+    std::vector<char> bytes;
+};
+
+/**
  * Opens [bytes] with whichever backend claims them, or returns null and fills [error].
  *
  * The order matters and is documented at the definition: name-claimed formats first, then content
  * magic, then the general trackers, because several formats are told apart only by extension and
  * several others only by their first four bytes.
+ *
+ * [companions] are the other files of a multifile song, and are ignored by every backend but UADE.
  */
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name,
-                                     std::string &error);
+                                     std::string &error,
+                                     std::vector<Companion> companions = {});
 
 /**
  * Which decoders this build carries, and at which versions.
@@ -100,5 +119,20 @@ std::string backendsFingerprint();
  * Android, and whatever a browser build decides to call its storage.
  */
 void setSharedDataPath(const std::string &path);
+
+/**
+ * Where UADE's emulator binary, its data directory and a scratch directory are.
+ *
+ * Three rather than one, and none of them a build-time constant. `uadecore` is an executable
+ * shipped as `lib/<abi>/libuadecore.so`, because that is the one place Android still permits
+ * executing from; the data directory holds the replay routines the app downloads rather than ships
+ * (`docs/LICENSES.md`); and the scratch directory is where a tune is written so the emulator can
+ * open it by path, which is the only way a multifile song can reach its other half.
+ *
+ * A build without UADE keeps the function and does nothing, so the host that calls it does not
+ * need to know which decoders it was built with.
+ */
+void setUadePaths(const std::string &coreFile, const std::string &baseDir,
+                  const std::string &scratchDir);
 
 }  // namespace protracktor

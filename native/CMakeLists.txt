@@ -23,9 +23,17 @@ add_subdirectory(backends/gme)
 add_subdirectory(backends/sidplayfp)
 add_subdirectory(backends/hively)
 add_subdirectory(backends/minimp3)
-# ZXTune is the one optional decoder, and only because it is the one that does not compile
-# everywhere: Emscripten's libc++ rejects `lexic_analysis.cpp`, and patching it means forking a
-# library §3 of docs/ARCHITECTURE.md says we do not fork. On by default, so Android is unchanged.
+# UADE is a second process, not a library, so it is Android-only: `fork` and `exec` do not exist
+# in WebAssembly. Off by default for that reason -- the browser build asks for nothing and the
+# Gradle build turns it on. `docs/PLAN_FORMATS.md` §4 has why the process model settles it.
+option(PROTRACKTOR_WITH_UADE "Build the Amiga custom-format decoder (needs fork/exec)" OFF)
+if(PROTRACKTOR_WITH_UADE)
+    add_subdirectory(backends/uade)
+endif()
+# ZXTune is optional for the opposite reason to UADE: not a process model, but a compiler.
+# Emscripten's libc++ rejects `lexic_analysis.cpp`, and patching it means forking a library §3 of
+# docs/ARCHITECTURE.md says we do not fork. On by default, so Android is unchanged; the web build
+# turns it off.
 option(PROTRACKTOR_WITH_ZXTUNE "Build the ZX Spectrum decoder" ON)
 if(PROTRACKTOR_WITH_ZXTUNE)
     add_subdirectory(backends/zxtune)
@@ -33,4 +41,17 @@ endif()
 
 if(PROTRACKTOR_BUILD_ENGINE)
     add_subdirectory(engine)
+endif()
+
+# The engine on the host, driving UADE. `engine.cpp` compiled unchanged with the host compiler, the
+# way the web build compiles it with Emscripten -- so our code around a backend runs before a phone
+# is asked to, rather than being tried there first (`native/probe/engine/uade_drive.cpp`).
+option(PROTRACKTOR_BUILD_HOST_PROBE "Build the host driver for UADE through the real engine" OFF)
+if(PROTRACKTOR_BUILD_HOST_PROBE)
+    add_executable(uade-drive probe/engine/uade_drive.cpp engine/engine.cpp)
+    target_include_directories(uade-drive PRIVATE engine)
+    target_compile_options(uade-drive PRIVATE -fexceptions -frtti)
+    target_link_libraries(uade-drive PRIVATE openmpt sc68 asap gme::gme sidplayfp hively minimp3
+                          $<$<BOOL:${PROTRACKTOR_WITH_ZXTUNE}>:zxtune> uade_frontend lhasa pthread)
+    add_dependencies(uade-drive uadecore)
 endif()

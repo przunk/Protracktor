@@ -4,6 +4,7 @@
 package com.przunk.protracktor.player
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -79,5 +80,37 @@ class OpenFailureTest {
         assertEquals("PSM", OpenFailure.formatName("  ", "x.psm"))
         // Nothing to go on at all still has to read as a sentence.
         assertEquals("This", OpenFailure.formatName(null, "README"))
+    }
+
+    @Test
+    fun `an Amiga custom tune without its replay routines says what to download`() {
+        // Before this case existed the last decoder asked was libopenmpt, so a TFMX file on a phone
+        // without the download was reported as refused by the tracker decoder.
+        assertEquals(
+            OpenFailure.Kind.NEEDS_AMIGA_PLAYERS,
+            OpenFailure.kindOf(fetched = true, claimed = true, reason = "libopenmpt refused it", needsPlayers = true),
+        )
+        assertTrue(SupportedFormats.needsUade("mdat.turrican") && SupportedFormats.needsUade("alfred chicken.dw"))
+        assertTrue(!SupportedFormats.needsUade("elysium.mod") && !SupportedFormats.needsUade("x.sid"))
+    }
+
+    @Test
+    fun `and a file that did not arrive is still reported as not arriving`() {
+        assertEquals(
+            OpenFailure.Kind.NOT_FETCHED,
+            OpenFailure.kindOf(fetched = false, claimed = true, reason = "", needsPlayers = true),
+        )
+    }
+
+    @Test
+    fun `a TFMX song whose samples did not arrive says so, not that UADE is puzzled`() {
+        assertEquals(
+            OpenFailure.Kind.COMPANION_MISSING,
+            OpenFailure.kindOf(
+                fetched = true, claimed = true,
+                reason = "the Amiga decoder (UADE) does not recognise it",
+                companionMissing = true,
+            ),
+        )
     }
 }

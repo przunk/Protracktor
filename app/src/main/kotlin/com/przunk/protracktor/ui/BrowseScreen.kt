@@ -111,6 +111,7 @@ fun BrowseScreen(
     onPickDownloads: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
+    onDownloadPlayers: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
@@ -243,6 +244,7 @@ fun BrowseScreen(
                 onPickDownloads = onPickDownloads,
                 onDownloadFavourites = onDownloadFavourites,
                 onDownloadReplays = onDownloadReplays,
+                onDownloadPlayers = onDownloadPlayers,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
                 onPlay = onPlay,
@@ -665,6 +667,7 @@ private fun OnlineDomain(
     onPickDownloads: () -> Unit,
     onDownloadFavourites: () -> Unit,
     onDownloadReplays: () -> Unit,
+    onDownloadPlayers: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onPlay: (Int) -> Unit,
@@ -734,10 +737,7 @@ private fun OnlineDomain(
             //
             // It leaves once there is nothing left to download, because an offer that does nothing
             // is worse than no offer.
-            if (browse.catalogues.any { it.requiresIndex } ||
-                browse.songLengthCount == 0 ||
-                browse.trackMetadataCount == 0
-            ) {
+            if (browse.offersDownloadEverything) {
                 item(key = "download-everything") {
                     ListItem(
                         leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
@@ -974,6 +974,38 @@ private fun OnlineDomain(
                         } else {
                             // The same act as an arrow, only the whole row is the button.
                             Modifier.clickable { haptics.press(); onDownloadReplays() }
+                        },
+                    )
+                }
+            }
+
+            // The same arrangement again, for UADE. An Amiga replay routine is a small 68000
+            // program that the emulator runs to play the tune, and the 176 of them are extracted
+            // from commercial and shareware music programs -- so UADE's own maintainers said to
+            // download rather than redistribute them, and this is that download
+            // (`docs/LICENSES.md`, `docs/PLAN_FORMATS.md` §4).
+            item {
+                if (browse.playerCount == 0) {
+                    HorizontalDivider()
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.players_title)) },
+                        supportingContent = {
+                            Text(
+                                browse.indexing[DownloadKeys.PLAYERS]
+                                    ?: stringResource(R.string.players_none),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
+                        trailingContent = if (browse.indexing.containsKey(DownloadKeys.PLAYERS)) {
+                            { CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp) }
+                        } else {
+                            null
+                        },
+                        modifier = if (browse.indexing.containsKey(DownloadKeys.PLAYERS)) {
+                            Modifier
+                        } else {
+                            Modifier.clickable { haptics.press(); onDownloadPlayers() }
                         },
                     )
                 }

@@ -284,10 +284,10 @@ Two things to settle when it is picked up:
   (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
   differ — A43 is in the same corner of the same screen and the two may as well be one branch.
 
-## A44. UADE's process model — **awaiting a decision, recommended 2026-09-17**
+## A44. UADE's process model — **decided 2026-09-19, fork+exec; integration on `feature/a44-uade`**
 
 Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
-guess it. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
+guess it. The recommendation was taken as it stood. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
 licence (`players/` downloaded from the page upstream publishes for it, never shipped), and the
 song database it also needs (`conf/song.conf`, GPL-2-or-later — **not** `conf/songdb` beside it,
 which is CC BY-NC-SA and cannot ship in a store app).
@@ -320,6 +320,61 @@ nothing and the app simply disappears. Forty of the 51 exits are in that one com
 
 **Not blocked on anything else.** Say yes and the work is the integration; say no and it is the same
 integration with a fork of UADE in front of it. `docs/PLAN_FORMATS.md` has the full reading.
+
+### What the integration turned out to need, 2026-09-19
+
+Measured while building it, because none of it was visible from the decision:
+
+- **Five files upstream's `configure` writes are not in git**, and a cross-compiler cannot ask the
+  questions they answer — they would describe the build machine, not the phone. They are answered
+  for bionic in `native/backends/uade/config/` and copied in by `scripts/fetch-uade.py`. One of
+  them matters: glibc has `canonicalize_file_name` and bionic does not, tested with the NDK's own
+  clang rather than assumed.
+- **The 68000 emulator does not exist as source.** `build68k` and `gencpu` write 80,293 lines of it
+  from `table68k`; they are host programs, so the fetch script runs them and the NDK compiles what
+  they produce. Compiled in eight pieces, as upstream does.
+- **`uadecore` is 1.2 MB stripped on arm64**, 784 KB on armeabi-v7a, 1.2 MB on x86_64 — close to
+  the +1.8 MB the recommendation quoted, and position-independent with 16 KB-aligned segments,
+  both measured on the built file.
+- **The native libraries now extract at install** (`useLegacyPackaging = true`), which is not the
+  modern default and is not a preference: an executable has to be a file on disk, and with the
+  default packaging `nativeLibraryDir` holds nothing. It applies to every library, not only this
+  one, and there is no per-file form of it. The download gets smaller and the install gets bigger.
+- **A song is not always a file.** `uade_play_from_buffer` cannot do multifile and TFMX is
+  `mdat.name` beside `smpl.name`, so the engine writes the tune to a scratch directory and plays it
+  by path. `openBackend` takes companions, and the caller finds them: the next URL in the Modland
+  directory, the next member of the UnExoticA archive, the next document in a granted folder —
+  that last one only where the provider's document ids are paths.
+- **The format list is measured, not read from UADE's table.** `eagleplayer.conf` declares 371
+  markers; taken as a list it would have indexed 3,856 PlayStation `.psf` files UADE cannot play.
+  `probe-uade.py --formats 60 --play 12`: 413 of 720. 33 extensions and two prefixes whose Modland
+  directory played 10 or more of 12 — 3,810 files. Left out and why is in `SupportedFormats`.
+- **Size, measured on the release APK**: arm64 native libraries 6.0 → 7.4 MB installed, and the APK
+  itself 20 → 11 MB, because extracted libraries are compressed inside it again.
+- **Run on the host through our own engine, 2026-09-21**: `scripts/probe-uade-engine.py` drives
+  `UadeBackend` in the unchanged `engine.cpp` through the real `openBackend`, with the data
+  directory laid out from the same GitLab archive the app downloads. **140 of 140** — four files for
+  each of the 35 offered names, TFMX with its `smpl.` fetched beside it — plus five pairs played at
+  once, and the scratch directory empty afterwards. It found two things the phone would have shown
+  as "plays wrong" with no reason:
+  - UADE walks on to the next subsong inside the same stream unless told `one_subsong`, so the
+    position restarted mid-tune and the player's own "play all subsongs" was bypassed.
+  - With one subsong per stream, a file whose first subsong is half a second of silence that ends —
+    `reach for the skies-german.avp` — would play nothing. It now opens at the first subsong with
+    sound, as `GmeBackend` does for HES and KSS; a subsong that is only quiet at the start is kept.
+
+  Both were confirmed to be caught: with `one_subsong` removed the driver fails
+  `subsong-advanced-by-itself`.
+- **The phone, first contact, 2026-09-21**: `uadecore` started — the process model works — and
+  `mdat.coolbass` was refused with "score died" although its samples had been fetched beside it.
+  UADE finds the files a replay routine asks for with `uade_find_amiga_file`, which matches names
+  without regard to case by walking the path **from `/`, listing every directory**. An app may
+  pass through `/data` but not list it, so the walk failed on its second step. Reproduced on the
+  host with a parent directory of mode 111, and fixed with `uade_set_amiga_loader`: names are
+  looked up in the instance's own scratch directory, which is where this class put them. The host
+  run now keeps both directories under such a parent, so it cannot pass what a phone cannot.
+- **Replay routines counted**: 176, not the 178 first written, plus eleven player configurations
+  under `players/ENV/EaglePlayer/` that the first unpacker dropped.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
