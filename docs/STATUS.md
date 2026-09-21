@@ -1,8 +1,7 @@
 # Status
 
 Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
-songdb, the downloads grouped. versionCode is the commit count, schema version 17 (18 on
-`feature/a47-title-encoding`)
+songdb, the downloads grouped. versionCode is the commit count, schema version 18
 
 ## What works
 
@@ -445,7 +444,7 @@ Two things, and only the second is small:
 2. **Silence is a defect meanwhile** (AGENTS.md §7): a tune the engine cannot play must say so, not
    open and play nothing. The flag is in the file's header, so the refusal can be as specific as
    "this tune is a BASIC program and needs the C64's BASIC ROM".
-### C79. ~~Accented letters in a title came out as `�`~~ — FIXED 2026-09-21, branch `feature/a47-title-encoding`
+### C79. ~~Accented letters in a title came out as `�`~~ — FIXED 2026-09-21, merged; confirmed on the phone
 
 `Zalza/akes lekhorna.mod` showed **"�kes lekh�rna (za)"**; `docs/BACKLOG.md` A47 noted it.
 
@@ -477,9 +476,11 @@ Both rare.
 **Verified:** the reported file through the rebuilt engine now reads `åkes lekhörna (za)` (bytes
 `c3 a5 … c3 b6`). `scripts/check-engine.mjs` builds a MOD and a PSID and checks CP437, ISO-8859-1
 and UTF-8 text through both paths -- three of those checks failed before the change. The migration
-is tested against real SQLite, and failed before the migration existed. **Not yet on a phone.**
+is tested against real SQLite, and failed before the migration existed. **On the owner's phone,
+2026-09-21:** `akes lekhorna.mod` reads `åkes lekhörna`. The migration's handing-back of stored rows
+was not looked at separately.
 
-### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, branch
+### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, released in 0.7.0
 
 Found the day the in-app policy was added: it stopped at the first line of "Changes", would not
 scroll further, and ended against the bottom edge — its last lines lay under the navigation bar.
