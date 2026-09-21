@@ -1131,6 +1131,15 @@ public:
         tune_.selectSong(0);
         info_ = tune_.getInfo();
 
+        // **A BASIC program, not machine code** (`docs/STATUS.md` C80). An RSID with this flag is
+        // started by BASIC's RUN and runs in the BASIC interpreter, which lives in a ROM this app
+        // does not carry -- so libsidplayfp loads it without complaint and plays silence. A tune
+        // that cannot play has to say so instead: this is the header's own statement, not a guess.
+        if (info_ && info_->compatibility() == SidTuneInfo::COMPATIBILITY_BASIC) {
+            throw std::runtime_error(
+                "this tune is a BASIC program and needs the Commodore 64's BASIC ROM, which Protracktor does not have");
+        }
+
         SidConfig cfg = engine_.config();
         cfg.frequency = kSampleRate;
         cfg.sidEmulation = &builder_;

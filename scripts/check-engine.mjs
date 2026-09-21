@@ -319,6 +319,34 @@ const describeOf = (bytes, name) => {
   check('a SID title already in UTF-8 is left as it is', titleOf(utf8) === 'Łódź', `said: ${titleOf(utf8)}`);
 }
 
+// --- a SID that is a BASIC program ---------------------------------------------------------------
+//
+// C80. An RSID with the BASIC flag is a program for the C64's BASIC interpreter, which needs the
+// BASIC ROM this app does not carry. Opened anyway, it played silence -- `Prelfugueinfmaj_BASIC.sid`,
+// and 590 others in HVSC. It has to be refused, and the refusal has to say why.
+{
+  const basicSid = (() => {
+    const header = Buffer.alloc(0x7c);
+    header.write('RSID', 0, 'latin1');
+    header.writeUInt16BE(2, 4);          // version
+    header.writeUInt16BE(0x7c, 6);       // data offset
+    header.writeUInt16BE(0, 8);          // load address from the data, as RSID requires
+    header.writeUInt16BE(0, 0x0a);       // init 0: BASIC's RUN starts it
+    header.writeUInt16BE(0, 0x0c);       // play 0
+    header.writeUInt16BE(1, 0x0e);       // songs
+    header.writeUInt16BE(1, 0x10);       // start song
+    header.write('basic check', 0x16, 'latin1');
+    header.writeUInt16BE(0x02, 0x76);    // flags: C64 BASIC
+    // A one-line BASIC program at $0801: 10 END.
+    const data = Buffer.from([0x01, 0x08, 0x07, 0x08, 0x0a, 0x00, 0x80, 0x00, 0x00, 0x00]);
+    return Buffer.concat([header, data]);
+  })();
+  const { handle, error } = open(basicSid, 'check_BASIC.sid');
+  if (handle) M._pt_close(handle);
+  check('a SID that needs the BASIC ROM is refused, not played as silence', handle === 0, 'it opened');
+  check('and the refusal says it is BASIC', /BASIC/.test(error), `said: ${error}`);
+}
+
 console.log();
 if (failed) {
   console.error(`${failed} engine check${failed === 1 ? '' : 's'} failed`);

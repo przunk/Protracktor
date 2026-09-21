@@ -427,7 +427,15 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
-### C80. A SID that needs the C64's BASIC plays silence — **OPEN, found 2026-09-21**
+### C80. A SID that needs the C64's BASIC ~~plays silence~~ — **found 2026-09-21; the silence FIXED the same day, branch `fix/c80-basic-sid`; playing them still OPEN**
+
+**The small part is done:** the SID backend reads the header's own compatibility field and refuses a
+BASIC tune with *"this tune is a BASIC program and needs the Commodore 64's BASIC ROM, which
+Protracktor does not have"*, which the app shows as the reason the file would not open. Checked on
+the host: `Prelfugueinfmaj_BASIC.sid` is refused with that sentence, and `scripts/check-engine.mjs`
+builds a BASIC RSID and fails if it opens -- it did open, before the change. A folder scan now
+records these files as unplayable. **Playing them is still the ROM decision below.**
+
 
 The owner: `Pace_Wayne/Prelfugueinfmaj_BASIC.sid` "does not play on my phone".
 
