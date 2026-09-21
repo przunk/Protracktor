@@ -111,7 +111,16 @@ public:
         }
         // A finished tune has no callback left to hand anything to, so the stream needs starting
         // for the new tune to be heard.
-        if (!wasRunning) start();
+        //
+        // **Closed first, the way `restart` does it** (`docs/STATUS.md` C73). When a tune ends the
+        // callback returns `Stop` and the stream object stays, so `start()` -- which returns at
+        // once when a stream exists -- did nothing: the next subsong was selected, the app said
+        // "playing", and nothing was heard until pause and play closed the stream. UADE ends every
+        // subsong cleanly, so "play all subsongs" through `cust.paradroid` hit it at every one.
+        if (!wasRunning) {
+            stop();
+            start();
+        }
     }
 
     /**
@@ -167,6 +176,11 @@ public:
         // Published here rather than asked for later: the poll runs on another thread and these
         // libraries are not safe to touch from two at once.
         publishPosition();
+        // A length that arrives while the tune plays (UADE works it out in the background) is
+        // picked up here, and only while it has not arrived: one relaxed load per buffer after.
+        if (duration_.load(std::memory_order_relaxed) <= 0.0 && backend_->durationArrivesLater()) {
+            publishDuration();
+        }
 
         if (rendered < static_cast<std::size_t>(numFrames)) {
             // End of the tune. Silence the remainder rather than leaving whatever the buffer held,
@@ -261,6 +275,8 @@ public:
     bool start() {
         if (stream_) return true;
         finished_.store(false, std::memory_order_release);
+        // Before the stream exists, so the backend is not yet shared with the audio thread.
+        guardedVoid("startedPlaying", [&] { backend_->startedPlaying(); });
 
         oboe::AudioStreamBuilder builder;
         builder.setDirection(oboe::Direction::Output)
@@ -313,6 +329,13 @@ public:
             return false;
         }
         return true;
+    }
+
+    /** Passed straight on; see `Backend::knownLengths`. Called before `start`. */
+    void knownLengths(const std::vector<double> &lengths) {
+        const std::lock_guard<std::mutex> held(decoderGuard_);
+        backend_->knownLengths(lengths);
+        publishDuration();
     }
 
     void stop() {
@@ -397,6 +420,8 @@ extern "C" {
 JNIEXPORT jlong JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, jbyteArray data,
                                                           jstring fileName,
+                                                          jobjectArray companionNames,
+                                                          jobjectArray companionData,
                                                           jobjectArray errorOut) {
     const jsize length = env->GetArrayLength(data);
 
@@ -422,9 +447,31 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
         std::vector<char> bytes(static_cast<std::size_t>(length));
         env->GetByteArrayRegion(data, 0, length, reinterpret_cast<jbyte *>(bytes.data()));
 
+        // The other files of a multifile song, when the caller found any. Two parallel arrays
+        // rather than an array of objects, because a Kotlin data class would need its fields looked
+        // up by name here, and two arrays need nothing looked up at all. Almost always empty.
+        std::vector<protracktor::Companion> companions;
+        const jsize count = companionNames ? env->GetArrayLength(companionNames) : 0;
+        for (jsize i = 0; i < count; ++i) {
+            auto nameRef = static_cast<jstring>(env->GetObjectArrayElement(companionNames, i));
+            auto dataRef = static_cast<jbyteArray>(env->GetObjectArrayElement(companionData, i));
+            if (!nameRef || !dataRef) continue;
+            protracktor::Companion companion;
+            const char *chars = env->GetStringUTFChars(nameRef, nullptr);
+            companion.name = chars ? chars : "";
+            env->ReleaseStringUTFChars(nameRef, chars);
+            const jsize size = env->GetArrayLength(dataRef);
+            companion.bytes.resize(static_cast<std::size_t>(size));
+            env->GetByteArrayRegion(dataRef, 0, size,
+                                    reinterpret_cast<jbyte *>(companion.bytes.data()));
+            env->DeleteLocalRef(nameRef);
+            env->DeleteLocalRef(dataRef);
+            companions.push_back(std::move(companion));
+        }
+
         // No backend recognising the bytes is reported as a handle of 0. The caller says so to the
         // user rather than failing silently.
-        backend = openBackend(std::move(bytes), name, error);
+        backend = openBackend(std::move(bytes), name, error, std::move(companions));
     } catch (const std::exception &e) {
         LOGE("opening %s threw and was contained: %s", name.c_str(), e.what());
         error = std::string("the decoder failed while opening it: ") + e.what();
@@ -533,6 +580,39 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeSetDataPath(JNIEnv *env, j
     const char *chars = env->GetStringUTFChars(path, nullptr);
     guardedVoid("setDataPath", [&] { protracktor::setSharedDataPath(chars ? chars : ""); });
     env->ReleaseStringUTFChars(path, chars);
+}
+
+/**
+ * Where UADE's three paths are. Called from the same start-up pass as `nativeSetDataPath`.
+ *
+ * Three strings rather than one, because none of them can be derived from the others: the emulator
+ * is an executable in `nativeLibraryDir`, its data is under `filesDir`, and the scratch directory
+ * is where a tune is written so a path exists to open. `engine.h` says why each one is needed.
+ */
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSetUadePaths(JNIEnv *env, jclass,
+                                                                  jstring core, jstring base,
+                                                                  jstring scratch) {
+    const char *coreChars = env->GetStringUTFChars(core, nullptr);
+    const char *baseChars = env->GetStringUTFChars(base, nullptr);
+    const char *scratchChars = env->GetStringUTFChars(scratch, nullptr);
+    guardedVoid("setUadePaths", [&] {
+        protracktor::setUadePaths(coreChars ? coreChars : "", baseChars ? baseChars : "",
+                                  scratchChars ? scratchChars : "");
+    });
+    env->ReleaseStringUTFChars(core, coreChars);
+    env->ReleaseStringUTFChars(base, baseChars);
+    env->ReleaseStringUTFChars(scratch, scratchChars);
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeKnownLengths(JNIEnv *env, jclass, jlong handle,
+                                                                  jdoubleArray lengths) {
+    std::vector<double> values(lengths ? static_cast<std::size_t>(env->GetArrayLength(lengths)) : 0);
+    if (!values.empty()) {
+        env->GetDoubleArrayRegion(lengths, 0, static_cast<jsize>(values.size()), values.data());
+    }
+    guardedVoid("knownLengths", [&] { asPlayer(handle)->knownLengths(values); });
 }
 
 JNIEXPORT void JNICALL

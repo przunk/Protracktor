@@ -1,6 +1,6 @@
 # Data safety declaration
 
-Prepared 2026-09-03 against commit `3d2946b`. Re-audit the release artifact and every dependency
+Prepared 2026-09-03 against commit `3d2946b`; re-audited 2026-09-21 for 0.7.0. Re-audit the release artifact and every dependency
 before submission. The developer is responsible for the final form; this document records the
 evidence and the conservative answer, not a promise that Play Console will keep the same wording.
 
@@ -35,9 +35,17 @@ data as shared too. Do not change the answer to “not collected” merely to av
   resulting IP address to infer location and does not add a device or advertising identifier.
 - **Share file** and **Share link** transfer exactly what the user selected to the app chosen in the
   Android share sheet. This is a specific user-initiated transfer.
-- Android Backup may copy eligible private app data under the device owner's system backup settings.
-  Confirm how the final Play form presents platform-service backup; do not describe it as a
-  developer-operated collection.
+- **System backup is off** (`android:allowBackup="false"` and `dataExtractionRules` excluding every
+  domain, since 0.5.0, `docs/STATUS.md` C64), so the operating system does not copy app data off the
+  device either.
+- **Send to a web player** transfers the chosen queue — titles, archive addresses, position — and
+  device-only tracks as files (up to 8 MB), to the server named by a pairing code the user scanned.
+  Specific and user-initiated, like **Share**, and to a server running the page the user opened.
+- The downloads added since the first audit are all of the same kind as the catalogue downloads:
+  `files.exotica.org.uk` (UnExoticA), `raw.githubusercontent.com` (songdb metadata and lengths,
+  Modland's favourites, UADE's song database), `svn.code.sf.net` (sc68's replay routines) and
+  `gitlab.com` (UADE's replay routines). Ordinary HTTPS requests for public files; no identifier is
+  added.
 
 ## Security and deletion answers
 

@@ -39,7 +39,7 @@ class SchemaSqlTest {
     private fun freshTableNames(): Set<String> = setOf(
         "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
         "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
-        "track_metadata", "modland_favourites",
+        "track_metadata", "modland_favourites", "songdb_lengths", "learned_lengths",
     )
 
     @Test
@@ -281,6 +281,53 @@ class SchemaSqlTest {
                     rows.next()
                     assertEquals("what this build opens is untouched", 2, rows.getInt(1))
                     assertEquals("and what the archive holds is counted, not guessed", 3, rows.getInt(2))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `songdb's lengths arrive in their own table and touch nothing else`() {
+        // Version 17 (A52). A phone at 16 holds playlists, SID lengths and songdb's metadata; all of
+        // it must be exactly where it was, and the new table must take the widest key songdb can
+        // publish -- 48 bits, which a text key would have stored as twelve characters.
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 16))
+            connection.run(
+                listOf(
+                    "INSERT INTO playlists (name, position) VALUES ('Mine', 0)",
+                    "INSERT INTO song_lengths (md5, seconds) VALUES ('0123456789abcdef0123456789abcdef', '120 30')",
+                    "INSERT INTO track_metadata (md5, author, publisher, album, year) " +
+                        "VALUES ('00000b104a70', 'Devastator', 'Shrimps Design', 'Crunched Chips #5', '1995')",
+                )
+            )
+
+            connection.run(SchemaSql.migrationsBetween(16, SchemaSql.VERSION))
+            connection.run(
+                listOf(
+                    "INSERT INTO songdb_lengths (key, first_subsong, subsongs) " +
+                        "VALUES (${0xffffffffffffL}, 1, '308000,p')",
+                )
+            )
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT name FROM playlists").use { rows ->
+                    rows.next(); assertEquals("Mine", rows.getString(1))
+                }
+                statement.executeQuery("SELECT seconds FROM song_lengths").use { rows ->
+                    rows.next(); assertEquals("120 30", rows.getString(1))
+                }
+                statement.executeQuery("SELECT author FROM track_metadata").use { rows ->
+                    rows.next(); assertEquals("Devastator", rows.getString(1))
+                }
+                statement.executeQuery(
+                    "SELECT subsongs FROM songdb_lengths WHERE key = ${0xffffffffffffL}"
+                ).use { rows ->
+                    assertTrue("the widest 48-bit key is found by itself", rows.next())
+                    assertEquals("308000,p", rows.getString(1))
+                }
+                statement.executeQuery("SELECT COUNT(*) FROM learned_lengths").use { rows ->
+                    rows.next(); assertEquals("learnt lengths start empty", 0, rows.getInt(1))
                 }
             }
         }

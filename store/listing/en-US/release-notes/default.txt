@@ -1,5 +1,7 @@
-The index now keeps everything an archive lists, and notes beside each track whether this build can play it. Adding a decoder later costs a moment of local work instead of downloading the index again.
+Amiga custom formats: TFMX, Hippel, David Whittaker, Sonic Arranger and thirty more, played by the UADE emulator. They need its replay routines, a separate download under Browse.
 
-The first launch after updating rearranges what is already downloaded, so it may take a few seconds. Nothing is lost and nothing is fetched.
+Amiga tunes now show their length and can be seeked, including tunes that loop.
 
-Indexing reports both numbers: what the archive holds, and what plays here. Console tunes no longer claim a length the file never stated.
+Downloads are simpler: the catalogues, then one button for song metadata and one for replay routines. A tick marks what is on the phone.
+
+Fixes: Random view, subsongs after an ended tune, deletes that answer at once.

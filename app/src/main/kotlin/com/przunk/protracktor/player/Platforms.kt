@@ -53,11 +53,19 @@ object Platforms {
             "symphonie", "digital symphony", "in stereo", "audiosculpture", "musicmaker",
             "images music system", "jamcracker", "protracker ist", "soundfx", "bp soundmon 2",
             "bp soundmon 3",
+            "david whittaker", "sidmon 2", "delta music 2", "hippel coso", "digital mugician",
+            "pretracker", "hippel", "fredmon", "musicmaker v8", "dave lowe", "dave lowe new",
+            "ben daglish", "synthesis", "mark ii", "sound images", "beathoven synthesizer",
+            "special fx", "aprosys", "activision pro", "wally beben", "sound master ii v3",
         ),
         names = setOf(
             "mod", "med", "mmd0", "mmd1", "mmd2", "mmd3", "ahx", "hvl", "okt", "okta", "dbm",
             "digi", "stk", "sfx", "ice", "gmc", "unic", "kris", "puma", "tcb", "fc", "fc13",
             "fc14", "smod", "dsym", "symmod", "gtk", "mms",
+            // UADE's, and `SupportedFormats` says which directory each was measured in.
+            "ml", "cus", "sa", "bp", "bp3", "aon", "dw", "sid2", "dm2", "hipc", "dmu", "prt",
+            "hip", "fred", "mm8", "mm4", "jam", "dl", "dln", "bd", "syn", "mk2", "tw", "bss", "jd",
+            "aps", "avp", "wb", "sm3", "mdat", "cust",
         ),
     )
 
@@ -73,8 +81,10 @@ object Platforms {
         name = "Atari ST",
         catalogueFormats = setOf(
             "sndh", "sc68", "ym", "ymst", "quartet st", "quartet", "face the music", "easytrax",
+            "hippel st", "hippel st coso", "special fx st",
         ),
-        names = setOf("sndh", "sc68", "ym", "etx"),
+        // The last four are ST replays that UADE runs on its emulated Amiga.
+        names = setOf("sndh", "sc68", "ym", "etx", "soc", "sog", "hst", "doda"),
     )
 
     val ATARI_8BIT = Platform(

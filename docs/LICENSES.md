@@ -67,7 +67,10 @@ projects' terms rather than ours.
 | HivelyTracker V1_9 | Amiga AHX and HVL | BSD-3-Clause | **yes, 2026-09-05** |
 | ZXTune (c93e81d) | ZX Spectrum AY trackers | LGPL-3.0 | **yes, 2026-09-07** |
 | audacious-uade-tools | metadata, downloaded not shipped | GPL-2.0-**or-later** | **yes, 2026-09-07** |
-| UADE | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL-2.0-**or-later** | no |
+| UADE 3.05 — `uadecore`, a separate program | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL, **no version stated** in the files; `COPYING.GPL` is v2 | **read 2026-09-21; accepted by the owner the same day, see below** |
+| UADE 3.05 — libuade and `score` | identification, IPC; the 68k sound core | LGPL, no version stated; `COPYING.LGPL` is 2.1 | **read 2026-09-21** |
+| bencodetools (5fa73d3) | bencode, for UADE's RMC containers | BSD-2-Clause, and BSD-3-Clause for the part from Codeville | **yes, 2026-09-21** |
+| libzakalwe (080b054) | UADE's author's support library | BSD-2-Clause-style; `tree.h` from OpenBSD | **yes, 2026-09-21** |
 | Oboe 1.10.0 | audio output | Apache-2.0 | no |
 
 **The "or later" matters.** A dependency that turns out to be GPL-2-**only** cannot be combined
@@ -78,6 +81,32 @@ stop and raise it with the owner — do not work around it.
 commercial and shareware Amiga music programs. UADE's own code is GPL; the status of those
 binaries is not clean, and that is a distribution question, not a linking one. To be settled before
 UADE is integrated, not after.
+
+**UADE's own licence, read from the files on 2026-09-21 — and an earlier line here was wrong.**
+This table said "GPL-2.0-or-later" for UADE. The files do not say "or later": none of the 26 sources
+of the emulator mentions a version, `COPYING` says only that the UAE code "is licensed under the GNU
+GPL", and `COPYING.GPL` beside it is the version 2 text. libuade's sources say "licensed under the
+GNU LGPL", also without a version, beside the 2.1 text. So the rule above — *a GPL-2-only
+dependency: stop and raise it* — applies, and this is the raising. Two things make it, in our
+reading, compatible; both are for the owner to accept or not:
+
+1. **GPL v2 §9**: "If the Program does not specify a version number of this License, you may
+   choose any version ever published by the Free Software Foundation." The UAE code names no
+   version, which by v2's own terms lets a recipient take v3.
+2. **`uadecore` is a separate program.** It is executed as its own process and spoken to over a
+   socket — the fork+exec decided in A44 — which is aggregation, not a combined work. What is
+   linked into the app is libuade, under the LGPL, which version 2.1 allows to be combined with
+   GPL-3 code.
+
+**Accepted by the owner on 2026-09-21**, on both readings, before UADE was first published in 0.7.0.
+
+**bencodetools and libzakalwe** are BSD-style, and BSD asks that a binary redistribution
+"reproduce the above copyright notice … in the documentation and/or other materials provided with
+the distribution". So does libopenmpt's and HivelyTracker's BSD-3, which have shipped since 0.4.0;
+the release checklist's "in-app legal surface" is where that is met -- and since 0.7.0 it is:
+**Settings → Open-source licences** lists every component in `app/notices/components.tsv` with the
+licence files the build copies from its sources, and `NoticesCoverTheBuildTest` fails when a decoder
+is built without a row.
 
 ## Verified
 
@@ -482,6 +511,33 @@ the entire technique. So the options are two, not three:
 
 There is no version of UADE worth shipping that does not answer this question first, which is
 exactly why `docs/BACKLOG.md` A5 put the licence before the code.
+
+### Built 2026-09-19 — option 2, as decided
+
+- **The APK ships three files and no replay routine**: `score`, the 68000 program that runs inside
+  the emulated Amiga; `uaerc`, which configures the machine; and `eagleplayer.conf`, the table that
+  says which player a file needs. All three are UADE's own work in UADE's own tree, 30 KB together.
+- **The 176 replay routines, and the eleven player configurations under `players/ENV/`, are fetched by the device**, pinned to the same revision the emulator
+  was built from. A replay routine and the emulator that runs it are one program in two halves;
+  fetching HEAD would pair them with a different UADE than the one in the APK.
+- **From GitLab rather than zakalwe.fi, and that is a deviation from the rule above.** The rule was
+  to prefer the page upstream publishes and fall back to GitLab. zakalwe.fi serves `.tar.bz2` and
+  Android has no bzip2 decoder, so honouring it would mean adding a decompression library to the
+  APK to read 726 KB once. GitLab serves the same revision as gzip, which `java.util.zip` already
+  reads, and it is upstream's own repository rather than a mirror — the reply that settled this
+  named GitLab as the more reliably available of the two. Worth revisiting if a bzip2 reader ever
+  arrives for another reason.
+- **The song database comes with them**: `conf/song.conf` from audacious-uade, GPL-2.0-or-later, and
+  **not** `conf/songdb` beside it, which is CC BY-NC-SA 4.0 and could never ship in a store app.
+  It is not fetched either. Without the table several Hippel and TFMX variants are identified as
+  the wrong player, which looks like the format not working.
+- **The notice comes before the download** and says what these are, in the same words sc68's row
+  uses: other people's code, and this app is not the one handing it out.
+- **They can be deleted**, from the same storage section as everything else, with the consequence
+  named: the Amiga custom formats stop playing.
+- **The Delitracker question is still open.** `players/DaveLowe_Deli` is the one binary in the
+  family that has ever been objected to, and it is in what the device fetches. Leaving it out is a
+  choice nobody has made yet; it changes nothing about who is distributing.
 
 ## Data the app downloads, and does not ship
 

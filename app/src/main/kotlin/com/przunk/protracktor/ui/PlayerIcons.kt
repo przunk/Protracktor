@@ -254,6 +254,59 @@ object PlayerIcons {
     val Download: ImageVector by lazy {
         icon("Download", "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z")
     }
+    /**
+     * A tick in a disc: this set is on the phone. The state of a downloadable row, read by shape as
+     * well as by the words under it and the colour it is drawn in.
+     *
+     * Material's `check_circle`, with its second subpath written from an absolute point: the
+     * original starts it with `m-2 15` after a `z`, whose meaning depends on where the renderer
+     * leaves the current point, and `scripts/check-icons.mjs` refuses exactly that (C66).
+     */
+    val Downloaded: ImageVector by lazy {
+        icon(
+            "Downloaded",
+            "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM10 17l-5-5 " +
+                "1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+        )
+    }
+    /**
+     * A cloud with a tick: available, and nothing to download -- a catalogue searched live, whose
+     * state is good from the start but is about the network rather than an index on the phone
+     * (decided 2026-09-21). Material's `cloud_done`; its tick is already an absolute subpath.
+     */
+    val CloudDone: ImageVector by lazy {
+        icon(
+            "CloudDone",
+            "M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 " +
+                "14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM10 17l-3.5-3.5 " +
+                "1.41-1.41L10 14.17 15.18 9l1.41 1.41L10 17z",
+        )
+    }
+    /**
+     * A page with lines on it: the open-source licences. Material's `description`, its three later
+     * subpaths rewritten from absolute points -- the original moves relative to the point a `z`
+     * leaves, which `scripts/check-icons.mjs` refuses (C66).
+     */
+    val Document: ImageVector by lazy {
+        icon(
+            "Document",
+            "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z" +
+                "M16 18H8v-2h8v2zM16 14H8v-2h8v2zM13 9V3.5L18.5 9H13z",
+        )
+    }
+    /** A shield: the privacy policy. Material's `shield`. */
+    val Shield: ImageVector by lazy {
+        icon("Shield", "M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z")
+    }
+    /** Round arrow: fetch again what is already here, to bring it up to date. */
+    val Refresh: ImageVector by lazy {
+        icon(
+            "Refresh",
+            "M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 " +
+                "6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 " +
+                "0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
+        )
+    }
     val DropDown: ImageVector by lazy {
         icon("DropDown", "M7 10l5 5 5-5z")
     }

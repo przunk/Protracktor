@@ -68,6 +68,55 @@ public:
      * app has to be told where that was.
      */
     virtual int currentSubsong() const { return 0; }
+
+    /**
+     * Called by the host when this tune starts playing, and never by a scan or a metadata pass.
+     *
+     * For work worth doing only for a tune somebody is listening to. `UadeBackend` is why it
+     * exists: an Amiga tune states no length, and finding it means running a second emulator to
+     * the end -- a few seconds of a core per tune, which a folder scan opening hundreds of files
+     * has no business paying for.
+     */
+    virtual void startedPlaying() {}
+
+    /**
+     * Whether [durationSeconds] may go from zero to a real value while the tune plays.
+     *
+     * The host publishes a length when a tune opens and when a subsong changes, because for most
+     * backends it cannot change otherwise and asking is not cheap. A backend that learns its
+     * length later says so, and the host keeps asking until it has one. Must be cheap: it is asked
+     * from the audio callback.
+     */
+    virtual bool durationArrivesLater() const { return false; }
+
+    /**
+     * Each subsong's length where the host already knows it from a database, zero-based, zero for
+     * a subsong it does not know.
+     *
+     * Said before [startedPlaying]. `UadeBackend` then works out only what is missing: songdb has
+     * the length of every Amiga tune the app offers, and running a second emulator to the end to
+     * learn a number already on the phone is a few seconds of a core for nothing (A52). Per subsong
+     * rather than all-or-nothing, because what is known often is not all of it -- songdb has no
+     * length for a subsong that makes no sound, and a length learnt by playing covers only the
+     * subsongs somebody has heard.
+     */
+    virtual void knownLengths(const std::vector<double> &) {}
+};
+
+/**
+ * Another file belonging to the same song.
+ *
+ * **Because a song is not always a file.** TFMX is `mdat.name` beside `smpl.name`, and a dozen
+ * other Amiga formats name a sample set the replay routine loads while it plays. Only UADE reads
+ * these; every other backend here is handed one file and wants one file, so the list is almost
+ * always empty and costs nothing when it is.
+ *
+ * The caller finds them -- it is the only side that knows whether the neighbours are a folder, an
+ * archive or a catalogue -- and the engine only writes them where the decoder will look.
+ */
+struct Companion {
+    std::string name;
+    std::vector<char> bytes;
 };
 
 /**
@@ -76,9 +125,12 @@ public:
  * The order matters and is documented at the definition: name-claimed formats first, then content
  * magic, then the general trackers, because several formats are told apart only by extension and
  * several others only by their first four bytes.
+ *
+ * [companions] are the other files of a multifile song, and are ignored by every backend but UADE.
  */
 std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string &name,
-                                     std::string &error);
+                                     std::string &error,
+                                     std::vector<Companion> companions = {});
 
 /**
  * Which decoders this build carries, and at which versions.
@@ -100,5 +152,20 @@ std::string backendsFingerprint();
  * Android, and whatever a browser build decides to call its storage.
  */
 void setSharedDataPath(const std::string &path);
+
+/**
+ * Where UADE's emulator binary, its data directory and a scratch directory are.
+ *
+ * Three rather than one, and none of them a build-time constant. `uadecore` is an executable
+ * shipped as `lib/<abi>/libuadecore.so`, because that is the one place Android still permits
+ * executing from; the data directory holds the replay routines the app downloads rather than ships
+ * (`docs/LICENSES.md`); and the scratch directory is where a tune is written so the emulator can
+ * open it by path, which is the only way a multifile song can reach its other half.
+ *
+ * A build without UADE keeps the function and does nothing, so the host that calls it does not
+ * need to know which decoders it was built with.
+ */
+void setUadePaths(const std::string &coreFile, const std::string &baseDir,
+                  const std::string &scratchDir);
 
 }  // namespace protracktor

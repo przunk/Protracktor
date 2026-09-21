@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 16
+    const val VERSION = 17
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -362,6 +362,40 @@ object SchemaSql {
     )
 
     /** What a fresh install gets: version 1's tables plus every migration since. */
+    /**
+     * songdb's song lengths, added at version 17 (`docs/PLAN_SONGDB_LENGTHS.md`, A52).
+     *
+     * **An integer key, unlike every other table of facts here.** songdb keys on the first 48 bits
+     * of an MD5, which fit a SQLite integer with room to spare, and an `INTEGER PRIMARY KEY` is the
+     * rowid itself -- no separate index. Measured on the full published file, 476,919 rows: 11.1 MB
+     * this way, 25.0 MB with the twelve-character text key `track_metadata` uses.
+     *
+     * `subsongs` is the published text, `ms,end ms,end …`, not a parsed form. Which of its ends are
+     * lengths is decided when a file is opened (`SongDbLengths.lengths`), so changing that is a code
+     * change rather than a re-download.
+     */
+    private val SONGDB_LENGTHS_V17: List<String> = listOf(
+        """
+        CREATE TABLE songdb_lengths (
+            key INTEGER PRIMARY KEY,
+            first_subsong INTEGER NOT NULL,
+            subsongs TEXT NOT NULL
+        )
+        """.trimIndent(),
+        // **Lengths this phone learnt by playing** (A50, folded into A52): a tune songdb does not
+        // know -- a file in a granted folder, most often -- is measured in the background once, and
+        // the answer kept here so the second play shows it at once. The same key as songdb's, so
+        // one hash answers both. A table of its own because `songdb_lengths` is replaced wholesale
+        // by every download, and what the phone learnt is not songdb's to throw away.
+        // `seconds` is one figure per subsong, space-separated, zero where nothing is known yet.
+        """
+        CREATE TABLE learned_lengths (
+            key INTEGER PRIMARY KEY,
+            seconds TEXT NOT NULL
+        )
+        """.trimIndent(),
+    )
+
     val CREATE: List<String> = listOf(
         """
         CREATE TABLE playlists (
@@ -419,7 +453,7 @@ object SchemaSql {
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
-        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16
+        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17
 
 
 
@@ -446,6 +480,7 @@ object SchemaSql {
         14 to FALLBACK_LENGTH_V14,
         15 to CATALOGUE_PLAYABLE_V15,
         16 to CATALOGUE_ARCHIVE_COUNT_V16,
+        17 to SONGDB_LENGTHS_V17,
     )
 
     /**

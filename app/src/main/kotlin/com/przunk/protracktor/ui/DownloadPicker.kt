@@ -76,7 +76,9 @@ internal fun DownloadPicker(
     // Ticked to begin with: whatever this phone does not already hold. The commonest press is the
     // first one, on an install that holds nothing, and it should not start with a tour of the
     // checkboxes.
-    var selected by remember(browse.catalogues, browse.trackMetadataCount) {
+    var selected by remember(
+        browse.catalogues, browse.songLengthCount, browse.trackMetadataCount, browse.songDbLengthCount,
+    ) {
         mutableStateOf(DownloadPlan.choices().filter { !isHeld(it, browse) }.toSet())
     }
 
@@ -105,7 +107,10 @@ internal fun DownloadPicker(
             DownloadPlan.choices().forEach { id ->
                 val held = isHeld(id, browse)
                 val busy = browse.indexing.containsKey(id) ||
-                    (id == Modland.id && browse.indexing.keys.any { it == DownloadKeys.SONG_LENGTHS || it == DownloadKeys.FAVOURITES })
+                    (id == Modland.id && browse.indexing.containsKey(DownloadKeys.FAVOURITES)) ||
+                    (id == DownloadPlan.SONG_METADATA && browse.indexing.keys.any {
+                        it == DownloadKeys.SONG_LENGTHS || it == DownloadKeys.TRACK_METADATA
+                    })
                 ListItem(
                     headlineContent = { Text(labelFor(id)) },
                     supportingContent = {
@@ -191,16 +196,16 @@ private const val BUTTON_SHARE = 0.55f
 
 /** Whether this phone already holds what [id] would fetch. */
 private fun isHeld(id: String, browse: BrowseState): Boolean = when (id) {
-    DownloadPlan.TRACK_METADATA -> browse.trackMetadataCount > 0
+    DownloadPlan.SONG_METADATA -> browse.songMetadataComplete
     else -> browse.catalogues.firstOrNull { it.id == id }?.let { it.indexed && !it.requiresIndex } ?: false
 }
 
-/** What a box costs on its own, the lengths and the favourites counted with Modland. */
+/** What a box costs on its own: the favourites counted with Modland, the three databases together. */
 private fun megabytesFor(id: String): Int = DownloadPlan.megabytesFor(setOf(id))
 
 @Composable
 private fun labelFor(id: String): String = when (id) {
-    DownloadPlan.TRACK_METADATA -> stringResource(R.string.download_pick_metadata)
+    DownloadPlan.SONG_METADATA -> stringResource(R.string.download_pick_metadata)
     Modland.id -> stringResource(R.string.download_pick_modland)
     else -> Catalogue.byId(id)?.displayName ?: id
 }

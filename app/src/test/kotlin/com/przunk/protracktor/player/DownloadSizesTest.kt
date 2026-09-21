@@ -37,7 +37,7 @@ class DownloadSizesTest {
             DownloadSizes.ASMA_MB to 19.18,
             DownloadSizes.UNEXOTICA_MB to 1.68,
             DownloadSizes.SONG_LENGTHS_MB to 4.96,
-            DownloadSizes.TRACK_METADATA_MB to 14.11,
+            DownloadSizes.TRACK_METADATA_MB to 25.48,
             DownloadSizes.FAVOURITES_MB to 0.14,
         )
         measured.forEach { (declared, actual) ->

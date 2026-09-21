@@ -14,7 +14,7 @@ package com.przunk.protracktor.player
  * | ASMA `asma.zip` | 19.2 |
  * | UnExoticA `unexotica.tsv` | 1.7 |
  * | HVSC `Songlengths.md5` | 5.0 |
- * | songdb `metadata.tsv` | 14.1 |
+ * | songdb `metadata.tsv` and `songlengths.tsv`, at `1bad3e8` (2026-09-21) | 14.1 + 11.4 = 25.5 |
  * | Modland favourites | 0.1 |
  *
  * Held here rather than read from `Content-Length` at the moment the screen draws, which would be
@@ -31,7 +31,8 @@ object DownloadSizes {
     const val ASMA_MB = 20
     const val UNEXOTICA_MB = 2
     const val SONG_LENGTHS_MB = 5
-    const val TRACK_METADATA_MB = 15
+    /** The metadata and the song lengths, one tick since A52 (`docs/PLAN_SONGDB_LENGTHS.md` D1). */
+    const val TRACK_METADATA_MB = 26
     const val FAVOURITES_MB = 1
 
     /** What the button says. The parts are rounded up individually, so this is a ceiling. */

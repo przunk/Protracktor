@@ -7,7 +7,8 @@ signing and rollout remain the owner's actions.
 
 - [ ] Resolve the sc68 replay-binary distribution question.
 - [ ] Verify Oboe's licence and produce notices from every exact shipped dependency.
-- [ ] Add an in-app legal surface containing the privacy link, GPL source link and notices.
+- [x] Add an in-app legal surface containing the privacy link, GPL source link and notices. *(0.7.0:
+      Settings → Licence, Open-source licences, Privacy policy; the policy shown is the published file.)*
 - [ ] Publish the privacy policy as a public, non-geofenced HTML page; no PDF or private-repository
       URL.
 - [ ] Make the exact corresponding source public and tag the release commit.
@@ -30,6 +31,10 @@ signing and rollout remain the owner's actions.
 - [ ] Complete the IARC content-rating questionnaire and archive its resulting certificate.
 
 ## 3. Prepare the release tree
+
+`./scripts/release.sh X.Y.Z` does the repository half of §3 and §4 in this order and stops at the
+first failure; `--check` runs its checks without changing anything (`docs/BUILD.md`). The items
+below stay as the record of what it does and what it cannot.
 
 - [ ] Merge only owner-approved branches into `develop` and run the complete final documentation
       pass.

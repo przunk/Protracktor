@@ -27,6 +27,20 @@ object NativeEngine {
     fun setDataPath(path: String) = nativeSetDataPath(path)
 
     /**
+     * Where UADE's emulator, its data and a scratch directory are.
+     *
+     * Three paths because none of them is a build-time constant: `uadecore` is an executable
+     * shipped as `lib/<abi>/libuadecore.so` and found through `applicationInfo.nativeLibraryDir`,
+     * the data directory is under `filesDir`, and the scratch directory is where a tune is written
+     * so that it has a path — which is the only way a multifile song can find its other half.
+     *
+     * Called again after the replay routines are downloaded, because until they are there the
+     * backend answers "not set up" and the Amiga formats are simply absent.
+     */
+    fun setUadePaths(coreFile: String, baseDir: String, scratchDir: String) =
+        nativeSetUadePaths(coreFile, baseDir, scratchDir)
+
+    /**
      * Why the last [open] returned null.
      *
      * Empty when nothing failed. Worth showing: a file no backend claims and a file a backend
@@ -69,13 +83,28 @@ object NativeEngine {
      * formats ASAP handles are told apart by extension rather than by any header, and one of them
      * shares `.fc` with an Amiga format libopenmpt claims.
      */
-    fun open(bytes: ByteArray, fileName: String): Opened {
+    /**
+     * [companions] are the other files of a multifile song — `smpl.name` beside `mdat.name` for
+     * TFMX — as (file name, bytes). Only UADE reads them, and only because the emulated program
+     * asks for them by name while it plays; every other decoder is handed one file.
+     */
+    fun open(
+        bytes: ByteArray,
+        fileName: String,
+        companions: List<Pair<String, ByteArray>> = emptyList(),
+    ): Opened {
         // The reason comes back with the call. It used to sit in a process-wide string that the
         // caller collected afterwards, which was fine while one thread opened files at a time and
         // became a data race -- confirmed under ThreadSanitizer -- the moment library scanning was
         // made concurrent with playback (`docs/review.md` R2).
         val reason = arrayOfNulls<String>(1)
-        val handle = nativeOpen(bytes, fileName, reason)
+        val handle = nativeOpen(
+            bytes,
+            fileName,
+            companions.map { it.first }.toTypedArray(),
+            companions.map { it.second }.toTypedArray(),
+            reason,
+        )
         return Opened(
             track = if (handle == 0L) null else Track(handle),
             error = reason[0].orEmpty(),
@@ -90,6 +119,12 @@ object NativeEngine {
         fun describe(): Map<String, String> = DescribeBlock.parse(nativeDescribe(handle()))
 
         fun start(): Boolean = nativeStart(handle())
+
+        /**
+         * Each subsong's length where a database knows it, zero-based, zero where it does not.
+         * Before [start]. Only UADE listens: it works out only what is missing (A52).
+         */
+        fun knownLengths(lengths: List<Double>) = nativeKnownLengths(handle(), lengths.toDoubleArray())
 
         /**
          * True once the module has played to its end.
@@ -166,10 +201,13 @@ object NativeEngine {
     @JvmStatic private external fun nativeOpen(
         data: ByteArray,
         fileName: String,
+        companionNames: Array<String>,
+        companionData: Array<ByteArray>,
         errorOut: Array<String?>,
     ): Long
     @JvmStatic private external fun nativeClose(handle: Long)
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
+    @JvmStatic private external fun nativeKnownLengths(handle: Long, lengths: DoubleArray)
     @JvmStatic private external fun nativeStop(handle: Long)
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean
@@ -177,6 +215,11 @@ object NativeEngine {
     @JvmStatic private external fun nativeSubsongCount(handle: Long): Int
     @JvmStatic private external fun nativeSelectSubsong(handle: Long, index: Int)
     @JvmStatic private external fun nativeSetDataPath(path: String)
+    @JvmStatic private external fun nativeSetUadePaths(
+        coreFile: String,
+        baseDir: String,
+        scratchDir: String,
+    )
     @JvmStatic private external fun nativeBackendsFingerprint(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
     @JvmStatic private external fun nativeDescribe(handle: Long): String

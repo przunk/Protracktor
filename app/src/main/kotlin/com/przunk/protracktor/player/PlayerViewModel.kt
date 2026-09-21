@@ -59,9 +59,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun browseBack(): Boolean = controller.browseBack()
     fun indexCatalogue(id: String) = controller.indexCatalogue(id)
 
-    fun downloadSongLengths() = controller.downloadSongLengths()
-    fun downloadTrackMetadata() = controller.downloadTrackMetadata()
-    fun downloadFavourites() = controller.downloadFavourites()
 
     /** The catalogues, the song lengths and the metadata, in one press (`docs/BACKLOG.md` A46). */
     fun downloadEverything() = controller.downloadEverything()
@@ -86,17 +83,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Giving disk back, one copy at a time (`docs/ARCHITECTURE.md` §19).
     fun clearFetchedCache() = controller.clearFetchedCache()
+    fun downloadSongMetadata() = controller.downloadSongMetadata()
+    fun downloadFavourites() = controller.downloadFavourites()
+    fun deleteSongMetadata() = controller.deleteSongMetadata()
+    fun downloadReplayRoutines() = controller.downloadReplayRoutines()
+    fun deleteReplayRoutines() = controller.deleteReplayRoutines()
     fun deleteCatalogueIndex(catalogueId: String) = controller.deleteCatalogueIndex(catalogueId)
-    fun clearSongLengths() = controller.clearSongLengths()
-    fun clearTrackMetadata() = controller.clearTrackMetadata()
-    fun clearFavourites() = controller.clearFavourites()
 
     // The sc68 replay routines the app does not ship (`docs/LICENSES.md`).
     /** Re-reads what is stored. Settings shows those numbers and can be opened without Browse. */
     fun refreshCatalogues() = controller.refreshCatalogues()
 
-    fun downloadReplays() = controller.downloadReplays()
-    fun deleteReplays() = controller.deleteReplays()
 
     fun selectSubsong(index: Int) = controller.selectSubsong(index)
 

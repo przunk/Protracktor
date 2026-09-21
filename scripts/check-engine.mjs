@@ -74,7 +74,9 @@ const open = (bytes, name) => {
     .map((part) => part.split(':'))
     .filter(([, version]) => version === 'none')
     .map(([name]) => name);
-  check('the browser engine reports no missing decoder', absent.length === 0,
+  // UADE is the one decoder the browser can never have: it is a second process, and WebAssembly
+  // has no `fork` (`docs/BACKLOG.md` A44). Anything else missing is a build that lost a decoder.
+  check('the browser engine is missing exactly UADE', absent.join() === 'uade',
     `missing: ${absent.join(', ') || '(none)'} — full fingerprint: ${fingerprint}`);
   // Named individually, because "nothing missing" also passes on a build that lost a decoder in a
   // way the fingerprint does not describe.

@@ -47,7 +47,7 @@ into `FILE_REFUSED_WITH_REASON`, which repeats the decoder's own sentence and ne
 Modland files this under **Beaver Sweeper**. One clause, from data already in hand, turns a puzzling
 refusal into an explanation — and it covers every one of those 5,079 rows, not just this extension.
 
-## A50. A length learnt by playing it once — **agreed 2026-09-18**
+## A50. A length learnt by playing it once — **agreed 2026-09-18; folded into A52 as its last step**
 
 **The right answer, and bigger than the defect it comes from.** C67 stopped the app claiming a
 length no file ever stated; C68 stopped the bar pinning itself at the end when there is none. What
@@ -74,6 +74,18 @@ library's default.
 **What it costs**: a schema version, a store, one call at the end of a track and one at its start,
 and its own tests. **What it buys**: every format with nowhere to write a length — NSF, AY, KSS,
 GBS, SNDH without sc68's database, SID without HVSC — gets a real one after a single listen.
+
+## A52. Song lengths from songdb for the Amiga formats — **DONE 2026-09-21, schema 17; confirmed on the phone**
+
+`docs/PLAN_SONGDB_LENGTHS.md` has it in full. In one paragraph: songdb, from the same repository the
+track metadata already comes from, has a length for **every one of the 3,792** Modland files the app
+offers through UADE, per subsong, agreeing with our own measurement to a tenth of a second — and
+lengths for the 1,172 that loop, which the measurement cannot give. It replaces the two-second wait
+and the second emulator for every tune it knows, and gives looping tunes a slider. It is **not** a
+source for consoles, SID or anything outside what audacious-uade plays: measured, zero such rows.
+11.9 MB to download, 11.1 MB stored with an integer key (25.0 MB with the text key `track_metadata`
+uses). The four decisions (D1–D4) were approved as recommended. **A50 is folded in** as the plan's last
+step: a length learnt by playing becomes a row of the same shape.
 
 ## A49. Quotations from correspondence in the documentation — **DONE 2026-09-18**
 
@@ -284,10 +296,10 @@ Two things to settle when it is picked up:
   (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
   differ — A43 is in the same corner of the same screen and the two may as well be one branch.
 
-## A44. UADE's process model — **awaiting a decision, recommended 2026-09-17**
+## A44. UADE's process model — **decided 2026-09-19, fork+exec; merged 2026-09-21**
 
 Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
-guess it. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
+guess it. The recommendation was taken as it stood. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
 licence (`players/` downloaded from the page upstream publishes for it, never shipped), and the
 song database it also needs (`conf/song.conf`, GPL-2-or-later — **not** `conf/songdb` beside it,
 which is CC BY-NC-SA and cannot ship in a store app).
@@ -320,6 +332,93 @@ nothing and the app simply disappears. Forty of the 51 exits are in that one com
 
 **Not blocked on anything else.** Say yes and the work is the integration; say no and it is the same
 integration with a fork of UADE in front of it. `docs/PLAN_FORMATS.md` has the full reading.
+
+### What the integration turned out to need, 2026-09-19
+
+Measured while building it, because none of it was visible from the decision:
+
+- **Five files upstream's `configure` writes are not in git**, and a cross-compiler cannot ask the
+  questions they answer — they would describe the build machine, not the phone. They are answered
+  for bionic in `native/backends/uade/config/` and copied in by `scripts/fetch-uade.py`. One of
+  them matters: glibc has `canonicalize_file_name` and bionic does not, tested with the NDK's own
+  clang rather than assumed.
+- **The 68000 emulator does not exist as source.** `build68k` and `gencpu` write 80,293 lines of it
+  from `table68k`; they are host programs, so the fetch script runs them and the NDK compiles what
+  they produce. Compiled in eight pieces, as upstream does.
+- **`uadecore` is 1.2 MB stripped on arm64**, 784 KB on armeabi-v7a, 1.2 MB on x86_64 — close to
+  the +1.8 MB the recommendation quoted, and position-independent with 16 KB-aligned segments,
+  both measured on the built file.
+- **The native libraries now extract at install** (`useLegacyPackaging = true`), which is not the
+  modern default and is not a preference: an executable has to be a file on disk, and with the
+  default packaging `nativeLibraryDir` holds nothing. It applies to every library, not only this
+  one, and there is no per-file form of it. The download gets smaller and the install gets bigger.
+- **A song is not always a file.** `uade_play_from_buffer` cannot do multifile and TFMX is
+  `mdat.name` beside `smpl.name`, so the engine writes the tune to a scratch directory and plays it
+  by path. `openBackend` takes companions, and the caller finds them: the next URL in the Modland
+  directory, the next member of the UnExoticA archive, the next document in a granted folder —
+  that last one only where the provider's document ids are paths.
+- **The format list is measured, not read from UADE's table.** `eagleplayer.conf` declares 371
+  markers; taken as a list it would have indexed 3,856 PlayStation `.psf` files UADE cannot play.
+  `probe-uade.py --formats 60 --play 12`: 413 of 720. 33 extensions and two prefixes whose Modland
+  directory played 10 or more of 12 — 3,810 files. Left out and why is in `SupportedFormats`.
+- **Size, measured on the release APK**: arm64 native libraries 6.0 → 7.4 MB installed, and the APK
+  itself 20 → 11 MB, because extracted libraries are compressed inside it again.
+- **Run on the host through our own engine, 2026-09-21**: `scripts/probe-uade-engine.py` drives
+  `UadeBackend` in the unchanged `engine.cpp` through the real `openBackend`, with the data
+  directory laid out from the same GitLab archive the app downloads. **140 of 140** — four files for
+  each of the 35 offered names, TFMX with its `smpl.` fetched beside it — plus five pairs played at
+  once, and the scratch directory empty afterwards. It found two things the phone would have shown
+  as "plays wrong" with no reason:
+  - UADE walks on to the next subsong inside the same stream unless told `one_subsong`, so the
+    position restarted mid-tune and the player's own "play all subsongs" was bypassed.
+  - With one subsong per stream, a file whose first subsong is half a second of silence that ends —
+    `reach for the skies-german.avp` — would play nothing. It now opens at the first subsong with
+    sound, as `GmeBackend` does for HES and KSS; a subsong that is only quiet at the start is kept.
+
+  Both were confirmed to be caught: with `one_subsong` removed the driver fails
+  `subsong-advanced-by-itself`.
+- **The phone, first contact, 2026-09-21**: `uadecore` started — the process model works — and
+  `mdat.coolbass` was refused with "score died" although its samples had been fetched beside it.
+  UADE finds the files a replay routine asks for with `uade_find_amiga_file`, which matches names
+  without regard to case by walking the path **from `/`, listing every directory**. An app may
+  pass through `/data` but not list it, so the walk failed on its second step. Reproduced on the
+  host with a parent directory of mode 111, and fixed with `uade_set_amiga_loader`: names are
+  looked up in the instance's own scratch directory, which is where this class put them. The host
+  run now keeps both directories under such a parent, so it cannot pass what a phone cannot.
+- **Replay routines counted**: 176, not the 178 first written, plus eleven player configurations
+  under `players/ENV/EaglePlayer/` that the first unpacker dropped.
+- **Length and seeking, 2026-09-21.** Nothing in these formats states a length, so the app showed
+  none and offered no slider. Measured first: UADE renders 120 to 150 times faster than real time
+  on the host, and a tune's replay routine reports its own end. Now, once a tune starts *playing* —
+  never for a scan or the metadata pass, through `Backend::startedPlaying` — a second emulator
+  plays the subsong silently to its end and the length arrives a few seconds in; the host keeps
+  asking while `durationArrivesLater` says it may. Seeking runs the emulator to the position, under
+  the same lock as every other backend's.
+
+  **The trap, found by measuring rather than by reading:** with UADE's own timeouts on, 19 of 140
+  tunes measured exactly 512.0 seconds. That is UADE's subsong timeout, reported the same way — even
+  as a happy ending — as a routine that finished. The measurement runs with timeouts off; a tune
+  that loops reaches the ten-minute cap and stays unknown. Host run: 140 of 140 with seeks forward
+  and back, 122 with a length, 18 without, none at 512.
+
+  **And then the phone showed no length at all**, and two mistakes of mine were behind it. The
+  backend said "a length may still come" only *while* measuring, which stops being true at the
+  moment the length is known — so the host, which asks only while that is said, stopped asking
+  just as there was something to read. The host check did not catch it because the driver asked
+  the backend directly rather than the way the host asks, and because UADE had quietly remembered
+  the lengths of tunes my earlier measurements had played to the end, in `~/.uade/contentdb`, so
+  the host had a length from the first frame without measuring anything. Both are closed: the
+  driver now asks as the host does and fails `length-not-announced` on the old code, and every
+  host run gets an empty home directory.
+- **A dead emulator took the app with it, 2026-09-21.** Found on the phone as a crash on the seventh
+  subsong of `cust.paradroid`, with no message. The host could not reproduce the trigger — all
+  seven subsongs play there — but it could reproduce the kind of death: kill uadecore mid-tune and
+  the process talking to it dies of **SIGPIPE**, because libuade writes to a socket whose other end
+  is gone and the signal's default action ends the process. That defeats the reason UADE runs
+  apart at all (the 51 `exit()` calls above). SIGPIPE is ignored now, the write fails with EPIPE,
+  and the tune ends; the host run kills uadecore at three moments on every run and fails if the
+  driver dies of a signal. **Why uadecore died on the phone is still unknown** — the fix makes the
+  app survive it, and the next phone test says whether subsong seven then plays or ends.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**

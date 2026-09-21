@@ -17,4 +17,17 @@ add_library(protracktor_engine SHARED engine.cpp player_oboe.cpp lha_jni.cpp)
 target_compile_options(protracktor_engine PRIVATE -Wall -Wextra -fexceptions -frtti)
 set_target_properties(protracktor_engine PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(protracktor_engine PRIVATE openmpt sc68 asap gme::gme sidplayfp hively minimp3 zxtune lhasa oboe::oboe android log)
+# UADE is linked when the build asked for it. Unlike ZXTune it cannot be made unconditional: the
+# browser has no `fork`, so `native/CMakeLists.txt` defaults it off and Gradle turns it on.
+if(PROTRACKTOR_WITH_UADE)
+    set(UADE_LIBRARY uade_frontend)
+endif()
+
+target_link_libraries(protracktor_engine PRIVATE openmpt sc68 asap gme::gme sidplayfp hively minimp3 zxtune ${UADE_LIBRARY} lhasa oboe::oboe android log)
+
+# uadecore is a second program, not a library, so nothing links it -- but it has to be built, and
+# packaged into the same lib/<abi>/ the engine lands in. A dependency rather than a copy step: AGP
+# packages what the CMake build produces, and an explicit edge is what makes sure it produced it.
+if(PROTRACKTOR_WITH_UADE)
+    add_dependencies(protracktor_engine uadecore)
+endif()

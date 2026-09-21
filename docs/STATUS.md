@@ -1,7 +1,7 @@
 # Status
 
-Updated: 2026-09-18 — version 0.6.0, round 12: the index no longer depends on what this build
-can play. versionCode is the commit count, schema version 16
+Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
+songdb, the downloads grouped. versionCode is the commit count, schema version 17
 
 ## What works
 
@@ -14,7 +14,14 @@ A usable player, as far as anything can be called that without a device saying s
   through libsidplayfp (PSID, RSID), seven console families through game-music-emu (NSF, GBS,
   SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
   and KSS routinely hold nothing at track 0), and the Amiga synth trackers through HivelyTracker
-  (AHX, HVL). Backends sit behind one interface and are asked what they can do rather
+  (AHX, HVL). **The Amiga custom formats through UADE** — TFMX, Hippel, David Whittaker, Sonic
+  Arranger and thirty more, once the replay routines are downloaded (`docs/BACKLOG.md` A44).
+  **Heard on a phone: TFMX (`mdat.coolbass` with its samples)**, which exercises the second
+  process, the fetched companion and the file lookup at once. The other 34 names are checked on
+  the host only — 140 of 140 through the unchanged engine, under a parent directory that cannot be
+  listed, as `/data` cannot on a phone. **Not yet on a phone**: the other formats, subsong
+  switching, deleting the routines. **Length and seeking**: the formats state no length, so a second emulator plays the subsong silently to its end once playback starts, and the total and the slider appear a few seconds in; a tune that loops stays without either.
+  The browser cannot have them at all. Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt and HivelyTracker seek, sc68 and libsidplayfp cannot, and the UI
   reflects that.
 - **Ships no code it has no right to.** Of sc68's 99 replay routines the APK carries one — sc68's
@@ -419,6 +426,130 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 **Entries state the defect, not who found it.** What was wrong, how it was proved, and what was
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
+
+### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, branch
+
+Found the day the in-app policy was added: it stopped at the first line of "Changes", would not
+scroll further, and ended against the bottom edge — its last lines lay under the navigation bar.
+
+**The first fix did not fix it.** The page was a full-screen dialog; handing the insets to its
+Scaffold (`decorFitsSystemWindows = false`) changed nothing on the phone, which says the dialog
+received no system-bar insets at all. So the legal pages are no longer a window of their own: they
+show in the place of the Settings list and take Settings' own padding, which the app's Scaffold
+already computes to clear the top bar, the dock and the system bars — plus 32 dp after the last line.
+Reasoned from the layout; there is no emulator here, and the phone decides.
+
+### C77. ~~Several deletes spoke all at once, seconds after their rows had gone~~ — FIXED 2026-09-21
+
+After C76 the rows went at the press, but each delete's message still waited for the database. Four
+deletes in a row queued on the one database, finished almost together, and four snackbars arrived
+at once. Every delete in Settings now says its message at the press, with the row: the size freed
+is known before anything is deleted, so the message is the true one. The work goes on behind it,
+and only a failure speaks again ("Could not delete …").
+
+### C76. ~~Deleting Modland's index did nothing for ten seconds~~ — FIXED 2026-09-21
+
+Confirmed delete in Settings, and nothing happened; ten to fifteen seconds later "Index deleted"
+and the row went. ASMA and UnExoticA went at once. Deleting Modland is half a million rows and
+their indexes in one transaction: **5.1 s on a desktop, measured**, on a table built to Modland's
+size. Rebuilding the table from the rows that stay measured 2.3 s, and was not taken: it needs the
+table's definition written a second time outside the schema, which the next schema change would
+forget.
+
+What was wrong was the silence, so the screen is told first: the catalogue shows as not indexed,
+its storage row goes, and its Browse row reads "deleting…" and refuses a new download until the
+delete has finished.
+
+### C75. ~~A downloaded set's tick appeared seconds late~~ — FIXED 2026-09-21
+
+The song metadata and replay routine rows showed the dim cloud for three to five seconds and then
+the tick. The tick waited for the counts — `COUNT(*)` over tables of 380,000 and 476,919 rows,
+queued behind the platform counts on the same database — when all it needs is whether anything is
+there. `HeldSets` asks that with one `EXISTS` per table and one directory listing per set, and is
+published before the counts are started; the counts still arrive later for the second line.
+`DownloadOfferTest` holds the rules to the quick answer and not to the counts.
+
+### C74. ~~The replay-routine rows appeared for a few seconds and vanished~~ — FIXED 2026-09-21
+
+Opening Online catalogues on a phone holding both sets of replay routines showed their two
+download rows for a few seconds, and then they went. C71's flash again, one screen down: the rows
+were drawn while the counts were zero, and the counts are zero until the screen has read them —
+which is also what "not downloaded" looks like. C71 fixed the offer at the top and left these.
+
+Fixed by the regrouping of the same day rather than by a second gate: the song metadata and the
+replay routines are now one row each, always drawn, and their second line waits for
+`heldCountsKnown` — a row that is always there and says nothing until it knows cannot flash.
+`DownloadOfferTest` covers the two "complete" rules the rows read.
+
+### C73. ~~The next subsong after a tune ended was selected and never heard~~ — FIXED 2026-09-21
+
+With "play all subsongs" on, `cust.paradroid` moved to its second subsong when the first ended, the
+app showed it as playing, and nothing sounded. Pause and play brought it back; four seconds later it
+stopped again.
+
+When a tune ends, the audio callback returns `Stop` and Oboe never calls it again, but the stream
+object stays. `requestSubsong` then selected the next subsong and called `start()` to be heard, and
+`start()` returns at once when a stream exists. `restart()` closes the stream before starting, which
+is why pause and play worked. It does the same now.
+
+**Not a UADE defect**, though UADE exposed it: every subsong there ends with a clean short render,
+and paradroid's second to sixth are two- to five-second effects, so the "stopped again" was the
+same fault at the next boundary. Any backend whose subsongs end by running out would have met it.
+Not reproducible off a phone — Oboe is the half the host run does not have — so it was reasoned
+from the code; **confirmed on the phone 2026-09-21**, all seven of paradroid's subsongs in turn.
+### C72. ~~The app died when Android refused the playback service the foreground~~ — FIXED 2026-09-21
+
+Found on a phone while stepping through `cust.paradroid`'s subsongs, with logcat:
+`ForegroundServiceStartNotAllowedException: Service.startForeground() not allowed`, thrown from
+`PlaybackService.onCreate`, uncaught, and the process ended.
+
+From Android 12 a service may enter the foreground only while its app is on screen, and the check
+is made when the service calls `startForeground` — not when it was asked for. A press in the app
+starts the service; if the app is no longer visible by the moment `onCreate` runs, the refusal is an
+exception, and nothing caught it. Now it is caught: the service logs it and stops. The music is in
+the engine and plays on; the notification returns with the next press in the app.
+
+**What put the service in that position is not established.** The service stops itself when nothing
+is playing, loading or current (C43), and something asked for it again from behind the screen. The
+crash is fixed whatever the sequence was; the sequence is still owed an explanation.
+
+It was first taken for a UADE crash, because it happened on an Amiga tune. It is not one, though
+looking for it did find a real UADE defect of a different kind (`docs/BACKLOG.md` A44, SIGPIPE).
+
+### C71. ~~"Get some music to browse" flashed on every visit to Online catalogues~~ — FIXED 2026-09-21
+
+The row appeared for a moment each time Online catalogues opened, on a phone holding every index,
+and then vanished.
+
+The rule offered it while HVSC's song lengths or the track metadata were missing, and read both as
+counts. **Those counts are read only when the screen opens**; before that they are zero, which is
+also what "not downloaded" looks like. So for the frame between opening and the counts arriving,
+the rule saw a phone with nothing on it.
+
+`BrowseState.heldCountsKnown` now says whether the counts are real, and the rule lives in
+`BrowseState.offersDownloadEverything` rather than in the composable, where it can be tested.
+`DownloadOfferTest` fails with the gate removed. In since round 12 (`030d87a`).
+
+### C70. ~~Random played, and the playlist stayed on screen~~ — FIXED 2026-09-19
+
+Play anything from Browse, then open Random: a tune started and the playlist was still there. The
+Random view opened and closed itself in the same frame.
+
+**Two readings of one question.** The view closes when search results take over playback (C49), and
+it asked `PlayerUiState.searchMode`, which was `resultsQueue != null` and nothing else. Playing a
+dice pick sets `transient` and does not clear the queue Browse was last played from, so that queue
+was still sitting in the state — not driving anything, but answering yes.
+
+The transport had the rule right the whole time. `nextFile` reads `transient != null &&
+!diceWaiting` as "the dice owns this", and `searchMode` now says the same thing, so a queue left
+behind is no longer a queue playing. The dice waiting under an author's list (`docs/BACKLOG.md`
+A41) is still search mode, because there the list really is driving next and previous.
+
+`openRandom` also clears the queue now. The reading was the defect; the stale queue was what fed
+it, and a session that starts should not carry the last source's state — which is what the page has
+always done at the same point (`away = null` in `web/src/app.js`).
+
+`RandomIsNotSearchTest` fails against the old definition.
 
 ### C64. ~~Uninstalling did not remove the database~~ — FIXED 2026-09-17
 

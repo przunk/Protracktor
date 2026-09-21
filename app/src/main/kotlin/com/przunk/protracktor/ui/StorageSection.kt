@@ -45,26 +45,25 @@ fun StorageSection(
     archiveBytes: Map<String, Long>,
     databaseBytes: Long,
     replayCount: Int,
+    playerCount: Int,
     replayBytes: Long,
     catalogues: List<CatalogueSummary>,
     songLengthCount: Int,
     trackMetadataCount: Int,
-    favouriteCount: Int,
+    songDbLengthCount: Int,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
-    onClearSongLengths: () -> Unit,
-    onClearTrackMetadata: () -> Unit,
-    onClearFavourites: () -> Unit,
-    onDeleteReplays: () -> Unit,
+    onDeleteSongMetadata: () -> Unit,
+    onDeleteReplayRoutines: () -> Unit,
 ) {
     var confirming by remember { mutableStateOf<Confirmation?>(null) }
 
     val stored = catalogues.filter {
         !it.isOnlineOnly && (it.trackCount > 0 || (archiveBytes[it.id] ?: 0L) > 0L)
     }
-    if (cacheBytes <= 0 && stored.isEmpty() && songLengthCount <= 0 && databaseBytes <= 0 &&
-        replayCount <= 0 && trackMetadataCount <= 0 && favouriteCount <= 0
-    ) return
+    val songMetadata = songLengthCount + trackMetadataCount + songDbLengthCount
+    val replayRoutines = replayCount + playerCount
+    if (cacheBytes <= 0 && stored.isEmpty() && databaseBytes <= 0 && songMetadata <= 0 && replayRoutines <= 0) return
 
     HorizontalDivider()
     Text(
@@ -115,71 +114,36 @@ fun StorageSection(
         )
     }
 
-    if (replayCount > 0) {
-        val replaysName = stringResource(R.string.replays_title)
+    // **One row per button** (decided 2026-09-21): what one press in Browse fetched, one press
+    // here deletes. The three databases of facts about files are one row, as they are one
+    // download; the two sets of replay routines likewise. Modland's favourites are not listed at
+    // all -- they go with Modland's index, above.
+    if (songMetadata > 0) {
+        val name = stringResource(R.string.song_metadata_title)
+        val tunes = songLengthCount + songDbLengthCount
         StorageRow(
-            title = replaysName,
-            detail = pluralStringResource(R.plurals.replays_count, replayCount, replayCount),
+            title = name,
+            detail = pluralStringResource(R.plurals.song_metadata_count, tunes, tunes),
             onDelete = {
                 confirming = Confirmation(
-                    title = replaysName,
-                    body = R.string.storage_confirm_replays,
-                    act = onDeleteReplays,
+                    title = name,
+                    body = R.string.storage_confirm_song_metadata,
+                    act = onDeleteSongMetadata,
                 )
             },
         )
     }
 
-    if (songLengthCount > 0) {
-        // Resolved outside the click, because a lambda is not a composable scope.
-        val songLengthsName = stringResource(R.string.song_lengths_title)
+    if (replayRoutines > 0) {
+        val name = stringResource(R.string.replay_routines_title)
         StorageRow(
-            title = songLengthsName,
-            detail = pluralStringResource(
-                R.plurals.song_lengths_count, songLengthCount, songLengthCount
-            ),
+            title = name,
+            detail = pluralStringResource(R.plurals.replay_routines_count, replayRoutines, replayRoutines),
             onDelete = {
                 confirming = Confirmation(
-                    title = songLengthsName,
-                    body = R.string.storage_confirm_song_lengths,
-                    act = onClearSongLengths,
-                )
-            },
-        )
-    }
-
-    // The song lengths and the songdb metadata, each with its own row and its own delete. A
-    // download the app cannot show and cannot remove is a download the user cannot reason about,
-    // and one button naming the lengths must not quietly take the metadata with it.
-    if (trackMetadataCount > 0) {
-        val metadataName = stringResource(R.string.track_metadata_title)
-        StorageRow(
-            title = metadataName,
-            detail = pluralStringResource(
-                R.plurals.track_metadata_count, trackMetadataCount, trackMetadataCount
-            ),
-            onDelete = {
-                confirming = Confirmation(
-                    title = metadataName,
-                    body = R.string.storage_confirm_track_metadata,
-                    act = onClearTrackMetadata,
-                )
-            },
-        )
-    }
-
-    if (favouriteCount > 0) {
-        val favouritesName = stringResource(R.string.favourites_title)
-        StorageRow(
-            title = favouritesName,
-            detail = pluralStringResource(
-                R.plurals.favourites_listed, favouriteCount, favouriteCount
-            ),
-            onDelete = {
-                confirming = Confirmation(
-                    title = favouritesName,
-                    body = R.string.storage_confirm_favourites,
-                    act = onClearFavourites,
+                    title = name,
+                    body = R.string.storage_confirm_replay_routines,
+                    act = onDeleteReplayRoutines,
                 )
             },
         )
