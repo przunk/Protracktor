@@ -469,4 +469,5 @@
     <string name="a11y_refresh_song_metadata">Update the song metadata</string>
     <string name="a11y_refresh_replay_routines">Update the replay routines</string>
     <string name="browse_deleting_short">deleting…</string>
+    <string name="notice_delete_failed">Could not delete %1$s.</string>
 </resources>

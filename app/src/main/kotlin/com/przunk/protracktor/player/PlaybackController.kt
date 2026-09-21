@@ -2282,6 +2282,13 @@ class PlaybackController private constructor(private val context: Context) {
         // screen is told first: the catalogue shows as not indexed, its storage row goes, and its
         // Browse row turns into "deleting…", which also refuses a new download until this is done.
         if (!beginDownload(catalogueId, context.getString(R.string.browse_deleting_short))) return
+        // **Said now, with the row going, not when the database has finished** (C77). Several
+        // deletes in a row queue on the one database and used to finish -- and speak -- almost
+        // together, seconds after their rows had gone. The size is known before anything is
+        // deleted, so the message can be the true one. Only a failure speaks again later.
+        val displayName = _browse.value.catalogues.firstOrNull { it.id == catalogueId }?.displayName ?: catalogueId
+        val archived = _browse.value.archiveBytes[catalogueId] ?: 0L
+        say(Message(if (archived > 0L) freedMessage(archived) else context.getString(R.string.notice_index_deleted)))
         _browse.update { current ->
             current.copy(
                 deleting = current.deleting + catalogueId,
@@ -2293,12 +2300,13 @@ class PlaybackController private constructor(private val context: Context) {
         }
         scope.launch {
             try {
-                catalogues.clearIndex(catalogueId)
+                runCatching { catalogues.clearIndex(catalogueId) }.onFailure {
+                    say(Message(context.getString(R.string.notice_delete_failed, displayName)))
+                    return@launch
+                }
                 if (catalogueId == Modland.id) dropFavourites()
-                val freed = withContext(backgroundWork) {
-                    if (Catalogue.byId(catalogueId)?.isArchive != true) return@withContext 0L
-                    val before = remoteFiles.archiveBytes(catalogueId)
-                    if (remoteFiles.deleteArchive(catalogueId)) before else 0L
+                withContext(backgroundWork) {
+                    if (Catalogue.byId(catalogueId)?.isArchive == true) remoteFiles.deleteArchive(catalogueId)
                 }
                 _browse.update { current ->
                     current.copy(
@@ -2308,15 +2316,6 @@ class PlaybackController private constructor(private val context: Context) {
                             ?.let { SearchScope.Online(it.catalogueIds - catalogueId) }
                             ?: current.searchScope,
                         openCatalogue = current.openCatalogue?.takeIf { it.id != catalogueId },
-                    )
-                }
-                // The rows cost no disk worth naming; the archive is 20 MB and the user just asked
-                // where their storage went, so it is the number worth saying when there is one.
-                _state.update {
-                    it.copy(
-                        message = Message(
-                            if (freed > 0L) freedMessage(freed) else context.getString(R.string.notice_index_deleted)
-                        )
                     )
                 }
                 refreshCatalogues()
@@ -2487,13 +2486,27 @@ class PlaybackController private constructor(private val context: Context) {
      *
      * **What this phone learnt by playing stays** (`learned_lengths`, A50): it was not downloaded,
      * cannot be downloaded again, and costs next to nothing. The button deletes what it fetched.
+     *
+     * The row goes and the message comes at the press; the tables empty behind them (C77).
      */
     fun deleteSongMetadata() {
+        say(Message(context.getString(R.string.notice_song_metadata_deleted)))
+        _browse.update {
+            it.copy(
+                held = it.held?.copy(songLengths = false, trackMetadata = false, songDbLengths = false),
+                songLengthCount = 0,
+                trackMetadataCount = 0,
+                songDbLengthCount = 0,
+            )
+        }
         scope.launch {
-            songLengths.clear()
-            trackMetadata.clear()
-            songDbLengths.clear()
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_song_metadata_deleted))) }
+            runCatching {
+                songLengths.clear()
+                trackMetadata.clear()
+                songDbLengths.clear()
+            }.onFailure {
+                say(Message(context.getString(R.string.notice_delete_failed, context.getString(R.string.song_metadata_title))))
+            }
             refreshCatalogues()
         }
     }
@@ -2855,21 +2868,36 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Throws both sets of replay routines away: `.sc68` goes back to mostly silent and the Amiga
      * custom formats stop playing; SNDH does not care. One delete, as there is one download.
+     *
+     * The size is known before anything goes, so the true message is said at the press (C77).
      */
     fun deleteReplayRoutines() {
+        val now = _browse.value
+        say(Message(freedMessage(now.replayBytes + now.playerBytes)))
+        _browse.update {
+            it.copy(
+                held = it.held?.copy(replays = false, players = false),
+                replayCount = 0,
+                replayBytes = 0L,
+                playerCount = 0,
+                playerBytes = 0L,
+            )
+        }
         scope.launch {
-            val freed = withContext(backgroundWork) {
-                val sc68 = Sc68Replays.bytes(context).takeIf { Sc68Replays.delete(context) } ?: 0L
-                val uade = UadePlayers.bytes(context).takeIf { UadePlayers.delete(context) } ?: 0L
+            val removed = withContext(backgroundWork) {
+                val sc68 = Sc68Replays.delete(context)
+                val uade = UadePlayers.delete(context)
                 // The copies UADE actually reads go too, or it would go on playing from them with
                 // nothing on the storage screen saying they were there.
                 java.io.File(context.filesDir, "uade").deleteRecursively()
-                sc68 + uade
+                sc68 && uade
+            }
+            if (!removed) {
+                say(Message(context.getString(R.string.notice_delete_failed, context.getString(R.string.replay_routines_title))))
             }
             val version = context.packageManager
                 .getPackageInfo(context.packageName, 0).longVersionCode.toString()
             withContext(backgroundWork) { configureUade(version) }
-            _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }
     }

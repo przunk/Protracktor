@@ -427,6 +427,14 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C77. ~~Several deletes spoke all at once, seconds after their rows had gone~~ — FIXED 2026-09-21
+
+After C76 the rows went at the press, but each delete's message still waited for the database. Four
+deletes in a row queued on the one database, finished almost together, and four snackbars arrived
+at once. Every delete in Settings now says its message at the press, with the row: the size freed
+is known before anything is deleted, so the message is the true one. The work goes on behind it,
+and only a failure speaks again ("Could not delete …").
+
 ### C76. ~~Deleting Modland's index did nothing for ten seconds~~ — FIXED 2026-09-21
 
 Confirmed delete in Settings, and nothing happened; ten to fifteen seconds later "Index deleted"
