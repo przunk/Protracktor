@@ -18,6 +18,17 @@ class SongDbLengthStore(context: Context) {
 
     private val helper = ProtracktorDatabase.of(context)
 
+    /**
+     * Whether anything is stored, **without counting it**. `COUNT(*)` walks every row -- hundreds of
+     * thousands here -- while this stops at the first; it is what a row's "downloaded" tick needs,
+     * and it is what made the tick wait seconds for the count behind it (C75).
+     */
+    suspend fun any(): Boolean = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery("SELECT EXISTS (SELECT 1 FROM songdb_lengths)", null).use { row ->
+            row.moveToFirst() && row.getInt(0) != 0
+        }
+    }
+
     /** How many files are known. Zero means the lengths have not been downloaded. */
     suspend fun count(): Int = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery("SELECT COUNT(*) FROM songdb_lengths", null).use { row ->

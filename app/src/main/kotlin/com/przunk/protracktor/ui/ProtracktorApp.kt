@@ -392,7 +392,7 @@ fun ProtracktorApp(
                 onWebPlayerChanged = viewModel::setWebPlayer,
                 songLengthCount = browse.songLengthCount,
                 trackMetadataCount = browse.trackMetadataCount,
-                favouriteCount = browse.favouritesListed,
+                songDbLengthCount = browse.songDbLengthCount,
                 contentPadding = insets,
                 selectedTheme = selectedTheme,
                 dynamicColour = dynamicColour,
@@ -404,11 +404,8 @@ fun ProtracktorApp(
                 onLanguageSelected = onLanguageSelected,
                 onClearCache = viewModel::clearFetchedCache,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,
-                onClearSongLengths = viewModel::clearSongLengths,
-                onClearTrackMetadata = viewModel::clearTrackMetadata,
-                onClearFavourites = viewModel::clearFavourites,
-                onDeleteReplays = viewModel::deleteReplays,
-                onDeletePlayers = viewModel::deletePlayers,
+                onDeleteSongMetadata = viewModel::deleteSongMetadata,
+                onDeleteReplayRoutines = viewModel::deleteReplayRoutines,
             )
         } else if (showBrowse) {
             BrowseScreen(
@@ -422,12 +419,8 @@ fun ProtracktorApp(
                 onForgetFolder = viewModel::forgetFolder,
                 onScanFolder = viewModel::scanFolder,
                 onIndexCatalogue = viewModel::indexCatalogue,
-                onDownloadSongLengths = viewModel::downloadSongLengths,
-                onDownloadTrackMetadata = viewModel::downloadTrackMetadata,
-                onPickDownloads = { choosingDownloads = true },
-                onDownloadFavourites = viewModel::downloadFavourites,
-                onDownloadReplays = viewModel::downloadReplays,
-                onDownloadPlayers = viewModel::downloadPlayers,
+                onDownloadSongMetadata = viewModel::downloadSongMetadata,
+                onDownloadReplayRoutines = viewModel::downloadReplayRoutines,
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
                 // **Open, not just play.** Starting a tune and dropping back onto a playlist

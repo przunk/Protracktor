@@ -427,6 +427,48 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C77. ~~Several deletes spoke all at once, seconds after their rows had gone~~ — FIXED 2026-09-21
+
+After C76 the rows went at the press, but each delete's message still waited for the database. Four
+deletes in a row queued on the one database, finished almost together, and four snackbars arrived
+at once. Every delete in Settings now says its message at the press, with the row: the size freed
+is known before anything is deleted, so the message is the true one. The work goes on behind it,
+and only a failure speaks again ("Could not delete …").
+
+### C76. ~~Deleting Modland's index did nothing for ten seconds~~ — FIXED 2026-09-21
+
+Confirmed delete in Settings, and nothing happened; ten to fifteen seconds later "Index deleted"
+and the row went. ASMA and UnExoticA went at once. Deleting Modland is half a million rows and
+their indexes in one transaction: **5.1 s on a desktop, measured**, on a table built to Modland's
+size. Rebuilding the table from the rows that stay measured 2.3 s, and was not taken: it needs the
+table's definition written a second time outside the schema, which the next schema change would
+forget.
+
+What was wrong was the silence, so the screen is told first: the catalogue shows as not indexed,
+its storage row goes, and its Browse row reads "deleting…" and refuses a new download until the
+delete has finished.
+
+### C75. ~~A downloaded set's tick appeared seconds late~~ — FIXED 2026-09-21
+
+The song metadata and replay routine rows showed the dim cloud for three to five seconds and then
+the tick. The tick waited for the counts — `COUNT(*)` over tables of 380,000 and 476,919 rows,
+queued behind the platform counts on the same database — when all it needs is whether anything is
+there. `HeldSets` asks that with one `EXISTS` per table and one directory listing per set, and is
+published before the counts are started; the counts still arrive later for the second line.
+`DownloadOfferTest` holds the rules to the quick answer and not to the counts.
+
+### C74. ~~The replay-routine rows appeared for a few seconds and vanished~~ — FIXED 2026-09-21
+
+Opening Online catalogues on a phone holding both sets of replay routines showed their two
+download rows for a few seconds, and then they went. C71's flash again, one screen down: the rows
+were drawn while the counts were zero, and the counts are zero until the screen has read them —
+which is also what "not downloaded" looks like. C71 fixed the offer at the top and left these.
+
+Fixed by the regrouping of the same day rather than by a second gate: the song metadata and the
+replay routines are now one row each, always drawn, and their second line waits for
+`heldCountsKnown` — a row that is always there and says nothing until it knows cannot flash.
+`DownloadOfferTest` covers the two "complete" rules the rows read.
+
 ### C73. ~~The next subsong after a tune ended was selected and never heard~~ — FIXED 2026-09-21
 
 With "play all subsongs" on, `cust.paradroid` moved to its second subsong when the first ended, the

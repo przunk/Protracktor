@@ -15,24 +15,34 @@ import org.junit.Test
 class DownloadPlanTest {
 
     @Test
-    fun `the song lengths and the favourites come with Modland`() {
+    fun `the favourites come with Modland, and the SID lengths no longer do`() {
+        // Decided 2026-09-21: Modland is one row and brings its own list of favourite paths. HVSC's
+        // lengths moved to the song metadata box -- they answer "how long is this SID" about tunes
+        // from anywhere, a granted folder included, not only about Modland's.
+        assertEquals(listOf(Modland.id, DownloadKeys.FAVOURITES), DownloadPlan.stepsFor(setOf(Modland.id)))
+    }
+
+    @Test
+    fun `the song metadata box is all three databases`() {
+        // HVSC's SID lengths, then songdb's metadata and lengths -- one box, because nobody should
+        // have to know which database says what about a file.
         assertEquals(
-            listOf(Modland.id, DownloadKeys.SONG_LENGTHS, DownloadKeys.FAVOURITES),
-            DownloadPlan.stepsFor(setOf(Modland.id)),
+            listOf(DownloadKeys.SONG_LENGTHS, DownloadKeys.TRACK_METADATA),
+            DownloadPlan.stepsFor(setOf(DownloadPlan.SONG_METADATA)),
         )
     }
 
     @Test
     fun `and come with nothing else`() {
-        // They describe Modland's files. Fetching HVSC's lengths because somebody ticked the Atari
-        // archive would be five megabytes that answer a question nobody asked.
+        // The favourites describe Modland's files. Fetching them because somebody ticked the Atari
+        // archive would answer a question nobody asked.
         assertEquals(listOf(Asma.id), DownloadPlan.stepsFor(setOf(Asma.id)))
     }
 
     @Test
-    fun `the metadata table is last, whatever order it was ticked in`() {
-        val steps = DownloadPlan.stepsFor(setOf(DownloadPlan.TRACK_METADATA, Asma.id, Modland.id))
-        assertEquals(DownloadPlan.TRACK_METADATA, steps.last())
+    fun `the song metadata is last, whatever order it was ticked in`() {
+        val steps = DownloadPlan.stepsFor(setOf(DownloadPlan.SONG_METADATA, Asma.id, Modland.id))
+        assertEquals(DownloadKeys.TRACK_METADATA, steps.last())
         assertTrue("$steps starts with Modland", steps.first() == Modland.id)
     }
 

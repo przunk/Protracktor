@@ -16,21 +16,21 @@ import com.przunk.protracktor.net.UnExoticA
  *
  * **Three rules, and each is a decision:**
  *
- * 1. **HVSC's song lengths and Modland's favourites ride with Modland.** Neither is a catalogue:
- *    the lengths say how long a SID plays and the favourites say which Modland paths are worth
- *    hearing, and both are useless without the index they describe. Asking about them separately
- *    asks the user to know what HVSC is; the owner's rule is that the SID music and the SID
- *    lengths are one thing.
+ * 1. **Modland brings its favourites.** They are Modland's own list of Modland paths and mean
+ *    nothing without it, so the Modland box is one idea (decided 2026-09-21). HVSC's SID lengths
+ *    used to ride here too; they moved to the song metadata box, because they answer "how long is
+ *    this SID" about tunes from anywhere, not only from Modland.
  * 2. **The catalogues come first, in the order they are listed**, which puts Modland — the largest
  *    catalogue and the smallest download — at the front. Somebody who stops the run early still
  *    has the biggest thing in it.
- * 3. **The metadata table goes last.** Fifteen megabytes that improve what is written *under* a
- *    title are worth less than the first catalogue that puts titles on the screen at all.
+ * 3. **The song metadata goes last**: HVSC's SID lengths and songdb's credits and lengths, one box,
+ *    because nobody should have to know which database says what. It improves what is written
+ *    *under* a title, which is worth less than the first catalogue that puts titles on screen.
  */
 object DownloadPlan {
 
-    /** The one id in a selection that is not a catalogue. */
-    const val TRACK_METADATA = DownloadKeys.TRACK_METADATA
+    /** The one box that is not a catalogue: every fact about files the files cannot carry. */
+    const val SONG_METADATA = DownloadKeys.SONG_METADATA
 
     /**
      * Every box this phone can offer, in the order they are drawn.
@@ -39,7 +39,7 @@ object DownloadPlan {
      * offered, because there is nothing a tick could fetch.
      */
     fun choices(): List<String> =
-        Catalogue.all.filter { !it.isOnlineOnly }.map { it.id } + TRACK_METADATA
+        Catalogue.all.filter { !it.isOnlineOnly }.map { it.id } + SONG_METADATA
 
     /**
      * The steps [selected] comes to, as [DownloadKeys] and catalogue ids, in the order to run them.
@@ -55,12 +55,12 @@ object DownloadPlan {
         for (catalogue in Catalogue.all.filter { !it.isOnlineOnly }) {
             if (catalogue.id !in wanted) continue
             steps += catalogue.id
-            if (catalogue.id == Modland.id) {
-                steps += DownloadKeys.SONG_LENGTHS
-                steps += DownloadKeys.FAVOURITES
-            }
+            if (catalogue.id == Modland.id) steps += DownloadKeys.FAVOURITES
         }
-        if (TRACK_METADATA in wanted) steps += TRACK_METADATA
+        if (SONG_METADATA in wanted) {
+            steps += DownloadKeys.SONG_LENGTHS
+            steps += DownloadKeys.TRACK_METADATA
+        }
         return steps
     }
 
@@ -71,7 +71,7 @@ object DownloadPlan {
                 Modland.id -> DownloadSizes.MODLAND_MB
                 DownloadKeys.SONG_LENGTHS -> DownloadSizes.SONG_LENGTHS_MB
                 DownloadKeys.FAVOURITES -> DownloadSizes.FAVOURITES_MB
-                TRACK_METADATA -> DownloadSizes.TRACK_METADATA_MB
+                DownloadKeys.TRACK_METADATA -> DownloadSizes.TRACK_METADATA_MB
                 Asma.id -> DownloadSizes.ASMA_MB
                 UnExoticA.id -> DownloadSizes.UNEXOTICA_MB
                 else -> 0
