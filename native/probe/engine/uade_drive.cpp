@@ -219,6 +219,31 @@ int main(int argc, char **argv) {
         return play(argv[2], std::vector<std::string>(argv + 3, argv + argc), scratch);
     }
     if (mode == "pair" && argc == 4) return pair(argv[2], argv[3], scratch);
+    if (mode == "walk") {
+        // Every subsong in turn, as a listener stepping through them: switch, play a little, wait
+        // for the length the way the host does, and go on. Written for the phone's crash on
+        // `cust.paradroid`'s seventh subsong.
+        std::string error;
+        auto backend = open(argv[2], std::vector<std::string>(argv + 3, argv + argc), error);
+        if (!backend) { std::printf("VERDICT fail refused \"%s\"\n", error.c_str()); return 1; }
+        backend->startedPlaying();
+        std::vector<float> buffer(kFrames * 2);
+        for (int s = 0; s < backend->subsongCount(); ++s) {
+            if (s > 0 && !backend->selectSubsong(s)) { std::printf("VERDICT fail select %d\n", s); return 1; }
+            std::size_t frames = 0;
+            for (int b = 0; b < 100; ++b) frames += backend->render(kRate, kFrames, buffer.data());
+            double length = 0.0;
+            for (int i = 0; i < 400 && length <= 0.0 && backend->durationArrivesLater(); ++i) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                if (backend->durationArrivesLater()) length = backend->durationSeconds();
+            }
+            std::printf("subsong %d: current=%d rendered=%.1fs length=%.1fs\n", s + 1,
+                        backend->currentSubsong() + 1, static_cast<double>(frames) / kRate, length);
+            std::fflush(stdout);
+        }
+        std::printf("VERDICT ok walked %d subsongs\n", backend->subsongCount());
+        return 0;
+    }
     if (mode == "trace") {
         // What the host sees of the background length, every 100 ms for ten seconds.
         std::string error;

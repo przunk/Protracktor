@@ -72,6 +72,7 @@ extern "C" {
 #include <uade/uade.h>
 }
 #include <atomic>
+#include <csignal>
 #include <dirent.h>
 #include <fcntl.h>
 #include <thread>
@@ -1762,6 +1763,21 @@ public:
      */
     static void setPaths(const std::string &core, const std::string &base,
                          const std::string &scratch) {
+        // **A dead emulator must not take the app with it**, and without this it did. libuade
+        // writes to uadecore over a socket, and a write to a socket whose other end has died raises
+        // SIGPIPE, whose default action ends the process -- the app, with no message and nothing
+        // in any log the listener can see. That is exactly the failure fork+exec was chosen to
+        // contain (`docs/BACKLOG.md` A44): uadecore has 51 `exit()` calls, and one of them firing
+        // was meant to end a tune, not the player. Found on the phone as a crash on
+        // `cust.paradroid`'s seventh subsong, and reproduced on the host by killing uadecore
+        // mid-tune: the driver died of signal 13. Ignored, the write fails with EPIPE, libuade
+        // reports an error, and the tune ends.
+        //
+        // Process-wide, because a signal disposition is; ignoring SIGPIPE is what every program
+        // that writes to sockets does, and Java's own sockets never relied on it.
+        static std::once_flag ignored;
+        std::call_once(ignored, [] { ::signal(SIGPIPE, SIG_IGN); });
+
         std::lock_guard<std::mutex> held(pathMutex());
         corePath() = core;
         basePath() = base;
@@ -2095,7 +2111,10 @@ private:
                 bool ended = false;
                 while (!stop_.load(std::memory_order_acquire) && frames < kMeasureCapFrames) {
                     const ssize_t got = uade_read(buffer.data(), buffer.size() * sizeof(int16_t), probe);
-                    if (got <= 0) { ended = true; break; }
+                    // Zero is the routine's own end. Negative is the emulator gone -- a crash, not
+                    // an ending -- and the length at that point would be invented.
+                    if (got == 0) { ended = true; break; }
+                    if (got < 0) break;
                     frames += static_cast<std::size_t>(got) / (2 * sizeof(int16_t));
                 }
                 if (ended && frames > 0) {

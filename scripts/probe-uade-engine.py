@@ -20,6 +20,9 @@ from __future__ import annotations
 
 import argparse
 import collections
+import os
+import signal
+import time
 import importlib.util
 import io
 import pathlib
@@ -188,6 +191,45 @@ def main() -> int:
         verdict = next((l for l in reversed(out.splitlines()) if l.startswith("VERDICT")), "VERDICT fail")
         tally["pair ok" if verdict.startswith("VERDICT ok") else "pair fail"] += 1
         print(f"  {a.name[:30]} + {b.name[:30]}: {verdict[8:]}")
+
+    # **The emulator dying must not take the host with it** -- the whole reason UADE runs as its
+    # own process. On the phone it did: libuade writes to uadecore over a socket, a write to a
+    # dead peer raises SIGPIPE, and SIGPIPE ends the process. So uadecore is killed here at several
+    # moments during a walk through the subsongs, and the driver must end by returning, never by a
+    # signal.
+    print("\n=== uadecore killed mid-tune")
+    # A tune with seven subsongs, so the walk lasts long enough to be interrupted: the first
+    # version picked any `cust.` file, which ended before the second kill and "passed" having
+    # killed nothing. A kill that found no emulator is counted as a failure of the check.
+    walker = next((p for p in played if p.name == "cust.paradroid"), None)
+    if walker is None:
+        walker = staged("Delitracker Custom/TSM/paradroid/cust.paradroid")
+    if walker is None:
+        failures.append(("kill", "cust.paradroid", "not available to walk"))
+    else:
+        for delay in (0.6, 1.5, 3.0):
+            proc = subprocess.Popen([args.drive, "walk", str(walker)], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(delay)
+            children = subprocess.run(["pgrep", "-P", str(proc.pid)], capture_output=True,
+                                      text=True).stdout.split()
+            for child in children:
+                try:
+                    os.kill(int(child), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            code = proc.wait(timeout=120)
+            if not children:
+                tally["survives UNTESTED"] += 1
+                failures.append(("kill", str(walker), f"nothing to kill after {delay}s"))
+                print(f"  nothing to kill after {delay}s -- the check did not run")
+                continue
+            survived = code >= 0
+            tally["survives ok" if survived else "survives FAIL"] += 1
+            print(f"  killed {len(children)} after {delay}s: "
+                  f"{'returned ' + str(code) if survived else 'died of ' + signal.Signals(-code).name}")
+            if not survived:
+                failures.append(("kill", str(walker), f"died of {signal.Signals(-code).name}"))
 
     leftovers = list(scratch.iterdir())
     print(f"\nscratch directory after everything: {len(leftovers)} entries")

@@ -398,6 +398,15 @@ Measured while building it, because none of it was visible from the decision:
   the host had a length from the first frame without measuring anything. Both are closed: the
   driver now asks as the host does and fails `length-not-announced` on the old code, and every
   host run gets an empty home directory.
+- **A dead emulator took the app with it, 2026-09-21.** Found on the phone as a crash on the seventh
+  subsong of `cust.paradroid`, with no message. The host could not reproduce the trigger — all
+  seven subsongs play there — but it could reproduce the kind of death: kill uadecore mid-tune and
+  the process talking to it dies of **SIGPIPE**, because libuade writes to a socket whose other end
+  is gone and the signal's default action ends the process. That defeats the reason UADE runs
+  apart at all (the 51 `exit()` calls above). SIGPIPE is ignored now, the write fails with EPIPE,
+  and the tune ends; the host run kills uadecore at three moments on every run and fails if the
+  driver dies of a signal. **Why uadecore died on the phone is still unknown** — the fix makes the
+  app survive it, and the next phone test says whether subsong seven then plays or ends.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
