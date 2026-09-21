@@ -365,9 +365,16 @@ Measured while building it, because none of it was visible from the decision:
 
   Both were confirmed to be caught: with `one_subsong` removed the driver fails
   `subsong-advanced-by-itself`.
-- **Not yet checked on a phone**: that `fork` and `exec` from `nativeLibraryDir` work on a phone,
-  and that the players download there. The host run covers our code; it cannot cover Android's
-  process rules.
+- **The phone, first contact, 2026-09-21**: `uadecore` started — the process model works — and
+  `mdat.coolbass` was refused with "score died" although its samples had been fetched beside it.
+  UADE finds the files a replay routine asks for with `uade_find_amiga_file`, which matches names
+  without regard to case by walking the path **from `/`, listing every directory**. An app may
+  pass through `/data` but not list it, so the walk failed on its second step. Reproduced on the
+  host with a parent directory of mode 111, and fixed with `uade_set_amiga_loader`: names are
+  looked up in the instance's own scratch directory, which is where this class put them. The host
+  run now keeps both directories under such a parent, so it cannot pass what a phone cannot.
+- **Replay routines counted**: 176, not the 178 first written, plus eleven player configurations
+  under `players/ENV/EaglePlayer/` that the first unpacker dropped.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**

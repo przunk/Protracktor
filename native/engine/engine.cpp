@@ -73,6 +73,7 @@ extern "C" {
 }
 #include <dirent.h>
 #include <fcntl.h>
+#include <strings.h>
 #include <fstream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -1847,6 +1848,7 @@ public:
             cleanScratch();
             throw std::runtime_error(reason);
         }
+        uade_set_amiga_loader(&UadeBackend::loadAmigaFile, this, state_);
 
         const int claimed = uade_play(modulePath_.c_str(), -1, state_);
         if (claimed <= 0) {
@@ -2012,6 +2014,72 @@ private:
     }
 
     static std::mutex &openMutex() { static std::mutex m; return m; }
+
+    /**
+     * Finds a file the emulated Amiga asks for -- TFMX's `smpl.` beside its `mdat.`.
+     *
+     * **UADE's own search cannot work on a phone.** `uade_find_amiga_file` matches names without
+     * regard to case, as AmigaOS did, and does it by walking the path from `/` and *listing* every
+     * directory on the way. An app on Android may pass through `/data` but may not list it, so the
+     * walk stopped on its second step, the samples were "not found" beside the tune that had just
+     * been written next to them, and the replay routine died: "score died" on the phone for a file
+     * that played on the host. Reproduced on the host with a parent directory of mode 111.
+     *
+     * Everything a song can ask for by a plain name is in this instance's scratch directory,
+     * because this class put it there, so that is the only place looked -- listed, which it may
+     * be, and matched without regard to case. Names on an Amiga volume (`ENV:`, `S:`) are the
+     * players' own configuration under the data directory and go to UADE's search unchanged; so
+     * does anything outside the scratch directory, which nothing here puts there.
+     */
+    static struct uade_file *loadAmigaFile(const char *name, const char *playerdir, void *context,
+                                           struct uade_state *state) {
+        auto *self = static_cast<UadeBackend *>(context);
+        const std::string requested = name ? name : "";
+        if (requested.find(':') != std::string::npos || self->scratch_.empty()) {
+            return uade_load_amiga_file(name, playerdir, state);
+        }
+        // The part to look up: whatever follows the scratch directory in an absolute request, or
+        // the name itself in a relative one.
+        std::string relative = requested;
+        const std::string prefix = self->scratch_ + "/";
+        if (!relative.empty() && relative[0] == '/') {
+            if (relative.compare(0, prefix.size(), prefix) != 0) {
+                return uade_load_amiga_file(name, playerdir, state);
+            }
+            relative = relative.substr(prefix.size());
+        }
+        std::string directory = self->scratch_;
+        std::size_t start = 0;
+        while (start <= relative.size()) {
+            const std::size_t slash = relative.find('/', start);
+            const std::string segment =
+                relative.substr(start, slash == std::string::npos ? std::string::npos : slash - start);
+            if (!segment.empty() && segment != ".") {
+                if (segment == "..") return uade_load_amiga_file(name, playerdir, state);
+                const std::string found = matchIgnoringCase(directory, segment);
+                if (found.empty()) return nullptr;
+                directory += "/" + found;
+            }
+            if (slash == std::string::npos) break;
+            start = slash + 1;
+        }
+        return uade_file_load(directory.c_str());
+    }
+
+    /** The entry in [directory] whose name equals [wanted] ignoring case, or empty. */
+    static std::string matchIgnoringCase(const std::string &directory, const std::string &wanted) {
+        DIR *dir = ::opendir(directory.c_str());
+        if (!dir) return {};
+        std::string match;
+        while (struct dirent *entry = ::readdir(dir)) {
+            if (::strcasecmp(entry->d_name, wanted.c_str()) == 0) {
+                match = entry->d_name;
+                if (match == wanted) break;  // an exact match wins over a case-folded one
+            }
+        }
+        ::closedir(dir);
+        return match;
+    }
 
     /**
      * Points stdout and stderr at [path] for as long as it lives, and puts them back after.

@@ -117,8 +117,21 @@ def main() -> int:
 
     extensions, prefixes = offered()
     print(f"The app offers {len(extensions)} UADE extensions and {len(prefixes)} prefixes.")
-    base = base_dir()
-    scratch = pathlib.Path(tempfile.mkdtemp(prefix="uade-scratch-"))
+    # **Under a directory that may be passed through and not listed**, as `/data` is to an app on
+    # Android. UADE's own file search walked the path from `/` listing each directory, which works
+    # everywhere on a desktop and nowhere on a phone; TFMX's samples were "not found" beside the
+    # tune there and nowhere else. Both the data directory and the scratch directory live under
+    # this, so the host can no longer pass what a phone cannot.
+    locked = WORK / "locked"
+    if locked.exists():
+        locked.chmod(0o755)
+        shutil.rmtree(locked)
+    inner = locked / "inner"
+    shutil.copytree(base_dir(), inner / "base")
+    base = inner / "base"
+    scratch = inner / "scratch"
+    scratch.mkdir()
+    locked.chmod(0o111)
     env = {"UADE_CORE_FILE": args.core, "UADE_BASE_DIR": str(base), "UADE_SCRATCH_DIR": str(scratch),
            "PATH": "/usr/bin:/bin"}
 
@@ -174,8 +187,9 @@ def main() -> int:
     leftovers = list(scratch.iterdir())
     print(f"\nscratch directory after everything: {len(leftovers)} entries")
     print("\n" + ", ".join(f"{k}×{v}" for k, v in tally.most_common()))
-    shutil.rmtree(scratch, ignore_errors=True)
-    return 0 if not leftovers else 1
+    locked.chmod(0o755)
+    shutil.rmtree(locked, ignore_errors=True)
+    return 0 if not leftovers and not failures else 1
 
 
 if __name__ == "__main__":
