@@ -111,7 +111,16 @@ public:
         }
         // A finished tune has no callback left to hand anything to, so the stream needs starting
         // for the new tune to be heard.
-        if (!wasRunning) start();
+        //
+        // **Closed first, the way `restart` does it** (`docs/STATUS.md` C73). When a tune ends the
+        // callback returns `Stop` and the stream object stays, so `start()` -- which returns at
+        // once when a stream exists -- did nothing: the next subsong was selected, the app said
+        // "playing", and nothing was heard until pause and play closed the stream. UADE ends every
+        // subsong cleanly, so "play all subsongs" through `cust.paradroid` hit it at every one.
+        if (!wasRunning) {
+            stop();
+            start();
+        }
     }
 
     /**

@@ -427,6 +427,23 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C73. ~~The next subsong after a tune ended was selected and never heard~~ — FIXED 2026-09-21, branch
+
+With "play all subsongs" on, `cust.paradroid` moved to its second subsong when the first ended, the
+app showed it as playing, and nothing sounded. Pause and play brought it back; four seconds later it
+stopped again.
+
+When a tune ends, the audio callback returns `Stop` and Oboe never calls it again, but the stream
+object stays. `requestSubsong` then selected the next subsong and called `start()` to be heard, and
+`start()` returns at once when a stream exists. `restart()` closes the stream before starting, which
+is why pause and play worked. It does the same now.
+
+**Not a UADE defect**, though UADE exposed it: every subsong there ends with a clean short render,
+and paradroid's second to sixth are two- to five-second effects, so the "stopped again" was the
+same fault at the next boundary. Any backend whose subsongs end by running out would have met it.
+Not reproducible off a phone — Oboe is the half the host run does not have — so this is reasoned
+from the code and waits for the phone.
+
 ### C71. ~~"Get some music to browse" flashed on every visit to Online catalogues~~ — FIXED 2026-09-21, branch
 
 The row appeared for a moment each time Online catalogues opened, on a phone holding every index,
