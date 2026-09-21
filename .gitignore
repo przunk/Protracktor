@@ -59,3 +59,6 @@ user/*.jpg
 user/*.jpeg
 user/*.webp
 user/tests/
+
+# The owner's working notes for an unattended run: his, not the project's record.
+GOAL.md
