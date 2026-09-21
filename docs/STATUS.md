@@ -427,6 +427,15 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, branch
+
+Found the day the in-app policy was added: it stopped at the first line of "Changes", would not
+scroll further, and ended against the bottom edge. The screen is a full-screen dialog, and with its
+window fitting the system bars itself the content was measured to the whole screen, so the last
+lines lay under the navigation bar. `decorFitsSystemWindows = false` hands the insets to the
+Scaffold, as on every other screen, and both legal lists end with 32 dp of space. **Reasoned from the
+layout, not reproduced** — there is no emulator here; the phone decides.
+
 ### C77. ~~Several deletes spoke all at once, seconds after their rows had gone~~ — FIXED 2026-09-21
 
 After C76 the rows went at the press, but each delete's message still waited for the database. Four

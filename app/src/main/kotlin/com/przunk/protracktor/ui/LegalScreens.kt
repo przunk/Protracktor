@@ -5,6 +5,7 @@ package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -60,7 +61,7 @@ fun LicencesScreen(onClose: () -> Unit) {
     ) { modifier ->
         val shown = open
         if (shown == null) {
-            LazyColumn(modifier) {
+            LazyColumn(modifier, contentPadding = PaddingValues(bottom = END_SPACE)) {
                 items(components, key = { it.id }) { component ->
                     ListItem(
                         headlineContent = { Text(component.name) },
@@ -86,7 +87,7 @@ fun LicencesScreen(onClose: () -> Unit) {
                     listOf("## " + asset.substringAfterLast('/')) + text.split(Regex("\n\\s*\n"))
                 }
             }
-            LazyColumn(modifier.padding(horizontal = 16.dp)) {
+            LazyColumn(modifier.padding(horizontal = 16.dp), contentPadding = PaddingValues(bottom = END_SPACE)) {
                 items(paragraphs) { paragraph ->
                     if (paragraph.startsWith("## ")) {
                         Text(
@@ -125,7 +126,7 @@ fun PrivacyPolicyScreen(onClose: () -> Unit) {
         }.map { LegalText.privacyBlocks(it, polish) }.getOrDefault(emptyList())
     }
     FullScreen(title = stringResource(R.string.settings_privacy), onBack = onClose) { modifier ->
-        LazyColumn(modifier.padding(horizontal = 16.dp)) {
+        LazyColumn(modifier.padding(horizontal = 16.dp), contentPadding = PaddingValues(bottom = END_SPACE)) {
             items(blocks) { block ->
                 when (block) {
                     is LegalText.Block.Heading -> Text(
@@ -153,7 +154,16 @@ fun PrivacyPolicyScreen(onClose: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FullScreen(title: String, onBack: () -> Unit, content: @Composable (Modifier) -> Unit) {
-    Dialog(onDismissRequest = onBack, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    // **Edge to edge, with the insets left to the Scaffold** (`docs/STATUS.md` C78). With the
+    // dialog's own window fitting the system bars, the content was measured to the full screen and
+    // its last lines lay under the navigation bar -- the privacy policy stopped at the first line of
+    // "Changes" and would not scroll further. `decorFitsSystemWindows = false` hands the insets to
+    // the Scaffold, which pads the top bar below the status bar and the content above the
+    // navigation bar, as every other screen here does.
+    Dialog(
+        onDismissRequest = onBack,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -173,3 +183,6 @@ private fun FullScreen(title: String, onBack: () -> Unit, content: @Composable (
         }
     }
 }
+
+/** Space after the last line of a legal text, so it does not end against the screen's edge. */
+private val END_SPACE = 32.dp
