@@ -7,16 +7,20 @@ Players for these formats exist. This one is written because the existing ones l
 you leave the app, shuffle without a history, hold everything in a single playlist, and take
 seconds to start a track that is measured in kilobytes.
 
-**Status: 0.4.0 is in closed testing on Google Play** (versionCode 679, tag
-[`v0.4.0`](https://github.com/przunk/protracktor/releases/tag/v0.4.0)). That tag is the exact source
-the published build was made from, which is what the GPL below obliges.
+**Status: 0.7.0 is in closed testing on Google Play** (versionCode 788, tag
+[`v0.7.0`](https://github.com/przunk/protracktor/releases/tag/v0.7.0)). That tag is the exact source
+the published build was made from, which is what the GPL below obliges. Every release, with the
+hash of what was uploaded, is in
+[`store/play-console/releases.md`](store/play-console/releases.md), which `scripts/release.sh` writes.
 
 It plays tracker modules, Atari ST, Atari 8-bit, Commodore 64, the ZX Spectrum AY trackers, the
-Amiga synth trackers and seven console families, with playlists, background playback and a media
-session. Local folders are scanned by opening every file rather than by trusting its name. Four
+Amiga synth trackers, the Amiga custom replayers through UADE (TFMX, Hippel, Future Composer and
+the rest — their replay routines downloaded on request) and seven console families, with playlists,
+background playback and a media session. Local folders are scanned by opening every file rather than by trusting its name. Four
 online archives: Modland and ASMA browse offline from a downloaded index, The Mod Archive searches
 live, and UnExoticA is behind a switch until its maintainers answer a question
-(`docs/PLAN_UNEXOTICA.md`). HVSC's database supplies the duration a SID cannot carry.
+(`docs/PLAN_UNEXOTICA.md`). HVSC's database supplies the duration a SID cannot carry, and UADE's `songdb` the one an Amiga
+tune cannot; what neither knows is measured while the tune plays.
 
 There is also a **player for the browser** in `web/`, which plays the same archives and takes a
 playlist handed to it by the phone. It is a second player rather than a second screen; see
@@ -44,14 +48,19 @@ actually been confirmed on a device.
 | [`docs/WISHLIST.md`](docs/WISHLIST.md) | ideas, numbered **B1…Bn**, with who raised them and when |
 | [`docs/WEB_SERVER.md`](docs/WEB_SERVER.md) | running the browser player, on a machine or a Raspberry Pi |
 | [`docs/BUILD.md`](docs/BUILD.md) | how to build debug, release and a store bundle |
-| [`docs/PRIVACY.md`](docs/PRIVACY.md) | what leaves the phone, which is the published privacy policy |
+| [`store/privacy-policy.md`](store/privacy-policy.md) | the privacy policy, in both languages — the one published, and the one shown in the app |
+| [`docs/PRIVACY.md`](docs/PRIVACY.md) | why that is the only copy, and what leaves the phone in short |
 | [`docs/LICENSES.md`](docs/LICENSES.md) | every third-party component, its licence, and what that obliges us to do |
+| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | what the app has to do, each requirement traced to the complaint it came from |
+| [`docs/PLAN_SONGDB_LENGTHS.md`](docs/PLAN_SONGDB_LENGTHS.md) | where Amiga tunes get their length, and in what order the sources are asked |
+| [`docs/PLAN_INSTRUMENT_NAMES.md`](docs/PLAN_INSTRUMENT_NAMES.md) | instrument and sample names in Now Playing, planned before any code |
 | [`docs/ROADMAP_FORMATS.md`](docs/ROADMAP_FORMATS.md) | what we cannot play yet, in the order worth doing it, with what each costs |
+| [`docs/PLAY_STORE.md`](docs/PLAY_STORE.md) | what Google Play asks for, answered |
 | [`store/README.md`](store/README.md) | the Play listing in both languages, the console declarations, and the release gates still open |
 | [`store/play-console/releases.md`](store/play-console/releases.md) | every artifact handed to Play: hash, versionCode, commit, tag, signer |
 | [`docs/rules/`](docs/rules) | the rules the phone and the browser share, as data both of them are tested against |
 | [`docs/TESTING.md`](docs/TESTING.md) | what only a phone can prove, and what to check on a build before trusting it |
-| `docs/review-round-*.md` | what a pass over a finished round's own diff found, and what it checked and cleared |
+| `docs/review.md`, `docs/review-round-*.md` | what a pass over a finished round's own diff found, and what it checked and cleared |
 
 ## Licence
 
@@ -64,5 +73,11 @@ Version 3 rather than 2 because `sc68` alone requires it, and because the Androi
 with GPL-3. Every component, its licence and what it obliges us to do is in
 [`docs/LICENSES.md`](docs/LICENSES.md); the reasoning is in `docs/ARCHITECTURE.md`.
 
-UADE is **not** in the app. It has been measured on the host (`scripts/build-uade-probe.sh`) and
-what adopting it would cost is `docs/BACKLOG.md` A43 and A44.
+UADE is in the app since 0.7.0, and its licence needed reading rather than assuming: the emulator
+states "GPL" with no version, libuade "LGPL" with none. `uadecore` runs as a separate program the
+app starts and talks to over a socket; libuade is linked in. Why that is compatible with GPL-3, as
+accepted by the owner on 2026-09-21, is in [`docs/LICENSES.md`](docs/LICENSES.md). UADE's replay
+routines are not in the APK; they are downloaded when the user asks for them.
+
+The app shows every component's licence text itself, under **Settings → Open-source licences**, and
+a test fails when something compiled into the build has no entry there.
