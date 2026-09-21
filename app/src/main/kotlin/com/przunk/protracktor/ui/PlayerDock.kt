@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.ui
 
+import android.provider.Settings
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -33,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +53,19 @@ import com.przunk.protracktor.player.RepeatMode
  * becomes the button that opens Browse. A strip that is permanently dead and explains nothing
  * teaches the user something untrue (AGENTS.md §7).
  */
+/**
+ * A dock line that scrolls slowly left when it does not fit (A54), held for [DockMarquee.PAUSE_MS]
+ * at the start of every pass. Without [scrolls] it is the plain line, cut with `…` as before.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.dockLine(scrolls: Boolean): Modifier =
+    if (!scrolls) this else basicMarquee(
+        iterations = Int.MAX_VALUE,
+        initialDelayMillis = DockMarquee.PAUSE_MS,
+        repeatDelayMillis = DockMarquee.PAUSE_MS,
+        velocity = DockMarquee.VELOCITY_DP.dp,
+    )
+
 @Composable
 fun PlayerDock(
     state: PlayerUiState,
@@ -68,6 +84,12 @@ fun PlayerDock(
 ) {
     val haptics = rememberHaptics()
     val loaded = state.current
+    // Read once per composition of the dock rather than watched: the setting changes rarely, and a
+    // change reaches the dock the next time it is built -- the activity is recreated for less.
+    val context = LocalContext.current
+    val animatorScale = remember(context) {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    }
     val expandLabel = stringResource(R.string.a11y_expand_player)
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -140,6 +162,9 @@ fun PlayerDock(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = loaded?.title ?: stringResource(R.string.dock_idle_title),
+                        // A title that does not fit scrolls rather than losing its end (A54); one
+                        // that fits stands still, which the marquee decides by measuring.
+                        modifier = Modifier.dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
                         // A size up from titleSmall: this is read at a glance, in a car among
                         // other places, so the dock grows to fit rather than the text being
                         // squeezed to keep the dock's old height.
@@ -173,6 +198,9 @@ fun PlayerDock(
                             }
                             else -> stringResource(R.string.dock_idle_subtitle)
                         },
+                        modifier = Modifier.dockLine(
+                            DockMarquee.scrolls(animatorScale, isStatus = state.loadingTrack)
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
