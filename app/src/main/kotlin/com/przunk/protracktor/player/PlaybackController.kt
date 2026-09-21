@@ -245,8 +245,19 @@ data class PlayerUiState(
     /** True while a file handed to us by another app is playing. */
     val externalMode: Boolean get() = transient != null && externalOpen
 
-    /** True while search results are driving playback rather than the playlist. */
-    val searchMode: Boolean get() = resultsQueue != null
+    /**
+     * True while search results are driving playback rather than the playlist.
+     *
+     * **A queue left behind is not a queue playing.** Playing a dice pick does not clear the list
+     * Browse was last played from, so `resultsQueue != null` alone answered yes while the dice was
+     * the only source — and the Random view, which closes itself when results take over
+     * (`docs/STATUS.md` C49), closed in the frame it opened.
+     *
+     * The condition is the one [nextFile] already applies: a transient tune owns the transport
+     * unless the dice is waiting under a list, in which case the list owns it and this is a
+     * digression (`docs/BACKLOG.md` A41).
+     */
+    val searchMode: Boolean get() = resultsQueue != null && (transient == null || diceWaiting)
 
     /** True whenever what is playing did not come from the active playlist. */
     val awayFromPlaylist: Boolean get() = transient != null || searchMode
@@ -2680,7 +2691,17 @@ class PlaybackController private constructor(private val context: Context) {
             randomPlayed = -1
             failedRandomPicks = 0
             _state.update {
-                it.copy(randomPicks = emptyList(), randomIndex = -1, randomExhausted = false, diceWaiting = false)
+                it.copy(
+                    randomPicks = emptyList(),
+                    randomIndex = -1,
+                    randomExhausted = false,
+                    diceWaiting = false,
+                    // Whatever was the source before this is not the source now. The list Browse
+                    // was played from stays on screen there, but it has stopped driving playback,
+                    // and leaving it in the state left two answers to "what is playing".
+                    resultsQueue = null,
+                    externalOpen = false,
+                )
             }
             advanceRandom()
         }
