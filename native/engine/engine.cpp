@@ -72,6 +72,7 @@ extern "C" {
 #include <uade/uade.h>
 }
 #include <dirent.h>
+#include <fcntl.h>
 #include <fstream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -1803,6 +1804,16 @@ public:
 
         makeScratch(paths.scratch);
         for (const protracktor::Companion &companion : companions) write(companion.name, companion.bytes);
+
+        // **UADE's reasons, kept.** libuade and uadecore explain a refusal only on stderr and
+        // stdout -- "Could not load player", "load: request error: smpl.x" -- and on a phone both
+        // go nowhere, so every refusal read "does not recognise it" whatever the cause. Both
+        // descriptors point into this instance's scratch directory while the song is opened, and
+        // uadecore inherits them at fork, so its own complaints land there too. The last line is
+        // attached to the refusal (`docs/BACKLOG.md` A44). One opening at a time, because the
+        // descriptors are the process's, not this object's.
+        std::unique_lock<std::mutex> opening(openMutex());
+        const Captured captured(scratch_ + "/.uade-said");
         // The tune itself last, and its path is the one UADE is asked about. Companions are only
         // ever *found* by the emulated program, by the name the tune asks for.
         modulePath_ = write(name, bytes);
@@ -1830,15 +1841,20 @@ public:
         state_ = uade_new_state(config);
         std::free(config);
         if (!state_) {
+            std::string reason = "the Amiga decoder (UADE) would not start";
+            const std::string said = captured.lastLine();
+            if (!said.empty()) reason += " (UADE: " + said + ")";
             cleanScratch();
-            throw std::runtime_error("the Amiga decoder (UADE) would not start");
+            throw std::runtime_error(reason);
         }
 
         const int claimed = uade_play(modulePath_.c_str(), -1, state_);
         if (claimed <= 0) {
-            const std::string reason = claimed == 0
+            std::string reason = claimed == 0
                 ? "the Amiga decoder (UADE) does not recognise it"
                 : "the Amiga decoder (UADE) failed while opening it";
+            const std::string said = captured.lastLine();
+            if (!said.empty()) reason += " (UADE: " + said + ")";
             close();
             throw std::runtime_error(reason);
         }
@@ -1994,6 +2010,55 @@ private:
         uade_play(modulePath_.c_str(), chosen, state_);
         if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
     }
+
+    static std::mutex &openMutex() { static std::mutex m; return m; }
+
+    /**
+     * Points stdout and stderr at [path] for as long as it lives, and puts them back after.
+     *
+     * The file is not closed early on purpose: uadecore inherited the descriptor at fork and keeps
+     * writing to it while it plays, and the scratch directory's removal is what ends it.
+     */
+    class Captured {
+    public:
+        explicit Captured(const std::string &path) : path_(path) {
+            std::fflush(stdout);
+            std::fflush(stderr);
+            const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+            if (fd < 0) return;
+            savedOut_ = ::dup(1);
+            savedErr_ = ::dup(2);
+            ::dup2(fd, 1);
+            ::dup2(fd, 2);
+            ::close(fd);
+        }
+        ~Captured() { restore(); }
+
+        /** The last non-empty line written so far, trimmed; empty if nothing was said. */
+        std::string lastLine() const {
+            std::fflush(stdout);
+            std::fflush(stderr);
+            std::ifstream in(path_);
+            std::string line, last;
+            while (std::getline(in, line)) {
+                while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
+                // libuade's own chatter about a config file this app does not use is not a reason.
+                if (!line.empty() && line.find("uadeconfig not loaded") == std::string::npos) last = line;
+            }
+            return last.size() > 160 ? last.substr(0, 160) : last;
+        }
+
+    private:
+        void restore() {
+            std::fflush(stdout);
+            std::fflush(stderr);
+            if (savedOut_ >= 0) { ::dup2(savedOut_, 1); ::close(savedOut_); savedOut_ = -1; }
+            if (savedErr_ >= 0) { ::dup2(savedErr_, 2); ::close(savedErr_); savedErr_ = -1; }
+        }
+        std::string path_;
+        int savedOut_ = -1;
+        int savedErr_ = -1;
+    };
 
     static bool hasPlayers(const std::string &base) {
         DIR *dir = ::opendir((base + "/players").c_str());
