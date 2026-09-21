@@ -430,11 +430,14 @@ nowhere in a repository (`docs/BACKLOG.md` A49).
 ### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, branch
 
 Found the day the in-app policy was added: it stopped at the first line of "Changes", would not
-scroll further, and ended against the bottom edge. The screen is a full-screen dialog, and with its
-window fitting the system bars itself the content was measured to the whole screen, so the last
-lines lay under the navigation bar. `decorFitsSystemWindows = false` hands the insets to the
-Scaffold, as on every other screen, and both legal lists end with 32 dp of space. **Reasoned from the
-layout, not reproduced** — there is no emulator here; the phone decides.
+scroll further, and ended against the bottom edge — its last lines lay under the navigation bar.
+
+**The first fix did not fix it.** The page was a full-screen dialog; handing the insets to its
+Scaffold (`decorFitsSystemWindows = false`) changed nothing on the phone, which says the dialog
+received no system-bar insets at all. So the legal pages are no longer a window of their own: they
+show in the place of the Settings list and take Settings' own padding, which the app's Scaffold
+already computes to clear the top bar, the dock and the system bars — plus 32 dp after the last line.
+Reasoned from the layout; there is no emulator here, and the phone decides.
 
 ### C77. ~~Several deletes spoke all at once, seconds after their rows had gone~~ — FIXED 2026-09-21
 

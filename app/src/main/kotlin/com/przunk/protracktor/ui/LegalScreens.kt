@@ -10,15 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,8 +27,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.LegalText
 import com.przunk.protracktor.data.OpenSourceNotices
@@ -41,12 +36,10 @@ import com.przunk.protracktor.data.OpenSourceNotices
  *
  * Every component in `app/notices/components.tsv`, with its licence files copied into the APK by the
  * build -- the texts BSD, MIT and Apache ask to travel with the binary, and GPL's own (decided
- * 2026-09-21, release checklist §1). A full-screen window over Settings, so Back and the arrow both
- * close it and nothing in the app's own navigation has to know it exists.
+ * 2026-09-21, release checklist §1). Shown in the place of the Settings list, with its padding.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LicencesScreen(onClose: () -> Unit) {
+fun LicencesScreen(contentPadding: PaddingValues, onClose: () -> Unit) {
     val context = LocalContext.current
     val components = remember {
         runCatching {
@@ -55,13 +48,16 @@ fun LicencesScreen(onClose: () -> Unit) {
     }
     var open by remember { mutableStateOf<OpenSourceNotices.Component?>(null) }
 
-    FullScreen(
+    // Back from a component's text returns to the list, and from the list to Settings.
+    androidx.activity.compose.BackHandler(enabled = open != null) { open = null }
+    Pane(
         title = open?.name ?: stringResource(R.string.settings_notices),
+        contentPadding = contentPadding,
         onBack = { if (open != null) open = null else onClose() },
-    ) { modifier ->
+    ) { modifier, listPadding ->
         val shown = open
         if (shown == null) {
-            LazyColumn(modifier, contentPadding = PaddingValues(bottom = END_SPACE)) {
+            LazyColumn(modifier, contentPadding = listPadding) {
                 items(components, key = { it.id }) { component ->
                     ListItem(
                         headlineContent = { Text(component.name) },
@@ -87,7 +83,7 @@ fun LicencesScreen(onClose: () -> Unit) {
                     listOf("## " + asset.substringAfterLast('/')) + text.split(Regex("\n\\s*\n"))
                 }
             }
-            LazyColumn(modifier.padding(horizontal = 16.dp), contentPadding = PaddingValues(bottom = END_SPACE)) {
+            LazyColumn(modifier.padding(horizontal = 16.dp), contentPadding = listPadding) {
                 items(paragraphs) { paragraph ->
                     if (paragraph.startsWith("## ")) {
                         Text(
@@ -115,9 +111,8 @@ fun LicencesScreen(onClose: () -> Unit) {
  * **The published file, not a copy of it** (`store/privacy-policy.md`, copied in by the build), so
  * what the app shows and what the store links to cannot say different things.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrivacyPolicyScreen(onClose: () -> Unit) {
+fun PrivacyPolicyScreen(contentPadding: PaddingValues, onClose: () -> Unit) {
     val context = LocalContext.current
     val polish = context.resources.configuration.locales[0].language == "pl"
     val blocks = remember(polish) {
@@ -125,8 +120,8 @@ fun PrivacyPolicyScreen(onClose: () -> Unit) {
             context.assets.open(LegalText.PRIVACY_ASSET).bufferedReader().use { it.readText() }
         }.map { LegalText.privacyBlocks(it, polish) }.getOrDefault(emptyList())
     }
-    FullScreen(title = stringResource(R.string.settings_privacy), onBack = onClose) { modifier ->
-        LazyColumn(modifier.padding(horizontal = 16.dp), contentPadding = PaddingValues(bottom = END_SPACE)) {
+    Pane(title = stringResource(R.string.settings_privacy), contentPadding = contentPadding, onBack = onClose) { modifier, listPadding ->
+        LazyColumn(modifier.padding(horizontal = 16.dp), contentPadding = listPadding) {
             items(blocks) { block ->
                 when (block) {
                     is LegalText.Block.Heading -> Text(
@@ -151,36 +146,35 @@ fun PrivacyPolicyScreen(onClose: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * A legal page in the place of the Settings list: a header row with the way back, then the text.
+ *
+ * Takes Settings' own [contentPadding], which the app's Scaffold computes to clear the top bar,
+ * the player dock and the system bars -- so the text ends where every other list here ends, with
+ * [END_SPACE] more after its last line (C78).
+ */
 @Composable
-private fun FullScreen(title: String, onBack: () -> Unit, content: @Composable (Modifier) -> Unit) {
-    // **Edge to edge, with the insets left to the Scaffold** (`docs/STATUS.md` C78). With the
-    // dialog's own window fitting the system bars, the content was measured to the full screen and
-    // its last lines lay under the navigation bar -- the privacy policy stopped at the first line of
-    // "Changes" and would not scroll further. `decorFitsSystemWindows = false` hands the insets to
-    // the Scaffold, which pads the top bar below the status bar and the content above the
-    // navigation bar, as every other screen here does.
-    Dialog(
-        onDismissRequest = onBack,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
-                        }
-                    },
-                    title = { Text(title) },
-                )
-            },
-        ) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding)) {
-                HorizontalDivider()
-                content(Modifier.fillMaxSize())
+private fun Pane(
+    title: String,
+    contentPadding: PaddingValues,
+    onBack: () -> Unit,
+    content: @Composable (Modifier, PaddingValues) -> Unit,
+) {
+    Column(Modifier.fillMaxSize().padding(top = contentPadding.calculateTopPadding())) {
+        androidx.compose.foundation.layout.Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            modifier = Modifier.padding(end = 16.dp),
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(PlayerIcons.Back, stringResource(R.string.action_back))
             }
+            Text(title, style = MaterialTheme.typography.titleMedium)
         }
+        HorizontalDivider()
+        content(
+            Modifier.fillMaxSize(),
+            PaddingValues(bottom = contentPadding.calculateBottomPadding() + END_SPACE),
+        )
     }
 }
 
