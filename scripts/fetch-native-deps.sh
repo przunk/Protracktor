@@ -56,6 +56,27 @@ fetch() {
     echo "  ✅ $name $version"
 }
 
+# Applies our patches to a fetched tree: native/patches/<name>/*.patch, in name order.
+#
+# **Idempotent, and checked in both directions.** A patch that applies is applied; one whose
+# reverse applies is already in; one that does neither means the upstream file moved under it, and
+# that stops the fetch rather than building an unpatched decoder that looks patched. Each patch says
+# at its top why it exists.
+apply_patches() {
+    local name="$1" dest="$VENDOR/$1" patch_file
+    for patch_file in "$PROJECT_DIR/native/patches/$name/"*.patch; do
+        [ -e "$patch_file" ] || continue
+        if patch -d "$dest" -p1 -R --dry-run --silent < "$patch_file" > /dev/null 2>&1; then
+            echo "  ✅ $name: $(basename "$patch_file") (already applied)"
+        elif patch -d "$dest" -p1 --forward --silent < "$patch_file" > /dev/null; then
+            echo "  🩹 $name: $(basename "$patch_file")"
+        else
+            echo "  ❌ $name: $(basename "$patch_file") no longer applies -- the upstream file changed."
+            exit 1
+        fi
+    done
+}
+
 echo "Fetching native dependencies into native/vendor/"
 echo
 
@@ -67,6 +88,8 @@ fetch libopenmpt \
       "https://lib.openmpt.org/files/libopenmpt/src/libopenmpt-0.8.9+release.makefile.tar.gz" \
       "9273b88b67973cc69e54d748ab1b749399d6d07695f1c37d0c59f88b4106074f" \
       1
+# One patch, for text only: a MOD's title in CP437 came out as U+FFFD (docs/BACKLOG.md A47).
+apply_patches libopenmpt
 
 # sc68 -- GPL-2.0-OR-LATER.
 #

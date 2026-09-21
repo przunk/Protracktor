@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 17
+    const val VERSION = 18
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -396,6 +396,32 @@ object SchemaSql {
         """.trimIndent(),
     )
 
+    /**
+     * Titles stored damaged, handed back to be read again: version 18 (`docs/BACKLOG.md` A47).
+     *
+     * **Data only; the shape does not change.** Until 0.7.0 the engine let a title through in
+     * whatever its file was written in, and CP437 or ISO-8859-1 letters arrived as U+FFFD -- which
+     * was then stored, and nothing would ever read it again: a playlist row is re-read only while
+     * its title still equals its file name, and a library row only when its folder is stale.
+     *
+     * So exactly the damaged rows go back to that state. A playlist or history row gets its file
+     * name as its title and an empty author, which is what the background pass and the next play
+     * both look for; a library row loses its decoder fingerprint, which makes its folder offer a
+     * rescan. U+FFFD is written as `char(65533)` because no title a person typed contains it, and
+     * the statements stay plain ASCII. Rows without it are not touched.
+     *
+     * In [CREATE] as well, where it runs over empty tables and changes nothing -- so the two lists
+     * stay the one list they are meant to be.
+     */
+    private val REREAD_DAMAGED_TITLES_V18: List<String> = listOf(
+        "UPDATE tracks SET title = CASE WHEN file_name <> '' THEN file_name ELSE title END, author = '' " +
+            "WHERE instr(title, char(65533)) > 0 OR instr(author, char(65533)) > 0",
+        "UPDATE play_history SET title = CASE WHEN file_name <> '' THEN file_name ELSE title END, author = '' " +
+            "WHERE instr(title, char(65533)) > 0 OR instr(author, char(65533)) > 0",
+        "UPDATE library_index SET backends = '' " +
+            "WHERE instr(title, char(65533)) > 0 OR instr(author, char(65533)) > 0",
+    )
+
     val CREATE: List<String> = listOf(
         """
         CREATE TABLE playlists (
@@ -453,7 +479,8 @@ object SchemaSql {
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
-        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17
+        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17 +
+        REREAD_DAMAGED_TITLES_V18
 
 
 
@@ -481,6 +508,7 @@ object SchemaSql {
         15 to CATALOGUE_PLAYABLE_V15,
         16 to CATALOGUE_ARCHIVE_COUNT_V16,
         17 to SONGDB_LENGTHS_V17,
+        18 to REREAD_DAMAGED_TITLES_V18,
     )
 
     /**

@@ -50,6 +50,12 @@ Downloads the decoder sources into `native/vendor/`, which is gitignored. Each i
 version and verified against a SHA-256 recorded in the script; a mismatch refuses to unpack rather
 than warning. Downloads are cached in `~/.protracktor/downloads`, so a re-fetch costs nothing.
 
+**Our patches** live in `native/patches/<library>/` and are applied by the same script, after the
+unpack. Each is checked both ways: already applied is fine, applies is applied, and one that does
+neither stops the fetch, because the upstream file moved under it. **A checkout fetched before a
+patch was added needs the script run again** — the version is unchanged, so it will not re-download,
+but it will patch. Today there is one, for libopenmpt's text (`docs/STATUS.md` C79).
+
 Run it once before the first build. `build-debug.sh` does not run it for you, because a build that
 silently reaches out to the network is a build that behaves differently depending on whether you
 noticed.

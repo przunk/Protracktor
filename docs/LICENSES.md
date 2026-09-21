@@ -59,7 +59,7 @@ projects' terms rather than ours.
 
 | Component | Covers | Licence expected | Verified |
 | --- | --- | --- | --- |
-| libopenmpt 0.8.9 | MOD, XM, S3M, IT, MPTM and many others | BSD-3-Clause | **yes, 2026-08-31** |
+| libopenmpt 0.8.9, **patched** (one function, `native/patches/libopenmpt/`) | MOD, XM, S3M, IT, MPTM and many others | BSD-3-Clause, which allows modification | **yes, 2026-08-31** |
 | sc68 **3.0.0b** (SVN r713) | Atari ST SNDH, YM, `.sc68` | GPL-3.0-**or-later** | **yes, 2026-09-03** |
 | libsidplayfp 3.1.1 | C64: PSID, RSID | GPL-2.0-**or-later** | **yes, 2026-09-02** |
 | game-music-emu 0.6.5 | NSF, NSFE, GBS, SPC, VGM, VGZ, GYM, HES, AY, KSS | LGPL-2.1-**or-later** | **yes, 2026-09-01** |

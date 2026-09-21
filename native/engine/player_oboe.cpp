@@ -237,7 +237,7 @@ public:
         // `describe()` walks a decoder's instrument and sample tables, which on a truncated file
         // is the first place a length read past the end becomes a throw (`docs/STATUS.md` C42). An
         // unreadable description costs a line of metadata, not the process.
-        std::string text = guarded<std::string>("describe", [&] { return backend_->describe(); },
+        std::string text = guarded<std::string>("describe", [&] { return protracktor::describeOf(*backend_); },
                                                 std::string());
         const std::lock_guard<std::mutex> held(describeGuard_);
         describe_ = std::move(text);
