@@ -146,6 +146,44 @@ extension	pp20	openmpt	PC
 extension	xpk	openmpt	PC
 extension	umx	openmpt	PC
 
+# The Amiga custom formats, through UADE. The phone's alone: UADE is a second process and
+# WebAssembly cannot start one, so the page's engine says `uade:none` and these rows drop out of
+# its index. Measured in `SupportedFormats`, which says which Modland directory each came from.
+extension	ml	uade	Amiga
+extension	cus	uade	Amiga
+extension	sa	uade	Amiga
+extension	bp	uade	Amiga
+extension	bp3	uade	Amiga
+extension	aon	uade	Amiga
+extension	dw	uade	Amiga
+extension	sid2	uade	Amiga
+extension	dm2	uade	Amiga
+extension	hipc	uade	Amiga
+extension	dmu	uade	Amiga
+extension	prt	uade	Amiga
+extension	hip	uade	Amiga
+extension	fred	uade	Amiga
+extension	mm8	uade	Amiga
+extension	mm4	uade	Amiga
+extension	jam	uade	Amiga
+extension	dl	uade	Amiga
+extension	dln	uade	Amiga
+extension	bd	uade	Amiga
+extension	syn	uade	Amiga
+extension	mk2	uade	Amiga
+extension	tw	uade	Amiga
+extension	bss	uade	Amiga
+extension	jd	uade	Amiga
+extension	aps	uade	Amiga
+extension	avp	uade	Amiga
+extension	wb	uade	Amiga
+extension	sm3	uade	Amiga
+extension	soc	uade	Atari ST
+extension	sog	uade	Atari ST
+extension	hst	uade	Atari ST
+extension	doda	uade	Atari ST
+
+
 # Filename prefixes, the Amiga way: `mod.title` rather than `title.mod`
 prefix	ahx	hively	Amiga
 prefix	hvl	hively	Amiga
@@ -160,3 +198,5 @@ prefix	ice	openmpt	Amiga
 prefix	fc	openmpt,asap	Amiga
 prefix	smod	openmpt	Amiga
 prefix	sndh	sc68	Atari ST
+prefix	mdat	uade	Amiga
+prefix	cust	uade	Amiga

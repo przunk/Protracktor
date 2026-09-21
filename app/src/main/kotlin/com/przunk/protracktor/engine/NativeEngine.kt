@@ -83,13 +83,28 @@ object NativeEngine {
      * formats ASAP handles are told apart by extension rather than by any header, and one of them
      * shares `.fc` with an Amiga format libopenmpt claims.
      */
-    fun open(bytes: ByteArray, fileName: String): Opened {
+    /**
+     * [companions] are the other files of a multifile song — `smpl.name` beside `mdat.name` for
+     * TFMX — as (file name, bytes). Only UADE reads them, and only because the emulated program
+     * asks for them by name while it plays; every other decoder is handed one file.
+     */
+    fun open(
+        bytes: ByteArray,
+        fileName: String,
+        companions: List<Pair<String, ByteArray>> = emptyList(),
+    ): Opened {
         // The reason comes back with the call. It used to sit in a process-wide string that the
         // caller collected afterwards, which was fine while one thread opened files at a time and
         // became a data race -- confirmed under ThreadSanitizer -- the moment library scanning was
         // made concurrent with playback (`docs/review.md` R2).
         val reason = arrayOfNulls<String>(1)
-        val handle = nativeOpen(bytes, fileName, reason)
+        val handle = nativeOpen(
+            bytes,
+            fileName,
+            companions.map { it.first }.toTypedArray(),
+            companions.map { it.second }.toTypedArray(),
+            reason,
+        )
         return Opened(
             track = if (handle == 0L) null else Track(handle),
             error = reason[0].orEmpty(),
@@ -180,6 +195,8 @@ object NativeEngine {
     @JvmStatic private external fun nativeOpen(
         data: ByteArray,
         fileName: String,
+        companionNames: Array<String>,
+        companionData: Array<ByteArray>,
         errorOut: Array<String?>,
     ): Long
     @JvmStatic private external fun nativeClose(handle: Long)

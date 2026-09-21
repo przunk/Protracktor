@@ -383,6 +383,7 @@
     <string name="notice_favourites_playable">%1$,d of %2$,d favourites are in your Modland index.</string>
     <string name="notice_favourites_need_index">%1$,d favourites downloaded. Index Modland to play them.</string>
     <string name="notice_replays_failed">Could not download the replay routines.</string>
+    <string name="open_failed_needs_players">\"%1$s\" needs the Amiga replay routines. Download them from Browse → Online catalogues.</string>
     <string name="notice_players_failed">Could not download the Amiga replay routines.</string>
     <plurals name="notice_replays_done">
         <item quantity="one">%1$,d replay routine downloaded. .sc68 files should play now.</item>

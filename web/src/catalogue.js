@@ -89,8 +89,8 @@ export function platformOf(table, fileName) {
  * **Only what it says.** `pt_backends` appends `zxtune:none` and `uade:none` when those decoders
  * are compiled out and mentions nothing else as missing -- HivelyTracker is in every build and
  * never named. So absence is read from the fingerprint and never inferred from a name not being
- * there. In this build both are absent: ZXTune will not compile under Emscripten, and UADE is a
- * second process, which WebAssembly cannot start at all.
+ * there. The browser build is missing UADE and always will be: it is a second process, which
+ * WebAssembly cannot start at all.
  */
 export function absentDecoders(engineFingerprint) {
   const absent = new Set();

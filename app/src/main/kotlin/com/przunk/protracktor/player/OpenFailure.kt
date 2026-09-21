@@ -28,6 +28,14 @@ object OpenFailure {
         /** No backend claims this name. The format is genuinely absent, and saying so is fair. */
         FORMAT_UNSUPPORTED,
 
+        /**
+         * An Amiga custom format, and the replay routines it needs are not on the phone. Neither
+         * the file nor the format is at fault, and the fix is one download away, so the message
+         * says where that download is instead of blaming the tracker decoder that happened to be
+         * the last one asked.
+         */
+        NEEDS_AMIGA_PLAYERS,
+
         /** We claim the format and a decoder gave a reason. Report the reason, about this file. */
         FILE_REFUSED_WITH_REASON,
 
@@ -39,10 +47,17 @@ object OpenFailure {
      * @param fetched whether the bytes arrived at all.
      * @param claimed whether `SupportedFormats` says this name is playable — the load-bearing one.
      * @param reason what the decoder said, which is often empty and sometimes only meaningful to us.
+     * @param needsPlayers whether the name is one only UADE plays and its replay routines are absent.
      */
-    fun kindOf(fetched: Boolean, claimed: Boolean, reason: String): Kind = when {
+    fun kindOf(
+        fetched: Boolean,
+        claimed: Boolean,
+        reason: String,
+        needsPlayers: Boolean = false,
+    ): Kind = when {
         !fetched -> Kind.NOT_FETCHED
         !claimed -> Kind.FORMAT_UNSUPPORTED
+        needsPlayers -> Kind.NEEDS_AMIGA_PLAYERS
         reason.isNotBlank() -> Kind.FILE_REFUSED_WITH_REASON
         else -> Kind.FILE_REFUSED
     }

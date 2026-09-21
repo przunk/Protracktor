@@ -6,6 +6,7 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.os.Process
 import android.os.SystemClock
 import android.provider.OpenableColumns
@@ -1335,7 +1336,12 @@ class PlaybackController private constructor(private val context: Context) {
             context.contentResolver.openInputStream(Uri.parse(candidate.uri))?.use { it.readBytes() }
         }.getOrNull() ?: return null
 
-        val opened = NativeEngine.open(bytes, candidate.fileName).track ?: return null
+        val companions = siblingDocuments(Uri.parse(candidate.uri)).mapNotNull { (name, uri) ->
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            }.getOrNull()?.let { name to it }
+        }
+        val opened = NativeEngine.open(bytes, candidate.fileName, companions).track ?: return null
         return try {
             val described = opened.describe()
             IndexedFile(
@@ -3279,9 +3285,13 @@ class PlaybackController private constructor(private val context: Context) {
     private suspend fun describeFailure(ref: TrackRef, fetched: Boolean, reason: String = ""): String {
         val name = ref.fileNameOrTitle
         val claimed = SupportedFormats.looksPlayable(name)
-        return when (OpenFailure.kindOf(fetched, claimed, reason)) {
+        val needsPlayers = SupportedFormats.needsUade(name) &&
+            withContext(Dispatchers.IO) { !UadePlayers.present(context) }
+        return when (OpenFailure.kindOf(fetched, claimed, reason, needsPlayers)) {
             OpenFailure.Kind.NOT_FETCHED ->
                 context.getString(R.string.open_failed_not_fetched, ref.title)
+            OpenFailure.Kind.NEEDS_AMIGA_PLAYERS ->
+                context.getString(R.string.open_failed_needs_players, ref.title)
             OpenFailure.Kind.FORMAT_UNSUPPORTED ->
                 context.getString(
                     R.string.open_failed_format,
@@ -4018,7 +4028,10 @@ class PlaybackController private constructor(private val context: Context) {
                 return@launch
             }
 
-            val result = withContext(Dispatchers.IO) { NativeEngine.open(bytes, ref.fileNameOrTitle) }
+            val companions = loadCompanions(ref)
+            val result = withContext(Dispatchers.IO) {
+                NativeEngine.open(bytes, ref.fileNameOrTitle, companions)
+            }
             val opened = result.track
             if (opened == null) {
                 _state.update {
@@ -4224,8 +4237,9 @@ class PlaybackController private constructor(private val context: Context) {
                 // describe() and close() were on the caller's thread, which is the main one --
                 // close() destroys a decoder, and for sc68 that is an emulator being torn down.
                 // All of it belongs on the background thread, not just the open.
+                val companions = loadCompanions(ref)
                 val described = withContext(backgroundWork) {
-                    val opened = NativeEngine.open(bytes, ref.fileNameOrTitle).track
+                    val opened = NativeEngine.open(bytes, ref.fileNameOrTitle, companions).track
                         ?: return@withContext null
                     val text = opened.describe()
                     opened.close()
@@ -4265,6 +4279,72 @@ class PlaybackController private constructor(private val context: Context) {
                 }.getOrNull()
             }
         }
+
+    /**
+     * The other files [ref]'s song needs, read from wherever [ref] itself came from.
+     *
+     * Empty for every single-file format, which is nearly all of them, and that costs one string
+     * comparison. For TFMX it is `smpl.name` beside `mdat.name` (`Companions`), and the source
+     * decides how "beside" is reached: the next URL in the same Modland directory, the next member
+     * of the same UnExoticA archive, the next document in the same granted folder.
+     *
+     * **A companion that cannot be found is not an error here.** The song is still opened without
+     * it, and UADE says it does not recognise it, which is the truth; failing before the decoder is
+     * asked would hide which half was missing.
+     */
+    private suspend fun loadCompanions(ref: TrackRef): List<Pair<String, ByteArray>> {
+        if (Companions.namesFor(ref.fileNameOrTitle.substringAfterLast('/')).isEmpty() &&
+            Companions.siblingPaths(ref.id).isEmpty()
+        ) {
+            return emptyList()
+        }
+        val unexotica = if (UnExoticA.ENABLED) UnExoticA.pathFrom(ref.id) else null
+        return when {
+            unexotica != null -> {
+                val archiveUrl = UnExoticA.archiveUrlFor(unexotica) ?: return emptyList()
+                val member = UnExoticA.split(unexotica)?.second ?: return emptyList()
+                val archive = remoteFiles.fetch(archiveUrl) ?: return emptyList()
+                withContext(backgroundWork) {
+                    Companions.siblingPaths(member).mapNotNull { sibling ->
+                        Lha.extract(archive, sibling)?.let { sibling.substringAfterLast('/') to it }
+                    }
+                }
+            }
+            ref.id.startsWith("http") ->
+                Companions.siblingPaths(ref.id).mapNotNull { url ->
+                    remoteFiles.fetch(url)?.let { bytes ->
+                        Uri.decode(url.substringAfterLast('/')) to bytes
+                    }
+                }
+            ref.id.startsWith("content:") -> withContext(Dispatchers.IO) {
+                siblingDocuments(Uri.parse(ref.id)).mapNotNull { (name, uri) ->
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    }.getOrNull()?.let { name to it }
+                }
+            }
+            else -> emptyList()
+        }
+    }
+
+    /**
+     * The companions of a document in a granted folder, as (name, uri).
+     *
+     * **Best effort, and it says so.** The external-storage provider gives documents ids that are
+     * paths — `primary:Music/TFMX/mdat.unicorn` — so the sibling is the same id with the last
+     * segment renamed. Other providers give opaque ids with nothing to rename, and there this finds
+     * nothing: the tune opens alone and UADE refuses it, rather than this walking a whole folder
+     * tree on every play to look.
+     */
+    private fun siblingDocuments(uri: Uri): List<Pair<String, Uri>> = runCatching {
+        val documentId = DocumentsContract.getDocumentId(uri)
+        val treeId = DocumentsContract.getTreeDocumentId(uri)
+        val tree = DocumentsContract.buildTreeDocumentUri(uri.authority, treeId)
+        Companions.siblingPaths(documentId).map { siblingId ->
+            siblingId.substringAfterLast('/').substringAfterLast(':') to
+                DocumentsContract.buildDocumentUriUsingTree(tree, siblingId)
+        }
+    }.getOrDefault(emptyList())
 
     /**
      * A tune out of an UnExoticA game archive.

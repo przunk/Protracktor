@@ -406,6 +406,7 @@
     <string name="notice_favourites_playable">%1$,d z %2$,d ulubionych jest w twoim indeksie Modland.</string>
     <string name="notice_favourites_need_index">Pobrano %1$,d ulubionych. Zaindeksuj Modland, aby je odtwarzać.</string>
     <string name="notice_replays_failed">Nie udało się pobrać procedur odtwarzających.</string>
+    <string name="open_failed_needs_players">\"%1$s\" potrzebuje amigowych procedur odtwarzających. Pobierz je w Browse → Katalogi online.</string>
     <string name="notice_players_failed">Nie udało się pobrać amigowych procedur odtwarzających.</string>
     <plurals name="notice_replays_done">
         <item quantity="one">Pobrano %1$,d procedurę odtwarzającą. Pliki .sc68 powinny już grać.</item>

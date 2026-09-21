@@ -1069,11 +1069,11 @@ if (window.__api) {
   console.log('\nonly what this browser can play:');
   const archive = await import(path.resolve('web/src/catalogue.js'));
   const table = archive.parseFormats(fs.readFileSync('web/src/formats.tsv', 'utf8'));
-  const browser = 'openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;zxtune:none';
-  const phone = browser.replace(';zxtune:none', '');
+  const browser = 'openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;zxtune:none;uade:none';
+  const phone = browser.replace(';zxtune:none', '').replace(';uade:none', '');
 
   check(table.extensions.size > 100 && table.prefixes.size > 10, 'the real list is read, extensions and prefixes');
-  check([...archive.absentDecoders(browser)].join() === 'zxtune', 'the browser engine lacks exactly ZXTune');
+  check([...archive.absentDecoders(browser)].sort().join() === 'uade,zxtune', 'the browser engine lacks exactly ZXTune and UADE');
   check(archive.platformOf(table, 'zoolook.mod') === 'Amiga' && archive.platformOf(table, 'mod.zoolook') === 'Amiga',
     'a file\'s machine comes from its extension or its Amiga prefix');
   check(archive.platformOf(table, 'Commando.sid') === 'Commodore 64' && archive.platformOf(table, 'a.pt3') === 'ZX Spectrum',
@@ -1092,6 +1092,9 @@ if (window.__api) {
   check(here('mod.title') && here('ELYSIUM.MOD'), 'an Amiga prefix name and an upper-case extension are both kept');
   check(!here('holiday.jpg') && !archive.onPhone(table)('holiday.jpg'), 'and a photograph is kept by neither');
   check(archive.onPhone(table)('bomb.pt3'), 'the phone would keep the Spectrum tune the browser drops');
+  check(!here('mdat.turrican') && there('mdat.turrican') && !here('alfred chicken.dw') && there('alfred chicken.dw'),
+    'an Amiga custom tune is the phone\'s alone: UADE is a second process and the page cannot start one');
+  check(archive.platformOf(table, '5th gear.soc') === 'Atari ST', 'and an ST replay UADE plays is still an Atari ST tune');
 
   // **The index keeps every row now** (`docs/ROADMAP_FORMATS.md` step 0), and what plays is decided
   // where it is read. This used to check `filterIndex`, which dropped rows at download time and

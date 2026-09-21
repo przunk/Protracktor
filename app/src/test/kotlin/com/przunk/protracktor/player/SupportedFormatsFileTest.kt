@@ -89,6 +89,6 @@ class SupportedFormatsFileTest {
          * `hively`, which is in every build and so is never printed. A decoder outside this set is a
          * typo, and a typo here would make the page drop a format it can play.
          */
-        val DECODERS = setOf("openmpt", "hively", "sc68", "asap", "gme", "zxtune", "sidplayfp")
+        val DECODERS = setOf("openmpt", "hively", "sc68", "asap", "gme", "zxtune", "sidplayfp", "uade")
     }
 }
