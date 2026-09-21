@@ -75,7 +75,7 @@ library's default.
 and its own tests. **What it buys**: every format with nowhere to write a length — NSF, AY, KSS,
 GBS, SNDH without sc68's database, SID without HVSC — gets a real one after a single listen.
 
-## A52. Song lengths from songdb for the Amiga formats — **planned 2026-09-21, schema 17 reserved**
+## A52. Song lengths from songdb for the Amiga formats — **planned and approved 2026-09-21, schema 17 reserved**
 
 `docs/PLAN_SONGDB_LENGTHS.md` has it in full. In one paragraph: songdb, from the same repository the
 track metadata already comes from, has a length for **every one of the 3,792** Modland files the app
@@ -84,7 +84,7 @@ lengths for the 1,172 that loop, which the measurement cannot give. It replaces 
 and the second emulator for every tune it knows, and gives looping tunes a slider. It is **not** a
 source for consoles, SID or anything outside what audacious-uade plays: measured, zero such rows.
 11.9 MB to download, 11.1 MB stored with an integer key (25.0 MB with the text key `track_metadata`
-uses). Four decisions are the owner's (D1–D4 in the plan). **A50 is folded in** as the plan's last
+uses). The four decisions (D1–D4) were approved as recommended. **A50 is folded in** as the plan's last
 step: a length learnt by playing becomes a row of the same shape.
 
 ## A49. Quotations from correspondence in the documentation — **DONE 2026-09-18**

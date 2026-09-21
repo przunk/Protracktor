@@ -5,8 +5,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Song lengths from songdb
 
-*Planned 2026-09-21, after A44 made the Amiga custom formats play. Not started. `docs/BACKLOG.md`
-A52 is the entry; this is the reasoning and the steps.*
+*Planned 2026-09-21, after A44 made the Amiga custom formats play. **D1–D4 approved as recommended
+the same day.** `docs/BACKLOG.md` A52 is the entry; this is the reasoning and the steps.*
 
 ## Why now, when it was "mostly redundant" in September
 
@@ -81,7 +81,7 @@ subsong that duplicates another.
 | `e` | error | 1,706 | no |
 | `t` | timeout | 170 | **no** — a cap, not a length; C67, and A44's 512-second trap |
 
-## Decisions that are the owner's
+## Decisions that were the owner's — approved 2026-09-21 as recommended
 
 **D1. One download or two.** songdb's metadata table already downloads under "Track metadata",
 from the same repository. Recommended: **the same tick**, relabelled "Track metadata and lengths" —
