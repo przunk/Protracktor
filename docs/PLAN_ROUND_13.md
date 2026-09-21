@@ -34,7 +34,8 @@ free number when its run starts, because it is built on `develop` after A47 has 
 3. **A53**, on the titles A47 made right.
 4. **A54**, independent and small.
 5. **A55**, the largest and the only one with network, storage and privacy consequences.
-6. **A48, the fix**, from what step 1 measured on the phone.
+6. ~~**A48, the fix**, from what step 1 measured on the phone.~~ **Not needed** (2026-09-21): the phone
+   measured under 0.4 s from process start to the playlist, and the owner closed A48.
 
 One branch and one PR per item, each off `develop` as the owner has left it. Nothing merges before
 the phone.

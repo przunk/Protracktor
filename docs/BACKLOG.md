@@ -159,7 +159,18 @@ safe to paraphrase; "he wanted it because…" is not, and now has nowhere to liv
 - The **dates on measurements** stay too: "measured 2026-09-11, 6,780 entries" is provenance of a
   fact, not of a person.
 
-## A48. Two seconds pass before the playlist appears — **measured, one cause fixed 2026-09-18**
+## A48. ~~Two seconds pass before the playlist appears~~ — **CLOSED 2026-09-21: gone, measured on the phone**
+
+**Closed by the owner on 2026-09-21**: "the app starts fast; I think it was solved along the way."
+Measured on his phone the same evening with launch logging (build 803): from the process starting
+to the first frame showing a 44-track playlist, **333 ms** on the first start after install and
+**390 ms** on a cold start; every query 0–3 ms. The two seconds are not there, and the most likely
+reason is the 2026-09-18 fix below — the scan of half a million rows inside a write transaction at
+start-up. The logging itself is on `feature/a48-launch-timing`, not merged; whether it stays is the
+owner's call.
+
+The record as it stood before the measurement:
+
 
 *In round 13 (2026-09-21): `docs/PLAN_ROUND_13.md` has the steps and the decisions.*
 
