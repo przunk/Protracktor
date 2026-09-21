@@ -27,9 +27,11 @@ under the finger that tapped it and the list reorders while it is being read.
 - **Inside History**, a play does not move the row. The list stays as it was while it is open.
 - **Anywhere else** — playlist, Browse, search, Random — a play updates the last-played time and
   the row goes to the top, as today.
-- Not decided yet, to ask before building: whether a play from History still counts towards
-  `play_count` and whether it updates the time without moving the row (so the next visit shows it
-  on top), or leaves the time alone.
+- **Decided 2026-09-22** (the owner, as recommended): a play started from History — and the tracks
+  that follow it from there — leaves its history entry alone entirely: no new time, no position,
+  **no `play_count`**. History then says what was played elsewhere, and does not drift under the
+  person reading it. And while History is open, it is not refreshed at all: it shows what it
+  showed when it was opened.
 ## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13**
 
 Opening a Modland author's folder fetches its tracks into the cache one after another, three at a

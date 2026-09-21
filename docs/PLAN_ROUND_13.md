@@ -118,6 +118,8 @@ marks, then a short table for the letters that do not decompose: `ł→l`, `đ�
 
 **D2 — where the folded text lives.**
 
+**Decided 2026-09-22: (a)**, approved by the owner as recommended.
+
 - **(a) Recommended: a sparse `folded` column**, filled only for rows whose title or author is not
   plain ASCII, and `NULL` for the rest. The query is folded and matched against `title`, `author`
   *and* `folded`. An ASCII row is matched by its own columns as today; a row with accents is
