@@ -151,6 +151,9 @@ and it is in the Compose version already in use, so no new dependency.
 
 **D3 — what scrolls, and how.**
 
+**Decided 2026-09-21:** the owner asked for A54 next without choosing otherwise, so it is built to
+the recommendation, (a).
+
 - **(a) Recommended:** each of the two lines scrolls on its own, only when it overflows; about
   30 dp per second, a two-second pause at the start of every pass; **no scrolling at all when the
   system's "Remove animations" is on**, which then falls back to `…` as today. The loading line
