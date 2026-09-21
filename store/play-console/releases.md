@@ -6,6 +6,25 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 0.7.0 — versionCode 788
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v0.7.0`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-0.7.0-788.aab` |
+| Size | 21632456 bytes |
+| SHA-256 | `bd6a32a48fbdf137d9407e7e8f61bd47b73814aad756929af6649215df766b57` |
+| versionCode | 788 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 0.7.0 |
+| Commit | `83b9f4e` |
+| Tag | `v0.7.0` |
+| Built | 2026-09-21 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v0.6.0**: `git log --oneline v0.6.0..v0.7.0`, and
+`docs/STATUS.md` for the defects by number.
 ## 0.6.0 — versionCode 731
 
 Closed testing. Round 12: the index stops depending on what this build can play.
