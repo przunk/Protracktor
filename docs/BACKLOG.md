@@ -284,7 +284,7 @@ Two things to settle when it is picked up:
   (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
   differ — A43 is in the same corner of the same screen and the two may as well be one branch.
 
-## A44. UADE's process model — **decided 2026-09-19, fork+exec; integration on `feature/a44-uade`**
+## A44. UADE's process model — **decided 2026-09-19, fork+exec; merged 2026-09-21**
 
 Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
 guess it. The recommendation was taken as it stood. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
