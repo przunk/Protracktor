@@ -69,7 +69,7 @@ fun SettingsScreen(
     onWebPlayerChanged: (String) -> Unit,
     songLengthCount: Int,
     trackMetadataCount: Int,
-    favouriteCount: Int,
+    songDbLengthCount: Int,
     contentPadding: PaddingValues,
     selectedTheme: AppTheme,
     dynamicColour: Boolean,
@@ -81,11 +81,8 @@ fun SettingsScreen(
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
-    onClearSongLengths: () -> Unit,
-    onClearTrackMetadata: () -> Unit,
-    onClearFavourites: () -> Unit,
-    onDeleteReplays: () -> Unit,
-    onDeletePlayers: () -> Unit,
+    onDeleteSongMetadata: () -> Unit,
+    onDeleteReplayRoutines: () -> Unit,
 ) {
     val haptics = rememberHaptics()
     val context = LocalContext.current
@@ -269,14 +266,11 @@ fun SettingsScreen(
                 catalogues = catalogues,
                 songLengthCount = songLengthCount,
                 trackMetadataCount = trackMetadataCount,
-                favouriteCount = favouriteCount,
+                songDbLengthCount = songDbLengthCount,
                 onClearCache = onClearCache,
                 onDeleteIndex = onDeleteIndex,
-                onClearSongLengths = onClearSongLengths,
-                onClearTrackMetadata = onClearTrackMetadata,
-                onClearFavourites = onClearFavourites,
-                onDeleteReplays = onDeleteReplays,
-                onDeletePlayers = onDeletePlayers,
+                onDeleteSongMetadata = onDeleteSongMetadata,
+                onDeleteReplayRoutines = onDeleteReplayRoutines,
             )
         }
 

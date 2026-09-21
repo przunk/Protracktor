@@ -39,6 +39,7 @@ import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.Lha
 import com.przunk.protracktor.net.ModArchive
+import com.przunk.protracktor.net.Modland
 import com.przunk.protracktor.net.RemoteFiles
 import com.przunk.protracktor.net.WebRemote
 import com.przunk.protracktor.net.Sc68Replays
@@ -291,6 +292,15 @@ object DownloadKeys {
 
     /** The one press that fetches the lot. Its own key, so the offer can show its own spinner. */
     const val EVERYTHING = "everything"
+
+    /**
+     * Everything the app knows about a file that the file cannot say -- HVSC's SID lengths,
+     * songdb's credits and lengths -- as one press. Nobody has to know which database says what.
+     */
+    const val SONG_METADATA = "songmetadata"
+
+    /** sc68's and UADE's replay routines, as one press. Other people's code, fetched from them. */
+    const val REPLAY_ROUTINES = "replayroutines"
 }
 
 data class BrowseState(
@@ -481,7 +491,7 @@ data class BrowseState(
      */
     val offersDownloadEverything: Boolean
         get() = knowsWhatIsHeld && heldCountsKnown &&
-            (catalogues.any { it.requiresIndex } || songLengthCount == 0 || !songDbComplete)
+            (catalogues.any { it.requiresIndex } || !songMetadataComplete)
 
     /**
      * Whether both halves of the songdb tick are here: the metadata and, since A52, the lengths.
@@ -493,6 +503,17 @@ data class BrowseState(
      */
     val songDbComplete: Boolean
         get() = trackMetadataCount > 0 && songDbLengthCount > 0
+
+    /**
+     * Whether the whole song metadata button's worth is here: HVSC's SID lengths and both halves of
+     * songdb. One button fetches the three (decided 2026-09-21), so one answer says whether it has.
+     */
+    val songMetadataComplete: Boolean
+        get() = songLengthCount > 0 && songDbComplete
+
+    /** Whether both sets of replay routines are here, sc68's and UADE's: one button, one answer. */
+    val replayRoutinesComplete: Boolean
+        get() = replayCount > 0 && playerCount > 0
 }
 
 class PlaybackController private constructor(private val context: Context) {
@@ -2234,6 +2255,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun deleteCatalogueIndex(catalogueId: String) {
         scope.launch {
             catalogues.clearIndex(catalogueId)
+            if (catalogueId == Modland.id) dropFavourites()
             val freed = withContext(backgroundWork) {
                 if (Catalogue.byId(catalogueId)?.isArchive != true) return@withContext 0L
                 val before = remoteFiles.archiveBytes(catalogueId)
@@ -2263,43 +2285,13 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Throws away the HVSC song lengths. SID durations go unknown until they are fetched again.
-     *
-     * **The songdb metadata is not touched here**, and has its own control: it is 380,282 rows of
-     * author, album and year, and a button naming song lengths must not throw them out.
+     * Modland's favourites go with Modland's index: they are Modland paths, meaningless without it.
+     * Random leaves that scope, since a scope whose contents are gone would draw nothing -- and the
+     * chip that set it is then disabled, leaving no way back but a restart.
      */
-    fun clearSongLengths() {
-        scope.launch {
-            songLengths.clear()
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_song_lengths_deleted))) }
-            refreshCatalogues()
-        }
-    }
-
-    /** Throws away the songdb metadata. Years and authors go blank until it is fetched again. */
-    fun clearTrackMetadata() {
-        scope.launch {
-            trackMetadata.clear()
-            // The lengths came with it and go with it: one download, one delete (D1).
-            songDbLengths.clear()
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_deleted))) }
-            refreshCatalogues()
-        }
-    }
-
-    /** Throws away Modland's favourites. Random loses that scope until the list is fetched again. */
-    fun clearFavourites() {
-        scope.launch {
-            favourites.clear()
-            // Back to Everything, because a scope whose contents have just been deleted would draw
-            // nothing and report an empty index -- and the chip that set it is now disabled, so
-            // there would be no way back to Everything but a restart.
-            if (_browse.value.randomScope is RandomScope.Favourites) {
-                setRandomScope(RandomScope.Everything)
-            }
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_favourites_deleted))) }
-            refreshCatalogues()
-        }
+    private suspend fun dropFavourites() {
+        favourites.clear()
+        if (_browse.value.randomScope is RandomScope.Favourites) setRandomScope(RandomScope.Everything)
     }
 
     /** The wording for what [CacheBudget.describeFreed] worked out. */
@@ -2346,7 +2338,19 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun indexCatalogue(id: String) {
         val catalogue = Catalogue.byId(id) ?: return
-        scope.launch { fetchCatalogue(catalogue)?.let { say(it.message) } }
+        scope.launch {
+            val fetched = fetchCatalogue(catalogue) ?: return@launch
+            // **Modland brings its favourites** (decided 2026-09-21): Modland's own list of Modland
+            // paths, one idea with the archive. Their failure is said only if the index landed.
+            if (catalogue.id == Modland.id && fetched.ok) {
+                val list = fetchFavourites()
+                if (list != null && !list.ok) {
+                    say(list.message)
+                    return@launch
+                }
+            }
+            say(fetched.message)
+        }
     }
 
     /**
@@ -2410,15 +2414,43 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Downloads HVSC's song length database.
+     * HVSC's SID lengths and songdb's credits and lengths, as one press with one message.
      *
-     * Offered as its own action rather than fetched when the first SID plays, because it is 5 MB
-     * and the moment somebody presses play on a tune is the wrong moment to spend it. It is not a
-     * catalogue either -- nothing in it can be played, it only answers "how long" about SIDs that
-     * came from somewhere else, so it sits below the catalogues rather than among them.
+     * **One button, because nobody should need to know which database says what** about a file.
+     * HVSC's lengths rode with Modland until now; they answer "how long is this SID" about tunes
+     * from anywhere, a granted folder included, so they belong with the other facts about files
+     * rather than with one catalogue (decided 2026-09-21).
      */
-    fun downloadSongLengths() {
-        scope.launch { fetchSongLengths()?.let { say(it.message) } }
+    fun downloadSongMetadata() {
+        if (!beginDownload(DownloadKeys.SONG_METADATA, context.getString(R.string.song_metadata_title))) return
+        scope.launch {
+            try {
+                val results = listOfNotNull(fetchSongLengths(), fetchTrackMetadata())
+                val failed = results.firstOrNull { !it.ok }
+                say(failed?.message ?: Message(context.getString(R.string.notice_song_metadata_done)))
+            } finally {
+                withContext(NonCancellable) {
+                    endDownload(DownloadKeys.SONG_METADATA)
+                    refreshCatalogues()
+                }
+            }
+        }
+    }
+
+    /**
+     * Throws away every downloaded fact about files: HVSC's lengths, songdb's credits and lengths.
+     *
+     * **What this phone learnt by playing stays** (`learned_lengths`, A50): it was not downloaded,
+     * cannot be downloaded again, and costs next to nothing. The button deletes what it fetched.
+     */
+    fun deleteSongMetadata() {
+        scope.launch {
+            songLengths.clear()
+            trackMetadata.clear()
+            songDbLengths.clear()
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_song_metadata_deleted))) }
+            refreshCatalogues()
+        }
     }
 
     /** HVSC's lengths, as one step. See [fetchCatalogue] for why the steps are shaped like this. */
@@ -2447,22 +2479,6 @@ class PlaybackController private constructor(private val context: Context) {
                 )
             ),
         )
-    }
-
-    /**
-     * Fetches the songdb metadata table.
-     *
-     * Its own action for the same reason the song lengths are: **15 MB, and the moment somebody
-     * presses play is the wrong moment to spend it.** Nothing in it can be played -- it only
-     * answers "who wrote this and when" about files that came from somewhere else -- so it sits
-     * beside the song lengths rather than among the catalogues.
-     *
-     * What it buys, measured rather than hoped: **67,601 of the Modland files this app claims would
-     * gain a release year**, and the formats that gain most are the ones with nowhere in the file
-     * to put one -- 40,161 ProTracker, 11,733 Fasttracker 2 (`docs/reference/songdb.md`).
-     */
-    fun downloadTrackMetadata() {
-        scope.launch { fetchTrackMetadata()?.let { say(it.message) } }
     }
 
     /** The songdb table, as one step. See [fetchCatalogue]. */
@@ -2564,16 +2580,10 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Fetches Modland's favourites list.
-     *
-     * Beside the song lengths and the metadata table because it is the same kind of thing: nothing
-     * in it plays, and it answers a question about files that came from somewhere else. 142 KB, so
-     * it is over before a progress bar would have meant anything.
-     *
-     * **The count reported is the playable one**, not the number of rows written. 991 paths go into
-     * the table; how many the dice can reach depends on the Modland index this device holds, and
-     * the sentence that follows a download should describe what the user just gained rather than
-     * what the file contained.
+     * Modland's favourites on their own. **Not a row any more** -- they come with Modland -- but
+     * the Random scope sheet still offers them when the favourites scope is empty: a phone that
+     * indexed Modland before the two travelled together has the index and not the list, and a
+     * whole Modland re-download to fix that would be six megabytes for 142 KB.
      */
     fun downloadFavourites() {
         scope.launch { fetchFavourites()?.let { say(it.message) } }
@@ -2701,40 +2711,25 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Fetches the sc68 replay routines the app deliberately does not ship.
-     *
-     * `docs/LICENSES.md` has the reasoning; `Sc68Replays` has the mechanism. The app ships one
-     * replay of the ninety-nine — sc68's own — and this brings the rest from sc68's own
-     * SourceForge, which is what keeps us out of the business of distributing other people's code.
-     *
-     * Ninety-eight small files, so it reports progress: an indeterminate bar for a minute of
-     * downloads says nothing, and this is the one download in the app that is not a single file.
+     * sc68's replay routines as one step: how many arrived, or null when none did. Progress shows
+     * under its own key; the message is the caller's to give. `docs/LICENSES.md` has why they are
+     * fetched rather than shipped.
      */
-    fun downloadReplays() {
-        if (!beginDownload(DownloadKeys.REPLAYS, REPLAYS_LABEL)) return
-        scope.launch {
+    private suspend fun fetchReplays(): Int? {
+        if (!beginDownload(DownloadKeys.REPLAYS, REPLAYS_LABEL)) return null
+        try {
             val fetched = Sc68Replays.download(context) { done, total ->
-                // The one download that can say how far it is. It replaces its own entry rather
-                // than adding one, so the banner counts up in place while other rows carry on.
                 _browse.update {
                     it.copy(indexing = it.indexing + (DownloadKeys.REPLAYS to "$REPLAYS_LABEL $done/$total"))
                 }
             }
-            endDownload(DownloadKeys.REPLAYS)
-            if (fetched == null || fetched == 0) {
-                _state.update {
-                    it.copy(message = Message(context.getString(R.string.notice_replays_failed)))
-                }
-                return@launch
-            }
+            if (fetched == null || fetched == 0) return null
             // Put them where sc68 will look, now rather than at the next update. It is handed a
-            // path once and reads what is under it each time it opens a tune, so this is enough --
-            // no restart, and the next `.sc68` works.
+            // path once and reads what is under it each time it opens a tune, so this is enough.
             withContext(backgroundWork) { NativeData.adoptDownloadedReplays(context) }
-            _state.update {
-                it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_replays_done, fetched, fetched)))
-            }
-            refreshCatalogues()
+            return fetched
+        } finally {
+            endDownload(DownloadKeys.REPLAYS)
         }
     }
 
@@ -2756,68 +2751,79 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Fetches UADE's replay routines: 726 KB from upstream's own repository.
-     *
-     * The same arrangement as sc68's, for the same reason and after the same question was asked of
-     * the people who would know (`docs/LICENSES.md`). Without them UADE plays 12 files in 300.
-     */
-    fun downloadPlayers() {
-        if (!beginDownload(DownloadKeys.PLAYERS, PLAYERS_LABEL)) return
-        scope.launch {
+    /** UADE's replay routines as one step: how many arrived, or null when none did. */
+    private suspend fun fetchPlayers(): Int? {
+        if (!beginDownload(DownloadKeys.PLAYERS, PLAYERS_LABEL)) return null
+        try {
             val fetched = UadePlayers.download(context) { done, total ->
                 _browse.update {
                     it.copy(indexing = it.indexing + (DownloadKeys.PLAYERS to "$PLAYERS_LABEL $done/$total"))
                 }
             }
-            endDownload(DownloadKeys.PLAYERS)
-            if (fetched == null || fetched == 0) {
-                _state.update {
-                    it.copy(message = Message(context.getString(R.string.notice_players_failed)))
-                }
-                return@launch
-            }
+            if (fetched == null || fetched == 0) return null
             withContext(backgroundWork) {
                 val version = context.packageManager
                     .getPackageInfo(context.packageName, 0).longVersionCode.toString()
                 configureUade(version)
             }
-            _state.update {
-                it.copy(message = Message(context.resources.getQuantityString(R.plurals.notice_players_done, fetched, fetched)))
-            }
-            refreshCatalogues()
+            return fetched
+        } finally {
+            endDownload(DownloadKeys.PLAYERS)
         }
     }
 
-    /** Throws UADE's replay routines away. The Amiga custom formats stop playing until they return. */
-    fun deletePlayers() {
+    /**
+     * Both sets of replay routines, sc68's and UADE's, as one press with one message.
+     *
+     * **One button, because nobody should need to know which emulator a format runs on**
+     * (decided 2026-09-21). The note beside it still says what these are -- other people's code,
+     * fetched from the projects that publish it (`docs/LICENSES.md`).
+     */
+    fun downloadReplayRoutines() {
+        if (!beginDownload(DownloadKeys.REPLAY_ROUTINES, context.getString(R.string.replay_routines_title))) return
+        scope.launch {
+            try {
+                val sc68 = fetchReplays()
+                val uade = fetchPlayers()
+                say(
+                    Message(
+                        when {
+                            sc68 != null && uade != null ->
+                                context.resources.getQuantityString(
+                                    R.plurals.notice_replay_routines_done, sc68 + uade, sc68 + uade,
+                                )
+                            sc68 == null && uade == null ->
+                                context.getString(R.string.notice_replay_routines_failed)
+                            else -> context.getString(R.string.notice_replay_routines_partly)
+                        }
+                    )
+                )
+            } finally {
+                withContext(NonCancellable) {
+                    endDownload(DownloadKeys.REPLAY_ROUTINES)
+                    refreshCatalogues()
+                }
+            }
+        }
+    }
+
+    /**
+     * Throws both sets of replay routines away: `.sc68` goes back to mostly silent and the Amiga
+     * custom formats stop playing; SNDH does not care. One delete, as there is one download.
+     */
+    fun deleteReplayRoutines() {
         scope.launch {
             val freed = withContext(backgroundWork) {
-                val before = UadePlayers.bytes(context)
-                if (UadePlayers.delete(context)) {
-                    // The copies UADE actually reads go too, or it would go on playing from them
-                    // with nothing on the storage screen saying they were there.
-                    java.io.File(context.filesDir, "uade").deleteRecursively()
-                    before
-                } else {
-                    0L
-                }
+                val sc68 = Sc68Replays.bytes(context).takeIf { Sc68Replays.delete(context) } ?: 0L
+                val uade = UadePlayers.bytes(context).takeIf { UadePlayers.delete(context) } ?: 0L
+                // The copies UADE actually reads go too, or it would go on playing from them with
+                // nothing on the storage screen saying they were there.
+                java.io.File(context.filesDir, "uade").deleteRecursively()
+                sc68 + uade
             }
             val version = context.packageManager
                 .getPackageInfo(context.packageName, 0).longVersionCode.toString()
             withContext(backgroundWork) { configureUade(version) }
-            _state.update { it.copy(message = Message(freedMessage(freed))) }
-            refreshCatalogues()
-        }
-    }
-
-    /** Throws the downloaded replay routines away. `.sc68` goes back to mostly silent; SNDH does not care. */
-    fun deleteReplays() {
-        scope.launch {
-            val freed = withContext(backgroundWork) {
-                val before = Sc68Replays.bytes(context)
-                if (Sc68Replays.delete(context)) before else 0L
-            }
             _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }

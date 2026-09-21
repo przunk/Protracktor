@@ -72,4 +72,21 @@ class DownloadOfferTest {
         assertFalse(halfway.songDbComplete)
         assertTrue(halfway.offersDownloadEverything)
     }
+
+    @Test
+    fun `the song metadata row is complete only with all three databases`() {
+        // One button fetches HVSC's lengths and both halves of songdb (decided 2026-09-21).
+        val all = BrowseState(songLengthCount = 61_157, trackMetadataCount = 380_282, songDbLengthCount = 476_919)
+        assertTrue(all.songMetadataComplete)
+        assertFalse(all.copy(songLengthCount = 0).songMetadataComplete)
+        assertFalse(all.copy(songDbLengthCount = 0).songMetadataComplete)
+    }
+
+    @Test
+    fun `the replay routines row is complete only with both sets`() {
+        val both = BrowseState(replayCount = 98, playerCount = 176)
+        assertTrue(both.replayRoutinesComplete)
+        assertFalse(both.copy(playerCount = 0).replayRoutinesComplete)
+        assertFalse(both.copy(replayCount = 0).replayRoutinesComplete)
+    }
 }

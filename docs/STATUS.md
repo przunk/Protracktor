@@ -427,6 +427,18 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C74. ~~The replay-routine rows appeared for a few seconds and vanished~~ — FIXED 2026-09-21
+
+Opening Online catalogues on a phone holding both sets of replay routines showed their two
+download rows for a few seconds, and then they went. C71's flash again, one screen down: the rows
+were drawn while the counts were zero, and the counts are zero until the screen has read them —
+which is also what "not downloaded" looks like. C71 fixed the offer at the top and left these.
+
+Fixed by the regrouping of the same day rather than by a second gate: the song metadata and the
+replay routines are now one row each, always drawn, and their second line waits for
+`heldCountsKnown` — a row that is always there and says nothing until it knows cannot flash.
+`DownloadOfferTest` covers the two "complete" rules the rows read.
+
 ### C73. ~~The next subsong after a tune ended was selected and never heard~~ — FIXED 2026-09-21
 
 With "play all subsongs" on, `cust.paradroid` moved to its second subsong when the first ended, the
