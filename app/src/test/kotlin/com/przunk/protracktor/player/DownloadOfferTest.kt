@@ -37,7 +37,7 @@ class DownloadOfferTest {
     fun `and nothing once they say everything is here`() {
         val held = BrowseState(
             catalogues = listOf(indexed), knowsWhatIsHeld = true, heldCountsKnown = true,
-            songLengthCount = 61_157, trackMetadataCount = 300_000,
+            songLengthCount = 61_157, trackMetadataCount = 300_000, songDbLengthCount = 476_919,
         )
         assertFalse(held.offersDownloadEverything)
     }
@@ -46,7 +46,7 @@ class DownloadOfferTest {
     fun `a catalogue without its index is offered`() {
         val partial = BrowseState(
             catalogues = listOf(indexed, missing), knowsWhatIsHeld = true, heldCountsKnown = true,
-            songLengthCount = 61_157, trackMetadataCount = 300_000,
+            songLengthCount = 61_157, trackMetadataCount = 300_000, songDbLengthCount = 476_919,
         )
         assertTrue(partial.offersDownloadEverything)
     }
@@ -55,8 +55,21 @@ class DownloadOfferTest {
     fun `so are the song lengths or the metadata, once it is known they are missing`() {
         val noLengths = BrowseState(
             catalogues = listOf(indexed), knowsWhatIsHeld = true, heldCountsKnown = true,
-            songLengthCount = 0, trackMetadataCount = 300_000,
+            songLengthCount = 0, trackMetadataCount = 300_000, songDbLengthCount = 476_919,
         )
         assertTrue(noLengths.offersDownloadEverything)
+    }
+
+    @Test
+    fun `metadata fetched before the lengths existed still offers the lengths`() {
+        // A52. The metadata tick now brings songdb's lengths as well, and a phone that took the
+        // metadata before that holds half of it. Asking only about the metadata would never offer
+        // the rest, and those phones' Amiga tunes would wait for a measurement for ever.
+        val halfway = BrowseState(
+            catalogues = listOf(indexed), knowsWhatIsHeld = true, heldCountsKnown = true,
+            songLengthCount = 61_157, trackMetadataCount = 300_000, songDbLengthCount = 0,
+        )
+        assertFalse(halfway.songDbComplete)
+        assertTrue(halfway.offersDownloadEverything)
     }
 }

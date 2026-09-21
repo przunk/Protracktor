@@ -355,6 +355,8 @@ data class BrowseState(
     val songLengthCount: Int = 0,
     /** How many tunes the songdb metadata table describes. Zero until it is downloaded. */
     val trackMetadataCount: Int = 0,
+    /** How many files songdb has lengths for (A52). Downloaded and deleted with the metadata. */
+    val songDbLengthCount: Int = 0,
     /**
      * How many of Modland's favourites this device could play — listed **and** indexed.
      *
@@ -479,7 +481,18 @@ data class BrowseState(
      */
     val offersDownloadEverything: Boolean
         get() = knowsWhatIsHeld && heldCountsKnown &&
-            (catalogues.any { it.requiresIndex } || songLengthCount == 0 || trackMetadataCount == 0)
+            (catalogues.any { it.requiresIndex } || songLengthCount == 0 || !songDbComplete)
+
+    /**
+     * Whether both halves of the songdb tick are here: the metadata and, since A52, the lengths.
+     *
+     * **Both, not either.** A phone that fetched the metadata before the lengths existed holds a
+     * full metadata table and an empty lengths one, and asking only about the first would never
+     * offer it the second -- the Amiga tunes on the phones that had downloaded the most would be
+     * the ones left waiting for a measurement.
+     */
+    val songDbComplete: Boolean
+        get() = trackMetadataCount > 0 && songDbLengthCount > 0
 }
 
 class PlaybackController private constructor(private val context: Context) {
@@ -539,9 +552,27 @@ class PlaybackController private constructor(private val context: Context) {
          * built from -- it is one file, versioned, and the project that assembles it is the one
          * asking to be credited. GPL-2.0-or-later (`docs/LICENSES.md`).
          */
-        private const val TRACK_METADATA_LABEL = "Track metadata"
-        private const val TRACK_METADATA_URL =
-            "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/master/tsv/pretty/md5/metadata.tsv"
+        private const val TRACK_METADATA_LABEL = "Track metadata and lengths"
+
+        /**
+         * The songdb revision both files come from, **pinned** (`docs/PLAN_SONGDB_LENGTHS.md` D2).
+         *
+         * The metadata followed `master` until A52. The repository's README says its author
+         * "reserve[s] the right to change the format or location … at any time", and a parser
+         * pointed at a moving target breaks on somebody's phone the day it moves. `1bad3e8` is
+         * 2026-08-22, the commit A52 was measured against; moving it is a deliberate act.
+         */
+        private const val SONGDB_REVISION = "1bad3e8"
+        private const val SONGDB_BASE =
+            "https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/$SONGDB_REVISION/tsv/pretty/md5/"
+        private const val TRACK_METADATA_URL = SONGDB_BASE + "metadata.tsv"
+
+        /**
+         * songdb's song lengths: every subsong of 476,919 files, the Amiga formats among them
+         * (A52). Fetched with the metadata, under the same tick -- one idea, "what songdb knows
+         * about a file" (D1). 11.9 MB.
+         */
+        private const val SONGDB_LENGTHS_URL = SONGDB_BASE + "songlengths.tsv"
 
         /**
          * Modland's favourites, as `audacious-uade-tools` republishes them.
@@ -677,6 +708,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private var openSongLengths: List<Double> = emptyList()
 
+    /** The open file's MD5, for recording a length learnt while it plays (A50). */
+    private var openMd5: String = ""
+
     /**
      * What the metadata database said about the open **file**, kept for a subsong switch.
      *
@@ -736,6 +770,8 @@ class PlaybackController private constructor(private val context: Context) {
     private val catalogues = CatalogueStore(context)
     private val remoteFiles = RemoteFiles(context)
     private val songLengths = SongLengthStore(context)
+    private val songDbLengths = com.przunk.protracktor.data.SongDbLengthStore(context)
+    private val learnedLengths = com.przunk.protracktor.data.LearnedLengthStore(context)
     private val trackMetadata = TrackMetadataStore(context)
     private val favourites = FavouriteStore(context)
 
@@ -888,6 +924,7 @@ class PlaybackController private constructor(private val context: Context) {
                 }
 
                 val position = open.positionSeconds()
+                val before = _state.value
                 _state.update {
                     it.copy(
                         positionSeconds = position,
@@ -900,6 +937,7 @@ class PlaybackController private constructor(private val context: Context) {
                         },
                     )
                 }
+                rememberLearntLength(before, _state.value)
 
                 // **A tune that never ends still ends when we know how long it is.**
                 //
@@ -927,6 +965,25 @@ class PlaybackController private constructor(private val context: Context) {
                 if (known > 0.0 && position >= known) handleTrackEnded()
             }
         }
+    }
+
+    /**
+     * Keeps a length UADE worked out while the tune played, if no database had it (A50).
+     *
+     * Only UADE's: every other backend states its length when it opens, or after a subsong switch
+     * from the file itself, and storing that would be writing down what the file says anyway. And
+     * only a length that *arrived* -- zero a tick ago, a figure now -- for a subsong nothing knew.
+     */
+    private fun rememberLearntLength(before: PlayerUiState, after: PlayerUiState) {
+        if (before.durationSeconds > 0.0 || after.durationSeconds <= 0.0) return
+        if (before.subsong != after.subsong || before.current?.id != after.current?.id) return
+        if (after.metadata["format"]?.endsWith("(UADE)") != true) return
+        val subsong = after.subsong
+        if ((openSongLengths.getOrNull(subsong) ?: 0.0) > 0.0 || openMd5.isEmpty()) return
+        val md5 = openMd5
+        val seconds = after.durationSeconds
+        openSongLengths = LengthSource.learn(openSongLengths, subsong, seconds) ?: openSongLengths
+        scope.launch { learnedLengths.remember(md5, subsong, seconds) }
     }
 
     // --- persistence --------------------------------------------------------------------------
@@ -2084,6 +2141,7 @@ class PlaybackController private constructor(private val context: Context) {
             val summaries = catalogues.summaries()
             val lengths = songLengths.count()
             val metadataRows = trackMetadata.count()
+            val lengthRows = songDbLengths.count()
             // Counted here, with the index, and not where it is downloaded: it is a fact about the
             // list *and* the Modland index together, so indexing Modland changes it as surely as
             // downloading the list does.
@@ -2115,6 +2173,7 @@ class PlaybackController private constructor(private val context: Context) {
                     catalogues = summaries,
                     songLengthCount = lengths,
                     trackMetadataCount = metadataRows,
+                    songDbLengthCount = lengthRows,
                     favouriteCount = favouriteRows,
                     favouritesListed = favouriteRowsListed,
                     pairedBrowser = paired,
@@ -2221,6 +2280,8 @@ class PlaybackController private constructor(private val context: Context) {
     fun clearTrackMetadata() {
         scope.launch {
             trackMetadata.clear()
+            // The lengths came with it and go with it: one download, one delete (D1).
+            songDbLengths.clear()
             _state.update { it.copy(message = Message(context.getString(R.string.notice_track_metadata_deleted))) }
             refreshCatalogues()
         }
@@ -2421,8 +2482,16 @@ class PlaybackController private constructor(private val context: Context) {
                 endDownload(DownloadKeys.TRACK_METADATA)
                 return Fetched(false, Message(context.getString(R.string.notice_track_metadata_empty)))
             }
+            // The lengths, second and on the same tick (D1). A failure here does not undo the
+            // metadata that did arrive: the two are useful apart, and the message says which half
+            // is missing rather than calling the whole download a failure.
+            val lengthBytes = remoteFiles.fetchIndex(SONGDB_LENGTHS_URL)
+            val lengths = if (lengthBytes == null) 0 else songDbLengths.replaceAllFrom(lengthBytes)
             endDownload(DownloadKeys.TRACK_METADATA)
-            _browse.update { it.copy(trackMetadataCount = written) }
+            _browse.update { it.copy(trackMetadataCount = written, songDbLengthCount = lengths) }
+            if (lengths == 0) {
+                return Fetched(false, Message(context.getString(R.string.notice_songdb_lengths_failed)))
+            }
             return Fetched(
                 true,
                 Message(
@@ -4130,6 +4199,21 @@ class PlaybackController private constructor(private val context: Context) {
             // after the audio callback has begun is the same race the position poll had. Before
             // `start()` there is no other thread to race with.
             val described = opened.describe()
+
+            // **The lengths before the start**, now that one of them decides what the start does
+            // (A52). Hashed once for both databases -- HVSC keys on all of the MD5, songdb on its
+            // first twelve characters -- and asked in the order `LengthSource` gives: HVSC for a
+            // SID, songdb for the rest. What they know is handed to the engine, and UADE works out
+            // only the subsongs they do not.
+            val md5 = Md5.of(bytes)
+            val hvsc = songLengths.forMd5(md5).orEmpty()
+            val songdb = if (hvsc.any { it > 0.0 }) emptyList() else songDbLengths.forMd5(md5)
+            // And the gaps from what this phone learnt by playing, last: a database's figure is a
+            // considered one, ours is a run to the end (A50).
+            openSongLengths = LengthSource.fill(LengthSource.known(hvsc, songdb), learnedLengths.forMd5(md5))
+            openMd5 = md5
+            opened.knownLengths(openSongLengths)
+
             val started = opened.start()
 
             // **Said out loud, once, because a listener cannot read logcat.** Backends that
@@ -4144,14 +4228,6 @@ class PlaybackController private constructor(private val context: Context) {
                     _state.update { it.copy(message = Message(note)) }
                 }
             }
-            // A SID has no length in it, so the backend reports none and HVSC's database is asked
-            // instead. Only when the backend has nothing: a format that knows its own length knows
-            // it better than a lookup on a hash could.
-            // Hashed once for both databases. They key on the same digest -- HVSC on all of it,
-            // songdb on its first twelve characters -- and hashing a few megabytes twice per track
-            // is work nobody asked for.
-            val md5 = Md5.of(bytes)
-            openSongLengths = songLengths.forMd5(md5).orEmpty()
 
             // What the file cannot say about itself, from the database keyed on its hash. A plain
             // `.mod` has nowhere to record a year and no room for an author beyond the sample names
@@ -4164,9 +4240,11 @@ class PlaybackController private constructor(private val context: Context) {
             // authoritative.
             val fromDatabase = trackMetadata.forMd5(md5)
             openMetadata = fromDatabase
-            val duration = opened.durationSeconds().takeIf { it > 0.0 }
-                ?: openSongLengths.firstOrNull()
-                ?: 0.0
+            // The file first, then the databases, **for the subsong it opened at** -- not the
+            // first: a HES opens at its first track with sound, an Amiga tune past a leading
+            // subsong of silence (`LengthSource`).
+            val openedAt = described["subsong"]?.toIntOrNull() ?: 0
+            val duration = LengthSource.forSubsong(opened.durationSeconds(), openSongLengths, openedAt)
             _state.update {
                 it.copy(
                     playing = started,

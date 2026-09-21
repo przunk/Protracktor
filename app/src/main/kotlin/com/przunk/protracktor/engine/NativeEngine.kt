@@ -121,6 +121,12 @@ object NativeEngine {
         fun start(): Boolean = nativeStart(handle())
 
         /**
+         * Each subsong's length where a database knows it, zero-based, zero where it does not.
+         * Before [start]. Only UADE listens: it works out only what is missing (A52).
+         */
+        fun knownLengths(lengths: List<Double>) = nativeKnownLengths(handle(), lengths.toDoubleArray())
+
+        /**
          * True once the module has played to its end.
          *
          * Polled rather than pushed: signalling from the audio callback would mean attaching a JNI
@@ -201,6 +207,7 @@ object NativeEngine {
     ): Long
     @JvmStatic private external fun nativeClose(handle: Long)
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
+    @JvmStatic private external fun nativeKnownLengths(handle: Long, lengths: DoubleArray)
     @JvmStatic private external fun nativeStop(handle: Long)
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
     @JvmStatic private external fun nativeRestart(handle: Long): Boolean

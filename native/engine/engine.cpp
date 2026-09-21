@@ -1954,6 +1954,9 @@ public:
     double durationSeconds() const override {
         const double measured = measured_.load(std::memory_order_acquire);
         if (measured > 0.0) return measured;
+        // What the host already knew, reported as this backend's own, so a seek can be held to it.
+        const double known = knownFor(subsongs_.cur);
+        if (known > 0.0) return known;
         const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
         return info ? info->duration : 0.0;
     }
@@ -1972,7 +1975,12 @@ public:
                measured_.load(std::memory_order_acquire) > 0.0;
     }
 
-    void startedPlaying() override { measure(subsongs_.cur); }
+    void startedPlaying() override {
+        playing_ = true;
+        if (knownFor(subsongs_.cur) <= 0.0) measure(subsongs_.cur);
+    }
+
+    void knownLengths(const std::vector<double> &lengths) override { known_ = lengths; }
 
     int preferredSampleRate() const override { return kSampleRate; }
 
@@ -1992,7 +2000,14 @@ public:
         if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
         // Another subsong is another length. Only if a measurement was ever started: a scan never
         // plays, and switching subsongs there must not start an emulator either.
-        if (measurer_.joinable()) measure(wanted);
+        // Only while playing -- a scan switches no subsongs worth measuring -- and only a subsong
+        // the host did not already know.
+        if (playing_ && knownFor(wanted) <= 0.0) {
+            measure(wanted);
+        } else {
+            stopMeasuring();
+            measured_.store(0.0, std::memory_order_release);
+        }
         return true;
     }
 
@@ -2011,7 +2026,11 @@ public:
         o << "format\t" << format << " (UADE)" << '\n';
         if (info && info->playername[0]) o << "player\t" << info->playername << '\n';
         if (info && info->modulename[0]) o << "title\t" << info->modulename << '\n';
+        // Where it opened, as `GmeBackend` says it: `skipEmptyLeadingSubsongs` can start past a
+        // first subsong that is only silence, and the app reads this to point the subsong strip,
+        // and the length, at what is actually playing.
         o << "subsongs\t" << subsongCount() << '\n'
+          << "subsong\t" << currentSubsong() << '\n'
           << "seekable\t" << (canSeek() ? 1 : 0);
         return o.str();
     }
@@ -2079,6 +2098,12 @@ private:
     }
 
     static std::mutex &openMutex() { static std::mutex m; return m; }
+
+    /** The host's length for UADE's [subsong] number, or zero. */
+    double knownFor(int subsong) const {
+        const int index = subsong - subsongs_.min;
+        return index >= 0 && index < static_cast<int>(known_.size()) ? known_[index] : 0.0;
+    }
 
     /** The longest subsong measured before it is taken to loop for ever: ten minutes of audio. */
     static constexpr std::size_t kMeasureCapFrames = static_cast<std::size_t>(600) * kSampleRate;
@@ -2343,6 +2368,10 @@ private:
     struct uade_state *state_ = nullptr;
     struct uade_subsong_info subsongs_ = {0, 0, 0, 0};
     std::thread measurer_;
+    /** What the host knew, zero-based from the first subsong; zero where it knew nothing. */
+    std::vector<double> known_;
+    /** Set once playback starts; before that nothing is measured, so a scan costs no emulator. */
+    bool playing_ = false;
     std::atomic<double> measured_{0.0};
     std::atomic<bool> measuring_{false};
     std::atomic<bool> stop_{false};

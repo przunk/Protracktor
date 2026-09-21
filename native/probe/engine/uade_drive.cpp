@@ -219,6 +219,23 @@ int main(int argc, char **argv) {
         return play(argv[2], std::vector<std::string>(argv + 3, argv + argc), scratch);
     }
     if (mode == "pair" && argc == 4) return pair(argv[2], argv[3], scratch);
+    if (mode == "known") {
+        // The host has told the backend every length is known (A52): nothing may be measured.
+        std::string error;
+        auto backend = open(argv[2], std::vector<std::string>(argv + 3, argv + argc), error);
+        if (!backend) { std::printf("VERDICT fail refused \"%s\"\n", error.c_str()); return 1; }
+        // Every subsong known, as songdb knows paradroid's seven: nothing may be measured.
+        backend->knownLengths(std::vector<double>(backend->subsongCount(), 42.0));
+        backend->startedPlaying();
+        std::vector<float> buffer(kFrames * 2);
+        for (int b = 0; b < 100; ++b) backend->render(kRate, kFrames, buffer.data());
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        // Quiet: nothing measuring, and the length reported is the one the host gave.
+        const bool quiet = !backend->durationArrivesLater() && backend->durationSeconds() == 42.0;
+        std::printf("VERDICT %s arrivesLater=%d duration=%.1f\n", quiet ? "ok" : "fail measured-anyway",
+                    backend->durationArrivesLater() ? 1 : 0, backend->durationSeconds());
+        return quiet ? 0 : 1;
+    }
     if (mode == "walk") {
         // Every subsong in turn, as a listener stepping through them: switch, play a little, wait
         // for the length the way the host does, and go on. Written for the phone's crash on

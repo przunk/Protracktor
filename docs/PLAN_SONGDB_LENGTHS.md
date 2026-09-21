@@ -178,3 +178,29 @@ other backend ignores it.
 
 **Phone only.** The page cannot play these formats at all (A44), so there is nothing for it to show
 a length for, and `docs/SPEC_RANDOM.md` parity does not reach this.
+
+## Built, 2026-09-21
+
+All six steps, on `feature/a52-songdb-lengths`. What building them changed from the plan:
+
+- **Per subsong, not all or nothing.** The plan had one call, "lengths known", before start. Step 6
+  showed why that is wrong: a length learnt by playing covers only the subsongs somebody has
+  heard, and songdb itself has no length for a subsong that makes no sound. The engine now gets
+  each subsong's known length (`Backend::knownLengths`), measures only a subsong it lacks, and
+  reports a known one as its own, so a seek is held to it.
+- **The subsong the file opened at.** The open path took the first length in the list; UADE opens
+  past a leading silent subsong, as a HES opens past an empty track, so the length is now taken
+  for the subsong actually playing, and UADE says which in `describe()` as GME already did.
+- **A phone halfway there.** One that fetched the metadata before the lengths existed holds half
+  the tick; everything that decides whether to offer the download asks for both halves.
+- **Learnt lengths in a table of their own**, `learned_lengths`, in the same schema 17: a songdb
+  download replaces its table wholesale, and what the phone learnt is not songdb's to throw away.
+
+**The host comparison, 140 files**: 116 songdb lengths agree with UADE here — `p` to 0.2 s, and
+the trimmed `p+s` and `p+v` shorter by up to five seconds, as trimming should make them. The first
+run counted those eight as disagreements; the check was wrong, not the data. **One real exception**:
+`return of medusa (1).hipc`, one subsong, songdb 196.8 s against 137.1 s here on every run.
+songdb was made with audacious-uade's UADE, which is not byte-identical to ours; the cause is not
+established. In the app the bar reads 3:16 and the tune ends at 2:17 on UADE's own end, so
+nothing is cut. It is listed by name in `scripts/probe-uade-engine.py`, reported and not failing,
+so a new disagreement still fails the run.
