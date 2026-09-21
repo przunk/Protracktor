@@ -214,7 +214,7 @@
     <string name="settings_version">Wersja</string>
     <string name="settings_decoders">Dekodery w tej wersji</string>
     <string name="settings_licence">Licencja</string>
-    <string name="settings_licence_detail">GNU GPL w wersji 3 lub nowszej. Kod źródłowy: github.com/przunk/protracktor.</string>
+    <string name="settings_licence_detail">GPL-3.0 lub nowsza · github.com/przunk/protracktor</string>
     <string name="storage_title">Miejsce na tym telefonie</string>
     <string name="storage_database">Playlisty, historia i indeksy, które nie są plikami: %1$,d MB. Zostaje, bo są tu twoje własne listy.</string>
     <string name="storage_cache">Pobrana muzyka</string>
