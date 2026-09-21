@@ -708,6 +708,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private var openSongLengths: List<Double> = emptyList()
 
+    /** The open file's MD5, for recording a length learnt while it plays (A50). */
+    private var openMd5: String = ""
+
     /**
      * What the metadata database said about the open **file**, kept for a subsong switch.
      *
@@ -768,6 +771,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val remoteFiles = RemoteFiles(context)
     private val songLengths = SongLengthStore(context)
     private val songDbLengths = com.przunk.protracktor.data.SongDbLengthStore(context)
+    private val learnedLengths = com.przunk.protracktor.data.LearnedLengthStore(context)
     private val trackMetadata = TrackMetadataStore(context)
     private val favourites = FavouriteStore(context)
 
@@ -920,6 +924,7 @@ class PlaybackController private constructor(private val context: Context) {
                 }
 
                 val position = open.positionSeconds()
+                val before = _state.value
                 _state.update {
                     it.copy(
                         positionSeconds = position,
@@ -932,6 +937,7 @@ class PlaybackController private constructor(private val context: Context) {
                         },
                     )
                 }
+                rememberLearntLength(before, _state.value)
 
                 // **A tune that never ends still ends when we know how long it is.**
                 //
@@ -959,6 +965,25 @@ class PlaybackController private constructor(private val context: Context) {
                 if (known > 0.0 && position >= known) handleTrackEnded()
             }
         }
+    }
+
+    /**
+     * Keeps a length UADE worked out while the tune played, if no database had it (A50).
+     *
+     * Only UADE's: every other backend states its length when it opens, or after a subsong switch
+     * from the file itself, and storing that would be writing down what the file says anyway. And
+     * only a length that *arrived* -- zero a tick ago, a figure now -- for a subsong nothing knew.
+     */
+    private fun rememberLearntLength(before: PlayerUiState, after: PlayerUiState) {
+        if (before.durationSeconds > 0.0 || after.durationSeconds <= 0.0) return
+        if (before.subsong != after.subsong || before.current?.id != after.current?.id) return
+        if (after.metadata["format"]?.endsWith("(UADE)") != true) return
+        val subsong = after.subsong
+        if ((openSongLengths.getOrNull(subsong) ?: 0.0) > 0.0 || openMd5.isEmpty()) return
+        val md5 = openMd5
+        val seconds = after.durationSeconds
+        openSongLengths = LengthSource.learn(openSongLengths, subsong, seconds) ?: openSongLengths
+        scope.launch { learnedLengths.remember(md5, subsong, seconds) }
     }
 
     // --- persistence --------------------------------------------------------------------------
@@ -4174,6 +4199,21 @@ class PlaybackController private constructor(private val context: Context) {
             // after the audio callback has begun is the same race the position poll had. Before
             // `start()` there is no other thread to race with.
             val described = opened.describe()
+
+            // **The lengths before the start**, now that one of them decides what the start does
+            // (A52). Hashed once for both databases -- HVSC keys on all of the MD5, songdb on its
+            // first twelve characters -- and asked in the order `LengthSource` gives: HVSC for a
+            // SID, songdb for the rest. What they know is handed to the engine, and UADE works out
+            // only the subsongs they do not.
+            val md5 = Md5.of(bytes)
+            val hvsc = songLengths.forMd5(md5).orEmpty()
+            val songdb = if (hvsc.any { it > 0.0 }) emptyList() else songDbLengths.forMd5(md5)
+            // And the gaps from what this phone learnt by playing, last: a database's figure is a
+            // considered one, ours is a run to the end (A50).
+            openSongLengths = LengthSource.fill(LengthSource.known(hvsc, songdb), learnedLengths.forMd5(md5))
+            openMd5 = md5
+            opened.knownLengths(openSongLengths)
+
             val started = opened.start()
 
             // **Said out loud, once, because a listener cannot read logcat.** Backends that
@@ -4188,14 +4228,6 @@ class PlaybackController private constructor(private val context: Context) {
                     _state.update { it.copy(message = Message(note)) }
                 }
             }
-            // A SID has no length in it, so the backend reports none and HVSC's database is asked
-            // instead. Only when the backend has nothing: a format that knows its own length knows
-            // it better than a lookup on a hash could.
-            // Hashed once for both databases. They key on the same digest -- HVSC on all of it,
-            // songdb on its first twelve characters -- and hashing a few megabytes twice per track
-            // is work nobody asked for.
-            val md5 = Md5.of(bytes)
-            openSongLengths = songLengths.forMd5(md5).orEmpty()
 
             // What the file cannot say about itself, from the database keyed on its hash. A plain
             // `.mod` has nowhere to record a year and no room for an author beyond the sample names
@@ -4208,9 +4240,11 @@ class PlaybackController private constructor(private val context: Context) {
             // authoritative.
             val fromDatabase = trackMetadata.forMd5(md5)
             openMetadata = fromDatabase
-            val duration = opened.durationSeconds().takeIf { it > 0.0 }
-                ?: openSongLengths.firstOrNull()
-                ?: 0.0
+            // The file first, then the databases, **for the subsong it opened at** -- not the
+            // first: a HES opens at its first track with sound, an Amiga tune past a leading
+            // subsong of silence (`LengthSource`).
+            val openedAt = described["subsong"]?.toIntOrNull() ?: 0
+            val duration = LengthSource.forSubsong(opened.durationSeconds(), openSongLengths, openedAt)
             _state.update {
                 it.copy(
                     playing = started,

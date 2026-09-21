@@ -382,6 +382,18 @@ object SchemaSql {
             subsongs TEXT NOT NULL
         )
         """.trimIndent(),
+        // **Lengths this phone learnt by playing** (A50, folded into A52): a tune songdb does not
+        // know -- a file in a granted folder, most often -- is measured in the background once, and
+        // the answer kept here so the second play shows it at once. The same key as songdb's, so
+        // one hash answers both. A table of its own because `songdb_lengths` is replaced wholesale
+        // by every download, and what the phone learnt is not songdb's to throw away.
+        // `seconds` is one figure per subsong, space-separated, zero where nothing is known yet.
+        """
+        CREATE TABLE learned_lengths (
+            key INTEGER PRIMARY KEY,
+            seconds TEXT NOT NULL
+        )
+        """.trimIndent(),
     )
 
     val CREATE: List<String> = listOf(

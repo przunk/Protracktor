@@ -75,7 +75,7 @@ library's default.
 and its own tests. **What it buys**: every format with nowhere to write a length — NSF, AY, KSS,
 GBS, SNDH without sc68's database, SID without HVSC — gets a real one after a single listen.
 
-## A52. Song lengths from songdb for the Amiga formats — **planned and approved 2026-09-21, schema 17 reserved**
+## A52. Song lengths from songdb for the Amiga formats — **built 2026-09-21 on `feature/a52-songdb-lengths`, schema 17; not yet on a phone**
 
 `docs/PLAN_SONGDB_LENGTHS.md` has it in full. In one paragraph: songdb, from the same repository the
 track metadata already comes from, has a length for **every one of the 3,792** Modland files the app

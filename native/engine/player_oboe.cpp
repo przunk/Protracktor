@@ -331,6 +331,13 @@ public:
         return true;
     }
 
+    /** Passed straight on; see `Backend::knownLengths`. Called before `start`. */
+    void knownLengths(const std::vector<double> &lengths) {
+        const std::lock_guard<std::mutex> held(decoderGuard_);
+        backend_->knownLengths(lengths);
+        publishDuration();
+    }
+
     void stop() {
         if (!stream_) return;
         stream_->stop();  // blocks until any in-flight callback has returned
@@ -596,6 +603,16 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeSetUadePaths(JNIEnv *env, 
     env->ReleaseStringUTFChars(core, coreChars);
     env->ReleaseStringUTFChars(base, baseChars);
     env->ReleaseStringUTFChars(scratch, scratchChars);
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeKnownLengths(JNIEnv *env, jclass, jlong handle,
+                                                                  jdoubleArray lengths) {
+    std::vector<double> values(lengths ? static_cast<std::size_t>(env->GetArrayLength(lengths)) : 0);
+    if (!values.empty()) {
+        env->GetDoubleArrayRegion(lengths, 0, static_cast<jsize>(values.size()), values.data());
+    }
+    guardedVoid("knownLengths", [&] { asPlayer(handle)->knownLengths(values); });
 }
 
 JNIEXPORT void JNICALL

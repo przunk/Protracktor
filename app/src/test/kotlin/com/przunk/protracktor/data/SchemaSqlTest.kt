@@ -39,7 +39,7 @@ class SchemaSqlTest {
     private fun freshTableNames(): Set<String> = setOf(
         "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
         "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
-        "track_metadata", "modland_favourites", "songdb_lengths",
+        "track_metadata", "modland_favourites", "songdb_lengths", "learned_lengths",
     )
 
     @Test
@@ -325,6 +325,9 @@ class SchemaSqlTest {
                 ).use { rows ->
                     assertTrue("the widest 48-bit key is found by itself", rows.next())
                     assertEquals("308000,p", rows.getString(1))
+                }
+                statement.executeQuery("SELECT COUNT(*) FROM learned_lengths").use { rows ->
+                    rows.next(); assertEquals("learnt lengths start empty", 0, rows.getInt(1))
                 }
             }
         }

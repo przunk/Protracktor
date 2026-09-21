@@ -4,8 +4,6 @@
 package com.przunk.protracktor.player
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The order a length is taken in: the file, HVSC, songdb, nothing. */
@@ -47,10 +45,34 @@ class LengthSourceTest {
     }
 
     @Test
-    fun `measuring is needed only when nothing knows any subsong`() {
-        assertTrue(LengthSource.needsMeasuring(0.0, emptyList()))
-        assertTrue(LengthSource.needsMeasuring(0.0, listOf(0.0, 0.0)))
-        assertFalse(LengthSource.needsMeasuring(0.0, listOf(53.8)))
-        assertFalse(LengthSource.needsMeasuring(120.0, emptyList()))
+    fun `what the phone learnt fills the databases' gaps, and only the gaps`() {
+        // songdb knows subsong one and not three; we once measured one and three.
+        val filled = LengthSource.fill(known = listOf(46.5, 4.8, 0.0), learned = listOf(47.0, 0.0, 2.0))
+        assertEquals(listOf(46.5, 4.8, 2.0), filled)
+    }
+
+    @Test
+    fun `a subsong only we have heard still gets its length`() {
+        assertEquals(listOf(53.8, 0.0, 12.0), LengthSource.fill(listOf(53.8), listOf(0.0, 0.0, 12.0)))
+    }
+
+    @Test
+    fun `learning records one subsong and pads to reach it`() {
+        assertEquals(listOf(0.0, 0.0, 69.2), LengthSource.learn(emptyList(), 2, 69.2))
+        assertEquals(listOf(46.5, 69.2), LengthSource.learn(listOf(46.5), 1, 69.2))
+    }
+
+    @Test
+    fun `nothing new is nothing to write`() {
+        assertEquals(null, LengthSource.learn(listOf(46.5), 0, 46.5))
+        assertEquals(null, LengthSource.learn(listOf(46.5), 0, 0.0))
+        assertEquals(null, LengthSource.learn(listOf(46.5), -1, 10.0))
+    }
+
+    @Test
+    fun `the stored form reads back as it was written, and nonsense reads as unknown`() {
+        val lengths = listOf(46.5, 0.0, 1.9)
+        assertEquals(lengths, LengthSource.decode(LengthSource.encode(lengths)))
+        assertEquals(listOf(0.0, 3.0), LengthSource.decode("abc 3"))
     }
 }

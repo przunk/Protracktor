@@ -37,7 +37,37 @@ object LengthSource {
             ?: known.getOrNull(subsong)?.takeIf { it > 0.0 }
             ?: 0.0
 
-    /** Whether the backend needs to work the length out itself: nothing above knows any subsong. */
-    fun needsMeasuring(backend: Double, known: List<Double>): Boolean =
-        backend <= 0.0 && known.none { it > 0.0 }
+    /**
+     * [known] with its gaps filled from what this phone learnt by playing (A50).
+     *
+     * Only the gaps: a database's figure stands over a measurement of ours, because it is the same
+     * UADE and a considered one -- songdb trims a fade and a trailing silence that a run to the end
+     * does not. The result is as long as the longer of the two, so a subsong only we have heard
+     * still gets its length.
+     */
+    fun fill(known: List<Double>, learned: List<Double>): List<Double> =
+        List(maxOf(known.size, learned.size)) { index ->
+            known.getOrNull(index)?.takeIf { it > 0.0 } ?: learned.getOrNull(index)?.takeIf { it > 0.0 } ?: 0.0
+        }
+
+    /**
+     * [learned] with [seconds] recorded for [subsong], padded with zeros to reach it.
+     *
+     * Returns null when there is nothing new to store -- no length, or the same one already there --
+     * so the caller writes only when something changed.
+     */
+    fun learn(learned: List<Double>, subsong: Int, seconds: Double): List<Double>? {
+        if (subsong < 0 || seconds <= 0.0) return null
+        if (learned.getOrNull(subsong) == seconds) return null
+        return List(maxOf(learned.size, subsong + 1)) { index ->
+            if (index == subsong) seconds else learned.getOrNull(index) ?: 0.0
+        }
+    }
+
+    /** The stored form: one figure per subsong, space-separated. */
+    fun encode(lengths: List<Double>): String = lengths.joinToString(" ") { "%.3f".format(java.util.Locale.ROOT, it) }
+
+    /** The stored form read back; anything unreadable is a zero, never a guess. */
+    fun decode(text: String): List<Double> =
+        text.split(' ').filter { it.isNotEmpty() }.map { it.toDoubleOrNull()?.takeIf { v -> v > 0.0 } ?: 0.0 }
 }

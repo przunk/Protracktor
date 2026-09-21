@@ -88,6 +88,19 @@ public:
      * from the audio callback.
      */
     virtual bool durationArrivesLater() const { return false; }
+
+    /**
+     * Each subsong's length where the host already knows it from a database, zero-based, zero for
+     * a subsong it does not know.
+     *
+     * Said before [startedPlaying]. `UadeBackend` then works out only what is missing: songdb has
+     * the length of every Amiga tune the app offers, and running a second emulator to the end to
+     * learn a number already on the phone is a few seconds of a core for nothing (A52). Per subsong
+     * rather than all-or-nothing, because what is known often is not all of it -- songdb has no
+     * length for a subsong that makes no sound, and a length learnt by playing covers only the
+     * subsongs somebody has heard.
+     */
+    virtual void knownLengths(const std::vector<double> &) {}
 };
 
 /**
