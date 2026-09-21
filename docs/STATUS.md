@@ -427,6 +427,25 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C72. ~~The app died when Android refused the playback service the foreground~~ — FIXED 2026-09-21, branch
+
+Found on a phone while stepping through `cust.paradroid`'s subsongs, with logcat:
+`ForegroundServiceStartNotAllowedException: Service.startForeground() not allowed`, thrown from
+`PlaybackService.onCreate`, uncaught, and the process ended.
+
+From Android 12 a service may enter the foreground only while its app is on screen, and the check
+is made when the service calls `startForeground` — not when it was asked for. A press in the app
+starts the service; if the app is no longer visible by the moment `onCreate` runs, the refusal is an
+exception, and nothing caught it. Now it is caught: the service logs it and stops. The music is in
+the engine and plays on; the notification returns with the next press in the app.
+
+**What put the service in that position is not established.** The service stops itself when nothing
+is playing, loading or current (C43), and something asked for it again from behind the screen. The
+crash is fixed whatever the sequence was; the sequence is still owed an explanation.
+
+It was first taken for a UADE crash, because it happened on an Amiga tune. It is not one, though
+looking for it did find a real UADE defect of a different kind (`docs/BACKLOG.md` A44, SIGPIPE).
+
 ### C71. ~~"Get some music to browse" flashed on every visit to Online catalogues~~ — FIXED 2026-09-21, branch
 
 The row appeared for a moment each time Online catalogues opened, on a phone holding every index,
