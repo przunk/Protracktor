@@ -33,7 +33,6 @@ actually been confirmed on a device.
 
 | File | Contents |
 | --- | --- |
-| [`GOAL.md`](GOAL.md) | the work queued for an unattended run, with its rules |
 | [`docs/STATUS.md`](docs/STATUS.md) | what is done, known defects numbered **C1…Cn**, branch state |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | how it is built and **why that way** |
 | [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md) | decisions deliberately left open, with options |
