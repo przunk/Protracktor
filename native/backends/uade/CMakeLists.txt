@@ -106,7 +106,7 @@ add_executable(uadecore
     "${UADE_COMMON}/ossupport.c")
 target_include_directories(uadecore PRIVATE
     "${UADE}/src" "${UADE}/src/include" "${UADE}/src/frontends/include" "${UADE_COMMON}")
-target_link_libraries(uadecore PRIVATE uade_zakalwe m log)
+target_link_libraries(uadecore PRIVATE uade_zakalwe m)
 target_compile_options(uadecore PRIVATE -w -fno-exceptions -fomit-frame-pointer)
 set_target_properties(uadecore PROPERTIES
     PREFIX "lib" OUTPUT_NAME "uadecore" SUFFIX ".so"

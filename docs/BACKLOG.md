@@ -351,9 +351,23 @@ Measured while building it, because none of it was visible from the decision:
   directory played 10 or more of 12 — 3,810 files. Left out and why is in `SupportedFormats`.
 - **Size, measured on the release APK**: arm64 native libraries 6.0 → 7.4 MB installed, and the APK
   itself 20 → 11 MB, because extracted libraries are compressed inside it again.
-- **Not yet checked on a phone**: that `fork` and `exec` from `nativeLibraryDir` work on his device,
-  that the players download and unpack, and that anything plays. Everything above is built and
-  unit-tested; none of it has made a sound on Android.
+- **Run on the host through our own engine, 2026-09-21**: `scripts/probe-uade-engine.py` drives
+  `UadeBackend` in the unchanged `engine.cpp` through the real `openBackend`, with the data
+  directory laid out from the same GitLab archive the app downloads. **140 of 140** — four files for
+  each of the 35 offered names, TFMX with its `smpl.` fetched beside it — plus five pairs played at
+  once, and the scratch directory empty afterwards. It found two things the phone would have shown
+  as "plays wrong" with no reason:
+  - UADE walks on to the next subsong inside the same stream unless told `one_subsong`, so the
+    position restarted mid-tune and the player's own "play all subsongs" was bypassed.
+  - With one subsong per stream, a file whose first subsong is half a second of silence that ends —
+    `reach for the skies-german.avp` — would play nothing. It now opens at the first subsong with
+    sound, as `GmeBackend` does for HES and KSS; a subsong that is only quiet at the start is kept.
+
+  Both were confirmed to be caught: with `one_subsong` removed the driver fails
+  `subsong-advanced-by-itself`.
+- **Not yet checked on a phone**: that `fork` and `exec` from `nativeLibraryDir` work on a phone,
+  and that the players download there. The host run covers our code; it cannot cover Android's
+  process rules.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**

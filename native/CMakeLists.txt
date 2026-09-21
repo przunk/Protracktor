@@ -42,3 +42,16 @@ endif()
 if(PROTRACKTOR_BUILD_ENGINE)
     add_subdirectory(engine)
 endif()
+
+# The engine on the host, driving UADE. `engine.cpp` compiled unchanged with the host compiler, the
+# way the web build compiles it with Emscripten -- so our code around a backend runs before a phone
+# is asked to, rather than being tried there first (`native/probe/engine/uade_drive.cpp`).
+option(PROTRACKTOR_BUILD_HOST_PROBE "Build the host driver for UADE through the real engine" OFF)
+if(PROTRACKTOR_BUILD_HOST_PROBE)
+    add_executable(uade-drive probe/engine/uade_drive.cpp engine/engine.cpp)
+    target_include_directories(uade-drive PRIVATE engine)
+    target_compile_options(uade-drive PRIVATE -fexceptions -frtti)
+    target_link_libraries(uade-drive PRIVATE openmpt sc68 asap gme::gme sidplayfp hively minimp3
+                          $<$<BOOL:${PROTRACKTOR_WITH_ZXTUNE}>:zxtune> uade_frontend lhasa pthread)
+    add_dependencies(uade-drive uadecore)
+endif()

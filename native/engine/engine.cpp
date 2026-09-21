@@ -1808,6 +1808,12 @@ public:
         uade_config_set_option(config, UC_BASE_DIR, paths.base.c_str());
         uade_config_set_option(config, UC_UADECORE_FILE, paths.core.c_str());
         uade_config_set_option(config, UC_FREQUENCY, "44100");
+        // **One subsong per render stream.** Left to itself UADE moves on to the next subsong when
+        // one ends, inside the same stream -- found on the host, where `mdat.bundesliga manager`
+        // reported 3.5 s after 10 s of rendering because the position had restarted with subsong
+        // two. Here the engine owns that decision: a short render ends the subsong, and whether the
+        // next one follows is the player's "play all subsongs", as it is for every other backend.
+        uade_config_set_option(config, UC_ONE_SUBSONG, nullptr);
         // **Not `UC_CONTENT_DETECTION`**, despite the name. uade123 exposes it as "detect strictly
         // by file content", and `get_eagleplayer` then rejects a filename match whenever the bytes
         // alone did not identify the format. Several real formats are known only by their prefix or
@@ -1830,6 +1836,7 @@ public:
             throw std::runtime_error(reason);
         }
         if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
+        skipEmptyLeadingSubsongs();
     }
 
     ~UadeBackend() override { close(); }
@@ -1895,7 +1902,10 @@ public:
     int subsongCount() const override { return subsongs_.max - subsongs_.min + 1; }
 
     /** Zero-based here, whatever UADE numbers them from -- usually one (`engine.h`). */
-    int currentSubsong() const override { return subsongs_.cur - subsongs_.min; }
+    int currentSubsong() const override {
+        const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
+        return (info ? info->subsongs.cur : subsongs_.cur) - subsongs_.min;
+    }
 
     bool selectSubsong(int index) override {
         if (!state_ || index < 0 || index >= subsongCount()) return false;
@@ -1936,6 +1946,47 @@ private:
     static std::string &basePath() { static std::string p; return p; }
     static std::string &scratchPath() { static std::string p; return p; }
     static std::mutex &pathMutex() { static std::mutex m; return m; }
+
+    /**
+     * Opens at the first subsong with sound in it, as `GmeBackend` does for HES and KSS.
+     *
+     * Found on the host: `reach for the skies-german.avp` begins with a subsong of half a second of
+     * silence that ends, and the music is subsong one. UADE left to itself walks on to it; this
+     * engine keeps one subsong per stream (see `UC_ONE_SUBSONG`), so without this the tune would
+     * be half a second of nothing and then the next track.
+     *
+     * **Only a subsong that ends silent is skipped.** One that is merely quiet at the start -- a
+     * slow fade-in, a long intro -- is still playing after the look, and is kept. The look is at
+     * most two seconds of emulation per subsong, which UADE renders many times faster than real
+     * time, and at most eight subsongs, so a file of nothing but empty subsongs costs a bounded
+     * moment and then plays its first one anyway.
+     */
+    void skipEmptyLeadingSubsongs() {
+        const int start = subsongs_.cur;
+        int chosen = start;
+        for (int subsong = start; subsong <= subsongs_.max && subsong < start + 8; ++subsong) {
+            if (subsong != start) {
+                uade_stop(state_);
+                if (uade_play(modulePath_.c_str(), subsong, state_) <= 0) break;
+            }
+            bool heard = false;
+            bool ended = false;
+            std::size_t looked = 0;
+            while (looked < static_cast<std::size_t>(kSampleRate) * 2) {
+                const ssize_t got = uade_read(chunk_.data(), kChunkFrames * 2 * sizeof(int16_t), state_);
+                if (got <= 0) { ended = true; break; }
+                const std::size_t samples = static_cast<std::size_t>(got) / sizeof(int16_t);
+                for (std::size_t i = 0; i < samples && !heard; ++i) heard = chunk_[i] != 0;
+                looked += samples / 2;
+                if (heard) break;
+            }
+            if (heard || !ended) { chosen = subsong; break; }
+        }
+        // Back to the start of whichever subsong was chosen: the look consumed audio.
+        uade_stop(state_);
+        uade_play(modulePath_.c_str(), chosen, state_);
+        if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
+    }
 
     void makeScratch(const std::string &root) {
         ::mkdir(root.c_str(), 0700);
