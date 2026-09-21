@@ -15,6 +15,21 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A56. History keeps its order while you use it — **noted 2026-09-21**
+
+*The owner: "history should have a fixed form in its view; clicking a track in history should not
+move it to the top; playing it outside history should update when it was last played (move it to
+the top)."*
+
+Today a play from the history view records a play like any other, so the row jumps to the top
+under the finger that tapped it and the list reorders while it is being read.
+
+- **Inside History**, a play does not move the row. The list stays as it was while it is open.
+- **Anywhere else** — playlist, Browse, search, Random — a play updates the last-played time and
+  the row goes to the top, as today.
+- Not decided yet, to ask before building: whether a play from History still counts towards
+  `play_count` and whether it updates the time without moving the row (so the next visit shows it
+  on top), or leaves the time alone.
 ## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13**
 
 Opening a Modland author's folder fetches its tracks into the cache one after another, three at a
