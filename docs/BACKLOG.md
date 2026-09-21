@@ -37,11 +37,12 @@ time, with a spinner in each row's left slot while it runs. When it may run (Wi-
 default), what a cached row shows, and a per-folder limit are D4–D6 in `docs/PLAN_ROUND_13.md`,
 which is the plan.
 
-## A54. The dock's text scrolls when it does not fit — **planned 2026-09-21, round 13; BUILT the same day, branch `feature/a54-dock-marquee`**
+## A54. The dock's text scrolls when it does not fit — **planned 2026-09-21, round 13; DONE the same day, merged**
 
 Built to D3 (a): Compose's `basicMarquee` on both dock lines, 30 dp/s, two seconds' pause before
-every pass; the rule of when it may move is `DockMarquee.scrolls`, tested on the JVM. How it looks
-and reads is the phone's.
+every pass; the rule of when it may move is `DockMarquee.scrolls`, tested on the JVM. Merged 2026-09-21 on
+the owner's word; **not yet tried on a phone at all, including the "Remove animations" case** (on his Pixel 7:
+Settings → Accessibility → Color and motion → Remove animations).
 
 A dock line that overflows scrolls slowly to the left instead of ending in `…`; one that fits stands
 still, and nothing moves with the system's animations off. D3 in `docs/PLAN_ROUND_13.md`.
