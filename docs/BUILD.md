@@ -156,6 +156,22 @@ but such an APK must never be published. `build-release.sh` prints the certifica
 than assuming, because the Gradle config can look right and still have fallen back, and the mistake
 is otherwise invisible until an upload is rejected.
 
+### A whole release
+
+```
+./scripts/release.sh 0.7.0 --check     # only check; changes nothing
+./scripts/release.sh 0.7.0             # do it
+```
+
+Written 2026-09-21 on the owner's request, so a release is one command run from his terminal. It
+does, in order and stopping at the first failure: the tree (on `develop`, clean, tag free, version
+newer), the release notes in both languages, the web engine and the whole suite, `versionName`
+committed and tagged `v<version>`, the bundle through `build-bundle.sh` — which asks for the
+keystore passwords itself, so the release script never sees them — the evidence entry in
+`store/play-console/releases.md` read from the bundle itself, and `master` merged level with
+`develop`. **It does not push and does not upload**; its last lines say what to push and what to
+upload where. It asks once, by having the version typed again, before it changes anything.
+
 ### App Bundle (.aab)
 
 ```

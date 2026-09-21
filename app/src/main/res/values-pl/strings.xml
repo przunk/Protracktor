@@ -214,7 +214,7 @@
     <string name="settings_version">Wersja</string>
     <string name="settings_decoders">Dekodery w tej wersji</string>
     <string name="settings_licence">Licencja</string>
-    <string name="settings_licence_detail">GNU GPL w wersji 3 lub nowszej. Kod źródłowy: github.com/przunk/protracktor.</string>
+    <string name="settings_licence_detail">GPL-3.0 lub nowsza · github.com/przunk/protracktor</string>
     <string name="storage_title">Miejsce na tym telefonie</string>
     <string name="storage_database">Playlisty, historia i indeksy, które nie są plikami: %1$,d MB. Zostaje, bo są tu twoje własne listy.</string>
     <string name="storage_cache">Pobrana muzyka</string>
@@ -509,4 +509,9 @@
     <string name="a11y_refresh_replay_routines">Zaktualizuj procedury odtwarzające</string>
     <string name="browse_deleting_short">usuwanie…</string>
     <string name="notice_delete_failed">Nie udało się usunąć: %1$s.</string>
+    <string name="settings_notices">Licencje open source</string>
+    <string name="settings_notices_detail">Składniki tej aplikacji i ich licencje</string>
+    <string name="notices_version_licence">%1$s · %2$s</string>
+    <string name="settings_privacy">Polityka prywatności</string>
+    <string name="settings_privacy_detail">Co aplikacja wysyła i dokąd</string>
 </resources>

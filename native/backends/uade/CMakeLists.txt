@@ -1,4 +1,4 @@
-# UADE -- GPL-2.0-or-later. The Amiga custom formats: TFMX, Hippel, David Whittaker, SidMon,
+# UADE -- GPL (UAE, no version stated) and LGPL (libuade); `docs/LICENSES.md` has the reading. The Amiga custom formats: TFMX, Hippel, David Whittaker, SidMon,
 # Sonic Arranger, Delta Music and a hundred more. It emulates an Amiga and runs the original replay
 # routines, which is why it reaches music no tracker library can.
 #

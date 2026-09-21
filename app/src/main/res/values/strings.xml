@@ -56,7 +56,7 @@
     <string name="settings_version">Version</string>
     <string name="settings_decoders">Decoders in this build</string>
     <string name="settings_licence">Licence</string>
-    <string name="settings_licence_detail">GNU GPL version 3 or later. The source is at github.com/przunk/protracktor.</string>
+    <string name="settings_licence_detail">GPL-3.0 or later · github.com/przunk/protracktor</string>
     <string name="storage_title">Storage on this phone</string>
     <string name="storage_database">Playlists, history and the indexes that are not files: %1$,d MB. Kept, because your own lists are in here.</string>
     <string name="storage_cache">Fetched music</string>
@@ -470,4 +470,9 @@
     <string name="a11y_refresh_replay_routines">Update the replay routines</string>
     <string name="browse_deleting_short">deleting…</string>
     <string name="notice_delete_failed">Could not delete %1$s.</string>
+    <string name="settings_notices">Open-source licences</string>
+    <string name="settings_notices_detail">The components inside this app, and their licences</string>
+    <string name="notices_version_licence">%1$s · %2$s</string>
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_privacy_detail">What the app sends, and where</string>
 </resources>

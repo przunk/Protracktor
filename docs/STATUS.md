@@ -1,7 +1,7 @@
 # Status
 
-Updated: 2026-09-18 — version 0.6.0, round 12: the index no longer depends on what this build
-can play. versionCode is the commit count, schema version 16
+Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
+songdb, the downloads grouped. versionCode is the commit count, schema version 17
 
 ## What works
 
@@ -426,6 +426,18 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 **Entries state the defect, not who found it.** What was wrong, how it was proved, and what was
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
+
+### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, branch
+
+Found the day the in-app policy was added: it stopped at the first line of "Changes", would not
+scroll further, and ended against the bottom edge — its last lines lay under the navigation bar.
+
+**The first fix did not fix it.** The page was a full-screen dialog; handing the insets to its
+Scaffold (`decorFitsSystemWindows = false`) changed nothing on the phone, which says the dialog
+received no system-bar insets at all. So the legal pages are no longer a window of their own: they
+show in the place of the Settings list and take Settings' own padding, which the app's Scaffold
+already computes to clear the top bar, the dock and the system bars — plus 32 dp after the last line.
+Reasoned from the layout; there is no emulator here, and the phone decides.
 
 ### C77. ~~Several deletes spoke all at once, seconds after their rows had gone~~ — FIXED 2026-09-21
 

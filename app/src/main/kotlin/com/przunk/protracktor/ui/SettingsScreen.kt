@@ -3,6 +3,7 @@
 
 package com.przunk.protracktor.ui
 
+import androidx.activity.compose.BackHandler
 import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +21,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -98,6 +102,28 @@ fun SettingsScreen(
             }
             "${info.versionName} ($code)"
         }.getOrDefault("unknown")
+    }
+
+    // Which legal page is showing in place of the list, if any. Saved, so a rotation keeps it.
+    var legal by rememberSaveable { mutableStateOf<Legal?>(null) }
+
+    // **In place of the list, not in a window of its own** (`docs/STATUS.md` C78). A full-screen
+    // dialog received no system-bar insets on the phone, so its last lines lay under the navigation
+    // bar twice over -- once as first built, and again after the insets were handed to its
+    // Scaffold. This screen's own padding already clears the bars and the dock, because the app's
+    // Scaffold computes it; the legal pages take the same padding and cannot get it wrong.
+    when (legal) {
+        Legal.NOTICES -> {
+            BackHandler { legal = null }
+            LicencesScreen(contentPadding = contentPadding, onClose = { legal = null })
+            return
+        }
+        Legal.PRIVACY -> {
+            BackHandler { legal = null }
+            PrivacyPolicyScreen(contentPadding = contentPadding, onClose = { legal = null })
+            return
+        }
+        null -> Unit
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
@@ -313,10 +339,37 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 },
+                leadingContent = { Icon(PlayerIcons.Info, contentDescription = null) },
+            )
+        }
+        // What the app carries of other people's work, and what it sends where. Both open a full
+        // screen over this one, and both show files the build copies in from where they are kept --
+        // the licences from the code that brought them, the policy from the page that is published.
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_notices)) },
+                supportingContent = {
+                    Text(stringResource(R.string.settings_notices_detail), style = MaterialTheme.typography.bodySmall)
+                },
+                leadingContent = { Icon(PlayerIcons.Document, contentDescription = null) },
+                modifier = Modifier.clickable { legal = Legal.NOTICES },
+            )
+        }
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_privacy)) },
+                supportingContent = {
+                    Text(stringResource(R.string.settings_privacy_detail), style = MaterialTheme.typography.bodySmall)
+                },
+                leadingContent = { Icon(PlayerIcons.Shield, contentDescription = null) },
+                modifier = Modifier.clickable { legal = Legal.PRIVACY },
             )
         }
     }
+
 }
+
+private enum class Legal { NOTICES, PRIVACY }
 
 @Composable
 private fun AppTheme.label(): String = stringResource(

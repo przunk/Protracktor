@@ -1,6 +1,6 @@
 # Protracktor privacy policy
 
-Effective date: 2026-09-03
+Effective date: 2026-09-21
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -38,9 +38,8 @@ The application stores the following in its private application storage:
 This information is used only to provide playback, browsing, history, sharing and session restore.
 It is not sent to the developer.
 
-Android may include eligible private application data in the device owner's system backup when
-Android Backup is enabled. That transfer is performed by the operating system under the device
-owner's Google backup settings, not by a Protracktor server.
+Protracktor opts out of Android's system backup and of device-to-device transfer, so its private
+data is not copied off the device by the operating system either. Uninstalling the app removes it.
 
 ### Network requests to independent archives
 
@@ -49,9 +48,15 @@ connect over HTTPS to:
 
 - `modland.com` to download its catalogue index and selected tracks;
 - `asma.atari.org` to download the ASMA collection;
+- `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
   module;
-- `hvsc.c64.org` to download the SID song-length database.
+- `hvsc.c64.org` to download the SID song-length database;
+- `raw.githubusercontent.com` to download song metadata and song lengths published by the
+  audacious-uade-tools project, Modland's favourites list, and a song database used by the Amiga
+  decoder;
+- `svn.code.sf.net` to download the Atari ST replay routines published by the sc68 project;
+- `gitlab.com` to download the Amiga replay routines published by the UADE project.
 
 Like any direct web request, an archive receives the device's public IP address and technical HTTP
 request data. The Mod Archive additionally receives the search words entered by the user. The
@@ -69,12 +74,20 @@ explicit action. The receiving application or service applies its own privacy po
 share copies are removed after their retention window when Protracktor next performs cleanup; the
 receiving application may keep its own copy.
 
+### Sending to a web player
+
+When the user scans the pairing code shown by a Protracktor web page and chooses **Send**, the app
+sends the chosen queue — track titles, their archive addresses and the position in the queue — to
+the address that code names. Tracks that exist only on the device are sent as files, up to 8 MB in
+one transfer. Nothing is sent without that scan and that choice, and the receiving server is the one
+running the page the user opened.
+
 ### Retention and deletion
 
 Local information remains until it is replaced, removed by an available application action,
 cleared through Android's **App info → Storage & cache → Clear storage**, or removed when the app is
-uninstalled. Android may clear cache files independently. Some downloaded catalogue data currently
-has no separate in-app delete control; clearing application storage or uninstalling removes it.
+uninstalled. Android may clear cache files independently. Every downloaded catalogue index, the
+song metadata and the replay routines can be deleted separately under **Settings → Storage**.
 
 The developer holds no account record to delete. Requests concerning logs held by an independent
 archive must be directed to that archive.
@@ -121,9 +134,9 @@ Aplikacja zapisuje w swojej prywatnej pamięci:
 Dane te służą wyłącznie do odtwarzania, przeglądania, historii, udostępniania i przywracania sesji.
 Nie są wysyłane do dewelopera.
 
-Jeżeli właściciel urządzenia włączył Android Backup, system Android może objąć kopią zapasową
-kwalifikujące się prywatne dane aplikacji. Transfer wykonuje system zgodnie z ustawieniami kopii
-Google właściciela urządzenia, a nie serwer Protracktora.
+Protracktor rezygnuje z systemowej kopii zapasowej Androida i z przenoszenia danych między
+urządzeniami, więc jego prywatne dane nie są kopiowane poza urządzenie także przez system.
+Odinstalowanie aplikacji je usuwa.
 
 ### Połączenia z niezależnymi archiwami
 
@@ -132,8 +145,13 @@ może łączyć się przez HTTPS z:
 
 - `modland.com`, aby pobrać indeks i wybrane utwory;
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
+- `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;
-- `hvsc.c64.org`, aby pobrać bazę długości utworów SID.
+- `hvsc.c64.org`, aby pobrać bazę długości utworów SID;
+- `raw.githubusercontent.com`, aby pobrać metadane i długości utworów publikowane przez projekt
+  audacious-uade-tools, listę ulubionych Modlandu oraz bazę utworów używaną przez dekoder Amigi;
+- `svn.code.sf.net`, aby pobrać procedury odtwarzające Atari ST publikowane przez projekt sc68;
+- `gitlab.com`, aby pobrać procedury odtwarzające Amigi publikowane przez projekt UADE.
 
 Jak przy każdym bezpośrednim żądaniu internetowym, archiwum otrzymuje publiczny adres IP urządzenia
 i techniczne dane HTTP. The Mod Archive otrzymuje również wpisane słowa wyszukiwania. Archiwa są
@@ -151,12 +169,20 @@ po takim działaniu użytkownika. Aplikacja lub usługa odbierająca stosuje wł
 prywatności. Tymczasowe kopie są usuwane po okresie retencji podczas kolejnego sprzątania przez
 Protracktor; odbiorca może zachować własną kopię.
 
+### Wysyłanie do odtwarzacza w przeglądarce
+
+Gdy użytkownik zeskanuje kod parowania wyświetlony przez stronę Protracktora i wybierze **Wyślij**,
+aplikacja wysyła wybraną kolejkę — tytuły utworów, ich adresy w archiwach i miejsce w kolejce — pod
+adres zapisany w tym kodzie. Utwory, które istnieją tylko na urządzeniu, są wysyłane jako pliki, do
+8 MB w jednym przesłaniu. Bez tego skanu i tego wyboru nic nie jest wysyłane, a odbiorcą jest serwer
+obsługujący stronę otwartą przez użytkownika.
+
 ### Retencja i usuwanie
 
 Lokalne informacje pozostają do czasu zastąpienia, usunięcia przez dostępną funkcję aplikacji,
 wyczyszczenia przez **App info → Storage & cache → Clear storage** albo odinstalowania aplikacji.
-Android może niezależnie usuwać pliki pamięci podręcznej. Część pobranych danych katalogów nie ma
-jeszcze osobnej funkcji usuwania; usuwa je wyczyszczenie pamięci aplikacji lub odinstalowanie.
+Android może niezależnie usuwać pliki pamięci podręcznej. Każdy pobrany indeks katalogu,
+metadane utworów i procedury odtwarzające można usunąć osobno w **Settings → Storage**.
 
 Deweloper nie przechowuje konta użytkownika ani rekordu, którego usunięcia można od niego zażądać.
 W sprawie logów niezależnego archiwum należy kontaktować się z jego operatorem.
