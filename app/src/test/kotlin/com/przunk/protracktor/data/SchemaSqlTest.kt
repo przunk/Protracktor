@@ -334,6 +334,79 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `titles stored with a replacement character are handed back to be read again`() {
+        // Version 18 (A47). Before it, a title in CP437 or ISO-8859-1 was stored with U+FFFD where
+        // its letters were, and nothing would ever read it again: a playlist row reads a title only
+        // while it still equals the file name, and a library row only when its folder is stale.
+        // Only the damaged rows go back; a clean title, and a title a user may have typed, stay.
+        val damaged = "\uFFFDkes lekh\uFFFDrna (za)"
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 17))
+            connection.prepareStatement(
+                "INSERT INTO tracks (id, title, subtitle, file_name, author) VALUES (?, ?, '', ?, ?)"
+            ).use { insert ->
+                listOf(
+                    arrayOf("damaged", damaged, "akes lekhorna.mod", "Zalza"),
+                    arrayOf("author-only", "Space Debris", "space_debris.mod", "J\uFFFDrg"),
+                    arrayOf("clean", "Åkes lekhörna", "other.mod", "Zalza"),
+                ).forEach { row ->
+                    row.forEachIndexed { i, value -> insert.setString(i + 1, value) }
+                    insert.executeUpdate()
+                }
+            }
+            connection.prepareStatement(
+                "INSERT INTO play_history (track_id, title, file_name, author, played_at) VALUES (?, ?, ?, ?, 1)"
+            ).use { insert ->
+                insert.setString(1, "damaged"); insert.setString(2, damaged)
+                insert.setString(3, "akes lekhorna.mod"); insert.setString(4, "Zalza")
+                insert.executeUpdate()
+            }
+            connection.prepareStatement(
+                "INSERT INTO library_index (uri, folder_uri, file_name, title, author, indexed_at, backends) " +
+                    "VALUES (?, 'tree', ?, ?, '', 1, 'openmpt:0.8.9')"
+            ).use { insert ->
+                listOf(arrayOf("a", "akes lekhorna.mod", damaged), arrayOf("b", "fine.mod", "Fine")).forEach { row ->
+                    row.forEachIndexed { i, value -> insert.setString(i + 1, value) }
+                    insert.executeUpdate()
+                }
+            }
+
+            connection.run(SchemaSql.migrationsBetween(17, SchemaSql.VERSION))
+
+            connection.createStatement().use { statement ->
+                fun one(sql: String): List<String> = statement.executeQuery(sql).use { rows ->
+                    rows.next(); (1..rows.metaData.columnCount).map { rows.getString(it) }
+                }
+                assertEquals(
+                    "a damaged title goes back to the file name, so it is read again",
+                    listOf("akes lekhorna.mod", ""),
+                    one("SELECT title, author FROM tracks WHERE id = 'damaged'"),
+                )
+                assertEquals(
+                    "a damaged author sends the row back too",
+                    listOf("space_debris.mod", ""),
+                    one("SELECT title, author FROM tracks WHERE id = 'author-only'"),
+                )
+                assertEquals(
+                    "a clean row is left exactly as it was",
+                    listOf("Åkes lekhörna", "Zalza"),
+                    one("SELECT title, author FROM tracks WHERE id = 'clean'"),
+                )
+                assertEquals(
+                    listOf("akes lekhorna.mod", ""),
+                    one("SELECT title, author FROM play_history WHERE track_id = 'damaged'"),
+                )
+                assertEquals(
+                    "a damaged library row is marked stale, so its folder offers a rescan",
+                    listOf(""),
+                    one("SELECT backends FROM library_index WHERE uri = 'a'"),
+                )
+                assertEquals(listOf("openmpt:0.8.9"), one("SELECT backends FROM library_index WHERE uri = 'b'"))
+            }
+        }
+    }
+
+    @Test
     fun `the browse indexes cover only what is offered`() {
         // `docs/ROADMAP_FORMATS.md` step 0: the table holds the whole archive and every screen asks
         // for the playable part, so indexing the rest is 16 MB of b-tree nothing reads -- measured
@@ -721,11 +794,18 @@ class SchemaSqlTest {
         // If somebody makes these idempotent and this test starts failing, the right response is
         // not to delete it: it is to ask whether ProtracktorDatabase still needs to be a singleton,
         // and to answer that question deliberately. `docs/review.md` R3.
+        //
+        // **The newest migration that changes the shape**, not simply the newest. Version 18 is
+        // data only -- three UPDATEs, harmless twice by nature -- and would pass the question by
+        // not being about it.
+        val structural = SchemaSql.MIGRATIONS.entries
+            .filter { (_, statements) -> statements.any { "CREATE TABLE" in it || "ALTER TABLE" in it } }
+            .maxBy { it.key }
         memoryDatabase().use { connection ->
             connection.run(SchemaSql.CREATE)
-            val again = runCatching { connection.run(SchemaSql.MIGRATIONS.getValue(SchemaSql.VERSION)) }
+            val again = runCatching { connection.run(structural.value) }
             assertTrue(
-                "the newest migration replayed without error; see the comment above",
+                "migration ${structural.key} replayed without error; see the comment above",
                 again.isFailure,
             )
         }

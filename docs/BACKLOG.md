@@ -180,7 +180,11 @@ The rest of the two seconds is unaccounted for and the remaining candidates are 
 112 MB database. **Do not guess at those either** — the next step is a timing log around each, read
 once on a phone.
 
-## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
+## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17, BUILT 2026-09-21, branch**
+
+**Corrected 2026-09-21: the analysis below is wrong.** The bytes are `0x86` and `0x94` (CP437), not
+`0xC5` and `0xF6`, and the `�` is made by libopenmpt, not by `NewStringUTF`. What was found and
+built is `docs/STATUS.md` C79; the text below is kept as it was, as the reading that was corrected.
 
 Opening `Zalza/akes lekhorna.mod` shows the title as **"�kes lekh�rna (za)"** — diamond
 question marks where two letters should be.

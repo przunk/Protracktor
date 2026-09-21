@@ -96,7 +96,7 @@ Handle *pt_open(const unsigned char *bytes, int length, const char *name) {
         auto handle = std::make_unique<Handle>(Handle{std::move(backend), ""});
         // **Inside the guard**, because this is the call that ran after the file was already open,
         // and a backend that opened a file it cannot fully read throws here rather than above.
-        handle->describe = handle->backend->describe();
+        handle->describe = protracktor::describeOf(*handle->backend);
         return handle.release();
     }, nullptr);
 }
@@ -163,7 +163,7 @@ int pt_select_subsong(Handle *h, int index) {
     if (!h) return 0;
     return guarded<int>([&] {
         if (!h->backend->selectSubsong(index)) return 0;
-        h->describe = h->backend->describe();
+        h->describe = protracktor::describeOf(*h->backend);
         return 1;
     }, 0);
 }

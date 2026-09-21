@@ -146,6 +146,34 @@ std::unique_ptr<Backend> openBackend(std::vector<char> bytes, const std::string 
 std::string backendsFingerprint();
 
 /**
+ * Text a decoder read out of a file, as UTF-8 (`docs/BACKLOG.md` A47).
+ *
+ * A title is bytes from a fixed field in whatever the author's machine wrote, and nothing in the
+ * file says which. One rule, in this order:
+ *
+ * 1. **Valid UTF-8 stays as it is.** A byte sequence that parses as UTF-8 by accident is rare, and
+ *    a decoder that already decoded (libopenmpt) hands out UTF-8.
+ * 2. **A byte from 0x80 to 0x9F means CP437.** Those are control characters in ISO-8859-1, which
+ *    no real text holds, and letters on a DOS machine -- `0x86` "å", `0x94` "ö". The file that
+ *    found this, `Zalza/akes lekhorna.mod`, is exactly that.
+ * 3. **Anything else is ISO-8859-1**, what an Amiga and a C64 tune wrote, and which maps every
+ *    byte to a letter, so nothing comes out as U+FFFD.
+ *
+ * `native/patches/libopenmpt/` applies rule 2 inside libopenmpt, which decodes its own formats'
+ * text before this sees it; the two are checked together by `scripts/check-engine.mjs`.
+ */
+std::string fileTextToUtf8(const std::string &raw);
+
+/**
+ * A backend's description with every line through [fileTextToUtf8].
+ *
+ * Per line rather than whole: the lines come from different fields -- a title in one encoding, an
+ * author in another -- and one byte of CP437 in the title must not decide the author's letters.
+ * The one way out of the engine for a description, so both hosts get the same text.
+ */
+std::string describeOf(const Backend &backend);
+
+/**
  * Where sc68 should look for the replay routines the app does not ship (`docs/LICENSES.md`).
  *
  * Also an engine fact rather than a host one, though what it points at differs: a directory on

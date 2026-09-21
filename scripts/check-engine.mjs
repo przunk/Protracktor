@@ -263,6 +263,62 @@ const tinyModule = (() => {
   }
 }
 
+// --- text read out of a file -------------------------------------------------------------------
+//
+// A47. A title is bytes from a fixed field, written in whatever the author's machine used, and
+// every string leaves the engine as UTF-8 by one rule: valid UTF-8 stays as it is; text holding a
+// byte from 0x80 to 0x9F is CP437 (those bytes are control characters in ISO-8859-1, and letters
+// on a DOS machine); anything else is ISO-8859-1. The reported file, Zalza's "akes lekhorna.mod",
+// holds 0x86 and 0x94 -- CP437's "å" and "ö" -- which libopenmpt turned into U+FFFD.
+const titleOf = (describe) => (describe.split('\n').find((l) => l.startsWith('title\t')) ?? '').slice(6);
+const lineOf = (describe, key) => (describe.split('\n').find((l) => l.startsWith(`${key}\t`)) ?? '').slice(key.length + 1);
+const describeOf = (bytes, name) => {
+  const { handle, error } = open(bytes, name);
+  if (!handle) return `(did not open: ${error})`;
+  const text = M.UTF8ToString(M._pt_describe(handle));
+  M._pt_close(handle);
+  return text;
+};
+
+{
+  // Through libopenmpt, which decodes a MOD's text itself.
+  const modWithTitle = (title) => {
+    const bytes = Buffer.from(tinyModule);
+    bytes.fill(0, 0, 20);
+    title.copy(bytes, 0);
+    return bytes;
+  };
+  const cp437 = describeOf(modWithTitle(Buffer.from([0x86, ...Buffer.from('kes lekh', 'latin1'), 0x94, ...Buffer.from('rna (za)', 'latin1')])), 'akes lekhorna.mod');
+  check('a MOD title in CP437 reads as letters', titleOf(cp437) === 'åkes lekhörna (za)', `said: ${titleOf(cp437)}`);
+  const latin1 = describeOf(modWithTitle(Buffer.from('J\xf6rg \xc5ke', 'latin1')), 'latin1.mod');
+  check('a MOD title in ISO-8859-1 still reads as ISO-8859-1', titleOf(latin1) === 'Jörg Åke', `said: ${titleOf(latin1)}`);
+}
+
+{
+  // Through the engine's own rule, for a decoder that hands out raw bytes: a PSID file, built
+  // here -- a header, then two RTS instructions for init and play at $1000 and $1003.
+  const sidWith = (name, author) => {
+    const header = Buffer.alloc(0x7c);
+    header.write('PSID', 0, 'latin1');
+    header.writeUInt16BE(2, 4);          // version
+    header.writeUInt16BE(0x7c, 6);       // data offset
+    header.writeUInt16BE(0, 8);          // load address: the first two bytes of the data
+    header.writeUInt16BE(0x1000, 0x0a);  // init
+    header.writeUInt16BE(0x1003, 0x0c);  // play
+    header.writeUInt16BE(1, 0x0e);       // songs
+    header.writeUInt16BE(1, 0x10);       // start song
+    name.copy(header, 0x16, 0, 32);
+    author.copy(header, 0x36, 0, 32);
+    const data = Buffer.from([0x00, 0x10, 0x60, 0xea, 0xea, 0x60]);
+    return Buffer.concat([header, data]);
+  };
+  const sid = describeOf(sidWith(Buffer.from('lekh\x94rna', 'latin1'), Buffer.from('J\xf6rg', 'latin1')), 'check.sid');
+  check('a SID title with a CP437 letter reads as that letter', titleOf(sid) === 'lekhörna', `said: ${titleOf(sid)}`);
+  check('a SID author in ISO-8859-1 reads as ISO-8859-1', lineOf(sid, 'artist') === 'Jörg', `said: ${sid.split('\n').slice(0, 4).join(' | ')}`);
+  const utf8 = describeOf(sidWith(Buffer.from('Łódź', 'utf8'), Buffer.from('x', 'latin1')), 'utf8.sid');
+  check('a SID title already in UTF-8 is left as it is', titleOf(utf8) === 'Łódź', `said: ${titleOf(utf8)}`);
+}
+
 console.log();
 if (failed) {
   console.error(`${failed} engine check${failed === 1 ? '' : 's'} failed`);

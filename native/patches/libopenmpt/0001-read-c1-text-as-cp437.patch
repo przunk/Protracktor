@@ -1,0 +1,25 @@
+--- a/libopenmpt/libopenmpt_impl.cpp
++++ b/libopenmpt/libopenmpt_impl.cpp
+@@ -417,7 +417,21 @@
+ }
+ 
+ std::string module_impl::mod_string_to_utf8( const std::string & encoded ) const {
+-	return OpenMPT::mpt::ToCharset( OpenMPT::mpt::Charset::UTF8, m_sndFile->GetCharsetInternal(), encoded );
++	// Protracktor (native/patches/libopenmpt, docs/BACKLOG.md A47): the "no C1" charsets turn every
++	// byte from 0x80 to 0x9F into U+FFFD. Those bytes are control characters in ISO-8859-1 and
++	// letters in CP437 -- a MOD saved on a DOS machine writes "\x86" for "a-ring" -- so text that holds
++	// one is read as CP437, which is the rule the engine applies to every other decoder's text.
++	OpenMPT::mpt::Charset charset = m_sndFile->GetCharsetInternal();
++	if ( charset == OpenMPT::mpt::Charset::Amiga_no_C1 || charset == OpenMPT::mpt::Charset::ISO8859_1_no_C1 || charset == OpenMPT::mpt::Charset::ISO8859_15_no_C1 ) {
++		for ( const char c : encoded ) {
++			const unsigned char b = static_cast<unsigned char>( c );
++			if ( b >= 0x80 && b <= 0x9f ) {
++				charset = OpenMPT::mpt::Charset::CP437;
++				break;
++			}
++		}
++	}
++	return OpenMPT::mpt::ToCharset( OpenMPT::mpt::Charset::UTF8, charset, encoded );
+ }
+ void module_impl::apply_mixer_settings( std::int32_t samplerate, int channels ) {
+ 	bool samplerate_changed = static_cast<std::int32_t>( m_sndFile->m_MixerSettings.gdwMixingFreq ) != samplerate;
