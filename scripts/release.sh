@@ -125,12 +125,14 @@ Closed testing. Notes as uploaded: \`store/listing/*/release-notes/default.txt\`
 
 ENTRY
 )"
+# The blank line after the entry is explicit: \$(…) strips trailing newlines, and without it the
+# previous release's heading sticks to this entry's last line -- as 0.6.0's did under 0.7.0's.
 python3 - "$entry" <<'PY'
 import pathlib, sys
 path = pathlib.Path("store/play-console/releases.md")
 text = path.read_text(encoding="utf-8")
 first = text.index("\n## ") + 1
-path.write_text(text[:first] + sys.argv[1] + "\n" + text[first:], encoding="utf-8")
+path.write_text(text[:first] + sys.argv[1].rstrip("\n") + "\n\n" + text[first:], encoding="utf-8")
 PY
 git add store/play-console/releases.md
 git commit -q -m "Record the evidence for versionCode $version_code" \
