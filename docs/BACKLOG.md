@@ -342,8 +342,18 @@ Measured while building it, because none of it was visible from the decision:
   one, and there is no per-file form of it. The download gets smaller and the install gets bigger.
 - **A song is not always a file.** `uade_play_from_buffer` cannot do multifile and TFMX is
   `mdat.name` beside `smpl.name`, so the engine writes the tune to a scratch directory and plays it
-  by path. `openBackend` takes companions now; finding them is the caller's, and **that half is not
-  built yet** — single-file formats play, TFMX needs the other half fetched with it.
+  by path. `openBackend` takes companions, and the caller finds them: the next URL in the Modland
+  directory, the next member of the UnExoticA archive, the next document in a granted folder —
+  that last one only where the provider's document ids are paths.
+- **The format list is measured, not read from UADE's table.** `eagleplayer.conf` declares 371
+  markers; taken as a list it would have indexed 3,856 PlayStation `.psf` files UADE cannot play.
+  `probe-uade.py --formats 60 --play 12`: 413 of 720. 33 extensions and two prefixes whose Modland
+  directory played 10 or more of 12 — 3,810 files. Left out and why is in `SupportedFormats`.
+- **Size, measured on the release APK**: arm64 native libraries 6.0 → 7.4 MB installed, and the APK
+  itself 20 → 11 MB, because extracted libraries are compressed inside it again.
+- **Not yet checked on a phone**: that `fork` and `exec` from `nativeLibraryDir` work on his device,
+  that the players download and unpack, and that anything plays. Everything above is built and
+  unit-tested; none of it has made a sound on Android.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
