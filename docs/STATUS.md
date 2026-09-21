@@ -1,7 +1,7 @@
 # Status
 
-Updated: 2026-09-18 — version 0.6.0, round 12: the index no longer depends on what this build
-can play. versionCode is the commit count, schema version 16
+Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
+songdb, the downloads grouped. versionCode is the commit count, schema version 17
 
 ## What works
 

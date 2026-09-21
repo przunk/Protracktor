@@ -31,6 +31,10 @@ signing and rollout remain the owner's actions.
 
 ## 3. Prepare the release tree
 
+`./scripts/release.sh X.Y.Z` does the repository half of §3 and §4 in this order and stops at the
+first failure; `--check` runs its checks without changing anything (`docs/BUILD.md`). The items
+below stay as the record of what it does and what it cannot.
+
 - [ ] Merge only owner-approved branches into `develop` and run the complete final documentation
       pass.
 - [ ] Run `./scripts/test-protracktor.sh --really` and confirm a non-zero test count.

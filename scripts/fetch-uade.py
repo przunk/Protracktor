@@ -49,20 +49,23 @@ CONFIG = ROOT / "native" / "backends" / "uade" / "config"
 
 # name -> (repository, revision, what it is)
 SOURCES = {
-    # UADE 3.05. GPL-2.0-or-later; the replay binaries under `players/` are *not* shipped and are
+    # UADE 3.05. UAE code under the GPL with no version stated, libuade under the LGPL
+    # (`docs/LICENSES.md`); the replay binaries under `players/` are *not* shipped and are
     # downloaded by the app from the page upstream publishes for them (`docs/LICENSES.md`).
     "uade": (
         "https://gitlab.com/uade-music-player/uade.git",
         "d40dcc7",
         "the emulator and the library in front of it",
     ),
-    # LGPL-2.1-or-later. libuade reads RMC containers, which are bencoded.
+    # BSD-2-Clause (and BSD-3-Clause for the part from Codeville). libuade reads RMC containers,
+    # which are bencoded. Read from its LICENSE files on 2026-09-21; an earlier note here said LGPL.
     "bencodetools": (
         "https://gitlab.com/heikkiorsila/bencodetools.git",
         "5fa73d3",
         "bencode, for RMC containers",
     ),
-    # LGPL-2.1-or-later. UADE's author's support library: arrays, strings, files.
+    # BSD-2-Clause-style, from its COPYING (read 2026-09-21; an earlier note here said LGPL).
+    # UADE's author's support library: arrays, strings, files.
     "libzakalwe": (
         "https://gitlab.com/hors/libzakalwe.git",
         "080b054",
