@@ -221,16 +221,32 @@ class PlaybackService : Service() {
     private fun showNotification(content: NotificationContent) {
         val notification = buildNotification(content)
         if (!started) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                notification,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                } else {
-                    0
-                },
-            )
+            // **Android may refuse, and refusing must not end the app** (`docs/STATUS.md` C72).
+            // From Android 12 a service may enter the foreground only while its app is on screen,
+            // and the check is made here, when the service is being created -- not when it was
+            // asked for. A request made while the app was visible reaches this line a moment later,
+            // and if the app has left the screen in between, the refusal arrives as an exception
+            // thrown out of `onCreate`, which took the whole process down on a phone. The music
+            // is in the engine, not in this service, so it plays on; what is lost is the
+            // notification until the next press in the app asks for this service again.
+            try {
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    } else {
+                        0
+                    },
+                )
+            } catch (refused: IllegalStateException) {
+                // `ForegroundServiceStartNotAllowedException` is an IllegalStateException, and
+                // naming the parent keeps this compiling for API 29, which lacks the class.
+                Log.w("Protracktor", "playback service: not allowed into the foreground", refused)
+                stopSelf()
+                return
+            }
             started = true
         } else {
             getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)

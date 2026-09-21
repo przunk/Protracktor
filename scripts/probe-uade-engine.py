@@ -20,6 +20,9 @@ from __future__ import annotations
 
 import argparse
 import collections
+import os
+import signal
+import time
 import importlib.util
 import io
 import pathlib
@@ -132,8 +135,13 @@ def main() -> int:
     scratch = inner / "scratch"
     scratch.mkdir()
     locked.chmod(0o111)
+    # **An empty home directory, every run.** UADE remembers the length of every tune it has played
+    # to the end, in `$HOME/.uade/contentdb`, and reports it from the first frame. Earlier runs had
+    # filled that file, so a length arrived here without the app's measurement doing anything --
+    # and the phone, with no such file, showed none.
+    home = pathlib.Path(tempfile.mkdtemp(prefix="uade-home-"))
     env = {"UADE_CORE_FILE": args.core, "UADE_BASE_DIR": str(base), "UADE_SCRATCH_DIR": str(scratch),
-           "PATH": "/usr/bin:/bin"}
+           "PATH": "/usr/bin:/bin", "HOME": str(home)}
 
     by_marker: dict[str, list[str]] = collections.defaultdict(list)
     for _size, path in probe.modland_index():
@@ -184,11 +192,51 @@ def main() -> int:
         tally["pair ok" if verdict.startswith("VERDICT ok") else "pair fail"] += 1
         print(f"  {a.name[:30]} + {b.name[:30]}: {verdict[8:]}")
 
+    # **The emulator dying must not take the host with it** -- the whole reason UADE runs as its
+    # own process. On the phone it did: libuade writes to uadecore over a socket, a write to a
+    # dead peer raises SIGPIPE, and SIGPIPE ends the process. So uadecore is killed here at several
+    # moments during a walk through the subsongs, and the driver must end by returning, never by a
+    # signal.
+    print("\n=== uadecore killed mid-tune")
+    # A tune with seven subsongs, so the walk lasts long enough to be interrupted: the first
+    # version picked any `cust.` file, which ended before the second kill and "passed" having
+    # killed nothing. A kill that found no emulator is counted as a failure of the check.
+    walker = next((p for p in played if p.name == "cust.paradroid"), None)
+    if walker is None:
+        walker = staged("Delitracker Custom/TSM/paradroid/cust.paradroid")
+    if walker is None:
+        failures.append(("kill", "cust.paradroid", "not available to walk"))
+    else:
+        for delay in (0.6, 1.5, 3.0):
+            proc = subprocess.Popen([args.drive, "walk", str(walker)], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(delay)
+            children = subprocess.run(["pgrep", "-P", str(proc.pid)], capture_output=True,
+                                      text=True).stdout.split()
+            for child in children:
+                try:
+                    os.kill(int(child), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            code = proc.wait(timeout=120)
+            if not children:
+                tally["survives UNTESTED"] += 1
+                failures.append(("kill", str(walker), f"nothing to kill after {delay}s"))
+                print(f"  nothing to kill after {delay}s -- the check did not run")
+                continue
+            survived = code >= 0
+            tally["survives ok" if survived else "survives FAIL"] += 1
+            print(f"  killed {len(children)} after {delay}s: "
+                  f"{'returned ' + str(code) if survived else 'died of ' + signal.Signals(-code).name}")
+            if not survived:
+                failures.append(("kill", str(walker), f"died of {signal.Signals(-code).name}"))
+
     leftovers = list(scratch.iterdir())
     print(f"\nscratch directory after everything: {len(leftovers)} entries")
     print("\n" + ", ".join(f"{k}×{v}" for k, v in tally.most_common()))
     locked.chmod(0o755)
     shutil.rmtree(locked, ignore_errors=True)
+    shutil.rmtree(home, ignore_errors=True)
     return 0 if not leftovers and not failures else 1
 
 

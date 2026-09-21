@@ -68,6 +68,26 @@ public:
      * app has to be told where that was.
      */
     virtual int currentSubsong() const { return 0; }
+
+    /**
+     * Called by the host when this tune starts playing, and never by a scan or a metadata pass.
+     *
+     * For work worth doing only for a tune somebody is listening to. `UadeBackend` is why it
+     * exists: an Amiga tune states no length, and finding it means running a second emulator to
+     * the end -- a few seconds of a core per tune, which a folder scan opening hundreds of files
+     * has no business paying for.
+     */
+    virtual void startedPlaying() {}
+
+    /**
+     * Whether [durationSeconds] may go from zero to a real value while the tune plays.
+     *
+     * The host publishes a length when a tune opens and when a subsong changes, because for most
+     * backends it cannot change otherwise and asking is not cheap. A backend that learns its
+     * length later says so, and the host keeps asking until it has one. Must be cheap: it is asked
+     * from the audio callback.
+     */
+    virtual bool durationArrivesLater() const { return false; }
 };
 
 /**

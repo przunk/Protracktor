@@ -20,7 +20,7 @@ A usable player, as far as anything can be called that without a device saying s
   process, the fetched companion and the file lookup at once. The other 34 names are checked on
   the host only — 140 of 140 through the unchanged engine, under a parent directory that cannot be
   listed, as `/data` cannot on a phone. **Not yet on a phone**: the other formats, subsong
-  switching, deleting the routines. No length and no seeking yet: the formats do not state one.
+  switching, deleting the routines. **Length and seeking**: the formats state no length, so a second emulator plays the subsong silently to its end once playback starts, and the total and the slider appear a few seconds in; a tune that loops stays without either.
   The browser cannot have them at all. Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt and HivelyTracker seek, sc68 and libsidplayfp cannot, and the UI
   reflects that.
@@ -427,7 +427,42 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
-### C71. ~~"Get some music to browse" flashed on every visit to Online catalogues~~ — FIXED 2026-09-21, branch
+### C73. ~~The next subsong after a tune ended was selected and never heard~~ — FIXED 2026-09-21
+
+With "play all subsongs" on, `cust.paradroid` moved to its second subsong when the first ended, the
+app showed it as playing, and nothing sounded. Pause and play brought it back; four seconds later it
+stopped again.
+
+When a tune ends, the audio callback returns `Stop` and Oboe never calls it again, but the stream
+object stays. `requestSubsong` then selected the next subsong and called `start()` to be heard, and
+`start()` returns at once when a stream exists. `restart()` closes the stream before starting, which
+is why pause and play worked. It does the same now.
+
+**Not a UADE defect**, though UADE exposed it: every subsong there ends with a clean short render,
+and paradroid's second to sixth are two- to five-second effects, so the "stopped again" was the
+same fault at the next boundary. Any backend whose subsongs end by running out would have met it.
+Not reproducible off a phone — Oboe is the half the host run does not have — so it was reasoned
+from the code; **confirmed on the phone 2026-09-21**, all seven of paradroid's subsongs in turn.
+### C72. ~~The app died when Android refused the playback service the foreground~~ — FIXED 2026-09-21
+
+Found on a phone while stepping through `cust.paradroid`'s subsongs, with logcat:
+`ForegroundServiceStartNotAllowedException: Service.startForeground() not allowed`, thrown from
+`PlaybackService.onCreate`, uncaught, and the process ended.
+
+From Android 12 a service may enter the foreground only while its app is on screen, and the check
+is made when the service calls `startForeground` — not when it was asked for. A press in the app
+starts the service; if the app is no longer visible by the moment `onCreate` runs, the refusal is an
+exception, and nothing caught it. Now it is caught: the service logs it and stops. The music is in
+the engine and plays on; the notification returns with the next press in the app.
+
+**What put the service in that position is not established.** The service stops itself when nothing
+is playing, loading or current (C43), and something asked for it again from behind the screen. The
+crash is fixed whatever the sequence was; the sequence is still owed an explanation.
+
+It was first taken for a UADE crash, because it happened on an Amiga tune. It is not one, though
+looking for it did find a real UADE defect of a different kind (`docs/BACKLOG.md` A44, SIGPIPE).
+
+### C71. ~~"Get some music to browse" flashed on every visit to Online catalogues~~ — FIXED 2026-09-21
 
 The row appeared for a moment each time Online catalogues opened, on a phone holding every index,
 and then vanished.
@@ -441,7 +476,7 @@ the rule saw a phone with nothing on it.
 `BrowseState.offersDownloadEverything` rather than in the composable, where it can be tested.
 `DownloadOfferTest` fails with the gate removed. In since round 12 (`030d87a`).
 
-### C70. ~~Random played, and the playlist stayed on screen~~ — FIXED 2026-09-19, branch
+### C70. ~~Random played, and the playlist stayed on screen~~ — FIXED 2026-09-19
 
 Play anything from Browse, then open Random: a tune started and the playlist was still there. The
 Random view opened and closed itself in the same frame.

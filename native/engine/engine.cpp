@@ -71,8 +71,11 @@ void hvl_play_irq(struct hvl_tune *ht);
 extern "C" {
 #include <uade/uade.h>
 }
+#include <atomic>
+#include <csignal>
 #include <dirent.h>
 #include <fcntl.h>
+#include <thread>
 #include <strings.h>
 #include <fstream>
 #include <sys/stat.h>
@@ -1760,6 +1763,21 @@ public:
      */
     static void setPaths(const std::string &core, const std::string &base,
                          const std::string &scratch) {
+        // **A dead emulator must not take the app with it**, and without this it did. libuade
+        // writes to uadecore over a socket, and a write to a socket whose other end has died raises
+        // SIGPIPE, whose default action ends the process -- the app, with no message and nothing
+        // in any log the listener can see. That is exactly the failure fork+exec was chosen to
+        // contain (`docs/BACKLOG.md` A44): uadecore has 51 `exit()` calls, and one of them firing
+        // was meant to end a tune, not the player. Found on the phone as a crash on
+        // `cust.paradroid`'s seventh subsong, and reproduced on the host by killing uadecore
+        // mid-tune: the driver died of signal 13. Ignored, the write fails with EPIPE, libuade
+        // reports an error, and the tune ends.
+        //
+        // Process-wide, because a signal disposition is; ignoring SIGPIPE is what every program
+        // that writes to sockets does, and Java's own sockets never relied on it.
+        static std::once_flag ignored;
+        std::call_once(ignored, [] { ::signal(SIGPIPE, SIG_IGN); });
+
         std::lock_guard<std::mutex> held(pathMutex());
         corePath() = core;
         basePath() = base;
@@ -1884,19 +1902,34 @@ public:
     }
 
     /**
-     * No, and it is a measurement nobody has made rather than a limitation anybody proved.
+     * Yes, by running the emulator to the position, which is how every emulator here seeks.
      *
-     * `uade_seek` exists and works by running the emulator forward, which for a five-minute Amiga
-     * tune is real time nobody has timed on a phone. Offering a slider that takes ten seconds to
-     * answer would be offering a control that cannot be honoured (`docs/ARCHITECTURE.md` §5), so
-     * it says no until somebody times it.
+     * Measured before saying so, 2026-09-21: UADE renders 120 to 150 times faster than real time
+     * on the host, so a minute in costs about half a second there and a few on a phone. The host
+     * holds the decoder lock for the duration and the audio thread plays silence meanwhile, as it
+     * does for a SID (`docs/ARCHITECTURE.md` §5). Backwards starts the subsong again, since the
+     * emulator has no other way back. Without a length the app offers no slider at all, so in
+     * practice this waits for [startedPlaying]'s measurement.
      */
-    bool canSeek() const override { return false; }
-    void seek(double) override {}
+    bool canSeek() const override { return true; }
+
+    void seek(double seconds) override {
+        if (!state_) return;
+        const double known = durationSeconds();
+        const double target = std::max(0.0, known > 0.0 ? std::min(seconds, known) : seconds);
+        if (target < positionSeconds()) {
+            uade_stop(state_);
+            if (uade_play(modulePath_.c_str(), subsongs_.cur, state_) <= 0) return;
+        }
+        // Rendered and thrown away, a chunk at a time, until the position is reached or the
+        // subsong ends first.
+        while (positionSeconds() + static_cast<double>(kChunkFrames) / kSampleRate <= target) {
+            if (uade_read(chunk_.data(), kChunkFrames * 2 * sizeof(int16_t), state_) <= 0) break;
+        }
+    }
 
     void rewind() override {
-        // Back to the start by playing the file again: the emulator has no other way in, which is
-        // also why there is no seek.
+        // Back to the start by playing the subsong again: the emulator has no other way in.
         if (!state_) return;
         uade_stop(state_);
         uade_play(modulePath_.c_str(), subsongs_.cur, state_);
@@ -1910,17 +1943,36 @@ public:
     }
 
     /**
-     * What the file itself says, and nothing invented.
+     * The length, once it is known, and nothing invented before.
      *
-     * Zero when UADE does not know, which is most tunes: an Amiga replay routine has no notion of
-     * a length, and the answers that do arrive come from the song database or from an RMC
-     * container. Reporting a guess here is what `docs/STATUS.md` C67 was about, and the bar and
-     * the total both read a zero correctly now (C68).
+     * An Amiga replay routine has no notion of a length; the file states none, and UADE's own
+     * figure is zero for nearly every tune. What a routine does know is when it has finished, so
+     * [startedPlaying] runs a second emulator to that point in the background and this reports
+     * what it found. Until then it is zero, which the bar and the total read correctly (C68) --
+     * a guess here is what C67 was about. A subsong that never ends stays at zero.
      */
     double durationSeconds() const override {
+        const double measured = measured_.load(std::memory_order_acquire);
+        if (measured > 0.0) return measured;
         const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
         return info ? info->duration : 0.0;
     }
+
+    /**
+     * While the measurement runs, **and after it has found a length**.
+     *
+     * The first version said yes only while measuring, which stops being true at the moment the
+     * length becomes known -- so the host, which asks for the length only while this says yes,
+     * stopped asking just as there was something to read, and the phone never showed one. The host
+     * stops asking by itself once it has published a length, so saying yes afterwards costs one
+     * load per buffer until then and nothing after.
+     */
+    bool durationArrivesLater() const override {
+        return measuring_.load(std::memory_order_acquire) ||
+               measured_.load(std::memory_order_acquire) > 0.0;
+    }
+
+    void startedPlaying() override { measure(subsongs_.cur); }
 
     int preferredSampleRate() const override { return kSampleRate; }
 
@@ -1938,17 +1990,30 @@ public:
         uade_stop(state_);
         if (uade_play(modulePath_.c_str(), wanted, state_) <= 0) return false;
         if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
+        // Another subsong is another length. Only if a measurement was ever started: a scan never
+        // plays, and switching subsongs there must not start an emulator either.
+        if (measurer_.joinable()) measure(wanted);
         return true;
     }
 
+    /**
+     * The same `key\tvalue` lines every backend gives (`DescribeBlock`).
+     *
+     * The first version returned a sentence, which parsed as no keys at all: the information panel
+     * showed no format, and `seekable` was absent rather than stated.
+     */
     std::string describe() const override {
         const struct uade_song_info *info = state_ ? uade_get_song_info(state_) : nullptr;
-        if (!info) return "UADE";
+        std::ostringstream o;
         // The format is what the user wants; the player is what tells two Hippel variants apart,
         // and is the thing to quote back when a file does not work.
-        std::string text = info->formatname[0] ? info->formatname : "Amiga custom";
-        if (info->playername[0]) text += std::string(" (") + info->playername + ")";
-        return text;
+        const std::string format = info && info->formatname[0] ? info->formatname : "Amiga custom";
+        o << "format\t" << format << " (UADE)" << '\n';
+        if (info && info->playername[0]) o << "player\t" << info->playername << '\n';
+        if (info && info->modulename[0]) o << "title\t" << info->modulename << '\n';
+        o << "subsongs\t" << subsongCount() << '\n'
+          << "seekable\t" << (canSeek() ? 1 : 0);
+        return o.str();
     }
 
 private:
@@ -2014,6 +2079,82 @@ private:
     }
 
     static std::mutex &openMutex() { static std::mutex m; return m; }
+
+    /** The longest subsong measured before it is taken to loop for ever: ten minutes of audio. */
+    static constexpr std::size_t kMeasureCapFrames = static_cast<std::size_t>(600) * kSampleRate;
+
+    /**
+     * Finds [subsong]'s length by playing it to the end in a second emulator, on a thread.
+     *
+     * A second process, not this one's: this one is playing, and running it ahead would be
+     * running the music ahead. Silent and as fast as the machine allows -- 120 to 150 times real
+     * time on the host, so a three-minute tune is under two seconds there and a few on a phone.
+     * Stopped and joined whenever the tune closes or the subsong changes, so a measurement never
+     * outlives the scratch directory it reads from.
+     */
+    void measure(int subsong) {
+        stopMeasuring();
+        measured_.store(0.0, std::memory_order_release);
+        measuring_.store(true, std::memory_order_release);
+        stop_.store(false, std::memory_order_release);
+        measurer_ = std::thread([this, subsong] {
+            struct uade_state *probe = nullptr;
+            {
+                // Forked under the same lock as an opening, so it cannot inherit descriptors
+                // another opening has pointed at its own scratch directory for a moment.
+                std::lock_guard<std::mutex> held(openMutex());
+                probe = newState();
+            }
+            if (probe && uade_play(modulePath_.c_str(), subsong, probe) > 0) {
+                std::vector<int16_t> buffer(kChunkFrames * 2);
+                std::size_t frames = 0;
+                bool ended = false;
+                while (!stop_.load(std::memory_order_acquire) && frames < kMeasureCapFrames) {
+                    const ssize_t got = uade_read(buffer.data(), buffer.size() * sizeof(int16_t), probe);
+                    // Zero is the routine's own end. Negative is the emulator gone -- a crash, not
+                    // an ending -- and the length at that point would be invented.
+                    if (got == 0) { ended = true; break; }
+                    if (got < 0) break;
+                    frames += static_cast<std::size_t>(got) / (2 * sizeof(int16_t));
+                }
+                if (ended && frames > 0) {
+                    measured_.store(static_cast<double>(frames) / kSampleRate, std::memory_order_release);
+                }
+            }
+            if (probe) {
+                uade_stop(probe);
+                uade_cleanup_state(probe);
+            }
+            measuring_.store(false, std::memory_order_release);
+        });
+    }
+
+    void stopMeasuring() {
+        stop_.store(true, std::memory_order_release);
+        if (measurer_.joinable()) measurer_.join();
+    }
+
+    /** A state configured exactly as the playing one is, for the measurement. */
+    struct uade_state *newState() {
+        const Paths paths = pathsCopy();
+        struct uade_config *config = uade_new_config();
+        if (!config) return nullptr;
+        uade_config_set_option(config, UC_BASE_DIR, paths.base.c_str());
+        uade_config_set_option(config, UC_UADECORE_FILE, paths.core.c_str());
+        uade_config_set_option(config, UC_FREQUENCY, "44100");
+        uade_config_set_option(config, UC_ONE_SUBSONG, nullptr);
+        // **No timeouts in the measurement.** UADE ends a subsong after 512 seconds, and after
+        // 20 of silence, and reports both exactly as it reports a replay routine saying "the end"
+        // -- even marked as a happy ending. Measured with them on, 19 of 140 tunes came back 512.0
+        // seconds long, which is the timeout and not a length (C67 is that mistake once already).
+        // Off, only the routine's own end yields a length, and a tune that loops runs into this
+        // class's ten-minute cap and stays unknown.
+        uade_config_set_option(config, UC_DISABLE_TIMEOUTS, nullptr);
+        struct uade_state *state = uade_new_state(config);
+        std::free(config);
+        if (state) uade_set_amiga_loader(&UadeBackend::loadAmigaFile, this, state);
+        return state;
+    }
 
     /**
      * Finds a file the emulated Amiga asks for -- TFMX's `smpl.` beside its `mdat.`.
@@ -2175,6 +2316,7 @@ private:
     }
 
     void close() {
+        stopMeasuring();
         if (state_) {
             uade_stop(state_);
             uade_cleanup_state(state_);
@@ -2200,6 +2342,10 @@ private:
 
     struct uade_state *state_ = nullptr;
     struct uade_subsong_info subsongs_ = {0, 0, 0, 0};
+    std::thread measurer_;
+    std::atomic<double> measured_{0.0};
+    std::atomic<bool> measuring_{false};
+    std::atomic<bool> stop_{false};
     std::string scratch_;
     std::string modulePath_;
     std::vector<int16_t> chunk_ = std::vector<int16_t>(kChunkFrames * 2);

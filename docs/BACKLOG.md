@@ -284,7 +284,7 @@ Two things to settle when it is picked up:
   (`docs/SPEC_RANDOM.md` wants them alike). Check before building, and fix both together if they
   differ — A43 is in the same corner of the same screen and the two may as well be one branch.
 
-## A44. UADE's process model — **decided 2026-09-19, fork+exec; integration on `feature/a44-uade`**
+## A44. UADE's process model — **decided 2026-09-19, fork+exec; merged 2026-09-21**
 
 Round 12 item 2 stopped here, which is what the round's rules say to do with a decision rather than
 guess it. The recommendation was taken as it stood. Everything else about UADE is settled: the measurement (~29,000 Modland files), the
@@ -375,6 +375,38 @@ Measured while building it, because none of it was visible from the decision:
   run now keeps both directories under such a parent, so it cannot pass what a phone cannot.
 - **Replay routines counted**: 176, not the 178 first written, plus eleven player configurations
   under `players/ENV/EaglePlayer/` that the first unpacker dropped.
+- **Length and seeking, 2026-09-21.** Nothing in these formats states a length, so the app showed
+  none and offered no slider. Measured first: UADE renders 120 to 150 times faster than real time
+  on the host, and a tune's replay routine reports its own end. Now, once a tune starts *playing* —
+  never for a scan or the metadata pass, through `Backend::startedPlaying` — a second emulator
+  plays the subsong silently to its end and the length arrives a few seconds in; the host keeps
+  asking while `durationArrivesLater` says it may. Seeking runs the emulator to the position, under
+  the same lock as every other backend's.
+
+  **The trap, found by measuring rather than by reading:** with UADE's own timeouts on, 19 of 140
+  tunes measured exactly 512.0 seconds. That is UADE's subsong timeout, reported the same way — even
+  as a happy ending — as a routine that finished. The measurement runs with timeouts off; a tune
+  that loops reaches the ten-minute cap and stays unknown. Host run: 140 of 140 with seeks forward
+  and back, 122 with a length, 18 without, none at 512.
+
+  **And then the phone showed no length at all**, and two mistakes of mine were behind it. The
+  backend said "a length may still come" only *while* measuring, which stops being true at the
+  moment the length is known — so the host, which asks only while that is said, stopped asking
+  just as there was something to read. The host check did not catch it because the driver asked
+  the backend directly rather than the way the host asks, and because UADE had quietly remembered
+  the lengths of tunes my earlier measurements had played to the end, in `~/.uade/contentdb`, so
+  the host had a length from the first frame without measuring anything. Both are closed: the
+  driver now asks as the host does and fails `length-not-announced` on the old code, and every
+  host run gets an empty home directory.
+- **A dead emulator took the app with it, 2026-09-21.** Found on the phone as a crash on the seventh
+  subsong of `cust.paradroid`, with no message. The host could not reproduce the trigger — all
+  seven subsongs play there — but it could reproduce the kind of death: kill uadecore mid-tune and
+  the process talking to it dies of **SIGPIPE**, because libuade writes to a socket whose other end
+  is gone and the signal's default action ends the process. That defeats the reason UADE runs
+  apart at all (the 51 `exit()` calls above). SIGPIPE is ignored now, the write fails with EPIPE,
+  and the tune ends; the host run kills uadecore at three moments on every run and fails if the
+  driver dies of a signal. **Why uadecore died on the phone is still unknown** — the fix makes the
+  app survive it, and the next phone test says whether subsong seven then plays or ends.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
