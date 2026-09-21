@@ -427,6 +427,24 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C80. A SID that needs the C64's BASIC plays silence — **OPEN, found 2026-09-21**
+
+The owner: `Pace_Wayne/Prelfugueinfmaj_BASIC.sid` "does not play on my phone".
+
+**Why, checked on the host:** it is an **RSID with the BASIC flag set** — the tune is a BASIC
+program, and running it needs the C64's BASIC ROM. The app plays SID without ROMs (by decision, when
+libsidplayfp was integrated), so the engine opens it without complaint and renders **silence**: a peak
+of 0.005 over 50 buffers, where music reaches tenths. **590 of HVSC's 60,572 files in Modland are
+`_BASIC`**, and every one of them will do the same.
+
+Two things, and only the second is small:
+
+1. **Playing them** needs the BASIC ROM, which is the ROM question kept out of scope when
+   libsidplayfp arrived: ship it, ask the user for it, or live without. The owner's decision.
+2. **Silence is a defect meanwhile** (AGENTS.md §7): a tune the engine cannot play must say so, not
+   open and play nothing. The flag is in the file's header, so the refusal can be as specific as
+   "this tune is a BASIC program and needs the C64's BASIC ROM".
+
 ### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, branch
 
 Found the day the in-app policy was added: it stopped at the first line of "Changes", would not

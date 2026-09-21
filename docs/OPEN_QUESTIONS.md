@@ -154,6 +154,19 @@ start at speed, which takes real time for a position deep into a track.
 
 Recommendation: **(c)**. Threshold to be measured once something plays.
 
+## Q11 — Should the seek bar move a SID? — **to talk through, raised 2026-09-21**
+
+*The owner: "talk through whether the playback slider can be dragged for SID files".*
+
+Today it cannot: libsidplayfp has no seek, because a SID is a C64 program and the only way to a
+position is to run the machine there. The slider is read-only for SID, as for sc68. Q6 is the same
+question for resuming.
+
+What there is to decide, once measured: whether a seek **forwards** is worth rendering silently at
+full speed (how many seconds of wait per minute of tune, on the phone), whether a seek **backwards**
+restarts and runs forward the same way, and whether a long wait is shown or capped (Q6's (c)).
+Nothing to build before that conversation.
+
 ## Q9 — Should the decoders run in their own process?
 
 *Raised 2026-09-08 by a C++ engineer shown the project, whose first reaction to JNI
