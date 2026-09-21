@@ -326,6 +326,17 @@ data class BrowseState(
      */
     val knowsWhatIsHeld: Boolean = false,
 
+    /**
+     * Whether [songLengthCount] and [trackMetadataCount] have been read, as opposed to still being
+     * their defaults.
+     *
+     * Separate from [knowsWhatIsHeld] because they arrive separately: the summaries are read at
+     * start-up, the counts only when Online catalogues opens. Until then both counts are zero, which
+     * is also what "not downloaded" looks like -- so the download row appeared for the moment
+     * between the screen opening and the counts arriving, and then vanished (`docs/STATUS.md` C71).
+     */
+    val heldCountsKnown: Boolean = false,
+
     /** True when the open folder has never been scanned. */
     val folderUnscanned: Boolean = false,
     /** True when the open folder's index was built by a different set of decoders. */
@@ -446,6 +457,17 @@ data class BrowseState(
      */
     val hasSomethingToBrowse: Boolean
         get() = catalogues.any { it.trackCount > 0 } || folders.isNotEmpty()
+
+    /**
+     * Whether Online catalogues offers "Get some music to browse".
+     *
+     * While anything is left to download -- a catalogue without its index, HVSC's song lengths, the
+     * track metadata -- and **only once that is known**. Asked before the counts had arrived it
+     * answered yes for a moment on every phone, including those holding everything (C71).
+     */
+    val offersDownloadEverything: Boolean
+        get() = knowsWhatIsHeld && heldCountsKnown &&
+            (catalogues.any { it.requiresIndex } || songLengthCount == 0 || trackMetadataCount == 0)
 }
 
 class PlaybackController private constructor(private val context: Context) {
@@ -2079,6 +2101,7 @@ class PlaybackController private constructor(private val context: Context) {
                     databaseBytes = database,
                     replayCount = replays.first,
                     replayBytes = replays.second,
+                    heldCountsKnown = true,
                     backends = NativeEngine.backendsFingerprint(),
                 )
             }
