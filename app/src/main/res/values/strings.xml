@@ -63,7 +63,7 @@
     <string name="storage_cache_detail">%1$,d MB of %2$,d MB, oldest deleted first</string>
     <string name="storage_index">%1$s index</string>
     <string name="catalogue_playable_of">%1$,d of %2$,d playable</string>
-    <string name="catalogue_count_and_size">%1$s · %2$,d MB on this phone</string>
+    <string name="catalogue_count_and_size">%1$s · %2$,d MB</string>
     <string name="storage_index_and_archive">%1$s, including a %2$,d MB archive</string>
     <string name="storage_megabytes">%1$,d MB</string>
     <string name="storage_confirm_title">Delete %1$s?</string>
@@ -465,4 +465,7 @@
     </plurals>
     <string name="notice_replay_routines_failed">Could not download the replay routines.</string>
     <string name="notice_replay_routines_partly">Some of the replay routines could not be downloaded.</string>
+    <string name="a11y_refresh_catalogue">Update the index for %1$s</string>
+    <string name="a11y_refresh_song_metadata">Update the song metadata</string>
+    <string name="a11y_refresh_replay_routines">Update the replay routines</string>
 </resources>

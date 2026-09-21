@@ -820,14 +820,25 @@ private fun OnlineDomain(
                             }
                         }
                     },
-                    leadingContent = { Icon(PlayerIcons.Cloud, contentDescription = null) },
+                    // A live catalogue has nothing to hold, so it keeps the plain cloud; the rest say
+                    // whether their index is here.
+                    leadingContent = {
+                        if (catalogue.isOnlineOnly) {
+                            Icon(PlayerIcons.Cloud, contentDescription = null)
+                        } else {
+                            HeldIcon(held = !catalogue.requiresIndex)
+                        }
+                    },
                     trailingContent = if (catalogue.isOnlineOnly) {
                         null
                     } else {
                         { DownloadAction(
                             downloading = browse.indexing.containsKey(catalogue.id),
+                            held = !catalogue.requiresIndex,
                             description = stringResource(
-                                R.string.a11y_index_catalogue, catalogue.displayName,
+                                if (catalogue.requiresIndex) R.string.a11y_index_catalogue
+                                else R.string.a11y_refresh_catalogue,
+                                catalogue.displayName,
                             ),
                             onClick = { onIndexCatalogue(catalogue.id) },
                         ) }
@@ -862,9 +873,14 @@ private fun OnlineDomain(
                         }
                         else -> stringResource(R.string.song_metadata_none)
                     },
-                    icon = PlayerIcons.Info,
+                    // Until the counts are read nothing is claimed either way: the dim cloud, and no
+                    // tick that might be withdrawn a second later (C74).
+                    held = browse.heldCountsKnown && browse.songMetadataComplete,
                     downloading = browse.indexing.containsKey(DownloadKeys.SONG_METADATA),
-                    description = stringResource(R.string.a11y_download_song_metadata),
+                    description = stringResource(
+                        if (browse.songMetadataComplete) R.string.a11y_refresh_song_metadata
+                        else R.string.a11y_download_song_metadata
+                    ),
                     onDownload = onDownloadSongMetadata,
                 )
             }
@@ -884,9 +900,12 @@ private fun OnlineDomain(
                         }
                         else -> stringResource(R.string.replay_routines_none)
                     },
-                    icon = PlayerIcons.Download,
+                    held = browse.heldCountsKnown && browse.replayRoutinesComplete,
                     downloading = browse.indexing.containsKey(DownloadKeys.REPLAY_ROUTINES),
-                    description = stringResource(R.string.a11y_download_replay_routines),
+                    description = stringResource(
+                        if (browse.replayRoutinesComplete) R.string.a11y_refresh_replay_routines
+                        else R.string.a11y_download_replay_routines
+                    ),
                     onDownload = onDownloadReplayRoutines,
                 )
             }
@@ -1544,7 +1563,12 @@ private fun BrowseTrackRow(
  * tall as the icon already was, so the spinner and its word fit inside what the arrow occupied.
  */
 @Composable
-private fun DownloadAction(downloading: Boolean, description: String, onClick: () -> Unit) {
+private fun DownloadAction(
+    downloading: Boolean,
+    description: String,
+    onClick: () -> Unit,
+    held: Boolean = false,
+) {
     val haptics = rememberHaptics()
     Box(
         modifier = Modifier.width(84.dp).height(48.dp),
@@ -1569,8 +1593,11 @@ private fun DownloadAction(downloading: Boolean, description: String, onClick: (
             // **The one button in this app whose result is a spinner.** Everything it starts is
             // minutes of work over the network, and until the first byte arrives the screen has
             // nothing to show but the spinner it swapped in. The buzz is the receipt.
+            // **What the press will do, drawn as what it does.** Here: fetch it again to bring it up
+            // to date. Missing: fetch it. The same arrow for both made one button look like two
+            // different offers had been merged (decided 2026-09-21).
             IconButton(onClick = { haptics.press(); onClick() }) {
-                Icon(PlayerIcons.Download, description)
+                Icon(if (held) PlayerIcons.Refresh else PlayerIcons.Download, description)
             }
         }
     }
@@ -1585,7 +1612,7 @@ private fun DownloadAction(downloading: Boolean, description: String, onClick: (
 private fun GroupRow(
     title: String,
     detail: String?,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    held: Boolean,
     downloading: Boolean,
     description: String,
     onDownload: () -> Unit,
@@ -1593,9 +1620,23 @@ private fun GroupRow(
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = detail?.let { { Text(it, style = MaterialTheme.typography.bodySmall) } },
-        leadingContent = { Icon(icon, contentDescription = null) },
+        leadingContent = { HeldIcon(held) },
         trailingContent = {
-            DownloadAction(downloading = downloading, description = description, onClick = onDownload)
+            DownloadAction(downloading = downloading, held = held, description = description, onClick = onDownload)
         },
     )
+}
+
+/**
+ * Whether a downloadable set is on this phone, as the row's leading icon: a tick in the accent
+ * colour when it is, a dimmed cloud when it is not. Shape, colour and the words under it all say
+ * the same thing, so none of them has to carry it alone.
+ */
+@Composable
+private fun HeldIcon(held: Boolean) {
+    if (held) {
+        Icon(PlayerIcons.Downloaded, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+    } else {
+        Icon(PlayerIcons.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
