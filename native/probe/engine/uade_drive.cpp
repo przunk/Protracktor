@@ -23,6 +23,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <thread>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -98,8 +99,9 @@ int play(const std::string &path, const std::vector<std::string> &companions, co
         return 1;
     }
     const std::string described = backend->describe();
-    const bool isUade = described.find("UADE") != std::string::npos ||
-                        described.find("(") != std::string::npos;
+    const bool isUade = described.find("(UADE)") != std::string::npos;
+    // As the host does when playback begins: this is what starts the background length.
+    backend->startedPlaying();
     const int subsongs = backend->subsongCount();
     const int current = backend->currentSubsong();
     const int whileOpen = scratchEntries(scratch);
@@ -108,7 +110,26 @@ int play(const std::string &path, const std::vector<std::string> &companions, co
     // The subsong must not have moved on inside the stream: that is the player's decision.
     const bool stayed = backend->currentSubsong() == current;
     const double position = backend->positionSeconds();
-    const double duration = backend->durationSeconds();
+
+    // The length arrives from the second emulator; the host asks while it says it may.
+    double duration = backend->durationSeconds();
+    for (int i = 0; i < 300 && duration <= 0.0 && backend->durationArrivesLater(); ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        duration = backend->durationSeconds();
+    }
+
+    // Seeking, both ways, once there is a length to seek within.
+    bool seekOk = true;
+    if (duration > 4.0) {
+        const double middle = duration / 2;
+        backend->seek(middle);
+        const double there = backend->positionSeconds();
+        const bool forward = std::fabs(there - middle) < 0.1 && render(*backend, 0.5).firstFrames == kFrames;
+        backend->seek(1.0);
+        const double back = backend->positionSeconds();
+        const bool backward = std::fabs(back - 1.0) < 0.1 && render(*backend, 0.5).firstFrames == kFrames;
+        seekOk = forward && backward;
+    }
 
     // The last subsong, when there is more than one: the zero-based index has to land where UADE
     // numbers from, which is usually one.
@@ -132,11 +153,13 @@ int play(const std::string &path, const std::vector<std::string> &companions, co
         : !stayed ? "subsong-advanced-by-itself"
         : std::fabs(position - static_cast<double>(first.totalFrames) / kRate) > 0.5 ? "position"
         : !subsongOk ? "subsong"
+        : !seekOk ? "seek"
         : !rewindOk ? "rewind"
         : nullptr;
     std::printf("VERDICT %s%s backend=\"%s\" first=%zu peak=%.3f rendered=%.1fs position=%.1fs "
                 "duration=%.1fs subsongs=%d current=%d uade=%s\n",
-                problem ? "fail " : "ok", problem ? problem : "", described.c_str(),
+                problem ? "fail " : "ok", problem ? problem : "",
+                described.substr(0, described.find('\n')).c_str(),
                 first.firstFrames, first.peak, static_cast<double>(first.totalFrames) / kRate,
                 position, duration, subsongs, current, isUade ? "yes" : "no");
     return problem ? 1 : 0;

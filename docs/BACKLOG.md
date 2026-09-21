@@ -375,6 +375,19 @@ Measured while building it, because none of it was visible from the decision:
   run now keeps both directories under such a parent, so it cannot pass what a phone cannot.
 - **Replay routines counted**: 176, not the 178 first written, plus eleven player configurations
   under `players/ENV/EaglePlayer/` that the first unpacker dropped.
+- **Length and seeking, 2026-09-21.** Nothing in these formats states a length, so the app showed
+  none and offered no slider. Measured first: UADE renders 120 to 150 times faster than real time
+  on the host, and a tune's replay routine reports its own end. Now, once a tune starts *playing* —
+  never for a scan or the metadata pass, through `Backend::startedPlaying` — a second emulator
+  plays the subsong silently to its end and the length arrives a few seconds in; the host keeps
+  asking while `durationArrivesLater` says it may. Seeking runs the emulator to the position, under
+  the same lock as every other backend's.
+
+  **The trap, found by measuring rather than by reading:** with UADE's own timeouts on, 19 of 140
+  tunes measured exactly 512.0 seconds. That is UADE's subsong timeout, reported the same way — even
+  as a happy ending — as a routine that finished. The measurement runs with timeouts off; a tune
+  that loops reaches the ten-minute cap and stays unknown. Host run: 140 of 140 with seeks forward
+  and back, 122 with a length, 18 without, none at 512.
 
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**

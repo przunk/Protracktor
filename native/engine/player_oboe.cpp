@@ -167,6 +167,11 @@ public:
         // Published here rather than asked for later: the poll runs on another thread and these
         // libraries are not safe to touch from two at once.
         publishPosition();
+        // A length that arrives while the tune plays (UADE works it out in the background) is
+        // picked up here, and only while it has not arrived: one relaxed load per buffer after.
+        if (duration_.load(std::memory_order_relaxed) <= 0.0 && backend_->durationArrivesLater()) {
+            publishDuration();
+        }
 
         if (rendered < static_cast<std::size_t>(numFrames)) {
             // End of the tune. Silence the remainder rather than leaving whatever the buffer held,
@@ -261,6 +266,8 @@ public:
     bool start() {
         if (stream_) return true;
         finished_.store(false, std::memory_order_release);
+        // Before the stream exists, so the backend is not yet shared with the audio thread.
+        guardedVoid("startedPlaying", [&] { backend_->startedPlaying(); });
 
         oboe::AudioStreamBuilder builder;
         builder.setDirection(oboe::Direction::Output)

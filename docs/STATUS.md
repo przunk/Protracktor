@@ -20,7 +20,7 @@ A usable player, as far as anything can be called that without a device saying s
   process, the fetched companion and the file lookup at once. The other 34 names are checked on
   the host only — 140 of 140 through the unchanged engine, under a parent directory that cannot be
   listed, as `/data` cannot on a phone. **Not yet on a phone**: the other formats, subsong
-  switching, deleting the routines. No length and no seeking yet: the formats do not state one.
+  switching, deleting the routines. **Length and seeking**: the formats state no length, so a second emulator plays the subsong silently to its end once playback starts, and the total and the slider appear a few seconds in; a tune that loops stays without either.
   The browser cannot have them at all. Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt and HivelyTracker seek, sc68 and libsidplayfp cannot, and the UI
   reflects that.
