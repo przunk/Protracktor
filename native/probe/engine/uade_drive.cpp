@@ -21,6 +21,7 @@
  */
 #include "engine.h"
 
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -186,5 +187,25 @@ int main(int argc, char **argv) {
         return play(argv[2], std::vector<std::string>(argv + 3, argv + argc), scratch);
     }
     if (mode == "pair" && argc == 4) return pair(argv[2], argv[3], scratch);
+    if (mode == "length") {
+        // How long the subsong really is, and what it costs to find out: render until the song
+        // ends or ten minutes pass, and time it.
+        std::string error;
+        auto backend = open(argv[2], std::vector<std::string>(argv + 3, argv + argc), error);
+        if (!backend) { std::printf("VERDICT fail refused \"%s\"\n", error.c_str()); return 1; }
+        std::vector<float> buffer(kFrames * 2);
+        std::size_t frames = 0;
+        const auto started = std::chrono::steady_clock::now();
+        while (frames < static_cast<std::size_t>(600) * kRate) {
+            const std::size_t got = backend->render(kRate, kFrames, buffer.data());
+            frames += got;
+            if (got < kFrames) break;
+        }
+        const double cpu = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+        const double audio = static_cast<double>(frames) / kRate;
+        std::printf("VERDICT ok audio=%.1fs cpu=%.2fs speed=%.0fx ended=%s\n", audio, cpu, audio / cpu,
+                    frames < static_cast<std::size_t>(600) * kRate ? "yes" : "no (10 min cap)");
+        return 0;
+    }
     return 2;
 }

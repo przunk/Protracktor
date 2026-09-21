@@ -15,9 +15,13 @@ A usable player, as far as anything can be called that without a device saying s
   SPC, VGM, HES, AY, KSS — measured, and opened at the first track that has sound in it, because HES
   and KSS routinely hold nothing at track 0), and the Amiga synth trackers through HivelyTracker
   (AHX, HVL). **The Amiga custom formats through UADE** — TFMX, Hippel, David Whittaker, Sonic
-  Arranger and thirty more — are built on `feature/a44-uade` and **not yet heard on a phone**: UADE
-  is a second process, and whether a phone lets the app start it is exactly what only a phone can
-  say (`docs/BACKLOG.md` A44). The browser cannot have them at all. Backends sit behind one interface and are asked what they can do rather
+  Arranger and thirty more, once the replay routines are downloaded (`docs/BACKLOG.md` A44).
+  **Heard on a phone: TFMX (`mdat.coolbass` with its samples)**, which exercises the second
+  process, the fetched companion and the file lookup at once. The other 34 names are checked on
+  the host only — 140 of 140 through the unchanged engine, under a parent directory that cannot be
+  listed, as `/data` cannot on a phone. **Not yet on a phone**: the other formats, subsong
+  switching, deleting the routines. No length and no seeking yet: the formats do not state one.
+  The browser cannot have them at all. Backends sit behind one interface and are asked what they can do rather
   than assumed — libopenmpt and HivelyTracker seek, sc68 and libsidplayfp cannot, and the UI
   reflects that.
 - **Ships no code it has no right to.** Of sc68's 99 replay routines the APK carries one — sc68's
