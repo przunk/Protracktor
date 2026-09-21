@@ -71,15 +71,20 @@ def base_dir() -> pathlib.Path:
         data = response.read()
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
         for member in tar.getmembers():
-            leaf = member.name.rsplit("/players/", 1)[-1] if "/players/" in member.name else ""
-            if member.isfile() and leaf and "/" not in leaf:
-                (players / leaf).write_bytes(tar.extractfile(member).read())
+            # The same rule as UadePlayers.unpackPlayers: everything under `players/`, keeping
+            # `ENV/EaglePlayer/`, and nothing that climbs out.
+            relative = member.name.split("/players/", 1)[1] if "/players/" in member.name else ""
+            parts = relative.split("/")
+            if member.isfile() and relative and not any(p in ("", ".", "..") for p in parts):
+                target = players / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(tar.extractfile(member).read())
     try:
         with urllib.request.urlopen(SONG_CONF, timeout=60) as response:
             (base / "song.conf").write_bytes(response.read())
     except Exception:
         print("  ⚠️  no song.conf; Hippel and TFMX variants may be misidentified")
-    print(f"   {len(list(players.iterdir()))} replay routines, {len(data):,} bytes downloaded")
+    print(f"   {sum(1 for p in players.iterdir() if p.is_file())} replay routines, {len(data):,} bytes downloaded")
     return base
 
 

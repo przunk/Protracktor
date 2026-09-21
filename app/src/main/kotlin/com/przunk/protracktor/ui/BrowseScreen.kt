@@ -983,7 +983,7 @@ private fun OnlineDomain(
             }
 
             // The same arrangement again, for UADE. An Amiga replay routine is a small 68000
-            // program that the emulator runs to play the tune, and the 178 of them are extracted
+            // program that the emulator runs to play the tune, and the 176 of them are extracted
             // from commercial and shareware music programs -- so UADE's own maintainers said to
             // download rather than redistribute them, and this is that download
             // (`docs/LICENSES.md`, `docs/PLAN_FORMATS.md` §4).

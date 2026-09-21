@@ -78,7 +78,7 @@ object NativeData {
      *
      * Three files come out of the APK — `score`, the 68k program that runs inside the emulated
      * Amiga; `uaerc`, which configures the machine; and `eagleplayer.conf`, the table that says
-     * which player a file needs. The 178 replay routines do not: they are downloaded
+     * which player a file needs. The 176 replay routines do not: they are downloaded
      * (`docs/LICENSES.md`) and copied in here, exactly as sc68's are and for the same reason —
      * this tree is rebuilt whenever the app version changes, and a download inside it would
      * vanish with it.
@@ -114,12 +114,18 @@ object NativeData {
         target: File = File(context.filesDir, UADE_ROOT),
     ) {
         val store = UadePlayers.store(context)
-        val downloaded = File(store, "players").listFiles().orEmpty().filter { it.isFile }
-        if (downloaded.isNotEmpty()) {
-            val players = File(target, "players").apply { mkdirs() }
-            downloaded.forEach { source ->
-                val destination = File(players, source.name)
-                if (!destination.exists()) runCatching { source.copyTo(destination) }
+        val downloaded = File(store, "players")
+        if (downloaded.isDirectory) {
+            // The whole tree, `ENV/EaglePlayer/` included: eleven player configurations live one
+            // level down and are part of what upstream installs.
+            downloaded.walkTopDown().filter { it.isFile }.forEach { source ->
+                val destination = File(File(target, "players"), source.relativeTo(downloaded).path)
+                if (!destination.exists()) {
+                    runCatching {
+                        destination.parentFile?.mkdirs()
+                        source.copyTo(destination)
+                    }
+                }
             }
         }
         val songConf = File(store, "song.conf")

@@ -104,4 +104,16 @@ class UnpackPlayersTest {
         val written = UadePlayers.unpackPlayers(ByteArrayInputStream(truncated), into)
         assertEquals(0, written)
     }
+
+    @Test
+    fun `the player configurations one level down keep their place and are not counted`() {
+        // `players/ENV/EaglePlayer/` holds eleven configurations in the real archive. The first
+        // version kept only files directly under `players/`, and dropped them.
+        val (written, into) = unpack(
+            entry("uade-d40dcc7-players/players/TFMX-Pro", ByteArray(10)),
+            entry("uade-d40dcc7-players/players/ENV/EaglePlayer/EP-TFMX_Pro.cfg", ByteArray(5)),
+        )
+        assertEquals("replay routines only", 1, written)
+        assertTrue(File(into, "ENV/EaglePlayer/EP-TFMX_Pro.cfg").isFile)
+    }
 }

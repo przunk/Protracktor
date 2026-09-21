@@ -1793,6 +1793,13 @@ public:
                 const std::vector<protracktor::Companion> &companions) {
         const Paths paths = pathsCopy();
         if (paths.core.empty()) throw std::runtime_error("the Amiga decoder (UADE) is not set up");
+        // **Said apart from "does not recognise".** UADE answers a missing player file with the
+        // same zero it gives a file it has never heard of, and prints the difference to stderr,
+        // which on a phone goes nowhere. A tune refused on a phone that had downloaded the
+        // routines could not be told from a tune refused on one that had not, until this.
+        if (!hasPlayers(paths.base)) {
+            throw std::runtime_error("the Amiga replay routines are not where the decoder looks for them");
+        }
 
         makeScratch(paths.scratch);
         for (const protracktor::Companion &companion : companions) write(companion.name, companion.bytes);
@@ -1986,6 +1993,17 @@ private:
         uade_stop(state_);
         uade_play(modulePath_.c_str(), chosen, state_);
         if (const struct uade_song_info *info = uade_get_song_info(state_)) subsongs_ = info->subsongs;
+    }
+
+    static bool hasPlayers(const std::string &base) {
+        DIR *dir = ::opendir((base + "/players").c_str());
+        if (!dir) return false;
+        bool found = false;
+        while (struct dirent *entry = ::readdir(dir)) {
+            if (entry->d_name[0] != '.') { found = true; break; }
+        }
+        ::closedir(dir);
+        return found;
     }
 
     void makeScratch(const std::string &root) {

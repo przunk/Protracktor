@@ -488,7 +488,7 @@ exactly why `docs/BACKLOG.md` A5 put the licence before the code.
 - **The APK ships three files and no replay routine**: `score`, the 68000 program that runs inside
   the emulated Amiga; `uaerc`, which configures the machine; and `eagleplayer.conf`, the table that
   says which player a file needs. All three are UADE's own work in UADE's own tree, 30 KB together.
-- **The 178 replay routines are fetched by the device**, pinned to the same revision the emulator
+- **The 176 replay routines, and the eleven player configurations under `players/ENV/`, are fetched by the device**, pinned to the same revision the emulator
   was built from. A replay routine and the emulator that runs it are one program in two halves;
   fetching HEAD would pair them with a different UADE than the one in the APK.
 - **From GitLab rather than zakalwe.fi, and that is a deviation from the rule above.** The rule was

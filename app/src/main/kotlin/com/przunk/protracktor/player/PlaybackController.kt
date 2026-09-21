@@ -3303,12 +3303,19 @@ class PlaybackController private constructor(private val context: Context) {
      * occasionally it is the only thing that says *which* backend gave up — but it is now attached
      * to the file rather than offered as a verdict on the format.
      */
-    private suspend fun describeFailure(ref: TrackRef, fetched: Boolean, reason: String = ""): String {
+    private suspend fun describeFailure(
+        ref: TrackRef,
+        fetched: Boolean,
+        reason: String = "",
+        missingCompanions: List<String> = emptyList(),
+    ): String {
         val name = ref.fileNameOrTitle
         val claimed = SupportedFormats.looksPlayable(name)
         val needsPlayers = SupportedFormats.needsUade(name) &&
             withContext(Dispatchers.IO) { !UadePlayers.present(context) }
-        return when (OpenFailure.kindOf(fetched, claimed, reason, needsPlayers)) {
+        return when (OpenFailure.kindOf(fetched, claimed, reason, needsPlayers, missingCompanions.isNotEmpty())) {
+            OpenFailure.Kind.COMPANION_MISSING ->
+                context.getString(R.string.open_failed_companion, ref.title, missingCompanions.joinToString())
             OpenFailure.Kind.NOT_FETCHED ->
                 context.getString(R.string.open_failed_not_fetched, ref.title)
             OpenFailure.Kind.NEEDS_AMIGA_PLAYERS ->
@@ -4055,8 +4062,15 @@ class PlaybackController private constructor(private val context: Context) {
             }
             val opened = result.track
             if (opened == null) {
+                val arrived = companions.map { it.first.lowercase() }.toSet()
+                val missing = Companions.namesFor(ref.fileNameOrTitle.substringAfterLast('/'))
+                    .filter { it.lowercase() !in arrived }
                 _state.update {
-                    it.copy(message = Message(describeFailure(ref, fetched = true, reason = result.error)))
+                    it.copy(
+                        message = Message(
+                            describeFailure(ref, fetched = true, reason = result.error, missingCompanions = missing)
+                        )
+                    )
                 }
                 // **Random walks past a file it cannot open.** A dice roll can land on a `.ym`,
                 // which nothing here opens (`docs/STATUS.md` C20), and stopping dead on it turns

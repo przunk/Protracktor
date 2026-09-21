@@ -101,4 +101,16 @@ class OpenFailureTest {
             OpenFailure.kindOf(fetched = false, claimed = true, reason = "", needsPlayers = true),
         )
     }
+
+    @Test
+    fun `a TFMX song whose samples did not arrive says so, not that UADE is puzzled`() {
+        assertEquals(
+            OpenFailure.Kind.COMPANION_MISSING,
+            OpenFailure.kindOf(
+                fetched = true, claimed = true,
+                reason = "the Amiga decoder (UADE) does not recognise it",
+                companionMissing = true,
+            ),
+        )
+    }
 }

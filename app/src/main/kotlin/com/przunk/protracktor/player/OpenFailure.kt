@@ -36,6 +36,13 @@ object OpenFailure {
          */
         NEEDS_AMIGA_PLAYERS,
 
+        /**
+         * A multifile song whose other half could not be fetched — TFMX's `smpl.` beside its
+         * `mdat.`. UADE refuses the half it was given with the same words it uses for a file it
+         * has never heard of, so this says which file was missing instead.
+         */
+        COMPANION_MISSING,
+
         /** We claim the format and a decoder gave a reason. Report the reason, about this file. */
         FILE_REFUSED_WITH_REASON,
 
@@ -48,16 +55,19 @@ object OpenFailure {
      * @param claimed whether `SupportedFormats` says this name is playable — the load-bearing one.
      * @param reason what the decoder said, which is often empty and sometimes only meaningful to us.
      * @param needsPlayers whether the name is one only UADE plays and its replay routines are absent.
+     * @param companionMissing whether the song needs a file beside it that could not be fetched.
      */
     fun kindOf(
         fetched: Boolean,
         claimed: Boolean,
         reason: String,
         needsPlayers: Boolean = false,
+        companionMissing: Boolean = false,
     ): Kind = when {
         !fetched -> Kind.NOT_FETCHED
         !claimed -> Kind.FORMAT_UNSUPPORTED
         needsPlayers -> Kind.NEEDS_AMIGA_PLAYERS
+        companionMissing -> Kind.COMPANION_MISSING
         reason.isNotBlank() -> Kind.FILE_REFUSED_WITH_REASON
         else -> Kind.FILE_REFUSED
     }

@@ -16,7 +16,7 @@ import java.util.zip.GZIPInputStream
  * UADE's replay routines, fetched if the user asks.
  *
  * **Why they are not in the APK** is the same shape as sc68's, and was settled with UADE's own
- * maintainers on 2026-09-04 (`docs/LICENSES.md`). UADE's code is GPL; the 178 binaries under
+ * maintainers on 2026-09-04 (`docs/LICENSES.md`). UADE's code is GPL; the 176 binaries under
  * `players/` are the original 68000 replay routines extracted from commercial and shareware Amiga
  * music programs, and their licensing is not something UADE can grant. Upstream's answer was to
  * download rather than redistribute, and that is what this does: the device fetches them, which
@@ -132,16 +132,23 @@ object UadePlayers {
             // `/players/`, with both slashes. The archive's top directory is `uade-<rev>-players/`,
             // so looking for `players/` alone matches that too and every file in the archive's root
             // is treated as a replay routine -- which is how `README` was written the first time.
-            val leaf = name.substringAfterLast("/players/", missingDelimiterValue = "")
-            // A name from somebody else's archive decides a filename here, so it is checked rather
-            // than trusted: anything with a separator left in it would write outside `into`.
-            val safe = isFile && leaf.isNotEmpty() &&
-                !leaf.contains('/') && !leaf.contains('\\') && leaf != "." && leaf != ".."
+            // The first occurrence, not the last: `players/ENV/EaglePlayer/` is a real subdirectory
+            // of eleven player configurations, and it keeps its shape.
+            val relative = name.substringAfter("/players/", missingDelimiterValue = "")
+            // A name from somebody else's archive decides a path here, so it is checked rather than
+            // trusted: no segment may climb out, and none may be empty or absolute.
+            val segments = relative.split('/')
+            val safe = isFile && relative.isNotEmpty() &&
+                segments.none { it.isEmpty() || it == "." || it == ".." || it.contains('\\') }
 
             if (safe) {
                 val bytes = ByteArray(size.toInt())
                 if (!tar.readFully(bytes)) break
-                runCatching { File(into, leaf).writeBytes(bytes) }.onSuccess { written++ }
+                val target = File(into, relative)
+                runCatching {
+                    target.parentFile?.mkdirs()
+                    target.writeBytes(bytes)
+                }.onSuccess { if (segments.size == 1) written++ }
                 onProgress(written, EXPECTED)
             } else {
                 tar.skipFully(size)
@@ -154,8 +161,12 @@ object UadePlayers {
 
     private const val BLOCK = 512L.toInt()
 
-    /** What the pinned revision holds, used only to make the progress bar mean something. */
-    private const val EXPECTED = 178
+    /**
+     * Replay routines in the pinned revision -- the files directly under `players/`, not the eleven
+     * configurations under `players/ENV/`. Counted in the archive, 2026-09-21: 176. It was written
+     * as 178 at first, from memory, and the phone's progress said 176 of 178.
+     */
+    private const val EXPECTED = 176
 
     private fun InputStream.readFully(into: ByteArray): Boolean {
         var read = 0
