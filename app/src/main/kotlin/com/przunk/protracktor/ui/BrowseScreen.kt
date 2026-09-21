@@ -108,7 +108,6 @@ fun BrowseScreen(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongMetadata: () -> Unit,
     onDownloadReplayRoutines: () -> Unit,
-    onPickDownloads: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onRandom: () -> Unit,
@@ -238,7 +237,6 @@ fun BrowseScreen(
                 onIndexCatalogue = onIndexCatalogue,
                 onDownloadSongMetadata = onDownloadSongMetadata,
                 onDownloadReplayRoutines = onDownloadReplayRoutines,
-                onPickDownloads = onPickDownloads,
                 onOpenCatalogue = onOpenCatalogue,
                 onOpenGroup = onOpenGroup,
                 onPlay = onPlay,
@@ -658,7 +656,6 @@ private fun OnlineDomain(
     onIndexCatalogue: (String) -> Unit,
     onDownloadSongMetadata: () -> Unit,
     onDownloadReplayRoutines: () -> Unit,
-    onPickDownloads: () -> Unit,
     onOpenCatalogue: (CatalogueSummary) -> Unit,
     onOpenGroup: (String) -> Unit,
     onPlay: (Int) -> Unit,
@@ -718,45 +715,9 @@ private fun OnlineDomain(
         val listState = scroll.stateFor(key)
         RestorePosition(scroll, key, listState, browse.catalogues.map { it.id }, browse.loading)
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            // **The one press, at the top, while there is anything left to fetch.**
-            //
-            // The first testers did not know an index had to be downloaded at all
-            // (`docs/BACKLOG.md` A46): the rows below say "no index -- tap the arrow", which only
-            // reads as an instruction to somebody who already knows what an index is. This says
-            // what it will do and what it will cost, in one row, in the place they were already
-            // standing.
-            //
-            // It leaves once there is nothing left to download, because an offer that does nothing
-            // is worse than no offer.
-            if (browse.offersDownloadEverything) {
-                item(key = "download-everything") {
-                    ListItem(
-                        leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },
-                        headlineContent = { Text(stringResource(R.string.download_pick_open)) },
-                        supportingContent = {
-                            Text(
-                                stringResource(
-                                    R.string.download_all_body,
-                                    DownloadSizes.EVERYTHING_MB,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        },
-                        // The spinner belongs here as well as in the sheet: a run started from the
-                        // sheet goes on after it is dismissed, and this row is what the screen
-                        // underneath has to say about it.
-                        trailingContent = {
-                            DownloadAction(
-                                downloading = browse.indexing.containsKey(DownloadKeys.EVERYTHING),
-                                description = stringResource(R.string.a11y_download_pick),
-                                onClick = onPickDownloads,
-                            )
-                        },
-                        modifier = Modifier.clickable(onClick = onPickDownloads),
-                    )
-                    HorizontalDivider()
-                }
-            }
+            // **No "get some music" offer here** (decided 2026-09-21). It did in one press what the
+            // rows below each do, which is worth something on an empty playlist -- where it still
+            // is -- and is only a duplicate on a screen whose every row is already a download.
             items(browse.catalogues, key = { it.id }) { catalogue ->
                 ListItem(
                     headlineContent = { Text(catalogue.displayName) },
@@ -820,11 +781,12 @@ private fun OnlineDomain(
                             }
                         }
                     },
-                    // A live catalogue has nothing to hold, so it keeps the plain cloud; the rest say
-                    // whether their index is here.
+                    // A live catalogue has nothing to hold and is ready from the start: a cloud with
+                    // a tick, in the same accent as a downloaded set. The rest say whether their
+                    // index is here.
                     leadingContent = {
                         if (catalogue.isOnlineOnly) {
-                            Icon(PlayerIcons.Cloud, contentDescription = null)
+                            Icon(PlayerIcons.CloudDone, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         } else {
                             HeldIcon(held = !catalogue.requiresIndex)
                         }
@@ -834,6 +796,7 @@ private fun OnlineDomain(
                     } else {
                         { DownloadAction(
                             downloading = browse.indexing.containsKey(catalogue.id),
+                            deleting = catalogue.id in browse.deleting,
                             held = !catalogue.requiresIndex,
                             description = stringResource(
                                 if (catalogue.requiresIndex) R.string.a11y_index_catalogue
@@ -866,16 +829,18 @@ private fun OnlineDomain(
                 GroupRow(
                     title = stringResource(R.string.song_metadata_title),
                     detail = when {
+                        browse.held == null -> null
+                        !browse.songMetadataComplete -> stringResource(R.string.song_metadata_none)
+                        // Here, and the count not read yet: say nothing rather than "0 tunes".
                         !browse.heldCountsKnown -> null
-                        browse.songMetadataComplete -> {
+                        else -> {
                             val tunes = browse.songLengthCount + browse.songDbLengthCount
                             pluralStringResource(R.plurals.song_metadata_count, tunes, tunes)
                         }
-                        else -> stringResource(R.string.song_metadata_none)
                     },
-                    // Until the counts are read nothing is claimed either way: the dim cloud, and no
-                    // tick that might be withdrawn a second later (C74).
-                    held = browse.heldCountsKnown && browse.songMetadataComplete,
+                    // Nothing is claimed until the quick look has answered -- `held` is null before
+                    // it -- so no tick is shown and withdrawn (C74), and none waits for a count (C75).
+                    held = browse.songMetadataComplete,
                     downloading = browse.indexing.containsKey(DownloadKeys.SONG_METADATA),
                     description = stringResource(
                         if (browse.songMetadataComplete) R.string.a11y_refresh_song_metadata
@@ -889,18 +854,19 @@ private fun OnlineDomain(
                 GroupRow(
                     title = stringResource(R.string.replay_routines_title),
                     detail = when {
-                        !browse.heldCountsKnown -> null
                         // While it runs, how many files have arrived: nothing else on the screen can
                         // say how far a hundred and seventy small files have got.
                         browse.indexing.containsKey(DownloadKeys.REPLAY_ROUTINES) ->
                             browse.indexing[DownloadKeys.PLAYERS] ?: browse.indexing[DownloadKeys.REPLAYS]
-                        browse.replayRoutinesComplete -> {
+                        browse.held == null -> null
+                        !browse.replayRoutinesComplete -> stringResource(R.string.replay_routines_none)
+                        !browse.heldCountsKnown -> null
+                        else -> {
                             val files = browse.replayCount + browse.playerCount
                             pluralStringResource(R.plurals.replay_routines_count, files, files)
                         }
-                        else -> stringResource(R.string.replay_routines_none)
                     },
-                    held = browse.heldCountsKnown && browse.replayRoutinesComplete,
+                    held = browse.replayRoutinesComplete,
                     downloading = browse.indexing.containsKey(DownloadKeys.REPLAY_ROUTINES),
                     description = stringResource(
                         if (browse.replayRoutinesComplete) R.string.a11y_refresh_replay_routines
@@ -1568,6 +1534,7 @@ private fun DownloadAction(
     description: String,
     onClick: () -> Unit,
     held: Boolean = false,
+    deleting: Boolean = false,
 ) {
     val haptics = rememberHaptics()
     Box(
@@ -1581,7 +1548,7 @@ private fun DownloadAction(
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Text(
-                    text = stringResource(R.string.browse_indexing_short),
+                    text = stringResource(if (deleting) R.string.browse_deleting_short else R.string.browse_indexing_short),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

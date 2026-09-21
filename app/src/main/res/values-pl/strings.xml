@@ -507,4 +507,5 @@
     <string name="a11y_refresh_catalogue">Zaktualizuj indeks dla %1$s</string>
     <string name="a11y_refresh_song_metadata">Zaktualizuj metadane utworów</string>
     <string name="a11y_refresh_replay_routines">Zaktualizuj procedury odtwarzające</string>
+    <string name="browse_deleting_short">usuwanie…</string>
 </resources>

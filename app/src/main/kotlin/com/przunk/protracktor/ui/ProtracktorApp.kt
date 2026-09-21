@@ -421,7 +421,6 @@ fun ProtracktorApp(
                 onIndexCatalogue = viewModel::indexCatalogue,
                 onDownloadSongMetadata = viewModel::downloadSongMetadata,
                 onDownloadReplayRoutines = viewModel::downloadReplayRoutines,
-                onPickDownloads = { choosingDownloads = true },
                 onOpenCatalogue = viewModel::openCatalogue,
                 onOpenGroup = viewModel::openGroup,
                 // **Open, not just play.** Starting a tune and dropping back onto a playlist

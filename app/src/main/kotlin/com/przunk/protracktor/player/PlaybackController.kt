@@ -303,6 +303,21 @@ object DownloadKeys {
     const val REPLAY_ROUTINES = "replayroutines"
 }
 
+/**
+ * Which downloadable sets are on the phone, **asked, not counted** (`docs/STATUS.md` C75).
+ *
+ * Each is one `EXISTS` or one directory listing, so this arrives within a frame of Online
+ * catalogues opening. The counts under the rows arrive later, on the same pass that has always
+ * produced them; the ticks no longer wait for them.
+ */
+data class HeldSets(
+    val songLengths: Boolean = false,
+    val trackMetadata: Boolean = false,
+    val songDbLengths: Boolean = false,
+    val replays: Boolean = false,
+    val players: Boolean = false,
+)
+
 data class BrowseState(
     val domain: BrowseDomain = BrowseDomain.ROOT,
     val loading: Boolean = false,
@@ -351,6 +366,12 @@ data class BrowseState(
      * between the screen opening and the counts arriving, and then vanished (`docs/STATUS.md` C71).
      */
     val heldCountsKnown: Boolean = false,
+
+    /** What is on the phone, asked quickly; null until the first quick look (C75). */
+    val held: HeldSets? = null,
+
+    /** Catalogues whose index is being deleted right now: their row says so (C76). */
+    val deleting: Set<String> = emptySet(),
 
     /** True when the open folder has never been scanned. */
     val folderUnscanned: Boolean = false,
@@ -483,17 +504,6 @@ data class BrowseState(
         get() = catalogues.any { it.trackCount > 0 } || folders.isNotEmpty()
 
     /**
-     * Whether Online catalogues offers "Get some music to browse".
-     *
-     * While anything is left to download -- a catalogue without its index, HVSC's song lengths, the
-     * track metadata -- and **only once that is known**. Asked before the counts had arrived it
-     * answered yes for a moment on every phone, including those holding everything (C71).
-     */
-    val offersDownloadEverything: Boolean
-        get() = knowsWhatIsHeld && heldCountsKnown &&
-            (catalogues.any { it.requiresIndex } || !songMetadataComplete)
-
-    /**
      * Whether both halves of the songdb tick are here: the metadata and, since A52, the lengths.
      *
      * **Both, not either.** A phone that fetched the metadata before the lengths existed holds a
@@ -502,18 +512,18 @@ data class BrowseState(
      * the ones left waiting for a measurement.
      */
     val songDbComplete: Boolean
-        get() = trackMetadataCount > 0 && songDbLengthCount > 0
+        get() = held?.let { it.trackMetadata && it.songDbLengths } ?: false
 
     /**
      * Whether the whole song metadata button's worth is here: HVSC's SID lengths and both halves of
      * songdb. One button fetches the three (decided 2026-09-21), so one answer says whether it has.
      */
     val songMetadataComplete: Boolean
-        get() = songLengthCount > 0 && songDbComplete
+        get() = held?.songLengths == true && songDbComplete
 
     /** Whether both sets of replay routines are here, sc68's and UADE's: one button, one answer. */
     val replayRoutinesComplete: Boolean
-        get() = replayCount > 0 && playerCount > 0
+        get() = held?.let { it.replays && it.players } ?: false
 }
 
 class PlaybackController private constructor(private val context: Context) {
@@ -2156,6 +2166,19 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun refreshCatalogues() {
         scope.launch {
+            // **What is here, before how much** (C75). Five yes-or-no questions that stop at the
+            // first row or the first file, published at once; the counts below walk hundreds of
+            // thousands of rows and queue behind the platform counts, and the ticks waited seconds
+            // for them.
+            val held = HeldSets(
+                songLengths = songLengths.any(),
+                trackMetadata = trackMetadata.any(),
+                songDbLengths = songDbLengths.any(),
+                replays = withContext(Dispatchers.IO) { Sc68Replays.count(context) > 0 },
+                players = withContext(Dispatchers.IO) { UadePlayers.present(context) },
+            )
+            _browse.update { it.copy(held = held) }
+
             // Recounted rather than kept: this runs whenever what is indexed has changed, and the
             // platform counts are derived from exactly that.
             refreshPlatformCounts()
@@ -2253,34 +2276,56 @@ class PlaybackController private constructor(private val context: Context) {
      * count, browsing normally and playing nothing.
      */
     fun deleteCatalogueIndex(catalogueId: String) {
+        // **The row answers at once** (`docs/STATUS.md` C76). Deleting Modland is half a million
+        // rows and their indexes -- 5.1 s on a desktop, measured, and 10 to 15 on a phone -- and
+        // for all of it the confirmed delete looked like a press that had done nothing. So the
+        // screen is told first: the catalogue shows as not indexed, its storage row goes, and its
+        // Browse row turns into "deleting…", which also refuses a new download until this is done.
+        if (!beginDownload(catalogueId, context.getString(R.string.browse_deleting_short))) return
+        _browse.update { current ->
+            current.copy(
+                deleting = current.deleting + catalogueId,
+                catalogues = current.catalogues.map {
+                    if (it.id == catalogueId) it.copy(trackCount = 0, indexedAt = null, archiveCount = 0) else it
+                },
+                archiveBytes = current.archiveBytes - catalogueId,
+            )
+        }
         scope.launch {
-            catalogues.clearIndex(catalogueId)
-            if (catalogueId == Modland.id) dropFavourites()
-            val freed = withContext(backgroundWork) {
-                if (Catalogue.byId(catalogueId)?.isArchive != true) return@withContext 0L
-                val before = remoteFiles.archiveBytes(catalogueId)
-                if (remoteFiles.deleteArchive(catalogueId)) before else 0L
-            }
-            _browse.update { current ->
-                current.copy(
-                    // A deleted catalogue drops out of an online scope that named it. Left in, the
-                    // label would go on claiming a source that no longer exists.
-                    searchScope = (current.searchScope as? SearchScope.Online)
-                        ?.let { SearchScope.Online(it.catalogueIds - catalogueId) }
-                        ?: current.searchScope,
-                    openCatalogue = current.openCatalogue?.takeIf { it.id != catalogueId },
-                )
-            }
-            // The rows cost no disk worth naming; the archive is 20 MB and the user just asked
-            // where their storage went, so it is the number worth saying when there is one.
-            _state.update {
-                it.copy(
-                    message = Message(
-                        if (freed > 0L) freedMessage(freed) else context.getString(R.string.notice_index_deleted)
+            try {
+                catalogues.clearIndex(catalogueId)
+                if (catalogueId == Modland.id) dropFavourites()
+                val freed = withContext(backgroundWork) {
+                    if (Catalogue.byId(catalogueId)?.isArchive != true) return@withContext 0L
+                    val before = remoteFiles.archiveBytes(catalogueId)
+                    if (remoteFiles.deleteArchive(catalogueId)) before else 0L
+                }
+                _browse.update { current ->
+                    current.copy(
+                        // A deleted catalogue drops out of an online scope that named it. Left in, the
+                        // label would go on claiming a source that no longer exists.
+                        searchScope = (current.searchScope as? SearchScope.Online)
+                            ?.let { SearchScope.Online(it.catalogueIds - catalogueId) }
+                            ?: current.searchScope,
+                        openCatalogue = current.openCatalogue?.takeIf { it.id != catalogueId },
                     )
-                )
+                }
+                // The rows cost no disk worth naming; the archive is 20 MB and the user just asked
+                // where their storage went, so it is the number worth saying when there is one.
+                _state.update {
+                    it.copy(
+                        message = Message(
+                            if (freed > 0L) freedMessage(freed) else context.getString(R.string.notice_index_deleted)
+                        )
+                    )
+                }
+                refreshCatalogues()
+            } finally {
+                withContext(NonCancellable) {
+                    endDownload(catalogueId)
+                    _browse.update { it.copy(deleting = it.deleting - catalogueId) }
+                }
             }
-            refreshCatalogues()
         }
     }
 

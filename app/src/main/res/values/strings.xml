@@ -468,4 +468,5 @@
     <string name="a11y_refresh_catalogue">Update the index for %1$s</string>
     <string name="a11y_refresh_song_metadata">Update the song metadata</string>
     <string name="a11y_refresh_replay_routines">Update the replay routines</string>
+    <string name="browse_deleting_short">deleting…</string>
 </resources>
