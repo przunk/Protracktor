@@ -737,10 +737,7 @@ private fun OnlineDomain(
             //
             // It leaves once there is nothing left to download, because an offer that does nothing
             // is worse than no offer.
-            if (browse.catalogues.any { it.requiresIndex } ||
-                browse.songLengthCount == 0 ||
-                browse.trackMetadataCount == 0
-            ) {
+            if (browse.offersDownloadEverything) {
                 item(key = "download-everything") {
                     ListItem(
                         leadingContent = { Icon(PlayerIcons.Download, contentDescription = null) },

@@ -423,6 +423,20 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C71. ~~"Get some music to browse" flashed on every visit to Online catalogues~~ — FIXED 2026-09-21, branch
+
+The row appeared for a moment each time Online catalogues opened, on a phone holding every index,
+and then vanished.
+
+The rule offered it while HVSC's song lengths or the track metadata were missing, and read both as
+counts. **Those counts are read only when the screen opens**; before that they are zero, which is
+also what "not downloaded" looks like. So for the frame between opening and the counts arriving,
+the rule saw a phone with nothing on it.
+
+`BrowseState.heldCountsKnown` now says whether the counts are real, and the rule lives in
+`BrowseState.offersDownloadEverything` rather than in the composable, where it can be tested.
+`DownloadOfferTest` fails with the gate removed. In since round 12 (`030d87a`).
+
 ### C70. ~~Random played, and the playlist stayed on screen~~ — FIXED 2026-09-19, branch
 
 Play anything from Browse, then open Random: a tune started and the playlist was still there. The
