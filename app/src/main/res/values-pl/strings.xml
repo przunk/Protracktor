@@ -226,7 +226,7 @@
     <string name="storage_megabytes">%1$,d MB</string>
     <string name="storage_confirm_title">Usunąć: %1$s?</string>
     <string name="storage_confirm_index">Można go pobrać ponownie z tego ekranu. Do tego czasu tego katalogu nie da się przeglądać ani przeszukiwać, a jego utwory nie zagrają.</string>
-    <string name="storage_confirm_track_metadata">Można je pobrać ponownie z Browse. Do tego czasu większość utworów nie pokaże roku ani autora.</string>
+    <string name="storage_confirm_track_metadata">Można je pobrać ponownie z Browse. Do tego czasu większość utworów nie pokaże roku ani autora, a utwory z Amigi długości, dopóki chwilę nie pograją.</string>
     <string name="storage_confirm_favourites">Można je pobrać ponownie z Browse. Do tego czasu nie da się zawęzić losowania do ulubionych.</string>
     <plurals name="favourites_listed">
         <item quantity="few">%1$,d utwory</item>
@@ -295,15 +295,15 @@
         <item quantity="many">%1$,d procedur odtwarzających</item>
         <item quantity="other">%1$,d procedury odtwarzającej</item>
     </plurals>
-    <string name="track_metadata_title">Metadane utworów (songdb)</string>
-    <string name="track_metadata_none">Nie pobrano — większość utworów nie pokaże roku ani autora</string>
+    <string name="track_metadata_title">Metadane i długości utworów (songdb)</string>
+    <string name="track_metadata_none">Nie pobrano — większość utworów nie pokaże roku ani autora, a utwory z Amigi długości, dopóki chwilę nie pograją</string>
     <plurals name="track_metadata_count">
         <item quantity="few">%1$,d opisane utwory</item>
         <item quantity="many">%1$,d opisanych utworów</item>
         <item quantity="one">%1$,d opisany utwór</item>
         <item quantity="other">%1$,d opisanych utworów</item>
     </plurals>
-    <string name="a11y_download_track_metadata">Pobierz metadane utworów</string>
+    <string name="a11y_download_track_metadata">Pobierz metadane i długości utworów</string>
     <string name="domain_random_title_scoped">Losowo · %1$s</string>
     <string name="domain_random_body_scoped">Przytrzymaj, żeby zmienić źródło losowania</string>
     <string name="a11y_choose_random_scope">Wybierz, z czego losować</string>
@@ -394,6 +394,7 @@
         <item quantity="other">Długości dla %1$,d utworu SID.</item>
     </plurals>
     <string name="notice_track_metadata_failed">Nie udało się pobrać metadanych utworów.</string>
+    <string name="notice_songdb_lengths_failed">Metadane utworów dotarły, ale długości utworów nie udało się pobrać.</string>
     <string name="notice_track_metadata_empty">Metadane utworów były puste.</string>
     <plurals name="notice_track_metadata_done">
         <item quantity="one">Metadane dla %1$,d utworu.</item>

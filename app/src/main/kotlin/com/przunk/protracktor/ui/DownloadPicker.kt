@@ -76,7 +76,7 @@ internal fun DownloadPicker(
     // Ticked to begin with: whatever this phone does not already hold. The commonest press is the
     // first one, on an install that holds nothing, and it should not start with a tour of the
     // checkboxes.
-    var selected by remember(browse.catalogues, browse.trackMetadataCount) {
+    var selected by remember(browse.catalogues, browse.trackMetadataCount, browse.songDbLengthCount) {
         mutableStateOf(DownloadPlan.choices().filter { !isHeld(it, browse) }.toSet())
     }
 
@@ -191,7 +191,7 @@ private const val BUTTON_SHARE = 0.55f
 
 /** Whether this phone already holds what [id] would fetch. */
 private fun isHeld(id: String, browse: BrowseState): Boolean = when (id) {
-    DownloadPlan.TRACK_METADATA -> browse.trackMetadataCount > 0
+    DownloadPlan.TRACK_METADATA -> browse.songDbComplete
     else -> browse.catalogues.firstOrNull { it.id == id }?.let { it.indexed && !it.requiresIndex } ?: false
 }
 

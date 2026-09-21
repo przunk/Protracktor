@@ -68,7 +68,7 @@
     <string name="storage_megabytes">%1$,d MB</string>
     <string name="storage_confirm_title">Delete %1$s?</string>
     <string name="storage_confirm_index">It can be downloaded again from this screen. Until then, this catalogue cannot be browsed or searched, and its tracks will not play.</string>
-    <string name="storage_confirm_track_metadata">It can be downloaded again from Browse. Until then, most tunes will show no year or author.</string>
+    <string name="storage_confirm_track_metadata">It can be downloaded again from Browse. Until then, most tunes will show no year or author, and Amiga tunes no length until they have played a moment.</string>
     <string name="storage_confirm_favourites">It can be downloaded again from Browse. Until then, Random cannot be scoped to the favourites.</string>
     <plurals name="favourites_listed">
         <item quantity="one">%1$,d tune</item>
@@ -190,13 +190,13 @@
     <string name="action_clear_history">Clear history</string>
         <string name="song_lengths_title">SID song lengths (HVSC)</string>
     <string name="song_lengths_none">Not downloaded — SID tunes show no length and play until you skip them</string>
-    <string name="track_metadata_title">Track metadata (songdb)</string>
-    <string name="track_metadata_none">Not downloaded — most tunes will show no year or author</string>
+    <string name="track_metadata_title">Track metadata and lengths (songdb)</string>
+    <string name="track_metadata_none">Not downloaded — most tunes will show no year or author, and Amiga tunes no length until they have played a moment</string>
     <plurals name="track_metadata_count">
         <item quantity="one">%1$,d tune described</item>
         <item quantity="other">%1$,d tunes described</item>
     </plurals>
-    <string name="a11y_download_track_metadata">Download the track metadata</string>
+    <string name="a11y_download_track_metadata">Download the track metadata and lengths</string>
     <string name="settings_fallback_length">When nothing knows the length</string>
     <string name="settings_fallback_length_detail">A SID or an unlisted SNDH carries no length of its own. Without this, one would play until you skipped it.</string>
     <plurals name="minutes">
@@ -373,6 +373,7 @@
         <item quantity="other">Song lengths for %1$,d SID tunes.</item>
     </plurals>
     <string name="notice_track_metadata_failed">Could not download the track metadata.</string>
+    <string name="notice_songdb_lengths_failed">The track metadata arrived, but the song lengths could not be downloaded.</string>
     <string name="notice_track_metadata_empty">The track metadata was empty.</string>
     <plurals name="notice_track_metadata_done">
         <item quantity="one">Metadata for %1$,d tune.</item>
