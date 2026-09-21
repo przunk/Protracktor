@@ -67,7 +67,7 @@ projects' terms rather than ours.
 | HivelyTracker V1_9 | Amiga AHX and HVL | BSD-3-Clause | **yes, 2026-09-05** |
 | ZXTune (c93e81d) | ZX Spectrum AY trackers | LGPL-3.0 | **yes, 2026-09-07** |
 | audacious-uade-tools | metadata, downloaded not shipped | GPL-2.0-**or-later** | **yes, 2026-09-07** |
-| UADE 3.05 — `uadecore`, a separate program | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL, **no version stated** in the files; `COPYING.GPL` is v2 | **read 2026-09-21 — owner decision, see below** |
+| UADE 3.05 — `uadecore`, a separate program | Amiga custom replayers (TFMX, Hippel, FC, …) | GPL, **no version stated** in the files; `COPYING.GPL` is v2 | **read 2026-09-21; accepted by the owner the same day, see below** |
 | UADE 3.05 — libuade and `score` | identification, IPC; the 68k sound core | LGPL, no version stated; `COPYING.LGPL` is 2.1 | **read 2026-09-21** |
 | bencodetools (5fa73d3) | bencode, for UADE's RMC containers | BSD-2-Clause, and BSD-3-Clause for the part from Codeville | **yes, 2026-09-21** |
 | libzakalwe (080b054) | UADE's author's support library | BSD-2-Clause-style; `tree.h` from OpenBSD | **yes, 2026-09-21** |
@@ -98,10 +98,15 @@ reading, compatible; both are for the owner to accept or not:
    linked into the app is libuade, under the LGPL, which version 2.1 allows to be combined with
    GPL-3 code.
 
+**Accepted by the owner on 2026-09-21**, on both readings, before UADE was first published in 0.7.0.
+
 **bencodetools and libzakalwe** are BSD-style, and BSD asks that a binary redistribution
 "reproduce the above copyright notice … in the documentation and/or other materials provided with
 the distribution". So does libopenmpt's and HivelyTracker's BSD-3, which have shipped since 0.4.0;
-the release checklist's "in-app legal surface" is where that is met, and it is still open.
+the release checklist's "in-app legal surface" is where that is met -- and since 0.7.0 it is:
+**Settings → Open-source licences** lists every component in `app/notices/components.tsv` with the
+licence files the build copies from its sources, and `NoticesCoverTheBuildTest` fails when a decoder
+is built without a row.
 
 ## Verified
 

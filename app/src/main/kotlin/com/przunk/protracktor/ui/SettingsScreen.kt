@@ -20,6 +20,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,6 +102,9 @@ fun SettingsScreen(
             "${info.versionName} ($code)"
         }.getOrDefault("unknown")
     }
+
+    // Which legal screen is open over this one, if any. Saved, so a rotation keeps the page.
+    var legal by rememberSaveable { mutableStateOf<Legal?>(null) }
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item { Section(R.string.settings_playback) }
@@ -313,10 +319,42 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 },
+                leadingContent = { Icon(PlayerIcons.Info, contentDescription = null) },
+            )
+        }
+        // What the app carries of other people's work, and what it sends where. Both open a full
+        // screen over this one, and both show files the build copies in from where they are kept --
+        // the licences from the code that brought them, the policy from the page that is published.
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_notices)) },
+                supportingContent = {
+                    Text(stringResource(R.string.settings_notices_detail), style = MaterialTheme.typography.bodySmall)
+                },
+                leadingContent = { Icon(PlayerIcons.Document, contentDescription = null) },
+                modifier = Modifier.clickable { legal = Legal.NOTICES },
+            )
+        }
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_privacy)) },
+                supportingContent = {
+                    Text(stringResource(R.string.settings_privacy_detail), style = MaterialTheme.typography.bodySmall)
+                },
+                leadingContent = { Icon(PlayerIcons.Shield, contentDescription = null) },
+                modifier = Modifier.clickable { legal = Legal.PRIVACY },
             )
         }
     }
+
+    when (legal) {
+        Legal.NOTICES -> LicencesScreen(onClose = { legal = null })
+        Legal.PRIVACY -> PrivacyPolicyScreen(onClose = { legal = null })
+        null -> Unit
+    }
 }
+
+private enum class Legal { NOTICES, PRIVACY }
 
 @Composable
 private fun AppTheme.label(): String = stringResource(

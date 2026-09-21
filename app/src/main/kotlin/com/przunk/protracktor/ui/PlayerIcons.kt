@@ -282,6 +282,22 @@ object PlayerIcons {
                 "1.41-1.41L10 14.17 15.18 9l1.41 1.41L10 17z",
         )
     }
+    /**
+     * A page with lines on it: the open-source licences. Material's `description`, its three later
+     * subpaths rewritten from absolute points -- the original moves relative to the point a `z`
+     * leaves, which `scripts/check-icons.mjs` refuses (C66).
+     */
+    val Document: ImageVector by lazy {
+        icon(
+            "Document",
+            "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z" +
+                "M16 18H8v-2h8v2zM16 14H8v-2h8v2zM13 9V3.5L18.5 9H13z",
+        )
+    }
+    /** A shield: the privacy policy. Material's `shield`. */
+    val Shield: ImageVector by lazy {
+        icon("Shield", "M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z")
+    }
     /** Round arrow: fetch again what is already here, to bring it up to date. */
     val Refresh: ImageVector by lazy {
         icon(

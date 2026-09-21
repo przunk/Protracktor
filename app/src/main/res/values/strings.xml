@@ -470,4 +470,9 @@
     <string name="a11y_refresh_replay_routines">Update the replay routines</string>
     <string name="browse_deleting_short">deleting…</string>
     <string name="notice_delete_failed">Could not delete %1$s.</string>
+    <string name="settings_notices">Open-source licences</string>
+    <string name="settings_notices_detail">The components inside this app, and their licences</string>
+    <string name="notices_version_licence">%1$s · %2$s</string>
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_privacy_detail">What the app sends, and where</string>
 </resources>

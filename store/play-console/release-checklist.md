@@ -7,7 +7,8 @@ signing and rollout remain the owner's actions.
 
 - [ ] Resolve the sc68 replay-binary distribution question.
 - [ ] Verify Oboe's licence and produce notices from every exact shipped dependency.
-- [ ] Add an in-app legal surface containing the privacy link, GPL source link and notices.
+- [x] Add an in-app legal surface containing the privacy link, GPL source link and notices. *(0.7.0:
+      Settings → Licence, Open-source licences, Privacy policy; the policy shown is the published file.)*
 - [ ] Publish the privacy policy as a public, non-geofenced HTML page; no PDF or private-repository
       URL.
 - [ ] Make the exact corresponding source public and tag the release commit.

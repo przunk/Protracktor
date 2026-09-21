@@ -200,6 +200,38 @@ android.sourceSets["main"].assets.srcDir(uadeAssets)
 
 tasks.named("preBuild") { dependsOn(copyUadeData) }
 
+// **The licences and the privacy policy, as the app shows them** (Settings → Open-source licences,
+// Privacy policy). Every file named in `app/notices/components.tsv` is copied from where it came
+// with its code -- the vendored sources, or `app/notices/` for what arrives as a Maven artifact --
+// so the text on screen is the text the licence asks to be reproduced, not a retelling of it. The
+// privacy policy is the same file that is published, so the two cannot drift.
+//
+// Read at configuration time: the table is a handful of lines, and a `Sync` has to know its sources
+// before it runs. `Sync` rather than `Copy`, for `copySc68Data`'s reason -- a row removed from the
+// table must take its files out of the APK too.
+val noticeAssets: File = layout.buildDirectory.dir("generated/notice-assets").get().asFile
+
+val copyNotices = tasks.register<Sync>("copyNotices") {
+    val table = rootProject.file("app/notices/components.tsv")
+    inputs.file(table)
+    from(table) { into("notices") }
+    from(rootProject.file("store/privacy-policy.md")) { into("legal") }
+    table.readLines()
+        .filter { it.isNotBlank() && !it.startsWith("#") }
+        .forEach { line ->
+            val cells = line.split('\t')
+            val id = cells[0]
+            cells[4].split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { path ->
+                from(rootProject.file(path)) { into("notices/$id") }
+            }
+        }
+    into(noticeAssets)
+}
+
+android.sourceSets["main"].assets.srcDir(noticeAssets)
+
+tasks.named("preBuild") { dependsOn(copyNotices) }
+
 // Two tests read files outside the source set: `RuleCasesTest` the shared queue rules and
 // `SupportedFormatsFileTest` the page's format list. Gradle cannot see that, so an edit to either
 // file alone left the test task "up to date" and the check that exists to catch drift never ran.
@@ -209,6 +241,11 @@ tasks.withType<Test>().configureEach {
     // three settings that only matter together, none of which any code path mentions.
     inputs.file(rootProject.file("app/build.gradle.kts")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("native/backends/uade/CMakeLists.txt")).withPathSensitivity(PathSensitivity.RELATIVE)
+    // And `NoticesCoverTheBuildTest` the licence table and the native build it is held to. Found by
+    // taking a row out of the table: the test stayed green because Gradle had not re-run it.
+    inputs.file(rootProject.file("app/notices/components.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("native/CMakeLists.txt")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("store/privacy-policy.md")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("web/src/formats.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
