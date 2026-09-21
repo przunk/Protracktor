@@ -111,11 +111,17 @@ int play(const std::string &path, const std::vector<std::string> &companions, co
     const bool stayed = backend->currentSubsong() == current;
     const double position = backend->positionSeconds();
 
-    // The length arrives from the second emulator; the host asks while it says it may.
+    // The length arrives from the second emulator, and it is read **the way the host reads it**
+    // (`player_oboe.cpp`, once per buffer): only while nothing is published yet and the backend
+    // says one may still come. The first version of this loop asked the backend directly and so
+    // passed while the phone never saw a length at all.
     double duration = backend->durationSeconds();
-    for (int i = 0; i < 300 && duration <= 0.0 && backend->durationArrivesLater(); ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        duration = backend->durationSeconds();
+    // Asked until it is settled either way: a length published, or the backend saying none is
+    // coming. Whether a measured length was announced is checked explicitly below
+    // (`length-not-announced`), so this needs no particular rhythm to catch that.
+    for (int i = 0; i < 600 && duration <= 0.0 && backend->durationArrivesLater(); ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        if (backend->durationArrivesLater()) duration = backend->durationSeconds();
     }
 
     // Seeking, both ways, once there is a length to seek within.
@@ -142,6 +148,7 @@ int play(const std::string &path, const std::vector<std::string> &companions, co
     backend->rewind();
     const bool rewindOk = render(*backend, 1.0).firstFrames == kFrames;
 
+    const double knownButUnannounced = backend->durationSeconds();
     backend.reset();
     const int afterClose = scratchEntries(scratch);
 
@@ -154,6 +161,8 @@ int play(const std::string &path, const std::vector<std::string> &companions, co
         : std::fabs(position - static_cast<double>(first.totalFrames) / kRate) > 0.5 ? "position"
         : !subsongOk ? "subsong"
         : !seekOk ? "seek"
+        // The defect the phone found: a length measured and never announced to the host.
+        : duration <= 0.0 && knownButUnannounced > 0.0 ? "length-not-announced"
         : !rewindOk ? "rewind"
         : nullptr;
     std::printf("VERDICT %s%s backend=\"%s\" first=%zu peak=%.3f rendered=%.1fs position=%.1fs "
@@ -210,6 +219,24 @@ int main(int argc, char **argv) {
         return play(argv[2], std::vector<std::string>(argv + 3, argv + argc), scratch);
     }
     if (mode == "pair" && argc == 4) return pair(argv[2], argv[3], scratch);
+    if (mode == "trace") {
+        // What the host sees of the background length, every 100 ms for ten seconds.
+        std::string error;
+        auto backend = open(argv[2], std::vector<std::string>(argv + 3, argv + argc), error);
+        if (!backend) { std::printf("refused: %s\n", error.c_str()); return 1; }
+        backend->startedPlaying();
+        std::vector<float> buffer(kFrames * 2);
+        for (int i = 0; i <= 100; ++i) {
+            // Rendering alongside, as the audio thread does.
+            for (int b = 0; b < 4; ++b) backend->render(kRate, kFrames, buffer.data());
+            if (i % 5 == 0) {
+                std::printf("t=%.1fs arrivesLater=%d duration=%.1f\n", i / 10.0,
+                            backend->durationArrivesLater() ? 1 : 0, backend->durationSeconds());
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        return 0;
+    }
     if (mode == "length") {
         // How long the subsong really is, and what it costs to find out: render until the song
         // ends or ten minutes pass, and time it.

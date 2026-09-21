@@ -1942,8 +1942,18 @@ public:
         return info ? info->duration : 0.0;
     }
 
+    /**
+     * While the measurement runs, **and after it has found a length**.
+     *
+     * The first version said yes only while measuring, which stops being true at the moment the
+     * length becomes known -- so the host, which asks for the length only while this says yes,
+     * stopped asking just as there was something to read, and the phone never showed one. The host
+     * stops asking by itself once it has published a length, so saying yes afterwards costs one
+     * load per buffer until then and nothing after.
+     */
     bool durationArrivesLater() const override {
-        return measuring_.load(std::memory_order_acquire);
+        return measuring_.load(std::memory_order_acquire) ||
+               measured_.load(std::memory_order_acquire) > 0.0;
     }
 
     void startedPlaying() override { measure(subsongs_.cur); }

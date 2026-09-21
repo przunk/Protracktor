@@ -389,6 +389,16 @@ Measured while building it, because none of it was visible from the decision:
   that loops reaches the ten-minute cap and stays unknown. Host run: 140 of 140 with seeks forward
   and back, 122 with a length, 18 without, none at 512.
 
+  **And then the phone showed no length at all**, and two mistakes of mine were behind it. The
+  backend said "a length may still come" only *while* measuring, which stops being true at the
+  moment the length is known — so the host, which asks only while that is said, stopped asking
+  just as there was something to read. The host check did not catch it because the driver asked
+  the backend directly rather than the way the host asks, and because UADE had quietly remembered
+  the lengths of tunes my earlier measurements had played to the end, in `~/.uade/contentdb`, so
+  the host had a length from the first frame without measuring anything. Both are closed: the
+  driver now asks as the host does and fails `length-not-announced` on the old code, and every
+  host run gets an empty home directory.
+
 
 ## A43. "More from this author" opens an empty folder when the archive is not indexed — **noted 2026-09-16**
 

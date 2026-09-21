@@ -132,8 +132,13 @@ def main() -> int:
     scratch = inner / "scratch"
     scratch.mkdir()
     locked.chmod(0o111)
+    # **An empty home directory, every run.** UADE remembers the length of every tune it has played
+    # to the end, in `$HOME/.uade/contentdb`, and reports it from the first frame. Earlier runs had
+    # filled that file, so a length arrived here without the app's measurement doing anything --
+    # and the phone, with no such file, showed none.
+    home = pathlib.Path(tempfile.mkdtemp(prefix="uade-home-"))
     env = {"UADE_CORE_FILE": args.core, "UADE_BASE_DIR": str(base), "UADE_SCRATCH_DIR": str(scratch),
-           "PATH": "/usr/bin:/bin"}
+           "PATH": "/usr/bin:/bin", "HOME": str(home)}
 
     by_marker: dict[str, list[str]] = collections.defaultdict(list)
     for _size, path in probe.modland_index():
@@ -189,6 +194,7 @@ def main() -> int:
     print("\n" + ", ".join(f"{k}×{v}" for k, v in tally.most_common()))
     locked.chmod(0o755)
     shutil.rmtree(locked, ignore_errors=True)
+    shutil.rmtree(home, ignore_errors=True)
     return 0 if not leftovers and not failures else 1
 
 
