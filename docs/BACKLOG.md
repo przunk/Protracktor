@@ -49,7 +49,15 @@ Settings → Accessibility → Color and motion → Remove animations).
 A dock line that overflows scrolls slowly to the left instead of ending in `…`; one that fits stands
 still, and nothing moves with the system's animations off. D3 in `docs/PLAN_ROUND_13.md`.
 
-## A53. Search ignores accents — **planned 2026-09-21, round 13**
+## A53. Search ignores accents — **planned 2026-09-21, round 13; BUILT 2026-09-22, branch `feature/a53-accent-search`**
+
+Built to D2 (a). `SearchTerms.fold` (NFKD, marks dropped, a table for `ł đ ø ß æ œ þ ħ ı`) on the
+query and on a sparse `folded` column, schema **19**, filled on write and backfilled for stored rows
+in the migration's own transaction. Only **9 of Modland's 515,509** rows need it; the accented titles
+are mostly the library's, read out of files. Worst-case search on the full index, host: **56.6 ms →
+62.0 ms**, the column asked `IS NOT NULL` first (71.1 ms without). The browser folds the same way in
+`rules.js`, and eight shared cases in `docs/rules/queue-cases.tsv` hold both to one answer.
+
 
 `michal` finds `Michał` and the other way round; `akes lekhorna` finds `Åkes lekhörna`. One fold
 for query and stored text, a sparse folded column (the next free database version after A47's 18), the same rule in the

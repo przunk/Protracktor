@@ -139,3 +139,11 @@ spaceninja	space_ninja.mod	-	no	the direction this deliberately does not cover; 
 4-mat space	space.mod	4-Mat	yes	one word from the title and one from the author is a hit
 4-mat space	ninja.mod	4-Mat	no	the author alone is not enough
 	anything.mod	-	yes	a blank query means everything, which is how a platform scope is asked for
+michal	-	Michał Kowalski	yes	A53: an accent in the text does not stop a plain query
+michał	michal.mod	-	yes	and an accent in the query does not stop a plain text
+akes lekhorna	Åkes lekhörna (za)	-	yes	the Swedish title A47 made readable, found without its letters
+dzwiek	dźwięk.xm	-	yes	marks on more than one letter
+ŁÓDŹ	lodz.mod	-	yes	capitals with accents fold like small ones
+strasse	Straße	-	yes	ß becomes ss, which no decomposition does
+nerual	Ｎerual Ｔtoille.mdx	-	yes	fullwidth letters, which Modland holds, fold to plain ones
+michal	michel.mod	-	no	folding removes marks, it does not make different letters equal

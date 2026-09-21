@@ -406,6 +406,99 @@ class SchemaSqlTest {
         }
     }
 
+    /** Runs [SchemaSql.backfillFolded] through JDBC, the way the phone runs it through Android. */
+    private fun Connection.backfillFolded() = SchemaSql.backfillFolded(
+        rows = { sql ->
+            createStatement().use { statement ->
+                statement.executeQuery(sql).use { row ->
+                    val texts = row.metaData.columnCount - 1
+                    buildList {
+                        while (row.next()) add(row.getLong(1) to Array(texts) { row.getString(it + 2).orEmpty() })
+                    }
+                }
+            }
+        },
+        write = { sql, folded, rowid ->
+            prepareStatement(sql).use { it.setString(1, folded); it.setLong(2, rowid); it.executeUpdate() }
+        },
+    )
+
+    /** The titles a search over [table] returns, by the same SQL the stores build. */
+    private fun Connection.titlesFound(query: String, table: String, vararg columns: String): Set<String> {
+        val (clause, args) = SearchTerms.sqlFor(query, *columns, sparse = "folded")
+        return prepareStatement("SELECT title FROM $table WHERE $clause").use { statement ->
+            args.forEachIndexed { i, arg -> statement.setString(i + 1, arg) }
+            statement.executeQuery().use { rows -> buildSet { while (rows.next()) add(rows.getString(1)) } }
+        }
+    }
+
+    @Test
+    fun `a search finds accented rows through their folded copy and plain rows as before`() {
+        // A53, the SQL half the shared cases cannot reach: rows written the way the stores write
+        // them, found by the query the stores build. An ASCII row stores no folded copy at all.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            connection.prepareStatement(
+                "INSERT INTO library_index (uri, folder_uri, file_name, title, author, indexed_at, folded) " +
+                    "VALUES (?, 'tree', ?, ?, ?, 1, ?)"
+            ).use { insert ->
+                listOf(
+                    Triple("a.mod", "Åkes lekhörna (za)", "Zalza"),
+                    Triple("b.mod", "Suite", "Michał Kowalski"),
+                    Triple("c.mod", "michal", ""),
+                    Triple("d.mod", "michel", ""),
+                ).forEachIndexed { i, (file, title, author) ->
+                    insert.setString(1, "uri-$i"); insert.setString(2, file)
+                    insert.setString(3, title); insert.setString(4, author)
+                    insert.setString(5, SearchTerms.foldedOrNull(title, file, author))
+                    insert.executeUpdate()
+                }
+            }
+            val columns = arrayOf("title", "file_name", "author")
+            assertEquals(setOf("Åkes lekhörna (za)"), connection.titlesFound("akes lekhorna", "library_index", *columns))
+            assertEquals(setOf("Suite", "michal"), connection.titlesFound("michal", "library_index", *columns))
+            assertEquals(setOf("Suite", "michal"), connection.titlesFound("MICHAŁ", "library_index", *columns))
+            assertEquals(setOf("Suite"), connection.titlesFound("michał suite", "library_index", *columns))
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT COUNT(*) FROM library_index WHERE folded IS NULL").use { rows ->
+                    rows.next(); assertEquals("the two plain rows store no copy", 2, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `rows stored before version 19 get their folded copy, and only those that need one`() {
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 18))
+            connection.run(
+                listOf(
+                    "INSERT INTO catalogues (id, display_name) VALUES ('modland', 'Modland')",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                        "VALUES ('modland', 'Fasttracker 2/Floppi/teron tyhmä biisi.xm', 'Fasttracker 2', 'Floppi', 'teron tyhmä biisi.xm', 1)",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size) " +
+                        "VALUES ('modland', 'Protracker/Zalza/akes lekhorna.mod', 'Protracker', 'Zalza', 'akes lekhorna.mod', 1)",
+                    "INSERT INTO library_index (uri, folder_uri, file_name, title, author, indexed_at) " +
+                        "VALUES ('u', 'tree', 'akes lekhorna.mod', 'Åkes lekhörna (za)', '', 1)",
+                )
+            )
+
+            connection.run(SchemaSql.migrationsBetween(18, SchemaSql.VERSION))
+            connection.backfillFolded()
+
+            connection.createStatement().use { statement ->
+                fun folded(sql: String): String? = statement.executeQuery(sql).use { rows -> rows.next(); rows.getString(1) }
+                assertEquals("teron tyhma biisi.xm\nfloppi", folded("SELECT folded FROM catalogue_tracks WHERE author = 'Floppi'"))
+                assertEquals(null, folded("SELECT folded FROM catalogue_tracks WHERE author = 'Zalza'"))
+                assertEquals("akes lekhorna (za)\nakes lekhorna.mod\n", folded("SELECT folded FROM library_index"))
+            }
+            assertEquals(
+                setOf("teron tyhmä biisi.xm"),
+                connection.titlesFound("tyhma", "catalogue_tracks", "title", "author"),
+            )
+        }
+    }
+
     @Test
     fun `the browse indexes cover only what is offered`() {
         // `docs/ROADMAP_FORMATS.md` step 0: the table holds the whole archive and every screen asks

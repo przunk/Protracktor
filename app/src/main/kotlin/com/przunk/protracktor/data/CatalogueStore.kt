@@ -243,8 +243,8 @@ class CatalogueStore(context: Context) {
 
                 val insert = compileStatement(
                     "INSERT OR REPLACE INTO catalogue_tracks " +
-                        "(catalogue_id, path, format, author, title, size, ext, pre, playable) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "(catalogue_id, path, format, author, title, size, ext, pre, playable, folded) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
                 insert.use { statement ->
                     entries.forEach { entry ->
@@ -267,6 +267,9 @@ class CatalogueStore(context: Context) {
                             ext in SupportedFormats.extensions || pre in SupportedFormats.prefixes
                         if (playable) playableCount++
                         statement.bindLong(9, if (playable) 1L else 0L)
+                        // Search's folded copy, for the few rows with accents (A53).
+                        SearchTerms.foldedOrNull(entry.title, entry.author)
+                            ?.let { statement.bindString(10, it) } ?: statement.bindNull(10)
                         statement.executeInsert()
                     }
                 }
@@ -373,7 +376,7 @@ class CatalogueStore(context: Context) {
                 val placeholders = catalogueIds.joinToString(",") { "?" }
                 " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
             }
-            val words = SearchTerms.sqlFor(query, "title", "author")
+            val words = SearchTerms.sqlFor(query, "title", "author", sparse = "folded")
             val byFormat = if (formats.isEmpty()) {
                 "" to emptyArray<String>()
             } else {
@@ -436,7 +439,7 @@ class CatalogueStore(context: Context) {
             // **Every word, anywhere, in any order** (`SearchTerms`), which is also where the
             // escaping lives: a user typing % or _ searches for those characters rather than
             // matching everything.
-            val words = SearchTerms.sqlFor(query, "title", "author")
+            val words = SearchTerms.sqlFor(query, "title", "author", sparse = "folded")
             // Modland's directory name is what the `format` column holds, so narrowing to a platform
             // is one `IN (…)` over a column that already exists. `COLLATE NOCASE` because the table
             // stores the archive's own capitalisation and `Platforms` states everything lower-cased.

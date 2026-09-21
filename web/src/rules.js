@@ -98,7 +98,38 @@ export function freshPick({ drawn, seen }) {
  * megabytes. This costs nothing.
  */
 export function searchTerms(query) {
-  return String(query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return foldText(String(query ?? '').trim()).split(/\s+/).filter(Boolean);
+}
+
+// Letters with no combining mark to drop, and what they fold to. The same table as the phone's
+// `SearchTerms.UNDECOMPOSED`; `docs/rules/queue-cases.tsv` holds the two to one answer.
+const UNDECOMPOSED = { 'ł': 'l', 'đ': 'd', 'ø': 'o', 'ß': 'ss', 'æ': 'ae', 'œ': 'oe', 'þ': 'th', 'ħ': 'h', 'ı': 'i' };
+const UNDECOMPOSED_ANY = /[łđøßæœþħı]/g;
+
+/**
+ * Text as search compares it (`docs/BACKLOG.md` A53): lower case, compatibility-decomposed
+ * (NFKD), combining marks dropped, and the letters Unicode does not decompose mapped by hand --
+ * so `michal` finds `Michał` and `akes lekhorna` finds `Åkes lekhörna`. The phone's
+ * `SearchTerms.fold` is the same function.
+ */
+export function foldText(text) {
+  return String(text ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/\p{Mn}/gu, '')
+    .replace(UNDECOMPOSED_ANY, (c) => UNDECOMPOSED[c]);
+}
+
+/**
+ * [text] ready to be searched: folded when it holds anything outside ASCII, merely lower-cased
+ * when it does not. The catalogue search runs this half a million times a keystroke, and nearly
+ * every title is plain ASCII, for which folding and lower-casing are the same thing.
+ */
+// eslint-disable-next-line no-control-regex
+const NON_ASCII = /[^\x00-\x7f]/;
+export function searchable(text) {
+  const s = String(text ?? '');
+  return NON_ASCII.test(s) ? foldText(s) : s.toLowerCase();
 }
 
 /**
@@ -108,6 +139,6 @@ export function searchTerms(query) {
  * other is a hit, so each word is looked for across all of them.
  */
 export function searchMatches(query, ...texts) {
-  const haystacks = texts.filter((t) => t != null).map((t) => String(t).toLowerCase());
+  const haystacks = texts.filter((t) => t != null).map((t) => searchable(t));
   return searchTerms(query).every((word) => haystacks.some((text) => text.includes(word)));
 }

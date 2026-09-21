@@ -14,7 +14,7 @@
 
 import { catalogue } from './store.js';
 import { md5, parseSongLengths } from './songlengths.js';
-import { searchTerms } from './rules.js';
+import { searchTerms, searchable } from './rules.js';
 
 const MODLAND = 'modland';
 const ASMA = 'asma';
@@ -438,7 +438,7 @@ export async function searchTitles(query, limit = 200, source = MODLAND) {
   for (const shard of await allTitleShards(source)) {
     for (const [title, format, author] of shard.entries) {
       scanned++;
-      const haystack = title.toLowerCase();
+      const haystack = searchable(title);
       // A plain loop rather than `every`, because this runs half a million times a keystroke and
       // the first word that is missing is the answer.
       let all = true;
@@ -462,7 +462,7 @@ export async function searchAuthors(query, limit = 100, source = MODLAND) {
   const found = [];
   for (const { name: format } of await formats(source)) {
     for (const { name, count } of await authors(format, source)) {
-      const haystack = name.toLowerCase();
+      const haystack = searchable(name);
       if (!words.every((word) => haystack.includes(word))) continue;
       found.push({ source, format, author: name, count });
       if (found.length >= limit) return found;

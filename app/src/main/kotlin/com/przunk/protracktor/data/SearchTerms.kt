@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.data
 
+import java.text.Normalizer
+
 /**
  * What a typed search means.
  *
@@ -27,6 +29,13 @@ package com.przunk.protracktor.data
  * a normalised column and about twelve megabytes. Splitting the query costs **nothing**: 36.5 ms to
  * 36.8 ms for two words, because the extra clause short-circuits over the same scan.
  *
+ * **Accents do not count either** (`docs/BACKLOG.md` A53): `michal` finds `Michał`, and `akes
+ * lekhorna` finds `Åkes lekhörna`. Both sides go through [fold]. SQLite's `LIKE` folds case for
+ * ASCII only and Android's SQLite takes no custom function, so the stored side is folded when a
+ * row is written, into a `folded` column that is filled **only for rows with anything outside
+ * ASCII** ([foldedOrNull]) -- 9 of Modland's 515,509 rows, and the titles a library scan reads out
+ * of files. An ASCII row is matched by its own columns exactly as before.
+ *
  * **No Android imports on purpose**, like [SongLengths] beside it: the rule is shared with
  * `web/src/rules.js` through `docs/rules/queue-cases.tsv`, and a rule that cannot be run in a test
  * here is a rule that gets decided twice.
@@ -41,11 +50,46 @@ object SearchTerms {
      * what bounds it.
      */
     fun of(query: String): List<String> =
-        query.trim().lowercase().split(' ', '\t', '\n').filter { it.isNotEmpty() }
+        fold(query.trim()).split(' ', '\t', '\n').filter { it.isNotEmpty() }
+
+    /**
+     * Text as search compares it: lower case, compatibility-decomposed (NFKD), combining marks
+     * dropped, and the letters Unicode does not decompose mapped by hand.
+     *
+     * NFKD rather than NFD because Modland holds `Ｎerual Ｔtoille` in fullwidth letters, which only
+     * the compatibility form turns into `nerual ttoille`. `ł`, `đ`, `ø` and friends carry no
+     * combining mark at all -- `ł` is a letter of its own, not `l` plus a stroke -- which is what
+     * the table is for. `web/src/rules.js` `foldText` is the same function; `docs/rules/queue-cases.tsv`
+     * holds them to it.
+     */
+    fun fold(text: String): String {
+        val decomposed = Normalizer.normalize(text.lowercase(), Normalizer.Form.NFKD)
+        val out = StringBuilder(decomposed.length)
+        for (c in decomposed) {
+            if (Character.getType(c) == Character.NON_SPACING_MARK.toInt()) continue
+            out.append(UNDECOMPOSED[c] ?: c.toString())
+        }
+        return out.toString()
+    }
+
+    /** Letters with no combining mark to drop, and what they fold to. The same table as `rules.js`. */
+    private val UNDECOMPOSED: Map<Char, String> = mapOf(
+        'ł' to "l", 'đ' to "d", 'ø' to "o", 'ß' to "ss", 'æ' to "ae", 'œ' to "oe", 'þ' to "th",
+        'ħ' to "h", 'ı' to "i",
+    )
+
+    /**
+     * What a row stores in its `folded` column: the folded [texts] joined by line breaks, or
+     * **null when every one of them is plain ASCII** -- which is nearly every row, and needs no
+     * second copy because its own columns already match a folded query.
+     */
+    fun foldedOrNull(vararg texts: String): String? =
+        if (texts.all { text -> text.all { it.code < 0x80 } }) null
+        else texts.joinToString("\n") { fold(it) }
 
     /** Whether [text] satisfies [query] by this rule. The in-memory half of what the SQL does. */
     fun matches(query: String, text: String): Boolean {
-        val haystack = text.lowercase()
+        val haystack = fold(text)
         return of(query).all { haystack.contains(it) }
     }
 
@@ -65,12 +109,17 @@ object SearchTerms {
      * underscore rather than everything. A search box that silently means something else is worse
      * than no search box.
      */
-    fun sqlFor(query: String, vararg columns: String): Pair<String, Array<String>> {
+    fun sqlFor(query: String, vararg columns: String, sparse: String? = null): Pair<String, Array<String>> {
         val words = of(query)
         if (words.isEmpty() || columns.isEmpty()) return "1" to emptyArray()
-        val group = columns.joinToString(" OR ") { "$it LIKE ? ESCAPE '!'" }
+        // [sparse] is a column that is NULL on nearly every row -- `folded` (A53). `LIKE` is
+        // evaluated even on NULL, and asking first is measured: on Modland's 515,509 rows a search
+        // that matches nothing went 56.6 ms -> 71.1 ms with the column plain, 62.0 ms guarded.
+        val searched = columns.map { "$it LIKE ? ESCAPE '!'" } +
+            listOfNotNull(sparse?.let { "($it IS NOT NULL AND $it LIKE ? ESCAPE '!')" })
+        val group = searched.joinToString(" OR ")
         val clause = words.joinToString(" AND ") { "($group)" }
-        val args = words.flatMap { word -> columns.map { like(word) } }.toTypedArray()
+        val args = words.flatMap { word -> searched.map { like(word) } }.toTypedArray()
         return clause to args
     }
 
@@ -86,7 +135,7 @@ object SearchTerms {
      * every word by itself.
      */
     fun matchesAny(query: String, vararg texts: String): Boolean {
-        val haystacks = texts.map { it.lowercase() }
+        val haystacks = texts.map { fold(it) }
         return of(query).all { word -> haystacks.any { it.contains(word) } }
     }
 }
