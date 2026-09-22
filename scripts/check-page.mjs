@@ -83,6 +83,7 @@ const posted = [];
 let holdTrackFetch = false;
 window.fetch = async (url, options) => {
   const u = String(url);
+  if (u.endsWith('/pair/host') && window.__staticHost) return { ok: false, status: 404, json: async () => { throw new SyntaxError('not JSON'); } };
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
@@ -179,7 +180,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__api = { pair, setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -2782,6 +2783,32 @@ if (window.__api) {
   await settle();
   check(box.hidden, 'and says nothing once the list has something in it');
   await store.clear('modland:');
+}
+
+// --- the page's source, and what pairing sends (2026-09-22) -------------------------------------
+if (window.__api) {
+  console.log('\nsource and pairing notices:');
+  const settle = () => new Promise((r) => setTimeout(r, 60));
+  const source = $('open-source');
+  check(source?.querySelector('svg') && source.textContent.trim() === 'Source code'
+        && source.href.startsWith('https://github.com/przunk/protracktor'),
+    'Settings offers the source code, icon and word, linked to the repository');
+  const sending = $('sendingnote').textContent.replace(/\s+/g, ' ');
+  check(sending.includes('pass through the server that hosts this page') && sending.includes('nothing is written to disk'),
+    'and says what passes through the page\'s server when a phone sends');
+  check($('pairprivacy').textContent.replace(/\s+/g, ' ').includes('Pair only with a page you')
+        && $('pair-privacy').querySelector('svg') && $('pair-privacy').textContent.trim() === 'Privacy policy',
+    'the pairing code says the same beside it, with the privacy policy one press away');
+  $('pair-privacy').click();
+  await settle();
+  check(!$('legal').hidden && $('legaltitle').textContent === 'Privacy policy', 'which opens the policy');
+  window.__api.showPanel(null);
+  window.__staticHost = true;
+  await window.__api.pair();
+  check($('pairnote').textContent.startsWith('This page is served without its pairing service')
+        && !$('qr').children.length,
+    'on a static host with no pairing service, the pairing sheet says so instead of showing a dead code');
+  window.__staticHost = false;
 }
 
 // --- Browse as the phone draws it (W8) -------------------------------------------------------------

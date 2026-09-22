@@ -53,4 +53,12 @@ if (missing.length) {
 fs.mkdirSync(path.join(out, 'legal'), { recursive: true });
 fs.copyFileSync(path.join(root, 'store', 'privacy-policy.md'), path.join(out, 'legal', 'privacy-policy.md'));
 
+// **Which source this page is.** The GPL's offer of source is for the version conveyed, so the
+// page's Source code link points at the commit it was built from, when there is one to name.
+let commit = '';
+try {
+  commit = (await import('child_process')).execSync('git rev-parse HEAD', { cwd: root }).toString().trim();
+} catch { /* not a checkout: the link falls back to the repository */ }
+fs.writeFileSync(path.join(out, 'legal', 'build.json'), JSON.stringify({ commit }) + '\n');
+
 console.log(`📜 ${parseNotices(table, 'web').length} components, ${copied} licence files and the privacy policy beside the engine`);
