@@ -143,6 +143,7 @@
     <string name="notification_channel_playback">Odtwarzanie</string>
 
     <string name="a11y_seek">Przewiń w utworze</string>
+    <string name="a11y_seeking">Przewijanie</string>
     <string name="a11y_keep_track">Dodaj ten utwór do playlisty</string>
     <string name="a11y_preview">Odtwórz %1$s</string>
     <string name="a11y_play">Odtwórz</string>

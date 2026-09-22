@@ -347,6 +347,45 @@ const describeOf = (bytes, name) => {
   check('and the refusal says it is BASIC', /BASIC/.test(error), `said: ${error}`);
 }
 
+// --- seeking a SID: running the machine there ------------------------------------------------------
+//
+// libsidplayfp cannot jump, so a seek renders silently to the place (`seekByRendering`): forward
+// from where it is, backward from the start of the tune. The position it reports afterwards is the
+// place asked for, to the buffer.
+{
+  const header = Buffer.alloc(0x7c);
+  header.write('PSID', 0, 'latin1');
+  header.writeUInt16BE(2, 4);
+  header.writeUInt16BE(0x7c, 6);
+  header.writeUInt16BE(0x1000, 0x0a);
+  header.writeUInt16BE(0x1003, 0x0c);
+  header.writeUInt16BE(1, 0x0e);
+  header.writeUInt16BE(1, 0x10);
+  header.write('seek check', 0x16, 'latin1');
+  const sid = Buffer.concat([header, Buffer.from([0x00, 0x10, 0x60, 0xea, 0xea, 0x60])]);
+  const { handle: h } = open(sid, 'seek.sid');
+  check('the SID for seeking opens', h !== 0);
+  if (h) {
+    const describe = M.UTF8ToString(M._pt_describe(h));
+    check('a SID says it can seek now', describe.includes('seekable\t1'), describe.split('\n').find((l) => l.startsWith('seekable')));
+    const out = M._malloc(4096 * 8);
+    M._pt_render(h, 44100, 4096, out);
+    M._pt_seek(h, 30);
+    const forward = M._pt_position(h);
+    check('a seek forward arrives where it was asked', Math.abs(forward - 30) < 0.2, `at ${forward.toFixed(2)} s`);
+    M._pt_seek(h, 5);
+    const back = M._pt_position(h);
+    check('and a seek back goes back, through the start', Math.abs(back - 5) < 0.2, `at ${back.toFixed(2)} s`);
+    const started = Date.now();
+    M._pt_seek(h, 99999);
+    const far = M._pt_position(h);
+    check('a seek past any tune is bounded, not an hour of rendering', far <= 20 * 60 + 1 && Date.now() - started < 120000,
+      `at ${far.toFixed(0)} s after ${((Date.now() - started) / 1000).toFixed(1)} s`);
+    M._free(out);
+    M._pt_close(h);
+  }
+}
+
 console.log();
 if (failed) {
   console.error(`${failed} engine check${failed === 1 ? '' : 's'} failed`);

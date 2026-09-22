@@ -245,6 +245,7 @@
     <string name="notification_channel_playback">Playback</string>
 
     <string name="a11y_seek">Seek within the track</string>
+    <string name="a11y_seeking">Seeking</string>
     <string name="a11y_keep_track">Add this track to the playlist</string>
     <string name="a11y_preview">Play %1$s</string>
     <string name="a11y_play">Play</string>

@@ -2785,6 +2785,50 @@ if (window.__api) {
   await store.clear('modland:');
 }
 
+// --- a seek that takes a while (Q11) --------------------------------------------------------------
+//
+// A SID seeks by running its machine there. Until the worklet says it has landed the bar stays where
+// it was let go, a stale position cannot pull it back, and after 300 ms a spinner stands where the
+// elapsed time was -- the phone's SeekProgress.
+if (window.__api) {
+  console.log('\na seek that takes a while:');
+  const api = window.__api;
+  api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/seek.mod']);
+  api.onWorklet({ type: 'opened', duration: 240, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+                  describe: 'title\tseek test\nseekable\t1', current: 0 });
+  await new Promise((r) => setTimeout(r, 30));
+  $('seek').value = 750;
+  $('seek').onchange();
+  api.onWorklet({ type: 'position', seconds: 12 });
+  check($('seek').value === '750' && !$('elapsed').classList.contains('seeking'),
+    'the bar stays where it was let go, and a quick seek shows no spinner');
+  await new Promise((r) => setTimeout(r, 350));
+  check($('elapsed').classList.contains('seeking') && $('elapsed').getAttribute('aria-label') === 'Seeking',
+    'a seek still running after 300 ms shows a spinner where the time was, named for a screen reader');
+  api.onWorklet({ type: 'seeked', seconds: 180 });
+  check(!$('elapsed').classList.contains('seeking') && $('elapsed').textContent === '3:00',
+    'and when it lands the time comes back, at the new place');
+  api.onWorklet({ type: 'position', seconds: 181 });
+  check($('elapsed').textContent === '3:01', 'and positions are followed again');
+
+  // Ten clicks while a seek runs: only the last is sent, and only once the running one lands.
+  // A seek of its own first, so one is running when the ten clicks arrive.
+  $('seek').value = 50;
+  $('seek').onchange();
+  const before = window.__toWorklet.length;
+  for (const value of [100, 200, 300, 400, 500, 600, 700, 800, 900, 950]) {
+    $('seek').value = value;
+    $('seek').onchange();
+  }
+  const posted = () => window.__toWorklet.slice(before).filter((m) => m?.type === 'seek').map((m) => m.seconds);
+  check(posted().length === 0, 'ten clicks while a seek runs send nothing yet', JSON.stringify(posted()));
+  api.onWorklet({ type: 'seeked', seconds: 12 });
+  check(posted().length === 1 && Math.abs(posted()[0] - 228) < 0.01,
+    'and when it lands, only the last place asked for is sent', JSON.stringify(posted()));
+  api.onWorklet({ type: 'seeked', seconds: 228 });
+  check($('elapsed').textContent === '3:48', 'which is where it ends up');
+}
+
 // --- the page's source, and what pairing sends (2026-09-22) -------------------------------------
 if (window.__api) {
   console.log('\nsource and pairing notices:');

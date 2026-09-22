@@ -615,6 +615,11 @@
     padding: 10px 18px; font: inherit; border-radius: var(--shape-xl); cursor: pointer;
   }
   .legalrows { margin-top: 16px; }
+  /* A seek that takes a while (Q11): a small spinner where the elapsed time was, the same width. */
+  #elapsed.seeking { color: transparent; position: relative; }
+  #elapsed.seeking::after { content: ''; position: absolute; left: 0; top: 50%; width: 12px; height: 12px;
+                            margin-top: -8px; border-radius: 50%; border: 2px solid var(--surface-variant);
+                            border-top-color: var(--primary); animation: spin 0.9s linear infinite; }
   /* The licence texts are other people's, formatted by them: kept as written, in a face that keeps
      their columns, and wrapped so a long line does not push the sheet sideways. */
   .legalbody { max-height: 70vh; overflow-y: auto; text-align: left; }
@@ -843,7 +848,7 @@
     <div class="statusline error" id="error"></div>
 
     <div class="seekrow">
-      <span id="elapsed">0:00</span>
+      <span id="elapsed" aria-live="off">0:00</span>
       <input type="range" id="seek" min="0" max="1000" value="0" disabled aria-label="Position">
       <span id="remaining">0:00</span>
     </div>

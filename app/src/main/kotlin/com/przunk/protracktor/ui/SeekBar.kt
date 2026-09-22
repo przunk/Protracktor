@@ -10,22 +10,29 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.przunk.protracktor.R
+import com.przunk.protracktor.player.PlayerUiState
 
 /**
  * The seek control, used by both the dock and Now Playing.
@@ -40,6 +47,30 @@ import androidx.compose.ui.unit.dp
  */
 // The slot-based Slider overloads are still marked experimental. Taken knowingly: the default
 // thumb and track are what make a progress line look unmovable, which is the fault being fixed.
+/**
+ * The elapsed time beside a seek bar, or, while a seek takes long enough to be seen waiting, a
+ * small spinner in its place (Q11, the owner's choice 2026-09-22): where the eye already is, beside
+ * the bar just dragged. The same width either way, so the bar does not move.
+ */
+@Composable
+fun ElapsedTime(state: PlayerUiState) {
+    val seeking = stringResource(R.string.a11y_seeking)
+    Box(contentAlignment = Alignment.CenterStart) {
+        // Holds the width of a time, so the spinner does not pull the bar sideways.
+        Text(
+            text = formatTime(state.positionSeconds),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (state.seekSlow) Color.Transparent else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (state.seekSlow) {
+            CircularProgressIndicator(
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(12.dp).semantics { contentDescription = seeking },
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeekBar(
@@ -112,11 +143,11 @@ fun SeekBar(
             // A visible grab point: a progress line with nothing to take hold of does not look
             // like something you can move.
             //
-            // **And nothing to take hold of when there is nothing to move.** SID and Atari ST
-            // cannot seek — libsidplayfp is running a program and has no notion of a position at
-            // all — and since HVSC supplies SID durations the bar shows a real length, so it
-            // would otherwise look exactly like a bar you could drag. A greyed thumb reads as "not
-            // now"; no thumb reads as "this is progress", which is the truth.
+            // **And nothing to take hold of when there is nothing to move.** A backend that cannot
+            // seek still shows a real length where a database supplies one, so the bar would
+            // otherwise look exactly like a bar you could drag. A greyed thumb reads as "not now".
+            // (SID and Atari ST were the reason once; since 2026-09-22 they seek by running their
+            // machines to the place, Q11.)
             //
             // **Drawn here rather than by `SliderDefaults.Thumb`**, which grows while pressed. The
             // track is inset by the thumb's radius, so a thumb that changes size makes the line
