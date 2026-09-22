@@ -168,3 +168,13 @@ seconds	expect	why
 150	2:30	a known length, minutes and seconds
 59.9	0:59	seconds are not rounded up into a minute that has not passed
 3600	60:00	an hour stays in minutes, as both players have always shown it
+
+# Whether a now-playing line that does not fit may scroll (A54): the phone's DockMarquee.scrolls and
+# the page's lineScrolls. Motion turned down in the system keeps everything still; a status line
+# never moves.
+[lineScrolls]
+animationsOn	isStatus	expect	why
+yes	no	yes	a title that does not fit scrolls
+no	no	no	nothing moves with the system's animations off
+yes	yes	no	the loading line never scrolls
+no	yes	no	and certainly not with animations off

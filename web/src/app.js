@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
@@ -3401,6 +3401,50 @@ $('np-show').onclick = () => { if (index >= 0) showInPlaylist(index); };
 $('np-folder').onclick = () => showAuthorFolder(queue[index]);
 $('np-save').onclick = () => { const e = queue[index]; if (e) saveFile(e); };
 $('np-link').onclick = () => { const e = queue[index]; if (e) copyLink(e); };
+
+// --- the now-playing lines scroll when they do not fit (A54) --------------------------------------
+//
+// The title and the line under it are written from a dozen places, so they are watched rather than
+// each write being taught to measure: whenever either's text changes, it is measured once, and a
+// line wider than its box is wrapped in a span that moves -- two seconds still, then left at the
+// phone's pace until its end shows, and round again (`rules.lineScrollPass`). A line that fits is
+// left alone, with its `…` for the moment it no longer does.
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+
+function fitLine(el, again = false) {
+  const text = el.textContent;
+  // Our own wrapping is a change too; the same text already running is not a new line.
+  if (!again && el.scrollRun?.text === text) return;
+  el.scrollRun?.animation?.cancel();
+  el.scrollRun = null;
+  if (el.firstElementChild?.classList.contains('run')) el.textContent = text;
+  el.classList.remove('scrolling');
+  const isStatus = el.id === 'sub' && loading !== null;
+  if (!lineScrolls({ animationsOn: !reducedMotion?.matches, isStatus })) return;
+  const pass = lineScrollPass(el.scrollWidth - el.clientWidth);
+  if (!pass) return;
+  const run = document.createElement('span');
+  run.className = 'run';
+  run.textContent = text;
+  el.scrollRun = { text };
+  el.replaceChildren(run);
+  el.classList.add('scrolling');
+  if (typeof run.animate !== 'function') return;
+  el.scrollRun.animation = run.animate([
+    { transform: 'translateX(0)', offset: 0 },
+    { transform: 'translateX(0)', offset: pass.pauseShare },
+    { transform: `translateX(${-pass.distance}px)`, offset: 1 },
+  ], { duration: pass.duration, iterations: Infinity });
+}
+
+for (const id of ['title', 'sub']) {
+  const el = $(id);
+  new MutationObserver(() => fitLine(el)).observe(el, { childList: true, characterData: true, subtree: true });
+}
+// A narrower window, or motion turned down while playing, asks every line again.
+const refitLines = () => { fitLine($('title'), true); fitLine($('sub'), true); };
+window.addEventListener('resize', refitLines);
+reducedMotion?.addEventListener?.('change', refitLines);
 
 $('seek').oninput = () => { seeking = true; paint($('seek')); };
 $('seek').onchange = () => {

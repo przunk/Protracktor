@@ -2514,6 +2514,15 @@ if (window.__api) {
     rules.recordsPlay({ walkingResults: yes(c.walkingResults), fromHistory: yes(c.fromHistory) }) === yes(c.expect));
   // A length as the time display shows it, the same rows `RuleCasesTest` runs against `formatTotal`.
   each('lengthTotal', (c) => rules.clockTotal(Number(c.seconds)) === c.expect);
+  // When a now-playing line may scroll, the same rows `RuleCasesTest` runs against `DockMarquee`.
+  each('lineScrolls', (c) =>
+    rules.lineScrolls({ animationsOn: yes(c.animationsOn), isStatus: yes(c.isStatus) }) === yes(c.expect));
+  check(rules.lineScrollPass(0) === null && rules.lineScrollPass(-5) === null, 'a line that fits does not move');
+  {
+    const pass = rules.lineScrollPass(60);
+    check(pass && pass.duration === 4000 && pass.pauseShare === 0.5,
+      'a line 60 px too long: two seconds still, two seconds moving at 30 px a second');
+  }
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
