@@ -142,3 +142,14 @@ export function searchMatches(query, ...texts) {
   const haystacks = texts.filter((t) => t != null).map((t) => searchable(t));
   return searchTerms(query).every((word) => haystacks.some((text) => text.includes(word)));
 }
+
+/**
+ * Whether a play goes into History (`docs/BACKLOG.md` A56) -- the phone's `HistoryRecording.records`.
+ *
+ * A play History itself started, and the tunes walked after it with next or at a tune's end, leaves
+ * its entry alone: no new time, no new place. History says what was played elsewhere, and does not
+ * rearrange itself under the person reading it.
+ */
+export function recordsPlay({ walkingResults, fromHistory }) {
+  return !(walkingResults && fromHistory);
+}

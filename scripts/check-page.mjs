@@ -2338,6 +2338,9 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // What History records (A56), the same rows `RuleCasesTest` runs against `HistoryRecording`.
+  each('historyRecords', (c) =>
+    rules.recordsPlay({ walkingResults: yes(c.walkingResults), fromHistory: yes(c.fromHistory) }) === yes(c.expect));
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
