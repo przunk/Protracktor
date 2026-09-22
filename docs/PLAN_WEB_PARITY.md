@@ -176,6 +176,8 @@ Random digression, where Back already returns to the dice -- which stays as it i
 **W-D4 — a jump made from inside Browse** (a search result's or History's row menu). The app leaves
 Browse for the playlist in that case too.
 
+**Decided 2026-09-22: (a)**, the owner approving W8–W11 as planned.
+
 - **(a) Recommended: as the app does**, so the two players agree, and the rule goes into
   `docs/rules/queue-cases.tsv` so they keep agreeing.
 - (b) Back returns to the screen the jump was made from -- the search results, History. Arguably
