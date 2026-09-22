@@ -2748,6 +2748,42 @@ if (window.__api?.catalogueStore) {
   }
 }
 
+// --- the empty playlist (W11) --------------------------------------------------------------------
+//
+// The phone's EmptyPlaylist: nothing said until it is known what is held, then the download when
+// nothing is and Browse when something is. Last, because it empties the stored indexes.
+if (window.__api) {
+  console.log('\nthe empty playlist:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 60));
+  const store = api.catalogueStore;
+  if (api.awayState()) api.endSession();
+  if (api.randomState()) api.endRandom();
+  await store.clear('modland:');
+  await store.clear('asma:');
+  api.setQueue([]);
+  api.showPanel(null);
+  await settle();
+  const box = $('emptyplaylist');
+  const action = $('emptyaction');
+  check(!box.hidden && $('emptybody').textContent.startsWith('Nothing to browse yet')
+        && action.textContent === 'Get some music to browse' && action.querySelector('svg'),
+    'with nothing held, the empty list offers the download, with its icon and its words');
+  action.click();
+  await settle();
+  check(!$('browse').hidden && $('browsetitle').textContent === 'Browse', 'which opens Browse');
+  api.showPanel(null);
+  await store.putAll([{ key: 'modland:meta', tracks: 3, formats: 1 }]);
+  api.render();
+  await settle();
+  check(!box.hidden && action.textContent === 'Browse' && action.querySelector('svg'),
+    'with a catalogue held, it offers Browse instead');
+  api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/a.mod']);
+  await settle();
+  check(box.hidden, 'and says nothing once the list has something in it');
+  await store.clear('modland:');
+}
+
 // --- Browse as the phone draws it (W8) -------------------------------------------------------------
 //
 // The root's four rows, the catalogues with their held marks and one button each, the grouped Song

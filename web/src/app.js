@@ -1105,7 +1105,40 @@ function setPlaying(on) {
  * `primary`; both are reproduced here. The drag handle, the selection mode and the overflow menu
  * are phone-only and deliberately absent.
  */
+/**
+ * The empty playlist's offer (W11), the phone's `EmptyPlaylist`: **nothing is said until it is known
+ * what is held**, then Browse when a catalogue is here and the download when none is. Asked again
+ * whenever the list or the panels change; a later ask supersedes an earlier one still reading.
+ */
+let emptyAsked = 0;
+async function renderEmpty() {
+  const asked = ++emptyAsked;
+  const box = $('emptyplaylist');
+  const showing = () => !queue.length && !random && !away;
+  if (!showing()) { box.hidden = true; return; }
+  let held = false;
+  try {
+    const [modland, asma] = await Promise.all([archive.meta('modland'), archive.meta('asma')]);
+    held = !!(modland?.tracks || asma?.tracks);
+  } catch { /* nothing readable is nothing held */ }
+  if (asked !== emptyAsked || !showing()) { if (!showing()) box.hidden = true; return; }
+  $('emptybody').textContent = held
+    ? 'Browse the catalogues this browser holds, send tunes from your phone with the pairing code, '
+      + 'or paste some links.'
+    : 'Nothing to browse yet. Download a catalogue and half a million tracks are yours to look '
+      + 'through, offline — or send tunes from your phone with the pairing code.';
+  const action = $('emptyaction');
+  action.innerHTML = iconSvg(held ? ICON.cloud : ICON.download) + (held ? 'Browse' : 'Get some music to browse');
+  action.onclick = async () => {
+    browsePath = [];
+    showPanel('browse');
+    await renderBrowse();
+  };
+  box.hidden = false;
+}
+
 function render() {
+  renderEmpty();
   const list = $('queue');
   // Browse's Add buttons say whether a tune is in this list, and this is where the list changed.
   for (const row of $('browselist').children) row.repaintAdd?.();
@@ -2350,6 +2383,8 @@ function showPanel(which) {
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
   if (which === 'paste') $('urls').focus();
+  // Back to the list: a download made meanwhile may have changed what the empty list offers.
+  if (!which) renderEmpty();
 }
 /**
  * The playlist sheet: what there is, which one is showing, and what may be done to it.

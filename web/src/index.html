@@ -155,6 +155,9 @@
   .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container);
                            border-color: transparent; }
   #randomnote { padding: 0 16px; }
+  .emptystate { padding: 40px 24px; text-align: center; }
+  .emptystate .sheetbuttons { justify-content: center; }
+  .emptystate .outlined { flex: 0 1 auto; }
   ol { list-style: none; margin: 0; padding: 0; }
   li.track {
     display: flex;
@@ -723,6 +726,15 @@
     </div>
     <p id="randomnote" class="note" hidden></p>
     <ol id="queue"></ol>
+    <!--
+      The empty playlist (W11, the phone's EmptyPlaylist): what to do next, said only once it is
+      known what this browser holds -- so it never offers a download to somebody who has the lot.
+    -->
+    <div id="emptyplaylist" class="emptystate" hidden>
+      <h2>Nothing here yet</h2>
+      <p class="note" id="emptybody"></p>
+      <div class="sheetbuttons"><button class="outlined" id="emptyaction"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Get some music to browse</button></div>
+    </div>
 
 
 
