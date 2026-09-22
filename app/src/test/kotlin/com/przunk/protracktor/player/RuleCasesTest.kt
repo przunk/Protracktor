@@ -99,6 +99,15 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `what History records agrees with the shared cases`() = each("historyRecords") { case ->
+        assertEquals(
+            case.why(),
+            case.bool("expect"),
+            HistoryRecording.records(case.bool("walkingResults"), case.bool("fromHistory")),
+        )
+    }
+
+    @Test
     fun `what a search matches agrees with the shared cases`() = each("searchMatch") { case ->
         // The page decides the same thing in `rules.js`. Both sides split the query and look for
         // every word; the row that expects `no` for a run-on query is there on purpose.

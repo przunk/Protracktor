@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
@@ -334,8 +334,8 @@ function onWorklet(message) {
       const fields = withSongDb(describeFields(message.describe));
       dockFields = fields;
       // **Recorded here and only here.** The playlist's plays, Browse's, Random's and History's
-      // own replays all arrive at this one message, so there is one recording path rather than one
-      // per list -- and it is after the engine opened the file, so what
+      // own replays all arrive at this one message -- History's to be left out by `recordPlay`
+      // (A56) -- so there is one recording path rather than one per list -- and it is after the engine opened the file, so what
       // is recorded is a tune that played, under the name it gives itself.
       recordPlay(queue[index], fields);
       if (random) random.failures = 0;
@@ -2098,6 +2098,8 @@ function removeRandomAt(at) {
  */
 function recordPlay(entry, fields) {
   if (!entry?.url) return;
+  // A play History itself started leaves History as it is (A56, `rules.recordsPlay`).
+  if (!recordsPlay({ walkingResults: away !== null, fromHistory: away?.kind === 'history' })) return;
   played.record({
     url: entry.url,
     name: fields.title || entry.name,

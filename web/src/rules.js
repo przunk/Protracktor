@@ -222,3 +222,14 @@ export function fillFromSongDb(fields, found, hasYear) {
   if (found.year && !hasYear(out)) out.year = found.year;
   return out;
 }
+
+/**
+ * Whether a play goes into History (`docs/BACKLOG.md` A56) -- the phone's `HistoryRecording.records`.
+ *
+ * A play History itself started, and the tunes walked after it with next or at a tune's end, leaves
+ * its entry alone: no new time, no new place. History says what was played elsewhere, and does not
+ * rearrange itself under the person reading it.
+ */
+export function recordsPlay({ walkingResults, fromHistory }) {
+  return !(walkingResults && fromHistory);
+}
