@@ -2785,6 +2785,33 @@ if (window.__api) {
   await store.clear('modland:');
 }
 
+// --- a seek that takes a while (Q11) --------------------------------------------------------------
+//
+// A SID seeks by running its machine there. Until the worklet says it has landed the bar stays where
+// it was let go, a stale position cannot pull it back, and after 300 ms a spinner stands where the
+// elapsed time was -- the phone's SeekProgress.
+if (window.__api) {
+  console.log('\na seek that takes a while:');
+  const api = window.__api;
+  api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/seek.mod']);
+  api.onWorklet({ type: 'opened', duration: 240, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+                  describe: 'title\tseek test\nseekable\t1', current: 0 });
+  await new Promise((r) => setTimeout(r, 30));
+  $('seek').value = 750;
+  $('seek').onchange();
+  api.onWorklet({ type: 'position', seconds: 12 });
+  check($('seek').value === '750' && !$('elapsed').classList.contains('seeking'),
+    'the bar stays where it was let go, and a quick seek shows no spinner');
+  await new Promise((r) => setTimeout(r, 350));
+  check($('elapsed').classList.contains('seeking') && $('elapsed').getAttribute('aria-label') === 'Seeking',
+    'a seek still running after 300 ms shows a spinner where the time was, named for a screen reader');
+  api.onWorklet({ type: 'seeked', seconds: 180 });
+  check(!$('elapsed').classList.contains('seeking') && $('elapsed').textContent === '3:00',
+    'and when it lands the time comes back, at the new place');
+  api.onWorklet({ type: 'position', seconds: 181 });
+  check($('elapsed').textContent === '3:01', 'and positions are followed again');
+}
+
 // --- the page's source, and what pairing sends (2026-09-22) -------------------------------------
 if (window.__api) {
   console.log('\nsource and pairing notices:');

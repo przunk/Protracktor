@@ -90,6 +90,13 @@ data class PlayerUiState(
     val metadata: Map<String, String> = emptyMap(),
     val positionSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0,
+    /**
+     * Where a seek under way is going, or null (`SeekProgress`). A SID seeks by running its machine
+     * there, for seconds; meanwhile the bar shows this, not where the engine still says it is.
+     */
+    val seekingTo: Double? = null,
+    /** The seek has run long enough to say so: the spinner in place of the elapsed time. */
+    val seekSlow: Boolean = false,
     /** Which tune inside the file is playing, counted from zero. */
     val subsong: Int = 0,
     /** How many tunes the file holds. One for a format that holds one. */
@@ -964,7 +971,9 @@ class PlaybackController private constructor(private val context: Context) {
                 val before = _state.value
                 _state.update {
                     it.copy(
-                        positionSeconds = position,
+                        // Not while a seek is under way: the engine publishes the new place only
+                        // when it is there, and until then this would pull the bar back (Q11).
+                        positionSeconds = SeekProgress.shownPosition(position, it.seekingTo),
                         // Picked up here because a subsong switch is applied on the audio
                         // thread: the new tune's length does not exist until it has been.
                         durationSeconds = if (it.durationSeconds <= 0.0) {
@@ -3913,9 +3922,26 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun seekTo(seconds: Double) {
         val open = track ?: return
-        _state.update { it.copy(positionSeconds = seconds) }
-        scope.launch { withContext(Dispatchers.IO) { runCatching { open.seekTo(seconds) } } }
+        val generation = ++seekGeneration
+        _state.update { it.copy(positionSeconds = seconds, seekingTo = seconds, seekSlow = false) }
+        scope.launch {
+            // The spinner only for a seek that takes long enough to be seen waiting (`SeekProgress`).
+            val slow = launch {
+                delay(SeekProgress.SPINNER_AFTER_MS)
+                if (generation == seekGeneration) _state.update { it.copy(seekSlow = true) }
+            }
+            withContext(Dispatchers.IO) { runCatching { open.seekTo(seconds) } }
+            slow.cancel()
+            // Only the latest seek, on the tune it was made on, may say it has finished: a second
+            // drag, or another tune, has already taken the bar over.
+            if (generation == seekGeneration && track === open) {
+                _state.update { it.copy(seekingTo = null, seekSlow = false, positionSeconds = open.positionSeconds()) }
+            }
+        }
     }
+
+    /** Which seek is the latest; an earlier one finishing must not end a later one's spinner. */
+    private var seekGeneration = 0
 
     /**
      * Plays a tune inside the current file.
@@ -4222,6 +4248,9 @@ class PlaybackController private constructor(private val context: Context) {
     private fun load(ref: TrackRef) {
 
         openJob?.cancel()
+        // A seek belongs to the tune it was made on; a new tune ends it.
+        seekGeneration++
+        _state.update { it.copy(seekingTo = null, seekSlow = false) }
         openJob = scope.launch {
             track?.close()
             track = null

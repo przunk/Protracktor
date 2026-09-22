@@ -110,11 +110,7 @@ fun PlayerDock(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             ) {
-                Text(
-                    text = formatTime(state.positionSeconds),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                ElapsedTime(state)
                 SeekBar(
                     positionSeconds = state.positionSeconds,
                     durationSeconds = state.durationSeconds,

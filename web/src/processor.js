@@ -159,7 +159,14 @@ class ProtracktorProcessor extends AudioWorkletProcessor {
       }
       case 'play': this.playing = true; break;
       case 'pause': this.playing = false; break;
-      case 'seek': if (this.handle) e._pt_seek(this.handle, message.seconds); break;
+      case 'seek':
+        if (this.handle) {
+          // Answered when it has landed: a SID or an SNDH seeks by running its machine there, for
+          // seconds on a long SID, and the page shows a spinner until this says it is done (Q11).
+          e._pt_seek(this.handle, message.seconds);
+          this.port.postMessage({ type: 'seeked', seconds: e._pt_position(this.handle) });
+        }
+        break;
       case 'subsong':
         if (this.handle) {
           e._pt_select_subsong(this.handle, message.index);

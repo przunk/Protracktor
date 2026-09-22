@@ -77,11 +77,7 @@ fun NowPlaying(
             label = stringResource(R.string.a11y_seek),
         )
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = formatTime(state.positionSeconds),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            ElapsedTime(state)
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = formatTotal(state.durationSeconds),

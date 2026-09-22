@@ -396,8 +396,13 @@ function onWorklet(message) {
       renderNothingPlaying();
       setPlaying(false);
       break;
+    case 'seeked':
+      seekLanded();
+      $('elapsed').textContent = clock(message.seconds);
+      break;
     case 'position':
-      if (!seeking) {
+      // Not while a seek is under way: a position sent before it landed would pull the bar back.
+      if (!seeking && !seekPending) {
         $('seek').value = duration > 0 ? Math.round((message.seconds / duration) * 1000) : 0;
         paint($('seek'));
         $('elapsed').textContent = clock(message.seconds);
@@ -892,6 +897,7 @@ async function playAt(next) {
   // It is cleared where a new tune actually starts: `opened` and `subsong`.
   $('seek').value = 0;
   paint($('seek'));
+  seekLanded();
   $('elapsed').textContent = clock(0);
   $('remaining').textContent = clockTotal(0);
   nameTheTab(entry);
@@ -3513,8 +3519,32 @@ reducedMotion?.addEventListener?.('change', refitLines);
 $('seek').oninput = () => { seeking = true; paint($('seek')); };
 $('seek').onchange = () => {
   seeking = false;
+  // **The bar stays where it was let go** until the worklet says the seek has landed, and a seek
+  // that takes long enough to be seen waiting shows a spinner in place of the elapsed time -- the
+  // phone's `SeekProgress` (Q11). A SID seeks by running its machine there, for seconds.
+  seekPending = true;
+  clearTimeout(seekSpinner);
+  seekSpinner = setTimeout(() => {
+    if (!seekPending) return;
+    $('elapsed').classList.add('seeking');
+    $('elapsed').setAttribute('aria-label', 'Seeking');
+  }, SEEK_SPINNER_AFTER_MS);
   node?.port.postMessage({ type: 'seek', seconds: (Number($('seek').value) / 1000) * duration });
 };
+
+/** Whether a seek is under way, and the timer that shows its spinner if it takes a while. */
+let seekPending = false;
+let seekSpinner = null;
+/** A seek shorter than this shows nothing, as on the phone. */
+const SEEK_SPINNER_AFTER_MS = 300;
+
+/** The seek has landed, or the tune it was made on is gone: the time comes back. */
+function seekLanded() {
+  seekPending = false;
+  clearTimeout(seekSpinner);
+  $('elapsed').classList.remove('seeking');
+  $('elapsed').removeAttribute('aria-label');
+}
 
 /**
  * A queue handed over in the URL's fragment.
