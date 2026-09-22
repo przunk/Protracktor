@@ -536,6 +536,25 @@
                        padding: 8px; border-radius: 50%; flex: none; display: flex; }
   #browselist .bmore:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
   #browselist .bmore svg { width: 22px; height: 22px; fill: currentColor; }
+  /* Browse as the phone draws it (W8): a root row is a name over one line of what it is; a row that
+     can be downloaded carries its held mark first and its one button last. */
+  #browselist .bdomain, #browselist .bheldrow { padding: 10px 8px 10px 12px; min-height: 56px; }
+  #browselist .bheldrow.closed { cursor: default; }
+  #browselist .bheldrow.closed:hover { background: none; }
+  #browselist .groupstart { border-top: 1px solid var(--surface-variant); margin-top: 6px; }
+  #browselist .bheld { display: flex; flex: none; margin-right: 12px; color: var(--on-surface-variant); opacity: .6; }
+  #browselist .bheld.yes { color: var(--primary); opacity: 1; }
+  #browselist .bheld svg { width: 24px; height: 24px; fill: currentColor; }
+  #browselist .bwarn { color: var(--error); white-space: normal; }
+  #browselist .bdl { background: none; border: 0; color: var(--on-surface-variant); cursor: pointer;
+                     padding: 10px; border-radius: 50%; flex: none; display: flex; }
+  #browselist .bdl:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
+  #browselist .bdl svg { width: 24px; height: 24px; fill: currentColor; }
+  #browselist .bbusy { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none;
+                       width: 84px; color: var(--on-surface-variant); font-size: var(--label-small, 11px); }
+  #browselist .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface-variant);
+                         border-top-color: var(--primary); animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   /* The rows that *do* something carry an icon, as the phone's Browse rows do; rows of data do not. */
   #browselist li > svg { width: 22px; height: 22px; fill: currentColor; flex: none; margin-right: 12px;
                          color: var(--on-surface-variant); }
