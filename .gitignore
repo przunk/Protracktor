@@ -54,11 +54,12 @@ docs/letters/
 #
 # The music files in `user/` stay tracked: those are test material the checks and probes are run
 # against.
-user/*.png
-user/*.jpg
-user/*.jpeg
-user/*.webp
-user/tests/
+#user/*.png
+#user/*.jpg
+#user/*.jpeg
+#user/*.webp
+#user/tests/
+user/**
 
 # The owner's working notes for an unattended run: his, not the project's record.
 GOAL.md
