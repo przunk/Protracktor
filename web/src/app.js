@@ -1933,6 +1933,17 @@ function legalMissing(what) {
   $('legalbody').replaceChildren(p);
 }
 
+/**
+ * Points Source code at the exact version this page was built from (the GPL's offer of source), when
+ * the staging recorded one; the repository's front page otherwise.
+ */
+async function pointSourceAtBuild() {
+  try {
+    const build = await fetch('../vendor/legal/build.json').then((r) => (r.ok ? r.json() : null));
+    if (build?.commit) $('open-source').href = `https://github.com/przunk/protracktor/tree/${build.commit}`;
+  } catch { /* the front page is still the source */ }
+}
+
 async function renderLicences() {
   $('legaltitle').textContent = 'Open-source licences';
   $('legalback').hidden = true;
@@ -3169,11 +3180,12 @@ $('nowkeep').onclick = (event) => {
 };
 $('tab-settings').onclick = async () => {
   const opening = $('settings').hidden;
-  if (opening) await renderSettings();
+  if (opening) { await renderSettings(); await pointSourceAtBuild(); }
   showPanel(opening ? 'settings' : null);
 };
 $('open-notices').onclick = () => renderLicences().then(() => showPanel('legal'));
 $('open-privacy').onclick = () => renderPrivacy().then(() => showPanel('legal'));
+$('pair-privacy').onclick = () => renderPrivacy().then(() => showPanel('legal'));
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 
@@ -3702,7 +3714,12 @@ async function pair() {
   try {
     base = (await fetch('/pair/host').then((r) => r.json())).base;
   } catch {
-    $('pairnote').textContent = 'Pairing needs the local server; open this page through it.';
+    // **Said, not left blank**: a page on a static host (GitHub Pages, say) has no pairing service
+    // at all -- everything else works there, and this is the one thing that cannot.
+    $('pairnote').textContent = 'This page is served without its pairing service, so a phone cannot '
+      + 'send to it here. A page run with scripts/serve-web.mjs has one.';
+    $('pairurl').textContent = '';
+    $('qr').replaceChildren();
     return;
   }
   const post = `${base}/pair/${id}`;
