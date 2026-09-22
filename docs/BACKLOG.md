@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A56. History keeps its order while you use it — **noted 2026-09-21; BUILT 2026-09-22, branch `feature/a56-steady-history`**
+## A56. History keeps its order while you use it — **noted 2026-09-21; DONE 2026-09-22, merged; confirmed on the phone**
 
 Built as decided below: `HistoryRecording.records` keeps a play History started -- and the tunes
 walked after it -- out of History; the open History is no longer re-read on every play. Where a
@@ -53,7 +53,7 @@ Settings → Accessibility → Color and motion → Remove animations).
 A dock line that overflows scrolls slowly to the left instead of ending in `…`; one that fits stands
 still, and nothing moves with the system's animations off. D3 in `docs/PLAN_ROUND_13.md`.
 
-## A53. Search ignores accents — **planned 2026-09-21, round 13; BUILT 2026-09-22, branch `feature/a53-accent-search`**
+## A53. Search ignores accents — **planned 2026-09-21, round 13; DONE 2026-09-22, merged; confirmed on the phone**
 
 Built to D2 (a). `SearchTerms.fold` (NFKD, marks dropped, a table for `ł đ ø ß æ œ þ ħ ı`) on the
 query and on a sparse `folded` column, schema **19**, filled on write and backfilled for stored rows

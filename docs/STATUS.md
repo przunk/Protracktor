@@ -1,7 +1,7 @@
 # Status
 
 Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
-songdb, the downloads grouped. versionCode is the commit count, schema version 18
+songdb, the downloads grouped. versionCode is the commit count, schema version 19
 
 ## What works
 
