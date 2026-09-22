@@ -15,7 +15,11 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A56. History keeps its order while you use it — **noted 2026-09-21**
+## A56. History keeps its order while you use it — **noted 2026-09-21; BUILT 2026-09-22, branch `feature/a56-steady-history`**
+
+Built as decided below: `HistoryRecording.records` keeps a play History started -- and the tunes
+walked after it -- out of History; the open History is no longer re-read on every play. Where a
+results list came from is set once, where the list is made, so next and previous keep it.
 
 *The owner: "history should have a fixed form in its view; clicking a track in history should not
 move it to the top; playing it outside history should update when it was last played (move it to
