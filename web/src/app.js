@@ -603,12 +603,22 @@ function authorFolderOf(entry) {
 }
 
 /** Opens Browse on that folder: what else this author left in the archive. */
+/**
+ * Where a jump put Browse, while Browse is still there (W9). **A jump is a place you were put, not
+ * one you walked to**: More from this author lands three levels deep without passing through them,
+ * so the first Back leaves Browse for where you were, rather than climbing a hierarchy you never
+ * climbed into -- the phone's `arrivedByJump`. Any other Back, or walking elsewhere, ends it.
+ */
+let jumpedTo = null;
+const arrivedByJump = () => !!jumpedTo && jumpedTo.join('\u0000') === browsePath.join('\u0000');
+
 async function showAuthorFolder(entry) {
   const folder = authorFolderOf(entry);
   if (!folder) return;
   const digressing = !!random;
   $('browsesearch').value = '';
   browsePath = folder;
+  jumpedTo = folder.slice();
   showPanel('browse');
   // **The dice stands aside as the folder opens, not when something in it is played**
   // (`docs/SPEC_RANDOM.md` §3). Doing it when something is played instead lets next roll another
@@ -2765,6 +2775,7 @@ $('browsesearch').oninput = () => {
 $('tab-browse').onclick = async () => {
   if (!$('browse').hidden) { showPanel(null); return; }
   browsePath = [];
+  jumpedTo = null;
   showPanel('browse');
   await renderBrowse();
 };
@@ -2778,7 +2789,13 @@ $('browseback').onclick = async () => {
     resumeDice();
     showPanel(null);
     return;
+  } else if (arrivedByJump()) {
+    // Out of Browse in one press, wherever the jump was made from (W-D4 a, as the phone does).
+    jumpedTo = null;
+    showPanel(null);
+    return;
   } else browsePath = browsePath.slice(0, -1);
+  jumpedTo = null;
   await renderBrowse();
 };
 $('browseclose').onclick = () => showPanel(null);

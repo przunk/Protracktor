@@ -1002,6 +1002,22 @@ if (window.__api) {
     'More from this author walks to their folder, out of the search');
   check(rows().every((li) => li.classList.contains('btrack')) && rows().length === 2,
     'whose tunes are rows of the same kind');
+  // W9: a jump lands three levels deep without passing through them, so the first Back leaves
+  // Browse for where you were -- the phone's `browseBack` -- even when the jump was made from inside
+  // Browse, as here from a search (W-D4 a).
+  $('browseback').click();
+  await settle();
+  check($('browse').hidden && !window.document.querySelector('main').hidden,
+    'Back after More from this author leaves Browse in one press, not one level per press');
+  // Walked there by hand, the same folder climbs one level at a time, as it always did.
+  window.__api.showPanel('browse');
+  await window.__api.browseTo(['modland', 'Protracker', '4-Mat']);
+  $('browseback').click();
+  await settle();
+  check(!$('browse').hidden && $('browsetitle').textContent === 'Protracker',
+    'a folder reached by hand is climbed out of one level at a time');
+  window.__api.showPanel('browse');
+  await window.__api.browseTo(['modland', 'Protracker', '4-Mat']);
 
   // Out of Browse and back to the playlist: the added tune is there, and Save is offered.
   window.__api.showPanel(null);

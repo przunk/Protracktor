@@ -168,6 +168,8 @@ icons and grouped downloads since 2026-09-21.
 
 ### W9 — Back after a jump
 
+**Built 2026-09-22 on `feature/web-w9-back-after-jump`**; not yet seen in a browser.
+
 The app's rule (`PlaybackController.browseBack`): "More from this author" lands three levels deep
 without passing through them, so **the first Back leaves Browse** for where you were, rather than
 climbing a hierarchy you never climbed into. The page climbs one level per press today, except in a
