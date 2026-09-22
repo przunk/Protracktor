@@ -277,3 +277,14 @@ export function lineScrollPass(overflowPx) {
   const duration = LINE_SCROLL_PAUSE_MS + moving;
   return { distance: overflowPx, duration, pauseShare: LINE_SCROLL_PAUSE_MS / duration };
 }
+
+/**
+ * How far the seek bar runs, and whether that is a length or only where playback will stop -- the
+ * phone's `BarLength.of` (the owner's variant (a), 2026-09-22). A known length is exact; an unknown
+ * one runs to the earlier of the decoder's own end (`ends_at`) and the fallback length.
+ */
+export function barLength({ duration, endsAt, fallback }) {
+  if (duration > 0) return { seconds: duration, approximate: false };
+  const stop = endsAt > 0 ? Math.min(endsAt, fallback) : fallback;
+  return { seconds: stop, approximate: true };
+}
