@@ -113,7 +113,7 @@ fun PlayerDock(
                 ElapsedTime(state)
                 SeekBar(
                     positionSeconds = state.positionSeconds,
-                    durationSeconds = state.durationSeconds,
+                    durationSeconds = state.bar.seconds,
                     enabled = state.seekable && loaded != null,
                     onSeek = onSeek,
                     compact = true,
@@ -121,7 +121,7 @@ fun PlayerDock(
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                 )
                 Text(
-                    text = formatTotal(state.durationSeconds),
+                    text = formatBarTotal(state),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -399,6 +399,17 @@ internal fun formatTime(seconds: Double): String {
  */
 internal fun formatTotal(seconds: Double): String =
     if (seconds > 0.0) formatTime(seconds) else "--:--"
+
+/**
+ * The number at the end of the seek bar: the tune's length, or, when nothing knows it, where
+ * playback will stop, marked `~` because that is a fact about the player and not about the tune
+ * (`BarLength`, the owner's variant (a)).
+ */
+internal fun formatBarTotal(state: PlayerUiState): String {
+    val bar = state.bar
+    if (state.current == null || bar.seconds <= 0.0) return formatTotal(0.0)
+    return if (bar.approximate) "~" + formatTime(bar.seconds) else formatTime(bar.seconds)
+}
 
 /**
  * Skip forward or back: a press moves by tune, a hold moves by file.

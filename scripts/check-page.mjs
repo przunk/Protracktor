@@ -2540,6 +2540,11 @@ if (window.__api) {
     check(pass && pass.duration === 4000 && pass.pauseShare === 0.5,
       'a line 60 px too long: two seconds still, two seconds moving at 30 px a second');
   }
+  // How far the seek bar runs, the same rows `RuleCasesTest` runs against `BarLength`.
+  each('barLength', (c) => {
+    const bar = rules.barLength({ duration: Number(c.duration), endsAt: c.endsAt === '-' ? 0 : Number(c.endsAt), fallback: Number(c.fallback) });
+    return Math.abs(bar.seconds - Number(c.seconds)) < 0.001 && bar.approximate === yes(c.approximate);
+  });
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
@@ -2783,6 +2788,23 @@ if (window.__api) {
   await settle();
   check(box.hidden, 'and says nothing once the list has something in it');
   await store.clear('modland:');
+}
+
+// --- a tune whose length nobody knows still has a bar (variant (a), 2026-09-22) ---------------------
+if (window.__api) {
+  console.log('\na bar to where playback stops:');
+  const api = window.__api;
+  api.setQueue(['https://modland.com/pub/modules/Nintendo%20Sound%20Format/3-108/new%20rally-x.nsf']);
+  api.onWorklet({ type: 'opened', duration: 0, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+                  describe: 'title\tnew rally-x\nseekable\t1\nends_at\t158', current: 0 });
+  api.onWorklet({ type: 'position', seconds: 10 });
+  check(!$('seek').disabled && $('remaining').textContent === '~2:38',
+    'a looping NSF can be seeked, over a bar that ends where playback will stop, marked ~',
+    `${$('seek').disabled ? 'disabled' : 'enabled'}, "${$('remaining').textContent}"`);
+  api.onWorklet({ type: 'opened', duration: 30.5, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+                  describe: 'title\tjingle\nseekable\t1', current: 0 });
+  api.onWorklet({ type: 'position', seconds: 10 });
+  check($('remaining').textContent === '0:30', 'and a measured one is a length, with no ~', $('remaining').textContent);
 }
 
 // --- a seek that takes a while (Q11) --------------------------------------------------------------

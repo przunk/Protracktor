@@ -178,3 +178,15 @@ yes	no	yes	a title that does not fit scrolls
 no	no	no	nothing moves with the system's animations off
 yes	yes	no	the loading line never scrolls
 no	yes	no	and certainly not with animations off
+
+# How far the seek bar runs (the owner's variant (a), 2026-09-22): the phone's BarLength.of and the
+# page's barLength. A known length is exact; an unknown one runs to where playback will stop -- the
+# earlier of the decoder's own end (`ends_at`) and the fallback length -- and is approximate.
+# `-` means the decoder states no end of its own.
+[barLength]
+duration	endsAt	fallback	seconds	approximate	why
+245	-	180	245	no	a length the file states is the bar, exactly
+30.5	158	180	30.5	no	a tune measured falling silent has a length, and it wins
+0	158	180	158	yes	a looping NSF: game-music-emu fades it at 2:30 plus eight seconds
+0	-	180	180	yes	nothing ends it but the fallback, so the bar runs to the fallback
+0	400	180	180	yes	the fallback comes first, so that is where it stops

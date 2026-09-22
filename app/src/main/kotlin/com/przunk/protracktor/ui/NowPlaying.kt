@@ -71,7 +71,7 @@ fun NowPlaying(
 
         SeekBar(
             positionSeconds = state.positionSeconds,
-            durationSeconds = state.durationSeconds,
+            durationSeconds = state.bar.seconds,
             enabled = state.seekable && track != null,
             onSeek = onSeek,
             label = stringResource(R.string.a11y_seek),
@@ -80,7 +80,7 @@ fun NowPlaying(
             ElapsedTime(state)
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = formatTotal(state.durationSeconds),
+                text = formatBarTotal(state),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
