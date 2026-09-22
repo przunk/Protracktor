@@ -55,8 +55,8 @@ class LibraryIndexStore(context: Context) {
             compileStatement(
                 "INSERT OR REPLACE INTO library_index " +
                     "(uri, folder_uri, path, file_name, size, backend, format, title, author, " +
-                    " duration_ms, subsongs, indexed_at, backends) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    " duration_ms, subsongs, indexed_at, backends, folded) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             ).use { statement ->
                 entries.forEach { entry ->
                     statement.clearBindings()
@@ -73,6 +73,9 @@ class LibraryIndexStore(context: Context) {
                     statement.bindLong(11, entry.subsongs.toLong())
                     statement.bindLong(12, now)
                     statement.bindString(13, backends)
+                    // Search's folded copy, for names with accents in them (A53).
+                    SearchTerms.foldedOrNull(entry.title, entry.fileName, entry.author)
+                        ?.let { statement.bindString(14, it) } ?: statement.bindNull(14)
                     statement.executeInsert()
                 }
             }
@@ -154,7 +157,7 @@ class LibraryIndexStore(context: Context) {
     private val PLATFORM_SCAN_FACTOR = 5
 
     suspend fun countMatches(query: String): Int = withContext(Dispatchers.IO) {
-        val words = SearchTerms.sqlFor(query, "title", "file_name", "author")
+        val words = SearchTerms.sqlFor(query, "title", "file_name", "author", sparse = "folded")
         helper.readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM library_index WHERE ${words.first}",
             words.second,
@@ -177,7 +180,7 @@ class LibraryIndexStore(context: Context) {
         // **Every word, anywhere, in any order** (`SearchTerms`). A local file is filed under its
         // name far more often than under a title, so `file_name` is one of the columns a word may
         // be found in -- and that is the column with the underscores in it.
-        val words = SearchTerms.sqlFor(query, "title", "file_name", "author")
+        val words = SearchTerms.sqlFor(query, "title", "file_name", "author", sparse = "folded")
         helper.readableDatabase.rawQuery(
             "SELECT uri, path, file_name, size, title, author, subsongs FROM library_index " +
                 "WHERE ${words.first} ORDER BY title LIMIT ?",
