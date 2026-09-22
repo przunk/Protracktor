@@ -43,7 +43,7 @@ for the Amiga -- its end codes `l` and `p` are detected loops.
 4. the table committed and downloaded by both players with the song metadata, under the same tick;
 5. its licence and provenance written down: our own measurements of files, not anybody's list.
 
-Until then, variant (a) of 2026-09-22 (built on `feature/length-by-measuring`) covers the everyday case: a tune that falls silent gets its measured
+Until then, variant (a) of 2026-09-22 (merged the same day, confirmed on the phone) covers the everyday case: a tune that falls silent gets its measured
 length when it plays, and a looping one a seek bar up to the fallback length, shown as `~3:00`.
 
 ## B35. Old files' text as Central European, as a setting — **not planned, 2026-09-21**
