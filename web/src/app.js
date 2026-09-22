@@ -1955,54 +1955,60 @@ async function renderSettings() {
     list.append(dt, dd);
   };
   row('Decoders in this build', engineFingerprint || 'the engine has not started yet');
+  // **Storage in this browser** (W10), the phone's storage section: each download, what it holds,
+  // and a way to let go of it -- nothing downloaded here is undeletable, and saying how much there
+  // is without saying how to be rid of it is half an answer. Asked before, because each can be
+  // fetched again but not in a moment; answered at the press, and said once (C76, C77).
+  const heading = document.createElement('dt');
+  heading.className = 'storagehead';
+  heading.textContent = 'Storage in this browser';
+  list.append(heading);
+  const INDEX_GONE = 'It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or '
+    + 'searched, and its tunes will not play.';
+  const sets = [];
   for (const source of archive.sources()) {
     const held = await archive.meta(source);
-    row(archive.sourceName(source), held?.tracks
-      ? `${held.tracks.toLocaleString()} tunes indexed in this browser`
-      : 'not indexed here yet — Browse offers the download');
+    sets.push({
+      label: `${archive.sourceName(source)} index`,
+      held: held?.tracks ? `${held.tracks.toLocaleString()} tunes` : null,
+      absent: 'not downloaded — Browse offers it',
+      consequence: INDEX_GONE,
+      remove: () => archive.forgetIndex(source),
+    });
   }
-  // **What is held, and a way to let go of it.** The phone's storage section is the model: nothing
-  // downloaded here is undeletable, and saying how much there is without saying how to be rid of it
-  // is half an answer.
   const lengths = await archive.songLengthsMeta();
-  const dt = document.createElement('dt');
-  dt.textContent = 'SID song lengths (HVSC)';
-  const dd = document.createElement('dd');
-  if (lengths?.tunes) {
-    dd.append(`${lengths.tunes.toLocaleString()} tunes · `);
-    const forget = document.createElement('button');
-    forget.className = 'plain';
-    forget.textContent = 'Forget them';
-    forget.onclick = async () => {
-      await archive.clearSongLengths();
-      showNote('SID song lengths forgotten');
-      await renderSettings();
-    };
-    dd.append(forget);
-  } else {
-    dd.textContent = 'not downloaded — Browse offers them; until then a SID stops at the length below';
-  }
-  list.append(dt, dd);
-  // songdb's metadata (W5): what it holds, and a way to let go of it, with the same words.
   const metadata = await archive.songMetadataMeta();
-  const mdt = document.createElement('dt');
-  mdt.textContent = 'Song metadata (songdb)';
-  const mdd = document.createElement('dd');
-  if (metadata?.tunes) {
-    mdd.append(`${metadata.tunes.toLocaleString()} tunes · `);
-    const forget = document.createElement('button');
-    forget.className = 'plain';
-    forget.innerHTML = `${iconSvg(ICON.remove)}Forget it`;
-    forget.onclick = async () => {
-      await archive.clearSongMetadata();
-      showNote('Song metadata forgotten');
-      await renderSettings();
-    };
-    mdd.append(forget);
-  } else {
-    mdd.textContent = 'not downloaded — Browse offers it; until then a tune shows only what it says itself';
+  const songTunes = (lengths?.tunes ?? 0) + (metadata?.tunes ?? 0);
+  sets.push({
+    label: 'Song metadata',
+    held: songTunes ? `${songTunes.toLocaleString()} tunes` : null,
+    absent: 'not downloaded — Browse offers it; until then a SID stops at the length below',
+    consequence: 'It can be downloaded again from Browse. Until then tunes show no length, author or '
+      + 'year unless the file itself says.',
+    remove: async () => { await archive.clearSongLengths(); await archive.clearSongMetadata(); },
+  });
+  for (const set of sets) {
+    const dt = document.createElement('dt');
+    dt.textContent = set.label;
+    const dd = document.createElement('dd');
+    if (set.held) {
+      dd.append(`${set.held} · `);
+      const remove = document.createElement('button');
+      remove.className = 'plain';
+      remove.innerHTML = `${iconSvg(ICON.remove)}Delete`;
+      remove.onclick = async () => {
+        if (!confirm(`Delete the ${set.label}?\n\n${set.consequence}`)) return;
+        dd.textContent = 'deleting…';
+        await set.remove();
+        showNote(`${set.label} deleted`);
+        await renderSettings();
+      };
+      dd.append(remove);
+    } else {
+      dd.textContent = set.absent;
+    }
+    list.append(dt, dd);
   }
-  list.append(mdt, mdd);
 
   const { usage, quota } = await estimate();
   row('Stored here', usage

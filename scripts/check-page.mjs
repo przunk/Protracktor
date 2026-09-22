@@ -173,7 +173,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
     + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
     + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths, '
-    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata }; })();')
+    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata, forgetIndex }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -2211,8 +2211,8 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 40));
   check(!$('settings').hidden, 'pressing it opens the settings');
   const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
-  check(labels[0] === 'Decoders in this build' && labels.includes('Modland') && labels.includes('ASMA')
-        && labels.includes('Stored here'),
+  check(labels[0] === 'Decoders in this build' && labels.includes('Modland index') && labels.includes('ASMA index')
+        && labels.includes('Song metadata') && labels.includes('Stored here'),
     'which say what this build plays, what is indexed, and what the browser is holding');
   // W4: what the page carries and what it keeps, each a button with its mark and its words.
   const notices = $('open-notices');
@@ -2301,12 +2301,26 @@ if (window.__api) {
   $('tab-settings').click();
   await new Promise((r) => setTimeout(r, 40));
   const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
-  const forget = [...$('settingsfields').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Forget it');
-  check(labels.includes('Song metadata (songdb)') && forget?.querySelector('svg'),
-    'Settings says it is held, and offers to forget it with an icon and a word');
-  forget.click();
+  // W10: Settings lists it with the other downloads, and deletes it -- after asking, as the phone does.
+  const settingsRow = () => [...$('settingsfields').querySelectorAll('dt')].find((n) => n.textContent === 'Song metadata');
+  const remove = settingsRow()?.nextElementSibling.querySelector('button');
+  check(labels.includes('Song metadata') && remove?.querySelector('svg') && remove.textContent.trim() === 'Delete'
+        && settingsRow().nextElementSibling.textContent.startsWith('1 tunes'),
+    'Settings says it is held, and offers Delete with an icon and a word');
+  let asked = '';
+  window.confirm = (text) => { asked = text; return false; };
+  remove.click();
   await new Promise((r) => setTimeout(r, 60));
-  check(!(await archive.songMetadataMeta()) && (await archive.songMetadataFor(bytes)) === null, 'and forgetting it forgets it');
+  check(asked.startsWith('Delete the Song metadata?') && asked.includes('no length, author or year')
+        && (await archive.songMetadataMeta())?.tunes === 1,
+    'Delete asks first, saying what will be missing, and No keeps it');
+  window.confirm = () => true;
+  settingsRow().nextElementSibling.querySelector('button').click();
+  await new Promise((r) => setTimeout(r, 60));
+  check(!(await archive.songMetadataMeta()) && (await archive.songMetadataFor(bytes)) === null
+        && $('snacktext').textContent === 'Song metadata deleted'
+        && settingsRow().nextElementSibling.textContent.startsWith('not downloaded'),
+    'and Yes deletes it, says so once, and the row says it is gone');
   $('settings').querySelector('[data-close]').click();
   window.__api.showPanel(null);
 }
