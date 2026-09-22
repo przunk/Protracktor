@@ -14,6 +14,23 @@ they are on `develop`, and three things checked live today (below). Play Console
 seen from here, so every console step is marked **confirm** unless the repository holds evidence
 that it was done.
 
+## The owner's answers, 2026-09-22
+
+- **P1 package registration: done.** **P2:** the 14 days are expected to hold — about 15 testers
+  are signed up.
+- **P3 listing and P4 screenshots: the owner's.** The listing text is refreshed in
+  `store/listing/` (L1, done) for him to paste; the screenshots he retakes.
+- **The web player is an add-on, not part of the app.** Anyone can run it themselves; that is what
+  is deployed. A public copy at a permanent address is wanted, as cheaply as possible, without a
+  domain of his own (L-D1, L-D2 — open: GitHub Pages or `pages.dev`).
+- **L-D3: say it where it is decided** — a notice on the app's pairing screen with the privacy
+  policy one press away, and the same in the page's Settings and pairing sheet. Built:
+  `feature/app-pairing-privacy-notice` (app) and `feature/web-legal-and-pairing-notice` (page, with
+  the Source code link L2).
+- **L-D4: keep** the app's cleartext exception for pages on a private network.
+- Also asked: the page to carry the licences and policies it must — W4 (licences, privacy policy)
+  is merged; the Source code link and the pairing notice are on the branch above.
+
 ## Checked live today
 
 | what | result |
