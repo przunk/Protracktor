@@ -1646,6 +1646,10 @@ const ICON = {
   more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
   check: 'M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
   download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+  // A tick in a disc: this set is here. The phone's `Downloaded`.
+  downloaded: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM10 17l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+  // Fetch again what is already here. The phone's `Refresh`.
+  refresh: 'M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z',
   cloud: 'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z',
   // Hollow shapes on the phone, so they need the even-odd rule to keep their holes.
   dice: { d: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z', hollow: true },
@@ -2472,62 +2476,43 @@ async function renderBrowse() {
     li.onclick = onclick;
     list.append(li);
   };
+  // A row of the root: its name over one line of what it is, as the phone's DomainRow.
+  const domainRow = (name, detail, onclick, icon) => {
+    const li = document.createElement('li');
+    li.className = 'bdomain';
+    const text = document.createElement('div');
+    text.className = 'btext';
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = name;
+    const meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = detail;
+    text.append(label, meta);
+    li.append(text);
+    li.insertAdjacentHTML('afterbegin', iconSvg(icon));
+    li.onclick = onclick;
+    list.append(li);
+  };
 
   if (browsePath.length === 0) {
+    // **The phone's Browse** (W8): where the music is, then the two ways through it that are not
+    // places -- the dice and the record of what played -- then search. No local folders: a browser
+    // cannot list a phone's storage, and the page's ways in for those are the pairing code and
+    // pasted links.
     $('browsetitle').textContent = 'Browse';
-    const held = await archive.meta('modland');
-    const asma = await archive.meta('asma');
-    // **Offered, not assumed**, each of them: somebody else's server, on a page that until now cost
-    // nothing to open. An index is filtered by the list and the decoders it was built with, so one
-    // built by another set holds the wrong rows and looks current -- the phone learnt this by
-    // losing 60,572 C64 tunes -- and the sentence about that is Modland's, whose filter it is.
-    note.textContent = [
-      held?.tracks ? await staleSentence(held) : '',
-      held?.tracks ? holding(held)
-        : 'Modland is half a million tunes. The index is a 5.76 MB download, kept in this browser, '
-          + 'and browsing is then offline.',
-      asma?.tracks ? ''
-        : 'ASMA is 6,335 Atari 8-bit tunes. Its list is a 0.85 MB download, and each tune is fetched '
-          + 'from ASMA when it plays.',
-    ].filter(Boolean).join(' ');
-    if (held?.tracks || asma?.tracks) row('Random', null, enterRandomFromBrowse, ICON.dice);
-    row('History', null, openHistory, ICON.history);
-    if (held?.tracks) {
-      row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
-        browsePath = ['modland'];
-        await renderBrowse();
-      }, ICON.cloud);
-    }
-    if (asma?.tracks) {
-      row(`ASMA — ${asma.tracks.toLocaleString()} tunes`, asma.formats, async () => {
-        browsePath = ['asma'];
-        await renderBrowse();
-      }, ICON.cloud);
-    }
-    row(held?.tracks ? 'Download the index again' : 'Download the Modland index', null, downloadIndex, ICON.download);
-    row(asma?.tracks ? 'Download the ASMA list again' : 'Download the ASMA list', null, downloadAsmaIndex, ICON.download);
-    // **Not an index of tunes, and it sits with them anyway**, because this is the screen for
-    // "fetch the thing that makes the rest work", which is what it is. A SID carries no
-    // length; without this one plays until the fallback in Settings stops it.
-    const lengths = await archive.songLengthsMeta();
-    row(
-      lengths?.tunes
-        ? `SID song lengths — ${lengths.tunes.toLocaleString()} tunes`
-        : 'Download SID song lengths (HVSC)',
-      lengths?.tunes ? 'stored here · tap to fetch again' : '5.2 MB, from HVSC',
-      downloadSongLengths,
-      ICON.download,
-    );
-    // songdb's author, publisher, album and year (W5): the phone's "Song metadata".
-    const metadata = await archive.songMetadataMeta();
-    row(
-      metadata?.tunes
-        ? `Song metadata — ${metadata.tunes.toLocaleString()} tunes`
-        : 'Download song metadata (songdb)',
-      metadata?.tunes ? 'stored here · tap to fetch again' : '14.8 MB · author, album, publisher and year',
-      downloadSongMetadata,
-      ICON.download,
-    );
+    domainRow('Online catalogues', 'Browse the archives — indexed once, then browsable offline', async () => {
+      browsePath = ['catalogues'];
+      await renderBrowse();
+    }, ICON.cloud);
+    domainRow('Random', 'Play something from the indexed catalogues', enterRandomFromBrowse, ICON.dice);
+    domainRow('History', 'Tunes you have played, most recent first', openHistory, ICON.history);
+    domainRow('Search', 'Across the catalogues this browser holds', () => $('browsesearch').focus(), ICON.search);
+    return;
+  }
+
+  if (browsePath[0] === 'catalogues') {
+    await renderCatalogues(list, note);
     return;
   }
 
@@ -2725,7 +2710,7 @@ function holding({ tracks, total, complete } = {}) {
 
 async function downloadIndex() {
   const note = $('browsenote');
-  $('browselist').replaceChildren();
+  await downloadStarted('modland');
   try {
     // Which formats to keep depends on which decoders this engine has, and only the engine can say.
     // Started here if nothing has played yet -- this is a click, so a browser allows the audio.
@@ -2747,10 +2732,10 @@ async function downloadIndex() {
           : `${p.stage}…`;
       },
     });
+    await downloadEnded('modland');
     note.textContent = `${result.formats} formats. ${holding(result)}`;
-    browsePath = [];
-    await renderBrowse();
   } catch (e) {
+    await downloadEnded('modland');
     note.textContent = `the index could not be downloaded: ${e.message}`;
   }
 }
@@ -2758,7 +2743,7 @@ async function downloadIndex() {
 /** Browse → Download the ASMA list: 0.85 MB of the archive's own directory (`archive.downloadAsma`). */
 async function downloadAsmaIndex() {
   const note = $('browsenote');
-  $('browselist').replaceChildren();
+  await downloadStarted('asma');
   try {
     if (!engineReady) {
       note.textContent = 'starting the engine, to ask which formats this browser can play…';
@@ -2775,10 +2760,10 @@ async function downloadAsmaIndex() {
           : `${p.stage}…`;
       },
     });
-    browsePath = [];
-    await renderBrowse();
-    note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections. ${note.textContent}`;
+    await downloadEnded('asma');
+    note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections.`;
   } catch (e) {
+    await downloadEnded('asma');
     note.textContent = `the ASMA list could not be downloaded: ${e.message}`;
   }
 }
@@ -2799,7 +2784,6 @@ async function downloadAsmaIndex() {
  */
 async function downloadDatabase(what, run) {
   const note = $('browsenote');
-  $('browselist').replaceChildren();
   try {
     const result = await run({
       onProgress: (p) => {
@@ -2812,16 +2796,160 @@ async function downloadDatabase(what, run) {
         }
       },
     });
-    browsePath = [];
-    await renderBrowse();
-    note.textContent = `${what}: ${result.tunes.toLocaleString()} tunes. ${note.textContent}`;
+    note.textContent = `${what}: ${result.tunes.toLocaleString()} tunes.`;
+    return true;
   } catch (e) {
     note.textContent = `the ${what.toLowerCase()} could not be downloaded: ${e.message}`;
+    return false;
   }
 }
 
-const downloadSongLengths = () => downloadDatabase('SID song lengths', archive.downloadSongLengths);
-const downloadSongMetadata = () => downloadDatabase('Song metadata', archive.downloadSongMetadata);
+/**
+ * **Song metadata, one press** (the phone's A52 D1): everything the page can use of what a file
+ * cannot say about itself -- HVSC's SID lengths and songdb's author, publisher, album and year --
+ * under one row and one tick. Each part is still its own download underneath, so one that fails
+ * says which.
+ */
+async function downloadSongMetadata() {
+  await downloadStarted(SONG_METADATA);
+  const lengths = await downloadDatabase('SID song lengths', archive.downloadSongLengths);
+  const said = $('browsenote').textContent;
+  const metadata = await downloadDatabase('Song metadata', archive.downloadSongMetadata);
+  await downloadEnded(SONG_METADATA);
+  if (lengths && metadata) $('browsenote').textContent = `${said} ${$('browsenote').textContent}`;
+}
+
+// --- the catalogues, as the phone draws them (W8) ------------------------------------------------
+
+/** The key the grouped "Song metadata" download runs under, beside the catalogues' own names. */
+const SONG_METADATA = 'song-metadata';
+
+/** What is downloading now, by key: a catalogue's name, or `SONG_METADATA`. */
+const downloading = new Set();
+
+/** Redraws the catalogues if they are on screen; the list stays, only its rows change. */
+async function redrawCatalogues() {
+  if (!$('browse').hidden && browsePath[0] === 'catalogues') await renderBrowse();
+}
+async function downloadStarted(key) { downloading.add(key); await redrawCatalogues(); }
+async function downloadEnded(key) { downloading.delete(key); await redrawCatalogues(); }
+
+/**
+ * Whether a downloadable set is here, as the row's first mark: a tick in a disc, in the accent
+ * colour, or a dimmed cloud. Shape, colour and the line under it all say the same thing, so none of
+ * them carries it alone -- the phone's `HeldIcon`.
+ */
+function heldMark(held) {
+  const span = document.createElement('span');
+  span.className = held ? 'bheld yes' : 'bheld';
+  span.innerHTML = iconSvg(held ? ICON.downloaded : ICON.cloud);
+  return span;
+}
+
+/**
+ * The one button of a downloadable row, drawn as what it will do: **Download** when the set is not
+ * here, **Refresh** when it is -- two marks, because one arrow for both made one button look like
+ * two offers merged. While it runs, a spinner and what it is doing, in the button's place.
+ */
+function downloadButton(key, held, label, onclick) {
+  if (downloading.has(key)) {
+    const busy = document.createElement('span');
+    busy.className = 'bbusy';
+    busy.innerHTML = '<span class="spinner" aria-hidden="true"></span>indexing…';
+    return busy;
+  }
+  const button = document.createElement('button');
+  button.className = 'bdl';
+  button.innerHTML = iconSvg(held ? ICON.refresh : ICON.download);
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  button.onclick = (event) => { event.stopPropagation(); onclick(); };
+  return button;
+}
+
+/** A row that may be downloaded: the held mark, a name over its detail, and its one button. */
+function heldRow(list, { name, detail, warning = '', held, key, label, ondownload, onopen = null }) {
+  const li = document.createElement('li');
+  li.className = 'bheldrow';
+  const text = document.createElement('div');
+  text.className = 'btext';
+  const title = document.createElement('div');
+  title.className = 'bname';
+  title.textContent = name;
+  text.append(title);
+  // **Nothing drawn before it is known** (the phone's C74): a detail of null is "not read yet".
+  if (detail != null) {
+    const meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = detail;
+    text.append(meta);
+  }
+  if (warning) {
+    const warn = document.createElement('div');
+    warn.className = 'bmeta bwarn';
+    warn.textContent = warning;
+    text.append(warn);
+  }
+  li.append(heldMark(held), text, downloadButton(key, held, label, ondownload));
+  // Only openable once it is here: an empty catalogue opened teaches nothing about why.
+  if (onopen) li.onclick = onopen; else li.classList.add('closed');
+  list.append(li);
+  return li;
+}
+
+async function renderCatalogues(list, note) {
+  $('browsetitle').textContent = 'Online catalogues';
+  // Everything is read first, then drawn at once: no row appears and then changes its mind.
+  const held = {};
+  for (const source of archive.sources()) held[source] = await archive.meta(source);
+  const lengths = await archive.songLengthsMeta();
+  const metadata = await archive.songMetadataMeta();
+  if (browsePath[0] !== 'catalogues') return;
+  list.replaceChildren();
+
+  const sizes = { modland: '5.76 MB', asma: '0.85 MB' };
+  const about = {
+    modland: 'Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.',
+    asma: 'ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.',
+  };
+  note.textContent = [
+    held.modland?.tracks ? holding(held.modland) : about.modland,
+    held.asma?.tracks ? '' : about.asma,
+  ].filter(Boolean).join(' ');
+
+  for (const source of archive.sources()) {
+    const here = held[source];
+    const name = archive.sourceName(source);
+    heldRow(list, {
+      name,
+      detail: here?.tracks
+        ? `${here.tracks.toLocaleString()} tunes`
+        : `Not indexed yet — tap the arrow to download its index (${sizes[source] ?? 'a download'})`,
+      warning: source === 'modland' ? await staleSentence(here) : '',
+      held: !!here?.tracks,
+      key: source,
+      label: here?.tracks ? `Update the index for ${name}` : `Download the index for ${name}`,
+      ondownload: source === 'asma' ? downloadAsmaIndex : downloadIndex,
+      onopen: here?.tracks ? async () => { browsePath = [source]; await renderBrowse(); } : null,
+    });
+  }
+
+  // **One row for what files cannot say about themselves** (the phone's A52 D1): the SID lengths
+  // and songdb's metadata, one tick for both. No replay routines row: neither sc68's nor UADE's can
+  // reach a browser (`docs/PLAN_WEB_PARITY.md`).
+  const complete = !!(lengths?.tunes && metadata?.tunes);
+  const group = heldRow(list, {
+    name: 'Song metadata',
+    detail: complete
+      ? `${(lengths.tunes + metadata.tunes).toLocaleString()} tunes`
+      : 'Not downloaded — no lengths, authors or years (5.2 + 14.8 MB)',
+    held: complete,
+    key: SONG_METADATA,
+    label: complete ? 'Update the song metadata' : 'Download the song metadata',
+    ondownload: downloadSongMetadata,
+  });
+  group.classList.add('groupstart');
+}
 
 /**
  * Searching the index.
