@@ -86,6 +86,11 @@ window.fetch = async (url, options) => {
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  // songdb's metadata (W5), as a test writes it; no body stream, so the page reads it whole.
+  if (u.endsWith('/metadata.tsv')) {
+    const bytes = new TextEncoder().encode(window.__songdbTsv ?? '');
+    return { ok: true, headers: { get: () => String(bytes.length) }, arrayBuffer: async () => bytes.buffer };
+  }
   // What the page shows about itself (W4), off disk where the staging takes it from.
   if (u.endsWith('vendor/notices/components.tsv')) return { ok: true, text: async () => fs.readFileSync('app/notices/components.tsv', 'utf8') };
   if (u.endsWith('vendor/legal/privacy-policy.md')) return { ok: true, text: async () => fs.readFileSync('store/privacy-policy.md', 'utf8') };
@@ -151,6 +156,7 @@ window.navigator.storage ??= { persist: async () => true, persisted: async () =>
 
 const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
 const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
+const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
 const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
@@ -159,14 +165,15 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
   .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
-    'const archive = (() => {' + fs.readFileSync('web/src/catalogue.js', 'utf8')
+    'const archive = (() => {' + lengthsSource + songdbSource + fs.readFileSync('web/src/catalogue.js', 'utf8')
       .replace(/^import .*$/gm, '')
       .replace(/^export function (\w+)/gm, 'function $1')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
     + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
-    + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths }; })();')
+    + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths, '
+    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -2243,6 +2250,60 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 40));
   $('settings').querySelector('[data-close]').click();
   check($('settings').hidden, 'and Close shuts the settings');
+}
+
+// --- songdb's metadata (W5) ----------------------------------------------------------------------
+//
+// The phone's "Song metadata": the parser on the rows `SongDbMetadataTest` uses, the rule that fills
+// gaps and never overwrites, and the whole way from a download to a tune's bytes finding their row.
+if (window.__api) {
+  console.log('\nsongdb metadata:');
+  const rulesModule = await import(path.resolve('web/src/rules.js'));
+  const { parseSongDbMetadata, songDbKey } = await import(path.resolve('web/src/songdb.js'));
+  const { md5 } = await import(path.resolve('web/src/songlengths.js'));
+  const full = parseSongDbMetadata('00000b104a70\tDevastator\tShrimps Design\tCrunched Chips #5\t1995');
+  check(full.length === 1 && full[0].author === 'Devastator' && full[0].publisher === 'Shrimps Design'
+        && full[0].album === 'Crunched Chips #5' && full[0].year === '1995',
+    "a full row gives author, publisher, album and year, in songdb's order");
+  check(parseSongDbMetadata('004340d8fba1\t4-Mat')[0]?.author === '4-Mat', 'a row that stops early is still a row');
+  check(parseSongDbMetadata('00002cf7031f\t\t\t\t').length === 0, 'a row that says nothing is dropped');
+  check(['0009c3ef4c4c58f5d597a21df3fbb6d7\tSomebody', 'zzzzzzzzzzzz\tSomebody', '# a comment\tSomebody']
+    .every((line) => parseSongDbMetadata(line).length === 0), 'only twelve hex characters count as a key');
+  check(songDbKey('0009C3EF4C4C58F5D597A21DF3FBB6D7') === '0009c3ef4c4c', 'the key is the published prefix, not the whole hash');
+
+  const hasYear = (fields) => window.__api.releaseYear(fields) !== '';
+  const found = { author: 'Devastator', publisher: 'Shrimps Design', album: 'Crunched Chips #5', year: '1995' };
+  const filled = rulesModule.fillFromSongDb({ artist: 'Own Name', title: 'x' }, found, hasYear);
+  check(filled.artist === 'Own Name' && filled.album === 'Crunched Chips #5' && filled.publisher === 'Shrimps Design'
+        && filled.year === '1995', 'songdb fills the gaps and never overwrites what the tune says');
+  check(rulesModule.fillFromSongDb({ year: '0' }, found, hasYear).year === '1995', "a year of 0 is no year, and songdb's takes its place");
+  check(rulesModule.fillFromSongDb({ year: '1992' }, found, hasYear).year === '1992', 'a year the file states stays');
+  check(rulesModule.fillFromSongDb({ title: 't' }, null, hasYear).title === 't', 'nothing found changes nothing');
+
+  const bytes = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+  const key = songDbKey(md5(bytes));
+  window.__songdbTsv = `${key}\tSomeone\tSome Group\tSome Disk\t1993\nzzzz\tbad\n`;
+  const archive = window.__archive;
+  await archive.downloadSongMetadata();
+  check((await archive.songMetadataMeta())?.tunes === 1, 'the download stores what the file holds, and drops what it cannot read');
+  const got = await archive.songMetadataFor(bytes);
+  check(got?.author === 'Someone' && got.album === 'Some Disk' && got.year === '1993',
+    "a tune's bytes find their row by the first twelve characters of their MD5");
+
+  await window.__api.browseTo([]);
+  const offer = [...$('browselist').children].find((li) => li.textContent.includes('Song metadata'));
+  check(offer && offer.querySelector('svg'), 'Browse offers the song metadata beside the other downloads, with its icon');
+  $('tab-settings').click();
+  await new Promise((r) => setTimeout(r, 40));
+  const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
+  const forget = [...$('settingsfields').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Forget it');
+  check(labels.includes('Song metadata (songdb)') && forget?.querySelector('svg'),
+    'Settings says it is held, and offers to forget it with an icon and a word');
+  forget.click();
+  await new Promise((r) => setTimeout(r, 60));
+  check(!(await archive.songMetadataMeta()) && (await archive.songMetadataFor(bytes)) === null, 'and forgetting it forgets it');
+  $('settings').querySelector('[data-close]').click();
+  window.__api.showPanel(null);
 }
 
 // --- add to playlist, from one row ---------------------------------------------------------------

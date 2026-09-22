@@ -130,6 +130,14 @@ and indexes in the browser (IndexedDB) and fetches from the same archives.
 
 ## W5 — Song metadata from songdb
 
+**Built 2026-09-22 on `feature/web-w5-songdb-metadata`, branched from W4** because it extends the
+policy section W4 adds (the page now contacts `raw.githubusercontent.com` too): parsed by
+`web/src/songdb.js` on the rows `SongDbMetadataTest` uses, stored in 256 shards, looked up only
+when something is stored, and filled in by `rules.fillFromSongDb`, which never overwrites what a
+tune says. Measured on the host with the real file, 2026-09-22: **380,282 rows kept of 380,282**
+(the phone's count), parsed in 0.3 s, **about 19 MB** as stored shards. Not yet seen in a browser,
+and what IndexedDB makes of those 19 MB not measured in one.
+
 The phone downloads songdb's `metadata.tsv` (14.1 MB, `raw.githubusercontent.com`, which sends CORS
 `*` -- checked 2026-09-22) and shows author, publisher, album and year in Now Playing, and the year
 in the dock. The page shows the year only when the file itself states one.

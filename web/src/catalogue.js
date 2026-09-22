@@ -14,6 +14,7 @@
 
 import { catalogue } from './store.js';
 import { md5, parseSongLengths } from './songlengths.js';
+import { parseSongDbMetadata, songDbKey } from './songdb.js';
 import { searchTerms, searchable } from './rules.js';
 
 const MODLAND = 'modland';
@@ -720,35 +721,39 @@ export async function clearSongLengths() {
  * nothing for ten seconds reads as a page that has stopped. Parsing is another 100 ms and storing a
  * few hundred, so only the fetch is worth counting.
  */
-export async function downloadSongLengths({ onProgress = null } = {}) {
+/**
+ * A text file, fetched with its progress reported by bytes, decoded as [encoding]. Shared by the two
+ * databases the page downloads whole -- HVSC's lengths and songdb's metadata -- because a page that
+ * says nothing for ten seconds reads as a page that has stopped.
+ */
+async function fetchText(url, encoding, onProgress) {
   onProgress?.({ stage: 'fetching', done: 0, total: 0 });
-  const response = await fetch(SONG_LENGTHS_URL);
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
   const total = Number(response.headers.get('content-length')) || 0;
-  let text;
-  if (response.body) {
-    const reader = response.body.getReader();
-    const chunks = [];
-    let done = 0;
-    for (;;) {
-      const read = await reader.read();
-      if (read.done) break;
-      chunks.push(read.value);
-      done += read.value.length;
-      onProgress?.({ stage: 'fetching', done, total });
-    }
-    const joined = new Uint8Array(done);
-    let at = 0;
-    for (const chunk of chunks) { joined.set(chunk, at); at += chunk.length; }
-    // **Latin-1, not UTF-8.** The file is a list of hex keys and digits, but the comment lines above
-    // them carry composer names with accents in whatever eight-bit encoding HVSC has always used.
-    // Decoding as UTF-8 throws on those bytes in strict mode and replaces them otherwise; either
-    // way the comments are not read, and the entries must not be risked for them.
-    text = new TextDecoder('latin1').decode(joined);
-  } else {
-    text = new TextDecoder('latin1').decode(new Uint8Array(await response.arrayBuffer()));
+  if (!response.body) return new TextDecoder(encoding).decode(new Uint8Array(await response.arrayBuffer()));
+  const reader = response.body.getReader();
+  const chunks = [];
+  let done = 0;
+  for (;;) {
+    const read = await reader.read();
+    if (read.done) break;
+    chunks.push(read.value);
+    done += read.value.length;
+    onProgress?.({ stage: 'fetching', done, total });
   }
+  const joined = new Uint8Array(done);
+  let at = 0;
+  for (const chunk of chunks) { joined.set(chunk, at); at += chunk.length; }
+  return new TextDecoder(encoding).decode(joined);
+}
+
+export async function downloadSongLengths({ onProgress = null } = {}) {
+  // **Latin-1, not UTF-8.** The file is a list of hex keys and digits, but the comment lines above
+  // them carry composer names with accents in whatever eight-bit encoding HVSC has always used.
+  // Decoding as UTF-8 throws on those bytes in strict mode and replaces them otherwise; either
+  // way the comments are not read, and the entries must not be risked for them.
+  const text = await fetchText(SONG_LENGTHS_URL, 'latin1', onProgress);
 
   onProgress?.({ stage: 'reading' });
   const entries = parseSongLengths(text);
@@ -784,4 +789,60 @@ export async function songLengthsFor(bytes) {
   const shard = await catalogue.get(shardOfMd5(key));
   const found = shard?.tunes?.[key];
   return Array.isArray(found) ? found : null;
+}
+
+// --- songdb's metadata: author, publisher, album, year (W5) --------------------------------------
+//
+// The phone's "Song metadata" download: `audacious-uade-tools`' `metadata.tsv`, at the revision the
+// phone pins, so both players read the same rows. 14.8 MB of UTF-8; `raw.githubusercontent.com`
+// sends `Access-Control-Allow-Origin: *`, checked 2026-09-22. Only this file: its sibling
+// `songlengths.tsv` times the Amiga custom formats, which a browser cannot play.
+
+const SONGDB_METADATA_URL =
+  'https://raw.githubusercontent.com/mvtiaine/audacious-uade-tools/1bad3e8/tsv/pretty/md5/metadata.tsv';
+
+/** Everything the metadata stores lives under this, so one `clear` takes all of it. */
+const SONGDB = 'songdb:';
+
+/** 380,000 tunes in 256 rows, sharded like the song lengths and for the same reasons. */
+const shardOfSongDb = (key) => `${SONGDB}${key.slice(0, 2)}`;
+
+/** What the page knows about the stored metadata: how many tunes, and when it was fetched. */
+export async function songMetadataMeta() { return catalogue.get(`${SONGDB}meta`); }
+
+/** Forgets it all. Settings offers this, as the phone's storage section does. */
+export async function clearSongMetadata() { await catalogue.clear(SONGDB); }
+
+/**
+ * Fetches songdb's metadata and stores it, **replaced wholesale**: the publisher corrects as well as
+ * adds, and a merge would keep a row it has withdrawn.
+ */
+export async function downloadSongMetadata({ onProgress = null } = {}) {
+  const text = await fetchText(SONGDB_METADATA_URL, 'utf-8', onProgress);
+  onProgress?.({ stage: 'reading' });
+  const entries = parseSongDbMetadata(text);
+  if (entries.length === 0) throw new Error('the song metadata was empty');
+  const shards = new Map();
+  for (const { key, author, publisher, album, year } of entries) {
+    const shard = shardOfSongDb(key);
+    let held = shards.get(shard);
+    if (!held) { held = {}; shards.set(shard, held); }
+    held[key] = [author, publisher, album, year];
+  }
+  await catalogue.clear(SONGDB);
+  const records = [...shards].map(([key, tunes]) => ({ key, tunes }));
+  await catalogue.putAll(records, 16, (done, count) => onProgress?.({ stage: 'storing', done, total: count }));
+  await catalogue.putAll([{ key: `${SONGDB}meta`, tunes: entries.length, at: Date.now() }]);
+  onProgress?.({ stage: 'done', tunes: entries.length });
+  return { tunes: entries.length };
+}
+
+/** What songdb says about these bytes -- author, publisher, album, year -- or null. */
+export async function songMetadataFor(bytes) {
+  if (!bytes || bytes.length === 0) return null;
+  const key = songDbKey(md5(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)));
+  const found = (await catalogue.get(shardOfSongDb(key)))?.tunes?.[key];
+  if (!Array.isArray(found)) return null;
+  const [author, publisher, album, year] = found;
+  return { author, publisher, album, year };
 }

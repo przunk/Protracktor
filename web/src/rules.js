@@ -204,3 +204,21 @@ export function privacyBlocks(markdown) {
   flush();
   return blocks;
 }
+
+/**
+ * A tune's own fields with the gaps filled from songdb (W5) -- the phone's `merged`: songdb **fills
+ * and never overwrites**, because what a tune says about itself is not a guess and a database row
+ * can be stale or wrong. The year needs its own test for "the file said nothing": sc68 writes `0`
+ * or `unknown` when it does not know, which is not blank, so [hasYear] -- the page's `releaseYear`
+ * -- decides whether the file named one.
+ */
+export function fillFromSongDb(fields, found, hasYear) {
+  if (!found) return fields;
+  const out = { ...fields };
+  const fill = (key, value) => { if (value && !String(out[key] ?? '').trim()) out[key] = value; };
+  fill('artist', found.author);
+  fill('album', found.album);
+  fill('publisher', found.publisher);
+  if (found.year && !hasYear(out)) out.year = found.year;
+  return out;
+}
