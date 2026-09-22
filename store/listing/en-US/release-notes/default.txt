@@ -1,7 +1,9 @@
-Amiga custom formats: TFMX, Hippel, David Whittaker, Sonic Arranger and thirty more, played by the UADE emulator. They need its replay routines, a separate download under Browse.
+Titles with accented letters now read correctly, whether written on an Amiga, a DOS PC or a C64: no more question marks in diamonds.
 
-Amiga tunes now show their length and can be seeked, including tunes that loop.
+Search ignores accents: "michal" finds "Michał", and "akes lekhorna" finds "Åkes lekhörna".
 
-Downloads are simpler: the catalogues, then one button for song metadata and one for replay routines. A tick marks what is on the phone.
+A title too long for the player bar scrolls slowly instead of being cut off.
 
-Fixes: Random view, subsongs after an ended tune, deletes that answer at once.
+History stays in order while you play from it.
+
+A C64 tune written in BASIC now says why it cannot play, instead of playing silence.
