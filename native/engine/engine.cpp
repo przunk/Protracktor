@@ -174,6 +174,35 @@ std::string joinNames(const std::vector<std::string> &names) {
     return out;
 }
 
+/**
+ * Seeking a backend that cannot jump: **run the machine there, silently.**
+ *
+ * libsidplayfp and sc68 emulate a computer running a program, and a program has no "position" to
+ * set -- the only way to minute two is through minute one. So a seek forward renders and discards
+ * until the backend's own clock reaches [target]; a seek backward goes back to the start of the
+ * tune playing and does the same. Measured 2026-09-22 in the browser's engine: a SID runs about
+ * 41 times faster than it plays, an SNDH about 265 times, so a minute costs about 1.5 s and 0.2 s.
+ *
+ * **The host decides where the waiting happens.** On the phone `Player::seek` holds the decoder's
+ * lock on a control thread while the audio callback plays silence; nothing with a deadline waits.
+ * Stops early if the tune ends before the target: there is nothing past the end to reach.
+ */
+void seekByRendering(Backend &backend, double target, int sampleRate) {
+    // **A bound, because the cost is real time.** The players only ask for a place inside a length
+    // they know, but a wrong number from anywhere -- 99999 s, say -- would otherwise hold the
+    // decoder for most of an hour. Twenty minutes of music is about thirty seconds of a SID.
+    constexpr double kFurthest = 20.0 * 60.0;
+    if (target > kFurthest) target = kFurthest;
+    if (target < backend.positionSeconds()) backend.rewind();
+    constexpr std::size_t kChunk = 4096;
+    static thread_local std::vector<float> discard(kChunk * 2);
+    while (backend.positionSeconds() < target) {
+        const double left = (target - backend.positionSeconds()) * sampleRate;
+        const std::size_t want = left < kChunk ? static_cast<std::size_t>(left) + 1 : kChunk;
+        if (backend.render(sampleRate, want, discard.data()) == 0) break;
+    }
+}
+
 class OpenmptBackend : public Backend {
 public:
     explicit OpenmptBackend(const std::vector<char> &bytes)
@@ -381,8 +410,9 @@ public:
         return produced;
     }
 
-    bool canSeek() const override { return false; }
-    void seek(double) override {}
+    // No seek of its own: a 68000 running a program has no position to set. Run there instead.
+    bool canSeek() const override { return true; }
+    void seek(double seconds) override { seekByRendering(*this, seconds, kSampleRate); }
 
     /**
      * Back to the start of **what is playing**, which used to mean track 1 whatever was playing.
@@ -425,7 +455,7 @@ public:
           << "hardware\t" << text(info_.trk.hw) << '\n'
           << "year\t" << text(info_.year) << '\n'
           << "subsongs\t" << info_.tracks << '\n'
-          << "seekable\t0";
+          << "seekable\t1";
         return o.str();
     }
 
@@ -1186,9 +1216,10 @@ public:
         return produced;
     }
 
-    // libsidplayfp has no seek: the only way to a position is to run the machine there.
-    bool canSeek() const override { return false; }
-    void seek(double) override {}
+    // libsidplayfp has no seek: the only way to a position is to run the machine there, which is
+    // what `seekByRendering` does.
+    bool canSeek() const override { return true; }
+    void seek(double seconds) override { seekByRendering(*this, seconds, rate_); }
 
     void rewind() override {
         spare_.clear();
@@ -1247,7 +1278,7 @@ public:
           << "copyright\t" << field(2) << '\n'
           << "channels\t" << (info_ ? info_->sidChips() : 1) << '\n'
           << "subsongs\t" << (info_ ? info_->songs() : 1) << '\n'
-          << "seekable\t0";
+          << "seekable\t1";
         return o.str();
     }
 
