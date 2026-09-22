@@ -178,6 +178,13 @@ Browse for the playlist in that case too.
 
 **Decided 2026-09-22: (a)**, the owner approving W8–W11 as planned.
 
+**State, 2026-09-22 evening — all built, none merged, none seen in a browser.** One branch each:
+`feature/web-w9-back-after-jump` and `feature/web-w11-first-run` off `develop`;
+`feature/web-w8-browse-like-app` off W5 (it folds W5's row into the group), and
+`feature/web-w10-storage` off W8 (it lists the grouped row). All of W1–W11 together are on
+`test/web-w1-w11`, packaged as `dist/protracktor-web-20260922-191146.tar.gz`. W11's button opens
+Browse's root; with W8 merged, the catalogues are one row below it.
+
 - **(a) Recommended: as the app does**, so the two players agree, and the rule goes into
   `docs/rules/queue-cases.tsv` so they keep agreeing.
 - (b) Back returns to the screen the jump was made from -- the search results, History. Arguably
