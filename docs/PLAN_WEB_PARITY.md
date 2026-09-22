@@ -9,6 +9,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
 the APK since the web last changed, and prepare a stage."* Written before any code. `docs/BACKLOG.md`
 A57 is the entry; the decisions W-D1 to W-D3 are the owner's, each with a recommendation.
 
+**Decided 2026-09-22: W-D1, W-D2 and W-D3 as recommended**, the owner approving all three; W1–W3
+first.
+
 ## Where the page stopped
 
 The page was kept level round by round until **2026-09-16/17** (round 11 and the index rewrite of
