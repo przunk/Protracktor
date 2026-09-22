@@ -28,6 +28,29 @@ node scripts/serve-web.mjs
 
 It prints two addresses and writes `server.json` beside itself on the first run.
 
+## The public copy — GitHub Pages
+
+*Decided 2026-09-22: the web player is an add-on to the app, which anyone can run themselves with
+this archive; one public copy lives at **https://przunk.github.io/protracktor/**, free and without a
+domain.*
+
+```
+./scripts/build-web-engine.sh      # when the engine's code has changed
+./scripts/publish-web-pages.sh     # commits the site to the gh-pages branch
+git push origin gh-pages
+```
+
+The first time only, on GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a
+branch → Branch: gh-pages, / (root) → Save**.
+
+**Everything works there except pairing**, which needs a running process -- this server -- and
+GitHub Pages serves files only. The pairing sheet says so. The consequence is a good one: nothing a
+phone sends ever reaches the public copy, so it changes nothing in the privacy policy or in Play's
+Data safety answers beyond naming GitHub as its host.
+
+The script refuses uncommitted changes and an engine older than its code, because the page's
+**Source code** link names the commit it was built from.
+
 ## server.json
 
 ```json
