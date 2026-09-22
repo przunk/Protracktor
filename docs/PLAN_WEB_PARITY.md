@@ -135,6 +135,66 @@ IndexedDB keyed as the phone keys `track_metadata` (the first twelve hex digits 
 when a tune opens. Only `metadata.tsv` -- `songlengths.tsv` serves formats the page cannot play. The storage it
 takes is measured in a real browser before it is offered, and shown in Settings with the rest.
 
+## Second part — Browse, Back, storage, first run (asked 2026-09-22)
+
+*The owner, after W1–W5: "align the icons in Browse with the APK (state, icons, sections), align what
+Back does after More from this author, and the others we fixed lately."* Read against the app on
+2026-09-22; the page's Browse is one flat list today, where the app has had domains, held-state
+icons and grouped downloads since 2026-09-21.
+
+| # | what | from the app | size |
+| --- | --- | --- | --- |
+| **W8** | Browse as the app draws it: the root's rows (online catalogues, Random with its scope in the title, History, Search); each catalogue with its held icon (tick in the accent colour, or a dimmed cloud), a line saying what is here, and one button that says what it will do (download, or refresh); the downloads grouped under the catalogues | `e01b26c`, `53d93bc`, `30e09a7` | medium |
+| **W9** | Back after **More from this author** returns to where you were in one press, instead of climbing author → format → archive | `browseBack`, `arrivedByJump` | small |
+| **W10** | Settings says what the page holds, per download, and deletes each one; a delete answers at the press, one message at a time | Storage section, C76, C77 | medium |
+| **W11** | An empty page offers what to get, once it knows nothing is held -- never before, never a wrong offer | `355f198`, `3c40bc5`, A46 | small |
+
+### W8 — what is and is not copied
+
+- **The root.** The app's rows are Local folders, Online catalogues, Random, History, Search. The
+  page has no local folders (a browser cannot list a phone's storage; its ways in are the pairing
+  code and pasted links, which stay where they are), so its root is **Online catalogues, Random,
+  History, Search**, with the app's icons, titles and one-line subtitles.
+- **The catalogues.** Modland and ASMA, each with the held icon, the detail line (how many tunes, or
+  "not downloaded"), and the trailing button: **Download** when absent, **Refresh** when held -- the
+  app's two marks, not one arrow for both. While it runs: a spinner and "Downloading…" in the
+  button's place. A catalogue opens only once it is held.
+- **The groups.** One **Song metadata** row fetches everything the page can use of what a file
+  cannot say about itself: HVSC's SID lengths and songdb's metadata (W5), under one tick, as the
+  app decided (A52 D1). **This replaces W5's separate row.** No "Replay routines" row: neither
+  set can reach a browser (see "Not for the page").
+- **Nothing drawn before it is known** (C74, C75): the rows wait for the stored state to be read,
+  so no tick appears and vanishes.
+
+### W9 — Back after a jump
+
+The app's rule (`PlaybackController.browseBack`): "More from this author" lands three levels deep
+without passing through them, so **the first Back leaves Browse** for where you were, rather than
+climbing a hierarchy you never climbed into. The page climbs one level per press today, except in a
+Random digression, where Back already returns to the dice -- which stays as it is.
+
+**W-D4 — a jump made from inside Browse** (a search result's or History's row menu). The app leaves
+Browse for the playlist in that case too.
+
+- **(a) Recommended: as the app does**, so the two players agree, and the rule goes into
+  `docs/rules/queue-cases.tsv` so they keep agreeing.
+- (b) Back returns to the screen the jump was made from -- the search results, History. Arguably
+  kinder, but then the app should change too, and that is a change to the app, not parity.
+
+### W10 — Storage in Settings
+
+The app's Settings → Storage lists each download with what it holds and a delete (icon and label);
+a delete shows at once and says so once (C76, C77). The page's Settings shows counts and can forget
+only the SID lengths, with a word and no icon. W10 gives the page the same list -- Modland, ASMA,
+Song metadata -- and a delete for each, icon and label.
+
+### W11 — The first run
+
+The app's empty playlist says nothing until it knows what is held, then offers **Get some music to
+browse** when nothing is (`355f198`). The page's empty playlist says "Scan the code with your
+phone, or paste some URLs" whatever is held. W11 adds the offer beside those two ways in, only
+when no catalogue is held, opening Browse on the catalogues.
+
 ## W-D3 — Polish and a light theme
 
 - **(a) Recommended: a stage of their own, after the public launch.** Both touch every screen of

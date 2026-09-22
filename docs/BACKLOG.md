@@ -21,7 +21,8 @@ Everything the app gained since the page was last brought level (2026-09-16/17),
 shared engine already gives the page, what was done alongside, what a browser cannot have, and five
 items that are missing -- W1 History order, W2 an unknown length, W3 scrolling lines, W4 licences
 and privacy in the page, W5 songdb's metadata. `docs/PLAN_WEB_PARITY.md` is the plan, with the
-decisions W-D1 to W-D3.
+decisions W-D1 to W-D3. A second part, W8–W11 (Browse as the app draws it, Back after a jump,
+storage in Settings, the first run), was added on 2026-09-22 with W-D4.
 
 ## A56. History keeps its order while you use it — **noted 2026-09-21; DONE 2026-09-22, merged; confirmed on the phone**
 
