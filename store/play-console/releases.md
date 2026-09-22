@@ -6,6 +6,26 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 0.8.0 — versionCode 844
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v0.8.0`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-0.8.0-844.aab` |
+| Size | 21655370 bytes |
+| SHA-256 | `39f432c9b17a7f0eae864bb92837e6b3363b396a44e6b7d28f93d07c3b1d9c97` |
+| versionCode | 844 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 0.8.0 |
+| Commit | `afb628b` |
+| Tag | `v0.8.0` |
+| Built | 2026-09-22 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v0.7.0**: `git log --oneline v0.7.0..v0.8.0`, and
+`docs/STATUS.md` for the defects by number.
+
 ## 0.7.0 — versionCode 788
 
 Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v0.7.0`.
