@@ -10,6 +10,42 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B36. Protracktor's own length database, measured by its own engines — **planned 2026-09-22, not started**
+
+Raised by the owner on 2026-09-22, after asking whether NSF could have lengths and a seek bar:
+*"a project of our own metadata. We already have the engines; we only need to measure every tune
+and store the results. It could run in the background for 72 hours from a script if it takes that
+long."*
+
+**Why it is needed.** NSF has nowhere to store a length, songdb does not cover it (checked on two
+Modland files), and HVSC is the C64's only. What exists elsewhere is scattered: NSFe collections as
+RAR files on MediaFire, MEGA and Dropbox, with no terms stated and different files from Modland's;
+`nsf.joshw.info`'s 1,634 per-game `.7z` archives with hand-timed NEZplug M3U playlists, no CORS and
+no single index (whether its NSFs are byte-identical to Modland's is **not yet checked** -- no 7z
+tool here).
+
+**The cost is not the problem.** game-music-emu renders an NSF about 2,500 times faster than it
+plays (2026-09-22): Modland's 5,015 NSFs with their tracks are hours, not days.
+
+**The problem is loops.** Game music plays in a loop and never falls silent; played to its end, a
+looping NSF stops at game-music-emu's default of 2:30 plus fade -- both files measured did, at
+158.1 s. So measuring means **detecting the loop**: for the NES, the sequence of writes to the sound
+chip starting to repeat. That needs a hook in game-music-emu (a patch, kept in `native/patches/` as
+libopenmpt's is) and is a piece of research, which is why it is its own project. songdb did the same
+for the Amiga -- its end codes `l` and `p` are detected loops.
+
+**The shape, when it is taken up:**
+1. loop detection in game-music-emu for NSF (then GBS, HES, KSS, which share the approach);
+2. a host script that walks a catalogue index, fetches each file, measures every track, and writes
+   a table keyed like songdb's (the first 48 bits of the MD5), resumable, safe to run for days;
+3. the joshw playlists as a check: where the same file exists, the measured and the hand-timed
+   lengths should agree;
+4. the table committed and downloaded by both players with the song metadata, under the same tick;
+5. its licence and provenance written down: our own measurements of files, not anybody's list.
+
+Until then, D-(a) of 2026-09-22 covers the everyday case: a tune that falls silent gets its measured
+length when it plays, and a looping one a seek bar up to the fallback length, shown as `~3:00`.
+
 ## B35. Old files' text as Central European, as a setting — **not planned, 2026-09-21**
 
 Raised by the owner on 2026-09-21: `Fasttracker 2/Jakim/studium falszu.xm` shows "Studium Fa³szu".
