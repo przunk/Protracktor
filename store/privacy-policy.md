@@ -1,6 +1,6 @@
 # Protracktor privacy policy
 
-Effective date: 2026-09-21
+Effective date: 2026-09-22
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -81,6 +81,17 @@ sends the chosen queue — track titles, their archive addresses and the positio
 the address that code names. Tracks that exist only on the device are sent as files, up to 8 MB in
 one transfer. Nothing is sent without that scan and that choice, and the receiving server is the one
 running the page the user opened.
+
+### The web player
+
+Protracktor also has a web page: a second player that runs in a browser, served by whoever hosts
+it — usually the user, on a machine of their own. The page keeps its playlists, play history,
+downloaded catalogue indexes and settings in that browser's own storage, on that device. It sends
+nothing to the developer and has no analytics, advertising or account. For what the user browses,
+downloads or plays it contacts `modland.com`, `asma.atari.org` and `hvsc.c64.org`, as the app does,
+and those archives see the same requests described above. The server hosting the page sees the
+requests for the page itself and whatever the app sends to it (above). Clearing the site's data in
+the browser removes everything the page kept.
 
 ### Retention and deletion
 
@@ -176,6 +187,18 @@ aplikacja wysyła wybraną kolejkę — tytuły utworów, ich adresy w archiwach
 adres zapisany w tym kodzie. Utwory, które istnieją tylko na urządzeniu, są wysyłane jako pliki, do
 8 MB w jednym przesłaniu. Bez tego skanu i tego wyboru nic nie jest wysyłane, a odbiorcą jest serwer
 obsługujący stronę otwartą przez użytkownika.
+
+### Odtwarzacz w przeglądarce
+
+Protracktor ma też stronę internetową: drugi odtwarzacz działający w przeglądarce, udostępniany
+przez tego, kto go hostuje — zwykle przez samego użytkownika, na jego własnym komputerze. Strona
+przechowuje swoje playlisty, historię odtwarzania, pobrane indeksy katalogów i ustawienia w pamięci
+tej przeglądarki, na tym urządzeniu. Niczego nie wysyła do twórcy i nie ma analityki, reklam ani
+konta. Dla tego, co użytkownik przegląda, pobiera lub odtwarza, łączy się z `modland.com`,
+`asma.atari.org` i `hvsc.c64.org`, tak jak aplikacja, a te archiwa widzą te same zapytania, co
+opisane wyżej. Serwer udostępniający stronę widzi zapytania o samą stronę oraz to, co aplikacja do
+niego wysyła (wyżej). Wyczyszczenie danych witryny w przeglądarce usuwa wszystko, co strona
+przechowywała.
 
 ### Retencja i usuwanie
 

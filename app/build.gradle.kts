@@ -218,6 +218,9 @@ val copyNotices = tasks.register<Sync>("copyNotices") {
     from(rootProject.file("store/privacy-policy.md")) { into("legal") }
     table.readLines()
         .filter { it.isNotBlank() && !it.startsWith("#") }
+        // Only what the app carries: the last column says which build a row is for, and the web
+        // page's Emscripten runtime and QR library have no business in the APK.
+        .filter { line -> "app" in line.split('\t').getOrElse(5) { "" }.split(',').map { it.trim() } }
         .forEach { line ->
             val cells = line.split('\t')
             val id = cells[0]

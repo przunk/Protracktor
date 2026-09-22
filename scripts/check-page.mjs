@@ -86,6 +86,10 @@ window.fetch = async (url, options) => {
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  // What the page shows about itself (W4), off disk where the staging takes it from.
+  if (u.endsWith('vendor/notices/components.tsv')) return { ok: true, text: async () => fs.readFileSync('app/notices/components.tsv', 'utf8') };
+  if (u.endsWith('vendor/legal/privacy-policy.md')) return { ok: true, text: async () => fs.readFileSync('store/privacy-policy.md', 'utf8') };
+  if (u.includes('vendor/notices/')) return { ok: true, text: async () => `licence text of ${u.slice(u.lastIndexOf('/') + 1)}` };
   // The real list, off disk: the page reads it at load, and a stub of it would test nothing.
   if (u.endsWith('formats.tsv')) return { ok: true, text: async () => fs.readFileSync('web/src/formats.tsv', 'utf8') };
   // ASMA's archive, answering ranges as asma.atari.org does -- or ignoring them, as a server may.
@@ -2199,8 +2203,46 @@ if (window.__api) {
   check(labels[0] === 'Decoders in this build' && labels.includes('Modland') && labels.includes('ASMA')
         && labels.includes('Stored here'),
     'which say what this build plays, what is indexed, and what the browser is holding');
+  // W4: what the page carries and what it keeps, each a button with its mark and its words.
+  const notices = $('open-notices');
+  const privacy = $('open-privacy');
+  check(notices?.querySelector('svg') && notices.textContent.trim() === 'Open-source licences'
+        && privacy?.querySelector('svg') && privacy.textContent.trim() === 'Privacy policy',
+    'they offer the open-source licences and the privacy policy, each with its icon and its name');
+  notices.click();
+  await new Promise((r) => setTimeout(r, 40));
+  const table = fs.readFileSync('app/notices/components.tsv', 'utf8');
+  const webRows = (await import(path.resolve('web/src/rules.js'))).parseNotices(table, 'web');
+  const rows = [...$('legalbody').querySelectorAll('.component')];
+  check(!$('legal').hidden && $('settings').hidden && rows.length === webRows.length
+        && rows.some((r) => r.textContent.startsWith('libopenmpt')) && !rows.some((r) => r.textContent.startsWith('UADE')),
+    `the licences list what the page carries -- ${webRows.length} components, UADE not among them`);
+  rows.find((r) => r.textContent.startsWith('Emscripten')).click();
+  await new Promise((r) => setTimeout(r, 40));
+  check($('legalbody').querySelectorAll('pre').length === 3 && !$('legalback').hidden
+        && $('legalback').querySelector('svg') && $('legalback').textContent.trim() === 'Back',
+    'a component shows each of its licence texts, with Back to the list');
+  $('legalback').click();
+  await new Promise((r) => setTimeout(r, 40));
+  check($('legalbody').querySelectorAll('.component').length === webRows.length && $('legalback').hidden,
+    'and Back returns to the list');
+  $('legal').querySelector('[data-close]').click();
+  check($('legal').hidden, 'Close shuts the licences');
+  gear.click();
+  await new Promise((r) => setTimeout(r, 40));
+  $('open-privacy').click();
+  await new Promise((r) => setTimeout(r, 40));
+  const headings = [...$('legalbody').querySelectorAll('h3')].map((h) => h.textContent);
+  check(!$('legal').hidden && $('legaltitle').textContent === 'Privacy policy'
+        && headings[0] === 'Who is responsible' && headings.at(-1) === 'Changes'
+        && $('legalbody').querySelectorAll('li').length > 0,
+    'the privacy policy reads from who is responsible down to Changes, its lists as lists');
+  $('legal').querySelector('[data-close]').click();
+  check($('legal').hidden, 'and Close shuts it');
+  gear.click();
+  await new Promise((r) => setTimeout(r, 40));
   $('settings').querySelector('[data-close]').click();
-  check($('settings').hidden, 'and Close shuts them');
+  check($('settings').hidden, 'and Close shuts the settings');
 }
 
 // --- add to playlist, from one row ---------------------------------------------------------------
@@ -2338,6 +2380,55 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // --- what the page carries and says about itself (W4) ---------------------------------------
+  //
+  // **The page's engine links nothing it does not name.** The web build is `native/CMakeLists.txt`
+  // configured by `build-web-engine.sh`'s own flags, plus what Emscripten brings (its runtime, and
+  // zlib when asked for) and the scripts in `web/lib/`. Derived from those files rather than listed,
+  // so a decoder switched on for the browser without a notice fails here -- the page's
+  // `NoticesCoverTheBuildTest`.
+  {
+    const table = fs.readFileSync('app/notices/components.tsv', 'utf8');
+    const listed = new Set(rules.parseNotices(table, 'web').map((c) => c.id));
+    const cmake = fs.readFileSync('native/CMakeLists.txt', 'utf8');
+    const script = fs.readFileSync('scripts/build-web-engine.sh', 'utf8');
+    const defaults = Object.fromEntries([...cmake.matchAll(/option\((\w+)\s+"[^"]*"\s+(ON|OFF)\)/g)].map((m) => [m[1], m[2] === 'ON']));
+    const set = Object.fromEntries([...script.matchAll(/-D(PROTRACKTOR_\w+)=(ON|OFF)/g)].map((m) => [m[1], m[2] === 'ON']));
+    const on = (flag) => set[flag] ?? defaults[flag] ?? false;
+    const built = new Set();
+    const open = [];
+    for (const line of cmake.split('\n')) {
+      const ifMatch = line.match(/^\s*if\((\w+)\)/);
+      if (ifMatch) { open.push(ifMatch[1]); continue; }
+      if (/^\s*endif\(/.test(line)) { open.pop(); continue; }
+      const sub = line.match(/^\s*add_subdirectory\((?:backends\/)?(\w+)\)/);
+      if (sub && sub[1] !== 'engine' && open.every(on)) built.add(sub[1]);
+    }
+    check(built.size >= 8 && !built.has('uade') && built.has('zxtune'),
+      `the web build is read as what it is: ${[...built].join(', ')}`);
+    const required = new Set(['protracktor', 'emscripten', ...built]);
+    if (built.has('zxtune')) required.add('fmt');
+    if (/-sUSE_ZLIB=1/.test(script)) required.add('zlib');
+    for (const file of fs.readdirSync('web/lib')) if (file.endsWith('.js')) required.add(file.replace(/\.js$/, ''));
+    const unlisted = [...required].filter((id) => !listed.has(id));
+    check(unlisted.length === 0, `everything the page links has a notice${unlisted.length ? `: missing ${unlisted.join(', ')}` : ''}`);
+    check(!listed.has('uade') && !listed.has('oboe') && !listed.has('androidx'),
+      'and the page names nothing it does not carry -- no UADE, nothing of Android');
+    for (const c of rules.parseNotices(table, 'web')) {
+      check(c.files.length > 0, `${c.id} names at least one licence file`);
+    }
+  }
+  {
+    const blocks = rules.privacyBlocks(fs.readFileSync('store/privacy-policy.md', 'utf8'));
+    const english = fs.readFileSync('store/privacy-policy.md', 'utf8').split('## Polski')[0];
+    const headings = [...english.matchAll(/^### (.+)$/gm)].map((m) => rules.cleanLegal(m[1]));
+    check(blocks[0]?.text.startsWith('Effective date:'), 'the privacy policy opens with its date');
+    check(JSON.stringify(blocks.filter((b) => b.kind === 'heading').map((b) => b.text)) === JSON.stringify(headings),
+      'every English heading of the policy is shown, in order, and no Polish one');
+    check(blocks.every((b) => !b.text.includes('**') && !b.text.includes('`')), 'with its Markdown taken off');
+    check(blocks.at(-1)?.kind !== 'heading' && headings.at(-1) === 'Changes', 'down to its last section, Changes, and its text');
+  }
+
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));

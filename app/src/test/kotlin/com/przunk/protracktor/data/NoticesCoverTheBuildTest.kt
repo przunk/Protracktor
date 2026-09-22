@@ -55,10 +55,23 @@ class NoticesCoverTheBuildTest {
     @Test
     fun `a row becomes asset paths under its own id`() {
         val parsed = OpenSourceNotices.parse(
-            "# comment\nuade\tUADE\t3.05\tGPL\tnative/vendor/uade/COPYING,native/vendor/uade/COPYING.GPL\n"
+            "# comment\nuade\tUADE\t3.05\tGPL\tnative/vendor/uade/COPYING,native/vendor/uade/COPYING.GPL\tapp\n"
         ).single()
         assertEquals(listOf("notices/uade/COPYING", "notices/uade/COPYING.GPL"), parsed.files)
         assertEquals("3.05", parsed.version)
+    }
+
+    @Test
+    fun `every row says which build carries it, and the app lists only its own`() {
+        val rows = table.lineSequence().filter { it.isNotBlank() && !it.startsWith("#") }.toList()
+        val unsaid = rows.filter { line ->
+            val builds = OpenSourceNotices.buildsOf(line)
+            builds.isEmpty() || !(builds - setOf(OpenSourceNotices.APP, OpenSourceNotices.WEB)).isEmpty()
+        }
+        assertEquals("rows with no build, or an unknown one", emptyList<String>(), unsaid)
+        val appIds = OpenSourceNotices.parse(table).map { it.id }.toSet()
+        assertTrue("the page's Emscripten runtime is not the app's", "emscripten" !in appIds)
+        assertTrue("UADE is the app's", "uade" in appIds)
     }
 
     @Test
