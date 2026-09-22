@@ -192,6 +192,9 @@ Song metadata -- and a delete for each, icon and label.
 
 ### W11 — The first run
 
+**Built 2026-09-22 on `feature/web-w11-first-run`**; the button opens Browse's root until W8 gives it
+a catalogue list to open. Not yet seen in a browser.
+
 The app's empty playlist says nothing until it knows what is held, then offers **Get some music to
 browse** when nothing is (`355f198`). The page's empty playlist says "Scan the code with your
 phone, or paste some URLs" whatever is held. W11 adds the offer beside those two ways in, only
