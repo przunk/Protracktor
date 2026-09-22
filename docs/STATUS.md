@@ -427,6 +427,13 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C81. An NSF refused as "invalid load/init/play address" — **OPEN, reported 2026-09-22**
+
+The owner: `Nintendo Sound Format/Y. Matuo/19 neunzehn.nsf` (Modland, 26,768 bytes) does not play;
+the reason shown is game-music-emu's "invalid load/init/play address". Not investigated yet: the
+header's three addresses are where to start, and whether the file is unusual or game-music-emu 0.6.5
+is stricter than NSF players that play it.
+
 ### C80. A SID that needs the C64's BASIC ~~plays silence~~ — **found 2026-09-21; the silence FIXED the same day, merged 2026-09-22, confirmed on the phone; playing them still OPEN**
 
 **The small part is done:** the SID backend reads the header's own compatibility field and refuses a

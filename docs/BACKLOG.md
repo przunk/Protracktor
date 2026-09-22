@@ -15,6 +15,21 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22, to think through**
+
+*The owner: "think through how `~2:38` is written, because the tilde is there one time and not the
+next, so the bar has a different length."*
+
+The total beside the seek bar is `~2:38` for a tune whose length is unknown (where playback will
+stop, `BarLength`) and `0:30` once a length is known or for a tune that has one. The label's width
+changes with the tilde, and the bar, which takes the rest of the row, changes length with it --
+between tunes, and within one tune when a measured length replaces the approximation.
+
+To decide before building, not decided: a fixed width for the total (room for the tilde always),
+the approximation said another way (a different colour or style of the number, an icon, the bar's
+end drawn differently), or the tilde moved elsewhere. Whatever is chosen applies to the dock, Now
+Playing and the page alike.
+
 ## A57. The page catches up with the APK — **planned 2026-09-22; DONE the same day, W1–W11 merged; checked by the owner in a browser**
 
 Everything the app gained since the page was last brought level (2026-09-16/17), sorted: what the
