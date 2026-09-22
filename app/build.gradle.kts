@@ -48,7 +48,7 @@ android {
         // fixes, minor for a round of work that added capability, major reserved for "publishable".
         // Bumping it per merge was considered and rejected -- twenty merges in a day would make it
         // a second, worse timestamp.
-        versionName = "0.7.0"
+        versionName = "0.8.0"
 
         // Stated explicitly rather than left to whatever the NDK defaults to that month, because
         // native decoder builds are the expensive part of this project and the ABI list drives
