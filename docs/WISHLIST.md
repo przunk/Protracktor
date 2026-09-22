@@ -43,6 +43,24 @@ for the Amiga -- its end codes `l` and `p` are detected loops.
 4. the table committed and downloaded by both players with the song metadata, under the same tick;
 5. its licence and provenance written down: our own measurements of files, not anybody's list.
 
+**Beyond NSF, and in what order — agreed 2026-09-22.** The owner asked whether the database should
+cover every format that lacks a length, not only NSF. Where lengths come from today: libopenmpt
+computes them for tracker modules; songdb covers much of UADE's Amiga formats; HVSC keeps its own
+song lengths for SID (whether the app already reads them is **not checked**); SNDH, SAP and VGM carry
+a length in some files and not in others (**not checked** how many). The real gap is the looping
+console formats -- NSF, GBS, HES, KSS, AY. After the launch, in two steps, with a decision between
+them:
+
+1. **Inventory.** A script walks Modland's index and counts, per format, the tunes with no length
+   from any source. It says whether this is a database of 5,000 NSFs or of 50,000 files in many
+   formats. Less than a day; nothing in the app changes.
+2. **An NSF pilot.** Loop detection on about 50 games, compared with joshw's hand-timed playlists.
+   A wrongly detected loop gives a wrong length, which is worse than an honest `~`, so the whole
+   run (steps 1–5 above) and other formats follow only if the pilot's lengths agree.
+
+Expected size: some 100,000 rows (tune and subsong), about 1 MB. A file not in the table (another
+dump of the same tune) falls back to today's behaviour.
+
 Until then, variant (a) of 2026-09-22 (merged the same day, confirmed on the phone) covers the everyday case: a tune that falls silent gets its measured
 length when it plays, and a looping one a seek bar up to the fallback length, shown as `~3:00`.
 
