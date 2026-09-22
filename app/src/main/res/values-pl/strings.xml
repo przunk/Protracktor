@@ -313,6 +313,7 @@
     <string name="action_send_as_link">Wyślij zamiast tego linkiem</string>
     <string name="action_pair_again">Zeskanuj inną przeglądarkę</string>
     <string name="scan_hint">Skieruj na kod na stronie odtwarzacza.</string>
+    <string name="scan_privacy">To, co wysyłasz — tytuły, adresy w archiwach i pliki z tego telefonu — trafia na serwer, na którym działa zeskanowana strona. Wysyłaj tylko do strony uruchomionej przez ciebie albo kogoś, komu ufasz.</string>
     <string name="scan_refused">Bez aparatu nie da się odczytać kodu. Playlistę nadal można wysłać linkiem.</string>
     <string name="action_cancel">Anuluj</string>
     <string name="paired_with">Sparowano z %1$s</string>

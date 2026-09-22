@@ -296,6 +296,7 @@
     <string name="action_send_as_link">Send as a link instead</string>
     <string name="action_pair_again">Scan a different browser</string>
     <string name="scan_hint">Point this at the code on the player page.</string>
+    <string name="scan_privacy">What you send — titles, archive addresses and files from this phone — goes to the server that runs the page you scan. Send only to a page you, or somebody you trust, runs.</string>
     <string name="scan_refused">Without the camera the code cannot be read. You can still send the playlist as a link.</string>
     <string name="action_cancel">Cancel</string>
     <string name="paired_with">Paired with %1$s</string>
