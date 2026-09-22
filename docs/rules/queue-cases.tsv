@@ -147,3 +147,13 @@ dzwiek	dźwięk.xm	-	yes	marks on more than one letter
 strasse	Straße	-	yes	ß becomes ss, which no decomposition does
 nerual	Ｎerual Ｔtoille.mdx	-	yes	fullwidth letters, which Modland holds, fold to plain ones
 michal	michel.mod	-	no	folding removes marks, it does not make different letters equal
+
+# A tune's length as the time display shows it: the phone's formatTotal and the page's clockTotal.
+# Zero, or nothing at all, is not a length -- dashes, never 0:00.
+[lengthTotal]
+seconds	expect	why
+0	--:--	nothing knows the length: dashes, not a tune of no seconds
+-1	--:--	a negative is not a length either
+150	2:30	a known length, minutes and seconds
+59.9	0:59	seconds are not rounded up into a minute that has not passed
+3600	60:00	an hour stays in minutes, as both players have always shown it

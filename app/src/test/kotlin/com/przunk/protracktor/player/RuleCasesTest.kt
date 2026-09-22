@@ -99,6 +99,11 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `a length is shown as the shared cases say`() = each("lengthTotal") { case ->
+        assertEquals(case.why(), case.getValue("expect"), com.przunk.protracktor.ui.formatTotal(case.getValue("seconds").toDouble()))
+    }
+
+    @Test
     fun `what a search matches agrees with the shared cases`() = each("searchMatch") { case ->
         // The page decides the same thing in `rules.js`. Both sides split the query and look for
         // every word; the row that expects `no` for a run-on query is there on purpose.

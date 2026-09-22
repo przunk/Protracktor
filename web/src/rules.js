@@ -142,3 +142,21 @@ export function searchMatches(query, ...texts) {
   const haystacks = texts.filter((t) => t != null).map((t) => searchable(t));
   return searchTerms(query).every((word) => haystacks.some((text) => text.includes(word)));
 }
+
+/** A position as minutes and seconds. An elapsed zero is a real zero: `0:00`. */
+export function clock(seconds) {
+  if (!(seconds >= 0)) return '--:--';
+  const total = Math.floor(seconds);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * A tune's length, or dashes when nothing knows it -- the phone's `formatTotal` (`bb385c7`).
+ *
+ * **Zero is not a length**, and `0:00` where a total belongs says the tune is over before it
+ * starts. Formats with nowhere to record a length are ordinary -- an NSF, an AY, a SID HVSC does not
+ * know -- so this is the common case, not the odd one.
+ */
+export function clockTotal(seconds) {
+  return seconds > 0 ? clock(seconds) : '--:--';
+}

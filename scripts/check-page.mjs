@@ -2338,6 +2338,8 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // A length as the time display shows it, the same rows `RuleCasesTest` runs against `formatTotal`.
+  each('lengthTotal', (c) => rules.clockTotal(Number(c.seconds)) === c.expect);
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
