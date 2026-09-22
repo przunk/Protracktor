@@ -2338,6 +2338,15 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // When a now-playing line may scroll, the same rows `RuleCasesTest` runs against `DockMarquee`.
+  each('lineScrolls', (c) =>
+    rules.lineScrolls({ animationsOn: yes(c.animationsOn), isStatus: yes(c.isStatus) }) === yes(c.expect));
+  check(rules.lineScrollPass(0) === null && rules.lineScrollPass(-5) === null, 'a line that fits does not move');
+  {
+    const pass = rules.lineScrollPass(60);
+    check(pass && pass.duration === 4000 && pass.pauseShare === 0.5,
+      'a line 60 px too long: two seconds still, two seconds moving at 30 px a second');
+  }
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));

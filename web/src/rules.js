@@ -142,3 +142,29 @@ export function searchMatches(query, ...texts) {
   const haystacks = texts.filter((t) => t != null).map((t) => searchable(t));
   return searchTerms(query).every((word) => haystacks.some((text) => text.includes(word)));
 }
+
+/**
+ * Whether a line of the now-playing card may scroll when it does not fit (`docs/BACKLOG.md` A54)
+ * -- the phone's `DockMarquee.scrolls`. Not when motion is turned down (the OS's reduced motion,
+ * the page's equivalent of Android's "Remove animations"), and never for a status line such as
+ * "fetching…", which says one thing and is gone before a pass could finish.
+ */
+export function lineScrolls({ animationsOn, isStatus }) {
+  return animationsOn && !isStatus;
+}
+
+/** About the speed of reading a line without chasing it, in CSS pixels a second, as on the phone. */
+export const LINE_SCROLL_VELOCITY = 30;
+/** Held still at the start before each pass, so the beginning can be read. */
+export const LINE_SCROLL_PAUSE_MS = 2000;
+
+/**
+ * One pass of a scrolling line: how long, and what share of it is the pause at the start. Null when
+ * the text fits and nothing should move.
+ */
+export function lineScrollPass(overflowPx) {
+  if (!(overflowPx > 0)) return null;
+  const moving = (overflowPx / LINE_SCROLL_VELOCITY) * 1000;
+  const duration = LINE_SCROLL_PAUSE_MS + moving;
+  return { distance: overflowPx, duration, pauseShare: LINE_SCROLL_PAUSE_MS / duration };
+}

@@ -99,6 +99,13 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `when a dock line scrolls agrees with the shared cases`() = each("lineScrolls") { case ->
+        // The phone reads the animator scale; "animations off" is a scale of 0.
+        val scale = if (case.bool("animationsOn")) 1f else 0f
+        assertEquals(case.why(), case.bool("expect"), com.przunk.protracktor.ui.DockMarquee.scrolls(scale, case.bool("isStatus")))
+    }
+
+    @Test
     fun `what a search matches agrees with the shared cases`() = each("searchMatch") { case ->
         // The page decides the same thing in `rules.js`. Both sides split the query and look for
         // every word; the row that expects `no` for a run-on query is there on purpose.

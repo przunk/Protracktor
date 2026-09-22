@@ -147,3 +147,13 @@ dzwiek	dźwięk.xm	-	yes	marks on more than one letter
 strasse	Straße	-	yes	ß becomes ss, which no decomposition does
 nerual	Ｎerual Ｔtoille.mdx	-	yes	fullwidth letters, which Modland holds, fold to plain ones
 michal	michel.mod	-	no	folding removes marks, it does not make different letters equal
+
+# Whether a now-playing line that does not fit may scroll (A54): the phone's DockMarquee.scrolls and
+# the page's lineScrolls. Motion turned down in the system keeps everything still; a status line
+# never moves.
+[lineScrolls]
+animationsOn	isStatus	expect	why
+yes	no	yes	a title that does not fit scrolls
+no	no	no	nothing moves with the system's animations off
+yes	yes	no	the loading line never scrolls
+no	yes	no	and certainly not with animations off

@@ -331,6 +331,9 @@
   .nowkeep svg { width: 22px; height: 22px; fill: currentColor; }
   .nowcard .title { font-size: var(--title-medium); font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* A line that does not fit and is moving (A54, `fitLine`): no `…` while the whole of it passes. */
+  .nowcard .scrolling { text-overflow: clip; }
+  .nowcard .run { display: inline-block; }
   .nowcard svg { width: 22px; height: 22px; fill: var(--on-surface-variant); flex: none; }
 
   /*
