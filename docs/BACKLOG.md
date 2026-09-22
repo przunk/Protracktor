@@ -15,6 +15,14 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A57. The page catches up with the APK — **planned 2026-09-22**
+
+Everything the app gained since the page was last brought level (2026-09-16/17), sorted: what the
+shared engine already gives the page, what was done alongside, what a browser cannot have, and five
+items that are missing -- W1 History order, W2 an unknown length, W3 scrolling lines, W4 licences
+and privacy in the page, W5 songdb's metadata. `docs/PLAN_WEB_PARITY.md` is the plan, with the
+decisions W-D1 to W-D3.
+
 ## A56. History keeps its order while you use it — **noted 2026-09-21; DONE 2026-09-22, merged; confirmed on the phone**
 
 Built as decided below: `HistoryRecording.records` keeps a play History started -- and the tunes
