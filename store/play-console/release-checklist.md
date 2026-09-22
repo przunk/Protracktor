@@ -5,26 +5,30 @@ signing and rollout remain the owner's actions.
 
 ## 1. Resolve legal and privacy gates
 
-- [ ] Resolve the sc68 replay-binary distribution question.
-- [ ] Verify Oboe's licence and produce notices from every exact shipped dependency.
+- [x] Resolve the sc68 replay-binary distribution question. *(2026-09-04: the APK ships sc68's own one
+      routine; the rest are fetched by the device, `docs/LICENSES.md`.)*
+- [x] Verify Oboe's licence and produce notices from every exact shipped dependency. *(0.7.0:
+      `app/notices/components.tsv`, held to the build by `NoticesCoverTheBuildTest`.)*
 - [x] Add an in-app legal surface containing the privacy link, GPL source link and notices. *(0.7.0:
       Settings → Licence, Open-source licences, Privacy policy; the policy shown is the published file.)*
-- [ ] Publish the privacy policy as a public, non-geofenced HTML page; no PDF or private-repository
-      URL.
-- [ ] Make the exact corresponding source public and tag the release commit.
+- [x] Publish the privacy policy as a public, non-geofenced HTML page; no PDF or private-repository
+      URL. *(The repository is public; checked 2026-09-22.)*
+- [x] Make the exact corresponding source public and tag the release commit. *(Public; every release
+      tagged by `scripts/release.sh`.)*
 - [ ] Confirm the access terms for Modland, ASMA, HVSC and The Mod Archive.
 - [ ] Re-audit network/data behaviour and reconcile the privacy policy with **Data safety**.
 
 ## 2. Complete the application record
 
 - [ ] In **Settings → Developer account**, confirm developer identity and public contact details.
-- [ ] Confirm `com.przunk.protracktor` is registered under Android developer verification. Package
-      registration becomes mandatory on 30 September 2026.
+- [x] Confirm `com.przunk.protracktor` is registered under Android developer verification. Package
+      registration becomes mandatory on 30 September 2026. *(Done — the owner, 2026-09-22.)*
 - [ ] In **Grow users → Store presence → Store settings**, enter the owner-controlled support
       email, category **Music & Audio**, and required developer details.
 - [ ] In **Grow users → Store presence → Main store listing**, paste both locale packages from
-      `store/listing/`.
+      `store/listing/`. *(Refreshed 2026-09-22 for 0.8.0; to paste.)*
 - [ ] Upload the real screenshots and feature graphic described in `store/graphics/README.md`.
+      *(The screenshots predate the regrouped Browse of 2026-09-21; the owner retakes them.)*
 - [ ] Complete **Policy and programs → App content** from `app-content.md`.
 - [ ] Complete **Data safety** from `data-safety.md` and provide the hosted privacy URL.
 - [ ] Complete **Foreground service permissions → mediaPlayback**, including its video.
