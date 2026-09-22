@@ -29,7 +29,7 @@ that it was done.
   the Source code link L2).
 - **L-D4: keep** the app's cleartext exception for pages on a private network.
 - **L-D1, L-D2: GitHub Pages**, decided the same evening: a static public copy at
-  `https://przunk.github.io/protracktor/`, no domain, no server of ours, no pairing there. So L3
+  `https://przunk.github.io/Protracktor/`, no domain, no server of ours, no pairing there. So L3
   (Data safety for a server of ours) is **not needed**: nothing a phone sends reaches that copy; the
   policy only names GitHub as its host. L4 is `scripts/publish-web-pages.sh`, run once on 2026-09-22
   from `develop` (1a47b5b) into the local `gh-pages` branch, for the owner to push.

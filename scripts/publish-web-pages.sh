@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Przunk
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# The public copy of the web player, for GitHub Pages: https://przunk.github.io/protracktor/
+# The public copy of the web player, for GitHub Pages: https://przunk.github.io/Protracktor/
 #
 # **The page is an add-on to the app, and anyone can run it themselves** (the owner, 2026-09-22);
 # `package-web.sh` is that. This is one more copy of it, at a permanent address, without a server
@@ -107,4 +107,4 @@ fi
 echo "   1. Push:   git push origin gh-pages"
 echo "   2. The first time only, on GitHub: Settings → Pages → Build and deployment →"
 echo "      Source: Deploy from a branch → Branch: gh-pages, folder / (root) → Save."
-echo "   3. A minute later: https://przunk.github.io/protracktor/"
+echo "   3. A minute later: https://przunk.github.io/Protracktor/"

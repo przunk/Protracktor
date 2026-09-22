@@ -94,7 +94,7 @@ and those archives see the same requests described above. The server hosting the
 requests for the page itself and whatever the app sends to it (above). Clearing the site's data in
 the browser removes everything the page kept.
 
-A public copy of the web page is served by GitHub Pages at `https://przunk.github.io/protracktor/`.
+A public copy of the web page is served by GitHub Pages at `https://przunk.github.io/Protracktor/`.
 GitHub receives the requests for that page under its own privacy statement. That copy has no
 pairing service, so nothing an app sends ever reaches it.
 
@@ -207,7 +207,7 @@ niego wysyła (wyżej). Wyczyszczenie danych witryny w przeglądarce usuwa wszys
 przechowywała.
 
 Publiczna kopia strony jest udostępniana przez GitHub Pages pod adresem
-`https://przunk.github.io/protracktor/`. Zapytania o nią otrzymuje GitHub, zgodnie z własną polityką
+`https://przunk.github.io/Protracktor/`. Zapytania o nią otrzymuje GitHub, zgodnie z własną polityką
 prywatności. Ta kopia nie ma usługi parowania, więc nic, co wysyła aplikacja, do niej nie trafia.
 
 ### Retencja i usuwanie

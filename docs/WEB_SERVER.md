@@ -31,7 +31,7 @@ It prints two addresses and writes `server.json` beside itself on the first run.
 ## The public copy — GitHub Pages
 
 *Decided 2026-09-22: the web player is an add-on to the app, which anyone can run themselves with
-this archive; one public copy lives at **https://przunk.github.io/protracktor/**, free and without a
+this archive; one public copy lives at **https://przunk.github.io/Protracktor/**, free and without a
 domain.*
 
 ```
@@ -42,6 +42,9 @@ git push origin gh-pages
 
 The first time only, on GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a
 branch → Branch: gh-pages, / (root) → Save**.
+
+**The path keeps the repository's capital `P`**: GitHub Pages serves `/Protracktor/`, and
+`/protracktor/` is a 404 (checked 2026-09-22).
 
 **Everything works there except pairing**, which needs a running process -- this server -- and
 GitHub Pages serves files only. The pairing sheet says so. The consequence is a good one: nothing a
