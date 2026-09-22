@@ -8,13 +8,14 @@ Obsługiwane rodziny formatów:
 • Atari ST: YM i wiele plików SNDH
 • Atari 8-bit: SAP i powiązane formaty trackerowe
 • Commodore 64: SID, z długościami podutworów z bazy HVSC
-• formaty Amigi, między innymi AHX i HVL
+• Amiga: AHX i HVL oraz formaty autorskie, między innymi TFMX, Jochen Hippel, David Whittaker, Future Composer i Sonic Arranger, przez emulator UADE, którego procedury odtwarzające są pobierane na życzenie
 • formaty konsol i komputerów 8-bitowych, między innymi NSF, GBS, SPC, VGM, HES, AY i KSS
 
 Archiwa internetowe do przeglądania:
 • Modland, indeksowany do przeglądania offline
 • ASMA, kolekcja Atari 8-bit
 • The Mod Archive, przeszukiwany na żywo
+• UnExoticA, muzyka z gier na Amigę
 
 Funkcje do słuchania:
 • wiele nazwanych playlist, z ulubionymi
@@ -23,12 +24,14 @@ Funkcje do słuchania:
 • odkrywanie przez Random — ze wszystkiego, z jednej platformy albo z ulubionych — oraz dygresja do katalogu autora, z której da się wrócić
 • każdy utwór wewnątrz pliku, dla formatów mieszczących więcej niż jeden
 • nazwy instrumentów i sampli, jeśli autor coś w nich zostawił
-• historia odtwarzania i wyszukiwanie
-• udostępnianie pliku, linku do katalogu albo linku, który odtwarza utwór w przeglądarce
+• historia odtwarzania oraz wyszukiwanie ignorujące akcenty — michal znajduje Michał
+• metadane utworów na życzenie: autor, album, wydawca i rok dla utworów, których pliki ich nie zawierają, oraz długości utworów z Amigi
+• tytuły zapisane na Amidze, pececie z DOS-em czy C64 wyświetlane z właściwymi literami
+• udostępnianie pliku albo linku do katalogu, a z opcjonalnym odtwarzaczem w przeglądarce, który możesz uruchomić u siebie, także linku odtwarzającego utwór
 • interfejs polski i angielski
 
 Protracktor nie ma reklam, kont, analityki ani bibliotek raportujących awarie. Informacje o lokalnej bibliotece i playlisty pozostają na urządzeniu. Wyszukiwanie i pobieranie z katalogów internetowych łączy się z wybranym archiwum; szczegóły w polityce prywatności.
 
 Do aplikacji nie jest dołączona żadna muzyka. Treści internetowe pochodzą z niezależnych archiwów i podlegają warunkom ich autorów oraz wydawców. Protracktor nie jest powiązany z producentami platform ani operatorami katalogów wymienionymi w opisach zgodności.
 
-Protracktor to wolne oprogramowanie na licencji GPL-3.0-or-later. Kod źródłowy i noty o komponentach: https://github.com/przunk/protracktor
+Protracktor to wolne oprogramowanie na licencji GPL-3.0-or-later. Licencje wszystkich komponentów i polityka prywatności są dostępne w aplikacji. Kod źródłowy: https://github.com/przunk/protracktor
