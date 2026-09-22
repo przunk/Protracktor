@@ -7,11 +7,10 @@ Players for these formats exist. This one is written because the existing ones l
 you leave the app, shuffle without a history, hold everything in a single playlist, and take
 seconds to start a track that is measured in kilobytes.
 
-**Status: 0.7.0 is in closed testing on Google Play** (versionCode 788, tag
-[`v0.7.0`](https://github.com/przunk/protracktor/releases/tag/v0.7.0)). That tag is the exact source
-the published build was made from, which is what the GPL below obliges. Every release, with the
-hash of what was uploaded, is in
-[`store/play-console/releases.md`](store/play-console/releases.md), which `scripts/release.sh` writes.
+**Protracktor is in closed testing on Google Play.** Every release -- its version, the tag of the
+exact source it was built from (which is what the GPL below obliges), and the hash of what was
+uploaded -- is in [`store/play-console/releases.md`](store/play-console/releases.md), which
+`scripts/release.sh` writes, so this page never has to name one.
 
 It plays tracker modules, Atari ST, Atari 8-bit, Commodore 64, the ZX Spectrum AY trackers, the
 Amiga synth trackers, the Amiga custom replayers through UADE (TFMX, Hippel, Future Composer and
@@ -51,6 +50,8 @@ actually been confirmed on a device.
 | [`docs/PRIVACY.md`](docs/PRIVACY.md) | why that is the only copy, and what leaves the phone in short |
 | [`docs/LICENSES.md`](docs/LICENSES.md) | every third-party component, its licence, and what that obliges us to do |
 | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | what the app has to do, each requirement traced to the complaint it came from |
+| [`docs/LAUNCH_READINESS.md`](docs/LAUNCH_READINESS.md) | what is left before the public launch, in Play Console and here, and where the web player goes |
+| [`docs/PLAN_WEB_PARITY.md`](docs/PLAN_WEB_PARITY.md) | the browser brought level with the app, W1–W11 |
 | [`docs/PLAN_ROUND_13.md`](docs/PLAN_ROUND_13.md) | the round after 0.7.0: titles, accent-blind search, the dock, folders cached ahead |
 | [`docs/PLAN_SONGDB_LENGTHS.md`](docs/PLAN_SONGDB_LENGTHS.md) | where Amiga tunes get their length, and in what order the sources are asked |
 | [`docs/PLAN_INSTRUMENT_NAMES.md`](docs/PLAN_INSTRUMENT_NAMES.md) | instrument and sample names in Now Playing, planned before any code |
