@@ -88,7 +88,8 @@ Protracktor also has a web page: a second player that runs in a browser, served 
 it — usually the user, on a machine of their own. The page keeps its playlists, play history,
 downloaded catalogue indexes and settings in that browser's own storage, on that device. It sends
 nothing to the developer and has no analytics, advertising or account. For what the user browses,
-downloads or plays it contacts `modland.com`, `asma.atari.org` and `hvsc.c64.org`, as the app does,
+downloads or plays it contacts `modland.com`, `asma.atari.org`, `hvsc.c64.org` and, for song
+metadata the user downloads, `raw.githubusercontent.com`, as the app does,
 and those archives see the same requests described above. The server hosting the page sees the
 requests for the page itself and whatever the app sends to it (above). Clearing the site's data in
 the browser removes everything the page kept.
@@ -195,7 +196,8 @@ przez tego, kto go hostuje — zwykle przez samego użytkownika, na jego własny
 przechowuje swoje playlisty, historię odtwarzania, pobrane indeksy katalogów i ustawienia w pamięci
 tej przeglądarki, na tym urządzeniu. Niczego nie wysyła do twórcy i nie ma analityki, reklam ani
 konta. Dla tego, co użytkownik przegląda, pobiera lub odtwarza, łączy się z `modland.com`,
-`asma.atari.org` i `hvsc.c64.org`, tak jak aplikacja, a te archiwa widzą te same zapytania, co
+`asma.atari.org`, `hvsc.c64.org` oraz — dla pobieranych metadanych utworów —
+`raw.githubusercontent.com`, tak jak aplikacja, a te archiwa widzą te same zapytania, co
 opisane wyżej. Serwer udostępniający stronę widzi zapytania o samą stronę oraz to, co aplikacja do
 niego wysyła (wyżej). Wyczyszczenie danych witryny w przeglądarce usuwa wszystko, co strona
 przechowywała.

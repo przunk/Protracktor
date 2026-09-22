@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
@@ -114,6 +114,26 @@ let endedByClock = false;
  * length is what answers then.
  */
 let openLengths = [];
+
+/**
+ * What songdb says about the tune being opened -- author, publisher, album, year -- or null (W5).
+ * Read with the bytes, before they go to the worklet, and used to fill the gaps in what the tune
+ * says about itself, never to overwrite it (`rules.fillFromSongDb`).
+ */
+let openMetadata = null;
+
+/** Hashes the file only when there is a database to look it up in: no metadata, no hashing. */
+async function songMetadataFor(bytes) {
+  try {
+    if (!(await archive.songMetadataMeta())?.tunes) return null;
+    return await archive.songMetadataFor(new Uint8Array(bytes));
+  } catch {
+    return null;
+  }
+}
+
+/** A tune's fields, completed from songdb where it said nothing. */
+const withSongDb = (fields) => fillFromSongDb(fields, openMetadata, (f) => releaseYear(f) !== '');
 
 /**
  * The stored lengths for a file, if it is one HVSC could know about.
@@ -311,7 +331,7 @@ function onWorklet(message) {
       endedByClock = false;
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
-      const fields = describeFields(message.describe);
+      const fields = withSongDb(describeFields(message.describe));
       dockFields = fields;
       // **Recorded here and only here.** The playlist's plays, Browse's, Random's and History's
       // own replays all arrive at this one message, so there is one recording path rather than one
@@ -395,7 +415,7 @@ function onWorklet(message) {
       currentSubsong = message.index;
       // HVSC times every subsong separately, so switching tune switches length too.
       duration = message.duration > 0 ? message.duration : (openLengths[message.index] ?? 0);
-      const fields = describeFields(message.describe);
+      const fields = withSongDb(describeFields(message.describe));
       if (fields.title) $('title').textContent = fields.title;
       $('sub').textContent = describeLine(fields);
       renderNowPlaying(fields, subsongCount, currentSubsong);
@@ -922,6 +942,7 @@ async function playAt(next) {
   // Only for the three names HVSC could possibly know. Hashing every file would cost a pass over a
   // five-megabyte MP3 to learn that a C64 database has never heard of it.
   openLengths = await songLengthsFor(entry.file ?? entry.name, bytes);
+  openMetadata = await songMetadataFor(bytes);
 
   node.port.postMessage({ type: 'open', bytes, name: entry.file ?? entry.name }, [bytes]);
   setPlaying(false);
@@ -1958,6 +1979,26 @@ async function renderSettings() {
     dd.textContent = 'not downloaded — Browse offers them; until then a SID stops at the length below';
   }
   list.append(dt, dd);
+  // songdb's metadata (W5): what it holds, and a way to let go of it, with the same words.
+  const metadata = await archive.songMetadataMeta();
+  const mdt = document.createElement('dt');
+  mdt.textContent = 'Song metadata (songdb)';
+  const mdd = document.createElement('dd');
+  if (metadata?.tunes) {
+    mdd.append(`${metadata.tunes.toLocaleString()} tunes · `);
+    const forget = document.createElement('button');
+    forget.className = 'plain';
+    forget.innerHTML = `${iconSvg(ICON.remove)}Forget it`;
+    forget.onclick = async () => {
+      await archive.clearSongMetadata();
+      showNote('Song metadata forgotten');
+      await renderSettings();
+    };
+    mdd.append(forget);
+  } else {
+    mdd.textContent = 'not downloaded — Browse offers it; until then a tune shows only what it says itself';
+  }
+  list.append(mdt, mdd);
 
   const { usage, quota } = await estimate();
   row('Stored here', usage
@@ -2477,6 +2518,16 @@ async function renderBrowse() {
       downloadSongLengths,
       ICON.download,
     );
+    // songdb's author, publisher, album and year (W5): the phone's "Song metadata".
+    const metadata = await archive.songMetadataMeta();
+    row(
+      metadata?.tunes
+        ? `Song metadata — ${metadata.tunes.toLocaleString()} tunes`
+        : 'Download song metadata (songdb)',
+      metadata?.tunes ? 'stored here · tap to fetch again' : '14.8 MB · author, album, publisher and year',
+      downloadSongMetadata,
+      ICON.download,
+    );
     return;
   }
 
@@ -2742,11 +2793,15 @@ async function downloadAsmaIndex() {
  * No engine and no format table, unlike the two above: this is keyed on the MD5 of a file, so
  * nothing about it depends on what this build can decode.
  */
-async function downloadSongLengths() {
+/**
+ * Downloads one of the databases the page takes whole, saying how far it has got. [what] names it
+ * in the sentence that ends it, [run] is the archive's download.
+ */
+async function downloadDatabase(what, run) {
   const note = $('browsenote');
   $('browselist').replaceChildren();
   try {
-    const result = await archive.downloadSongLengths({
+    const result = await run({
       onProgress: (p) => {
         if (p.stage === 'fetching' && p.total) {
           note.textContent = `fetching ${(p.done / 1e6).toFixed(1)} of ${(p.total / 1e6).toFixed(1)} MB…`;
@@ -2759,11 +2814,14 @@ async function downloadSongLengths() {
     });
     browsePath = [];
     await renderBrowse();
-    note.textContent = `SID song lengths: ${result.tunes.toLocaleString()} tunes. ${note.textContent}`;
+    note.textContent = `${what}: ${result.tunes.toLocaleString()} tunes. ${note.textContent}`;
   } catch (e) {
-    note.textContent = `the song lengths could not be downloaded: ${e.message}`;
+    note.textContent = `the ${what.toLowerCase()} could not be downloaded: ${e.message}`;
   }
 }
+
+const downloadSongLengths = () => downloadDatabase('SID song lengths', archive.downloadSongLengths);
+const downloadSongMetadata = () => downloadDatabase('Song metadata', archive.downloadSongMetadata);
 
 /**
  * Searching the index.
