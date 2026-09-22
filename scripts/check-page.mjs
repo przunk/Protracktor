@@ -2810,6 +2810,23 @@ if (window.__api) {
     'and when it lands the time comes back, at the new place');
   api.onWorklet({ type: 'position', seconds: 181 });
   check($('elapsed').textContent === '3:01', 'and positions are followed again');
+
+  // Ten clicks while a seek runs: only the last is sent, and only once the running one lands.
+  // A seek of its own first, so one is running when the ten clicks arrive.
+  $('seek').value = 50;
+  $('seek').onchange();
+  const before = window.__toWorklet.length;
+  for (const value of [100, 200, 300, 400, 500, 600, 700, 800, 900, 950]) {
+    $('seek').value = value;
+    $('seek').onchange();
+  }
+  const posted = () => window.__toWorklet.slice(before).filter((m) => m?.type === 'seek').map((m) => m.seconds);
+  check(posted().length === 0, 'ten clicks while a seek runs send nothing yet', JSON.stringify(posted()));
+  api.onWorklet({ type: 'seeked', seconds: 12 });
+  check(posted().length === 1 && Math.abs(posted()[0] - 228) < 0.01,
+    'and when it lands, only the last place asked for is sent', JSON.stringify(posted()));
+  api.onWorklet({ type: 'seeked', seconds: 228 });
+  check($('elapsed').textContent === '3:48', 'which is where it ends up');
 }
 
 // --- the page's source, and what pairing sends (2026-09-22) -------------------------------------

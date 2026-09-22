@@ -197,6 +197,8 @@ void seekByRendering(Backend &backend, double target, int sampleRate) {
     constexpr std::size_t kChunk = 4096;
     static thread_local std::vector<float> discard(kChunk * 2);
     while (backend.positionSeconds() < target) {
+        // A newer seek has been asked for: stop here, and let it start from wherever this got to.
+        if (backend.seekAbandoned && backend.seekAbandoned()) return;
         const double left = (target - backend.positionSeconds()) * sampleRate;
         const std::size_t want = left < kChunk ? static_cast<std::size_t>(left) + 1 : kChunk;
         if (backend.render(sampleRate, want, discard.data()) == 0) break;
