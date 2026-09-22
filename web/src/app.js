@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
@@ -59,7 +59,22 @@ let tuneCanSeek = false;
  * the thumb at the far end while the time counted up beside it -- the phone's `SeekBar` (`bb385c7`).
  */
 function allowSeeking() {
-  $('seek').disabled = !(tuneCanSeek && duration > 0);
+  $('seek').disabled = !(tuneCanSeek && bar().seconds > 0);
+}
+
+/** Where the decoder itself ends a tune whose length is unknown (`ends_at`), or 0. */
+let endsAt = 0;
+
+/**
+ * How far the bar runs: the length, or where playback will stop when nothing knows it, marked
+ * approximate -- the phone's `BarLength` (the owner's variant (a)).
+ */
+const bar = () => barLength({ duration, endsAt, fallback: fallbackSeconds });
+
+/** The number at the bar's end: the length, or `~` and where playback will stop. */
+function barTotal() {
+  const b = bar();
+  return b.approximate ? `~${clock(b.seconds)}` : clockTotal(b.seconds);
 }
 let playing = false;
 let seeking = false;
@@ -342,6 +357,8 @@ function onWorklet(message) {
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
       const fields = withSongDb(describeFields(message.describe));
+      endsAt = Number(fields.ends_at) || 0;
+      allowSeeking();
       dockFields = fields;
       // **Recorded here and only here.** The playlist's plays, Browse's, Random's and History's
       // own replays all arrive at this one message -- History's to be left out by `recordPlay`
@@ -409,10 +426,11 @@ function onWorklet(message) {
     case 'position':
       // Not while a seek is under way: a position sent before it landed would pull the bar back.
       if (!seeking && !seekPending) {
-        $('seek').value = duration > 0 ? Math.round((message.seconds / duration) * 1000) : 0;
+        const range = bar().seconds;
+        $('seek').value = range > 0 ? Math.round((message.seconds / range) * 1000) : 0;
         paint($('seek'));
         $('elapsed').textContent = clock(message.seconds);
-        $('remaining').textContent = clockTotal(duration);
+        $('remaining').textContent = barTotal();
       }
       // **A tune ends when its length says so, whoever supplied the length.**
       //
@@ -437,6 +455,10 @@ function onWorklet(message) {
       currentSubsong = message.index;
       // HVSC times every subsong separately, so switching tune switches length too.
       duration = message.duration > 0 ? message.duration : (openLengths[message.index] ?? 0);
+      {
+        const described = describeFields(message.describe);
+        endsAt = Number(described.ends_at) || 0;
+      }
       allowSeeking();
       const fields = withSongDb(describeFields(message.describe));
       if (fields.title) $('title').textContent = fields.title;
@@ -890,6 +912,7 @@ async function playAt(next) {
   // zeroes it the instant a track is chosen; left alone, the page's bar stays on the last tune's
   // 1:07 through the whole of the next download.
   duration = 0;
+  endsAt = 0;
   openLengths = [];
   // **`endedByClock` is deliberately NOT cleared here**, and clearing it here was a bug that
   // skipped four tracks at a time (`docs/STATUS.md` C59).
@@ -3528,7 +3551,7 @@ $('seek').onchange = () => {
   // **The bar stays where it was let go** until the worklet says the seek has landed, and a seek
   // that takes long enough to be seen waiting shows a spinner in place of the elapsed time -- the
   // phone's `SeekProgress` (Q11). A SID seeks by running its machine there, for seconds.
-  const target = (Number($('seek').value) / 1000) * duration;
+  const target = (Number($('seek').value) / 1000) * bar().seconds;
   // **The latest seek wins** (Q11). The worklet runs a seek to its end before it reads its next
   // message, so a click while one runs is not sent: it is remembered, and only the last one goes
   // when the running one lands. Ten clicks in a second are two seeks, not ten.

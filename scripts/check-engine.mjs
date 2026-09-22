@@ -169,9 +169,12 @@ const malformedSap = (() => {
   const { handle, error } = open(nsf, 'no-length.nsf');
   check('an NSF opens', handle !== 0, `said: ${error}`);
   if (handle) {
+    // Since 2026-09-22 (the owner's variant (a)) a tune that falls silent is measured, so this
+    // silent one has a length of about a second -- where it really ends. What must never come back
+    // is the library's invented 2:30.
     check(
-      'and a file that states no length reports none, rather than the library default of 2:30',
-      M._pt_duration(handle) === 0,
+      'and a file that states no length never reports the library default of 2:30',
+      M._pt_duration(handle) !== 150 && M._pt_duration(handle) < 150,
       `${M._pt_duration(handle)} s`,
     );
     M._pt_close(handle);
@@ -383,6 +386,51 @@ const describeOf = (bytes, name) => {
       `at ${far.toFixed(0)} s after ${((Date.now() - started) / 1000).toFixed(1)} s`);
     M._free(out);
     M._pt_close(h);
+  }
+}
+
+// --- an NSF's length: measured when it falls silent, "where it stops" when it loops ------------------
+//
+// The owner's variant (a), 2026-09-22. NSF states no length. A tune that falls silent is measured by
+// playing a copy of it to its end; one that never does -- game music loops -- keeps no length, and
+// the description says where game-music-emu will stop it (`ends_at`: its 2:30 default plus the fade).
+{
+  const nsf = (code) => {
+    const header = Buffer.alloc(0x80);
+    header.write('NESM\x1a', 0, 'latin1');
+    header[5] = 1; header[6] = 1; header[7] = 1;               // version, songs, starting song
+    header.writeUInt16LE(0x8000, 8);                           // load
+    header.writeUInt16LE(0x8000, 10);                          // init
+    header.writeUInt16LE(0x8020, 12);                          // play
+    header.write('length check', 0x0e, 'latin1');
+    header.writeUInt16LE(16666, 0x6e);                         // NTSC speed, 60 Hz
+    const body = Buffer.alloc(0x40, 0xea);                     // NOPs
+    code.copy(body, 0);
+    body[0x20] = 0x60;                                          // play: RTS
+    return Buffer.concat([header, body]);
+  };
+  // A square wave held on: enable pulse 1, constant volume, halt its length counter, set a period.
+  const tone = nsf(Buffer.from([0xa9, 0x01, 0x8d, 0x15, 0x40, 0xa9, 0xbf, 0x8d, 0x00, 0x40,
+                                0xa9, 0xfd, 0x8d, 0x02, 0x40, 0xa9, 0x00, 0x8d, 0x03, 0x40, 0x60]));
+  const silent = nsf(Buffer.from([0x60]));
+  const lineOf2 = (d, key) => (d.split('\n').find((l) => l.startsWith(`${key}\t`)) ?? '').slice(key.length + 1);
+  const loops = open(tone, 'tone.nsf');
+  check('the looping NSF opens', loops.handle !== 0, loops.error);
+  if (loops.handle) {
+    const d = M.UTF8ToString(M._pt_describe(loops.handle));
+    check('a looping NSF has no length, and says where it will stop',
+      M._pt_duration(loops.handle) === 0 && Math.abs(Number(lineOf2(d, 'ends_at')) - 158) < 0.5,
+      `duration ${M._pt_duration(loops.handle)}, ends_at "${lineOf2(d, 'ends_at')}"`);
+    M._pt_close(loops.handle);
+  }
+  const quiet = open(silent, 'silent.nsf');
+  if (quiet.handle) {
+    const d = M.UTF8ToString(M._pt_describe(quiet.handle));
+    const seconds = M._pt_duration(quiet.handle);
+    check('an NSF that falls silent is measured, and has a length of its own',
+      seconds > 0 && seconds < 150 && !lineOf2(d, 'ends_at'),
+      `duration ${seconds}, ends_at "${lineOf2(d, 'ends_at')}"`);
+    M._pt_close(quiet.handle);
   }
 }
 

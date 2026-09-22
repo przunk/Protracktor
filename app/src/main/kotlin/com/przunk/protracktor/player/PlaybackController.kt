@@ -203,7 +203,20 @@ data class PlayerUiState(
      * again from the start, so offering a slider there would be offering a control that cannot be
      * honoured (docs/ARCHITECTURE.md §5).
      */
-    val seekable: Boolean get() = metadata["seekable"] != "0" && durationSeconds > 0.0
+    /**
+     * How far the seek bar runs: the length, or where playback will stop when nothing knows the
+     * length (`BarLength`, the owner's variant (a)).
+     */
+    val bar: BarLength.Bar
+        get() = if (metadata.isEmpty()) {
+            // Not yet described: nothing is known, not even that the length is unknown. Without
+            // this the bar would flash the fallback for the moment a tune takes to open.
+            BarLength.Bar(0.0, approximate = false)
+        } else {
+            BarLength.of(durationSeconds, metadata["ends_at"]?.toDoubleOrNull(), fallbackLengthSeconds.toDouble())
+        }
+
+    val seekable: Boolean get() = metadata["seekable"] != "0" && current != null && bar.seconds > 0.0
 
     /**
      * The year the tune was released, or empty when nothing in the file says.

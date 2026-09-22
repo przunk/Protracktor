@@ -129,6 +129,10 @@ extern "C" {
 
 #include <atomic>
 #include <mutex>
+#ifndef __EMSCRIPTEN__
+#include <chrono>
+#include <thread>
+#endif
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -738,7 +742,7 @@ public:
         return type && *type;
     }
 
-    explicit GmeBackend(const std::vector<char> &bytes) {
+    explicit GmeBackend(const std::vector<char> &bytes) : bytes_(bytes) {
         if (const gme_err_t err = gme_open_data(bytes.data(), static_cast<long>(bytes.size()),
                                                 &emu_, kSampleRate)) {
             throw std::runtime_error(std::string("the console decoder (game-music-emu) refused it: ") + err);
@@ -757,6 +761,46 @@ public:
         // The fade is applied by `openAtSomethingAudible`, at the end, after the last
         // `gme_start_track` — because that call throws it away. See `applyFade`.
         openAtSomethingAudible();
+#ifdef __EMSCRIPTEN__
+        // No threads in the browser's engine: measured here, before the page asks for the length.
+        measureNow(track_);
+#endif
+    }
+
+    ~GmeBackend() override {
+        stopMeasuring_.store(true, std::memory_order_release);
+#ifndef __EMSCRIPTEN__
+        if (measurer_.joinable()) measurer_.join();
+#endif
+        if (info_) gme_free_info(info_);
+        if (emu_) gme_delete(emu_);
+    }
+
+    /**
+     * Starts finding where a tune that states no length really ends (the owner's variant (a),
+     * 2026-09-22) -- on the phone, off every thread that has a deadline, as UADE's measurement does.
+     *
+     * **Only a tune that falls silent has a length to find.** Game music mostly loops; played on,
+     * such a tune never goes quiet and game-music-emu fades it at its default of 2:30. So the
+     * measurement plays a separate copy of the tune silently up to that default and keeps the time
+     * only if the tune ended before it -- a jingle, a short theme. A tune still playing at 2:30
+     * loops, and stays without a length: the app's bar then runs to where playback will stop
+     * (`ends_at` in `describe`), shown as approximate.
+     */
+    void startedPlaying() override {
+#ifndef __EMSCRIPTEN__
+        wanted_.store(track_, std::memory_order_release);
+        if (!measurer_.joinable() && !known()) {
+            measurer_ = std::thread([this] { measureLoop(); });
+        }
+#endif
+    }
+
+    /** While a measurement may still give this track a length, the host keeps asking for one. */
+    bool durationArrivesLater() const override {
+        if (known()) return false;
+        return measuredTrack_.load(std::memory_order_acquire) != track_
+            || measuredSeconds_.load(std::memory_order_acquire) > 0.0;
     }
 
     /**
@@ -846,10 +890,6 @@ public:
         return false;
     }
 
-    ~GmeBackend() override {
-        if (info_) gme_free_info(info_);
-        if (emu_) gme_delete(emu_);
-    }
 
     std::size_t render(int, std::size_t frames, float *out) override {
         if (!emu_ || gme_track_ended(emu_)) return 0;
@@ -897,6 +937,13 @@ public:
         // early for the long ones, and for a file whose first track states no length, not at all.
         // This path had the order right when the other three did not; it is the same call now.
         applyFade();
+#ifdef __EMSCRIPTEN__
+        measureNow(track_);
+#else
+        // Asked for, not measured here: this runs on the audio thread (a pending subsong is applied
+        // in the callback), and a measurement is up to a few seconds of emulation.
+        wanted_.store(track_, std::memory_order_release);
+#endif
         return true;
     }
     double positionSeconds() const override { return gme_tell(emu_) / 1000.0; }
@@ -926,8 +973,13 @@ public:
      */
     double durationSeconds() const override {
         if (!info_) return 0.0;
-        const bool known = info_->length > 0 || info_->intro_length > 0 || info_->loop_length > 0;
-        if (!known) return 0.0;
+        if (!known()) {
+            // Measured, and found to fall silent: that is a length. Otherwise still nothing.
+            if (measuredTrack_.load(std::memory_order_acquire) == track_) {
+                return measuredSeconds_.load(std::memory_order_acquire);
+            }
+            return 0.0;
+        }
         return info_->play_length > 0 ? info_->play_length / 1000.0 : 0.0;
     }
 
@@ -945,15 +997,81 @@ public:
           // track is an empty slot (`openAtSomethingAudible`), and the playlist row and the subsong
           // strip both have to agree with the audio.
           << "subsong\t" << track_ << '\n'
-          << "seekable\t1" << '\n'
-          << "message\t" << (info_ ? field(info_->comment) : "");
+          << "seekable\t1" << '\n';
+        // **Where playback will stop, when the tune's own length is unknown**: game-music-emu fades
+        // it at `play_length` -- its default of 2:30 -- over `kFadeSeconds`. Not a length, and not
+        // said as one: the app draws the seek bar to it as approximate (the owner's variant (a)).
+        const bool measured = measuredTrack_.load(std::memory_order_acquire) == track_
+            && measuredSeconds_.load(std::memory_order_acquire) > 0.0;
+        if (info_ && !known() && !measured && info_->play_length > 0) {
+            o << "ends_at\t" << (info_->play_length / 1000.0 + kFadeSeconds) << '\n';
+        }
+        o << "message\t" << (info_ ? field(info_->comment) : "");
         return o.str();
     }
 
     int preferredSampleRate() const override { return kSampleRate; }
 
 private:
+    /** Whether the file itself states this track's length (see `durationSeconds`). */
+    bool known() const {
+        return info_ && (info_->length > 0 || info_->intro_length > 0 || info_->loop_length > 0);
+    }
+
+    /**
+     * Plays [index] on a copy of its own, silently, up to game-music-emu's default length, and
+     * answers the time it fell silent -- or 0 when it was still playing there, which is a loop.
+     * Its own `Music_Emu`, so it touches nothing the playing one uses.
+     */
+    double measureNaturalEnd(int index) const {
+        Music_Emu *copy = nullptr;
+        if (gme_open_data(bytes_.data(), static_cast<long>(bytes_.size()), &copy, kSampleRate) || !copy) return 0.0;
+        gme_info_t *about = nullptr;
+        long cap = 150000;
+        if (!gme_track_info(copy, &about, index) && about && about->play_length > 0) cap = about->play_length;
+        if (about) gme_free_info(about);
+        double found = 0.0;
+        if (!gme_start_track(copy, index)) {
+            std::vector<short> scratch(4096 * 2);
+            while (!gme_track_ended(copy) && gme_tell(copy) < cap
+                   && !stopMeasuring_.load(std::memory_order_acquire)) {
+                if (gme_play(copy, static_cast<int>(scratch.size()), scratch.data())) break;
+            }
+            if (gme_track_ended(copy) && gme_tell(copy) < cap) found = gme_tell(copy) / 1000.0;
+        }
+        gme_delete(copy);
+        return found;
+    }
+
+    /** Measures [index] and publishes it: the seconds first, then which track they are for. */
+    void measureNow(int index) {
+        if (known()) return;
+        const double seconds = measureNaturalEnd(index);
+        measuredSeconds_.store(seconds, std::memory_order_release);
+        measuredTrack_.store(index, std::memory_order_release);
+    }
+
+#ifndef __EMSCRIPTEN__
+    /** The phone's measuring thread: measures whichever track is wanted, until the tune closes. */
+    void measureLoop() {
+        int done = -1;
+        while (!stopMeasuring_.load(std::memory_order_acquire)) {
+            const int wanted = wanted_.load(std::memory_order_acquire);
+            if (wanted >= 0 && wanted != done) {
+                done = wanted;
+                const double seconds = measureNaturalEnd(wanted);
+                measuredSeconds_.store(seconds, std::memory_order_release);
+                measuredTrack_.store(wanted, std::memory_order_release);
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(40));
+            }
+        }
+    }
+#endif
+
     static constexpr int kSampleRate = 44100;
+    /** game-music-emu's fade after `play_length`: eight seconds (`gme_set_fade`'s default). */
+    static constexpr double kFadeSeconds = 8.0;
     /** A fifth of a second is plenty to tell music from an empty slot, and cheap to throw away. */
     static constexpr std::size_t kProbeFrames = kSampleRate / 5;
     /**
@@ -972,6 +1090,17 @@ private:
     Music_Emu *emu_ = nullptr;
     gme_info_t *info_ = nullptr;
     std::vector<short> scratch_;
+
+    // The measurement's side (`measureNaturalEnd`): the file, kept for the copy it plays; the track
+    // asked for and the one measured; what was found; the thread, on the phone only.
+    std::vector<char> bytes_;
+    std::atomic<int> wanted_{-1};
+    std::atomic<int> measuredTrack_{-1};
+    std::atomic<double> measuredSeconds_{0.0};
+    std::atomic<bool> stopMeasuring_{false};
+#ifndef __EMSCRIPTEN__
+    std::thread measurer_;
+#endif
 };
 
 /**
