@@ -482,6 +482,12 @@ export async function searchAuthors(query, limit = 100, source = MODLAND) {
 function allTitleShards(source = MODLAND) { return catalogue.byPrefix(`${source}:titles:`); }
 
 export async function meta(source = MODLAND) { return catalogue.get(keyFor(source).meta); }
+
+/**
+ * Deletes a catalogue's whole index -- its meta, formats, authors, tracks and title shards, which all
+ * live under the source's own prefix -- and nothing of any other (W10, the phone's delete).
+ */
+export async function forgetIndex(source) { await catalogue.clear(`${source}:`); }
 export async function formats(source = MODLAND) { return (await catalogue.get(keyFor(source).formats))?.formats ?? []; }
 export async function authors(format, source = MODLAND) {
   return (await catalogue.get(keyFor(source).authors(format)))?.authors ?? [];

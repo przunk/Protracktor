@@ -485,6 +485,10 @@
     overflow-wrap: anywhere;
   }
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
+  /* Storage in this browser (W10): a heading across both columns, and Delete with its mark. */
+  #settingsfields .storagehead { grid-column: 1 / -1; margin-top: 12px; font-weight: 500; color: var(--on-surface); }
+  #settingsfields button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; }
+  #settingsfields button svg { width: 18px; height: 18px; fill: currentColor; }
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
   .np-message { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--surface-variant); }
