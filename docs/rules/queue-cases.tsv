@@ -158,3 +158,13 @@ yes	yes	no	a tune tapped in History, or reached from it with next, leaves Histor
 yes	no	yes	a search result or a folder is recorded as before
 no	yes	yes	the playlist is recorded, whatever list was walked before it
 no	no	yes	the playlist, plainly
+
+# A tune's length as the time display shows it: the phone's formatTotal and the page's clockTotal.
+# Zero, or nothing at all, is not a length -- dashes, never 0:00.
+[lengthTotal]
+seconds	expect	why
+0	--:--	nothing knows the length: dashes, not a tune of no seconds
+-1	--:--	a negative is not a length either
+150	2:30	a known length, minutes and seconds
+59.9	0:59	seconds are not rounded up into a minute that has not passed
+3600	60:00	an hour stays in minutes, as both players have always shown it

@@ -3,13 +3,12 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
-const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
  * Colours the part of a slider's track that is behind its handle.
@@ -51,6 +50,17 @@ let repeat = 'off';               // off -> all -> one
 let history = [];                 // what was really played, for `previous` under shuffle
 let order = [];                   // the permutation `next` walks when shuffle is on
 let duration = 0;
+// Whether the decoder can move to a position at all; `allowSeeking` adds the other half.
+let tuneCanSeek = false;
+
+/**
+ * The bar takes a drag only when there is somewhere to drag to: a decoder that can seek **and** a
+ * length. A position is asked for as a fraction of the length, and with none the bar would put
+ * the thumb at the far end while the time counted up beside it -- the phone's `SeekBar` (`bb385c7`).
+ */
+function allowSeeking() {
+  $('seek').disabled = !(tuneCanSeek && duration > 0);
+}
 let playing = false;
 let seeking = false;
 /**
@@ -355,7 +365,8 @@ function onWorklet(message) {
         status(`${message.rate} Hz` + (subsongCount > 1 ? ` · ${subsongCount} tunes in this file` : ''));
       }
       $('sub').textContent = describeLine(fields);
-      $('seek').disabled = !message.canSeek;
+      tuneCanSeek = !!message.canSeek;
+      allowSeeking();
       $('error').textContent = '';
       // **Open, and silent until the page is touched.** A link opened from another app starts the
       // tune with no click on this page, and a browser keeps the audio suspended until there is one
@@ -390,7 +401,7 @@ function onWorklet(message) {
         $('seek').value = duration > 0 ? Math.round((message.seconds / duration) * 1000) : 0;
         paint($('seek'));
         $('elapsed').textContent = clock(message.seconds);
-        $('remaining').textContent = clock(duration);
+        $('remaining').textContent = clockTotal(duration);
       }
       // **A tune ends when its length says so, whoever supplied the length.**
       //
@@ -415,6 +426,7 @@ function onWorklet(message) {
       currentSubsong = message.index;
       // HVSC times every subsong separately, so switching tune switches length too.
       duration = message.duration > 0 ? message.duration : (openLengths[message.index] ?? 0);
+      allowSeeking();
       const fields = withSongDb(describeFields(message.describe));
       if (fields.title) $('title').textContent = fields.title;
       $('sub').textContent = describeLine(fields);
@@ -871,7 +883,7 @@ async function playAt(next) {
   $('seek').value = 0;
   paint($('seek'));
   $('elapsed').textContent = clock(0);
-  $('remaining').textContent = clock(0);
+  $('remaining').textContent = clockTotal(0);
   nameTheTab(entry);
   $('title').textContent = entry.name;
   $('sub').textContent = 'fetching…';

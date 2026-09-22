@@ -2512,6 +2512,8 @@ if (window.__api) {
   // What History records (A56), the same rows `RuleCasesTest` runs against `HistoryRecording`.
   each('historyRecords', (c) =>
     rules.recordsPlay({ walkingResults: yes(c.walkingResults), fromHistory: yes(c.fromHistory) }) === yes(c.expect));
+  // A length as the time display shows it, the same rows `RuleCasesTest` runs against `formatTotal`.
+  each('lengthTotal', (c) => rules.clockTotal(Number(c.seconds)) === c.expect);
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
