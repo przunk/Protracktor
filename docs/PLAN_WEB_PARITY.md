@@ -97,6 +97,10 @@ still**, the page's equivalent of Android's "Remove animations". The loading lin
 
 ## W4 — Licences and privacy in the page
 
+**Built 2026-09-22 on `feature/web-w4-legal`**: 14 components with 19 licence texts, the policy's
+new section on the page, and the check that fails when the web build links something unlisted.
+Not yet seen in a browser.
+
 **Not optional.** Serving the wasm engine to a browser is conveying it (`docs/PLAN_WEB.md` §9): the
 BSD components (libopenmpt, HivelyTracker, bencodetools…) require their notices to go with the
 binary, and the GPL requires the offer of source. The app does this since 0.7.0; the page does not.

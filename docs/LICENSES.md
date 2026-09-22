@@ -8,6 +8,27 @@ from prior knowledge; each row is confirmed against the actual `COPYING`/`LICENS
 source we vendor, at the moment we vendor it, and this table is corrected then. A row still marked
 *unverified* must not be treated as fact.
 
+## The web page carries notices too — 2026-09-22
+
+*`docs/PLAN_WEB_PARITY.md` W4.* Serving the wasm engine is conveying it, so the page shows what the
+app shows since 0.7.0: **Settings → Open-source licences** and **Settings → Privacy policy**.
+
+One table serves both, `app/notices/components.tsv`, whose last column says which build carries a
+row. The page's engine has no UADE (with bencodetools and libzakalwe) and nothing of Android; it has
+three things the app does not, each with its text committed under `web/notices/`, copied from the
+installed toolchain:
+
+| component | licence | why it is in the page |
+| --- | --- | --- |
+| Emscripten 4.0.14 runtime, with musl libc and libc++ | MIT or NCSA; MIT (musl); Apache-2.0 with LLVM exception (libc++) | compiled into `engine.mjs` and `engine.wasm` |
+| zlib 1.3.1, Emscripten's port | Zlib | `-sUSE_ZLIB=1`, for ZXTune |
+| qrcode-generator 2.0.4 | MIT | `web/lib/qrcode.js`, below |
+
+`scripts/stage-web-legal.mjs` copies the `web` rows' files and the privacy policy beside the engine
+(`web/vendor/`), run by `build-web-engine.sh` and again by `package-web.sh`. `scripts/check-page.mjs`
+fails when the web build -- `native/CMakeLists.txt` under the flags `build-web-engine.sh` sets, plus
+Emscripten, zlib and `web/lib/` -- links something with no `web` row.
+
 ## qrcode-generator 2.0.4 — MIT
 
 *Added 2026-09-08, vendored as `web/lib/qrcode.js` for the page's pairing code.*

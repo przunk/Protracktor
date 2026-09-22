@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
@@ -1841,6 +1841,78 @@ function showingHas(url) {
   return ((random ?? away)?.stash.queue ?? queue).some((t) => t.url === url);
 }
 
+// --- what the page carries, and what it keeps (W4) -----------------------------------------------
+//
+// The files are staged beside the engine by `scripts/stage-web-legal.mjs`: the licence table, the
+// texts its `web` rows name, and the privacy policy. Fetched when asked for, never before.
+
+/** Says, in the sheet, that something the page should carry is not there -- never a blank sheet. */
+function legalMissing(what) {
+  const p = document.createElement('p');
+  p.textContent = `${what} is not beside this page's engine. Run scripts/stage-web-legal.mjs, or build the engine again.`;
+  $('legalbody').replaceChildren(p);
+}
+
+async function renderLicences() {
+  $('legaltitle').textContent = 'Open-source licences';
+  $('legalback').hidden = true;
+  const table = await fetch('../vendor/notices/components.tsv').then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  if (table === null) { legalMissing('The licence table'); return; }
+  const body = $('legalbody');
+  body.replaceChildren();
+  for (const component of parseNotices(table, 'web')) {
+    const row = document.createElement('button');
+    row.className = 'component';
+    row.textContent = component.name;
+    const detail = document.createElement('small');
+    detail.textContent = [component.version, component.licence].filter((s) => s && s !== '—').join(' · ');
+    row.append(detail);
+    row.onclick = () => renderComponent(component);
+    body.append(row);
+  }
+}
+
+/** One component's licence files, as written. Back returns to the list. */
+async function renderComponent(component) {
+  $('legaltitle').textContent = component.name;
+  const back = $('legalback');
+  back.hidden = false;
+  back.onclick = () => renderLicences();
+  const body = $('legalbody');
+  body.replaceChildren();
+  for (const file of component.files) {
+    const text = await fetch(`../vendor/${file}`).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+    const pre = document.createElement('pre');
+    pre.textContent = text ?? `(${file.slice(file.lastIndexOf('/') + 1)} is missing beside the engine)`;
+    body.append(pre);
+  }
+  body.scrollTop = 0;
+}
+
+async function renderPrivacy() {
+  $('legaltitle').textContent = 'Privacy policy';
+  $('legalback').hidden = true;
+  const markdown = await fetch('../vendor/legal/privacy-policy.md').then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  if (markdown === null) { legalMissing('The privacy policy'); return; }
+  const body = $('legalbody');
+  body.replaceChildren();
+  let list = null;
+  for (const block of privacyBlocks(markdown)) {
+    if (block.kind === 'bullet') {
+      if (!list) { list = document.createElement('ul'); body.append(list); }
+      const li = document.createElement('li');
+      li.textContent = block.text;
+      list.append(li);
+      continue;
+    }
+    list = null;
+    const el = document.createElement(block.kind === 'heading' ? 'h3' : 'p');
+    el.textContent = block.text;
+    body.append(el);
+  }
+  body.scrollTop = 0;
+}
+
 /**
  * The page's settings, drawn each time they open, behind the gear left of shuffle. **What is in
  * them is what the page already knew and nobody could read**: which decoders this browser's engine
@@ -2197,6 +2269,7 @@ function showPanel(which) {
   $('playlists').hidden = which !== 'playlists';
   $('addto').hidden = which !== 'addto';
   $('settings').hidden = which !== 'settings';
+  $('legal').hidden = which !== 'legal';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
@@ -2841,6 +2914,8 @@ $('tab-settings').onclick = async () => {
   if (opening) await renderSettings();
   showPanel(opening ? 'settings' : null);
 };
+$('open-notices').onclick = () => renderLicences().then(() => showPanel('legal'));
+$('open-privacy').onclick = () => renderPrivacy().then(() => showPanel('legal'));
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 

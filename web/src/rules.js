@@ -142,3 +142,65 @@ export function searchMatches(query, ...texts) {
   const haystacks = texts.filter((t) => t != null).map((t) => searchable(t));
   return searchTerms(query).every((word) => haystacks.some((text) => text.includes(word)));
 }
+
+/**
+ * The rows of the licence table (`app/notices/components.tsv`) that [build] carries -- `web` for
+ * the page -- the phone's `OpenSourceNotices.parse`, rule for rule: comments and blank lines
+ * skipped, a row short of its six cells refused, and each file named by where the staging puts it,
+ * `notices/<id>/<file name>`.
+ */
+export function parseNotices(text, build = 'web') {
+  const rows = [];
+  for (const line of String(text ?? '').split('\n')) {
+    if (!line.trim() || line.startsWith('#')) continue;
+    const cells = line.split('\t');
+    if (cells.length < 6) continue;
+    const builds = cells[5].split(',').map((b) => b.trim()).filter(Boolean);
+    if (!builds.includes(build)) continue;
+    const id = cells[0].trim();
+    rows.push({
+      id,
+      name: cells[1].trim(),
+      version: cells[2].trim(),
+      licence: cells[3].trim(),
+      files: cells[4].split(',').map((f) => f.trim()).filter(Boolean)
+        .map((f) => `notices/${id}/${f.slice(f.lastIndexOf('/') + 1)}`),
+    });
+  }
+  return rows;
+}
+
+/** Markdown's emphasis, code and angle-bracket links taken off; the words stay. `LegalText.clean`. */
+export function cleanLegal(text) {
+  return String(text).replaceAll('**', '').replaceAll('`', '').replace(/<(https?:\/\/[^>]+)>/g, '$1').trim();
+}
+
+/**
+ * The English section of the privacy policy as blocks -- headings, paragraphs and bullets -- headed
+ * by its effective date: the phone's `LegalText.privacyBlocks` for the language the page speaks.
+ */
+export function privacyBlocks(markdown) {
+  const lines = String(markdown ?? '').split('\n');
+  const dateLine = lines.find((l) => l.startsWith('Effective date:'));
+  const blocks = dateLine ? [{ kind: 'paragraph', text: cleanLegal(dateLine) }] : [];
+  const start = lines.findIndex((l) => l.trim() === '## English');
+  if (start < 0) return blocks;
+  let end = lines.findIndex((l, i) => i > start && l.startsWith('## '));
+  if (end < 0) end = lines.length;
+  let pending = '';
+  let bullet = false;
+  const flush = () => {
+    if (pending) blocks.push({ kind: bullet ? 'bullet' : 'paragraph', text: cleanLegal(pending) });
+    pending = '';
+    bullet = false;
+  };
+  for (const line of lines.slice(start + 1, end)) {
+    const trimmed = line.trim();
+    if (!trimmed) flush();
+    else if (trimmed.startsWith('### ')) { flush(); blocks.push({ kind: 'heading', text: cleanLegal(trimmed.slice(4)) }); }
+    else if (trimmed.startsWith('- ')) { flush(); bullet = true; pending = trimmed.slice(2); }
+    else pending = pending ? `${pending} ${trimmed}` : trimmed;
+  }
+  flush();
+  return blocks;
+}

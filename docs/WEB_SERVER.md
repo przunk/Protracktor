@@ -14,8 +14,9 @@ scripts/build-web-engine.sh     # on the development machine, once
 scripts/package-web.sh          # makes dist/protracktor-web-*.tar.gz
 ```
 
-The archive holds `web/` (the page, the vendored QR encoder, and the built `engine.wasm`),
-`scripts/serve-web.mjs`, this file, and the licence. About 3 MB.
+The archive holds `web/` (the page, the vendored QR encoder, the built `engine.wasm`, and beside it
+the licence texts and the privacy policy the page's Settings show), `scripts/serve-web.mjs`, this
+file, and the licence. About 3 MB.
 
 On the other machine:
 

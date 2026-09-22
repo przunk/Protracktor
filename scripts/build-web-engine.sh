@@ -85,4 +85,8 @@ emcc "$ROOT/native/engine/engine.cpp" "$ROOT/native/engine/player_wasm.cpp" \
     -sEXPORTED_FUNCTIONS=_malloc,_free \
     2>&1 | grep -vE "^$" | head -40
 
+# The notices of what was just linked, and the privacy policy, beside it (W4). Here so a page served
+# straight from web/ -- serve-web.mjs, during development -- shows them too, not only an archive.
+node "$ROOT/scripts/stage-web-legal.mjs"
+
 ls -l "$OUT"/engine.* | awk '{printf "📦 %s  %.2f MB\n", $NF, $5/1e6}'
