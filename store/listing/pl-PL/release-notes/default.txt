@@ -1,7 +1,9 @@
-Formaty autorskie Amigi: TFMX, Hippel, David Whittaker, Sonic Arranger i trzydzieści innych, grane przez emulator UADE. Potrzebują jego procedur odtwarzających, pobieranych osobno w Browse.
+Tytuły z literami diakrytycznymi wyświetlają się poprawnie, czy zapisano je na Amidze, pececie z DOS-em czy C64: koniec ze znakami zapytania w rombach.
 
-Utwory z Amigi pokazują długość i dają się przewijać, także te grające w pętli.
+Wyszukiwanie ignoruje akcenty: „michal” znajduje „Michał”, a „akes lekhorna” znajduje „Åkes lekhörna”.
 
-Pobieranie jest prostsze: katalogi oraz po jednym przycisku na metadane i procedury. Znaczek pokazuje, co jest na telefonie.
+Tytuł za długi na pasek odtwarzacza przewija się powoli, zamiast być ucięty.
 
-Poprawki: widok Random, podutwory po końcu utworu, usuwanie od razu.
+Historia nie zmienia kolejności, gdy grasz z niej utwory.
+
+Utwór z C64 napisany w BASIC-u mówi, dlaczego nie zagra, zamiast grać ciszę.

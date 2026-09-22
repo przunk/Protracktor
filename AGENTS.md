@@ -34,6 +34,22 @@ looks puts them in `develop` as though they had passed something.
 there: those rules stay as written in that file. Say plainly, when he comes back, what was merged
 without his having seen it.
 
+## Documents go straight to `develop`
+
+Stated by the owner on 2026-09-21: *"można dać regułę, że dokumenty aktualizujemy od razu do
+developa"*. **This overrides, for this project, the workspace rule that nobody commits to `develop`
+directly** (`/mnt/workspace/AGENTS.md` §5).
+
+**A change that is only documents is committed on `develop` itself** — a noted defect, a backlog
+item, a plan, an open question, a corrected record. No branch, no merge. Documents waited on
+branches for approval nobody needed to give, and a second branch touching `STATUS.md` then collided
+with the first.
+
+**Except a document describing code that is still on a branch.** That goes on the branch with the
+code: `develop` saying a defect is fixed while the fix waits for the phone is a document that lies
+(`/mnt/workspace/AGENTS.md` §9). Once the branch merges, its record is corrected on `develop` like any
+other document.
+
 ## An action is an icon with a label, not a word
 
 Stated by the owner on 2026-09-03, after asking for the same thing three times in two days: the way

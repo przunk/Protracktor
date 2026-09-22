@@ -1,7 +1,7 @@
 # Status
 
 Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
-songdb, the downloads grouped. versionCode is the commit count, schema version 17
+songdb, the downloads grouped. versionCode is the commit count, schema version 19
 
 ## What works
 
@@ -427,7 +427,68 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
-### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, branch
+### C80. A SID that needs the C64's BASIC ~~plays silence~~ — **found 2026-09-21; the silence FIXED the same day, merged 2026-09-22, confirmed on the phone; playing them still OPEN**
+
+**The small part is done:** the SID backend reads the header's own compatibility field and refuses a
+BASIC tune with *"this tune is a BASIC program and needs the Commodore 64's BASIC ROM, which
+Protracktor does not have"*, which the app shows as the reason the file would not open. Checked on
+the host: `Prelfugueinfmaj_BASIC.sid` is refused with that sentence, and `scripts/check-engine.mjs`
+builds a BASIC RSID and fails if it opens -- it did open, before the change. A folder scan now
+records these files as unplayable. **Playing them is still the ROM decision below.**
+
+
+The owner: `Pace_Wayne/Prelfugueinfmaj_BASIC.sid` "does not play on my phone".
+
+**Why, checked on the host:** it is an **RSID with the BASIC flag set** — the tune is a BASIC
+program, and running it needs the C64's BASIC ROM. The app plays SID without ROMs (by decision, when
+libsidplayfp was integrated), so the engine opens it without complaint and renders **silence**: a peak
+of 0.005 over 50 buffers, where music reaches tenths. **590 of HVSC's 60,572 files in Modland are
+`_BASIC`**, and every one of them will do the same.
+
+Two things, and only the second is small:
+
+1. **Playing them** needs the BASIC ROM, which is the ROM question kept out of scope when
+   libsidplayfp arrived: ship it, ask the user for it, or live without. The owner's decision.
+2. **Silence is a defect meanwhile** (AGENTS.md §7): a tune the engine cannot play must say so, not
+   open and play nothing. The flag is in the file's header, so the refusal can be as specific as
+   "this tune is a BASIC program and needs the C64's BASIC ROM".
+### C79. ~~Accented letters in a title came out as `�`~~ — FIXED 2026-09-21, merged; confirmed on the phone
+
+`Zalza/akes lekhorna.mod` showed **"�kes lekh�rna (za)"**; `docs/BACKLOG.md` A47 noted it.
+
+**The cause written down first was wrong, twice over.** A47 said the title was ISO-8859-1 (`0xC5`,
+`0xF6`) spoiled by `NewStringUTF`. Read from the file, the bytes are **`0x86` and `0x94`: CP437**, a
+DOS machine's "å" and "ö". And the `�` was not made at the JNI boundary at all: **libopenmpt** made
+it, decoding a MOD's text as "Amiga, no C1", which turns every byte from 0x80 to 0x9F into U+FFFD
+before the engine sees the string. The engine was handing out valid UTF-8 with the letters already
+gone. Built to the first reading, the fix would have left this very file as it was.
+
+**The fix is one rule, in two places** (the owner chose it, 2026-09-21): valid UTF-8 stays; text
+holding a byte from 0x80 to 0x9F is CP437; anything else is ISO-8859-1.
+- `native/patches/libopenmpt/0001-read-c1-text-as-cp437.patch`, applied by `fetch-native-deps.sh`,
+  puts it inside libopenmpt for the three "no C1" charsets it uses.
+- `protracktor::fileTextToUtf8` puts it on every line of every other decoder's description, through
+  `describeOf`, the one way a description leaves the engine -- a SID's Latin-1 author reached the
+  phone as raw bytes before.
+- **Migration 18** hands back exactly the rows stored damaged: playlist and history rows get their
+  file name as the title and an empty author, which the background pass and the next play look
+  for; library rows lose their decoder fingerprint, so their folder offers a rescan.
+
+**Not changed:** names inside LHA archives stay raw, because they are what an UnExoticA tune is
+extracted by.
+
+**What it cannot tell apart:** a DOS title with no byte in 0x80–0x9F but with, say, `ñ` or box
+drawing reads as ISO-8859-1; a Windows-1252 apostrophe (`0x92`) in a MOD reads as CP437's `Æ`.
+Both rare.
+
+**Verified:** the reported file through the rebuilt engine now reads `åkes lekhörna (za)` (bytes
+`c3 a5 … c3 b6`). `scripts/check-engine.mjs` builds a MOD and a PSID and checks CP437, ISO-8859-1
+and UTF-8 text through both paths -- three of those checks failed before the change. The migration
+is tested against real SQLite, and failed before the migration existed. **On the owner's phone,
+2026-09-21:** `akes lekhorna.mod` reads `åkes lekhörna`. The migration's handing-back of stored rows
+was not looked at separately.
+
+### C78. ~~The privacy policy could not be scrolled to its end~~ — FIXED 2026-09-21, released in 0.7.0
 
 Found the day the in-app policy was added: it stopped at the first line of "Changes", would not
 scroll further, and ended against the bottom edge — its last lines lay under the navigation bar.

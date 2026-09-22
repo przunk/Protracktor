@@ -98,7 +98,38 @@ export function freshPick({ drawn, seen }) {
  * megabytes. This costs nothing.
  */
 export function searchTerms(query) {
-  return String(query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return foldText(String(query ?? '').trim()).split(/\s+/).filter(Boolean);
+}
+
+// Letters with no combining mark to drop, and what they fold to. The same table as the phone's
+// `SearchTerms.UNDECOMPOSED`; `docs/rules/queue-cases.tsv` holds the two to one answer.
+const UNDECOMPOSED = { 'ł': 'l', 'đ': 'd', 'ø': 'o', 'ß': 'ss', 'æ': 'ae', 'œ': 'oe', 'þ': 'th', 'ħ': 'h', 'ı': 'i' };
+const UNDECOMPOSED_ANY = /[łđøßæœþħı]/g;
+
+/**
+ * Text as search compares it (`docs/BACKLOG.md` A53): lower case, compatibility-decomposed
+ * (NFKD), combining marks dropped, and the letters Unicode does not decompose mapped by hand --
+ * so `michal` finds `Michał` and `akes lekhorna` finds `Åkes lekhörna`. The phone's
+ * `SearchTerms.fold` is the same function.
+ */
+export function foldText(text) {
+  return String(text ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/\p{Mn}/gu, '')
+    .replace(UNDECOMPOSED_ANY, (c) => UNDECOMPOSED[c]);
+}
+
+/**
+ * [text] ready to be searched: folded when it holds anything outside ASCII, merely lower-cased
+ * when it does not. The catalogue search runs this half a million times a keystroke, and nearly
+ * every title is plain ASCII, for which folding and lower-casing are the same thing.
+ */
+// eslint-disable-next-line no-control-regex
+const NON_ASCII = /[^\x00-\x7f]/;
+export function searchable(text) {
+  const s = String(text ?? '');
+  return NON_ASCII.test(s) ? foldText(s) : s.toLowerCase();
 }
 
 /**
@@ -108,6 +139,141 @@ export function searchTerms(query) {
  * other is a hit, so each word is looked for across all of them.
  */
 export function searchMatches(query, ...texts) {
-  const haystacks = texts.filter((t) => t != null).map((t) => String(t).toLowerCase());
+  const haystacks = texts.filter((t) => t != null).map((t) => searchable(t));
   return searchTerms(query).every((word) => haystacks.some((text) => text.includes(word)));
+}
+
+/**
+ * The rows of the licence table (`app/notices/components.tsv`) that [build] carries -- `web` for
+ * the page -- the phone's `OpenSourceNotices.parse`, rule for rule: comments and blank lines
+ * skipped, a row short of its six cells refused, and each file named by where the staging puts it,
+ * `notices/<id>/<file name>`.
+ */
+export function parseNotices(text, build = 'web') {
+  const rows = [];
+  for (const line of String(text ?? '').split('\n')) {
+    if (!line.trim() || line.startsWith('#')) continue;
+    const cells = line.split('\t');
+    if (cells.length < 6) continue;
+    const builds = cells[5].split(',').map((b) => b.trim()).filter(Boolean);
+    if (!builds.includes(build)) continue;
+    const id = cells[0].trim();
+    rows.push({
+      id,
+      name: cells[1].trim(),
+      version: cells[2].trim(),
+      licence: cells[3].trim(),
+      files: cells[4].split(',').map((f) => f.trim()).filter(Boolean)
+        .map((f) => `notices/${id}/${f.slice(f.lastIndexOf('/') + 1)}`),
+    });
+  }
+  return rows;
+}
+
+/** Markdown's emphasis, code and angle-bracket links taken off; the words stay. `LegalText.clean`. */
+export function cleanLegal(text) {
+  return String(text).replaceAll('**', '').replaceAll('`', '').replace(/<(https?:\/\/[^>]+)>/g, '$1').trim();
+}
+
+/**
+ * The English section of the privacy policy as blocks -- headings, paragraphs and bullets -- headed
+ * by its effective date: the phone's `LegalText.privacyBlocks` for the language the page speaks.
+ */
+export function privacyBlocks(markdown) {
+  const lines = String(markdown ?? '').split('\n');
+  const dateLine = lines.find((l) => l.startsWith('Effective date:'));
+  const blocks = dateLine ? [{ kind: 'paragraph', text: cleanLegal(dateLine) }] : [];
+  const start = lines.findIndex((l) => l.trim() === '## English');
+  if (start < 0) return blocks;
+  let end = lines.findIndex((l, i) => i > start && l.startsWith('## '));
+  if (end < 0) end = lines.length;
+  let pending = '';
+  let bullet = false;
+  const flush = () => {
+    if (pending) blocks.push({ kind: bullet ? 'bullet' : 'paragraph', text: cleanLegal(pending) });
+    pending = '';
+    bullet = false;
+  };
+  for (const line of lines.slice(start + 1, end)) {
+    const trimmed = line.trim();
+    if (!trimmed) flush();
+    else if (trimmed.startsWith('### ')) { flush(); blocks.push({ kind: 'heading', text: cleanLegal(trimmed.slice(4)) }); }
+    else if (trimmed.startsWith('- ')) { flush(); bullet = true; pending = trimmed.slice(2); }
+    else pending = pending ? `${pending} ${trimmed}` : trimmed;
+  }
+  flush();
+  return blocks;
+}
+
+/**
+ * A tune's own fields with the gaps filled from songdb (W5) -- the phone's `merged`: songdb **fills
+ * and never overwrites**, because what a tune says about itself is not a guess and a database row
+ * can be stale or wrong. The year needs its own test for "the file said nothing": sc68 writes `0`
+ * or `unknown` when it does not know, which is not blank, so [hasYear] -- the page's `releaseYear`
+ * -- decides whether the file named one.
+ */
+export function fillFromSongDb(fields, found, hasYear) {
+  if (!found) return fields;
+  const out = { ...fields };
+  const fill = (key, value) => { if (value && !String(out[key] ?? '').trim()) out[key] = value; };
+  fill('artist', found.author);
+  fill('album', found.album);
+  fill('publisher', found.publisher);
+  if (found.year && !hasYear(out)) out.year = found.year;
+  return out;
+}
+
+/**
+ * Whether a play goes into History (`docs/BACKLOG.md` A56) -- the phone's `HistoryRecording.records`.
+ *
+ * A play History itself started, and the tunes walked after it with next or at a tune's end, leaves
+ * its entry alone: no new time, no new place. History says what was played elsewhere, and does not
+ * rearrange itself under the person reading it.
+ */
+export function recordsPlay({ walkingResults, fromHistory }) {
+  return !(walkingResults && fromHistory);
+}
+
+/** A position as minutes and seconds. An elapsed zero is a real zero: `0:00`. */
+export function clock(seconds) {
+  if (!(seconds >= 0)) return '--:--';
+  const total = Math.floor(seconds);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * A tune's length, or dashes when nothing knows it -- the phone's `formatTotal` (`bb385c7`).
+ *
+ * **Zero is not a length**, and `0:00` where a total belongs says the tune is over before it
+ * starts. Formats with nowhere to record a length are ordinary -- an NSF, an AY, a SID HVSC does not
+ * know -- so this is the common case, not the odd one.
+ */
+export function clockTotal(seconds) {
+  return seconds > 0 ? clock(seconds) : '--:--';
+}
+
+/**
+ * Whether a line of the now-playing card may scroll when it does not fit (`docs/BACKLOG.md` A54)
+ * -- the phone's `DockMarquee.scrolls`. Not when motion is turned down (the OS's reduced motion,
+ * the page's equivalent of Android's "Remove animations"), and never for a status line such as
+ * "fetching…", which says one thing and is gone before a pass could finish.
+ */
+export function lineScrolls({ animationsOn, isStatus }) {
+  return animationsOn && !isStatus;
+}
+
+/** About the speed of reading a line without chasing it, in CSS pixels a second, as on the phone. */
+export const LINE_SCROLL_VELOCITY = 30;
+/** Held still at the start before each pass, so the beginning can be read. */
+export const LINE_SCROLL_PAUSE_MS = 2000;
+
+/**
+ * One pass of a scrolling line: how long, and what share of it is the pause at the start. Null when
+ * the text fits and nothing should move.
+ */
+export function lineScrollPass(overflowPx) {
+  if (!(overflowPx > 0)) return null;
+  const moving = (overflowPx / LINE_SCROLL_VELOCITY) * 1000;
+  const duration = LINE_SCROLL_PAUSE_MS + moving;
+  return { distance: overflowPx, duration, pauseShare: LINE_SCROLL_PAUSE_MS / duration };
 }

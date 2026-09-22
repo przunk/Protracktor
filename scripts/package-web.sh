@@ -13,6 +13,11 @@ cd "$(dirname "$0")/.."
 
 [[ -f web/vendor/engine.wasm ]] || { echo "❌ no engine. Run scripts/build-web-engine.sh first"; exit 1; }
 
+# Staged again rather than trusted: the table or the policy may have changed since the engine was
+# built, and an archive must not go out naming components it does not carry, or without notices it
+# owes (docs/PLAN_WEB_PARITY.md W4).
+node scripts/stage-web-legal.mjs
+
 OUT="dist/protracktor-web-$(date +%Y%m%d-%H%M%S).tar.gz"
 mkdir -p dist
 STAGE="$(mktemp -d)"

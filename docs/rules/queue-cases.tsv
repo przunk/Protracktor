@@ -139,3 +139,42 @@ spaceninja	space_ninja.mod	-	no	the direction this deliberately does not cover; 
 4-mat space	space.mod	4-Mat	yes	one word from the title and one from the author is a hit
 4-mat space	ninja.mod	4-Mat	no	the author alone is not enough
 	anything.mod	-	yes	a blank query means everything, which is how a platform scope is asked for
+michal	-	Michał Kowalski	yes	A53: an accent in the text does not stop a plain query
+michał	michal.mod	-	yes	and an accent in the query does not stop a plain text
+akes lekhorna	Åkes lekhörna (za)	-	yes	the Swedish title A47 made readable, found without its letters
+dzwiek	dźwięk.xm	-	yes	marks on more than one letter
+ŁÓDŹ	lodz.mod	-	yes	capitals with accents fold like small ones
+strasse	Straße	-	yes	ß becomes ss, which no decomposition does
+nerual	Ｎerual Ｔtoille.mdx	-	yes	fullwidth letters, which Modland holds, fold to plain ones
+michal	michel.mod	-	no	folding removes marks, it does not make different letters equal
+
+# Whether a play goes into History (A56): the phone's HistoryRecording.records and the page's
+# rules.recordsPlay. A play History itself started -- and the tunes walked after it -- leaves its
+# entry alone; everything else is recorded. `fromHistory` without a list being walked is a flag that
+# outlived its list, and must not stop the playlist being recorded.
+[historyRecords]
+walkingResults	fromHistory	expect	why
+yes	yes	no	a tune tapped in History, or reached from it with next, leaves History alone
+yes	no	yes	a search result or a folder is recorded as before
+no	yes	yes	the playlist is recorded, whatever list was walked before it
+no	no	yes	the playlist, plainly
+
+# A tune's length as the time display shows it: the phone's formatTotal and the page's clockTotal.
+# Zero, or nothing at all, is not a length -- dashes, never 0:00.
+[lengthTotal]
+seconds	expect	why
+0	--:--	nothing knows the length: dashes, not a tune of no seconds
+-1	--:--	a negative is not a length either
+150	2:30	a known length, minutes and seconds
+59.9	0:59	seconds are not rounded up into a minute that has not passed
+3600	60:00	an hour stays in minutes, as both players have always shown it
+
+# Whether a now-playing line that does not fit may scroll (A54): the phone's DockMarquee.scrolls and
+# the page's lineScrolls. Motion turned down in the system keeps everything still; a status line
+# never moves.
+[lineScrolls]
+animationsOn	isStatus	expect	why
+yes	no	yes	a title that does not fit scrolls
+no	no	no	nothing moves with the system's animations off
+yes	yes	no	the loading line never scrolls
+no	yes	no	and certainly not with animations off

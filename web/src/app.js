@@ -3,13 +3,12 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
-const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
  * Colours the part of a slider's track that is behind its handle.
@@ -51,6 +50,17 @@ let repeat = 'off';               // off -> all -> one
 let history = [];                 // what was really played, for `previous` under shuffle
 let order = [];                   // the permutation `next` walks when shuffle is on
 let duration = 0;
+// Whether the decoder can move to a position at all; `allowSeeking` adds the other half.
+let tuneCanSeek = false;
+
+/**
+ * The bar takes a drag only when there is somewhere to drag to: a decoder that can seek **and** a
+ * length. A position is asked for as a fraction of the length, and with none the bar would put
+ * the thumb at the far end while the time counted up beside it -- the phone's `SeekBar` (`bb385c7`).
+ */
+function allowSeeking() {
+  $('seek').disabled = !(tuneCanSeek && duration > 0);
+}
 let playing = false;
 let seeking = false;
 /**
@@ -114,6 +124,26 @@ let endedByClock = false;
  * length is what answers then.
  */
 let openLengths = [];
+
+/**
+ * What songdb says about the tune being opened -- author, publisher, album, year -- or null (W5).
+ * Read with the bytes, before they go to the worklet, and used to fill the gaps in what the tune
+ * says about itself, never to overwrite it (`rules.fillFromSongDb`).
+ */
+let openMetadata = null;
+
+/** Hashes the file only when there is a database to look it up in: no metadata, no hashing. */
+async function songMetadataFor(bytes) {
+  try {
+    if (!(await archive.songMetadataMeta())?.tunes) return null;
+    return await archive.songMetadataFor(new Uint8Array(bytes));
+  } catch {
+    return null;
+  }
+}
+
+/** A tune's fields, completed from songdb where it said nothing. */
+const withSongDb = (fields) => fillFromSongDb(fields, openMetadata, (f) => releaseYear(f) !== '');
 
 /**
  * The stored lengths for a file, if it is one HVSC could know about.
@@ -311,11 +341,11 @@ function onWorklet(message) {
       endedByClock = false;
       subsongCount = message.subsongs ?? 1;
       currentSubsong = message.current ?? 0;
-      const fields = describeFields(message.describe);
+      const fields = withSongDb(describeFields(message.describe));
       dockFields = fields;
       // **Recorded here and only here.** The playlist's plays, Browse's, Random's and History's
-      // own replays all arrive at this one message, so there is one recording path rather than one
-      // per list -- and it is after the engine opened the file, so what
+      // own replays all arrive at this one message -- History's to be left out by `recordPlay`
+      // (A56) -- so there is one recording path rather than one per list -- and it is after the engine opened the file, so what
       // is recorded is a tune that played, under the name it gives itself.
       recordPlay(queue[index], fields);
       if (random) random.failures = 0;
@@ -335,7 +365,8 @@ function onWorklet(message) {
         status(`${message.rate} Hz` + (subsongCount > 1 ? ` · ${subsongCount} tunes in this file` : ''));
       }
       $('sub').textContent = describeLine(fields);
-      $('seek').disabled = !message.canSeek;
+      tuneCanSeek = !!message.canSeek;
+      allowSeeking();
       $('error').textContent = '';
       // **Open, and silent until the page is touched.** A link opened from another app starts the
       // tune with no click on this page, and a browser keeps the audio suspended until there is one
@@ -370,7 +401,7 @@ function onWorklet(message) {
         $('seek').value = duration > 0 ? Math.round((message.seconds / duration) * 1000) : 0;
         paint($('seek'));
         $('elapsed').textContent = clock(message.seconds);
-        $('remaining').textContent = clock(duration);
+        $('remaining').textContent = clockTotal(duration);
       }
       // **A tune ends when its length says so, whoever supplied the length.**
       //
@@ -395,7 +426,8 @@ function onWorklet(message) {
       currentSubsong = message.index;
       // HVSC times every subsong separately, so switching tune switches length too.
       duration = message.duration > 0 ? message.duration : (openLengths[message.index] ?? 0);
-      const fields = describeFields(message.describe);
+      allowSeeking();
+      const fields = withSongDb(describeFields(message.describe));
       if (fields.title) $('title').textContent = fields.title;
       $('sub').textContent = describeLine(fields);
       renderNowPlaying(fields, subsongCount, currentSubsong);
@@ -603,12 +635,22 @@ function authorFolderOf(entry) {
 }
 
 /** Opens Browse on that folder: what else this author left in the archive. */
+/**
+ * Where a jump put Browse, while Browse is still there (W9). **A jump is a place you were put, not
+ * one you walked to**: More from this author lands three levels deep without passing through them,
+ * so the first Back leaves Browse for where you were, rather than climbing a hierarchy you never
+ * climbed into -- the phone's `arrivedByJump`. Any other Back, or walking elsewhere, ends it.
+ */
+let jumpedTo = null;
+const arrivedByJump = () => !!jumpedTo && jumpedTo.join('\u0000') === browsePath.join('\u0000');
+
 async function showAuthorFolder(entry) {
   const folder = authorFolderOf(entry);
   if (!folder) return;
   const digressing = !!random;
   $('browsesearch').value = '';
   browsePath = folder;
+  jumpedTo = folder.slice();
   showPanel('browse');
   // **The dice stands aside as the folder opens, not when something in it is played**
   // (`docs/SPEC_RANDOM.md` §3). Doing it when something is played instead lets next roll another
@@ -851,7 +893,7 @@ async function playAt(next) {
   $('seek').value = 0;
   paint($('seek'));
   $('elapsed').textContent = clock(0);
-  $('remaining').textContent = clock(0);
+  $('remaining').textContent = clockTotal(0);
   nameTheTab(entry);
   $('title').textContent = entry.name;
   $('sub').textContent = 'fetching…';
@@ -922,6 +964,7 @@ async function playAt(next) {
   // Only for the three names HVSC could possibly know. Hashing every file would cost a pass over a
   // five-megabyte MP3 to learn that a C64 database has never heard of it.
   openLengths = await songLengthsFor(entry.file ?? entry.name, bytes);
+  openMetadata = await songMetadataFor(bytes);
 
   node.port.postMessage({ type: 'open', bytes, name: entry.file ?? entry.name }, [bytes]);
   setPlaying(false);
@@ -1062,7 +1105,40 @@ function setPlaying(on) {
  * `primary`; both are reproduced here. The drag handle, the selection mode and the overflow menu
  * are phone-only and deliberately absent.
  */
+/**
+ * The empty playlist's offer (W11), the phone's `EmptyPlaylist`: **nothing is said until it is known
+ * what is held**, then Browse when a catalogue is here and the download when none is. Asked again
+ * whenever the list or the panels change; a later ask supersedes an earlier one still reading.
+ */
+let emptyAsked = 0;
+async function renderEmpty() {
+  const asked = ++emptyAsked;
+  const box = $('emptyplaylist');
+  const showing = () => !queue.length && !random && !away;
+  if (!showing()) { box.hidden = true; return; }
+  let held = false;
+  try {
+    const [modland, asma] = await Promise.all([archive.meta('modland'), archive.meta('asma')]);
+    held = !!(modland?.tracks || asma?.tracks);
+  } catch { /* nothing readable is nothing held */ }
+  if (asked !== emptyAsked || !showing()) { if (!showing()) box.hidden = true; return; }
+  $('emptybody').textContent = held
+    ? 'Browse the catalogues this browser holds, send tunes from your phone with the pairing code, '
+      + 'or paste some links.'
+    : 'Nothing to browse yet. Download a catalogue and half a million tracks are yours to look '
+      + 'through, offline — or send tunes from your phone with the pairing code.';
+  const action = $('emptyaction');
+  action.innerHTML = iconSvg(held ? ICON.cloud : ICON.download) + (held ? 'Browse' : 'Get some music to browse');
+  action.onclick = async () => {
+    browsePath = [];
+    showPanel('browse');
+    await renderBrowse();
+  };
+  box.hidden = false;
+}
+
 function render() {
+  renderEmpty();
   const list = $('queue');
   // Browse's Add buttons say whether a tune is in this list, and this is where the list changed.
   for (const row of $('browselist').children) row.repaintAdd?.();
@@ -1625,6 +1701,10 @@ const ICON = {
   more: 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
   check: 'M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
   download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+  // A tick in a disc: this set is here. The phone's `Downloaded`.
+  downloaded: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM10 17l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+  // Fetch again what is already here. The phone's `Refresh`.
+  refresh: 'M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z',
   cloud: 'M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z',
   // Hollow shapes on the phone, so they need the even-odd rule to keep their holes.
   dice: { d: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v14h14V5H5zM7.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 8.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM10.7 12a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM7.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0zM14.2 15.5a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0-2.6 0z', hollow: true },
@@ -1841,6 +1921,78 @@ function showingHas(url) {
   return ((random ?? away)?.stash.queue ?? queue).some((t) => t.url === url);
 }
 
+// --- what the page carries, and what it keeps (W4) -----------------------------------------------
+//
+// The files are staged beside the engine by `scripts/stage-web-legal.mjs`: the licence table, the
+// texts its `web` rows name, and the privacy policy. Fetched when asked for, never before.
+
+/** Says, in the sheet, that something the page should carry is not there -- never a blank sheet. */
+function legalMissing(what) {
+  const p = document.createElement('p');
+  p.textContent = `${what} is not beside this page's engine. Run scripts/stage-web-legal.mjs, or build the engine again.`;
+  $('legalbody').replaceChildren(p);
+}
+
+async function renderLicences() {
+  $('legaltitle').textContent = 'Open-source licences';
+  $('legalback').hidden = true;
+  const table = await fetch('../vendor/notices/components.tsv').then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  if (table === null) { legalMissing('The licence table'); return; }
+  const body = $('legalbody');
+  body.replaceChildren();
+  for (const component of parseNotices(table, 'web')) {
+    const row = document.createElement('button');
+    row.className = 'component';
+    row.textContent = component.name;
+    const detail = document.createElement('small');
+    detail.textContent = [component.version, component.licence].filter((s) => s && s !== '—').join(' · ');
+    row.append(detail);
+    row.onclick = () => renderComponent(component);
+    body.append(row);
+  }
+}
+
+/** One component's licence files, as written. Back returns to the list. */
+async function renderComponent(component) {
+  $('legaltitle').textContent = component.name;
+  const back = $('legalback');
+  back.hidden = false;
+  back.onclick = () => renderLicences();
+  const body = $('legalbody');
+  body.replaceChildren();
+  for (const file of component.files) {
+    const text = await fetch(`../vendor/${file}`).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+    const pre = document.createElement('pre');
+    pre.textContent = text ?? `(${file.slice(file.lastIndexOf('/') + 1)} is missing beside the engine)`;
+    body.append(pre);
+  }
+  body.scrollTop = 0;
+}
+
+async function renderPrivacy() {
+  $('legaltitle').textContent = 'Privacy policy';
+  $('legalback').hidden = true;
+  const markdown = await fetch('../vendor/legal/privacy-policy.md').then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  if (markdown === null) { legalMissing('The privacy policy'); return; }
+  const body = $('legalbody');
+  body.replaceChildren();
+  let list = null;
+  for (const block of privacyBlocks(markdown)) {
+    if (block.kind === 'bullet') {
+      if (!list) { list = document.createElement('ul'); body.append(list); }
+      const li = document.createElement('li');
+      li.textContent = block.text;
+      list.append(li);
+      continue;
+    }
+    list = null;
+    const el = document.createElement(block.kind === 'heading' ? 'h3' : 'p');
+    el.textContent = block.text;
+    body.append(el);
+  }
+  body.scrollTop = 0;
+}
+
 /**
  * The page's settings, drawn each time they open, behind the gear left of shuffle. **What is in
  * them is what the page already knew and nobody could read**: which decoders this browser's engine
@@ -1858,34 +2010,60 @@ async function renderSettings() {
     list.append(dt, dd);
   };
   row('Decoders in this build', engineFingerprint || 'the engine has not started yet');
+  // **Storage in this browser** (W10), the phone's storage section: each download, what it holds,
+  // and a way to let go of it -- nothing downloaded here is undeletable, and saying how much there
+  // is without saying how to be rid of it is half an answer. Asked before, because each can be
+  // fetched again but not in a moment; answered at the press, and said once (C76, C77).
+  const heading = document.createElement('dt');
+  heading.className = 'storagehead';
+  heading.textContent = 'Storage in this browser';
+  list.append(heading);
+  const INDEX_GONE = 'It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or '
+    + 'searched, and its tunes will not play.';
+  const sets = [];
   for (const source of archive.sources()) {
     const held = await archive.meta(source);
-    row(archive.sourceName(source), held?.tracks
-      ? `${held.tracks.toLocaleString()} tunes indexed in this browser`
-      : 'not indexed here yet — Browse offers the download');
+    sets.push({
+      label: `${archive.sourceName(source)} index`,
+      held: held?.tracks ? `${held.tracks.toLocaleString()} tunes` : null,
+      absent: 'not downloaded — Browse offers it',
+      consequence: INDEX_GONE,
+      remove: () => archive.forgetIndex(source),
+    });
   }
-  // **What is held, and a way to let go of it.** The phone's storage section is the model: nothing
-  // downloaded here is undeletable, and saying how much there is without saying how to be rid of it
-  // is half an answer.
   const lengths = await archive.songLengthsMeta();
-  const dt = document.createElement('dt');
-  dt.textContent = 'SID song lengths (HVSC)';
-  const dd = document.createElement('dd');
-  if (lengths?.tunes) {
-    dd.append(`${lengths.tunes.toLocaleString()} tunes · `);
-    const forget = document.createElement('button');
-    forget.className = 'plain';
-    forget.textContent = 'Forget them';
-    forget.onclick = async () => {
-      await archive.clearSongLengths();
-      showNote('SID song lengths forgotten');
-      await renderSettings();
-    };
-    dd.append(forget);
-  } else {
-    dd.textContent = 'not downloaded — Browse offers them; until then a SID stops at the length below';
+  const metadata = await archive.songMetadataMeta();
+  const songTunes = (lengths?.tunes ?? 0) + (metadata?.tunes ?? 0);
+  sets.push({
+    label: 'Song metadata',
+    held: songTunes ? `${songTunes.toLocaleString()} tunes` : null,
+    absent: 'not downloaded — Browse offers it; until then a SID stops at the length below',
+    consequence: 'It can be downloaded again from Browse. Until then tunes show no length, author or '
+      + 'year unless the file itself says.',
+    remove: async () => { await archive.clearSongLengths(); await archive.clearSongMetadata(); },
+  });
+  for (const set of sets) {
+    const dt = document.createElement('dt');
+    dt.textContent = set.label;
+    const dd = document.createElement('dd');
+    if (set.held) {
+      dd.append(`${set.held} · `);
+      const remove = document.createElement('button');
+      remove.className = 'plain';
+      remove.innerHTML = `${iconSvg(ICON.remove)}Delete`;
+      remove.onclick = async () => {
+        if (!confirm(`Delete the ${set.label}?\n\n${set.consequence}`)) return;
+        dd.textContent = 'deleting…';
+        await set.remove();
+        showNote(`${set.label} deleted`);
+        await renderSettings();
+      };
+      dd.append(remove);
+    } else {
+      dd.textContent = set.absent;
+    }
+    list.append(dt, dd);
   }
-  list.append(dt, dd);
 
   const { usage, quota } = await estimate();
   row('Stored here', usage
@@ -1975,6 +2153,8 @@ function removeRandomAt(at) {
  */
 function recordPlay(entry, fields) {
   if (!entry?.url) return;
+  // A play History itself started leaves History as it is (A56, `rules.recordsPlay`).
+  if (!recordsPlay({ walkingResults: away !== null, fromHistory: away?.kind === 'history' })) return;
   played.record({
     url: entry.url,
     name: fields.title || entry.name,
@@ -2197,11 +2377,14 @@ function showPanel(which) {
   $('playlists').hidden = which !== 'playlists';
   $('addto').hidden = which !== 'addto';
   $('settings').hidden = which !== 'settings';
+  $('legal').hidden = which !== 'legal';
   $('nowplaying').hidden = which !== 'nowplaying';
   $('expand').style.transform = which === 'nowplaying' ? 'rotate(180deg)' : '';
   $('tab-pair').setAttribute('aria-pressed', String(which === 'pair'));
   $('tab-paste').setAttribute('aria-pressed', String(which === 'paste'));
   if (which === 'paste') $('urls').focus();
+  // Back to the list: a download made meanwhile may have changed what the empty list offers.
+  if (!which) renderEmpty();
 }
 /**
  * The playlist sheet: what there is, which one is showing, and what may be done to it.
@@ -2358,52 +2541,43 @@ async function renderBrowse() {
     li.onclick = onclick;
     list.append(li);
   };
+  // A row of the root: its name over one line of what it is, as the phone's DomainRow.
+  const domainRow = (name, detail, onclick, icon) => {
+    const li = document.createElement('li');
+    li.className = 'bdomain';
+    const text = document.createElement('div');
+    text.className = 'btext';
+    const label = document.createElement('div');
+    label.className = 'bname';
+    label.textContent = name;
+    const meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = detail;
+    text.append(label, meta);
+    li.append(text);
+    li.insertAdjacentHTML('afterbegin', iconSvg(icon));
+    li.onclick = onclick;
+    list.append(li);
+  };
 
   if (browsePath.length === 0) {
+    // **The phone's Browse** (W8): where the music is, then the two ways through it that are not
+    // places -- the dice and the record of what played -- then search. No local folders: a browser
+    // cannot list a phone's storage, and the page's ways in for those are the pairing code and
+    // pasted links.
     $('browsetitle').textContent = 'Browse';
-    const held = await archive.meta('modland');
-    const asma = await archive.meta('asma');
-    // **Offered, not assumed**, each of them: somebody else's server, on a page that until now cost
-    // nothing to open. An index is filtered by the list and the decoders it was built with, so one
-    // built by another set holds the wrong rows and looks current -- the phone learnt this by
-    // losing 60,572 C64 tunes -- and the sentence about that is Modland's, whose filter it is.
-    note.textContent = [
-      held?.tracks ? await staleSentence(held) : '',
-      held?.tracks ? holding(held)
-        : 'Modland is half a million tunes. The index is a 5.76 MB download, kept in this browser, '
-          + 'and browsing is then offline.',
-      asma?.tracks ? ''
-        : 'ASMA is 6,335 Atari 8-bit tunes. Its list is a 0.85 MB download, and each tune is fetched '
-          + 'from ASMA when it plays.',
-    ].filter(Boolean).join(' ');
-    if (held?.tracks || asma?.tracks) row('Random', null, enterRandomFromBrowse, ICON.dice);
-    row('History', null, openHistory, ICON.history);
-    if (held?.tracks) {
-      row(`Modland — ${held.tracks.toLocaleString()} tracks`, held.formats, async () => {
-        browsePath = ['modland'];
-        await renderBrowse();
-      }, ICON.cloud);
-    }
-    if (asma?.tracks) {
-      row(`ASMA — ${asma.tracks.toLocaleString()} tunes`, asma.formats, async () => {
-        browsePath = ['asma'];
-        await renderBrowse();
-      }, ICON.cloud);
-    }
-    row(held?.tracks ? 'Download the index again' : 'Download the Modland index', null, downloadIndex, ICON.download);
-    row(asma?.tracks ? 'Download the ASMA list again' : 'Download the ASMA list', null, downloadAsmaIndex, ICON.download);
-    // **Not an index of tunes, and it sits with them anyway**, because this is the screen for
-    // "fetch the thing that makes the rest work", which is what it is. A SID carries no
-    // length; without this one plays until the fallback in Settings stops it.
-    const lengths = await archive.songLengthsMeta();
-    row(
-      lengths?.tunes
-        ? `SID song lengths — ${lengths.tunes.toLocaleString()} tunes`
-        : 'Download SID song lengths (HVSC)',
-      lengths?.tunes ? 'stored here · tap to fetch again' : '5.2 MB, from HVSC',
-      downloadSongLengths,
-      ICON.download,
-    );
+    domainRow('Online catalogues', 'Browse the archives — indexed once, then browsable offline', async () => {
+      browsePath = ['catalogues'];
+      await renderBrowse();
+    }, ICON.cloud);
+    domainRow('Random', 'Play something from the indexed catalogues', enterRandomFromBrowse, ICON.dice);
+    domainRow('History', 'Tunes you have played, most recent first', openHistory, ICON.history);
+    domainRow('Search', 'Across the catalogues this browser holds', () => $('browsesearch').focus(), ICON.search);
+    return;
+  }
+
+  if (browsePath[0] === 'catalogues') {
+    await renderCatalogues(list, note);
     return;
   }
 
@@ -2601,7 +2775,7 @@ function holding({ tracks, total, complete } = {}) {
 
 async function downloadIndex() {
   const note = $('browsenote');
-  $('browselist').replaceChildren();
+  await downloadStarted('modland');
   try {
     // Which formats to keep depends on which decoders this engine has, and only the engine can say.
     // Started here if nothing has played yet -- this is a click, so a browser allows the audio.
@@ -2623,10 +2797,10 @@ async function downloadIndex() {
           : `${p.stage}…`;
       },
     });
+    await downloadEnded('modland');
     note.textContent = `${result.formats} formats. ${holding(result)}`;
-    browsePath = [];
-    await renderBrowse();
   } catch (e) {
+    await downloadEnded('modland');
     note.textContent = `the index could not be downloaded: ${e.message}`;
   }
 }
@@ -2634,7 +2808,7 @@ async function downloadIndex() {
 /** Browse → Download the ASMA list: 0.85 MB of the archive's own directory (`archive.downloadAsma`). */
 async function downloadAsmaIndex() {
   const note = $('browsenote');
-  $('browselist').replaceChildren();
+  await downloadStarted('asma');
   try {
     if (!engineReady) {
       note.textContent = 'starting the engine, to ask which formats this browser can play…';
@@ -2651,10 +2825,10 @@ async function downloadAsmaIndex() {
           : `${p.stage}…`;
       },
     });
-    browsePath = [];
-    await renderBrowse();
-    note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections. ${note.textContent}`;
+    await downloadEnded('asma');
+    note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections.`;
   } catch (e) {
+    await downloadEnded('asma');
     note.textContent = `the ASMA list could not be downloaded: ${e.message}`;
   }
 }
@@ -2669,11 +2843,14 @@ async function downloadAsmaIndex() {
  * No engine and no format table, unlike the two above: this is keyed on the MD5 of a file, so
  * nothing about it depends on what this build can decode.
  */
-async function downloadSongLengths() {
+/**
+ * Downloads one of the databases the page takes whole, saying how far it has got. [what] names it
+ * in the sentence that ends it, [run] is the archive's download.
+ */
+async function downloadDatabase(what, run) {
   const note = $('browsenote');
-  $('browselist').replaceChildren();
   try {
-    const result = await archive.downloadSongLengths({
+    const result = await run({
       onProgress: (p) => {
         if (p.stage === 'fetching' && p.total) {
           note.textContent = `fetching ${(p.done / 1e6).toFixed(1)} of ${(p.total / 1e6).toFixed(1)} MB…`;
@@ -2684,12 +2861,159 @@ async function downloadSongLengths() {
         }
       },
     });
-    browsePath = [];
-    await renderBrowse();
-    note.textContent = `SID song lengths: ${result.tunes.toLocaleString()} tunes. ${note.textContent}`;
+    note.textContent = `${what}: ${result.tunes.toLocaleString()} tunes.`;
+    return true;
   } catch (e) {
-    note.textContent = `the song lengths could not be downloaded: ${e.message}`;
+    note.textContent = `the ${what.toLowerCase()} could not be downloaded: ${e.message}`;
+    return false;
   }
+}
+
+/**
+ * **Song metadata, one press** (the phone's A52 D1): everything the page can use of what a file
+ * cannot say about itself -- HVSC's SID lengths and songdb's author, publisher, album and year --
+ * under one row and one tick. Each part is still its own download underneath, so one that fails
+ * says which.
+ */
+async function downloadSongMetadata() {
+  await downloadStarted(SONG_METADATA);
+  const lengths = await downloadDatabase('SID song lengths', archive.downloadSongLengths);
+  const said = $('browsenote').textContent;
+  const metadata = await downloadDatabase('Song metadata', archive.downloadSongMetadata);
+  await downloadEnded(SONG_METADATA);
+  if (lengths && metadata) $('browsenote').textContent = `${said} ${$('browsenote').textContent}`;
+}
+
+// --- the catalogues, as the phone draws them (W8) ------------------------------------------------
+
+/** The key the grouped "Song metadata" download runs under, beside the catalogues' own names. */
+const SONG_METADATA = 'song-metadata';
+
+/** What is downloading now, by key: a catalogue's name, or `SONG_METADATA`. */
+const downloading = new Set();
+
+/** Redraws the catalogues if they are on screen; the list stays, only its rows change. */
+async function redrawCatalogues() {
+  if (!$('browse').hidden && browsePath[0] === 'catalogues') await renderBrowse();
+}
+async function downloadStarted(key) { downloading.add(key); await redrawCatalogues(); }
+async function downloadEnded(key) { downloading.delete(key); await redrawCatalogues(); }
+
+/**
+ * Whether a downloadable set is here, as the row's first mark: a tick in a disc, in the accent
+ * colour, or a dimmed cloud. Shape, colour and the line under it all say the same thing, so none of
+ * them carries it alone -- the phone's `HeldIcon`.
+ */
+function heldMark(held) {
+  const span = document.createElement('span');
+  span.className = held ? 'bheld yes' : 'bheld';
+  span.innerHTML = iconSvg(held ? ICON.downloaded : ICON.cloud);
+  return span;
+}
+
+/**
+ * The one button of a downloadable row, drawn as what it will do: **Download** when the set is not
+ * here, **Refresh** when it is -- two marks, because one arrow for both made one button look like
+ * two offers merged. While it runs, a spinner and what it is doing, in the button's place.
+ */
+function downloadButton(key, held, label, onclick) {
+  if (downloading.has(key)) {
+    const busy = document.createElement('span');
+    busy.className = 'bbusy';
+    busy.innerHTML = '<span class="spinner" aria-hidden="true"></span>indexing…';
+    return busy;
+  }
+  const button = document.createElement('button');
+  button.className = 'bdl';
+  button.innerHTML = iconSvg(held ? ICON.refresh : ICON.download);
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  button.onclick = (event) => { event.stopPropagation(); onclick(); };
+  return button;
+}
+
+/** A row that may be downloaded: the held mark, a name over its detail, and its one button. */
+function heldRow(list, { name, detail, warning = '', held, key, label, ondownload, onopen = null }) {
+  const li = document.createElement('li');
+  li.className = 'bheldrow';
+  const text = document.createElement('div');
+  text.className = 'btext';
+  const title = document.createElement('div');
+  title.className = 'bname';
+  title.textContent = name;
+  text.append(title);
+  // **Nothing drawn before it is known** (the phone's C74): a detail of null is "not read yet".
+  if (detail != null) {
+    const meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = detail;
+    text.append(meta);
+  }
+  if (warning) {
+    const warn = document.createElement('div');
+    warn.className = 'bmeta bwarn';
+    warn.textContent = warning;
+    text.append(warn);
+  }
+  li.append(heldMark(held), text, downloadButton(key, held, label, ondownload));
+  // Only openable once it is here: an empty catalogue opened teaches nothing about why.
+  if (onopen) li.onclick = onopen; else li.classList.add('closed');
+  list.append(li);
+  return li;
+}
+
+async function renderCatalogues(list, note) {
+  $('browsetitle').textContent = 'Online catalogues';
+  // Everything is read first, then drawn at once: no row appears and then changes its mind.
+  const held = {};
+  for (const source of archive.sources()) held[source] = await archive.meta(source);
+  const lengths = await archive.songLengthsMeta();
+  const metadata = await archive.songMetadataMeta();
+  if (browsePath[0] !== 'catalogues') return;
+  list.replaceChildren();
+
+  const sizes = { modland: '5.76 MB', asma: '0.85 MB' };
+  const about = {
+    modland: 'Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.',
+    asma: 'ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.',
+  };
+  note.textContent = [
+    held.modland?.tracks ? holding(held.modland) : about.modland,
+    held.asma?.tracks ? '' : about.asma,
+  ].filter(Boolean).join(' ');
+
+  for (const source of archive.sources()) {
+    const here = held[source];
+    const name = archive.sourceName(source);
+    heldRow(list, {
+      name,
+      detail: here?.tracks
+        ? `${here.tracks.toLocaleString()} tunes`
+        : `Not indexed yet — tap the arrow to download its index (${sizes[source] ?? 'a download'})`,
+      warning: source === 'modland' ? await staleSentence(here) : '',
+      held: !!here?.tracks,
+      key: source,
+      label: here?.tracks ? `Update the index for ${name}` : `Download the index for ${name}`,
+      ondownload: source === 'asma' ? downloadAsmaIndex : downloadIndex,
+      onopen: here?.tracks ? async () => { browsePath = [source]; await renderBrowse(); } : null,
+    });
+  }
+
+  // **One row for what files cannot say about themselves** (the phone's A52 D1): the SID lengths
+  // and songdb's metadata, one tick for both. No replay routines row: neither sc68's nor UADE's can
+  // reach a browser (`docs/PLAN_WEB_PARITY.md`).
+  const complete = !!(lengths?.tunes && metadata?.tunes);
+  const group = heldRow(list, {
+    name: 'Song metadata',
+    detail: complete
+      ? `${(lengths.tunes + metadata.tunes).toLocaleString()} tunes`
+      : 'Not downloaded — no lengths, authors or years (5.2 + 14.8 MB)',
+    held: complete,
+    key: SONG_METADATA,
+    label: complete ? 'Update the song metadata' : 'Download the song metadata',
+    ondownload: downloadSongMetadata,
+  });
+  group.classList.add('groupstart');
 }
 
 /**
@@ -2765,6 +3089,7 @@ $('browsesearch').oninput = () => {
 $('tab-browse').onclick = async () => {
   if (!$('browse').hidden) { showPanel(null); return; }
   browsePath = [];
+  jumpedTo = null;
   showPanel('browse');
   await renderBrowse();
 };
@@ -2778,7 +3103,13 @@ $('browseback').onclick = async () => {
     resumeDice();
     showPanel(null);
     return;
+  } else if (arrivedByJump()) {
+    // Out of Browse in one press, wherever the jump was made from (W-D4 a, as the phone does).
+    jumpedTo = null;
+    showPanel(null);
+    return;
   } else browsePath = browsePath.slice(0, -1);
+  jumpedTo = null;
   await renderBrowse();
 };
 $('browseclose').onclick = () => showPanel(null);
@@ -2841,6 +3172,8 @@ $('tab-settings').onclick = async () => {
   if (opening) await renderSettings();
   showPanel(opening ? 'settings' : null);
 };
+$('open-notices').onclick = () => renderLicences().then(() => showPanel('legal'));
+$('open-privacy').onclick = () => renderPrivacy().then(() => showPanel('legal'));
 $('tab-pair').onclick = () => showPanel($('pair').hidden ? 'pair' : null);
 $('tab-paste').onclick = () => showPanel($('paste').hidden ? 'paste' : null);
 
@@ -3120,6 +3453,50 @@ $('np-show').onclick = () => { if (index >= 0) showInPlaylist(index); };
 $('np-folder').onclick = () => showAuthorFolder(queue[index]);
 $('np-save').onclick = () => { const e = queue[index]; if (e) saveFile(e); };
 $('np-link').onclick = () => { const e = queue[index]; if (e) copyLink(e); };
+
+// --- the now-playing lines scroll when they do not fit (A54) --------------------------------------
+//
+// The title and the line under it are written from a dozen places, so they are watched rather than
+// each write being taught to measure: whenever either's text changes, it is measured once, and a
+// line wider than its box is wrapped in a span that moves -- two seconds still, then left at the
+// phone's pace until its end shows, and round again (`rules.lineScrollPass`). A line that fits is
+// left alone, with its `…` for the moment it no longer does.
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+
+function fitLine(el, again = false) {
+  const text = el.textContent;
+  // Our own wrapping is a change too; the same text already running is not a new line.
+  if (!again && el.scrollRun?.text === text) return;
+  el.scrollRun?.animation?.cancel();
+  el.scrollRun = null;
+  if (el.firstElementChild?.classList.contains('run')) el.textContent = text;
+  el.classList.remove('scrolling');
+  const isStatus = el.id === 'sub' && loading !== null;
+  if (!lineScrolls({ animationsOn: !reducedMotion?.matches, isStatus })) return;
+  const pass = lineScrollPass(el.scrollWidth - el.clientWidth);
+  if (!pass) return;
+  const run = document.createElement('span');
+  run.className = 'run';
+  run.textContent = text;
+  el.scrollRun = { text };
+  el.replaceChildren(run);
+  el.classList.add('scrolling');
+  if (typeof run.animate !== 'function') return;
+  el.scrollRun.animation = run.animate([
+    { transform: 'translateX(0)', offset: 0 },
+    { transform: 'translateX(0)', offset: pass.pauseShare },
+    { transform: `translateX(${-pass.distance}px)`, offset: 1 },
+  ], { duration: pass.duration, iterations: Infinity });
+}
+
+for (const id of ['title', 'sub']) {
+  const el = $(id);
+  new MutationObserver(() => fitLine(el)).observe(el, { childList: true, characterData: true, subtree: true });
+}
+// A narrower window, or motion turned down while playing, asks every line again.
+const refitLines = () => { fitLine($('title'), true); fitLine($('sub'), true); };
+window.addEventListener('resize', refitLines);
+reducedMotion?.addEventListener?.('change', refitLines);
 
 $('seek').oninput = () => { seeking = true; paint($('seek')); };
 $('seek').onchange = () => {

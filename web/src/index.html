@@ -155,6 +155,9 @@
   .randomfilter .chip.on { background: var(--secondary-container); color: var(--on-secondary-container);
                            border-color: transparent; }
   #randomnote { padding: 0 16px; }
+  .emptystate { padding: 40px 24px; text-align: center; }
+  .emptystate .sheetbuttons { justify-content: center; }
+  .emptystate .outlined { flex: 0 1 auto; }
   ol { list-style: none; margin: 0; padding: 0; }
   li.track {
     display: flex;
@@ -331,6 +334,9 @@
   .nowkeep svg { width: 22px; height: 22px; fill: currentColor; }
   .nowcard .title { font-size: var(--title-medium); font-weight: 500; letter-spacing: .15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nowcard .meta { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* A line that does not fit and is moving (A54, `fitLine`): no `…` while the whole of it passes. */
+  .nowcard .scrolling { text-overflow: clip; }
+  .nowcard .run { display: inline-block; }
   .nowcard svg { width: 22px; height: 22px; fill: var(--on-surface-variant); flex: none; }
 
   /*
@@ -485,6 +491,10 @@
     overflow-wrap: anywhere;
   }
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
+  /* Storage in this browser (W10): a heading across both columns, and Delete with its mark. */
+  #settingsfields .storagehead { grid-column: 1 / -1; margin-top: 12px; font-weight: 500; color: var(--on-surface); }
+  #settingsfields button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; }
+  #settingsfields button svg { width: 18px; height: 18px; fill: currentColor; }
   dt { color: var(--on-surface-variant); font-size: var(--body-small); }
   dd { margin: 0; font-size: var(--body-large); overflow-wrap: anywhere; }
   .np-message { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--surface-variant); }
@@ -536,6 +546,25 @@
                        padding: 8px; border-radius: 50%; flex: none; display: flex; }
   #browselist .bmore:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
   #browselist .bmore svg { width: 22px; height: 22px; fill: currentColor; }
+  /* Browse as the phone draws it (W8): a root row is a name over one line of what it is; a row that
+     can be downloaded carries its held mark first and its one button last. */
+  #browselist .bdomain, #browselist .bheldrow { padding: 10px 8px 10px 12px; min-height: 56px; }
+  #browselist .bheldrow.closed { cursor: default; }
+  #browselist .bheldrow.closed:hover { background: none; }
+  #browselist .groupstart { border-top: 1px solid var(--surface-variant); margin-top: 6px; }
+  #browselist .bheld { display: flex; flex: none; margin-right: 12px; color: var(--on-surface-variant); opacity: .6; }
+  #browselist .bheld.yes { color: var(--primary); opacity: 1; }
+  #browselist .bheld svg { width: 24px; height: 24px; fill: currentColor; }
+  #browselist .bwarn { color: var(--error); white-space: normal; }
+  #browselist .bdl { background: none; border: 0; color: var(--on-surface-variant); cursor: pointer;
+                     padding: 10px; border-radius: 50%; flex: none; display: flex; }
+  #browselist .bdl:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
+  #browselist .bdl svg { width: 24px; height: 24px; fill: currentColor; }
+  #browselist .bbusy { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none;
+                       width: 84px; color: var(--on-surface-variant); font-size: var(--label-small, 11px); }
+  #browselist .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface-variant);
+                         border-top-color: var(--primary); animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   /* The rows that *do* something carry an icon, as the phone's Browse rows do; rows of data do not. */
   #browselist li > svg { width: 22px; height: 22px; fill: currentColor; flex: none; margin-right: 12px;
                          color: var(--on-surface-variant); }
@@ -584,6 +613,17 @@
     background: none; color: var(--on-surface-variant); border: 0;
     padding: 10px 18px; font: inherit; border-radius: var(--shape-xl); cursor: pointer;
   }
+  .legalrows { margin-top: 16px; }
+  /* The licence texts are other people's, formatted by them: kept as written, in a face that keeps
+     their columns, and wrapped so a long line does not push the sheet sideways. */
+  .legalbody { max-height: 70vh; overflow-y: auto; text-align: left; }
+  .legalbody .component { display: block; width: 100%; text-align: left; background: none; border: 0;
+                          border-bottom: 1px solid var(--surface-variant); color: var(--on-surface);
+                          padding: 10px 4px; font: inherit; cursor: pointer; }
+  .legalbody .component small { display: block; color: var(--on-surface-variant); }
+  .legalbody pre { white-space: pre-wrap; word-break: break-word; font-size: var(--body-small); }
+  .legalbody h3 { font-size: var(--title-small, 14px); margin: 18px 0 6px; }
+  .legalbody p, .legalbody li { font-size: var(--body-medium); color: var(--on-surface); }
   /* What the page is holding. The phone has a storage screen; this is the honest one line of it. */
   .storage { color: var(--on-surface-variant); font-size: var(--body-small); margin: 14px 0 0; text-align: left; }
 
@@ -686,6 +726,15 @@
     </div>
     <p id="randomnote" class="note" hidden></p>
     <ol id="queue"></ol>
+    <!--
+      The empty playlist (W11, the phone's EmptyPlaylist): what to do next, said only once it is
+      known what this browser holds -- so it never offers a download to somebody who has the lot.
+    -->
+    <div id="emptyplaylist" class="emptystate" hidden>
+      <h2>Nothing here yet</h2>
+      <p class="note" id="emptybody"></p>
+      <div class="sheetbuttons"><button class="outlined" id="emptyaction"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Get some music to browse</button></div>
+    </div>
 
 
 
@@ -915,6 +964,30 @@
       </div>
 
       <p class="storage" id="settingsnote">More will live here; for now it is what the page knows about itself.</p>
+
+      <!--
+        What the page carries and what it keeps (docs/PLAN_WEB_PARITY.md W4): the phone's
+        "Open-source licences" and "Privacy policy" rows, with the same marks.
+      -->
+      <div class="sheetbuttons legalrows">
+        <button class="outlined" id="open-notices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM16 18H8v-2h8v2zM16 14H8v-2h8v2zM13 9V3.5L18.5 9H13z"/></svg>Open-source licences</button>
+        <button class="outlined" id="open-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Privacy policy</button>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    The licences of everything the page carries, and its privacy policy (W4). One sheet for both,
+    drawn by `renderLicences` and `renderPrivacy`; Back returns from a component's texts to the list.
+  -->
+  <div class="overlay" id="legal" hidden>
+    <div class="sheet wide">
+      <div class="browsehead">
+        <button class="plain" id="legalback" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>
+        <h2 id="legaltitle">Open-source licences</h2>
+        <button class="plain" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
+      </div>
+      <div class="legalbody" id="legalbody"></div>
     </div>
   </div>
 

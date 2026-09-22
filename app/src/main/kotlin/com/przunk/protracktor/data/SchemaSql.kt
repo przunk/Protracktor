@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 17
+    const val VERSION = 19
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -396,6 +396,91 @@ object SchemaSql {
         """.trimIndent(),
     )
 
+    /**
+     * Titles stored damaged, handed back to be read again: version 18 (`docs/BACKLOG.md` A47).
+     *
+     * **Data only; the shape does not change.** Until 0.7.0 the engine let a title through in
+     * whatever its file was written in, and CP437 or ISO-8859-1 letters arrived as U+FFFD -- which
+     * was then stored, and nothing would ever read it again: a playlist row is re-read only while
+     * its title still equals its file name, and a library row only when its folder is stale.
+     *
+     * So exactly the damaged rows go back to that state. A playlist or history row gets its file
+     * name as its title and an empty author, which is what the background pass and the next play
+     * both look for; a library row loses its decoder fingerprint, which makes its folder offer a
+     * rescan. U+FFFD is written as `char(65533)` because no title a person typed contains it, and
+     * the statements stay plain ASCII. Rows without it are not touched.
+     *
+     * In [CREATE] as well, where it runs over empty tables and changes nothing -- so the two lists
+     * stay the one list they are meant to be.
+     */
+    private val REREAD_DAMAGED_TITLES_V18: List<String> = listOf(
+        "UPDATE tracks SET title = CASE WHEN file_name <> '' THEN file_name ELSE title END, author = '' " +
+            "WHERE instr(title, char(65533)) > 0 OR instr(author, char(65533)) > 0",
+        "UPDATE play_history SET title = CASE WHEN file_name <> '' THEN file_name ELSE title END, author = '' " +
+            "WHERE instr(title, char(65533)) > 0 OR instr(author, char(65533)) > 0",
+        "UPDATE library_index SET backends = '' " +
+            "WHERE instr(title, char(65533)) > 0 OR instr(author, char(65533)) > 0",
+    )
+
+    /**
+     * The folded copy search reads for rows with accents in them: version 19 (`docs/BACKLOG.md`
+     * A53, [SearchTerms.fold]).
+     *
+     * **Nullable, and null for nearly every row.** A plain-ASCII title is matched by its own
+     * columns; only a row with something outside ASCII needs a second, folded copy, and that is 9
+     * of Modland's 515,509 rows. Adding a column is a change to the table's description, not a
+     * rewrite of its rows, so this is instant on half a million of them.
+     *
+     * What goes in it cannot be computed in SQL -- SQLite has no Unicode decomposition -- so the
+     * rows already stored are filled by [backfillFolded], which the database helper runs right
+     * after these statements in the same transaction.
+     */
+    private val SEARCH_FOLDED_V19: List<String> = listOf(
+        "ALTER TABLE catalogue_tracks ADD COLUMN folded TEXT",
+        "ALTER TABLE library_index ADD COLUMN folded TEXT",
+    )
+
+    /**
+     * One table's backfill: [select] yields `rowid` and then the texts to fold, in the order the
+     * table's writer passes them to [SearchTerms.foldedOrNull]; [update] binds the folded text and
+     * the rowid.
+     *
+     * `GLOB '*[^ -~]*'` is "holds a character outside printable ASCII", so only the rows that can
+     * need a folded copy are read at all.
+     */
+    class FoldBackfill(val select: String, val update: String)
+
+    val FOLDED_BACKFILL_V19: List<FoldBackfill> = listOf(
+        FoldBackfill(
+            "SELECT rowid, title, author FROM catalogue_tracks " +
+                "WHERE title GLOB '*[^ -~]*' OR author GLOB '*[^ -~]*'",
+            "UPDATE catalogue_tracks SET folded = ? WHERE rowid = ?",
+        ),
+        FoldBackfill(
+            "SELECT rowid, title, file_name, author FROM library_index " +
+                "WHERE title GLOB '*[^ -~]*' OR file_name GLOB '*[^ -~]*' OR author GLOB '*[^ -~]*'",
+            "UPDATE library_index SET folded = ? WHERE rowid = ?",
+        ),
+    )
+
+    /**
+     * Fills `folded` for the rows stored before version 19.
+     *
+     * Takes the database as two functions so that the phone ([ProtracktorDatabase]) and the JVM
+     * test run this same loop, each through its own driver: [rows] runs a select and returns each
+     * row's rowid and texts, [write] runs an update with the folded text and the rowid.
+     */
+    fun backfillFolded(
+        rows: (String) -> List<Pair<Long, Array<String>>>,
+        write: (String, String, Long) -> Unit,
+    ) {
+        FOLDED_BACKFILL_V19.forEach { spec ->
+            rows(spec.select).forEach { (rowid, texts) ->
+                SearchTerms.foldedOrNull(*texts)?.let { write(spec.update, it, rowid) }
+            }
+        }
+    }
+
     val CREATE: List<String> = listOf(
         """
         CREATE TABLE playlists (
@@ -453,7 +538,8 @@ object SchemaSql {
         PLAY_HISTORY_V7 + LIBRARY_INDEX_V8 +
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
-        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17
+        CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17 +
+        REREAD_DAMAGED_TITLES_V18 + SEARCH_FOLDED_V19
 
 
 
@@ -481,6 +567,8 @@ object SchemaSql {
         15 to CATALOGUE_PLAYABLE_V15,
         16 to CATALOGUE_ARCHIVE_COUNT_V16,
         17 to SONGDB_LENGTHS_V17,
+        18 to REREAD_DAMAGED_TITLES_V18,
+        19 to SEARCH_FOLDED_V19,
     )
 
     /**

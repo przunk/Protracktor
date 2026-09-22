@@ -15,6 +15,68 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A57. The page catches up with the APK — **planned 2026-09-22; DONE the same day, W1–W11 merged; checked by the owner in a browser**
+
+Everything the app gained since the page was last brought level (2026-09-16/17), sorted: what the
+shared engine already gives the page, what was done alongside, what a browser cannot have, and five
+items that are missing -- W1 History order, W2 an unknown length, W3 scrolling lines, W4 licences
+and privacy in the page, W5 songdb's metadata. `docs/PLAN_WEB_PARITY.md` is the plan, with the
+decisions W-D1 to W-D3. A second part, W8–W11 (Browse as the app draws it, Back after a jump,
+storage in Settings, the first run), was added on 2026-09-22 with W-D4.
+
+## A56. History keeps its order while you use it — **noted 2026-09-21; DONE 2026-09-22, merged; confirmed on the phone**
+
+Built as decided below: `HistoryRecording.records` keeps a play History started -- and the tunes
+walked after it -- out of History; the open History is no longer re-read on every play. Where a
+results list came from is set once, where the list is made, so next and previous keep it.
+
+*The owner: "history should have a fixed form in its view; clicking a track in history should not
+move it to the top; playing it outside history should update when it was last played (move it to
+the top)."*
+
+Today a play from the history view records a play like any other, so the row jumps to the top
+under the finger that tapped it and the list reorders while it is being read.
+
+- **Inside History**, a play does not move the row. The list stays as it was while it is open.
+- **Anywhere else** — playlist, Browse, search, Random — a play updates the last-played time and
+  the row goes to the top, as today.
+- **Decided 2026-09-22** (the owner, as recommended): a play started from History — and the tracks
+  that follow it from there — leaves its history entry alone entirely: no new time, no position,
+  **no `play_count`**. History then says what was played elsewhere, and does not drift under the
+  person reading it. And while History is open, it is not refreshed at all: it shows what it
+  showed when it was opened.
+## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13**
+
+Opening a Modland author's folder fetches its tracks into the cache one after another, three at a
+time, with a spinner in each row's left slot while it runs. When it may run (Wi-Fi only by
+default), what a cached row shows, and a per-folder limit are D4–D6 in `docs/PLAN_ROUND_13.md`,
+which is the plan.
+
+## A54. The dock's text scrolls when it does not fit — **planned 2026-09-21, round 13; DONE the same day, merged; confirmed on the phone 2026-09-22**
+
+Built to D3 (a): Compose's `basicMarquee` on both dock lines, 30 dp/s, two seconds' pause before
+every pass; the rule of when it may move is `DockMarquee.scrolls`, tested on the JVM. Merged 2026-09-21 on
+the owner's word. **Checked on the owner's phone 2026-09-22: works.** Whether the "Remove
+animations" case was part of that check was not said (on his Pixel 7:
+Settings → Accessibility → Color and motion → Remove animations).
+
+A dock line that overflows scrolls slowly to the left instead of ending in `…`; one that fits stands
+still, and nothing moves with the system's animations off. D3 in `docs/PLAN_ROUND_13.md`.
+
+## A53. Search ignores accents — **planned 2026-09-21, round 13; DONE 2026-09-22, merged; confirmed on the phone**
+
+Built to D2 (a). `SearchTerms.fold` (NFKD, marks dropped, a table for `ł đ ø ß æ œ þ ħ ı`) on the
+query and on a sparse `folded` column, schema **19**, filled on write and backfilled for stored rows
+in the migration's own transaction. Only **9 of Modland's 515,509** rows need it; the accented titles
+are mostly the library's, read out of files. Worst-case search on the full index, host: **56.6 ms →
+62.0 ms**, the column asked `IS NOT NULL` first (71.1 ms without). The browser folds the same way in
+`rules.js`, and eight shared cases in `docs/rules/queue-cases.tsv` hold both to one answer.
+
+
+`michal` finds `Michał` and the other way round; `akes lekhorna` finds `Åkes lekhörna`. One fold
+for query and stored text, a sparse folded column (the next free database version after A47's 18), the same rule in the
+browser. D2 in `docs/PLAN_ROUND_13.md`.
+
 ## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18**
 
 **Both halves are working as designed, and the answer is a measurement.**
@@ -126,7 +188,20 @@ safe to paraphrase; "he wanted it because…" is not, and now has nowhere to liv
 - The **dates on measurements** stay too: "measured 2026-09-11, 6,780 entries" is provenance of a
   fact, not of a person.
 
-## A48. Two seconds pass before the playlist appears — **measured, one cause fixed 2026-09-18**
+## A48. ~~Two seconds pass before the playlist appears~~ — **CLOSED 2026-09-21: gone, measured on the phone**
+
+**Closed by the owner on 2026-09-21**: "the app starts fast; I think it was solved along the way."
+Measured on his phone the same evening with launch logging (build 803): from the process starting
+to the first frame showing a 44-track playlist, **333 ms** on the first start after install and
+**390 ms** on a cold start; every query 0–3 ms. The two seconds are not there, and the most likely
+reason is the 2026-09-18 fix below — the scan of half a million rows inside a write transaction at
+start-up. The logging itself is on `feature/a48-launch-timing`, not merged; whether it stays is the
+owner's call.
+
+The record as it stood before the measurement:
+
+
+*In round 13 (2026-09-21): `docs/PLAN_ROUND_13.md` has the steps and the decisions.*
 
 **The wrong screen was a defect and is fixed** (the empty playlist now says nothing until it knows
 what it is talking about). **The two seconds are not fixed, and this is that.**
@@ -180,7 +255,13 @@ The rest of the two seconds is unaccounted for and the remaining candidates are 
 112 MB database. **Do not guess at those either** — the next step is a timing log around each, read
 once on a phone.
 
-## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17**
+## A47. Accented letters in a title come out as replacement characters — **noted 2026-09-17, DONE 2026-09-21, merged; confirmed on the phone**
+
+**Corrected 2026-09-21: the analysis below is wrong.** The bytes are `0x86` and `0x94` (CP437), not
+`0xC5` and `0xF6`, and the `�` is made by libopenmpt, not by `NewStringUTF`. What was found and
+built is `docs/STATUS.md` C79; the text below is kept as it was, as the reading that was corrected.
+
+*In round 13 (2026-09-21): `docs/PLAN_ROUND_13.md` has the steps and the decisions.*
 
 Opening `Zalza/akes lekhorna.mod` shows the title as **"�kes lekh�rna (za)"** — diamond
 question marks where two letters should be.

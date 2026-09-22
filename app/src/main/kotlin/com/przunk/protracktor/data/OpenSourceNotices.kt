@@ -24,12 +24,17 @@ object OpenSourceNotices {
         val files: List<String>,
     )
 
-    /** Every row of the table; comments and blank lines skipped, a short row refused. */
-    fun parse(text: String): List<Component> = text.lineSequence()
+    /**
+     * The rows of the table that [build] carries -- `app` for this one; comments and blank lines
+     * skipped, a short row refused. The table serves the web page as well (its last column says
+     * which build carries a row), and the app must not list the page's Emscripten runtime.
+     */
+    fun parse(text: String, build: String = APP): List<Component> = text.lineSequence()
         .filter { it.isNotBlank() && !it.startsWith("#") }
         .mapNotNull { line ->
             val cells = line.split('\t')
-            if (cells.size < 5) return@mapNotNull null
+            if (cells.size < 6) return@mapNotNull null
+            if (build !in buildsOf(line)) return@mapNotNull null
             val id = cells[0].trim()
             Component(
                 id = id,
@@ -41,6 +46,13 @@ object OpenSourceNotices {
             )
         }
         .toList()
+
+    const val APP = "app"
+    const val WEB = "web"
+
+    /** Which builds carry a row: its last column, comma-separated. */
+    fun buildsOf(line: String): Set<String> =
+        line.split('\t').getOrNull(5)?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet().orEmpty()
 
     /** The repository paths a row names, as the build copies them. For the test. */
     fun sourcesOf(line: String): List<String> =

@@ -61,6 +61,23 @@ class ProtracktorDatabase private constructor(context: Context) :
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.transaction {
             SchemaSql.migrationsBetween(oldVersion, newVersion).forEach(::execSQL)
+            // The one migration SQL cannot finish by itself: folding needs Unicode tables SQLite
+            // does not have (A53). Same transaction, so a phone never holds the new column half
+            // filled.
+            if (oldVersion < 19 && newVersion >= 19) {
+                SchemaSql.backfillFolded(
+                    rows = { sql ->
+                        rawQuery(sql, null).use { row ->
+                            buildList {
+                                while (row.moveToNext()) {
+                                    add(row.getLong(0) to Array(row.columnCount - 1) { row.getString(it + 1).orEmpty() })
+                                }
+                            }
+                        }
+                    },
+                    write = { sql, folded, rowid -> execSQL(sql, arrayOf<Any>(folded, rowid)) },
+                )
+            }
         }
     }
 

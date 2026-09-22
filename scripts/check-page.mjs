@@ -86,6 +86,15 @@ window.fetch = async (url, options) => {
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+  // songdb's metadata (W5), as a test writes it; no body stream, so the page reads it whole.
+  if (u.endsWith('/metadata.tsv')) {
+    const bytes = new TextEncoder().encode(window.__songdbTsv ?? '');
+    return { ok: true, headers: { get: () => String(bytes.length) }, arrayBuffer: async () => bytes.buffer };
+  }
+  // What the page shows about itself (W4), off disk where the staging takes it from.
+  if (u.endsWith('vendor/notices/components.tsv')) return { ok: true, text: async () => fs.readFileSync('app/notices/components.tsv', 'utf8') };
+  if (u.endsWith('vendor/legal/privacy-policy.md')) return { ok: true, text: async () => fs.readFileSync('store/privacy-policy.md', 'utf8') };
+  if (u.includes('vendor/notices/')) return { ok: true, text: async () => `licence text of ${u.slice(u.lastIndexOf('/') + 1)}` };
   // The real list, off disk: the page reads it at load, and a stub of it would test nothing.
   if (u.endsWith('formats.tsv')) return { ok: true, text: async () => fs.readFileSync('web/src/formats.tsv', 'utf8') };
   // ASMA's archive, answering ranges as asma.atari.org does -- or ignoring them, as a server may.
@@ -147,6 +156,7 @@ window.navigator.storage ??= { persist: async () => true, persisted: async () =>
 
 const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export /gm, '');
 const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
+const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
 const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
@@ -155,14 +165,15 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
   .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
-    'const archive = (() => {' + fs.readFileSync('web/src/catalogue.js', 'utf8')
+    'const archive = (() => {' + lengthsSource + songdbSource + fs.readFileSync('web/src/catalogue.js', 'utf8')
       .replace(/^import .*$/gm, '')
       .replace(/^export function (\w+)/gm, 'function $1')
       .replace(/^export async function (\w+)/gm, 'async function $1')
     + '\nreturn { toRecords, downloadModland, meta, formats, authors, tracksIn, urlFor, searchTitles, '
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
     + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
-    + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths }; })();')
+    + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths, '
+    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata, forgetIndex }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -928,7 +939,7 @@ if (window.__api) {
   // Browsing writes into nothing now, so it is not shut on the phone's list.
   window.__api.showPanel('browse');
   await window.__api.browseTo([]);
-  check(!$('browsesearch').hidden && rows().some((li) => li.textContent.includes('Modland')),
+  check(!$('browsesearch').hidden && rows().some((li) => li.textContent.startsWith('Online catalogues')),
     'Browse opens whole on the phone\'s list, search and archive both');
   check(!$('browse').hidden && window.document.querySelector('main').hidden && !window.document.querySelector('footer').hidden,
     'and stands where the list stands, with the dock still under it');
@@ -1002,6 +1013,22 @@ if (window.__api) {
     'More from this author walks to their folder, out of the search');
   check(rows().every((li) => li.classList.contains('btrack')) && rows().length === 2,
     'whose tunes are rows of the same kind');
+  // W9: a jump lands three levels deep without passing through them, so the first Back leaves
+  // Browse for where you were -- the phone's `browseBack` -- even when the jump was made from inside
+  // Browse, as here from a search (W-D4 a).
+  $('browseback').click();
+  await settle();
+  check($('browse').hidden && !window.document.querySelector('main').hidden,
+    'Back after More from this author leaves Browse in one press, not one level per press');
+  // Walked there by hand, the same folder climbs one level at a time, as it always did.
+  window.__api.showPanel('browse');
+  await window.__api.browseTo(['modland', 'Protracker', '4-Mat']);
+  $('browseback').click();
+  await settle();
+  check(!$('browse').hidden && $('browsetitle').textContent === 'Protracker',
+    'a folder reached by hand is climbed out of one level at a time');
+  window.__api.showPanel('browse');
+  await window.__api.browseTo(['modland', 'Protracker', '4-Mat']);
 
   // Out of Browse and back to the playlist: the added tune is there, and Save is offered.
   window.__api.showPanel(null);
@@ -1132,7 +1159,7 @@ if (window.__api) {
     // An index from before step 0: it holds only what the build of the day accepted.
     await store.putAll([{ key: 'modland:meta', tracks: 315294, total: 516107,
                           formats: 90, buckets: 32212, fingerprint: 'x' }]);
-    await window.__api.renderBrowse();
+    await window.__api.browseTo(['catalogues']);
     check($('browsenote').textContent.includes("holds 315,294 of Modland's 516,107"),
       'Browse says how much of Modland a partial index holds');
 
@@ -1141,7 +1168,7 @@ if (window.__api) {
     // download somebody still owes.
     await store.putAll([{ key: 'modland:meta', tracks: 342169, total: 516107, complete: true,
                           formats: 90, buckets: 32212, fingerprint: 'x' }]);
-    await window.__api.renderBrowse();
+    await window.__api.browseTo(['catalogues']);
     check($('browsenote').textContent.includes("holds all 516,107 of Modland's tunes and can play 342,169"),
       'a whole index says it holds everything and plays some of it',
       $('browsenote').textContent);
@@ -1150,8 +1177,9 @@ if (window.__api) {
 
     // An index from before the page filtered at all: no counts, every row.
     await store.putAll([{ key: 'modland:meta', tracks: 516107, formats: 339, buckets: 43721, fingerprint: 'x' }]);
-    await window.__api.renderBrowse();
-    check($('browsenote').textContent.includes('Downloading it again (5.76 MB)'),
+    await window.__api.browseTo(['catalogues']);
+    // Under Modland's own row now, in the error colour and in words (W8, the phone's catalogue_stale).
+    check([...$('browselist').querySelectorAll('.bwarn')].some((n) => n.textContent.includes('Downloading it again (5.76 MB)')),
       'an index built before the filter says why it should be downloaded again, before it is');
 
     await store.clear('modland:');
@@ -1446,9 +1474,10 @@ if (window.__api) {
   // An index from before the filter: no counts, every row. This panel is all of Browse there is
   // while the phone's list shows, so if it does not say so, nothing does.
   await store.putAll([{ key: 'modland:meta', tracks: 516107, formats: 339, buckets: 43721, fingerprint: 'x' }]);
-  await window.__api.browseTo([]);
-  check($('browsenote').textContent.includes('Downloading it again (5.76 MB)'),
+  await window.__api.browseTo(['catalogues']);
+  check([...$('browselist').querySelectorAll('.bwarn')].some((n) => n.textContent.includes('Downloading it again (5.76 MB)')),
     'and an index from before the filter is called out there too, where it will be seen');
+  await window.__api.browseTo([]);
   check(labels.some((t) => t.includes('Random')) && labels.some((t) => t.includes('History')),
     'and still offers Random and History, which write into no playlist');
   await window.__api.browseTo(['history']);
@@ -1907,8 +1936,10 @@ if (window.__api) {
     'the list is read with a size from HEAD and an ordinary range — never the suffix form a browser must ask about');
   const held = await api.archiveMeta('asma');
   check(held?.tracks === 3 && held.formats === 2, 'every .sap is listed and nothing else, under its section');
-  check([...$('browselist').children].some((li) => li.textContent.startsWith('ASMA — 3 tunes')),
-    'Browse offers ASMA beside Modland');
+  await api.browseTo(['catalogues']);
+  const asmaRow = [...$('browselist').children].find((li) => li.querySelector('.bname')?.textContent === 'ASMA');
+  check(asmaRow && asmaRow.querySelector('.bmeta').textContent === '3 tunes' && asmaRow.querySelector('.bheld.yes'),
+    'Browse offers ASMA beside Modland, held, with how many tunes');
 
   await api.browseTo(['asma']);
   check([...$('browselist').children].map((li) => li.querySelector('.bname').textContent).join() === 'Composers,Games',
@@ -2196,11 +2227,118 @@ if (window.__api) {
   await new Promise((r) => setTimeout(r, 40));
   check(!$('settings').hidden, 'pressing it opens the settings');
   const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
-  check(labels[0] === 'Decoders in this build' && labels.includes('Modland') && labels.includes('ASMA')
-        && labels.includes('Stored here'),
+  check(labels[0] === 'Decoders in this build' && labels.includes('Modland index') && labels.includes('ASMA index')
+        && labels.includes('Song metadata') && labels.includes('Stored here'),
     'which say what this build plays, what is indexed, and what the browser is holding');
+  // W4: what the page carries and what it keeps, each a button with its mark and its words.
+  const notices = $('open-notices');
+  const privacy = $('open-privacy');
+  check(notices?.querySelector('svg') && notices.textContent.trim() === 'Open-source licences'
+        && privacy?.querySelector('svg') && privacy.textContent.trim() === 'Privacy policy',
+    'they offer the open-source licences and the privacy policy, each with its icon and its name');
+  notices.click();
+  await new Promise((r) => setTimeout(r, 40));
+  const table = fs.readFileSync('app/notices/components.tsv', 'utf8');
+  const webRows = (await import(path.resolve('web/src/rules.js'))).parseNotices(table, 'web');
+  const rows = [...$('legalbody').querySelectorAll('.component')];
+  check(!$('legal').hidden && $('settings').hidden && rows.length === webRows.length
+        && rows.some((r) => r.textContent.startsWith('libopenmpt')) && !rows.some((r) => r.textContent.startsWith('UADE')),
+    `the licences list what the page carries -- ${webRows.length} components, UADE not among them`);
+  rows.find((r) => r.textContent.startsWith('Emscripten')).click();
+  await new Promise((r) => setTimeout(r, 40));
+  check($('legalbody').querySelectorAll('pre').length === 3 && !$('legalback').hidden
+        && $('legalback').querySelector('svg') && $('legalback').textContent.trim() === 'Back',
+    'a component shows each of its licence texts, with Back to the list');
+  $('legalback').click();
+  await new Promise((r) => setTimeout(r, 40));
+  check($('legalbody').querySelectorAll('.component').length === webRows.length && $('legalback').hidden,
+    'and Back returns to the list');
+  $('legal').querySelector('[data-close]').click();
+  check($('legal').hidden, 'Close shuts the licences');
+  gear.click();
+  await new Promise((r) => setTimeout(r, 40));
+  $('open-privacy').click();
+  await new Promise((r) => setTimeout(r, 40));
+  const headings = [...$('legalbody').querySelectorAll('h3')].map((h) => h.textContent);
+  check(!$('legal').hidden && $('legaltitle').textContent === 'Privacy policy'
+        && headings[0] === 'Who is responsible' && headings.at(-1) === 'Changes'
+        && $('legalbody').querySelectorAll('li').length > 0,
+    'the privacy policy reads from who is responsible down to Changes, its lists as lists');
+  $('legal').querySelector('[data-close]').click();
+  check($('legal').hidden, 'and Close shuts it');
+  gear.click();
+  await new Promise((r) => setTimeout(r, 40));
   $('settings').querySelector('[data-close]').click();
-  check($('settings').hidden, 'and Close shuts them');
+  check($('settings').hidden, 'and Close shuts the settings');
+}
+
+// --- songdb's metadata (W5) ----------------------------------------------------------------------
+//
+// The phone's "Song metadata": the parser on the rows `SongDbMetadataTest` uses, the rule that fills
+// gaps and never overwrites, and the whole way from a download to a tune's bytes finding their row.
+if (window.__api) {
+  console.log('\nsongdb metadata:');
+  const rulesModule = await import(path.resolve('web/src/rules.js'));
+  const { parseSongDbMetadata, songDbKey } = await import(path.resolve('web/src/songdb.js'));
+  const { md5 } = await import(path.resolve('web/src/songlengths.js'));
+  const full = parseSongDbMetadata('00000b104a70\tDevastator\tShrimps Design\tCrunched Chips #5\t1995');
+  check(full.length === 1 && full[0].author === 'Devastator' && full[0].publisher === 'Shrimps Design'
+        && full[0].album === 'Crunched Chips #5' && full[0].year === '1995',
+    "a full row gives author, publisher, album and year, in songdb's order");
+  check(parseSongDbMetadata('004340d8fba1\t4-Mat')[0]?.author === '4-Mat', 'a row that stops early is still a row');
+  check(parseSongDbMetadata('00002cf7031f\t\t\t\t').length === 0, 'a row that says nothing is dropped');
+  check(['0009c3ef4c4c58f5d597a21df3fbb6d7\tSomebody', 'zzzzzzzzzzzz\tSomebody', '# a comment\tSomebody']
+    .every((line) => parseSongDbMetadata(line).length === 0), 'only twelve hex characters count as a key');
+  check(songDbKey('0009C3EF4C4C58F5D597A21DF3FBB6D7') === '0009c3ef4c4c', 'the key is the published prefix, not the whole hash');
+
+  const hasYear = (fields) => window.__api.releaseYear(fields) !== '';
+  const found = { author: 'Devastator', publisher: 'Shrimps Design', album: 'Crunched Chips #5', year: '1995' };
+  const filled = rulesModule.fillFromSongDb({ artist: 'Own Name', title: 'x' }, found, hasYear);
+  check(filled.artist === 'Own Name' && filled.album === 'Crunched Chips #5' && filled.publisher === 'Shrimps Design'
+        && filled.year === '1995', 'songdb fills the gaps and never overwrites what the tune says');
+  check(rulesModule.fillFromSongDb({ year: '0' }, found, hasYear).year === '1995', "a year of 0 is no year, and songdb's takes its place");
+  check(rulesModule.fillFromSongDb({ year: '1992' }, found, hasYear).year === '1992', 'a year the file states stays');
+  check(rulesModule.fillFromSongDb({ title: 't' }, null, hasYear).title === 't', 'nothing found changes nothing');
+
+  const bytes = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+  const key = songDbKey(md5(bytes));
+  window.__songdbTsv = `${key}\tSomeone\tSome Group\tSome Disk\t1993\nzzzz\tbad\n`;
+  const archive = window.__archive;
+  await archive.downloadSongMetadata();
+  check((await archive.songMetadataMeta())?.tunes === 1, 'the download stores what the file holds, and drops what it cannot read');
+  const got = await archive.songMetadataFor(bytes);
+  check(got?.author === 'Someone' && got.album === 'Some Disk' && got.year === '1993',
+    "a tune's bytes find their row by the first twelve characters of their MD5");
+
+  await window.__api.browseTo(['catalogues']);
+  const offer = [...$('browselist').children].find((li) => li.querySelector('.bname')?.textContent === 'Song metadata');
+  check(offer && offer.querySelector('.bheld svg') && offer.querySelector('.bdl svg'),
+    'Browse offers the song metadata under the catalogues, with its mark and its button');
+  $('tab-settings').click();
+  await new Promise((r) => setTimeout(r, 40));
+  const labels = [...$('settingsfields').querySelectorAll('dt')].map((n) => n.textContent);
+  // W10: Settings lists it with the other downloads, and deletes it -- after asking, as the phone does.
+  const settingsRow = () => [...$('settingsfields').querySelectorAll('dt')].find((n) => n.textContent === 'Song metadata');
+  const remove = settingsRow()?.nextElementSibling.querySelector('button');
+  check(labels.includes('Song metadata') && remove?.querySelector('svg') && remove.textContent.trim() === 'Delete'
+        && settingsRow().nextElementSibling.textContent.startsWith('1 tunes'),
+    'Settings says it is held, and offers Delete with an icon and a word');
+  let asked = '';
+  window.confirm = (text) => { asked = text; return false; };
+  remove.click();
+  await new Promise((r) => setTimeout(r, 60));
+  check(asked.startsWith('Delete the Song metadata?') && asked.includes('no length, author or year')
+        && (await archive.songMetadataMeta())?.tunes === 1,
+    'Delete asks first, saying what will be missing, and No keeps it');
+  window.confirm = () => true;
+  settingsRow().nextElementSibling.querySelector('button').click();
+  await new Promise((r) => setTimeout(r, 60));
+  check(!(await archive.songMetadataMeta()) && (await archive.songMetadataFor(bytes)) === null
+        && $('snacktext').textContent === 'Song metadata deleted'
+        && settingsRow().nextElementSibling.textContent.startsWith('not downloaded'),
+    'and Yes deletes it, says so once, and the row says it is gone');
+  $('settings').querySelector('[data-close]').click();
+  window.__api.showPanel(null);
 }
 
 // --- add to playlist, from one row ---------------------------------------------------------------
@@ -2338,6 +2476,69 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // --- what the page carries and says about itself (W4) ---------------------------------------
+  //
+  // **The page's engine links nothing it does not name.** The web build is `native/CMakeLists.txt`
+  // configured by `build-web-engine.sh`'s own flags, plus what Emscripten brings (its runtime, and
+  // zlib when asked for) and the scripts in `web/lib/`. Derived from those files rather than listed,
+  // so a decoder switched on for the browser without a notice fails here -- the page's
+  // `NoticesCoverTheBuildTest`.
+  {
+    const table = fs.readFileSync('app/notices/components.tsv', 'utf8');
+    const listed = new Set(rules.parseNotices(table, 'web').map((c) => c.id));
+    const cmake = fs.readFileSync('native/CMakeLists.txt', 'utf8');
+    const script = fs.readFileSync('scripts/build-web-engine.sh', 'utf8');
+    const defaults = Object.fromEntries([...cmake.matchAll(/option\((\w+)\s+"[^"]*"\s+(ON|OFF)\)/g)].map((m) => [m[1], m[2] === 'ON']));
+    const set = Object.fromEntries([...script.matchAll(/-D(PROTRACKTOR_\w+)=(ON|OFF)/g)].map((m) => [m[1], m[2] === 'ON']));
+    const on = (flag) => set[flag] ?? defaults[flag] ?? false;
+    const built = new Set();
+    const open = [];
+    for (const line of cmake.split('\n')) {
+      const ifMatch = line.match(/^\s*if\((\w+)\)/);
+      if (ifMatch) { open.push(ifMatch[1]); continue; }
+      if (/^\s*endif\(/.test(line)) { open.pop(); continue; }
+      const sub = line.match(/^\s*add_subdirectory\((?:backends\/)?(\w+)\)/);
+      if (sub && sub[1] !== 'engine' && open.every(on)) built.add(sub[1]);
+    }
+    check(built.size >= 8 && !built.has('uade') && built.has('zxtune'),
+      `the web build is read as what it is: ${[...built].join(', ')}`);
+    const required = new Set(['protracktor', 'emscripten', ...built]);
+    if (built.has('zxtune')) required.add('fmt');
+    if (/-sUSE_ZLIB=1/.test(script)) required.add('zlib');
+    for (const file of fs.readdirSync('web/lib')) if (file.endsWith('.js')) required.add(file.replace(/\.js$/, ''));
+    const unlisted = [...required].filter((id) => !listed.has(id));
+    check(unlisted.length === 0, `everything the page links has a notice${unlisted.length ? `: missing ${unlisted.join(', ')}` : ''}`);
+    check(!listed.has('uade') && !listed.has('oboe') && !listed.has('androidx'),
+      'and the page names nothing it does not carry -- no UADE, nothing of Android');
+    for (const c of rules.parseNotices(table, 'web')) {
+      check(c.files.length > 0, `${c.id} names at least one licence file`);
+    }
+  }
+  {
+    const blocks = rules.privacyBlocks(fs.readFileSync('store/privacy-policy.md', 'utf8'));
+    const english = fs.readFileSync('store/privacy-policy.md', 'utf8').split('## Polski')[0];
+    const headings = [...english.matchAll(/^### (.+)$/gm)].map((m) => rules.cleanLegal(m[1]));
+    check(blocks[0]?.text.startsWith('Effective date:'), 'the privacy policy opens with its date');
+    check(JSON.stringify(blocks.filter((b) => b.kind === 'heading').map((b) => b.text)) === JSON.stringify(headings),
+      'every English heading of the policy is shown, in order, and no Polish one');
+    check(blocks.every((b) => !b.text.includes('**') && !b.text.includes('`')), 'with its Markdown taken off');
+    check(blocks.at(-1)?.kind !== 'heading' && headings.at(-1) === 'Changes', 'down to its last section, Changes, and its text');
+  }
+
+  // What History records (A56), the same rows `RuleCasesTest` runs against `HistoryRecording`.
+  each('historyRecords', (c) =>
+    rules.recordsPlay({ walkingResults: yes(c.walkingResults), fromHistory: yes(c.fromHistory) }) === yes(c.expect));
+  // A length as the time display shows it, the same rows `RuleCasesTest` runs against `formatTotal`.
+  each('lengthTotal', (c) => rules.clockTotal(Number(c.seconds)) === c.expect);
+  // When a now-playing line may scroll, the same rows `RuleCasesTest` runs against `DockMarquee`.
+  each('lineScrolls', (c) =>
+    rules.lineScrolls({ animationsOn: yes(c.animationsOn), isStatus: yes(c.isStatus) }) === yes(c.expect));
+  check(rules.lineScrollPass(0) === null && rules.lineScrollPass(-5) === null, 'a line that fits does not move');
+  {
+    const pass = rules.lineScrollPass(60);
+    check(pass && pass.duration === 4000 && pass.pauseShare === 0.5,
+      'a line 60 px too long: two seconds still, two seconds moving at 30 px a second');
+  }
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
@@ -2545,6 +2746,105 @@ if (window.__api?.catalogueStore) {
     check(parsed[0].seconds.join(',') === '235.594,61.288,6', 'and every subsong is kept',
       parsed[0].seconds.join(','));
   }
+}
+
+// --- the empty playlist (W11) --------------------------------------------------------------------
+//
+// The phone's EmptyPlaylist: nothing said until it is known what is held, then the download when
+// nothing is and Browse when something is. Last, because it empties the stored indexes.
+if (window.__api) {
+  console.log('\nthe empty playlist:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 60));
+  const store = api.catalogueStore;
+  if (api.awayState()) api.endSession();
+  if (api.randomState()) api.endRandom();
+  await store.clear('modland:');
+  await store.clear('asma:');
+  api.setQueue([]);
+  api.showPanel(null);
+  await settle();
+  const box = $('emptyplaylist');
+  const action = $('emptyaction');
+  check(!box.hidden && $('emptybody').textContent.startsWith('Nothing to browse yet')
+        && action.textContent === 'Get some music to browse' && action.querySelector('svg'),
+    'with nothing held, the empty list offers the download, with its icon and its words');
+  action.click();
+  await settle();
+  check(!$('browse').hidden && $('browsetitle').textContent === 'Browse', 'which opens Browse');
+  api.showPanel(null);
+  await store.putAll([{ key: 'modland:meta', tracks: 3, formats: 1 }]);
+  api.render();
+  await settle();
+  check(!box.hidden && action.textContent === 'Browse' && action.querySelector('svg'),
+    'with a catalogue held, it offers Browse instead');
+  api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/a.mod']);
+  await settle();
+  check(box.hidden, 'and says nothing once the list has something in it');
+  await store.clear('modland:');
+}
+
+// --- Browse as the phone draws it (W8) -------------------------------------------------------------
+//
+// The root's four rows, the catalogues with their held marks and one button each, the grouped Song
+// metadata row, and a download that shows itself in its row rather than emptying the screen. Last,
+// because the download it starts is held open on purpose and never finishes.
+if (window.__api) {
+  console.log('\nBrowse as the phone draws it:');
+  const api = window.__api;
+  const settle = () => new Promise((r) => setTimeout(r, 60));
+  const store = api.catalogueStore;
+  await store.clear('modland:');
+  await store.clear('asma:');
+  await window.__archive.clearSongLengths();
+  await window.__archive.clearSongMetadata();
+  api.showPanel('browse');
+  await api.browseTo([]);
+  const root = [...$('browselist').children];
+  check(root.map((li) => li.querySelector('.bname').textContent).join('|') === 'Online catalogues|Random|History|Search'
+        && root.every((li) => li.querySelector('svg') && li.querySelector('.bmeta').textContent),
+    "the root is the phone's: online catalogues, Random, History and Search, each with its icon and one line");
+  root[0].click();
+  await settle();
+  const rowsNow = () => [...$('browselist').children];
+  const named = (name) => rowsNow().find((li) => li.querySelector('.bname')?.textContent === name);
+  check($('browsetitle').textContent === 'Online catalogues' && named('Modland') && named('ASMA') && named('Song metadata'),
+    'which opens on Modland, ASMA and the song metadata');
+  const modland = named('Modland');
+  check(!modland.querySelector('.bheld.yes') && modland.querySelector('.bheld svg')
+        && modland.querySelector('.bdl').getAttribute('aria-label') === 'Download the index for Modland'
+        && modland.querySelector('.bmeta').textContent.startsWith('Not indexed yet'),
+    'a catalogue that is not here: a dimmed cloud, Download, and a line that says so');
+  modland.click();
+  await settle();
+  check($('browsetitle').textContent === 'Online catalogues', 'and it does not open onto nothing');
+
+  await store.putAll([{ key: 'modland:meta', tracks: 3, total: 3, complete: true, formats: 1, buckets: 1, fingerprint: 'x' }]);
+  await api.browseTo(['catalogues']);
+  const held = named('Modland');
+  check(held.querySelector('.bheld.yes') && held.querySelector('.bmeta').textContent === '3 tunes'
+        && held.querySelector('.bdl').getAttribute('aria-label') === 'Update the index for Modland',
+    'a catalogue that is here: the tick, how many tunes, and Refresh instead of Download');
+  held.click();
+  await settle();
+  check($('browsetitle').textContent === 'Modland', 'and it opens');
+
+  await api.browseTo(['catalogues']);
+  check(!named('Song metadata').querySelector('.bheld.yes'), 'the song metadata is one row with no tick while either half is missing');
+  await store.putAll([{ key: 'lengths:meta', tunes: 2 }, { key: 'songdb:meta', tunes: 5 }]);
+  await api.browseTo(['catalogues']);
+  check(named('Song metadata').querySelector('.bheld.yes') && named('Song metadata').querySelector('.bmeta').textContent === '7 tunes',
+    'and one tick, counting both, once the SID lengths and songdb are here');
+
+  // A download in progress, held open: it shows in its own row, and the list stays.
+  holdTrackFetch = true;
+  api.onWorklet({ type: 'ready', backends: 'openmpt:0.8.9;sc68:3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;zxtune:none' });
+  named('Modland').querySelector('.bdl').click();
+  await settle();
+  check(named('Modland')?.querySelector('.bbusy .spinner') && named('ASMA') && named('Song metadata'),
+    'a download shows a spinner in its own row, and the other rows stay where they are');
+  holdTrackFetch = false;
+  api.showPanel(null);
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ page checks passed');

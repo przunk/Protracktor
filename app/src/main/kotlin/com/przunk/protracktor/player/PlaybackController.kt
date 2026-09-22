@@ -139,6 +139,12 @@ data class PlayerUiState(
      */
     val resultsQueue: PlayQueue? = null,
     /**
+     * Whether [resultsQueue] is History's list (A56). Set where a results list is made -- tapping a
+     * row, or walking into an author's folder -- and not where it is walked, so next and previous
+     * keep it. Meaningless once [resultsQueue] is gone, and [HistoryRecording] never reads it then.
+     */
+    val resultsFromHistory: Boolean = false,
+    /**
      * A Random session waiting under a digression (`docs/BACKLOG.md` A41).
      *
      * "More from this author" from the dice moves playback to that folder; the record and the
@@ -2067,7 +2073,11 @@ class PlaybackController private constructor(private val context: Context) {
             if (_state.value.randomMode || _state.value.diceWaiting) {
                 val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
                 _state.update {
-                    it.copy(resultsQueue = PlayQueue(tracks = found).startAt(at), diceWaiting = true)
+                    it.copy(
+                        resultsQueue = PlayQueue(tracks = found).startAt(at),
+                        resultsFromHistory = false,
+                        diceWaiting = true,
+                    )
                 }
             }
         }
@@ -2078,11 +2088,15 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Notes that a tune was played.
      *
-     * Every play, wherever it came from: the playlist, Random, a search result. Random is the
-     * reason this matters most — it is the only place that plays music nobody chose, and "what was
+     * Every play, wherever it came from -- the playlist, Random, a search result -- **except one
+     * History itself started** (A56). Random is the reason this matters most — it is the only place that plays music nobody chose, and "what was
      * that" is a question you can only ask afterwards.
      */
     private fun recordPlayed(ref: TrackRef) {
+        // A play History started leaves History as it is: no new time, no new place, no count
+        // (A56, `HistoryRecording`).
+        val now = _state.value
+        if (!HistoryRecording.records(now.searchMode, now.resultsFromHistory)) return
         scope.launch {
             history.record(
                 trackId = ref.id,
@@ -2092,9 +2106,9 @@ class PlaybackController private constructor(private val context: Context) {
                 author = ref.author,
                 sizeBytes = ref.sizeBytes,
             )
-            // Only if the user is looking at it. Refreshing a list nobody has open is a database
-            // read per track played, for nothing.
-            if (_browse.value.domain == BrowseDomain.HISTORY) refreshHistory()
+            // **Not refreshed while it is open** (A56). It used to be, so a row tapped in History
+            // jumped to the top under the finger that tapped it. History shows what it showed when
+            // it was opened, and the next visit reads it afresh.
         }
     }
 
@@ -3167,6 +3181,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun playFromResults(results: List<TrackRef>, index: Int) {
         if (index !in results.indices) return
+        // Where the list came from is known only here, from the screen it was tapped on (A56).
+        val fromHistory = _browse.value.domain == BrowseDomain.HISTORY
+        _state.update { it.copy(resultsFromHistory = fromHistory) }
         playFromResultsQueue(PlayQueue(tracks = results).startAt(index))
     }
 

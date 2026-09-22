@@ -112,11 +112,12 @@ artifact="$DIST_DIR/protracktor-${version_name:-unknown}-${version_code:-0}.aab"
 
 echo "🔨 Protracktor — Play bundle ${version_name:-?} (${version_code:-?})"
 
-# Play rejects a versionCode it has already seen. This file existing means the code was built
-# before: a rebuild is fine, a forgotten bump is not, and only the author can tell which.
+# Play rejects a versionCode it has already seen. The versionCode is the commit count, so this file
+# existing means this very commit count was bundled before: a rebuild is fine, but if that bundle
+# was uploaded, this one cannot be -- there is no number to bump, only a commit to make.
 if [ -f "$artifact" ]; then
     echo "ℹ️  A bundle for versionCode ${version_code} already exists and will be replaced."
-    echo "   If that code has been uploaded, bump it in app/build.gradle.kts first."
+    echo "   If it was uploaded, Play will refuse this one: the versionCode moves only with a commit."
 fi
 
 require_toolchain

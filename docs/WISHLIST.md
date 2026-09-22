@@ -10,6 +10,19 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B35. Old files' text as Central European, as a setting — **not planned, 2026-09-21**
+
+Raised by the owner on 2026-09-21: `Fasttracker 2/Jakim/studium falszu.xm` shows "Studium Fa³szu".
+The title holds `0xB3`, which is `ł` in Windows-1250 and ISO-8859-2 (Polish Windows) and `³` in
+Windows-1252, the encoding libopenmpt reads a FastTracker 2 XM in. The file does not say which, and
+the same byte is a different letter in a Polish title and a German one, so no rule can tell them
+apart without guessing the language — and switching everyone to Central European would turn `ö`,
+`ä` and `å` in western titles into other letters.
+
+The option, if it is ever wanted: a setting, *Old file text: Western / Central European*, default
+Western, applied where the engine and the libopenmpt patch choose ISO-8859-1 / Windows-1252 today
+(`docs/STATUS.md` C79). **The owner's decision, 2026-09-21: not to be built; kept as an option.**
+
 ## B32. A row being fetched breathes — DONE 2026-09-14
 
 Marking says "this one"; what a download has to add is "still working", and a network fetch is
