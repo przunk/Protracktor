@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A57. The page catches up with the APK — **planned 2026-09-22**
+## A57. The page catches up with the APK — **planned 2026-09-22; DONE the same day, W1–W11 merged; checked by the owner in a browser**
 
 Everything the app gained since the page was last brought level (2026-09-16/17), sorted: what the
 shared engine already gives the page, what was done alongside, what a browser cannot have, and five

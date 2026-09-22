@@ -5,6 +5,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # The page catches up with the APK
 
+**Done 2026-09-22: W1–W11 merged to `develop`, checked by the owner in a browser. W6 and W7 (Polish,
+a light theme) remain for after the public launch, as decided (W-D3).**
+
 *Asked for on 2026-09-22: "bring the web version up to the APK's state; write down what went into
 the APK since the web last changed, and prepare a stage."* Written before any code. `docs/BACKLOG.md`
 A57 is the entry; the decisions W-D1 to W-D3 are the owner's, each with a recommendation.
@@ -192,7 +195,8 @@ Browse for the playlist in that case too.
 
 **Decided 2026-09-22: (a)**, the owner approving W8–W11 as planned.
 
-**State, 2026-09-22 evening — all built, none merged, none seen in a browser.** One branch each:
+**Merged 2026-09-22, all of W1–W11, after the owner checked the combined build in a browser ("much
+better").** Before that: One branch each:
 `feature/web-w9-back-after-jump` and `feature/web-w11-first-run` off `develop`;
 `feature/web-w8-browse-like-app` off W5 (it folds W5's row into the group), and
 `feature/web-w10-storage` off W8 (it lists the grouped row). All of W1–W11 together are on
