@@ -176,14 +176,15 @@ export function cleanLegal(text) {
 }
 
 /**
- * The English section of the privacy policy as blocks -- headings, paragraphs and bullets -- headed
- * by its effective date: the phone's `LegalText.privacyBlocks` for the language the page speaks.
+ * The privacy policy's Polish section when [polish], its English one otherwise, as blocks --
+ * headings, paragraphs and bullets -- headed by its effective date: the phone's
+ * `LegalText.privacyBlocks`, rule for rule.
  */
-export function privacyBlocks(markdown) {
+export function privacyBlocks(markdown, polish = false) {
   const lines = String(markdown ?? '').split('\n');
   const dateLine = lines.find((l) => l.startsWith('Effective date:'));
   const blocks = dateLine ? [{ kind: 'paragraph', text: cleanLegal(dateLine) }] : [];
-  const start = lines.findIndex((l) => l.trim() === '## English');
+  const start = lines.findIndex((l) => l.trim() === (polish ? '## Polski' : '## English'));
   if (start < 0) return blocks;
   let end = lines.findIndex((l, i) => i > start && l.startsWith('## '));
   if (end < 0) end = lines.length;
