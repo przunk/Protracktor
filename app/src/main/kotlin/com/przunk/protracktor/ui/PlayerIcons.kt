@@ -218,6 +218,14 @@ object PlayerIcons {
                 "3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
         )
     }
+    /** A cross, for "close this without doing anything": the scanner's Cancel. */
+    val Close: ImageVector by lazy {
+        icon(
+            "Close",
+            "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 " +
+                "19 17.59 13.41 12z",
+        )
+    }
     /** The playlist itself. Used by the way out of Browse, which is not the same as "back". */
     val Playlist: ImageVector by lazy {
         icon(
