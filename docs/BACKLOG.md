@@ -60,7 +60,7 @@ under the finger that tapped it and the list reorders while it is being read.
   **no `play_count`**. History then says what was played elsewhere, and does not drift under the
   person reading it. And while History is open, it is not refreshed at all: it shows what it
   showed when it was opened.
-## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13**
+## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13; D4–D6 decided 2026-09-23 (a, a, a), a prototype**
 
 Opening a Modland author's folder fetches its tracks into the cache one after another, three at a
 time, with a spinner in each row's left slot while it runs. When it may run (Wi-Fi only by

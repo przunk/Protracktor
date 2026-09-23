@@ -187,6 +187,9 @@ tune is played, so there is nothing to spread over three. The Mod Archive has no
 - **While selecting**, the checkbox has the slot and the spinner is not shown; the fetch goes on.
 - It goes through the existing cache, with its 512 MB ceiling and least-recently-used eviction.
 
+**Decided 2026-09-23: D4 (a), D5 (a), D6 (a)**, approved by the owner as recommended, as a
+prototype to be judged on the phone ("we can settle on such a prototype").
+
 **D4 — when it runs.** Nobody has pressed anything, so this spends data on the user's behalf —
 the exact objection A46 made to downloading at first launch.
 
