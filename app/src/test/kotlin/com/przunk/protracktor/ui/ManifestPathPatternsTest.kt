@@ -42,4 +42,20 @@ class ManifestPathPatternsTest {
             patterns.filterNot { it.startsWith("/") },
         )
     }
+
+    @Test
+    fun `no web filter goes without a host, or the app is offered as a browser`() {
+        // Android ignores every path pattern in a filter that names no host, so an http(s) filter
+        // without one claims every web address: the owner found Protracktor offered as a browser.
+        val filters = Regex("""<intent-filter[^>]*>(.*?)</intent-filter>""", RegexOption.DOT_MATCHES_ALL)
+            .findAll(manifest).map { it.groupValues[1] }.toList()
+        val web = filters.filter { Regex("""android:scheme="https?"""").containsMatchIn(it) }
+        assertTrue("no web filter found at all — has it moved?", web.isNotEmpty())
+        assertEquals(
+            "every http(s) filter names its hosts",
+            emptyList<String>(),
+            web.filterNot { "android:host=" in it }.map { it.trim().take(120) },
+        )
+    }
 }
+
