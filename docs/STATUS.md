@@ -427,6 +427,16 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C87. Online catalogues jumped while downloading — **FIXED 2026-09-23, merged, confirmed in a browser**
+
+The owner: while indexing, the rows vanished and came back, and the download button and its spinner
+moved. Two causes. Every download's start and end redraws the list, and the redraw **cleared it and
+the note first**, then read from IndexedDB, then drew -- an empty moment each time, and one row
+still waited mid-list for the stale-index check. And the spinner with "indexing…" under it was 84 px
+against the button's 44, so the row's text rewrapped. Now the list is built aside and swapped in at
+once, the note is rewritten only when it says something new, and the spinner takes the button's
+44 × 44 box with its word for screen readers only.
+
 ### C86. GitHub Pages stopped deploying pushes to `gh-pages` — **worked around 2026-09-23; cause unknown**
 
 Two pushes to `gh-pages` on 2026-09-23 (`af27036`, `43a61d5`) reached GitHub, and no *pages build and
