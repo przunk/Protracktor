@@ -2819,6 +2819,13 @@ function holding({ tracks, total, complete } = {}) {
     + (complete ? ' yet — they are already here if it learns one.' : '.');
 }
 
+/*
+  **Progress is the row's spinner, and nothing else** (the owner, 2026-09-23). The note under the
+  heading used to narrate each download -- "storing 40,000 of 515,509…", then a result -- and with
+  several started at once every one of them wrote over the others. It now says only what is held,
+  which the list redraws when a download ends, and what went wrong: a failure left unsaid would be
+  a press that did nothing.
+*/
 async function downloadIndex() {
   const note = $('browsenote');
   await downloadStarted('modland');
@@ -2826,25 +2833,18 @@ async function downloadIndex() {
     // Which formats to keep depends on which decoders this engine has, and only the engine can say.
     // Started here if nothing has played yet -- this is a click, so a browser allows the audio.
     if (!engineReady) {
-      note.textContent = 'starting the engine, to ask which formats this browser can play…';
       await start();
       await whenEngineReady();
     }
     const table = await formatsReady();
-    const result = await archive.downloadModland({
+    await archive.downloadModland({
       fingerprint: archive.indexFingerprint(engineFingerprint, table),
       // **The verdict, not the filter.** Every row the archive lists is stored; this decides which
       // of them this build offers (`docs/ROADMAP_FORMATS.md` step 0), and a build that learns a
       // format re-decides the stored rows instead of fetching them again.
       isPlayable: archive.playable(table, absentHere()),
-      onProgress: (p) => {
-        note.textContent = p.stage === 'storing'
-          ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
-          : `${p.stage}…`;
-      },
     });
     await downloadEnded('modland');
-    note.textContent = `${result.formats} formats. ${holding(result)}`;
   } catch (e) {
     await downloadEnded('modland');
     note.textContent = `the index could not be downloaded: ${e.message}`;
@@ -2857,22 +2857,15 @@ async function downloadAsmaIndex() {
   await downloadStarted('asma');
   try {
     if (!engineReady) {
-      note.textContent = 'starting the engine, to ask which formats this browser can play…';
       await start();
       await whenEngineReady();
     }
     const table = await formatsReady();
-    const result = await archive.downloadAsma({
+    await archive.downloadAsma({
       fingerprint: archive.indexFingerprint(engineFingerprint, table),
       isPlayable: archive.playable(table, absentHere()),
-      onProgress: (p) => {
-        note.textContent = p.stage === 'storing'
-          ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
-          : `${p.stage}…`;
-      },
     });
     await downloadEnded('asma');
-    note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections.`;
   } catch (e) {
     await downloadEnded('asma');
     note.textContent = `the ASMA list could not be downloaded: ${e.message}`;
@@ -2896,18 +2889,7 @@ async function downloadAsmaIndex() {
 async function downloadDatabase(what, run) {
   const note = $('browsenote');
   try {
-    const result = await run({
-      onProgress: (p) => {
-        if (p.stage === 'fetching' && p.total) {
-          note.textContent = `fetching ${(p.done / 1e6).toFixed(1)} of ${(p.total / 1e6).toFixed(1)} MB…`;
-        } else if (p.stage === 'storing') {
-          note.textContent = `storing ${p.done} of ${p.total}…`;
-        } else {
-          note.textContent = `${p.stage}…`;
-        }
-      },
-    });
-    note.textContent = `${what}: ${result.tunes.toLocaleString()} tunes.`;
+    await run({});
     return true;
   } catch (e) {
     note.textContent = `the ${what.toLowerCase()} could not be downloaded: ${e.message}`;
@@ -2923,11 +2905,9 @@ async function downloadDatabase(what, run) {
  */
 async function downloadSongMetadata() {
   await downloadStarted(SONG_METADATA);
-  const lengths = await downloadDatabase('SID song lengths', archive.downloadSongLengths);
-  const said = $('browsenote').textContent;
-  const metadata = await downloadDatabase('Song metadata', archive.downloadSongMetadata);
+  await downloadDatabase('SID song lengths', archive.downloadSongLengths);
+  await downloadDatabase('Song metadata', archive.downloadSongMetadata);
   await downloadEnded(SONG_METADATA);
-  if (lengths && metadata) $('browsenote').textContent = `${said} ${$('browsenote').textContent}`;
 }
 
 // --- the catalogues, as the phone draws them (W8) ------------------------------------------------
