@@ -92,7 +92,17 @@ are mostly the library's, read out of files. Worst-case search on the full index
 for query and stored text, a sparse folded column (the next free database version after A47's 18), the same rule in the
 browser. D2 in `docs/PLAN_ROUND_13.md`.
 
-## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18**
+## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18; BUILT 2026-09-23, branch `feature/a51-refusal-names-format`, not yet seen on the phone**
+
+**Built:** a Modland file that this build claims and a decoder still refuses now ends its message
+with *Modland lists it as Beaver Sweeper.* (PL: *Modland zalicza ten plik do formatu …*), on the
+phone and on the page. The directory is read from the file's address rather than the index
+(`OpenFailure.modlandFormatOf`, the page's `modlandFormatOf`), so both sides use one rule, held by
+`docs/rules/queue-cases.tsv` `[refusalFormat]`; ASMA is left out, its first folder being a grouping.
+Both refusals about a claimed file get it -- with the decoder's reason and without one. **Checked:**
+the shared cases on both sides, the page's refusal text, and that a rule returning nothing fails
+all of them. **Not checked:** `nokia.gtk` refused on the phone.
+
 
 **Both halves are working as designed, and the answer is a measurement.**
 

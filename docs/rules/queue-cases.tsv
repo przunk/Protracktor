@@ -190,3 +190,16 @@ duration	endsAt	fallback	seconds	approximate	why
 0	158	180	158	yes	a looping NSF: game-music-emu fades it at 2:30 plus eight seconds
 0	-	180	180	yes	nothing ends it but the fallback, so the bar runs to the fallback
 0	400	180	180	yes	the fallback comes first, so that is where it stops
+
+# The format a refused catalogue file is filed under, read from its address (`docs/BACKLOG.md` A51):
+# the phone's `OpenFailure.modlandFormatOf` and the page's `modlandFormatOf`. One extension can be
+# two formats -- `.gtk` is Graoumf Tracker and Beaver Sweeper -- and only Modland's directory knows
+# which, so a refusal names it. `-` means no clause: not a Modland file.
+[refusalFormat]
+url	expect	why
+https://modland.com/pub/modules/Beaver%20Sweeper/Steffo/nokia.gtk	Beaver Sweeper	the case that raised it: a .gtk that is not Graoumf Tracker
+https://modland.com/pub/modules/Protracker/4-Mat/elysium.mod	Protracker	an ordinary file names its directory too
+https://modland.com/pub/modules/Ad%20Lib/Unknown/a%2Bb.sng	Ad Lib	escapes are undone in the name shown
+https://asma.atari.org/asma/Composers/Aki/Robots.sap	-	ASMA's first folder is a grouping, not a format
+content://com.android.externalstorage.documents/document/primary%3AMusic%2Fx.mod	-	a file on the phone has no archive to quote
+https://modland.com/pub/modules/	-	an address with no format in it

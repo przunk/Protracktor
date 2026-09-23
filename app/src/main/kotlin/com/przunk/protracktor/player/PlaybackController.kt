@@ -3535,10 +3535,16 @@ class PlaybackController private constructor(private val context: Context) {
                     R.string.open_failed_format,
                     OpenFailure.formatName(catalogueFormatOf(ref), name),
                 )
-            OpenFailure.Kind.FILE_REFUSED_WITH_REASON ->
-                context.getString(R.string.open_failed_file_because, ref.title, reason)
-            OpenFailure.Kind.FILE_REFUSED ->
-                context.getString(R.string.open_failed_file, ref.title)
+            OpenFailure.Kind.FILE_REFUSED_WITH_REASON -> {
+                val refused = context.getString(R.string.open_failed_file_because, ref.title, reason)
+                OpenFailure.modlandFormatOf(ref.id)
+                    ?.let { context.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
+            }
+            OpenFailure.Kind.FILE_REFUSED -> {
+                val refused = context.getString(R.string.open_failed_file, ref.title)
+                OpenFailure.modlandFormatOf(ref.id)
+                    ?.let { context.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
+            }
         }
     }
 

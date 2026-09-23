@@ -113,4 +113,11 @@ class OpenFailureTest {
             ),
         )
     }
+
+    @Test
+    fun `a clause after a decoder's reason follows a full stop, and only one`() {
+        // "error loading file" is how libopenmpt ends it; our own sentences already have a stop.
+        assertEquals("nokia.gtk would not open: error loading file.", OpenFailure.sentence("nokia.gtk would not open: error loading file"))
+        assertEquals("x.mod would not open. So it is this one.", OpenFailure.sentence("x.mod would not open. So it is this one."))
+    }
 }
