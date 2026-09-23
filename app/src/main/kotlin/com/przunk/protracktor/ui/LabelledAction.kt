@@ -4,6 +4,9 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -255,4 +258,17 @@ internal fun LabelledAction(
             )
         }
     }
+}
+
+/**
+ * An icon and its name inside a Material button, for the buttons that are not [LabelledAction]s --
+ * a row of two choices, a dialog-less call to action (`docs/STATUS.md` C82). The icon is decorative
+ * to a screen reader because the name beside it already says it; the sizes are Material's own for a
+ * button with an icon.
+ */
+@Composable
+fun RowScope.IconLabel(icon: ImageVector, label: String) {
+    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+    Spacer(Modifier.width(8.dp))
+    Text(label)
 }
