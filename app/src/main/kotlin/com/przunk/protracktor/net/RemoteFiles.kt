@@ -11,6 +11,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
 
 /**
@@ -42,7 +44,16 @@ class RemoteFiles(private val context: Context) {
             return@withContext runCatching { cached.readBytes() }.getOrNull()
         }
 
-        val downloaded = runCatching { download(url) }.getOrNull() ?: return@withContext null
+        // **One download per address** (A55): a tap on a track that is being fetched ahead waits
+        // for that fetch instead of starting a second, and a download keeps going when whoever
+        // asked for it -- a folder that was left -- stops waiting.
+        downloads.get(url) { downloadAndStore(url, cached) }
+    }
+
+    private val downloads = SharedFetches<ByteArray?>(CoroutineScope(SupervisorJob() + Dispatchers.IO))
+
+    private fun downloadAndStore(url: String, cached: File): ByteArray? {
+        val downloaded = runCatching { download(url) }.getOrNull() ?: return null
 
         // Written through a temporary file: a download interrupted halfway would otherwise leave a
         // truncated file in the cache that looks valid forever after. The budget ignores `.part`
@@ -57,7 +68,7 @@ class RemoteFiles(private val context: Context) {
         // survive anyway, and enforcing before writing would leave the cache briefly over budget
         // exactly when it is easiest to fix.
         if (stored) enforceBudget(inUse = setOf(cached.name))
-        downloaded
+        return downloaded
     }
 
     /**

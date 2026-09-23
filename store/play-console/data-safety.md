@@ -46,6 +46,9 @@ data as shared too. Do not change the answer to “not collected” merely to av
   Modland's favourites, UADE's song database), `svn.code.sf.net` (sc68's replay routines) and
   `gitlab.com` (UADE's replay routines). Ordinary HTTPS requests for public files; no identifier is
   added.
+- **Cache folders ahead** (`docs/BACKLOG.md` A55) downloads the tracks of a Modland folder the
+  user opened, from the same host as a tapped track, on Wi-Fi only by default. Re-read 2026-09-23:
+  the same kind of request as above, no new host and no new data type, so no answer changes.
 
 ## Security and deletion answers
 

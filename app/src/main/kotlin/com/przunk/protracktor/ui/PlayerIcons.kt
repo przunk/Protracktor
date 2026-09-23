@@ -218,6 +218,18 @@ object PlayerIcons {
                 "3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
         )
     }
+    /**
+     * A phone with a tick: this tune is on this phone and plays without the network (A55, D5).
+     * Not the catalogue's tick in a disc, which says a whole download is here -- the owner asked for
+     * the phone, 2026-09-23, because a row's file and a catalogue's index are different things.
+     */
+    val OnPhone: ImageVector by lazy {
+        icon(
+            "OnPhone",
+            "M19 1H9c-1.1 0-2 .9-2 2v3h2V4h10v16H9v-2H7v3c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2z" +
+                "M7.01 13.47l-2.55-2.55-1.27 1.27L7 16l7.19-7.19-1.27-1.27z",
+        )
+    }
     /** The playlist itself. Used by the way out of Browse, which is not the same as "back". */
     val Playlist: ImageVector by lazy {
         icon(

@@ -516,4 +516,12 @@
     <string name="notices_version_licence">%1$s · %2$s</string>
     <string name="settings_privacy">Polityka prywatności</string>
     <string name="settings_privacy_detail">Co aplikacja wysyła i dokąd</string>
+    <string name="settings_online_section">Katalogi online</string>
+    <string name="settings_cache_ahead">Pobieraj foldery z wyprzedzeniem</string>
+    <string name="settings_cache_ahead_detail">Gdy otworzysz folder autora z Modlandu, jego utwory pobierają się w tle, po trzy naraz i do 100 MB na folder, żeby grały bez czekania.</string>
+    <string name="settings_cache_ahead_wifi">Tylko Wi-Fi</string>
+    <string name="settings_cache_ahead_always">Zawsze</string>
+    <string name="settings_cache_ahead_off">Wyłączone</string>
+    <string name="a11y_caching_ahead">Pobieranie w tle</string>
+    <string name="a11y_cached_here">Na tym telefonie</string>
 </resources>
