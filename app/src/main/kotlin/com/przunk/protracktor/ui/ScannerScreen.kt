@@ -128,9 +128,15 @@ fun ScannerScreen(
                 Text(stringResource(R.string.settings_privacy))
             }
             TextButton(onClick = onSendLink) {
+                Icon(PlayerIcons.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.action_send_as_link))
             }
-            Button(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
+            Button(onClick = onCancel) {
+                Icon(PlayerIcons.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_cancel))
+            }
         }
     }
 }
