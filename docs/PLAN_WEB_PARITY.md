@@ -227,8 +227,8 @@ when no catalogue is held, opening Browse on the catalogues.
 
 ## W-D3 — Polish and a light theme
 
-**Decided 2026-09-23: (a), its own stage after the launch -- and BUILT the same day, branch
-`feature/web-polish-and-light-theme`, not yet seen in a browser.**
+**Decided 2026-09-23: (a), its own stage after the launch -- BUILT and merged the same day,
+confirmed in the owner's browser.**
 
 - **W6, Polish.** `web/src/i18n.js` and `i18n-pl.js`: the English text is the key, the Polish its
   value, counts in their three Polish forms (`1 utwór`, `3 utwory`, `5 utworów`). The app's words

@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23, branch `fix/a58-steady-bar`, not yet seen on the phone**
+## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
 
 **Decided 2026-09-23 (the owner):** keep room for the tilde always, and the same room on both
 sides. **Built:** both times beside the bar take the width of `~00:00` in their own font, measured
@@ -74,7 +74,7 @@ under the finger that tapped it and the list reorders while it is being read.
   **no `play_count`**. History then says what was played elsewhere, and does not drift under the
   person reading it. And while History is open, it is not refreshed at all: it shows what it
   showed when it was opened.
-## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13; D4–D6 decided 2026-09-23 (a, a, a), a prototype; BUILT 2026-09-23, branch `feature/a55-cache-folder-ahead`, not yet seen on the phone**
+## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13; D4–D6 decided 2026-09-23 (a, a, a), a prototype; BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone after the permission fix**
 
 **Built to the plan.** Opening a Modland author's folder -- by walking to it or by "more from this
 author" -- marks the rows already on the phone and, when *Settings → Online catalogues → Cache
@@ -133,7 +133,7 @@ are mostly the library's, read out of files. Worst-case search on the full index
 for query and stored text, a sparse folded column (the next free database version after A47's 18), the same rule in the
 browser. D2 in `docs/PLAN_ROUND_13.md`.
 
-## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18; BUILT 2026-09-23, branch `feature/a51-refusal-names-format`, not yet seen on the phone**
+## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18; BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
 
 **Built:** a Modland file that this build claims and a decoder still refuses now ends its message
 with *Modland lists it as Beaver Sweeper.* (PL: *Modland zalicza ten plik do formatu …*), on the

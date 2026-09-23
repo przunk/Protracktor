@@ -427,6 +427,16 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C84. Browse's search field stood over every list — **FIXED 2026-09-23, merged, confirmed in a browser**
+
+The owner: the field was visible across Browse, where the phone shows it only in Search. It now
+belongs to Search (`fix/web-search-in-its-place`).
+
+### C83. Several catalogue downloads at once wrote over each other in Browse's note — **FIXED 2026-09-23, merged, confirmed in a browser**
+
+The owner: pressing download on each catalogue made the note flicker between them. Progress is now
+only the row's spinner; the note says what is held and what failed (`fix/web-download-note`).
+
 ### C82. Buttons with a label and no icon, outside dialogs — **OPEN, found 2026-09-23; corrected the same day**
 
 Found while giving the pairing screen's two buttons their icons (`fix/scanner-button-icons`).
