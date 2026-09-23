@@ -641,7 +641,7 @@ the heading names the author, the heading's button offers the dice rather than t
 Back out of the author's folder resumes it. Eleven page checks walk the whole journey, including a
 playlist chosen mid-digression, which ends both.
 
-## A40. Protracktor links open in the app — **parked 2026-09-14; the app's side BUILT 2026-09-23, branch `feature/a40-app-links`; the verification file is the owner's**
+## A40. Protracktor links open in the app — **parked 2026-09-14; the app's side BUILT and merged 2026-09-23, confirmed on the phone with the link added by hand; the verification file is the owner's**
 
 **Unparked 2026-09-23**: the page has a permanent address, `https://przunk.github.io/Protracktor/`.
 
