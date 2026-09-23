@@ -448,7 +448,7 @@ belongs to Search (`fix/web-search-in-its-place`).
 The owner: pressing download on each catalogue made the note flicker between them. Progress is now
 only the row's spinner; the note says what is held and what failed (`fix/web-download-note`).
 
-### C82. Buttons with a label and no icon, outside dialogs — **found 2026-09-23; FIXED the same day on `fix/c82-button-icons`, not yet seen on the phone**
+### C82. Buttons with a label and no icon, outside dialogs — **found 2026-09-23; FIXED, merged and confirmed on the phone the same day**
 
 **Fixed, with the icons the owner agreed to:** Add a folder -- folder; Add files -- document; Clear
 history -- the cross; New playlist -- plus; Import -- download; Back to the playlist -- the playlist.
@@ -463,7 +463,7 @@ exempts a dialogue's confirm and cancel as Material's own convention. What is le
 child is a `Text`; a button built another way could be missing. Not fixed: outside the item it was
 found in; the owner decides whether it is its own item.
 
-### C81. An NSF refused as "invalid load/init/play address" — **reported 2026-09-22; diagnosed 2026-09-23; option (a) BUILT 2026-09-23 on `fix/c81-fds-nsf-message`, not yet seen on the phone; (b) still open**
+### C81. An NSF refused as "invalid load/init/play address" — **reported 2026-09-22; diagnosed 2026-09-23; option (a) BUILT, merged and confirmed on the phone 2026-09-23; (b) still open**
 
 The owner: `Nintendo Sound Format/Y. Matuo/19 neunzehn.nsf` (Modland, 26,768 bytes) does not play;
 the reason shown is game-music-emu's "invalid load/init/play address".

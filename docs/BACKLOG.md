@@ -641,7 +641,18 @@ the heading names the author, the heading's button offers the dice rather than t
 Back out of the author's folder resumes it. Eleven page checks walk the whole journey, including a
 playlist chosen mid-digression, which ends both.
 
-## A40. Protracktor links open in the app — **parked 2026-09-14; the app's side BUILT and merged 2026-09-23, confirmed on the phone with the link added by hand; the verification file is the owner's**
+## A40. Protracktor links open in the app — **parked 2026-09-14; the app's side BUILT and merged 2026-09-23, confirmed on the phone with the link added by hand; verified 2026-09-23**
+
+**Verified, 2026-09-23.** The owner published `https://przunk.github.io/.well-known/assetlinks.json`
+with the Play app-signing fingerprint (`E2:02:EF:…:A9:9D`) and the hand-over APKs' (`F9:7A:F5:…:E4:7E`);
+Google's Digital Asset Links API reads both with no error, and on the owner's phone *Open by default*
+shows `przunk.github.io` as **verified** (no longer a box to untick) and a link from the page opens
+the app. A link to a page on another host -- the Pi behind a Cloudflare tunnel -- still opens the
+browser, as intended: only the permanent address is claimed.
+
+A first version of the file kept the placeholder beside a real fingerprint; the API reported it as
+`ERROR_CODE_MALFORMED_CONTENT`, so a malformed entry is worth checking for before trusting the file:
+`https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://przunk.github.io&relation=delegate_permission/common.handle_all_urls`.
 
 **Unparked 2026-09-23**: the page has a permanent address, `https://przunk.github.io/Protracktor/`.
 
