@@ -427,6 +427,17 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C88. 3,800 files offered by name that their decoder reads as another format — **OPEN, found 2026-09-23**
+
+Found by B36's inventory (`feature/b36-length-inventory`, `docs/inventory/LENGTHS.md`): in twelve
+Modland directories the page's engine opened **none** of the files sampled. The big four -- Deflemask
+(1,807, `.dmf`), FamiTracker (1,779, `.ftm`), Music Editor (132, `.med`), SidMon 1 (61, `.sid`) -- carry
+a name that `formats.tsv` gives to a decoder that reads it as a **different** format: X-Tracker's DMF,
+Face The Music, OctaMED's MMD, a C64 SID. So they are indexed, offered, and refused; since A51 the
+refusal at least names the directory. The `.gtk` case of A51 was four files and earned no machinery;
+this is 3,800. **Not checked:** whether the phone, which has UADE as well, plays any of them. To
+decide: leave them (A51 explains the refusal), or keep them out of the index by directory.
+
 ### C87. Online catalogues jumped while downloading — **FIXED 2026-09-23, merged, confirmed in a browser**
 
 The owner: while indexing, the rows vanished and came back, and the download button and its spinner
