@@ -606,8 +606,9 @@
                      padding: 10px; border-radius: 50%; flex: none; display: flex; }
   #browselist .bdl:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
   #browselist .bdl svg { width: 24px; height: 24px; fill: currentColor; }
-  #browselist .bbusy { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none;
-                       width: 84px; color: var(--on-surface-variant); font-size: var(--label-small, 11px); }
+  /* Exactly the download button's box (10 + 24 + 10), so nothing in the row moves when it swaps. */
+  #browselist .bbusy { display: flex; align-items: center; justify-content: center; flex: none;
+                       width: 44px; height: 44px; }
   #browselist .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface-variant);
                          border-top-color: var(--primary); animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }

@@ -2591,8 +2591,12 @@ async function renderBrowse() {
   searchAsked++;
   const list = $('browselist');
   const note = $('browsenote');
-  list.replaceChildren();
-  // The dice's own heading, in the screen a digression happens in.
+  // **The catalogues redraw in place** (the owner, 2026-09-23): every download starting and ending
+  // redraws them, and clearing first left an empty list and an empty note for the moment the reads
+  // took -- everything under them jumped up and back, twice per download. `renderCatalogues`
+  // swaps the whole list at once when it has what to draw. Every other level starts empty.
+  const inPlace = browsePath[0] === 'catalogues';
+  if (!inPlace) list.replaceChildren();
   $('browsedigression').hidden = !away?.dice;
   if (away?.dice) {
     $('browsedigression').innerHTML = iconSvg(ICON.detour)
@@ -2601,7 +2605,7 @@ async function renderBrowse() {
     $('browsedigression').querySelector('.meta').textContent = away.author;
   }
   $('browseback').hidden = browsePath.length === 0;
-  note.textContent = '';
+  if (!inPlace) note.textContent = '';
   // No search inside a digression: it is one author's folder and the way out is Back (the phone
   // shows no field here either). Close goes with it — a second way out, to somewhere else, beside
   // the one that leads back to the dice.
@@ -2995,8 +2999,12 @@ function downloadButton(key, held, label, onclick) {
   if (downloading.has(key)) {
     const busy = document.createElement('span');
     busy.className = 'bbusy';
+    // **The button's own box, and nothing else in it** (the owner, 2026-09-23): a spinner with a
+    // word under it was twice the button's width, so the row's text narrowed and rewrapped the
+    // moment a download started. The word is for a screen reader now.
     busy.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
-    busy.append(t('indexing…'));
+    busy.setAttribute('role', 'status');
+    busy.setAttribute('aria-label', t('indexing…'));
     return busy;
   }
   const button = document.createElement('button');
@@ -3045,15 +3053,18 @@ async function renderCatalogues(list, note) {
   for (const source of archive.sources()) held[source] = await archive.meta(source);
   const lengths = await archive.songLengthsMeta();
   const metadata = await archive.songMetadataMeta();
+  // Read before anything is drawn too, so no row waits in the middle of the list for it.
+  const stale = await staleSentence(held.modland);
   if (browsePath[0] !== 'catalogues') return;
-  list.replaceChildren();
+  // Built aside and put in place at once: the list is never seen empty or half drawn.
+  const rows = document.createDocumentFragment();
 
   const sizes = { modland: '5.76 MB', asma: '0.85 MB' };
   const about = {
     modland: t('Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.'),
     asma: t('ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.'),
   };
-  note.textContent = [
+  const said = [
     held.modland?.tracks ? holding(held.modland) : about.modland,
     held.asma?.tracks ? '' : about.asma,
   ].filter(Boolean).join(' ');
@@ -3061,12 +3072,12 @@ async function renderCatalogues(list, note) {
   for (const source of archive.sources()) {
     const here = held[source];
     const name = archive.sourceName(source);
-    heldRow(list, {
+    heldRow(rows, {
       name,
       detail: here?.tracks
         ? tn(here.tracks, '{count} tune', '{count} tunes', { count: here.tracks.toLocaleString() })
         : t('Not indexed yet — tap the arrow to download its index ({size})', { size: sizes[source] ?? t('a download') }),
-      warning: source === 'modland' ? await staleSentence(here) : '',
+      warning: source === 'modland' ? stale : '',
       held: !!here?.tracks,
       key: source,
       label: here?.tracks ? t('Update the index for {name}', { name }) : t('Download the index for {name}', { name }),
@@ -3079,7 +3090,7 @@ async function renderCatalogues(list, note) {
   // and songdb's metadata, one tick for both. No replay routines row: neither sc68's nor UADE's can
   // reach a browser (`docs/PLAN_WEB_PARITY.md`).
   const complete = !!(lengths?.tunes && metadata?.tunes);
-  const group = heldRow(list, {
+  const group = heldRow(rows, {
     name: t('Song metadata'),
     detail: complete
       ? tn(lengths.tunes + metadata.tunes, '{count} tune', '{count} tunes', { count: (lengths.tunes + metadata.tunes).toLocaleString() })
@@ -3090,6 +3101,9 @@ async function renderCatalogues(list, note) {
     ondownload: downloadSongMetadata,
   });
   group.classList.add('groupstart');
+  // A note that says the same thing is left alone rather than rewritten.
+  if (note.textContent !== said) note.textContent = said;
+  list.replaceChildren(rows);
 }
 
 /**
