@@ -1,9 +1,9 @@
-Tytuły z literami diakrytycznymi wyświetlają się poprawnie, czy zapisano je na Amidze, pececie z DOS-em czy C64: koniec ze znakami zapytania w rombach.
+Przewijanie w utworach z C64 (SID) i Atari ST (SNDH); wskaźnik pokazuje, że trwa.
 
-Wyszukiwanie ignoruje akcenty: „michal” znajduje „Michał”, a „akes lekhorna” znajduje „Åkes lekhörna”.
+Utwór bez zapisanej długości ma pasek do miejsca, w którym się zatrzyma, oznaczony ~.
 
-Tytuł za długi na pasek odtwarzacza przewija się powoli, zamiast być ucięty.
+Otwarcie folderu autora z Modlandu pobiera jego utwory w tle, po trzy naraz: domyślnie tylko przez Wi-Fi (Ustawienia → Katalogi online).
 
-Historia nie zmienia kolejności, gdy grasz z niej utwory.
+Linki do odtwarzacza na przunk.github.io otwierają się w aplikacji.
 
-Utwór z C64 napisany w BASIC-u mówi, dlaczego nie zagra, zamiast grać ciszę.
+Protracktor nie udaje już przeglądarki. Więcej przycisków ma ikony, a plik, który nie zagra, lepiej mówi dlaczego.
