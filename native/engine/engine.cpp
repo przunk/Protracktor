@@ -742,7 +742,27 @@ public:
         return type && *type;
     }
 
+    /**
+     * A Famicom Disk System NSF that loads below $8000 (`docs/STATUS.md` C81).
+     *
+     * **A valid file** -- on the FDS, $6000-$DFFF is RAM and the NSF specification allows a rip to
+     * load there -- that game-music-emu 0.6.5 cannot play: it has the FDS sound chip but not its
+     * memory model, and refuses any load address below $8000 as "Corrupt file", which is untrue.
+     * Said here in the file's own terms instead. Header: `NESM\x1a`, load address at 8, the chip
+     * flags at 123, bit 2 for FDS; a load address of 0 means $8000 to game-music-emu.
+     */
+    static bool fdsLoadsLow(const std::vector<char> &bytes) {
+        if (bytes.size() < 128 || std::memcmp(bytes.data(), "NESM\x1a", 5) != 0) return false;
+        const auto byte = [&](size_t i) { return static_cast<unsigned>(static_cast<unsigned char>(bytes[i])); };
+        const unsigned load = byte(8) | (byte(9) << 8);
+        return (byte(123) & 0x04) != 0 && load != 0 && load < 0x8000;
+    }
+
     explicit GmeBackend(const std::vector<char> &bytes) : bytes_(bytes) {
+        if (fdsLoadsLow(bytes)) {
+            throw std::runtime_error("a Famicom Disk System NSF that loads below $8000, which the console "
+                                     "decoder (game-music-emu) cannot play yet");
+        }
         if (const gme_err_t err = gme_open_data(bytes.data(), static_cast<long>(bytes.size()),
                                                 &emu_, kSampleRate)) {
             throw std::runtime_error(std::string("the console decoder (game-music-emu) refused it: ") + err);
