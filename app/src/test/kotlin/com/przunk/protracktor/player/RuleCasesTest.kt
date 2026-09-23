@@ -232,6 +232,12 @@ class RuleCasesTest {
         )
     }
 
+    /** The format a refusal names (A51), from the file's address. */
+    @Test
+    fun `the format a refusal names agrees with the shared cases`() = each("refusalFormat") { case ->
+        assertEquals(case.why(), case.getValue("expect").takeIf { it != "-" }, OpenFailure.modlandFormatOf(case.getValue("url")))
+    }
+
     private companion object {
         const val RULES = "docs/rules/queue-cases.tsv"
     }

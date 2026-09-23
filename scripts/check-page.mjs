@@ -174,7 +174,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
     + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
     + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths, '
-    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata, forgetIndex }; })();')
+    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata, forgetIndex, modlandFormatOf }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
@@ -483,7 +483,10 @@ if (window.__api) {
     'and Now Playing stops describing whatever worked last');
   check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z',
     'a refusal ends the load rather than leaving the button stuck');
-  check($('error').textContent === 'nothing claimed it', 'and says what the decoder said');
+  check($('error').textContent.startsWith('nothing claimed it.'), 'and says what the decoder said');
+  // The queued file is Modland's, so the refusal also names the directory it is filed under (A51).
+  check(/ Modland lists it as \S[^.]*\.$/.test($('error').textContent),
+    'and what Modland lists it as, after a full stop');
 
   // The keys somebody at a desk will try, and the one place they must not fire.
   let played = 0;
@@ -2475,6 +2478,8 @@ if (window.__api) {
     const title = rest.pop();
     return catalogueModule.urlFor(format, rest.join('/'), title, 'asma') === `https://asma.atari.org/${c.expect}`;
   });
+  // The format a refusal names (A51), the same rows `RuleCasesTest` runs against `OpenFailure`.
+  each('refusalFormat', (c) => catalogueModule.modlandFormatOf(c.url) === (c.expect === '-' ? null : c.expect));
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
   // --- what the page carries and says about itself (W4) ---------------------------------------

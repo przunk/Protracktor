@@ -119,6 +119,7 @@
     <string name="open_failed_format">%1$s is a format Protracktor cannot play yet.</string>
     <string name="open_failed_file">%1$s would not open. Other files of this format do play, so it is this one.</string>
     <string name="open_failed_file_because">%1$s would not open: %2$s</string>
+    <string name="open_failed_modland_lists">%1$s Modland lists it as %2$s.</string>
     <string name="search_nothing_found">Nothing found for this search.</string>
     <string name="search_live_needs_query">The Mod Archive is searched live and needs something to search for.</string>
     <string name="search_not_yet">Search, or leave the field empty to find everything in scope.</string>

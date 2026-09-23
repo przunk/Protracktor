@@ -803,7 +803,12 @@ function explainFailure(reason, entry) {
       && !archive.playable(formatTable, absentHere())(entry.name)) {
     return `${entry.name}: this browser build has no decoder for this format — it plays on the phone`;
   }
-  return reason;
+  // A file this build claims and a decoder still refused: say what Modland calls it (A51), the
+  // phone's `open_failed_modland_lists`.
+  const listedAs = archive.modlandFormatOf(entry?.url);
+  if (!listedAs) return reason;
+  const closed = /[.!?]$/.test(reason.trimEnd()) || !reason.trim() ? reason.trimEnd() : `${reason.trimEnd()}.`;
+  return `${closed} Modland lists it as ${listedAs}.`.trim();
 }
 
 /**

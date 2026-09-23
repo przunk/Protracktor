@@ -35,6 +35,22 @@ export function sources() { return Object.keys(SOURCES); }
 
 export function sourceName(source) { return SOURCES[source]?.name ?? source; }
 
+/**
+ * The format directory Modland files a track under, read from its address, or null for any other
+ * file -- the phone's `OpenFailure.modlandFormatOf` (`docs/BACKLOG.md` A51). A refusal names it,
+ * because one extension can be two formats and only the directory knows which.
+ */
+export function modlandFormatOf(url) {
+  const base = SOURCES[MODLAND].files;
+  if (typeof url !== 'string' || !url.startsWith(base)) return null;
+  const rest = url.slice(base.length);
+  const slash = rest.indexOf('/');
+  if (slash <= 0) return null;
+  let format;
+  try { format = decodeURIComponent(rest.slice(0, slash)); } catch { return null; }
+  return format.trim() ? format : null;
+}
+
 const keyFor = (source) => ({
   meta: `${source}:meta`,
   formats: `${source}:formats`,

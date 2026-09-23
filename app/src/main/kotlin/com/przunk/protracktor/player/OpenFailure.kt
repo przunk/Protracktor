@@ -3,6 +3,8 @@
 
 package com.przunk.protracktor.player
 
+import java.net.URLDecoder
+
 /**
  * Why a track would not open — as a choice between four different things, not one apology.
  *
@@ -82,4 +84,30 @@ object OpenFailure {
     fun formatName(catalogueFormat: String?, fileName: String): String =
         catalogueFormat?.takeIf { it.isNotBlank() }
             ?: SupportedFormats.labelFor(fileName).ifBlank { "This" }
+
+    /**
+     * The format directory Modland files a track under, read from its address, or null for any
+     * other file (`docs/BACKLOG.md` A51).
+     *
+     * **For a file we claim and a decoder still refused.** An index built from names cannot tell
+     * that `Beaver Sweeper/Steffo/nokia.gtk` is not the Graoumf Tracker every other `.gtk` is; the
+     * decoder's own "error loading file" does not say so either. Quoting the directory turns a
+     * puzzling refusal into an explanation, from data already in the address. Modland only: ASMA's
+     * first folder is `Composers` or `Games`, a grouping and not a format.
+     */
+    fun modlandFormatOf(url: String): String? {
+        if (!url.startsWith(MODLAND_FILES)) return null
+        val segment = url.removePrefix(MODLAND_FILES).substringBefore('/', "")
+        // A literal `+` arrives escaped as %2B; URLDecoder would otherwise read a bare one as a space.
+        return URLDecoder.decode(segment.replace("+", "%2B"), "UTF-8").takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * [text] closed as a sentence, so a clause can follow it. The decoder's reason ends however
+     * the decoder ends it -- "error loading file" with nothing -- and the message around it is ours.
+     */
+    fun sentence(text: String): String =
+        text.trimEnd().let { if (it.isEmpty() || it.last() in ".!?") it else "$it." }
+
+    private const val MODLAND_FILES = "https://modland.com/pub/modules/"
 }
