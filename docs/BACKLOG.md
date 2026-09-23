@@ -74,7 +74,34 @@ under the finger that tapped it and the list reorders while it is being read.
   **no `play_count`**. History then says what was played elsewhere, and does not drift under the
   person reading it. And while History is open, it is not refreshed at all: it shows what it
   showed when it was opened.
-## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13; D4–D6 decided 2026-09-23 (a, a, a), a prototype**
+## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13; D4–D6 decided 2026-09-23 (a, a, a), a prototype; BUILT 2026-09-23, branch `feature/a55-cache-folder-ahead`, not yet seen on the phone**
+
+**Built to the plan.** Opening a Modland author's folder -- by walking to it or by "more from this
+author" -- marks the rows already on the phone and, when *Settings → Online catalogues → Cache
+folders ahead* allows it (Wi-Fi only by default, Always, Off; an unmetered network counts as
+Wi-Fi), fetches the rest three at a time in the folder's order, stopping before the folder passes
+100 MB. A row being fetched shows a spinner in the checkbox's slot; a row on the phone shows the
+downloaded mark, with "On this phone" for a screen reader. Leaving the folder or changing the setting
+cancels what has not started; a download already running finishes into the cache, because every
+download of an address is one shared download (`SharedFetches`), which is also why a tap on a row
+being fetched waits for it rather than fetching it twice. A failure is not retried. The privacy
+policy's Modland line says so in both languages; `data-safety.md` re-read, no answer changes.
+
+**The owner's first look, 2026-09-23: Wi-Fi only fetched nothing, on any network; Always worked.**
+Mechanism: the app did not declare `ACCESS_NETWORK_STATE`, so asking whether the network is
+metered threw, and the code took that as "metered" without a word -- Wi-Fi only meant never.
+Always does not ask, which is why it worked. Fixed in the same commit: the permission (normal,
+granted at install), a log line if the question ever fails again, and a test that the manifest
+declares it. And at the owner's word the row's mark is **a phone with a tick** (`PlayerIcons.OnPhone`),
+not the catalogue's tick in a disc.
+
+**Checked:** the plan, the setting's network rule and the three-at-a-time runner as JVM tests
+(`FolderPrefetchTest`, `SharedFetchesTest`), each broken once to see it fail. **Not checked:** the
+controller's wiring (which folder, the spinner, the mark, leaving) -- that is the phone's, and the
+checks for it are under "What the owner checks" in `docs/PLAN_ROUND_13.md`.
+
+The plan as written:
+
 
 Opening a Modland author's folder fetches its tracks into the cache one after another, three at a
 time, with a spinner in each row's left slot while it runs. When it may run (Wi-Fi only by

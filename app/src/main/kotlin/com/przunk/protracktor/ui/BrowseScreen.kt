@@ -43,6 +43,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -1247,6 +1249,8 @@ private fun Selectable(
                         selecting = selecting,
                         playing = track.id == playingId,
                         loading = track.id == loadingId,
+                        fetchingAhead = track.id in browse.aheadFetching,
+                        cachedHere = track.id in browse.cachedHere,
                         onPlay = { onPlay(index) },
                         onToggle = {
                             selected = if (track.id in selected) selected - track.id
@@ -1369,6 +1373,8 @@ private fun BrowseTrackRow(
     selecting: Boolean,
     playing: Boolean,
     loading: Boolean,
+    fetchingAhead: Boolean,
+    cachedHere: Boolean,
     onPlay: () -> Unit,
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
@@ -1394,10 +1400,27 @@ private fun BrowseTrackRow(
         // under the very finger that had just long-pressed one.
         leadingContent = {
             Box(modifier = Modifier.size(CHECKBOX_SLOT), contentAlignment = Alignment.Center) {
-                if (selecting) {
-                    Checkbox(
+                // One slot, three tenants, in this order (`docs/BACKLOG.md` A55): the checkbox
+                // while selecting -- a fetch goes on underneath it -- then a spinner while the row
+                // is fetched ahead, then a mark once it is on the phone, so a row says it will play
+                // without the network: a phone with a tick, not the catalogue's tick in a disc.
+                when {
+                    selecting -> Checkbox(
                         checked = ticked,
                         onCheckedChange = { on -> haptics.toggle(on); onToggle() },
+                    )
+                    fetchingAhead -> {
+                        val caching = stringResource(R.string.a11y_caching_ahead)
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp).semantics { contentDescription = caching },
+                        )
+                    }
+                    cachedHere -> Icon(
+                        PlayerIcons.OnPhone,
+                        contentDescription = stringResource(R.string.a11y_cached_here),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }

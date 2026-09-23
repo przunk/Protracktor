@@ -401,6 +401,8 @@ fun ProtracktorApp(
                 onToggleAllSubsongs = viewModel::toggleAllSubsongs,
                 fallbackLengthSeconds = state.fallbackLengthSeconds,
                 onFallbackLengthChanged = viewModel::setFallbackLength,
+                cacheAhead = state.cacheAhead,
+                onCacheAheadSelected = viewModel::setCacheAhead,
                 onLanguageSelected = onLanguageSelected,
                 onClearCache = viewModel::clearFetchedCache,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,

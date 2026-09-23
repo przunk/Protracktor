@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.provider.OpenableColumns
 import android.text.format.DateUtils
 import com.przunk.protracktor.Appearance
+import android.net.ConnectivityManager
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueGroup
 import com.przunk.protracktor.data.CatalogueStore
@@ -63,6 +64,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -118,6 +123,8 @@ data class PlayerUiState(
      * statement from how long the tune is.
      */
     val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
+    /** When an opened folder's tracks are fetched ahead (A55, D4). */
+    val cacheAhead: CacheAhead = CacheAhead.DEFAULT,
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
@@ -510,6 +517,11 @@ data class BrowseState(
 
     /** Whatever the current level lists, in the form the playlist takes. */
     val tracks: List<TrackRef> = emptyList(),
+
+    /** Rows of the open folder being fetched ahead right now: a spinner each (A55). */
+    val aheadFetching: Set<String> = emptySet(),
+    /** Rows of the open folder already on the phone: a mark each, whoever fetched them (A55, D5). */
+    val cachedHere: Set<String> = emptySet(),
 ) {
 
     /**
@@ -703,7 +715,7 @@ class PlaybackController private constructor(private val context: Context) {
         }, "protracktor-background")
     }.asCoroutineDispatcher()
 
-    private val _state = MutableStateFlow(PlayerUiState())
+    private val _state = MutableStateFlow(PlayerUiState(cacheAhead = Appearance.cacheAhead(context)))
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
 
     /**
@@ -894,6 +906,15 @@ class PlaybackController private constructor(private val context: Context) {
         // converges on it instead of staying over forever. Nothing is in use yet, which is exactly
         // why this is the cheapest moment to do it.
         scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
+
+        // **An opened Modland folder fetches its tracks ahead** (A55). One place decides, from the
+        // folder on screen and the setting: a new folder, a left one, or a changed setting cancels
+        // the last run and starts the next, which is what makes "leaving stops the rest" true.
+        scope.launch {
+            combine(_browse.map(::aheadKeyOf), _state.map { it.cacheAhead }) { key, mode -> key to mode }
+                .distinctUntilChanged()
+                .collectLatest { (key, mode) -> fetchFolderAhead(key, mode) }
+        }
 
         // **What is on this phone, before anybody opens Browse.** The empty playlist has to
         // choose between offering Browse and offering the download sheet, and it cannot ask a
@@ -2291,6 +2312,7 @@ class PlaybackController private constructor(private val context: Context) {
                 remoteFiles.clearCache()
                 before - remoteFiles.cacheBytes()
             }
+            _browse.update { it.copy(cachedHere = emptySet()) }
             _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }
@@ -4014,6 +4036,11 @@ class PlaybackController private constructor(private val context: Context) {
      * the new limit ends within the second, which is the behaviour somebody dragging the slider
      * down is asking for.
      */
+    fun setCacheAhead(mode: CacheAhead) {
+        if (!Appearance.selectCacheAhead(context, mode)) return
+        _state.update { it.copy(cacheAhead = mode) }
+    }
+
     fun setFallbackLength(seconds: Int) {
         val wanted = FallbackLength.snap(seconds)
         if (wanted == _state.value.fallbackLengthSeconds) return
@@ -4537,6 +4564,79 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /** A tapped track that arrived is on the phone too; its row says so if it is on screen (D5). */
+    private fun markCachedHere(id: String) = _browse.update { browse ->
+        if (id in browse.cachedHere || browse.tracks.none { it.id == id }) browse
+        else browse.copy(cachedHere = browse.cachedHere + id)
+    }
+
+    /** The folder fetching ahead is about: a Modland author's folder with its rows, or nothing. */
+    private data class AheadKey(val tracks: List<TrackRef>)
+
+    private fun aheadKeyOf(browse: BrowseState): AheadKey? {
+        // Only a folder, only when its rows are in, and only Modland: ASMA is whole on the phone, an
+        // UnExoticA folder is one archive fetched when its first tune plays, and The Mod Archive has
+        // no folders (`docs/PLAN_ROUND_13.md` A55).
+        if (browse.openAuthor == null || browse.loading || browse.tracks.isEmpty()) return null
+        if (browse.openCatalogue?.id != Modland.id) return null
+        return AheadKey(browse.tracks)
+    }
+
+    /**
+     * Marks what the open folder already holds, then, if the setting and the network allow it,
+     * fetches the rest [FolderPrefetch.PARALLEL] at a time. Cancelled by leaving the folder.
+     */
+    private suspend fun fetchFolderAhead(key: AheadKey?, mode: CacheAhead) {
+        if (key == null) {
+            _browse.update { it.copy(aheadFetching = emptySet(), cachedHere = emptySet()) }
+            return
+        }
+        val ids = key.tracks.map { it.id }
+        val cached = withContext(Dispatchers.IO) { ids.filterTo(HashSet()) { remoteFiles.isCached(it) } }
+        _browse.update { it.copy(cachedHere = cached, aheadFetching = emptySet()) }
+        if (!mode.allows(metered = networkIsMetered())) return
+
+        val wanted = FolderPrefetch.plan(
+            key.tracks.map { FolderPrefetch.Candidate(it.id, it.sizeBytes) },
+            cached,
+        )
+        try {
+            FolderPrefetch.run(
+                urls = wanted,
+                fetch = { url -> remoteFiles.fetch(url) != null },
+                // Asked before each start, so walking off Wi-Fi stops what has not begun.
+                mayContinue = { mode.allows(metered = networkIsMetered()) },
+                onStart = { url -> _browse.update { it.copy(aheadFetching = it.aheadFetching + url) } },
+                onDone = { url, ok ->
+                    _browse.update {
+                        it.copy(
+                            aheadFetching = it.aheadFetching - url,
+                            cachedHere = if (ok) it.cachedHere + url else it.cachedHere,
+                        )
+                    }
+                },
+            )
+        } finally {
+            _browse.update { it.copy(aheadFetching = emptySet()) }
+        }
+    }
+
+    /**
+     * Whether the network is one the user may pay for by the byte. Asked of the system, which counts
+     * a phone's hotspot as metered too -- the right answer for "Wi-Fi only", which means "not on my
+     * data".
+     */
+    private fun networkIsMetered(): Boolean =
+        runCatching {
+            (context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).isActiveNetworkMetered
+        }.getOrElse { error ->
+            // Taken as metered, which spends nothing -- but **said**, because a swallowed exception here
+            // was the whole of the first build's defect: without ACCESS_NETWORK_STATE this threw every
+            // time, and "Wi-Fi only" quietly meant "never".
+            android.util.Log.w("Protracktor", "cannot tell whether the network is metered", error)
+            true
+        }
+
     /** Reads a track's bytes, from wherever it lives. */
     private suspend fun loadBytes(ref: TrackRef): ByteArray? =
         if (UnExoticA.ENABLED && UnExoticA.pathFrom(ref.id) != null) {
@@ -4550,7 +4650,7 @@ class PlaybackController private constructor(private val context: Context) {
             // already on disk. No network, which is why an archive catalogue is worth its download.
             remoteFiles.readFromArchive(ref.id.substringBefore("://"), ref.id.substringAfter("://"))
         } else if (ref.id.startsWith("http")) {
-            remoteFiles.fetch(ref.id)
+            remoteFiles.fetch(ref.id)?.also { markCachedHere(ref.id) }
         } else {
             withContext(Dispatchers.IO) {
                 runCatching {

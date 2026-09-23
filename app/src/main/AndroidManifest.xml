@@ -23,6 +23,11 @@
     <!-- Online catalogues: the index is downloaded once, then browsing works offline. The network
          is next needed when a track that is not cached is played. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Whether the network is one the user pays for by the byte: "Cache folders ahead" runs on
+         Wi-Fi only by default (docs/BACKLOG.md A55). A normal permission, granted at install, with
+         nothing to ask. **Without it the question throws**, and the first build treated that as
+         "metered", so on Wi-Fi only it never fetched anything, on any network. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Uninstalling means gone: `allowBackup="false"` turns off Auto Backup, and
          `dataExtractionRules` turns off device-to-device transfer, which that flag does not

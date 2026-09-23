@@ -34,6 +34,7 @@ object Appearance {
     private const val DYNAMIC = "dynamic_colour"
     private const val WEB_PLAYER = "web_player_base"
     private const val PAIRED = "paired_endpoint"
+    private const val CACHE_AHEAD = "cache_ahead"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -138,4 +139,17 @@ object Appearance {
     }
 
     val supportsDynamicColour: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+    /**
+     * When an opened folder's tracks are fetched ahead (`docs/BACKLOG.md` A55). Kept here with the
+     * other answers to "what does this person want the app to do", in the same file.
+     */
+    fun cacheAhead(context: Context): com.przunk.protracktor.player.CacheAhead =
+        com.przunk.protracktor.player.CacheAhead.fromStored(prefs(context).getString(CACHE_AHEAD, null))
+
+    fun selectCacheAhead(context: Context, mode: com.przunk.protracktor.player.CacheAhead): Boolean {
+        if (cacheAhead(context) == mode) return false
+        prefs(context).edit().putString(CACHE_AHEAD, mode.stored).apply()
+        return true
+    }
 }

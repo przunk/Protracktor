@@ -1,6 +1,6 @@
 # Protracktor privacy policy
 
-Effective date: 2026-09-22
+Effective date: 2026-09-23
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -46,7 +46,8 @@ data is not copied off the device by the operating system either. Uninstalling t
 Only features chosen by the user contact the network. Depending on the action, Protracktor may
 connect over HTTPS to:
 
-- `modland.com` to download its catalogue index and selected tracks;
+- `modland.com` to download its catalogue index, the tracks you play, and those in a folder you
+  open when **Cache folders ahead** is on (Settings; on Wi-Fi only unless you choose otherwise);
 - `asma.atari.org` to download the ASMA collection;
 - `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
@@ -159,7 +160,8 @@ Odinstalowanie aplikacji je usuwa.
 Sieć jest używana tylko przez funkcje wybrane przez użytkownika. Zależnie od działania Protracktor
 może łączyć się przez HTTPS z:
 
-- `modland.com`, aby pobrać indeks i wybrane utwory;
+- `modland.com`, aby pobrać indeks, odtwarzane utwory oraz utwory z otwartego folderu, gdy
+  włączone jest **Pobieraj foldery z wyprzedzeniem** (Ustawienia; domyślnie tylko przez Wi-Fi);
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
 - `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;

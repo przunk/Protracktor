@@ -478,4 +478,12 @@
     <string name="notices_version_licence">%1$s · %2$s</string>
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_detail">What the app sends, and where</string>
+    <string name="settings_online_section">Online catalogues</string>
+    <string name="settings_cache_ahead">Cache folders ahead</string>
+    <string name="settings_cache_ahead_detail">When you open a Modland author\'s folder, its tracks are downloaded in the background, three at a time and up to 100 MB per folder, so they play without waiting.</string>
+    <string name="settings_cache_ahead_wifi">Wi-Fi only</string>
+    <string name="settings_cache_ahead_always">Always</string>
+    <string name="settings_cache_ahead_off">Off</string>
+    <string name="a11y_caching_ahead">Downloading in the background</string>
+    <string name="a11y_cached_here">On this phone</string>
 </resources>
