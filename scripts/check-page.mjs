@@ -3091,6 +3091,18 @@ if (window.__api) {
   await settle();
   check(named('Modland')?.querySelector('.bbusy .spinner') && named('ASMA') && named('Song metadata'),
     'a download shows a spinner in its own row, and the other rows stay where they are');
+  // **Nothing jumps** (the owner, 2026-09-23): the spinner says nothing on screen -- a word under it
+  // made it twice the button's width -- and a redraw of the catalogues swaps the list in one go, so
+  // at no moment is it empty. Asked synchronously, before any read the redraw waits for.
+  const busy = named('Modland')?.querySelector('.bbusy');
+  check(busy && busy.textContent.trim() === '' && busy.getAttribute('aria-label'),
+    'the spinner stands in the button\'s place with no word beside it, and says it to a screen reader');
+  const before = $('browselist').children.length;
+  const note = $('browsenote').textContent;
+  const redraw = api.renderBrowse();
+  check(before > 0 && $('browselist').children.length === before && $('browsenote').textContent === note,
+    'a redraw of the catalogues never empties the list or the note on the way');
+  await redraw;
   holdTrackFetch = false;
   api.showPanel(null);
 }
