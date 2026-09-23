@@ -427,6 +427,17 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C86. GitHub Pages stopped deploying pushes to `gh-pages` — **worked around 2026-09-23; cause unknown**
+
+Two pushes to `gh-pages` on 2026-09-23 (`af27036`, `43a61d5`) reached GitHub, and no *pages build and
+deployment* run followed: the last was 2026-09-22 20:20 UTC, and the page kept serving that day's
+files (`last-modified` of `src/app.js`), without the round's Browse fixes. Settings were unchanged.
+**What worked:** *Settings → Pages → Branch: None → Save*, then *gh-pages, / (root) → Save*; a run
+started at once (20:13 UTC, success). **How to tell next time:** the repository's *Actions* tab shows
+no run after the push, or `curl -sI https://przunk.github.io/Protracktor/src/app.js` shows an old
+`last-modified`. Why the pushes did not trigger a build is not known -- it happened the day the
+`przunk.github.io` user-site repository was created, which may or may not be related.
+
 ### C85. Protracktor was offered as a browser — **FIXED 2026-09-23, merged, confirmed on the phone**
 
 The owner, looking for "Open by default" for A40, found "Browser app" in the app's settings, with
