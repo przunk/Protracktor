@@ -94,6 +94,7 @@ for (const raw of fs.readFileSync('web/src/formats.tsv', 'utf8').split('\n')) {
   const line = raw.trim();
   if (!line || line.startsWith('#')) continue;
   const [kind, name, decoders] = line.split('\t');
+  if (kind === 'directory') continue;   // C88's refused directories: judged here by what opens
   if (name && decoders) (kind === 'prefix' ? table.prefixes : table.extensions).set(name, decoders.split(','));
 }
 /** The decoders for a file name, or null: the extension, or failing that the part before the first dot. */

@@ -29,22 +29,24 @@ class CataloguePlayableTest {
         }
 
     /** Writes a row the way `replaceIndex` does, verdict included. */
-    private fun Connection.add(title: String) {
+    private fun Connection.add(title: String, format: String = "Protracker") {
         createStatement().use {
             it.execute("INSERT OR IGNORE INTO catalogues (id, display_name) VALUES ('modland', 'Modland')")
         }
         val ext = SupportedFormats.extensionOf(title)
         val pre = SupportedFormats.prefixOf(title)
-        val playable = ext in SupportedFormats.extensions || pre in SupportedFormats.prefixes
+        // The verdict `replaceIndex` writes, asked the same way.
+        val playable = SupportedFormats.offeredInCatalogue(format, title)
         prepareStatement(
             "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, ext, pre, playable) " +
-                "VALUES ('modland', ?, 'Protracker', '4-Mat', ?, 1, ?, ?, ?)"
+                "VALUES ('modland', ?, ?, '4-Mat', ?, 1, ?, ?, ?)"
         ).use {
-            it.setString(1, "Protracker/4-Mat/$title")
-            it.setString(2, title)
-            it.setString(3, ext)
-            it.setString(4, pre)
-            it.setInt(5, if (playable) 1 else 0)
+            it.setString(1, "$format/4-Mat/$title")
+            it.setString(2, format)
+            it.setString(3, title)
+            it.setString(4, ext)
+            it.setString(5, pre)
+            it.setInt(6, if (playable) 1 else 0)
             it.execute()
         }
     }
@@ -55,15 +57,16 @@ class CataloguePlayableTest {
                 .use { rows -> buildList { while (rows.next()) add(rows.getString(1)) } }
         }
 
-    /** The recompute, exactly as `CatalogueStore.refreshPlayable` writes it. */
-    private fun Connection.recompute(extensions: Collection<String>, prefixes: Collection<String>) {
-        val ext = extensions.joinToString(",") { "'$it'" }
-        val pre = prefixes.joinToString(",") { "'$it'" }
-        createStatement().use {
-            it.execute(
-                "UPDATE catalogue_tracks SET playable = " +
-                    "(CASE WHEN ext IN ($ext) OR pre IN ($pre) THEN 1 ELSE 0 END)"
-            )
+    /** The recompute `CatalogueStore.refreshPlayable` runs: its own statement, not a copy. */
+    private fun Connection.recompute(
+        extensions: Collection<String>,
+        prefixes: Collection<String>,
+        refused: Collection<String> = SupportedFormats.refusedDirectories,
+    ) {
+        val (sql, bound) = playableUpdate(extensions, prefixes, refused)
+        prepareStatement(sql).use { statement ->
+            bound.forEachIndexed { i, value -> statement.setString(i + 1, value) }
+            statement.execute()
         }
     }
 
@@ -80,6 +83,22 @@ class CataloguePlayableTest {
                 }
             }
             assertEquals(listOf("tune.mod"), db.playable())
+        }
+    }
+
+    @Test
+    fun `a file in a refused directory is kept and not offered, and the same name elsewhere is`() {
+        // C88: FamiTracker's `.ftm` is Face The Music to libopenmpt, and not one played.
+        database().use { db ->
+            db.add("route_19.ftm", format = "FamiTracker")
+            db.add("farandole.ftm", format = "Face The Music")
+            assertEquals(listOf("farandole.ftm"), db.playable())
+            // And the recompute agrees with the verdict it was written with.
+            db.recompute(SupportedFormats.extensions, SupportedFormats.prefixes)
+            assertEquals(listOf("farandole.ftm"), db.playable())
+            // A decoder that learns FamiTracker is a line removed from the list, and no download.
+            db.recompute(SupportedFormats.extensions, SupportedFormats.prefixes, refused = emptyList())
+            assertEquals(listOf("farandole.ftm", "route_19.ftm"), db.playable())
         }
     }
 
