@@ -516,4 +516,18 @@
     <string name="notices_version_licence">%1$s · %2$s</string>
     <string name="settings_privacy">Polityka prywatności</string>
     <string name="settings_privacy_detail">Co aplikacja wysyła i dokąd</string>
+    <string name="notice_link_unreadable">Nie udało się odczytać tego linku Protracktora.</string>
+    <string name="notice_link_nothing_playable">Ten link nie wskazuje niczego, co zagra ten telefon.</string>
+    <plurals name="notice_link_opened">
+        <item quantity="one">Otwarto link: %1$,d utwór.</item>
+        <item quantity="few">Otwarto link: %1$,d utwory.</item>
+        <item quantity="many">Otwarto link: %1$,d utworów.</item>
+        <item quantity="other">Otwarto link: %1$,d utworu.</item>
+    </plurals>
+    <plurals name="notice_link_stayed">
+        <item quantity="one">%1$,d został na telefonie, który go wysłał.</item>
+        <item quantity="few">%1$,d zostały na telefonie, który je wysłał.</item>
+        <item quantity="many">%1$,d zostało na telefonie, który je wysłał.</item>
+        <item quantity="other">%1$,d zostało na telefonie, który je wysłał.</item>
+    </plurals>
 </resources>

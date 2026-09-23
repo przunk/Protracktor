@@ -76,6 +76,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val scan get() = controller.scan
 
     /** A file another app handed us. Starts the service first: this can arrive with nothing playing. */
+    fun openLink(url: String) = controller.openLink(url)
+
     fun playExternal(uri: android.net.Uri, name: String? = null) {
         ensureServiceRunning()
         controller.playExternal(uri, name)

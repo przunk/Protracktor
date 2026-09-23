@@ -477,4 +477,14 @@
     <string name="notices_version_licence">%1$s · %2$s</string>
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_detail">What the app sends, and where</string>
+    <string name="notice_link_unreadable">This Protracktor link could not be read.</string>
+    <string name="notice_link_nothing_playable">This link names nothing this phone can play.</string>
+    <plurals name="notice_link_opened">
+        <item quantity="one">Opened a link: %1$,d tune.</item>
+        <item quantity="other">Opened a link: %1$,d tunes.</item>
+    </plurals>
+    <plurals name="notice_link_stayed">
+        <item quantity="one">%1$,d stayed on the phone that sent it.</item>
+        <item quantity="other">%1$,d stayed on the phone that sent them.</item>
+    </plurals>
 </resources>
