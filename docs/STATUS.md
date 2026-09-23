@@ -427,16 +427,16 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
-### C82. Buttons with a label and no icon, across the app — **OPEN, found 2026-09-23**
+### C82. Buttons with a label and no icon, outside dialogs — **OPEN, found 2026-09-23; corrected the same day**
 
-Found while giving the pairing screen's two buttons their icons (`fix/scanner-button-icons`):
-the rule that every button carries an icon and a label (AGENTS.md §8) is broken in more places,
-mostly dialogs. Text only today: *Cancel* in `AddToPlaylistDialog` (twice), `PlaylistSwitcher`
-(twice) and `StorageSection`; *Save* in `PlaylistSwitcher`; *Close* in `TrackInfo`; the
-confirmation dialogs' *Delete*; *Add folder* and *Add files* and *Clear history* in `BrowseScreen`;
-*New playlist* and *Import* in `PlaylistSwitcher`; *Back to playlist* in `PlaylistScreen`. Found by
-a search for buttons whose first child is a `Text`; a button built another way could be missing.
-Not fixed: outside the item it was found in; the owner decides whether it is its own item.
+Found while giving the pairing screen's two buttons their icons (`fix/scanner-button-icons`).
+**Corrected 2026-09-23:** the first version of this entry also listed the dialogs' *Cancel*, *Save*,
+*Delete* and *Close*. Those are not defects: `AGENTS.md` ("An action is an icon with a label")
+exempts a dialogue's confirm and cancel as Material's own convention. What is left, text only today:
+*Add folder* and *Add files* and *Clear history* in `BrowseScreen`; *New playlist* and *Import* in
+`PlaylistSwitcher`; *Back to playlist* in `PlaylistScreen`. Found by a search for buttons whose first
+child is a `Text`; a button built another way could be missing. Not fixed: outside the item it was
+found in; the owner decides whether it is its own item.
 
 ### C81. An NSF refused as "invalid load/init/play address" — **OPEN, reported 2026-09-22; diagnosed 2026-09-23, fix waits for the owner**
 
