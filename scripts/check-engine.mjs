@@ -389,6 +389,34 @@ const describeOf = (bytes, name) => {
   }
 }
 
+// --- a Famicom Disk System NSF that loads below $8000 (C81) ------------------------------------------
+//
+// Valid by the NSF specification, unplayable by game-music-emu 0.6.5, which calls it "Corrupt file".
+// The refusal must name what the file is; an FDS NSF that loads at $8000 must still open.
+{
+  const fds = (load) => {
+    const nsf = Buffer.alloc(128 + 256);
+    nsf.write('NESM\x1a', 0, 'latin1');
+    nsf[5] = 1; nsf[6] = 1; nsf[7] = 1;
+    nsf.writeUInt16LE(load, 8);
+    nsf.writeUInt16LE(0x8000, 10);
+    nsf.writeUInt16LE(0x8003, 12);
+    nsf.writeUInt16LE(16666, 110);
+    nsf[123] = 0x04;                  // the FDS chip
+    nsf[128] = 0x60;
+    nsf[131] = 0x60;
+    return nsf;
+  };
+  const low = open(fds(0x6000), 'fds-low.nsf');
+  check('an FDS NSF loading at $6000 is refused as what it is, not as a corrupt file',
+    low.handle === 0 && /Famicom Disk System/.test(low.error ?? '') && !/Corrupt/.test(low.error ?? ''),
+    `said: ${low.error}`);
+  if (low.handle) M._pt_close(low.handle);
+  const high = open(fds(0x8000), 'fds-high.nsf');
+  check('an FDS NSF loading at $8000 still opens', high.handle !== 0, `said: ${high.error}`);
+  if (high.handle) M._pt_close(high.handle);
+}
+
 // --- an NSF's length: measured when it falls silent, "where it stops" when it loops ------------------
 //
 // The owner's variant (a), 2026-09-22. NSF states no length. A tune that falls silent is measured by

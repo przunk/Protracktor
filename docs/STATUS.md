@@ -459,7 +459,7 @@ exempts a dialogue's confirm and cancel as Material's own convention. What is le
 child is a `Text`; a button built another way could be missing. Not fixed: outside the item it was
 found in; the owner decides whether it is its own item.
 
-### C81. An NSF refused as "invalid load/init/play address" — **OPEN, reported 2026-09-22; diagnosed 2026-09-23, fix waits for the owner**
+### C81. An NSF refused as "invalid load/init/play address" — **reported 2026-09-22; diagnosed 2026-09-23; option (a) BUILT 2026-09-23 on `fix/c81-fds-nsf-message`, not yet seen on the phone; (b) still open**
 
 The owner: `Nintendo Sound Format/Y. Matuo/19 neunzehn.nsf` (Modland, 26,768 bytes) does not play;
 the reason shown is game-music-emu's "invalid load/init/play address".
@@ -483,9 +483,13 @@ is only too low below `$6000` when FDS is on, `$8000–$DFFF` is mapped as FDS R
 **How many files:** not known. The Modland index does not carry NSF headers; counting means
 fetching every NSF, which B36's inventory step does anyway.
 
-**Options:**
+**Options** -- the owner chose (a), 2026-09-23:
 
-- **(a) Recommended, before the launch: say it truthfully.** The refusal becomes "a Famicom Disk
+- **(a) Chosen, BUILT: say it truthfully.** `GmeBackend::fdsLoadsLow` refuses the file before
+  game-music-emu sees it: *a Famicom Disk System NSF that loads below $8000, which the console
+  decoder (game-music-emu) cannot play yet*. Two engine checks: that file refused in those words,
+  an FDS NSF at $8000 still opening; the first fails with the check switched off.
+  The recommendation as written: The refusal becomes "a Famicom Disk
   System NSF that loads below `$8000` — not supported yet" instead of "Corrupt file". A check of
   the header in `GmeBackend` before gme sees it; a small change, both languages, no risk to what
   plays today.
