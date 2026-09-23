@@ -427,6 +427,17 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C85. Protracktor was offered as a browser — **FIXED 2026-09-23 on `fix/manifest-link-hosts`, not yet seen on the phone**
+
+The owner, looking for "Open by default" for A40, found "Browser app" in the app's settings, with
+Protracktor as a choice. Mechanism: the filter for module links (B24) named `http` and `https` and
+no host, and Android ignores every path pattern in a filter without a host -- so it claimed every
+web address, which is what a browser is. In 0.8.0 as published. Now the web half names the
+archives' hosts (Modland, ASMA, The Mod Archive, UnExoticA) and the local half keeps `content` and
+`file` as before; a test holds every `http(s)` filter to a host. **Not changed, noticed:** the local
+half has no host either, so its patterns are ignored too and it matches any `content`/`file` link
+that comes without a type -- which the mime-type filter above it is there for anyway.
+
 ### C84. Browse's search field stood over every list — **FIXED 2026-09-23, merged, confirmed in a browser**
 
 The owner: the field was visible across Browse, where the phone shows it only in Search. It now
