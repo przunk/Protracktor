@@ -644,7 +644,8 @@ playlist chosen mid-digression, which ends both.
 ## A40. Protracktor links open in the app — **parked 2026-09-14; the app's side BUILT and merged 2026-09-23, confirmed on the phone with the link added by hand; verified 2026-09-23**
 
 **Verified, 2026-09-23.** The owner published `https://przunk.github.io/.well-known/assetlinks.json`
-with the Play app-signing fingerprint (`E2:02:EF:…:A9:9D`) and the hand-over APKs' (`F9:7A:F5:…:E4:7E`);
+with the Play app-signing fingerprint (`E2:02:EF:…:A9:9D`, taken from Google Play by the owner,
+confirmed 2026-09-23) and the hand-over APKs' (`F9:7A:F5:…:E4:7E`);
 Google's Digital Asset Links API reads both with no error, and on the owner's phone *Open by default*
 shows `przunk.github.io` as **verified** (no longer a box to untick) and a link from the page opens
 the app. A link to a page on another host -- the Pi behind a Cloudflare tunnel -- still opens the
@@ -696,8 +697,10 @@ The file, ready but for one fingerprint:
 ```
 
 - **The first fingerprint is the app signing key's**, the one on users' phones under Play App
-  Signing. Play Console → **Test and release → Setup → App signing** → *App signing key
-  certificate* → **SHA-256 certificate fingerprint**. (The same page offers a *Digital Asset Links
+  Signing, shown in Play Console under *App signing key certificate* → **SHA-256 certificate
+  fingerprint**. (**Not** under *Test and release → Setup → App signing*, where this entry first put
+  it: the owner did not find it there, 2026-09-23. Currently most likely *Test and release → App
+  integrity*; the owner found it, the exact place is not recorded.) (The same page offers a *Digital Asset Links
   JSON* snippet with it filled in.) A locally computed fingerprint of the upload key is **not** it.
 - **The second is the certificate the hand-over APKs in `dist/` are signed with** (the Android debug
   certificate, read from the APK with `apksigner verify --print-certs`, 2026-09-23), so a build
