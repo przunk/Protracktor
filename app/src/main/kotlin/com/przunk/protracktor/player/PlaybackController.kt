@@ -2677,6 +2677,33 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
+     * A link to the page at its permanent address, opened here instead (`docs/BACKLOG.md` A40).
+     *
+     * **Played, not filed**, the way the page plays a tune sent to it: the tunes become what next and
+     * previous walk, as a search's results do, and no playlist is written. A queue link is treated
+     * the same way -- on the page it replaces "From the phone", which the app has no counterpart of,
+     * and a list somebody sent is still something to hear before deciding to keep.
+     *
+     * **Never silent**: a link that cannot be read, or that holds nothing playable, says so.
+     */
+    fun openLink(url: String) {
+        val opened = QueueLink.open(url)
+        if (opened == null || opened.tracks.isEmpty()) {
+            _state.update {
+                it.copy(message = Message(context.getString(
+                    if (opened == null) R.string.notice_link_unreadable else R.string.notice_link_nothing_playable,
+                )))
+            }
+            return
+        }
+        playFromResults(opened.tracks, 0)
+        val count = opened.tracks.size
+        val said = context.resources.getQuantityString(R.plurals.notice_link_opened, count, count) +
+            if (opened.stayed > 0) " " + context.resources.getQuantityString(R.plurals.notice_link_stayed, opened.stayed, opened.stayed) else ""
+        _state.update { it.copy(message = Message(said)) }
+    }
+
+    /**
      * What to call a file somebody handed us.
      *
      * `OpenableColumns.DISPLAY_NAME` first, because a document provider knows the real name and the

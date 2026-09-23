@@ -281,4 +281,74 @@ class QueueLinkTest {
             assertTrue(tune.id, !QueueLink.canSend(tune))
         }
     }
+
+    // --- read back: a link to the page's permanent address opens in the app (A40) ---------------
+
+    private val page = "https://przunk.github.io/Protracktor/src/"
+
+    @Test
+    fun `a tune link made here opens back into the same tune, id and title`() {
+        val tunes = listOf(
+            TrackRef(id = "https://modland.com/pub/modules/Protracker/Jester%20%28Volker%20Tripp%29/elysium.mod", title = "Elysium", fileName = "elysium.mod"),
+            TrackRef(id = "https://modland.com/pub/modules/AHX/Pink/frog%2Bprince.ahx", title = "frog+prince.ahx", fileName = "frog+prince.ahx"),
+        )
+        val link = QueueLink.tracksLink(page, tunes)!!
+        val opened = QueueLink.open(link)!!
+        assertTrue(opened.play)
+        assertEquals(tunes.map { it.id }, opened.tracks.map { it.id })
+        assertEquals(listOf("Elysium", "frog+prince.ahx"), opened.tracks.map { it.title })
+        assertEquals("Modland/Protracker/Jester (Volker Tripp)", opened.tracks[0].subtitle)
+        assertEquals(0, opened.stayed)
+    }
+
+    @Test
+    fun `an ASMA tune keeps its web address, so it plays whether or not ASMA is on this phone`() {
+        val link = QueueLink.tracksLink(page, listOf(TrackRef(id = "asma://asma/Composers/Aki/Robots.sap", title = "Robots.sap", fileName = "Robots.sap")))!!
+        assertEquals(listOf("https://asma.atari.org/asma/Composers/Aki/Robots.sap"), QueueLink.open(link)!!.tracks.map { it.id })
+    }
+
+    @Test
+    fun `a queue link counts the files that stayed on the phone rather than dropping them silently`() {
+        val link = QueueLink.linkTo(page, QueueLink.pack(listOf(
+            track("https://modland.com/pub/modules/AHX/Pink/frog.ahx", "frog.ahx"),
+            track("content://x/1", "mine.mod"),
+        )).fragment)
+        val opened = QueueLink.open(link)!!
+        assertTrue(!opened.play)
+        assertEquals(listOf("https://modland.com/pub/modules/AHX/Pink/frog.ahx"), opened.tracks.map { it.id })
+        assertEquals(1, opened.stayed)
+    }
+
+    @Test
+    fun `a link a browser made opens here too`() {
+        // Deflated by zlib as `CompressionStream('deflate')` does, and base64url'd as the page does.
+        // Three rows: a Modland path, The Mod Archive's address with a title, a file left on a phone.
+        val browser = "eJwVysEKwjAMgOGzewrBsw3o8DAQD-6o4BtIWMJabJuQtsreXnr8-f6XSTVcPmwwHp9YgeNWQksuCQ2-Vi0TAGrojbb48GUntgLJL0dBKk693pJQixzoOp4OUWorfd89zu_7fBnUS-Ypbfsiee3wB7YUKeQ"
+        val opened = QueueLink.open("$page#$browser")!!
+        assertEquals(
+            listOf("https://modland.com/pub/modules/Protracker/4-Mat/elysium.mod", "https://api.modarchive.org/downloads.php?moduleid=42#lotus.mod"),
+            opened.tracks.map { it.id },
+        )
+        assertEquals(listOf("elysium.mod", "L3_CD6"), opened.tracks.map { it.title })
+        assertEquals("lotus.mod", opened.tracks[1].fileName)
+        assertEquals(1, opened.stayed)
+    }
+
+    @Test
+    fun `only the page's own address is claimed`() {
+        assertTrue(QueueLink.isPageLink("$page#play:abc"))
+        assertTrue(QueueLink.isPageLink("https://przunk.github.io/Protracktor/#abc"))
+        // The lowercase path is a 404 on GitHub Pages; another host is not ours; no fragment is no link.
+        assertTrue(!QueueLink.isPageLink("https://przunk.github.io/protracktor/src/#abc"))
+        assertTrue(!QueueLink.isPageLink("https://example.org/Protracktor/src/#abc"))
+        assertTrue(!QueueLink.isPageLink("http://przunk.github.io/Protracktor/src/#abc"))
+        assertTrue(!QueueLink.isPageLink(page))
+    }
+
+    @Test
+    fun `a link that is not one says so instead of opening nothing`() {
+        assertEquals(null, QueueLink.open("$page#not-deflate-at-all"))
+        assertEquals(null, QueueLink.open(page))
+    }
 }
+

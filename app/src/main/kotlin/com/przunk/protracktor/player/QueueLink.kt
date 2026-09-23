@@ -4,6 +4,7 @@
 package com.przunk.protracktor.player
 
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.Modland
 import java.util.Base64
 import java.util.zip.Deflater
 
@@ -182,6 +183,72 @@ object QueueLink {
         val packed = pack(sendable)
         return if (packed.sent == 0) null else linkTo(base, PLAY_PREFIX + packed.fragment)
     }
+
+    /**
+     * The page's permanent address (`docs/BACKLOG.md` A40): a link to it opens in the app when the
+     * app is here. **The path with its capital P**, because GitHub Pages is case-sensitive and
+     * `/protracktor/` is a 404 -- claiming it would take links that go nowhere.
+     */
+    const val PAGE_HOST = "przunk.github.io"
+    const val PAGE_PATH = "/Protracktor/"
+
+    /** Whether [url] is a queue or tune link to the page at its permanent address. */
+    fun isPageLink(url: String): Boolean {
+        val uri = runCatching { java.net.URI(url) }.getOrNull() ?: return false
+        return uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host.equals(PAGE_HOST, ignoreCase = true) &&
+            (uri.rawPath ?: "").startsWith(PAGE_PATH) &&
+            !uri.rawFragment.isNullOrBlank()
+    }
+
+    /**
+     * A link read back, the page's `fromFragment` on the phone (A40): [play] when it was one tune or
+     * a few to hear (`#play:`), otherwise a queue; the tunes that can play; and how many rows were
+     * files that stayed on the phone that sent them.
+     */
+    data class Opened(val play: Boolean, val tracks: List<TrackRef>, val stayed: Int)
+
+    /** [url]'s fragment read back into tracks, or null when it is not a link this can read. */
+    fun open(url: String): Opened? {
+        val fragment = runCatching { java.net.URI(url).rawFragment }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
+        val play = fragment.startsWith(PLAY_PREFIX)
+        val lines = decode(if (play) fragment.removePrefix(PLAY_PREFIX) else fragment) ?: return null
+        var stayed = 0
+        val tracks = lines.mapNotNull { line ->
+            if (line.startsWith(PHONE_PREFIX)) { stayed++; return@mapNotNull null }
+            val address = line.substringBefore('\t')
+            val title = line.substringAfter('\t', "").trim()
+            // A Modland row travels as its path, and becomes the id the app's own index gives it, so
+            // a tune from a link is the same tune everywhere else in the app.
+            val id = if ("://" in address) address else Modland.urlFor(address)
+            // The Mod Archive names the file only in the fragment: `downloads.php?moduleid=42#lotus.mod`.
+            val last = address.substringAfterLast('/')
+            val file = if ('#' in last) last.substringAfter('#') else last.substringBefore('?')
+            val source = Catalogue.owning(id)?.let { catalogue ->
+                catalogue.pathFrom(id)?.substringBeforeLast('/', "")?.let { folder ->
+                    listOf(catalogue.displayName, folder).filter { it.isNotBlank() }.joinToString("/")
+                }
+            }.orEmpty()
+            TrackRef(id = id, title = title.ifBlank { file }, subtitle = source, fileName = file)
+        }
+        return Opened(play, tracks, stayed)
+    }
+
+    /** [encode] undone: URL-safe base64, inflated, one row per line. Null when it is not that. */
+    internal fun decode(fragment: String): List<String>? = runCatching {
+        val packed = java.util.Base64.getUrlDecoder().decode(fragment)
+        val inflater = java.util.zip.Inflater()
+        inflater.setInput(packed)
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(4096)
+        while (!inflater.finished()) {
+            val n = inflater.inflate(buffer)
+            if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) error("truncated")
+            out.write(buffer, 0, n)
+        }
+        inflater.end()
+        out.toString(Charsets.UTF_8.name()).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+    }.getOrNull()
 
     /** The whole address, given where the page is served from. */
     fun linkTo(base: String, fragment: String): String =

@@ -347,6 +347,24 @@
                 <data android:pathPattern="/.*\\..*\\..*\\.gdm" />
             </intent-filter>
 
+            <!--
+                A link to the page at its permanent address (`docs/BACKLOG.md` A40), opened here when
+                the app is installed. **`autoVerify`**: Android checks
+                https://przunk.github.io/.well-known/assetlinks.json (the root of the host: the
+                owner's user-site repository, not this project's Pages), and until that file lists
+                this app's signing key the link opens in the browser unless the user turns "Open
+                supported links" on for the app. The path keeps its capital P: `/protracktor/` is a
+                404 on GitHub Pages, and claiming it would take links that go nowhere.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="przunk.github.io" />
+                <data android:pathPrefix="/Protracktor/" />
+            </intent-filter>
+
             <!-- The share sheet. Same mime types as the tap, for the same reason. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

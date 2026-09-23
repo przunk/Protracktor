@@ -105,7 +105,9 @@ fun ProtracktorApp(
     // caused by anything else does not restart it.
     LaunchedEffect(externalOpen) {
         val uri = externalOpen ?: return@LaunchedEffect
-        viewModel.playExternal(uri)
+        // A link to the page at its permanent address is a queue or a tune to hear, not a file (A40).
+        if (com.przunk.protracktor.player.QueueLink.isPageLink(uri.toString())) viewModel.openLink(uri.toString())
+        else viewModel.playExternal(uri)
         onExternalOpened()
     }
 

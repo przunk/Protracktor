@@ -486,4 +486,14 @@
     <string name="settings_cache_ahead_off">Off</string>
     <string name="a11y_caching_ahead">Downloading in the background</string>
     <string name="a11y_cached_here">On this phone</string>
+    <string name="notice_link_unreadable">This Protracktor link could not be read.</string>
+    <string name="notice_link_nothing_playable">This link names nothing this phone can play.</string>
+    <plurals name="notice_link_opened">
+        <item quantity="one">Opened a link: %1$,d tune.</item>
+        <item quantity="other">Opened a link: %1$,d tunes.</item>
+    </plurals>
+    <plurals name="notice_link_stayed">
+        <item quantity="one">%1$,d stayed on the phone that sent it.</item>
+        <item quantity="other">%1$,d stayed on the phone that sent them.</item>
+    </plurals>
 </resources>

@@ -641,7 +641,74 @@ the heading names the author, the heading's button offers the dice rather than t
 Back out of the author's folder resumes it. Eleven page checks walk the whole journey, including a
 playlist chosen mid-digression, which ends both.
 
-## A40. Protracktor links open in the app — **parked 2026-09-14, waiting for a fixed address**
+## A40. Protracktor links open in the app — **parked 2026-09-14; the app's side BUILT 2026-09-23, branch `feature/a40-app-links`; the verification file is the owner's**
+
+**Unparked 2026-09-23**: the page has a permanent address, `https://przunk.github.io/Protracktor/`.
+
+**Built (the app's side).** A link to that address -- a tune shared from the page (`#play:…`) or a
+queue (`#…`) -- opens in the app: `QueueLink.open` reads the fragment back (the inverse of `pack`;
+Modland rows become the ids the app's own index gives them, ASMA's keep their web address so they
+play whether or not ASMA is on the phone), and `openLink` plays the tunes **the way a search's
+results play: not filed, next and previous walking them**. A queue link is treated the same way; on
+the page it replaces "From the phone", which the app has no counterpart of. A link that cannot be
+read, or names nothing playable, says so. The manifest claims `https://przunk.github.io/Protracktor/…`
+with `autoVerify`; the lowercase path is not claimed, because it is a 404 on GitHub Pages.
+
+**Checked:** JVM tests -- a link made here read back to the same ids and titles, a queue link
+counting the files that stayed on a phone, a link deflated the way a browser does it, the address
+check, an unreadable link; the path check and the Modland id each broken once to see them fail.
+**Not checked:** a link tapped on the phone.
+
+**Why nothing happens yet, and what is the owner's.** Android opens an `https` link in an app only
+after checking `https://przunk.github.io/.well-known/assetlinks.json` -- **the root of the host**
+(developer.android.com, "Configure website associations", read 2026-09-23): served over HTTPS as
+`application/json`, with no redirect. The root of `przunk.github.io` is the owner's **user site**, a
+repository of its own named `przunk.github.io`; this project's `gh-pages` serves only
+`/Protracktor/` and cannot put a file there. Until that file exists and names this app's key, the
+link opens in the browser, unless the user turns links on by hand (*Settings → Apps → Protracktor →
+Open by default → Add link*).
+
+The file, ready but for one fingerprint:
+
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.przunk.protracktor",
+    "sha256_cert_fingerprints": [
+      "APP_SIGNING_KEY_SHA256_FROM_PLAY_CONSOLE",
+      "F9:7A:F5:0C:2D:86:9A:25:91:DD:82:D2:45:55:89:4A:2C:C9:59:27:AF:B6:C0:A1:FC:D4:BD:19:72:21:E4:7E"
+    ]
+  }
+}]
+```
+
+- **The first fingerprint is the app signing key's**, the one on users' phones under Play App
+  Signing. Play Console → **Test and release → Setup → App signing** → *App signing key
+  certificate* → **SHA-256 certificate fingerprint**. (The same page offers a *Digital Asset Links
+  JSON* snippet with it filled in.) A locally computed fingerprint of the upload key is **not** it.
+- **The second is the certificate the hand-over APKs in `dist/` are signed with** (the Android debug
+  certificate, read from the APK with `apksigner verify --print-certs`, 2026-09-23), so a build
+  installed from a file verifies too. Remove it if only Play builds should.
+- Add the **upload key's** SHA-256 from the same Play Console page as a third, if release APKs signed
+  locally with the upload key are also installed by hand.
+
+The owner's steps, on GitHub (English as on screen):
+
+1. **New repository** → *Repository name* `przunk.github.io` → **Public** → **Create repository**.
+2. **Add file → Create new file** → name `.nojekyll`, empty → **Commit changes**. (Without it GitHub
+   Pages skips folders whose name starts with a dot.)
+3. **Add file → Create new file** → name `.well-known/assetlinks.json`, the JSON above with the
+   first fingerprint pasted → **Commit changes**.
+4. **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main`,
+   `/ (root)` → Save.**
+5. A minute later, `https://przunk.github.io/.well-known/assetlinks.json` shows the JSON.
+6. On the phone, after installing a build from this branch: *Settings → Apps → Protracktor → Open by
+   default* lists `przunk.github.io` as a verified link. Android verifies at install time, so a
+   build installed before step 5 has to be installed again.
+
+The problem as noted:
 
 A link to the page, opened on a phone that has the app, should open in the app.
 
