@@ -427,7 +427,20 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
-### C88. 3,800 files offered by name that their decoder reads as another format — **OPEN, found 2026-09-23**
+### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
+
+**Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor
+did not play; SidMon 1's did (UADE). **Fixed (option (a)):** those three directories -- 3,718 files --
+are listed as refused in `web/src/formats.tsv` (`directory` rows) and `SupportedFormats.refusedDirectories`,
+held to one list by `SupportedFormatsFileTest`. Their rows stay in the index, unoffered; the list is
+part of the index fingerprint, so an index already on a phone or in a browser re-decides itself at
+the next start with no download. SidMon 1 is left alone.
+
+**Seen by the owner, 2026-09-24:** on the phone, the three directories gone from an index that was
+not downloaded again. **Not checked:** the page, and SidMon 1 still being offered. The recompute's SQL now lives in one
+function the test runs too (`playableUpdate`), where the test used to keep a copy.
+
+The finding as noted:
 
 Found by B36's inventory (`feature/b36-length-inventory`, `docs/inventory/LENGTHS.md`): in twelve
 Modland directories the page's engine opened **none** of the files sampled. The big four -- Deflemask

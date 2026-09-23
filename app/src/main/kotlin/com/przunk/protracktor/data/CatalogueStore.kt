@@ -263,8 +263,7 @@ class CatalogueStore(context: Context) {
                         statement.bindLong(6, entry.size)
                         statement.bindString(7, ext)
                         statement.bindString(8, pre)
-                        val playable =
-                            ext in SupportedFormats.extensions || pre in SupportedFormats.prefixes
+                        val playable = SupportedFormats.offeredInCatalogue(entry.format, entry.title)
                         if (playable) playableCount++
                         statement.bindLong(9, if (playable) 1L else 0L)
                         // Search's folded copy, for the few rows with accents (A53).
@@ -312,16 +311,11 @@ class CatalogueStore(context: Context) {
      * @return how many rows are playable afterwards, so the caller can say what changed.
      */
     suspend fun refreshPlayable(): Int = withContext(Dispatchers.IO) {
-        val extensions = SupportedFormats.extensions.toList()
-        val prefixes = SupportedFormats.prefixes.toList()
-        val ext = extensions.joinToString(",") { "?" }
-        val pre = prefixes.joinToString(",") { "?" }
+        val (sql, bound) = playableUpdate(
+            SupportedFormats.extensions, SupportedFormats.prefixes, SupportedFormats.refusedDirectories,
+        )
         helper.writableDatabase.transaction {
-            execSQL(
-                "UPDATE catalogue_tracks SET playable = " +
-                    "(CASE WHEN ext IN ($ext) OR pre IN ($pre) THEN 1 ELSE 0 END)",
-                (extensions + prefixes).toTypedArray(),
-            )
+            execSQL(sql, bound)
             // The count every catalogue shows follows the flags, or the number on screen is the
             // answer to a question the app stopped asking.
             execSQL(
@@ -562,4 +556,24 @@ internal fun randomWhere(
         clauses += "path IN (SELECT path FROM modland_favourites)"
     }
     return " WHERE " + clauses.joinToString(" AND ") to arguments.toTypedArray()
+}
+
+/**
+ * The statement that re-decides every stored row's `playable`, and its arguments --
+ * [SupportedFormats.offeredInCatalogue] in SQL: a name claimed by extension or prefix, in a directory
+ * not refused (C88). **One place**, so the test runs the statement the app runs rather than a copy
+ * of it that could drift.
+ */
+internal fun playableUpdate(
+    extensions: Collection<String>,
+    prefixes: Collection<String>,
+    refusedDirectories: Collection<String>,
+): Pair<String, Array<String>> {
+    val ext = extensions.joinToString(",") { "?" }
+    val pre = prefixes.joinToString(",") { "?" }
+    // `NOT IN ()` is a syntax error in SQLite, so an empty list is a condition that always holds.
+    val refused = if (refusedDirectories.isEmpty()) "1" else "format NOT IN (${refusedDirectories.joinToString(",") { "?" }})"
+    return "UPDATE catalogue_tracks SET playable = " +
+        "(CASE WHEN (ext IN ($ext) OR pre IN ($pre)) AND $refused THEN 1 ELSE 0 END)" to
+        (extensions + prefixes + refusedDirectories).toTypedArray()
 }

@@ -77,15 +77,18 @@ export function parseFormats(text) {
   const extensions = new Map();
   const prefixes = new Map();
   const platforms = new Map();
+  const directories = new Set();
   for (const raw of text.split('\n')) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
     const [kind, name, decoders, platform] = line.split('\t');
+    // A directory whose files nothing here plays, whatever their names say (C88).
+    if (kind === 'directory') { if (name) directories.add(name); continue; }
     if (!name || !decoders) continue;
     (kind === 'prefix' ? prefixes : extensions).set(name, decoders.split(','));
     if (platform && platform !== '-') platforms.set(name, platform);
   }
-  return { extensions, prefixes, platforms };
+  return { extensions, prefixes, platforms, directories };
 }
 
 /**
@@ -145,7 +148,10 @@ export function onPhone(table) {
  * and the rest of the Spectrum's formats fall out here -- 26,559 of the rows the phone keeps.
  */
 export function playable(table, absent) {
-  return (fileName) => {
+  // [format] is the directory an archive files the name under, where there is one: a directory the
+  // table refuses is not offered, whatever the name says (C88).
+  return (fileName, format) => {
+    if (format && table.directories?.has(format)) return false;
     const decoders = listedAs(table, fileName);
     return decoders !== null && decoders.some((decoder) => !absent.has(decoder));
   };
@@ -162,6 +168,7 @@ export function playable(table, absent) {
 export function indexFingerprint(engineFingerprint, table) {
   const names = [...table.extensions].map(([n, d]) => `e:${n}=${d.join('+')}`)
     .concat([...table.prefixes].map(([n, d]) => `p:${n}=${d.join('+')}`))
+    .concat([...(table.directories ?? [])].map((d) => `d:${d}`))
     .sort().join(',');
   let hash = 0;
   for (let i = 0; i < names.length; i++) hash = (Math.imul(hash, 31) + names.charCodeAt(i)) | 0;
@@ -258,7 +265,7 @@ export function toRecords(text, source = MODLAND, isPlayable = () => true) {
     // **Every row the archive lists, with the verdict beside it** (`docs/ROADMAP_FORMATS.md` step
     // 0). The index used to keep only what this build could open, which made it a function of the
     // format list -- so adding one format meant fetching the whole index again, on every device.
-    const p = isPlayable(title) ? 1 : 0;
+    const p = isPlayable(title, format) ? 1 : 0;
     held.push({ t: title, s: size, p });
     total++;
     if (p) {
@@ -613,7 +620,7 @@ export async function refreshPlayable(source = MODLAND, isPlayable = () => true)
     const author = rest.join('/');
     let count = 0;
     for (const entry of bucket.tracks ?? []) {
-      entry.p = isPlayable(entry.t) ? 1 : 0;
+      entry.p = isPlayable(entry.t, format) ? 1 : 0;
       total++;
       if (!entry.p) continue;
       count++;
