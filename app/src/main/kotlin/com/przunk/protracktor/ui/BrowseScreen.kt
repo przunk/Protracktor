@@ -603,10 +603,10 @@ private fun LocalDomain(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedButton(onClick = onPickFolder, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.action_add_folder))
+                IconLabel(PlayerIcons.Folder, stringResource(R.string.action_add_folder))
             }
             OutlinedButton(onClick = onPickFiles, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.action_add_files))
+                IconLabel(PlayerIcons.Document, stringResource(R.string.action_add_files))
             }
         }
 
@@ -1062,7 +1062,7 @@ private fun HistoryDomain(
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onClearHistory) {
-                Text(stringResource(R.string.action_clear_history))
+                IconLabel(PlayerIcons.Remove, stringResource(R.string.action_clear_history))
             }
         }
         Selectable(

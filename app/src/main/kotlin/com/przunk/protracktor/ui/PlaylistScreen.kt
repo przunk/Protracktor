@@ -778,7 +778,7 @@ private fun AwayScrim(
                 textAlign = TextAlign.Center,
             )
             Button(onClick = onReturnToPlaylist) {
-                Text(stringResource(R.string.random_back_to_playlist))
+                IconLabel(PlayerIcons.Playlist, stringResource(R.string.random_back_to_playlist))
             }
         }
     }

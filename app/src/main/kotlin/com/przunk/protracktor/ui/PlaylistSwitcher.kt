@@ -162,9 +162,9 @@ fun PlaylistSwitcher(
             OutlinedButton(
                 onClick = { naming = NamingIntent.Create },
                 modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.playlist_new)) }
+            ) { IconLabel(PlayerIcons.Add, stringResource(R.string.playlist_new)) }
             OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.action_import_playlist))
+                IconLabel(PlayerIcons.Download, stringResource(R.string.action_import_playlist))
             }
         }
     }

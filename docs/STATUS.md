@@ -448,7 +448,11 @@ belongs to Search (`fix/web-search-in-its-place`).
 The owner: pressing download on each catalogue made the note flicker between them. Progress is now
 only the row's spinner; the note says what is held and what failed (`fix/web-download-note`).
 
-### C82. Buttons with a label and no icon, outside dialogs — **OPEN, found 2026-09-23; corrected the same day**
+### C82. Buttons with a label and no icon, outside dialogs — **found 2026-09-23; FIXED the same day on `fix/c82-button-icons`, not yet seen on the phone**
+
+**Fixed, with the icons the owner agreed to:** Add a folder -- folder; Add files -- document; Clear
+history -- the cross; New playlist -- plus; Import -- download; Back to the playlist -- the playlist.
+One `IconLabel` for all six, the pairing screen's shape.
 
 Found while giving the pairing screen's two buttons their icons (`fix/scanner-button-icons`).
 **Corrected 2026-09-23:** the first version of this entry also listed the dialogs' *Cancel*, *Save*,
