@@ -15,7 +15,15 @@
 // Everything fetched is cached under ~/.protracktor/inventory, so a second run asks Modland for
 // nothing it has already given, and the fetching is three at a time.
 //
-//   node scripts/inventory-lengths.mjs [--sample N] [--seed N] [--nsf N] [--only Format,Format]
+//   node scripts/inventory-lengths.mjs [--sample N] [--seed N] [--nsf N] [--spc N] [--only Format,Format]
+//                                      [--zxtune native/probe/zxtune/build/probe-zxtune]
+//
+// **ZXTune through its probe.** The page's engine has no ZXTune, so its formats are asked of the
+// host probe (`scripts/build-zxtune-probe.sh`), when one is given: it opens a file with ZXTune's own
+// players and prints the length they compute. The probe is built from its own checkout of ZXTune,
+// not from `native/vendor/zxtune`, and carries the AY-family players -- a file it refuses is said
+// to be refused by the probe, not by the app. Modland files every Spectrum tracker under one
+// directory, so Spectrum is sampled per tracker, one level down.
 //
 // Writes docs/inventory/lengths.tsv (one row per format directory) and prints the totals.
 
@@ -24,6 +32,7 @@ import os from 'os';
 import path from 'path';
 import zlib from 'zlib';
 import crypto from 'crypto';
+import { execFileSync } from 'child_process';
 
 globalThis.sampleRate ??= 48000;
 globalThis.currentFrame ??= 0;
@@ -35,6 +44,8 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, a, i, all) 
 }, []));
 const SAMPLE = Number(args.sample ?? 20);
 const NSF_SAMPLE = Number(args.nsf ?? 150);
+const SPC_SAMPLE = Number(args.spc ?? 300);
+const ZXTUNE = args.zxtune ? path.resolve(args.zxtune) : null;
 const SEED = Number(args.seed ?? 1);
 const ONLY = args.only ? new Set(args.only.split(',')) : null;
 
@@ -139,7 +150,25 @@ const absent = new Set(fingerprint.split(';').map((p) => p.split(':')).filter(([
  * fingerprint; any other decoder must be named there and not as `none`. ZXTune is missing from the
  * page's build, so its formats are **not measured here** and said so, not counted as unknown.
  */
-const here = (decoder) => decoder === 'hively' || (fingerprint.includes(`${decoder}:`) && !absent.has(decoder));
+const here = (decoder) => decoder === 'hively' || (fingerprint.includes(`${decoder}:`) && !absent.has(decoder))
+  || (decoder === 'zxtune' && ZXTUNE !== null);
+
+/** What the ZXTune probe says of a file, in the shape `ask` answers. */
+function askZxtune(bytes, name) {
+  const file = path.join(os.tmpdir(), `inventory-${process.pid}-${name.replace(/[^\w.-]/g, '_')}`);
+  fs.writeFileSync(file, bytes);
+  try {
+    const out = execFileSync(ZXTUNE, [file], { encoding: 'utf8', timeout: 60_000, stdio: ['ignore', 'pipe', 'ignore'] });
+    const verdict = out.split('\n').reverse().find((l) => l.startsWith('VERDICT')) ?? '';
+    if (/VERDICT reject/.test(verdict)) return { opened: false, error: verdict };
+    const len = Number((verdict.match(/len=(\d+)s/) ?? [])[1] ?? 0);
+    return { opened: true, seconds: len, endsAt: false };
+  } catch (error) {
+    return { opened: false, error: String(error.message).slice(0, 120) };
+  } finally {
+    fs.rmSync(file, { force: true });
+  }
+}
 
 /** What the engine says of a file: opened or not, its length, and whether it ends by itself. */
 function ask(bytes, name) {
@@ -172,8 +201,9 @@ for (const line of text.split('\n')) {
   rows++;
   const decoders = decodersOf(parts[parts.length - 1]);
   if (!decoders) continue;
-  const format = parts[0];
-  if (ONLY && !ONLY.has(format)) continue;
+  // Spectrum holds every ZX tracker under one directory; each tracker is its own format.
+  const format = parts[0] === 'Spectrum' && parts.length > 2 ? `Spectrum/${parts[1]}` : parts[0];
+  if (ONLY && !ONLY.has(format) && !ONLY.has(parts[0])) continue;
   if (!byFormat.has(format)) byFormat.set(format, { files: [], decoders: new Map() });
   const group = byFormat.get(format);
   group.files.push(file);
@@ -197,7 +227,7 @@ for (const [format, group] of formats) {
     process.stdout.write(`\r  ${done}/${formats.length} ${format.slice(0, 40).padEnd(40)}`);
     continue;
   }
-  const n = format === 'Nintendo Sound Format' ? NSF_SAMPLE : SAMPLE;
+  const n = format === 'Nintendo Sound Format' ? NSF_SAMPLE : format === 'Nintendo SPC' ? SPC_SAMPLE : SAMPLE;
   const picks = sample(group.files, n, random);
   const tally = { asked: 0, file: 0, hvsc: 0, songdb: 0, none: 0, refused: 0, missing: 0 };
   const lengths = [];
@@ -215,7 +245,8 @@ for (const [format, group] of formats) {
         if ((bytes[123] & 0x04) && load && load < 0x8000) fds.low++;
       }
       // The app's order (`LengthSource`): the file through its backend, then HVSC, then songdb.
-      const answer = decoder === 'uade' ? null : ask(bytes, pick.split('/').pop());
+      const answer = decoder === 'uade' ? null
+        : decoder === 'zxtune' ? askZxtune(bytes, pick.split('/').pop()) : ask(bytes, pick.split('/').pop());
       if (answer && !answer.opened) { tally.refused++; continue; }
       if (answer && answer.seconds > 0 && !answer.endsAt) { tally.file++; lengths.push(Math.round(answer.seconds)); continue; }
       if (hvsc.has(md5)) { tally.hvsc++; continue; }
@@ -268,7 +299,8 @@ for (const r of results) {
 }
 fs.writeFileSync('docs/inventory/lengths.tsv',
   `# B36 step 1: Modland's tunes with no length from any source. Seed ${SEED}, ${SAMPLE} per directory (${NSF_SAMPLE} for NSF), ` +
-  `index and databases as fetched ${new Date().toISOString().slice(0, 10)}. Engine: ${fingerprint}\n` + lines.join('\n') + '\n');
+  `index and databases as fetched ${new Date().toISOString().slice(0, 10)}. Engine: ${fingerprint}` +
+  (ZXTUNE ? `; ZXTune via ${path.relative(process.cwd(), ZXTUNE)}` : '') + `; SPC ${SPC_SAMPLE}\n` + lines.join('\n') + '\n');
 
 console.log('\nBy decoder (estimated files with no length before playing):');
 for (const [decoder, d] of [...byDecoder.entries()].sort((a, b) => b[1].without - a[1].without)) {
