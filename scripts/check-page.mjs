@@ -159,10 +159,15 @@ const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export
 const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
 const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
 const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
+// The language module and its Polish table, inlined as the others are (W6). The table first: the
+// module's own import of it is the line that goes.
+const i18nSource = fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^export /gm, '')
+  + fs.readFileSync('web/src/i18n.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
   .replace(/^import .*from '\.\/songlengths\.js';$/gm, lengthsSource)
   .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
+  .replace(/^import .*from '\.\/i18n\.js';$/gm, i18nSource)
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
   .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
@@ -180,7 +185,7 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__api = { pair, setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -2322,7 +2327,8 @@ if (window.__api) {
   const settingsRow = () => [...$('settingsfields').querySelectorAll('dt')].find((n) => n.textContent === 'Song metadata');
   const remove = settingsRow()?.nextElementSibling.querySelector('button');
   check(labels.includes('Song metadata') && remove?.querySelector('svg') && remove.textContent.trim() === 'Delete'
-        && settingsRow().nextElementSibling.textContent.startsWith('1 tunes'),
+        // One tune, not "1 tunes": counts take their form since W6, in both languages.
+        && settingsRow().nextElementSibling.textContent.startsWith('1 tune ·'),
     'Settings says it is held, and offers Delete with an icon and a word');
   let asked = '';
   window.confirm = (text) => { asked = text; return false; };
@@ -2477,6 +2483,124 @@ if (window.__api) {
   });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // --- the page in Polish, and in a light theme (W6, W7) ------------------------------------------
+  //
+  // **Every text has its Polish, or the check fails** -- the language table's exhaustive `when`.
+  // Three sources of text, each read from the files rather than from what one run happened to draw:
+  // the `t(...)` and `tn(...)` calls in `app.js`, the markup in `index.html`, and nothing else --
+  // a sentence left outside `t()` is caught by the third check.
+  {
+    const i18n = window.__i18n;
+    check(i18n.language() === 'en', 'a browser that speaks English gets the page in English');
+    const cases = [
+      [['system', ['pl-PL', 'en']], 'pl', 'the browser says Polish first: Polish'],
+      [['system', ['de-DE', 'en-GB']], 'en', 'the first language the page has wins, not the first listed'],
+      [['system', ['fr']], 'en', 'none it has: English'],
+      [['en', ['pl-PL']], 'en', 'a choice beats the browser'],
+      [['pl', ['en-US']], 'pl', 'and the other way round'],
+      [['system', []], 'en', 'a browser that says nothing: English'],
+    ];
+    for (const [[choice, list], want, what] of cases) check(i18n.resolveLanguage(choice, list) === want, what);
+
+    const appSource = fs.readFileSync('web/src/app.js', 'utf8');
+    const keys = new Set();
+    for (const m of appSource.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) keys.add(m[2].replace(/\\(['"\\])/g, '$1'));
+    for (const m of appSource.matchAll(/\btn\([^,]+,\s*(['"])(?:\\.|(?!\1).)*\1\s*,\s*(['"])((?:\\.|(?!\2).)*)\2/g)) {
+      keys.add(m[3].replace(/\\(['"\\])/g, '$1'));
+    }
+    const untranslated = [...keys].filter((k) => !i18n.hasPolish(k));
+    check(keys.size > 150 && untranslated.length === 0,
+      `every one of app.js's ${keys.size} texts has its Polish` + (untranslated.length ? ` -- missing: ${untranslated.slice(0, 5).join(' | ')}` : ''));
+
+    const markup = new JSDOM(fs.readFileSync('web/src/index.html', 'utf8')).window.document;
+    // Names that are names in both languages, and so have no entry to find.
+    const sameInBoth = new Set(['Protracktor', 'Modland', 'ASMA']);
+    const staticMissing = [...i18n.staticTexts(markup.body)].filter((text) => !sameInBoth.has(text) && !i18n.hasPolish(text));
+    check(staticMissing.length === 0,
+      'every text in index.html has its Polish' + (staticMissing.length ? ` -- missing: ${staticMissing.slice(0, 5).join(' | ')}` : ''));
+
+    // A sentence written into app.js without `t()` is English on a Polish page. What is left outside
+    // is data or plumbing, named here one by one so a new one has to be argued for.
+    const plumbing = new Set([
+      'insecure context', 'From the phone', 'fetching the list',
+      'fetching the whole archive (20 MB), this browser will not ask for part of it',
+      'bheld yes', 'bmeta bwarn', '${named} — Protracktor web',
+      "${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(lines.join('\\n'))}",
+    ]);
+    const code = appSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      .replace(/\btn?\((?:[^()'"`]|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`]*`|\((?:[^()]|\([^()]*\))*\))*\)/g, 'T()');
+    const loose = [];
+    for (const m of code.matchAll(/'((?:[^'\\\n]|\\.)*)'|`([^`]*)`|"((?:[^"\\\n]|\\.)*)"/g)) {
+      const text = m[1] ?? m[2] ?? m[3] ?? '';
+      if (/[A-Za-z]{3,} [a-z]{2,}/.test(text) && !/^(https?:|[#.]\w|\w+\(|M\d|<)/.test(text) && !plumbing.has(text)) loose.push(text);
+    }
+    check(loose.length === 0, 'no sentence in app.js is left outside t()' + (loose.length ? ` -- ${loose.slice(0, 3).join(' | ')}` : ''));
+
+    // The same page, drawn in Polish: the markup's texts and the three read attributes change, and a
+    // count takes the Polish form its number asks for.
+    const polish = new JSDOM(fs.readFileSync('web/src/index.html', 'utf8')).window.document;
+    i18n.useLanguage('pl');
+    i18n.translateStatic(polish.body);
+    check(polish.getElementById('tab-browse')?.textContent.includes('Przeglądaj'), 'in Polish, Browse reads Przeglądaj, as in the app');
+    check(polish.getElementById('seek')?.getAttribute('aria-label') === 'Pozycja'
+      && polish.getElementById('next')?.getAttribute('title') === 'Następny',
+      'and what a screen reader or a tooltip says is translated too');
+    check(i18n.tn(1, '{n} track', '{n} tracks') === '1 utwór'
+      && i18n.tn(3, '{n} track', '{n} tracks') === '3 utwory'
+      && i18n.tn(5, '{n} track', '{n} tracks') === '5 utworów'
+      && i18n.tn(22, '{n} track', '{n} tracks') === '22 utwory',
+      'a count takes its Polish form: 1 utwór, 3 utwory, 5 utworów, 22 utwory');
+    check(i18n.t('Nothing playing') === 'Nic nie gra', 'and a sentence its Polish');
+    i18n.useLanguage('en');
+    check(i18n.t('Nothing playing') === 'Nothing playing' && i18n.tn(2, '{n} track', '{n} tracks') === '2 tracks',
+      'back in English, English again');
+  }
+
+  // The theme (W7): the choice is written where the page reads it before the first frame, and
+  // "System" hands the decision back to the browser.
+  {
+    const html = window.document.documentElement;
+    const pick = (value) => {
+      const input = window.document.querySelector(`input[name="theme"][value="${value}"]`);
+      input.checked = true;
+      input.onchange();
+    };
+    pick('light');
+    check(html.dataset.theme === 'light' && window.localStorage.getItem('protracktor.theme') === 'light',
+      'Theme → Light pins the page light, and remembers it');
+    pick('dark');
+    check(html.dataset.theme === 'dark', 'Theme → Dark pins it dark');
+    pick('system');
+    check(!('theme' in html.dataset) && window.localStorage.getItem('protracktor.theme') === 'system',
+      'Theme → System lets the browser decide again');
+
+    // **Contrast in both themes**, from the tokens themselves: every pair the page sets text in,
+    // at 4.5:1, the WCAG level for body text. A light theme that nobody can read is not a theme.
+    const css = fs.readFileSync('web/src/index.html', 'utf8');
+    const token = {};
+    for (const m of css.matchAll(/--([a-z-]+): light-dark\((#[0-9A-Fa-f]{6}), (#[0-9A-Fa-f]{6})\)/g)) token[m[1]] = { light: m[2], dark: m[3] };
+    const luminance = (hex) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+    const pairs = [
+      ['on-surface', 'bg'], ['on-surface-variant', 'bg'], ['on-surface', 'surface-container'],
+      ['on-surface-variant', 'surface-container'], ['on-secondary-container', 'secondary-container'],
+      ['on-primary', 'primary'], ['primary', 'bg'], ['error', 'bg'],
+    ];
+    const weak = [];
+    for (const theme of ['light', 'dark']) {
+      for (const [fg, bg] of pairs) {
+        if (!token[fg] || !token[bg]) { weak.push(`${fg} or ${bg} has no light-dark token`); continue; }
+        const r = ratio(token[fg][theme], token[bg][theme]);
+        if (r < 4.5) weak.push(`${theme}: ${fg} on ${bg} is ${r.toFixed(2)}:1`);
+      }
+    }
+    check(weak.length === 0, 'text meets 4.5:1 in both themes' + (weak.length ? ` -- ${weak.join('; ')}` : ''));
+  }
+
   // --- what the page carries and says about itself (W4) ---------------------------------------
   //
   // **The page's engine links nothing it does not name.** The web build is `native/CMakeLists.txt`
@@ -2517,6 +2641,11 @@ if (window.__api) {
   }
   {
     const blocks = rules.privacyBlocks(fs.readFileSync('store/privacy-policy.md', 'utf8'));
+    // And in Polish, the phone's same rule: the date first, then the Polish section's own headings.
+    const polishBlocks = rules.privacyBlocks(fs.readFileSync('store/privacy-policy.md', 'utf8'), true);
+    check(polishBlocks[0]?.text.startsWith('Effective date:') && polishBlocks[1]?.kind === 'heading'
+      && polishBlocks[1]?.text === 'Administrator',
+      'the Polish page shows the policy\'s Polish section, under the same date');
     const english = fs.readFileSync('store/privacy-policy.md', 'utf8').split('## Polski')[0];
     const headings = [...english.matchAll(/^### (.+)$/gm)].map((m) => rules.cleanLegal(m[1]));
     check(blocks[0]?.text.startsWith('Effective date:'), 'the privacy policy opens with its date');

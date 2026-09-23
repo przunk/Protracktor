@@ -227,6 +227,31 @@ when no catalogue is held, opening Browse on the catalogues.
 
 ## W-D3 — Polish and a light theme
 
+**Decided 2026-09-23: (a), its own stage after the launch -- and BUILT the same day, branch
+`feature/web-polish-and-light-theme`, not yet seen in a browser.**
+
+- **W6, Polish.** `web/src/i18n.js` and `i18n-pl.js`: the English text is the key, the Polish its
+  value, counts in their three Polish forms (`1 utwór`, `3 utwory`, `5 utworów`). The app's words
+  where it says the same thing. The page speaks the language chosen in *Settings → Language*
+  (System / English / Polski, the app's three) or the browser's first of the two; a new choice
+  reloads the page and says so. The privacy policy shows its Polish section, as the phone does.
+  Not translated, deliberately: what a decoder or the network says about a file, as on the phone.
+- **W7, a light theme.** *Settings → Theme* (System / Light / Dark). Light is Material's baseline
+  light scheme, read out of the library (`docs/reference/material3-light.json`) -- what the app shows
+  in light with dynamic colour off. The system decides through CSS `light-dark()`, so the first frame
+  is right without a script; a browser without it stays dark.
+- **Checked** (`check-page.mjs`, jsdom): every `t()` in `app.js` (228) and every text in `index.html`
+  has its Polish; no sentence is left outside `t()`; the Polish plural forms; the language rule; the
+  theme choice; text at 4.5:1 in both themes, from the tokens. Each broken once to see it fail.
+  **Not checked:** the page in a real browser, in either language or theme.
+
+**Open, for the owner:** the light palette. The dark page wears the owner's sampled wallpaper
+colours (magenta and violet); the light page wears Material's lavender baseline, because there is no
+light sample to take. **(a) Recommended:** two screenshots of the app in light mode on his phone,
+sampled as the dark ones were (`docs/reference/app-colours.json`), and the light tokens replaced.
+(b) Keep the baseline.
+
+
 - **(a) Recommended: a stage of their own, after the public launch.** Both touch every screen of
   the page, neither changes what it can play, and the page is not what launches on 2026-10-02.
 - (b) In this stage.

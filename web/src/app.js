@@ -6,9 +6,21 @@
 import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
+import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $('status').textContent = text; };
+
+/**
+ * The language, before anything is drawn over the markup (W6): the one chosen in Settings, or the
+ * browser's -- the phone's rule. Read from `localStorage` because it is needed now, not after an
+ * IndexedDB round trip; a private window that refuses it gets the browser's language.
+ */
+let languageChoice = 'system';
+try { languageChoice = localStorage.getItem('protracktor.language') || 'system'; } catch { /* the browser's */ }
+if (!LANGUAGE_CHOICES.includes(languageChoice)) languageChoice = 'system';
+useLanguage(resolveLanguage(languageChoice, navigator.languages?.length ? navigator.languages : [navigator.language]));
+translateStatic(document.body);
 
 /**
  * Colours the part of a slider's track that is behind its handle.
@@ -224,7 +236,7 @@ let openWatchdog = null;
  * `local` so the transport steps over it rather than stopping on a row that can never play.
  */
 function ghost(name) {
-  return { url: null, name: name || 'a file on the phone', local: true, meta: 'on the phone — not sent' };
+  return { url: null, name: name || t('a file on the phone'), local: true, meta: t('on the phone — not sent') };
 }
 
 function entryFor(url) {
@@ -265,8 +277,8 @@ async function begin() {
   // the wrong address (`docs/PLAN_HANDOFF.md` §4).
   if (!isSecureContext) {
     $('error').textContent =
-      'audio needs https or localhost — this address cannot start a decoder';
-    status('open this page on localhost, or through a tunnel with https');
+      t('audio needs https or localhost — this address cannot start a decoder');
+    status(t('open this page on localhost, or through a tunnel with https'));
     throw new Error('insecure context');
   }
   // Created on a click, because a browser will not let audio start without one. The *first* tune
@@ -279,7 +291,7 @@ async function begin() {
   // quicker than it should. Android asks the backend and tells Oboe, which resamples; this is the
   // same answer by the only route a page has.
   context = new AudioContext({ sampleRate: 44100 });
-  status('loading the engine…');
+  status(t('loading the engine…'));
   // Born suspended: no click has reached this page yet -- a link opened from another app. Chrome
   // does not even run the worklet until the context does, so this is said now rather than when a
   // tune opens, which there it would not do -- the page would fetch and then sit silent.
@@ -326,7 +338,7 @@ const readyWaiters = [];
 function whenEngineReady(ms = 30000) {
   if (engineReady) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('the engine did not start')), ms);
+    const timer = setTimeout(() => reject(new Error(t('the engine did not start'))), ms);
     readyWaiters.push(() => { clearTimeout(timer); resolve(); });
   });
 }
@@ -337,7 +349,7 @@ function onWorklet(message) {
       engineReady = true;
       // Recorded when an index is built and compared when one is read, exactly as the phone does.
       engineFingerprint = message.backends;
-      status(`engine ready — ${message.backends}`);
+      status(t('engine ready — {backends}', { backends: message.backends }));
       readyWaiters.splice(0).forEach((resolve) => resolve());
       reconsiderStoredIndexes();
       break;
@@ -372,14 +384,15 @@ function onWorklet(message) {
       // A backend that wants a rate this context cannot give would play sharp and say nothing.
       // Today they all want 44,100; if one ever does not, this says so instead of transposing it.
       if (message.preferredRate > 0 && message.preferredRate !== message.rate) {
-        status(`⚠ this decoder wants ${message.preferredRate} Hz and the page is running at ` +
-               `${message.rate} Hz — it will play ${(message.rate / message.preferredRate).toFixed(3)}× fast`);
+        status(t('⚠ this decoder wants {wanted} Hz and the page is running at {rate} Hz — it will play {ratio}× fast', {
+          wanted: message.preferredRate, rate: message.rate, ratio: (message.rate / message.preferredRate).toFixed(3),
+        }));
       } else {
         // **Overwritten, not left standing.** This line is the machine talking about the track in
         // front of it, so it has to be replaced when the track changes -- otherwise "Tune 2 of
         // 2" from a `.sndh` two files ago sits under a tune that has one (`docs/STATUS.md` C28).
         // A sentence about the wrong file is worse than no sentence.
-        status(`${message.rate} Hz` + (subsongCount > 1 ? ` · ${subsongCount} tunes in this file` : ''));
+        status(`${message.rate} Hz` + (subsongCount > 1 ? ` · ${tn(subsongCount, '{n} tune in this file', '{n} tunes in this file')}` : ''));
       }
       $('sub').textContent = describeLine(fields);
       tuneCanSeek = !!message.canSeek;
@@ -612,9 +625,9 @@ function renderNames(fields) {
   const instruments = namesOf(fields.instrument_names);
   const samples = namesOf(fields.sample_names);
   const lists = [];
-  if (instruments.length) lists.push(['Instrument names', instruments]);
+  if (instruments.length) lists.push([t('Instrument names'), instruments]);
   if (samples.length && samples.join(NAME_SEPARATOR) !== instruments.join(NAME_SEPARATOR)) {
-    lists.push(['Sample names', samples]);
+    lists.push([t('Sample names'), samples]);
   }
   for (const [label, names] of lists) {
     const details = document.createElement('details');
@@ -748,10 +761,10 @@ function describeLine(fields, entry = queue[index]) {
  * the one fact about the tune rather than about the file; the machine's own vocabulary last.
  */
 const FIELD_ORDER = [
-  ['format', 'Format'], ['tracker', 'Tracker'], ['artist', 'Artist'], ['album', 'Album'],
-  ['publisher', 'Publisher'], ['composer', 'Composer'], ['hardware', 'Hardware'],
-  ['channels', 'Channels'], ['patterns', 'Patterns'], ['instruments', 'Instruments'],
-  ['samples', 'Samples'], ['subsongs', 'Subsongs'],
+  ['format', t('Format')], ['tracker', t('Tracker')], ['artist', t('Artist')], ['album', t('Album')],
+  ['publisher', t('Publisher')], ['composer', t('Composer')], ['hardware', t('Hardware')],
+  ['channels', t('Channels')], ['patterns', t('Patterns')], ['instruments', t('Instruments')],
+  ['samples', t('Samples')], ['subsongs', t('Subsongs')],
 ];
 
 /**
@@ -784,7 +797,7 @@ function explainFailure(reason, entry) {
   // "nothing claimed it", which is true and useless when the phone plays the file perfectly.
   if (formatTable && entry?.name && archive.onPhone(formatTable)(entry.name)
       && !archive.playable(formatTable, absentHere())(entry.name)) {
-    return `${entry.name}: this browser build has no decoder for this format — it plays on the phone`;
+    return t('{name}: this browser build has no decoder for this format — it plays on the phone', { name: entry.name });
   }
   return reason;
 }
@@ -796,7 +809,7 @@ function explainFailure(reason, entry) {
  * screen with nothing to say has to say that.
  */
 function renderNothingPlaying() {
-  $('np-title').textContent = queue[index]?.name || 'Nothing playing';
+  $('np-title').textContent = queue[index]?.name || t('Nothing playing');
   $('np-message').hidden = true;
   $('np-names').replaceChildren();
   const list = $('fields');
@@ -804,22 +817,22 @@ function renderNothingPlaying() {
   const dt = document.createElement('dt');
   dt.textContent = '—';
   const dd = document.createElement('dd');
-  dd.textContent = 'nothing has played yet';
+  dd.textContent = t('nothing has played yet');
   list.append(dt, dd);
   $('subsongs').replaceChildren();
   $('subsongbar').hidden = true;
 }
 
 function renderNowPlaying(fields, subsongs, current, entry = queue[index]) {
-  $('np-title').textContent = fields.title || entry?.name || 'Nothing playing';
+  $('np-title').textContent = fields.title || entry?.name || t('Nothing playing');
   const list = $('fields');
   list.replaceChildren();
   const rows = [];
   // Where it came from and what the file is called, which the title stops showing once the tune's
   // own name has been read out of it.
-  if (entry) rows.push(['File', [whereOf(entry), fileOf(entry)].filter(Boolean).join('/')]);
+  if (entry) rows.push([t('File'), [whereOf(entry), fileOf(entry)].filter(Boolean).join('/')]);
   const year = releaseYear(fields);
-  if (year) rows.push(['Year', year]);
+  if (year) rows.push([t('Year'), year]);
   // The author where the file is silent, as the phone fills it from its song database: the folder
   // Modland files the tune under. What the file says always wins.
   const known = { ...fields, artist: authorOf(entry, fields) };
@@ -931,7 +944,7 @@ async function playAt(next) {
   $('remaining').textContent = clockTotal(0);
   nameTheTab(entry);
   $('title').textContent = entry.name;
-  $('sub').textContent = 'fetching…';
+  $('sub').textContent = t('fetching…');
   $('error').textContent = '';
 
   let bytes;
@@ -952,7 +965,7 @@ async function playAt(next) {
       // the queue's own copy zero bytes long, and the second play of that row sent nothing and
       // threw. Measured: one transfer, `byteLength` 0. A `.slice` of twenty kilobytes is not worth
       // reasoning about; a queue that empties itself as it plays is.
-      $('sub').textContent = 'from the phone…';
+      $('sub').textContent = t('from the phone…');
       bytes = entry.data.slice(0);
     } else {
       // A Random pick read ahead was fetched while the tune before it played, which is the point of
@@ -961,7 +974,7 @@ async function playAt(next) {
       if (ready) random.bytes.delete(entry.url);
       bytes = ready ? await ready : null;
       if (!bytes) {
-        $('sub').textContent = 'fetching…';
+        $('sub').textContent = t('fetching…');
         const response = await fetch(entry.url, { signal: abort.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         bytes = await response.arrayBuffer();
@@ -973,11 +986,11 @@ async function playAt(next) {
     // wipe the newer controller -- leaving a download nobody can call off and a button that lies
     // about what it will do.
     if (loading === abort) { loading = null; setPlaying(false); }
-    if (e.name === 'AbortError') { $('sub').textContent = 'stopped'; return; }
+    if (e.name === 'AbortError') { $('sub').textContent = t('stopped'); return; }
     if (random && index === queue.length - 1 && skipFailedPick(e.message)) return;
     // A fetch that fails here is usually CORS or a network that blocks the archive, and those are
     // different problems from a file the decoders refuse. Say which.
-    $('error').textContent = `could not fetch it: ${e.message}`;
+    $('error').textContent = t('could not fetch it: {reason}', { reason: e.message });
     $('sub').textContent = '—';
     return;
   }
@@ -989,8 +1002,8 @@ async function playAt(next) {
   // Handed over, and the page now waits for the worklet to say `opened` or `failed`. It says which
   // it is waiting for, because "fetching…" left standing after the fetch finished is a lie.
   $('sub').textContent = engineReady
-    ? `${(bytes.byteLength / 1024).toFixed(0)} KB — opening…`
-    : `${(bytes.byteLength / 1024).toFixed(0)} KB — waiting for the engine…`;
+    ? t('{size} KB — opening…', { size: (bytes.byteLength / 1024).toFixed(0) })
+    : t('{size} KB — waiting for the engine…', { size: (bytes.byteLength / 1024).toFixed(0) });
 
   // **Asked before the bytes are handed over, because handing them over detaches them** -- the
   // postMessage below transfers the buffer, and a moment later this page does not have it. The
@@ -1017,8 +1030,8 @@ async function playAt(next) {
     loading = null;
     setPlaying(false);
     $('error').textContent = engineReady
-      ? 'the decoder took the file and never answered — check the browser console'
-      : 'the engine never finished loading, so nothing can be opened — check the browser console';
+      ? t('the decoder took the file and never answered — check the browser console')
+      : t('the engine never finished loading, so nothing can be opened — check the browser console');
     $('sub').textContent = '—';
   }, 10_000);
 }
@@ -1112,7 +1125,7 @@ function setPlaying(on) {
   // Play, not stop, while the page waits for a touch: the press it wants is the one that plays.
   const stopping = loading && !firstTouch;
   $('playglyph').setAttribute('d', stopping ? STOP_GLYPH : on ? PAUSE_GLYPH : PLAY_GLYPH);
-  $('playpause').title = stopping ? 'Stop loading' : on ? 'Pause' : 'Play';
+  $('playpause').title = stopping ? t('Stop loading') : on ? t('Pause') : t('Play');
   $('playpause').disabled = queue.length === 0;
   // Asked of the modes rather than of the position, exactly as `PlayerState.canGoNext` is: under
   // repeat-all the last track does have a next, and under shuffle the row above is not the previous.
@@ -1158,12 +1171,10 @@ async function renderEmpty() {
   } catch { /* nothing readable is nothing held */ }
   if (asked !== emptyAsked || !showing()) { if (!showing()) box.hidden = true; return; }
   $('emptybody').textContent = held
-    ? 'Browse the catalogues this browser holds, send tunes from your phone with the pairing code, '
-      + 'or paste some links.'
-    : 'Nothing to browse yet. Download a catalogue and half a million tracks are yours to look '
-      + 'through, offline — or send tunes from your phone with the pairing code.';
+    ? t('Browse the catalogues this browser holds, send tunes from your phone with the pairing code, or paste some links.')
+    : t('Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline — or send tunes from your phone with the pairing code.');
   const action = $('emptyaction');
-  action.innerHTML = iconSvg(held ? ICON.cloud : ICON.download) + (held ? 'Browse' : 'Get some music to browse');
+  action.innerHTML = iconSvg(held ? ICON.cloud : ICON.download) + (held ? t('Browse') : t('Get some music to browse'));
   action.onclick = async () => {
     browsePath = [];
     showPanel('browse');
@@ -1198,7 +1209,7 @@ function render() {
       tick.type = 'checkbox';
       tick.className = 'tick';
       tick.checked = selected.has(entry);
-      tick.setAttribute('aria-label', `Select ${entry.name}`);
+      tick.setAttribute('aria-label', t('Select {name}', { name: entry.name }));
       n.replaceChildren(tick);
     }
     li.classList.toggle('ticked', selected.has(entry));
@@ -1215,8 +1226,8 @@ function render() {
 
     const menu = document.createElement('button');
     menu.className = 'rowmenu';
-    menu.title = 'More';
-    menu.setAttribute('aria-label', `More for ${entry.name}`);
+    menu.title = t('More');
+    menu.setAttribute('aria-label', t('More for {name}', { name: entry.name }));
     menu.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>';
     // Stopped here, or opening the menu would also start the track underneath it.
     menu.onclick = (event) => { event.stopPropagation(); openRowMenu(entry, menu); };
@@ -1233,12 +1244,16 @@ function render() {
   }));
   updateSelectBar();
   $('count').textContent = queue.length
-    ? `${queue.length} track${queue.length === 1 ? '' : 's'}`
-    : 'nothing yet';
-  if (random) $('count').textContent = `${queue.length} played at random`;
+    ? tn(queue.length, '{n} track', '{n} tracks')
+    : t('nothing yet');
+  if (random) $('count').textContent = tn(queue.length, '{n} played at random', '{n} played at random');
   // What the session is, not always History's words: a tune sent here said "1 from your history".
   if (away) {
-    $('count').textContent = `${queue.length} ${{ history: 'from your history', browse: 'from Browse', link: 'sent to you' }[away.kind] ?? ''}`.trim();
+    $('count').textContent = {
+      history: tn(queue.length, '{n} from your history', '{n} from your history'),
+      browse: tn(queue.length, '{n} from Browse', '{n} from Browse'),
+      link: tn(queue.length, '{n} sent to you', '{n} sent to you'),
+    }[away.kind] ?? String(queue.length);
   }
 }
 
@@ -1269,7 +1284,7 @@ async function bytesOf(entry) {
 async function saveFile(entry) {
   try {
     const bytes = await bytesOf(entry);
-    if (!bytes) { status('that one stayed on the phone — there is nothing here to save'); return; }
+    if (!bytes) { status(t('that one stayed on the phone — there is nothing here to save')); return; }
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
     const a = document.createElement('a');
     a.href = url;
@@ -1278,9 +1293,9 @@ async function saveFile(entry) {
     // Revoked on a timer rather than immediately: the click is asynchronous inside the browser and
     // revoking in the same tick has been known to hand the user a zero-byte file.
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    status(`Saved ${a.download}`);
+    status(t('Saved {name}', { name: a.download }));
   } catch (e) {
-    status(`could not save it: ${e.message}`);
+    status(t('could not save it: {reason}', { reason: e.message }));
   }
 }
 
@@ -1293,14 +1308,14 @@ async function saveFile(entry) {
  * nothing at all.
  */
 async function copyLink(entry) {
-  if (!entry.url) { status('that one stayed on the phone — it has no address'); return; }
+  if (!entry.url) { status(t('that one stayed on the phone — it has no address')); return; }
   try {
     await navigator.clipboard.writeText(entry.url);
-    showNote('Link copied');
+    showNote(t('Link copied'));
   } catch {
     // A browser that refuses the clipboard without a gesture it recognises, or an insecure context.
     // Showing the address is worse than copying it and much better than silence.
-    showNote('The browser would not copy it — the address is in Now Playing');
+    showNote(t('The browser would not copy it — the address is in Now Playing'));
     status(entry.url);
   }
 }
@@ -1326,10 +1341,10 @@ async function informAbout(entry) {
   showPanel('nowplaying');
   $('np-title').textContent = entry.name;
   $('fields').replaceChildren();
-  status('reading it…');
+  status(t('reading it…'));
   try {
     const bytes = await bytesOf(entry);
-    if (!bytes) { status('that one stayed on the phone — there is nothing to read'); return; }
+    if (!bytes) { status(t('that one stayed on the phone — there is nothing to read')); return; }
     await start();
     const id = ++describeAsk;
     // **With the watchdog `playAt` has.** A worklet that takes a message and never answers is a
@@ -1341,20 +1356,20 @@ async function informAbout(entry) {
     });
     node.port.postMessage({ type: 'describe', id, name: entry.file || entry.name, bytes }, [bytes]);
     const described = await answer;
-    if (!described) { status('the decoder took the file and never answered'); return; }
+    if (!described) { status(t('the decoder took the file and never answered')); return; }
     if (!described.ok) { status(explainFailure(described.reason, entry)); return; }
     renderNowPlaying(describeFields(described.describe), described.subsongs, -1, entry);
     $('np-title').textContent = describeFields(described.describe).title || entry.name;
-    status(`${entry.name} — not playing, just described`);
+    status(t('{name} — not playing, just described', { name: entry.name }));
   } catch (e) {
-    status(`could not read it: ${e.message}`);
+    status(t('could not read it: {reason}', { reason: e.message }));
   }
 }
 
 /** "Modland/Protracker/4-Mat", the way the phone's subtitle reads. */
 function sourceOf(url) {
   // A document URI is a grant to one app on one phone; showing it would be showing plumbing.
-  if (url.startsWith('content://')) return 'from the phone';
+  if (url.startsWith('content://')) return t('from the phone');
   try {
     const parsed = new URL(url, location.href);
     if (parsed.hostname.endsWith('modland.com')) {
@@ -1387,23 +1402,23 @@ function openRowMenu(entry, anchor) {
   menu.replaceChildren();
   const items = [
     // A mouse has no long press to discover, so the way into ticking rows is here as well.
-    ['Select', () => startSelecting(entry), !entry.local, ICON.check],
+    [t('Select'), () => startSelecting(entry), !entry.local, ICON.check],
     // **One row, one press**, as the phone's row menu has it: ticking the row first would be a
     // gesture meant for many rows spent on one.
-    ['Add to playlist', () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
-    ['Save the file', () => saveFile(entry), !entry.local, ICON.save],
-    ['Copy a link', () => copyLink(entry), !!entry.url, ICON.link],
-    ['Share with Protracktor', () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
+    [t('Add to playlist'), () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
+    [t('Save the file'), () => saveFile(entry), !entry.local, ICON.save],
+    [t('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
+    [t('Share with Protracktor'), () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
     // On every list, as on the phone, not in Browse alone.
-    ['More from this author', () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
-    ['Information', () => informAbout(entry), !entry.local, ICON.info],
+    [t('More from this author'), () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
+    [t('Information'), () => informAbout(entry), !entry.local, ICON.info],
   ];
   // Pruning the record before keeping the rest, as the phone's rows allow.
-  if (random) items.push(['Remove from this list', () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
+  if (random) items.push([t('Remove from this list'), () => removeRandomAt(queue.indexOf(entry)), true, ICON.remove]);
   // **A playlist of the user's own can lose a row**, as on the phone. "From the phone" is what
   // the phone sent and is never edited here; a session's list is not a playlist.
   if (!random && !away && activePlaylist !== PHONE) {
-    items.push(['Remove from this playlist', () => removeFromPlaylist(queue.indexOf(entry)), true, ICON.remove]);
+    items.push([t('Remove from this playlist'), () => removeFromPlaylist(queue.indexOf(entry)), true, ICON.remove]);
   }
   showMenu(items, anchor);
 }
@@ -1481,7 +1496,7 @@ async function saveQueue() {
     await playlists.save({ id, name, tracks, index: at });
     await settings.set('active', id);
   } catch (e) {
-    status(`could not save the playlist: ${e.message}`);
+    status(t('could not save the playlist: {reason}', { reason: e.message }));
   }
 }
 
@@ -1530,12 +1545,12 @@ let randomSource = Math.random;
  * somewhere the playlist is not, and a way back to it.
  */
 const SESSION = {
-  random: { title: 'Playing at random', chip: 'Random', icon: () => ICON.dice },
-  history: { title: 'Playing from your history', chip: 'History', icon: () => ICON.history },
+  random: { title: t('Playing at random'), chip: t('Random'), icon: () => ICON.dice },
+  history: { title: t('Playing from your history'), chip: t('History'), icon: () => ICON.history },
   // The phone's "Playing from search", widened to every Browse list: a folder plays the same way.
-  browse: { title: 'Playing from Browse', chip: 'Browse', icon: () => ICON.search },
+  browse: { title: t('Playing from Browse'), chip: t('Browse'), icon: () => ICON.search },
   // A tune sent here as a link (Share with Protracktor): shown to you, not yet yours.
-  link: { title: 'Playing a tune sent to you', chip: 'Sent', icon: () => ICON.web },
+  link: { title: t('Playing a tune sent to you'), chip: t('Sent'), icon: () => ICON.web },
 };
 
 function showSessionView(kind) {
@@ -1547,13 +1562,13 @@ function showSessionView(kind) {
   const digressing = kind === 'browse' && !!away?.dice;
   if (kind) {
     const { title, icon } = SESSION[kind];
-    $('sessiontitle').textContent = digressing ? 'Browsing author' : title;
+    $('sessiontitle').textContent = digressing ? t('Browsing author') : title;
     $('sessionicon').innerHTML = iconSvg(digressing ? ICON.detour : icon())
       .replace(/^<svg[^>]*>|<\/svg>$/g, '');
   }
   // Back to the dice rather than out to the playlist, while there is a dice to go back to.
   $('random-leave').innerHTML = iconSvg(digressing ? ICON.dice : ICON.playlist)
-    + (digressing ? 'Random' : 'Playlist');
+    + (digressing ? t('Random') : t('Playlist'));
   // The line under the heading: what the dice picks from, or whose folder this is -- the same shape
   // for both, rather than a name after a dash.
   if (digressing) $('randomscope').textContent = away.author;
@@ -1562,7 +1577,7 @@ function showSessionView(kind) {
   // **The chip stays usable**, because it looks like a way out and ought to be one. The phone
   // hides it here; the page lets it name where you are and choose where to go,
   // and choosing a playlist ends the session on the way (`choosePlaylist`).
-  if (kind) $('playlistname').textContent = digressing ? 'Browsing' : SESSION[kind].chip;
+  if (kind) $('playlistname').textContent = digressing ? t('Browsing') : SESSION[kind].chip;
   setDirty(dirty);
 }
 
@@ -1650,7 +1665,7 @@ async function rollRandom() {
   }
   if (random !== r) return;   // left while it was deciding
   if (!pick) {
-    $('randomnote').textContent = 'Nothing to pick from. Download the Modland index in Browse first.';
+    $('randomnote').textContent = t('Nothing to pick from. Download the Modland index in Browse first.');
     $('randomnote').hidden = false;
     return;
   }
@@ -1685,14 +1700,14 @@ function setDirty(value) {
 async function saveEdits() {
   setDirty(false);
   await saveQueue();
-  status('Saved');
+  status(t('Saved'));
 }
 
 /** Reads the stored playlist back, throwing the edits away. */
 async function discardEdits() {
   setDirty(false);
   await switchTo(activePlaylist);
-  status('Changes discarded');
+  status(t('Changes discarded'));
 }
 
 /**
@@ -1780,8 +1795,8 @@ function removeRows(ats) {
     index = Math.min(sorted[0], queue.length - 1);
     rowState = 'selected';
     setPlaying(false);
-    $('title').textContent = queue[index]?.name ?? 'Nothing playing';
-    $('sub').textContent = queue[index] ? 'press play' : '—';
+    $('title').textContent = queue[index]?.name ?? t('Nothing playing');
+    $('sub').textContent = queue[index] ? t('press play') : '—';
   } else {
     index = queue.indexOf(current);
   }
@@ -1791,7 +1806,7 @@ function removeRows(ats) {
   lastRemoval = { removed, playlist: activePlaylist, wasCurrent, current };
   setDirty(true);
   render();
-  showUndo(removed.length === 1 ? `Removed ${removed[0].track.name}` : `Removed ${removed.length} tracks`);
+  showUndo(removed.length === 1 ? t('Removed {name}', { name: removed[0].track.name }) : tn(removed.length, 'Removed {n} track', 'Removed {n} tracks'));
 }
 
 function undoRemoval() {
@@ -1804,8 +1819,8 @@ function undoRemoval() {
   if (removal.wasCurrent) {
     index = queue.indexOf(removal.current);
     rowState = 'selected';
-    $('title').textContent = removal.current?.name ?? 'Nothing playing';
-    $('sub').textContent = 'press play';
+    $('title').textContent = removal.current?.name ?? t('Nothing playing');
+    $('sub').textContent = t('press play');
   } else {
     index = queue.indexOf(current);
   }
@@ -1860,7 +1875,7 @@ function clearSelection() {
 
 function updateSelectBar() {
   $('selectbar').hidden = !selected.size;
-  $('selectcount').textContent = `${selected.size} selected`;
+  $('selectcount').textContent = tn(selected.size, '{n} selected', '{n} selected');
   // Delete only where rows can go: one of the user's own playlists, not the phone's, not a
   // session's list.
   $('sel-delete').hidden = !!(random || away) || activePlaylist === PHONE;
@@ -1895,8 +1910,8 @@ async function openAddTo(tracks = queue.filter((entry) => selected.has(entry) &&
     li.onclick = () => addTracksTo(target.id);
     list.append(li);
   }
-  $('addtonote').textContent = `${tracks.length} track${tracks.length === 1 ? '' : 's'} to add.`
-    + (targets.length ? '' : ' There is no other playlist yet — make one.');
+  $('addtonote').textContent = tn(tracks.length, '{n} track to add.', '{n} tracks to add.')
+    + (targets.length ? '' : ' ' + t('There is no other playlist yet — make one.'));
   showPanel('addto');
 }
 
@@ -1915,7 +1930,7 @@ async function addTracksTo(id, newName = null) {
     const have = new Set((target.tracks ?? []).map((t) => t.url));
     const adding = tracks.filter((t) => !have.has(t.url)).map(plain);
     await playlists.save({ ...target, tracks: [...(target.tracks ?? []), ...adding] });
-    status(`Added ${adding.length} to ${target.name}` + (adding.length < tracks.length ? `, ${tracks.length - adding.length} already there` : ''));
+    status(t('Added {n} to {name}', { n: adding.length, name: target.name }) + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
   }
   closeAddTo();
   clearSelection();
@@ -1947,7 +1962,7 @@ function addToShowing(tracks) {
     setDirty(true);
     if (!session) render();
   }
-  status(`Added ${adding.length} to ${name}` + (adding.length < tracks.length ? `, ${tracks.length - adding.length} already there` : ''));
+  status(t('Added {n} to {name}', { n: adding.length, name }) + (adding.length < tracks.length ? t(', {n} already there', { n: tracks.length - adding.length }) : ''));
   return adding.length;
 }
 
@@ -1964,7 +1979,7 @@ function showingHas(url) {
 /** Says, in the sheet, that something the page should carry is not there -- never a blank sheet. */
 function legalMissing(what) {
   const p = document.createElement('p');
-  p.textContent = `${what} is not beside this page's engine. Run scripts/stage-web-legal.mjs, or build the engine again.`;
+  p.textContent = t("{what} is not beside this page's engine. Run scripts/stage-web-legal.mjs, or build the engine again.", { what });
   $('legalbody').replaceChildren(p);
 }
 
@@ -1980,10 +1995,10 @@ async function pointSourceAtBuild() {
 }
 
 async function renderLicences() {
-  $('legaltitle').textContent = 'Open-source licences';
+  $('legaltitle').textContent = t('Open-source licences');
   $('legalback').hidden = true;
   const table = await fetch('../vendor/notices/components.tsv').then((r) => (r.ok ? r.text() : null)).catch(() => null);
-  if (table === null) { legalMissing('The licence table'); return; }
+  if (table === null) { legalMissing(t('The licence table')); return; }
   const body = $('legalbody');
   body.replaceChildren();
   for (const component of parseNotices(table, 'web')) {
@@ -2009,21 +2024,22 @@ async function renderComponent(component) {
   for (const file of component.files) {
     const text = await fetch(`../vendor/${file}`).then((r) => (r.ok ? r.text() : null)).catch(() => null);
     const pre = document.createElement('pre');
-    pre.textContent = text ?? `(${file.slice(file.lastIndexOf('/') + 1)} is missing beside the engine)`;
+    pre.textContent = text ?? t('({file} is missing beside the engine)', { file: file.slice(file.lastIndexOf('/') + 1) });
     body.append(pre);
   }
   body.scrollTop = 0;
 }
 
 async function renderPrivacy() {
-  $('legaltitle').textContent = 'Privacy policy';
+  $('legaltitle').textContent = t('Privacy policy');
   $('legalback').hidden = true;
   const markdown = await fetch('../vendor/legal/privacy-policy.md').then((r) => (r.ok ? r.text() : null)).catch(() => null);
-  if (markdown === null) { legalMissing('The privacy policy'); return; }
+  if (markdown === null) { legalMissing(t('The privacy policy')); return; }
   const body = $('legalbody');
   body.replaceChildren();
   let list = null;
-  for (const block of privacyBlocks(markdown)) {
+  // The policy's own section in the language in use: it is written in both.
+  for (const block of privacyBlocks(markdown, language() === 'pl')) {
     if (block.kind === 'bullet') {
       if (!list) { list = document.createElement('ul'); body.append(list); }
       const li = document.createElement('li');
@@ -2055,24 +2071,23 @@ async function renderSettings() {
     dd.textContent = value;
     list.append(dt, dd);
   };
-  row('Decoders in this build', engineFingerprint || 'the engine has not started yet');
+  row(t('Decoders in this build'), engineFingerprint || t('the engine has not started yet'));
   // **Storage in this browser** (W10), the phone's storage section: each download, what it holds,
   // and a way to let go of it -- nothing downloaded here is undeletable, and saying how much there
   // is without saying how to be rid of it is half an answer. Asked before, because each can be
   // fetched again but not in a moment; answered at the press, and said once (C76, C77).
   const heading = document.createElement('dt');
   heading.className = 'storagehead';
-  heading.textContent = 'Storage in this browser';
+  heading.textContent = t('Storage in this browser');
   list.append(heading);
-  const INDEX_GONE = 'It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or '
-    + 'searched, and its tunes will not play.';
+  const INDEX_GONE = t('It can be downloaded again from Browse. Until then, this catalogue cannot be browsed or searched, and its tunes will not play.');
   const sets = [];
   for (const source of archive.sources()) {
     const held = await archive.meta(source);
     sets.push({
-      label: `${archive.sourceName(source)} index`,
-      held: held?.tracks ? `${held.tracks.toLocaleString()} tunes` : null,
-      absent: 'not downloaded — Browse offers it',
+      label: t('{source} index', { source: archive.sourceName(source) }),
+      held: held?.tracks ? tn(held.tracks, '{count} tune', '{count} tunes', { count: held.tracks.toLocaleString() }) : null,
+      absent: t('not downloaded — Browse offers it'),
       consequence: INDEX_GONE,
       remove: () => archive.forgetIndex(source),
     });
@@ -2081,11 +2096,10 @@ async function renderSettings() {
   const metadata = await archive.songMetadataMeta();
   const songTunes = (lengths?.tunes ?? 0) + (metadata?.tunes ?? 0);
   sets.push({
-    label: 'Song metadata',
-    held: songTunes ? `${songTunes.toLocaleString()} tunes` : null,
-    absent: 'not downloaded — Browse offers it; until then a SID stops at the length below',
-    consequence: 'It can be downloaded again from Browse. Until then tunes show no length, author or '
-      + 'year unless the file itself says.',
+    label: t('Song metadata'),
+    held: songTunes ? tn(songTunes, '{count} tune', '{count} tunes', { count: songTunes.toLocaleString() }) : null,
+    absent: t('not downloaded — Browse offers it; until then a SID stops at the length below'),
+    consequence: t('It can be downloaded again from Browse. Until then tunes show no length, author or year unless the file itself says.'),
     remove: async () => { await archive.clearSongLengths(); await archive.clearSongMetadata(); },
   });
   for (const set of sets) {
@@ -2096,12 +2110,13 @@ async function renderSettings() {
       dd.append(`${set.held} · `);
       const remove = document.createElement('button');
       remove.className = 'plain';
-      remove.innerHTML = `${iconSvg(ICON.remove)}Delete`;
+      remove.innerHTML = iconSvg(ICON.remove);
+      remove.append(t('Delete'));
       remove.onclick = async () => {
-        if (!confirm(`Delete the ${set.label}?\n\n${set.consequence}`)) return;
-        dd.textContent = 'deleting…';
+        if (!confirm(`${t('Delete the {what}?', { what: set.label })}\n\n${set.consequence}`)) return;
+        dd.textContent = t('deleting…');
         await set.remove();
-        showNote(`${set.label} deleted`);
+        showNote(t('{what} deleted', { what: set.label }));
         await renderSettings();
       };
       dd.append(remove);
@@ -2112,9 +2127,9 @@ async function renderSettings() {
   }
 
   const { usage, quota } = await estimate();
-  row('Stored here', usage
-    ? `${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB this browser offered`
-    : 'nothing yet');
+  row(t('Stored here'), usage
+    ? t('{used} MB of {quota} GB this browser offered', { used: (usage / 1e6).toFixed(1), quota: (quota / 1e9).toFixed(0) })
+    : t('nothing yet'));
 }
 
 /** Six seconds, the length of a Material snackbar with an action. */
@@ -2163,14 +2178,14 @@ function skipFailedPick(reason) {
   r.failures = (r.failures ?? 0) + 1;
   if (r.failures > RANDOM_FAILURES) {
     r.failures = 0;
-    status('Several picks in a row would not open. Stopping here.');
+    status(t('Several picks in a row would not open. Stopping here.'));
     return false;
   }
   const failed = queue.splice(index, 1)[0];
   index--;
   rowState = index >= 0 ? 'selected' : null;
   render();
-  status(`skipped ${failed?.name ?? 'a pick'} — ${reason}`);
+  status(t('skipped {name} — {reason}', { name: failed?.name ?? t('a pick'), reason }));
   $('error').textContent = '';
   rollRandom();
   return true;
@@ -2263,8 +2278,8 @@ function restoreStash(stash) {
   render();
   setPlaying(false);
   const entry = queue[index];
-  $('title').textContent = entry?.name ?? 'Nothing playing';
-  $('sub').textContent = entry ? 'press play' : '—';
+  $('title').textContent = entry?.name ?? t('Nothing playing');
+  $('sub').textContent = entry ? t('press play') : '—';
   nameTheTab(entry);
 }
 
@@ -2310,10 +2325,10 @@ function resumeDice() {
   render();
   setPlaying(false);
   const entry = queue[index];
-  $('title').textContent = entry?.name ?? 'Nothing playing';
-  $('sub').textContent = entry ? 'press play' : '—';
+  $('title').textContent = entry?.name ?? t('Nothing playing');
+  $('sub').textContent = entry ? t('press play') : '—';
   nameTheTab(entry);
-  status('Back to the dice — press play for the tune it was on, or next for another.');
+  status(t('Back to the dice — press play for the tune it was on, or next for another.'));
 }
 
 /** A queue arrived from elsewhere: nothing to restore, the new queue wins. */
@@ -2401,7 +2416,7 @@ function setQueue(urls, at = 0) {
   const entry = queue[index];
   if (entry) {
     $('title').textContent = entry.name;
-    $('sub').textContent = 'press play';
+    $('sub').textContent = t('press play');
     nameTheTab(entry);
   }
 }
@@ -2456,7 +2471,8 @@ async function renderPlaylists() {
     count.textContent = String(playlist.tracks?.length ?? 0);
     const name = document.createElement('div');
     name.className = 'pname';
-    name.textContent = playlist.name;
+    // "From the phone" is named by the page, in its language; its stored name is the English one.
+    name.textContent = playlist.id === PHONE ? t('From the phone') : playlist.name;
     li.append(count, name);
 
     // Everything that can be done *to* a playlist, behind the same three dots a track row uses.
@@ -2465,7 +2481,7 @@ async function renderPlaylists() {
       const more = document.createElement('button');
       more.className = 'pmenu';
       more.innerHTML = iconSvg(ICON.more);
-      more.setAttribute('aria-label', `More for ${playlist.name}`);
+      more.setAttribute('aria-label', t('More for {name}', { name: playlist.name }));
       more.onclick = (event) => { event.stopPropagation(); openPlaylistMenu(playlist, more); };
       li.append(more);
     }
@@ -2476,20 +2492,20 @@ async function renderPlaylists() {
 
   const { usage, quota } = await estimate();
   $('storageline').textContent = usage
-    ? `This browser is holding ${(usage / 1e6).toFixed(1)} MB of ${(quota / 1e9).toFixed(0)} GB it offered.`
-    : 'Nothing stored yet.';
+    ? t('This browser is holding {used} MB of {quota} GB it offered.', { used: (usage / 1e6).toFixed(1), quota: (quota / 1e9).toFixed(0) })
+    : t('Nothing stored yet.');
 }
 
 /** A playlist's own menu: the phone's Rename and Delete, with their icons. */
 function openPlaylistMenu(playlist, anchor) {
   showMenu([
-    ['Rename', () => renamePlaylist(playlist), true, ICON.rename],
-    ['Delete', () => deletePlaylist(playlist), true, ICON.remove],
+    [t('Rename'), () => renamePlaylist(playlist), true, ICON.rename],
+    [t('Delete'), () => deletePlaylist(playlist), true, ICON.remove],
   ], anchor);
 }
 
 async function renamePlaylist(playlist) {
-  const name = prompt('Call it what?', playlist.name)?.trim();
+  const name = prompt(t('Call it what?'), playlist.name)?.trim();
   if (!name || name === playlist.name) return;
   await playlists.save({ ...(await playlists.get(playlist.id)), name });
   if (activePlaylist === playlist.id) {
@@ -2506,7 +2522,7 @@ async function renamePlaylist(playlist) {
  * an escape route, and asking is.
  */
 async function deletePlaylist(playlist) {
-  if (!confirm(`Delete “${playlist.name}”? Its ${playlist.tracks?.length ?? 0} tracks go with it.`)) return;
+  if (!confirm(tn(playlist.tracks?.length ?? 0, 'Delete “{name}”? Its {n} track goes with it.', 'Delete “{name}”? Its {n} tracks go with it.', { name: playlist.name }))) return;
   await playlists.remove(playlist.id);
   // Its unsaved edits went with it; there is nothing left to ask about.
   if (activePlaylist === playlist.id) { setDirty(false); choosePlaylist(PHONE); }
@@ -2529,7 +2545,7 @@ async function switchTo(id) {
   setDirty(false);
   const playlist = await playlists.get(id);
   activePlaylist = id;
-  $('playlistname').textContent = playlist?.name ?? (id === PHONE ? 'From the phone' : 'Playlist');
+  $('playlistname').textContent = id === PHONE ? t('From the phone') : playlist?.name ?? t('Playlist');
   setQueue(playlist?.tracks ?? [], playlist?.index ?? 0);
   await settings.set('active', id);
 }
@@ -2558,7 +2574,8 @@ async function renderBrowse() {
   $('browsedigression').hidden = !away?.dice;
   if (away?.dice) {
     $('browsedigression').innerHTML = iconSvg(ICON.detour)
-      + `<div class="text"><div class="title">Browsing author</div><div class="meta"></div></div>`;
+      + '<div class="text"><div class="title"></div><div class="meta"></div></div>';
+    $('browsedigression').querySelector('.title').textContent = t('Browsing author');
     $('browsedigression').querySelector('.meta').textContent = away.author;
   }
   $('browseback').hidden = browsePath.length === 0;
@@ -2611,14 +2628,14 @@ async function renderBrowse() {
     // places -- the dice and the record of what played -- then search. No local folders: a browser
     // cannot list a phone's storage, and the page's ways in for those are the pairing code and
     // pasted links.
-    $('browsetitle').textContent = 'Browse';
-    domainRow('Online catalogues', 'Browse the archives — indexed once, then browsable offline', async () => {
+    $('browsetitle').textContent = t('Browse');
+    domainRow(t('Online catalogues'), t('Browse the archives — indexed once, then browsable offline'), async () => {
       browsePath = ['catalogues'];
       await renderBrowse();
     }, ICON.cloud);
-    domainRow('Random', 'Play something from the indexed catalogues', enterRandomFromBrowse, ICON.dice);
-    domainRow('History', 'Tunes you have played, most recent first', openHistory, ICON.history);
-    domainRow('Search', 'Across the catalogues this browser holds', () => $('browsesearch').focus(), ICON.search);
+    domainRow(t('Random'), t('Play something from the indexed catalogues'), enterRandomFromBrowse, ICON.dice);
+    domainRow(t('History'), t('Tunes you have played, most recent first'), openHistory, ICON.history);
+    domainRow(t('Search'), t('Across the catalogues this browser holds'), () => $('browsesearch').focus(), ICON.search);
     return;
   }
 
@@ -2628,19 +2645,19 @@ async function renderBrowse() {
   }
 
   if (browsePath[0] === 'history') {
-    $('browsetitle').textContent = 'History';
+    $('browsetitle').textContent = t('History');
     const rows = await played.recent();
     if (!rows.length) {
-      note.textContent = 'Nothing played yet. What the page plays is kept here — the last 500 tunes, one row each.';
+      note.textContent = t('Nothing played yet. What the page plays is kept here — the last 500 tunes, one row each.');
       return;
     }
-    note.textContent = `${rows.length} tune${rows.length === 1 ? '' : 's'}, most recent first.`;
+    note.textContent = tn(rows.length, '{n} tune, most recent first.', '{n} tunes, most recent first.');
     const tracks = rows.filter((r) => r.replayable)
       .map(({ url, name, meta, file }) => ({ url, name, meta, file }));
     for (const r of rows) {
       const at = tracks.findIndex((t) => t.url === r.url);
       if (at >= 0) {
-        trackRow(list, tracks[at], [r.meta?.replace('Modland/', ''), r.playCount > 1 ? `played ${r.playCount} times` : '']
+        trackRow(list, tracks[at], [r.meta?.replace('Modland/', ''), r.playCount > 1 ? tn(r.playCount, 'played {n} time', 'played {n} times') : '']
           .filter(Boolean).join(' · '), () => playFromBrowse(tracks, at, 'history'));
         continue;
       }
@@ -2648,10 +2665,10 @@ async function renderBrowse() {
       const li = list.lastElementChild;
       li.dataset.url = r.url;
       li.classList.add('gone');
-      li.title = "Played from the phone's copy — the page does not keep those";
+      li.title = t("Played from the phone's copy — the page does not keep those");
     }
     markPlayingIn(list);
-    row('Clear the history', null, async () => { await played.clear(); await renderBrowse(); }, ICON.remove);
+    row(t('Clear the history'), null, async () => { await played.clear(); await renderBrowse(); }, ICON.remove);
     return;
   }
 
@@ -2669,7 +2686,7 @@ async function renderBrowse() {
     const format = browsePath[1];
     $('browsetitle').textContent = format;
     for (const { name, count } of await archive.authors(format, source)) {
-      row(name || '(no author)', count, async () => {
+      row(name || t('(no author)'), count, async () => {
         browsePath = [source, format, name];
         await renderBrowse();
       });
@@ -2678,7 +2695,7 @@ async function renderBrowse() {
   }
 
   const [, format, author] = browsePath;
-  $('browsetitle').textContent = `${format} / ${author || '(no author)'}`;
+  $('browsetitle').textContent = `${format} / ${author || t('(no author)')}`;
   const tracks = await archive.tracksIn(format, author, source);
   tracks.forEach((track, i) => {
     // **The whole author is what next and previous walk**, which is what the phone does: a person
@@ -2717,10 +2734,10 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
     const there = activePlaylist !== PHONE && showingHas(track.url);
     add.disabled = there;
     add.innerHTML = iconSvg(there ? ICON.check : ICON.playlistAdd);
-    add.append(there ? 'Added' : 'Add');
+    add.append(there ? t('Added') : t('Add'));
     const into = (random ?? away)?.stash.name ?? $('playlistname').textContent;
-    add.title = there ? `Already in ${into}`
-      : activePlaylist === PHONE ? 'Add to one of your playlists' : `Add to ${into}`;
+    add.title = there ? t('Already in {name}', { name: into })
+      : activePlaylist === PHONE ? t('Add to one of your playlists') : t('Add to {name}', { name: into });
   };
   paintAdd();
   li.repaintAdd = paintAdd;
@@ -2733,7 +2750,7 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
   const more = document.createElement('button');
   more.className = 'bmore';
   more.innerHTML = iconSvg(ICON.more);
-  more.setAttribute('aria-label', `More for ${track.name}`);
+  more.setAttribute('aria-label', t('More for {name}', { name: track.name }));
   more.onclick = (event) => {
     event.stopPropagation();
     openBrowseMenu(track, more, folder);
@@ -2746,16 +2763,16 @@ function trackRow(list, track, meta, onplay, { folder = true } = {}) {
 /** A Browse tune's menu: the phone's, less sharing, which a page does as saving and copying. */
 function openBrowseMenu(track, anchor, folder) {
   const items = [
-    ['Add to another playlist', () => openAddTo([plain(track)], { browse: true }), true, ICON.playlistAdd],
-    ['Information', () => informAbout(track), true, ICON.info],
+    [t('Add to another playlist'), () => openAddTo([plain(track)], { browse: true }), true, ICON.playlistAdd],
+    [t('Information'), () => informAbout(track), true, ICON.info],
   ];
   // Where the tune lives, and what else is there. Pointless from inside that very folder.
   if (folder && authorFolderOf(track)) {
-    items.push(['More from this author', () => showAuthorFolder(track), true, ICON.folder]);
+    items.push([t('More from this author'), () => showAuthorFolder(track), true, ICON.folder]);
   }
-  items.push(['Save the file', () => saveFile(track), true, ICON.save]);
-  items.push(['Copy a link', () => copyLink(track), true, ICON.link]);
-  items.push(['Share with Protracktor', () => sendToWeb(track), canSendToWeb(track), ICON.web]);
+  items.push([t('Save the file'), () => saveFile(track), true, ICON.save]);
+  items.push([t('Copy a link'), () => copyLink(track), true, ICON.link]);
+  items.push([t('Share with Protracktor'), () => sendToWeb(track), canSendToWeb(track), ICON.web]);
   showMenu(items, anchor);
 }
 
@@ -2791,9 +2808,7 @@ async function staleSentence(held) {
   const moved = held.total === undefined
     || (table && engineFingerprint && held.fingerprint !== archive.indexFingerprint(engineFingerprint, table));
   return partial && moved
-    ? 'This index was built for a different set of formats than this page now plays, and was built '
-      + 'before indexes kept everything. Downloading it again (5.76 MB) is the last time that will '
-      + 'be needed: what it stores then no longer depends on which formats this build can open.'
+    ? t('This index was built for a different set of formats than this page now plays, and was built before indexes kept everything. Downloading it again (5.76 MB) is the last time that will be needed: what it stores then no longer depends on which formats this build can open.')
     : '';
 }
 
@@ -2806,17 +2821,15 @@ async function staleSentence(held) {
 function holding({ tracks, total, complete } = {}) {
   if (!total || !tracks) return '';
   const rest = total - tracks;
-  if (rest <= 0) return `This browser holds all ${total.toLocaleString()} of Modland's tunes.`;
+  if (rest <= 0) return t("This browser holds all {total} of Modland's tunes.", { total: total.toLocaleString() });
   // **"Holds" and "offers" became different numbers** at `docs/ROADMAP_FORMATS.md` step 0: the
   // index keeps the whole archive and the page offers what it can open. Said that way round
   // because it is the useful half — a format arriving later needs no download, and the sentence
   // should not imply one.
-  const kept = complete
-    ? `This browser holds all ${total.toLocaleString()} of Modland's tunes and can play `
-      + `${tracks.toLocaleString()} of them. `
-    : `This browser holds ${tracks.toLocaleString()} of Modland's ${total.toLocaleString()} tunes. `;
-  return `${kept}The other ${rest.toLocaleString()} are in formats it cannot open`
-    + (complete ? ' yet — they are already here if it learns one.' : '.');
+  const numbers = { total: total.toLocaleString(), tracks: tracks.toLocaleString(), rest: rest.toLocaleString() };
+  return complete
+    ? t("This browser holds all {total} of Modland's tunes and can play {tracks} of them. The other {rest} are in formats it cannot open yet — they are already here if it learns one.", numbers)
+    : t("This browser holds {tracks} of Modland's {total} tunes. The other {rest} are in formats it cannot open.", numbers);
 }
 
 async function downloadIndex() {
@@ -2826,7 +2839,7 @@ async function downloadIndex() {
     // Which formats to keep depends on which decoders this engine has, and only the engine can say.
     // Started here if nothing has played yet -- this is a click, so a browser allows the audio.
     if (!engineReady) {
-      note.textContent = 'starting the engine, to ask which formats this browser can play…';
+      note.textContent = t('starting the engine, to ask which formats this browser can play…');
       await start();
       await whenEngineReady();
     }
@@ -2839,15 +2852,15 @@ async function downloadIndex() {
       isPlayable: archive.playable(table, absentHere()),
       onProgress: (p) => {
         note.textContent = p.stage === 'storing'
-          ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
-          : `${p.stage}…`;
+          ? t('storing {done} of {total}…', { done: p.done.toLocaleString(), total: p.total.toLocaleString() })
+          : `${stageName(p.stage)}…`;
       },
     });
     await downloadEnded('modland');
-    note.textContent = `${result.formats} formats. ${holding(result)}`;
+    note.textContent = `${tn(result.formats, '{n} format.', '{n} formats.')} ${holding(result)}`;
   } catch (e) {
     await downloadEnded('modland');
-    note.textContent = `the index could not be downloaded: ${e.message}`;
+    note.textContent = t('the index could not be downloaded: {reason}', { reason: e.message });
   }
 }
 
@@ -2857,7 +2870,7 @@ async function downloadAsmaIndex() {
   await downloadStarted('asma');
   try {
     if (!engineReady) {
-      note.textContent = 'starting the engine, to ask which formats this browser can play…';
+      note.textContent = t('starting the engine, to ask which formats this browser can play…');
       await start();
       await whenEngineReady();
     }
@@ -2867,16 +2880,33 @@ async function downloadAsmaIndex() {
       isPlayable: archive.playable(table, absentHere()),
       onProgress: (p) => {
         note.textContent = p.stage === 'storing'
-          ? `storing ${p.done.toLocaleString()} of ${p.total.toLocaleString()}…`
-          : `${p.stage}…`;
+          ? t('storing {done} of {total}…', { done: p.done.toLocaleString(), total: p.total.toLocaleString() })
+          : `${stageName(p.stage)}…`;
       },
     });
     await downloadEnded('asma');
-    note.textContent = `ASMA: ${result.tracks.toLocaleString()} tunes in ${result.formats} sections.`;
+    note.textContent = t('ASMA: {tunes} tunes in {sections} sections.', { tunes: result.tracks.toLocaleString(), sections: result.formats });
   } catch (e) {
     await downloadEnded('asma');
-    note.textContent = `the ASMA list could not be downloaded: ${e.message}`;
+    note.textContent = t('the ASMA list could not be downloaded: {reason}', { reason: e.message });
   }
+}
+
+/**
+ * A download's progress stage, as `catalogue.js` names it, in the page's language. A table rather than
+ * `t(stage)`, so the check that every text has its Polish can see these.
+ */
+function stageName(stage) {
+  return {
+    fetching: t('fetching'),
+    reading: t('reading'),
+    sorting: t('sorting'),
+    storing: t('storing'),
+    done: t('done'),
+    'fetching the list': t('fetching the list'),
+    'fetching the whole archive (20 MB), this browser will not ask for part of it':
+      t('fetching the whole archive (20 MB), this browser will not ask for part of it'),
+  }[stage] ?? stage;
 }
 
 /**
@@ -2899,18 +2929,18 @@ async function downloadDatabase(what, run) {
     const result = await run({
       onProgress: (p) => {
         if (p.stage === 'fetching' && p.total) {
-          note.textContent = `fetching ${(p.done / 1e6).toFixed(1)} of ${(p.total / 1e6).toFixed(1)} MB…`;
+          note.textContent = t('fetching {done} of {total} MB…', { done: (p.done / 1e6).toFixed(1), total: (p.total / 1e6).toFixed(1) });
         } else if (p.stage === 'storing') {
-          note.textContent = `storing ${p.done} of ${p.total}…`;
+          note.textContent = t('storing {done} of {total}…', { done: p.done, total: p.total });
         } else {
-          note.textContent = `${p.stage}…`;
+          note.textContent = `${stageName(p.stage)}…`;
         }
       },
     });
-    note.textContent = `${what}: ${result.tunes.toLocaleString()} tunes.`;
+    note.textContent = `${what}: ${tn(result.tunes, '{count} tune.', '{count} tunes.', { count: result.tunes.toLocaleString() })}`;
     return true;
   } catch (e) {
-    note.textContent = `the ${what.toLowerCase()} could not be downloaded: ${e.message}`;
+    note.textContent = t('the {what} could not be downloaded: {reason}', { what: what.toLowerCase(), reason: e.message });
     return false;
   }
 }
@@ -2923,9 +2953,9 @@ async function downloadDatabase(what, run) {
  */
 async function downloadSongMetadata() {
   await downloadStarted(SONG_METADATA);
-  const lengths = await downloadDatabase('SID song lengths', archive.downloadSongLengths);
+  const lengths = await downloadDatabase(t('SID song lengths'), archive.downloadSongLengths);
   const said = $('browsenote').textContent;
-  const metadata = await downloadDatabase('Song metadata', archive.downloadSongMetadata);
+  const metadata = await downloadDatabase(t('Song metadata'), archive.downloadSongMetadata);
   await downloadEnded(SONG_METADATA);
   if (lengths && metadata) $('browsenote').textContent = `${said} ${$('browsenote').textContent}`;
 }
@@ -2966,7 +2996,8 @@ function downloadButton(key, held, label, onclick) {
   if (downloading.has(key)) {
     const busy = document.createElement('span');
     busy.className = 'bbusy';
-    busy.innerHTML = '<span class="spinner" aria-hidden="true"></span>indexing…';
+    busy.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+    busy.append(t('indexing…'));
     return busy;
   }
   const button = document.createElement('button');
@@ -3009,7 +3040,7 @@ function heldRow(list, { name, detail, warning = '', held, key, label, ondownloa
 }
 
 async function renderCatalogues(list, note) {
-  $('browsetitle').textContent = 'Online catalogues';
+  $('browsetitle').textContent = t('Online catalogues');
   // Everything is read first, then drawn at once: no row appears and then changes its mind.
   const held = {};
   for (const source of archive.sources()) held[source] = await archive.meta(source);
@@ -3020,8 +3051,8 @@ async function renderCatalogues(list, note) {
 
   const sizes = { modland: '5.76 MB', asma: '0.85 MB' };
   const about = {
-    modland: 'Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.',
-    asma: 'ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.',
+    modland: t('Modland is half a million tunes; its index is kept in this browser, and browsing is then offline.'),
+    asma: t('ASMA is 6,335 Atari 8-bit tunes; each is fetched from ASMA when it plays.'),
   };
   note.textContent = [
     held.modland?.tracks ? holding(held.modland) : about.modland,
@@ -3034,12 +3065,12 @@ async function renderCatalogues(list, note) {
     heldRow(list, {
       name,
       detail: here?.tracks
-        ? `${here.tracks.toLocaleString()} tunes`
-        : `Not indexed yet — tap the arrow to download its index (${sizes[source] ?? 'a download'})`,
+        ? tn(here.tracks, '{count} tune', '{count} tunes', { count: here.tracks.toLocaleString() })
+        : t('Not indexed yet — tap the arrow to download its index ({size})', { size: sizes[source] ?? t('a download') }),
       warning: source === 'modland' ? await staleSentence(here) : '',
       held: !!here?.tracks,
       key: source,
-      label: here?.tracks ? `Update the index for ${name}` : `Download the index for ${name}`,
+      label: here?.tracks ? t('Update the index for {name}', { name }) : t('Download the index for {name}', { name }),
       ondownload: source === 'asma' ? downloadAsmaIndex : downloadIndex,
       onopen: here?.tracks ? async () => { browsePath = [source]; await renderBrowse(); } : null,
     });
@@ -3050,13 +3081,13 @@ async function renderCatalogues(list, note) {
   // reach a browser (`docs/PLAN_WEB_PARITY.md`).
   const complete = !!(lengths?.tunes && metadata?.tunes);
   const group = heldRow(list, {
-    name: 'Song metadata',
+    name: t('Song metadata'),
     detail: complete
-      ? `${(lengths.tunes + metadata.tunes).toLocaleString()} tunes`
-      : 'Not downloaded — no lengths, authors or years (5.2 + 14.8 MB)',
+      ? tn(lengths.tunes + metadata.tunes, '{count} tune', '{count} tunes', { count: (lengths.tunes + metadata.tunes).toLocaleString() })
+      : t('Not downloaded — no lengths, authors or years (5.2 + 14.8 MB)'),
     held: complete,
     key: SONG_METADATA,
-    label: complete ? 'Update the song metadata' : 'Download the song metadata',
+    label: complete ? t('Update the song metadata') : t('Download the song metadata'),
     ondownload: downloadSongMetadata,
   });
   group.classList.add('groupstart');
@@ -3082,9 +3113,9 @@ async function runSearch(query) {
     const known = await archive.meta(source);
     if (known?.tracks) held.push({ source, ...known });
   }
-  if (!held.length) { note.textContent = 'Download an index first.'; return; }
+  if (!held.length) { note.textContent = t('Download an index first.'); return; }
 
-  note.textContent = 'searching…';
+  note.textContent = t('searching…');
   const started = performance.now();
   const answers = await Promise.all(held.map(({ source }) => Promise.all([
     archive.searchAuthors(query, 100, source), archive.searchTitles(query, 200, source),
@@ -3104,7 +3135,7 @@ async function runSearch(query) {
   if (found.length > SEARCH_LIMIT) { found.length = SEARCH_LIMIT; full = true; }
   // A slower search for "zo" must not draw over the one for "zool" that finished first.
   if (asked !== searchAsked) return;
-  $('browsetitle').textContent = 'Search';
+  $('browsetitle').textContent = t('Search');
   $('browseback').hidden = false;
   list.replaceChildren();
   found.forEach((track, i) => {
@@ -3116,14 +3147,16 @@ async function runSearch(query) {
   // Where it looked, every time, so "nothing matched" cannot be read as "Modland has no such tune"
   // when the tune is in a format this browser does not index.
   const tunes = held.reduce((sum, { tracks }) => sum + tracks, 0);
-  const among = `among the ${tunes.toLocaleString()} tunes this browser can play`
-    + ` (${held.map(({ source }) => archive.sourceName(source)).join(' and ')})`;
+  const among = t('among the {tunes} tunes this browser can play ({where})', {
+    tunes: tunes.toLocaleString(),
+    where: held.map(({ source }) => archive.sourceName(source)).join(t(' and ')),
+  });
   note.textContent = found.length
-    ? `${found.length}${full ? '+' : ''} tunes by name or author ${among}, in ${ms} ms.`
-    : `nothing matched ${among}, in ${ms} ms.`
-      + (held.some(({ complete }) => complete)
-        ? ' Formats this build cannot open are indexed but not offered.'
-        : ' Formats it cannot play are not in an index built before this browser kept everything.');
+    ? t('{found} tunes by name or author {among}, in {ms} ms.', { found: `${found.length}${full ? '+' : ''}`, among, ms })
+    : t('nothing matched {among}, in {ms} ms.', { among, ms })
+      + ' ' + (held.some(({ complete }) => complete)
+        ? t('Formats this build cannot open are indexed but not offered.')
+        : t('Formats it cannot play are not in an index built before this browser kept everything.'));
 }
 
 $('browsesearch').oninput = () => {
@@ -3172,7 +3205,7 @@ $('playlistchip').onclick = () => {
  */
 async function newPlaylist() {
   if (!(await settleUnsaved())) return false;
-  const name = prompt('Call it what?', 'New playlist');
+  const name = prompt(t('Call it what?'), t('New playlist'));
   if (!name) return false;
   const id = `p${Date.now().toString(36)}`;
   await playlists.save({ id, name, tracks: [], index: 0 });
@@ -3182,15 +3215,15 @@ async function newPlaylist() {
   // Emptied on purpose: the point of a new list is to put something in it, and leaving the previous
   // queue on screen under a new name is the opposite of empty.
   setQueue([], 0);
-  status(`${name} — empty. Browse for something to put in it.`);
+  status(t('{name} — empty. Browse for something to put in it.', { name }));
   return true;
 }
 
 $('newlist').onclick = async () => { if (await newPlaylist()) renderPlaylists(); };
 
 $('saveas').onclick = async () => {
-  if (!queue.length) { status('there is nothing in the queue to save'); return; }
-  const name = prompt('Call it what?', 'My playlist');
+  if (!queue.length) { status(t('there is nothing in the queue to save')); return; }
+  const name = prompt(t('Call it what?'), t('My playlist'));
   if (!name) return;
   const id = `p${Date.now().toString(36)}`;
   await playlists.save({ id, name, tracks: queue.map(({ url, name: n, meta, local, file }) => ({ url, name: n, meta, local, file })), index });
@@ -3203,7 +3236,7 @@ $('saveas').onclick = async () => {
   $('playlistname').textContent = name;
   await settings.set('active', id);
   renderPlaylists();
-  status(`Saved as ${name}`);
+  status(t('Saved as {name}', { name }));
 };
 
 $('nowcard').onclick = () => showPanel($('nowplaying').hidden ? 'nowplaying' : null);
@@ -3246,8 +3279,7 @@ $('load').onclick = () => {
   // thrown away, silently, and until then the screen would show a queue the phone does not have.
   // The same holds for every function that writes into the showing list.
   if (activePlaylist === PHONE) {
-    $('pastenote').textContent = 'This would replace what the phone sent. Switch to one of your '
-      + 'own playlists first, or make an empty one — the name at the top left opens them.';
+    $('pastenote').textContent = t('This would replace what the phone sent. Switch to one of your own playlists first, or make an empty one — the name at the top left opens them.');
     return;
   }
   $('pastenote').textContent = '';
@@ -3282,8 +3314,8 @@ $('playpause').onclick = async () => {
     // It may already have the bytes and be opening them; tell it to drop what it has.
     node?.port.postMessage({ type: 'close' });
     setPlaying(false);
-    $('sub').textContent = 'stopped';
-    status('Stopped loading.');
+    $('sub').textContent = t('stopped');
+    status(t('Stopped loading.'));
     return;
   }
   await start();
@@ -3310,7 +3342,7 @@ const hasPreviousSubsong = () => currentSubsong > 0;
 
 function goToSubsong(index) {
   node?.port.postMessage({ type: 'subsong', index });
-  status(`Tune ${index + 1} of ${subsongCount}`);
+  status(t('Tune {n} of {count}', { n: index + 1, count: subsongCount }));
 }
 
 /** The next file, past whatever is left inside this one. What a long press means. */
@@ -3341,7 +3373,7 @@ $('sel-delete').onclick = () => {
 };
 $('sel-cancel').onclick = () => clearSelection();
 $('addto-new').onclick = async () => {
-  const name = prompt('Call it what?', 'New playlist')?.trim();
+  const name = prompt(t('Call it what?'), t('New playlist'))?.trim();
   if (name) addTracksTo(null, name);
 };
 // Escape leaves the ticking first, the way Back does on the phone -- before it closes anything else.
@@ -3400,8 +3432,36 @@ holdToSkipFile($('prev'), previousFile);
 function showFallback() {
   const minutes = Math.round(fallbackSeconds / 60);
   $('fallback').value = String(minutes);
-  $('fallbackvalue').textContent = `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  $('fallbackvalue').textContent = tn(minutes, '{n} minute', '{n} minutes');
 }
+/**
+ * Settings → Language and Theme (W6, W7), the app's two choices. **A new language reloads the page**:
+ * every sentence already on screen was written in the old one, and redrawing them all in place is a
+ * second way to render the page that nothing else would exercise. The queue comes back from
+ * storage; what was playing stops, and the setting says so. **A theme needs no reload** -- the
+ * colours follow `data-theme` (see `index.html`).
+ */
+function showChoices() {
+  for (const input of document.querySelectorAll('input[name="language"]')) input.checked = input.value === languageChoice;
+  let theme = 'system';
+  try { theme = localStorage.getItem('protracktor.theme') || 'system'; } catch { /* the system's */ }
+  for (const input of document.querySelectorAll('input[name="theme"]')) input.checked = input.value === theme;
+}
+for (const input of document.querySelectorAll('input[name="language"]')) {
+  input.onchange = () => {
+    try { localStorage.setItem('protracktor.language', input.value); } catch { /* private window */ }
+    location.reload();
+  };
+}
+for (const input of document.querySelectorAll('input[name="theme"]')) {
+  input.onchange = () => {
+    try { localStorage.setItem('protracktor.theme', input.value); } catch { /* private window */ }
+    if (input.value === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = input.value;
+  };
+}
+showChoices();
+
 $('fallback').oninput = () => {
   const minutes = Number($('fallback').value);
   fallbackSeconds = Math.min(FALLBACK_MAX_SECONDS, Math.max(FALLBACK_MIN_SECONDS, minutes * 60));
@@ -3418,7 +3478,7 @@ $('allsubsongs').onclick = () => {
   $('allsubsongs').setAttribute('aria-checked', String(playAllSubsongs));
   try { localStorage.setItem('protracktor.allsubsongs', playAllSubsongs ? '1' : '0'); } catch { /* private window */ }
   setPlaying(playing);
-  status(playAllSubsongs ? 'Next walks this file first' : 'Next moves to the next file');
+  status(playAllSubsongs ? t('Next walks this file first') : t('Next moves to the next file'));
 };
 
 const REPEAT_GLYPH = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
@@ -3428,7 +3488,7 @@ $('shuffle').onclick = () => {
   shuffle = !shuffle;
   if (shuffle) reshuffle(index >= 0 ? index : null);
   setPlaying(playing);
-  status(shuffle ? 'Shuffle on' : 'Shuffle off');
+  status(shuffle ? t('Shuffle on') : t('Shuffle off'));
 };
 
 $('repeat').onclick = () => {
@@ -3436,9 +3496,9 @@ $('repeat').onclick = () => {
   // **The shape carries the mode, not just the tint**, so it survives being read without colour --
   // the same rule the dock follows on the phone (AGENTS.md §8).
   $('repeat').querySelector('path').setAttribute('d', repeat === 'one' ? REPEAT_ONE_GLYPH : REPEAT_GLYPH);
-  $('repeat').title = repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off';
+  $('repeat').title = repeat === 'one' ? t('Repeat one') : repeat === 'all' ? t('Repeat all') : t('Repeat off');
   setPlaying(playing);
-  status(`Repeat ${repeat}`);
+  status($('repeat').title);
 };
 /*
   Volume. The slider is a **percentage of loudness, not of amplitude** -- halving the amplitude of
@@ -3469,7 +3529,7 @@ function applyVolume() {
   paint($('volume'));
   const silent = muted || level === 0;
   $('volglyph').setAttribute('d', silent ? VOLUME_OFF : VOLUME_ON);
-  $('mute').title = silent ? 'Unmute' : 'Mute';
+  $('mute').title = silent ? t('Unmute') : t('Mute');
   // `setTargetAtTime` rather than an assignment: a gain that jumps clicks, and a slider dragged
   // across produces a hundred jumps. 15 ms is under a frame and above the click.
   if (gain) gain.gain.setTargetAtTime(amplitude(), context.currentTime, 0.015);
@@ -3482,7 +3542,7 @@ function setVolume(value) {
   // look like the control had stopped working.
   if (level > 0) muted = false;
   applyVolume();
-  status(`Volume ${level}%`);
+  status(t('Volume {level}%', { level }));
 }
 
 $('volume').oninput = () => setVolume(Number($('volume').value));
@@ -3491,7 +3551,7 @@ $('mute').onclick = () => {
   // speaker icon means when the sound is already off.
   if (level === 0) { level = 100; muted = false; } else { muted = !muted; }
   applyVolume();
-  status(muted || level === 0 ? 'Muted' : `Volume ${level}%`);
+  status(muted || level === 0 ? t('Muted') : t('Volume {level}%', { level }));
 };
 applyVolume();
 
@@ -3561,7 +3621,7 @@ $('seek').onchange = () => {
   seekSpinner = setTimeout(() => {
     if (!seekPending) return;
     $('elapsed').classList.add('seeking');
-    $('elapsed').setAttribute('aria-label', 'Seeking');
+    $('elapsed').setAttribute('aria-label', t('Seeking'));
   }, SEEK_SPINNER_AFTER_MS);
   node?.port.postMessage({ type: 'seek', seconds: target });
 };
@@ -3620,12 +3680,12 @@ async function fromFragment() {
     if (!$('pair').hidden) showPanel(null);
     setQueue(entries);
     activePlaylist = PHONE;
-    $('playlistname').textContent = 'From the phone';
+    $('playlistname').textContent = t('From the phone');
     const ghosts = lines.filter((l) => l.startsWith('phone:')).length;
-    status(`${lines.length - ghosts} tracks from the link` +
-           (ghosts ? `, and ${ghosts} that stayed on the phone` : ''));
+    status(tn(lines.length - ghosts, '{n} track from the link', '{n} tracks from the link') +
+           (ghosts ? tn(ghosts, ', and {n} that stayed on the phone', ', and {n} that stayed on the phone') : ''));
   } catch (e) {
-    status(`the link could not be read: ${e.message}`);
+    status(t('the link could not be read: {reason}', { reason: e.message }));
   }
 }
 
@@ -3653,14 +3713,14 @@ async function deflateFragment(text) {
  * and the heading says where it came from, and a panel over both was one more thing to close.
  */
 function playSentTune(tracks) {
-  if (!tracks.length) { status('the link names nothing this page can play'); return; }
+  if (!tracks.length) { status(t('the link names nothing this page can play')); return; }
   openAway(tracks, 0, 'link');
   // The heading names what arrived: one tune, or the list of them (`docs/BACKLOG.md` A38).
-  if (tracks.length > 1) $('sessiontitle').textContent = 'Playing tunes sent to you';
+  if (tracks.length > 1) $('sessiontitle').textContent = t('Playing tunes sent to you');
   showPanel(null);
   status(tracks.length === 1
-    ? `${tracks[0].name} — sent to this player`
-    : `${tracks.length} tunes — sent to this player`);
+    ? t('{name} — sent to this player', { name: tracks[0].name })
+    : tn(tracks.length, '{n} tune — sent to this player', '{n} tunes — sent to this player'));
 }
 
 /**
@@ -3674,7 +3734,7 @@ function playSentTune(tracks) {
  */
 let firstTouch = null;
 let dockFields = null;
-const TAP_HINT = 'Tap anywhere to play';
+const TAP_HINT = t('Tap anywhere to play');
 
 /**
  * Waiting for the page to be used, **said in the dock**: the status line lives in Now Playing,
@@ -3683,7 +3743,7 @@ const TAP_HINT = 'Tap anywhere to play';
 function waitForTouch() {
   startOnFirstTouch();
   $('sub').textContent = TAP_HINT;
-  status('A browser starts no sound until the page is touched.');
+  status(t('A browser starts no sound until the page is touched.'));
   setPlaying(playing);
 }
 
@@ -3706,9 +3766,9 @@ function startOnFirstTouch() {
       setPlaying(playing);
     }
     if ($('sub').textContent === TAP_HINT) {
-      $('sub').textContent = opened && dockFields ? describeLine(dockFields) : 'opening…';
+      $('sub').textContent = opened && dockFields ? describeLine(dockFields) : t('opening…');
     }
-    status('Playing');
+    status(t('Playing'));
   };
   for (const type of events) addEventListener(type, firstTouch, true);
 }
@@ -3727,7 +3787,7 @@ function canSendToWeb(entry) {
  */
 async function sendToWeb(entries) {
   const tunes = (Array.isArray(entries) ? entries : [entries]).filter(canSendToWeb);
-  if (!tunes.length) { status('none of those have an address another browser could open'); return; }
+  if (!tunes.length) { status(t('none of those have an address another browser could open')); return; }
   const lines = tunes.map((entry) => {
     const address = entry.url.startsWith(MODLAND_FILES)
       ? entry.url.slice(MODLAND_FILES.length).split('/').map(decodeURIComponent).join('/')
@@ -3740,16 +3800,16 @@ async function sendToWeb(entries) {
   const link = `${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(lines.join('\n'))}`;
   lastSentLink = link;
   try {
-    const named = tunes.length === 1 ? entry.name : `${tunes.length} tunes`;
+    const named = tunes.length === 1 ? entry.name : tn(tunes.length, '{n} tune', '{n} tunes');
     if (navigator.share) { await navigator.share({ title: `${named} — Protracktor web`, url: link }); return; }
   } catch (error) {
     if (error?.name === 'AbortError') return;   // the share sheet was closed; nothing to say
   }
   try {
     await navigator.clipboard.writeText(link);
-    showNote('Link copied');
+    showNote(t('Link copied'));
   } catch {
-    showNote('The browser would not copy it — the link is in Now Playing');
+    showNote(t('The browser would not copy it — the link is in Now Playing'));
     status(link);
   }
 }
@@ -3784,8 +3844,7 @@ async function pair() {
   } catch {
     // **Said, not left blank**: a page on a static host (GitHub Pages, say) has no pairing service
     // at all -- everything else works there, and this is the one thing that cannot.
-    $('pairnote').textContent = 'This page is served without its pairing service, so a phone cannot '
-      + 'send to it here. A page run with scripts/serve-web.mjs has one.';
+    $('pairnote').textContent = t('This page is served without its pairing service, so a phone cannot send to it here. A page run with scripts/serve-web.mjs has one.');
     $('pairurl').textContent = '';
     $('qr').replaceChildren();
     return;
@@ -3798,7 +3857,7 @@ async function pair() {
   qr.make();
   $('qr').innerHTML = qr.createTableTag(5, 0);
 
-  const ready = 'Scan this with Protracktor on your phone to send it a playlist.';
+  const ready = t('Scan this with Protracktor on your phone to send it a playlist.');
   $('pairnote').textContent = ready;
 
   let since = 0;
@@ -3824,7 +3883,7 @@ async function pair() {
       failures += 1;
       const wait = Math.min(1000 * 2 ** Math.min(failures, 4), 15_000);
       $('pairnote').textContent =
-        `Not reaching the pairing service — trying again in ${Math.round(wait / 1000)}s.`;
+        t('Not reaching the pairing service — trying again in {seconds}s.', { seconds: Math.round(wait / 1000) });
       await new Promise((resume) => setTimeout(resume, wait));
     }
   }
@@ -3838,7 +3897,7 @@ function receive(message) {
   if (dirty) {
     settleUnsaved().then((go) => {
       if (go) applyReceive(message);
-      else status('A queue arrived from the phone and was not loaded, to keep your unsaved changes.');
+      else status(t('A queue arrived from the phone and was not loaded, to keep your unsaved changes.'));
     });
     return;
   }
@@ -3870,10 +3929,10 @@ function applyReceive(message) {
   );
   // A handoff is always the phone's playlist, whatever was showing. It replaces it whole.
   activePlaylist = PHONE;
-  $('playlistname').textContent = 'From the phone';
+  $('playlistname').textContent = t('From the phone');
   const stranded = message.queue.filter((row) => row.local).length;
-  status(`${message.queue.length - stranded} tracks from the phone — press play` +
-         (stranded ? `, and ${stranded} that stayed on it` : ''));
+  status(tn(message.queue.length - stranded, '{n} track from the phone — press play', '{n} tracks from the phone — press play') +
+         (stranded ? tn(stranded, ', and {n} that stayed on it', ', and {n} that stayed on it') : ''));
 }
 
 /**
@@ -3918,7 +3977,7 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 renderNothingPlaying();
 if (!location.hash.slice(1)) showPanel('pair');
 
-status('ready — press Play or load some URLs');
+status(t('ready — press Play or load some URLs'));
 pair();
 
 /**
@@ -3948,13 +4007,13 @@ formatsReady().catch(() => {});
       setQueue(playlist.tracks ?? [], playlist.index ?? 0);
       showPanel(null);
       status(playlist.tracks?.length
-        ? `${playlist.name} — where you left it`
-        : `${playlist.name} — empty. Browse for something to put in it.`);
+        ? t('{name} — where you left it', { name: playlist.name })
+        : t('{name} — empty. Browse for something to put in it.', { name: playlist.name }));
     }
   } catch (e) {
     // A private window, storage turned off, a second tab holding an old version. The page works
     // without any of this and saying so is better than a dialog nobody can act on.
-    status(`this browser is not keeping playlists: ${e.message}`);
+    status(t('this browser is not keeping playlists: {reason}', { reason: e.message }));
   }
   fromFragment();
 })();
