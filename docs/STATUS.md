@@ -438,12 +438,42 @@ confirmation dialogs' *Delete*; *Add folder* and *Add files* and *Clear history*
 a search for buttons whose first child is a `Text`; a button built another way could be missing.
 Not fixed: outside the item it was found in; the owner decides whether it is its own item.
 
-### C81. An NSF refused as "invalid load/init/play address" — **OPEN, reported 2026-09-22**
+### C81. An NSF refused as "invalid load/init/play address" — **OPEN, reported 2026-09-22; diagnosed 2026-09-23, fix waits for the owner**
 
 The owner: `Nintendo Sound Format/Y. Matuo/19 neunzehn.nsf` (Modland, 26,768 bytes) does not play;
-the reason shown is game-music-emu's "invalid load/init/play address". Not investigated yet: the
-header's three addresses are where to start, and whether the file is unusual or game-music-emu 0.6.5
-is stricter than NSF players that play it.
+the reason shown is game-music-emu's "invalid load/init/play address".
+
+**Mechanism (checked 2026-09-23).** The file is a **Famicom Disk System** rip: header chip flags
+`0x04` (FDS), load `$6000`, init `$D000`, play `$D650`, bank bytes `01 01 01 01 01 00 01 01`.
+The NSF specification allows exactly this -- on the FDS, `$6000–$DFFF` is RAM, a rip may load below
+`$8000`, and two extra bank registers `$5FF6/$5FF7` map `$6000–$7FFF` -- while noting that it "is not
+universally supported" ([NESdev wiki, NSF](https://www.nesdev.org/wiki/NSF)). **The file is valid;
+game-music-emu 0.6.5 does not implement the FDS memory model.** `Nsf_Emu::load_` refuses any load
+address below `rom_begin` (`$8000`) outright and calls it "Corrupt file", and even without that check
+it maps `$8000–$DFFF` as read-only ROM and has no `$5FF6/$5FF7`. Reproduced on the host:
+`native/probe/gme/build/probe-gme` on the file prints
+`VERDICT reject:Corrupt file (invalid load/init/play address)`.
+
+The later, unreleased line of the same library (blargg's "0.6pre", kept in DeaDBeeF's
+`plugins/gme/game-music-emu-0.6pre/gme/Nsf_Impl.cpp`, LGPL-2.1 like ours) has it: the load address
+is only too low below `$6000` when FDS is on, `$8000–$DFFF` is mapped as FDS RAM, and banks under
+`$6000` are mapped for `$5FF6/$5FF7`. Read from its source 2026-09-23; not built here.
+
+**How many files:** not known. The Modland index does not carry NSF headers; counting means
+fetching every NSF, which B36's inventory step does anyway.
+
+**Options:**
+
+- **(a) Recommended, before the launch: say it truthfully.** The refusal becomes "a Famicom Disk
+  System NSF that loads below `$8000` — not supported yet" instead of "Corrupt file". A check of
+  the header in `GmeBackend` before gme sees it; a small change, both languages, no risk to what
+  plays today.
+- **(b) After the launch: teach gme the FDS memory model**, ported from 0.6pre's `Nsf_Impl` as a
+  patch in `native/patches/` (as libopenmpt's is): RAM at `$6000–$DFFF` when FDS is flagged, the
+  low load address, `$5FF6/$5FF7`. Checked with this file and other FDS rips; the existing NSF
+  checks must stay unchanged. Medium; it touches the emulator's memory map.
+- (c) Move the whole gme backend to 0.6pre. Would also be the moment to look at C26 (SPC tempo),
+  but it swaps the engine under every console format ten days before a launch.
 
 ### C80. A SID that needs the C64's BASIC ~~plays silence~~ — **found 2026-09-21; the silence FIXED the same day, merged 2026-09-22, confirmed on the phone; playing them still OPEN**
 
