@@ -190,3 +190,15 @@ duration	endsAt	fallback	seconds	approximate	why
 0	158	180	158	yes	a looping NSF: game-music-emu fades it at 2:30 plus eight seconds
 0	-	180	180	yes	nothing ends it but the fallback, so the bar runs to the fallback
 0	400	180	180	yes	the fallback comes first, so that is where it stops
+
+# The number at the bar's end, and whether it fits the room both times beside the bar are given
+# (`docs/BACKLOG.md` A58, the owner's choice 2026-09-23): the phone's barTotalText and fitsBarLabel,
+# the page's barTotalText and fitsBarLabel. The room is the width of `~00:00`, the same on both
+# sides, so the bar does not move when a `~` comes or goes.
+[barLabel]
+seconds	approximate	label	fits	why
+158	yes	~2:38	yes	an approximate length keeps its tilde, in room already kept for it
+158	no	2:38	yes	the same length known exactly: same room, so the bar stays where it was
+0	no	--:--	yes	no length at all
+5999	yes	~99:59	yes	the longest time the room is made for
+6000	no	100:00	no	a tune past 99:59 widens its side rather than being cut

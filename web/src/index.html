@@ -615,6 +615,10 @@
     padding: 10px 18px; font: inherit; border-radius: var(--shape-xl); cursor: pointer;
   }
   .legalrows { margin-top: 16px; }
+  /* Both times keep the same room (holdBarLabels, A58); the total sits against the bar's end, so its
+     digits stay put and a ~ appears in space already kept for it. */
+  #elapsed, #remaining { flex-shrink: 0; white-space: nowrap; }
+  #remaining { text-align: end; }
   /* A seek that takes a while (Q11): a small spinner where the elapsed time was, the same width. */
   #elapsed.seeking { color: transparent; position: relative; }
   #elapsed.seeking::after { content: ''; position: absolute; left: 0; top: 50%; width: 12px; height: 12px;

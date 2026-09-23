@@ -279,6 +279,28 @@ export function lineScrollPass(overflowPx) {
 }
 
 /**
+ * The widest text either side of the seek bar is given room for -- the phone's
+ * `BAR_LABEL_TEMPLATE` (`docs/BACKLOG.md` A58, the owner's choice 2026-09-23). Both times take this
+ * room, so the bar does not grow and shrink when a `~` comes or goes.
+ */
+export const BAR_LABEL_TEMPLATE = '~00:00';
+
+/**
+ * Whether a label fits that room -- the phone's `fitsBarLabel`. Digits are tabular and the widest
+ * thing a time holds: no more digits than the template, and no more characters in all.
+ */
+export function fitsBarLabel(text) {
+  const digits = (s) => (s.match(/[0-9]/g) || []).length;
+  return digits(text) <= digits(BAR_LABEL_TEMPLATE) && text.length <= BAR_LABEL_TEMPLATE.length;
+}
+
+/** The number at the bar's end -- the phone's `barTotalText`. */
+export function barTotalText(seconds, approximate) {
+  if (!(seconds > 0)) return clockTotal(0);
+  return approximate ? `~${clock(seconds)}` : clock(seconds);
+}
+
+/**
  * How far the seek bar runs, and whether that is a length or only where playback will stop -- the
  * phone's `BarLength.of` (the owner's variant (a), 2026-09-22). A known length is exact; an unknown
  * one runs to the earlier of the decoder's own end (`ends_at`) and the fallback length.

@@ -79,11 +79,7 @@ fun NowPlaying(
         Row(modifier = Modifier.fillMaxWidth()) {
             ElapsedTime(state)
             Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = formatBarTotal(state),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            BarTotal(state)
         }
 
         // The filename and where it came from, which the title no longer shows once a tune's real
