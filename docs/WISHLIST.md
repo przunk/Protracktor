@@ -71,7 +71,10 @@ a length in some files and not in others (**not checked** how many). The real ga
 console formats -- NSF, GBS, HES, KSS, AY. After the launch, in two steps, with a decision between
 them:
 
-1. **Inventory.** A script walks Modland's index and counts, per format, the tunes with no length
+1. **Inventory -- DONE 2026-09-23, `docs/inventory/LENGTHS.md`:** about 7,800 of 315,000 measured
+   files have no length before playing, nearly all game-music-emu's (NSF ~3,800, GBS ~800, KSS and
+   HES ~350, SPC uncertain); ZXTune's 26,600 not measured. The plan as written:
+   A script walks Modland's index and counts, per format, the tunes with no length
    from any source. It says whether this is a database of 5,000 NSFs or of 50,000 files in many
    formats. Less than a day; nothing in the app changes.
 2. **An NSF pilot.** Loop detection on about 50 games, compared with joshw's hand-timed playlists.
