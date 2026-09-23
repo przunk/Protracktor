@@ -245,7 +245,7 @@ confirmed in the owner's browser.**
   theme choice; text at 4.5:1 in both themes, from the tokens. Each broken once to see it fail.
   **Not checked:** the page in a real browser, in either language or theme.
 
-**Open, for the owner:** the light palette. The dark page wears the owner's sampled wallpaper
+**Shelved by the owner, 2026-09-23 -- not to be raised until he does:** the light palette. The dark page wears the owner's sampled wallpaper
 colours (magenta and violet); the light page wears Material's lavender baseline, because there is no
 light sample to take. **(a) Recommended:** two screenshots of the app in light mode on his phone,
 sampled as the dark ones were (`docs/reference/app-colours.json`), and the light tokens replaced.
