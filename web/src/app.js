@@ -2605,7 +2605,9 @@ async function renderBrowse() {
   // No search inside a digression: it is one author's folder and the way out is Back (the phone
   // shows no field here either). Close goes with it — a second way out, to somewhere else, beside
   // the one that leads back to the dice.
-  $('browsesearch').hidden = !!away?.dice;
+  // **The field belongs to Search**, as on the phone (the owner, 2026-09-23): shown when Search is
+  // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
+  $('browsesearch').hidden = !!away?.dice || browsePath[0] !== 'search';
   $('browseclose').hidden = !!away?.dice;
 
   // **Declared before anything uses it**, because the "From the phone" branch below calls it: a
@@ -2657,12 +2659,24 @@ async function renderBrowse() {
     }, ICON.cloud);
     domainRow(t('Random'), t('Play something from the indexed catalogues'), enterRandomFromBrowse, ICON.dice);
     domainRow(t('History'), t('Tunes you have played, most recent first'), openHistory, ICON.history);
-    domainRow(t('Search'), t('Across the catalogues this browser holds'), () => $('browsesearch').focus(), ICON.search);
+    domainRow(t('Search'), t('Across the catalogues this browser holds'), async () => {
+      browsePath = ['search'];
+      await renderBrowse();
+      $('browsesearch').focus();
+    }, ICON.search);
     return;
   }
 
   if (browsePath[0] === 'catalogues') {
     await renderCatalogues(list, note);
+    return;
+  }
+
+  if (browsePath[0] === 'search') {
+    $('browsetitle').textContent = t('Search');
+    const query = $('browsesearch').value;
+    if (query.trim().length >= 2) { await runSearch(query); return; }
+    note.textContent = t('A tune or an author, two letters or more.');
     return;
   }
 
@@ -3091,7 +3105,9 @@ async function runSearch(query) {
   const list = $('browselist');
   const note = $('browsenote');
   const asked = ++searchAsked;
-  if (query.trim().length < 2) { browsePath = []; await renderBrowse(); return; }
+  // A search is always Search's: typed there, its results stay there when the list redraws.
+  if (browsePath[0] !== 'search') { browsePath = ['search']; $('browsesearch').hidden = false; }
+  if (query.trim().length < 2) { await renderBrowse(); return; }
   // Every archive held, one list of results: somebody typing a name does not know which has it.
   const held = [];
   for (const source of archive.sources()) {

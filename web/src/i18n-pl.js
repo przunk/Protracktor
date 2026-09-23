@@ -7,6 +7,7 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "A tune or an author, two letters or more.": "Utwór albo autor, co najmniej dwie litery.",
   " and ": " i ",
   "(no author)": "(bez autora)",
   "({file} is missing beside the engine)": "(brak {file} obok silnika)",

@@ -948,8 +948,15 @@ if (window.__api) {
   // Browsing writes into nothing now, so it is not shut on the phone's list.
   window.__api.showPanel('browse');
   await window.__api.browseTo([]);
-  check(!$('browsesearch').hidden && rows().some((li) => li.textContent.startsWith('Online catalogues')),
-    'Browse opens whole on the phone\'s list, search and archive both');
+  // The search field is Search's (the owner, 2026-09-23), so the root offers the row, not the field.
+  check($('browsesearch').hidden && rows().some((li) => li.textContent.startsWith('Online catalogues'))
+        && rows().some((li) => li.textContent.startsWith('Search')),
+    'Browse opens whole on the phone\'s list, search and archive both -- the field only in Search');
+  rows().find((li) => li.textContent.startsWith('Search')).click();
+  await settle();
+  check(!$('browsesearch').hidden && $('browsetitle').textContent === 'Search',
+    'choosing Search shows the field, as on the phone');
+  await window.__api.browseTo([]);
   check(!$('browse').hidden && window.document.querySelector('main').hidden && !window.document.querySelector('footer').hidden,
     'and stands where the list stands, with the dock still under it');
 
@@ -1074,10 +1081,15 @@ if (window.__api) {
   check($('browsetitle').textContent === 'Search' && !$('browseback').hidden
         && $('browsenote').textContent.startsWith('2 tunes by name or author'),
     'a search says what it found, and offers Back');
+  // Back clears the search and stays in Search; the next Back leaves it (the phone's order).
   $('browseback').click();
   await settle();
-  check(!$('browsesearch').value && $('browsetitle').textContent === 'Protracker',
-    'which clears it and returns to where it was typed');
+  check(!$('browsesearch').value && $('browsetitle').textContent === 'Search' && !$('browsesearch').hidden,
+    'which clears it and stays in Search');
+  $('browseback').click();
+  await settle();
+  check($('browsesearch').hidden && $('browsetitle').textContent === 'Browse',
+    'and the next Back leaves Search, taking the field with it');
   await window.__api.browseTo([]);
   window.__api.showPanel(null);
   await saved.remove('p-browse');
