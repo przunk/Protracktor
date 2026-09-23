@@ -176,14 +176,15 @@ export function cleanLegal(text) {
 }
 
 /**
- * The English section of the privacy policy as blocks -- headings, paragraphs and bullets -- headed
- * by its effective date: the phone's `LegalText.privacyBlocks` for the language the page speaks.
+ * The privacy policy's Polish section when [polish], its English one otherwise, as blocks --
+ * headings, paragraphs and bullets -- headed by its effective date: the phone's
+ * `LegalText.privacyBlocks`, rule for rule.
  */
-export function privacyBlocks(markdown) {
+export function privacyBlocks(markdown, polish = false) {
   const lines = String(markdown ?? '').split('\n');
   const dateLine = lines.find((l) => l.startsWith('Effective date:'));
   const blocks = dateLine ? [{ kind: 'paragraph', text: cleanLegal(dateLine) }] : [];
-  const start = lines.findIndex((l) => l.trim() === '## English');
+  const start = lines.findIndex((l) => l.trim() === (polish ? '## Polski' : '## English'));
   if (start < 0) return blocks;
   let end = lines.findIndex((l, i) => i > start && l.startsWith('## '));
   if (end < 0) end = lines.length;
@@ -276,6 +277,28 @@ export function lineScrollPass(overflowPx) {
   const moving = (overflowPx / LINE_SCROLL_VELOCITY) * 1000;
   const duration = LINE_SCROLL_PAUSE_MS + moving;
   return { distance: overflowPx, duration, pauseShare: LINE_SCROLL_PAUSE_MS / duration };
+}
+
+/**
+ * The widest text either side of the seek bar is given room for -- the phone's
+ * `BAR_LABEL_TEMPLATE` (`docs/BACKLOG.md` A58, the owner's choice 2026-09-23). Both times take this
+ * room, so the bar does not grow and shrink when a `~` comes or goes.
+ */
+export const BAR_LABEL_TEMPLATE = '~00:00';
+
+/**
+ * Whether a label fits that room -- the phone's `fitsBarLabel`. Digits are tabular and the widest
+ * thing a time holds: no more digits than the template, and no more characters in all.
+ */
+export function fitsBarLabel(text) {
+  const digits = (s) => (s.match(/[0-9]/g) || []).length;
+  return digits(text) <= digits(BAR_LABEL_TEMPLATE) && text.length <= BAR_LABEL_TEMPLATE.length;
+}
+
+/** The number at the bar's end -- the phone's `barTotalText`. */
+export function barTotalText(seconds, approximate) {
+  if (!(seconds > 0)) return clockTotal(0);
+  return approximate ? `~${clock(seconds)}` : clock(seconds);
 }
 
 /**
