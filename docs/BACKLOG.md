@@ -15,7 +15,21 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22, to think through**
+## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23, branch `fix/a58-steady-bar`, not yet seen on the phone**
+
+**Decided 2026-09-23 (the owner):** keep room for the tilde always, and the same room on both
+sides. **Built:** both times beside the bar take the width of `~00:00` in their own font, measured
+(`rememberTextMeasurer` on the phone, a hidden probe on the page), with tabular figures; the total
+sits against the bar's end, so its digits stay put and a `~` appears in space already kept for it.
+A minimum, not a width: past 99:59 a time still shows whole. The rule and its cases are
+`BAR_LABEL_TEMPLATE`, `barTotalText` and `fitsBarLabel`, shared through `docs/rules/queue-cases.tsv`
+`[barLabel]`. Now Playing uses the same labels, though its bar sits above them and never moved.
+
+**Checked:** the shared cases on both sides; shortening the template to `~0:00` fails both.
+**Not checked:** how it looks -- the page's checks run without layout, and the phone is the
+owner's.
+
+The problem as noted:
 
 *The owner: "think through how `~2:38` is written, because the tilde is there one time and not the
 next, so the bar has a different length."*

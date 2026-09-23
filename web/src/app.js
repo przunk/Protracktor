@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 
@@ -74,7 +74,24 @@ const bar = () => barLength({ duration, endsAt, fallback: fallbackSeconds });
 /** The number at the bar's end: the length, or `~` and where playback will stop. */
 function barTotal() {
   const b = bar();
-  return b.approximate ? `~${clock(b.seconds)}` : clockTotal(b.seconds);
+  return barTotalText(b.seconds, b.approximate);
+}
+
+/**
+ * Both times beside the bar get the room of `BAR_LABEL_TEMPLATE`, measured in their own font, so
+ * the bar is the same length for every tune (A58). A minimum, not a width: a time past 99:59 still
+ * shows whole. Measured again once the fonts are in, since a fallback font measures differently.
+ */
+function holdBarLabels() {
+  const row = $('elapsed').parentElement;
+  const probe = document.createElement('span');
+  probe.textContent = BAR_LABEL_TEMPLATE;
+  probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap';
+  row.appendChild(probe);
+  const width = Math.ceil(probe.getBoundingClientRect().width);
+  probe.remove();
+  if (!(width > 0)) return;
+  for (const id of ['elapsed', 'remaining']) $(id).style.minWidth = `${width}px`;
 }
 let playing = false;
 let seeking = false;
@@ -3916,6 +3933,8 @@ addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault()
 // would sit in the middle of the screen while it did -- the hash is read after an await, so the
 // first thing anybody opening a tune sent to them would see is a QR code meant for somebody else.
 renderNothingPlaying();
+holdBarLabels();
+document.fonts?.ready.then(holdBarLabels);
 if (!location.hash.slice(1)) showPanel('pair');
 
 status('ready — press Play or load some URLs');

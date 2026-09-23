@@ -2531,6 +2531,11 @@ if (window.__api) {
     rules.recordsPlay({ walkingResults: yes(c.walkingResults), fromHistory: yes(c.fromHistory) }) === yes(c.expect));
   // A length as the time display shows it, the same rows `RuleCasesTest` runs against `formatTotal`.
   each('lengthTotal', (c) => rules.clockTotal(Number(c.seconds)) === c.expect);
+  // The number at the bar's end and the room it gets, the same rows `RuleCasesTest` runs (A58).
+  each('barLabel', (c) => {
+    const label = rules.barTotalText(Number(c.seconds), yes(c.approximate));
+    return label === c.label && rules.fitsBarLabel(label) === yes(c.fits);
+  });
   // When a now-playing line may scroll, the same rows `RuleCasesTest` runs against `DockMarquee`.
   each('lineScrolls', (c) =>
     rules.lineScrolls({ animationsOn: yes(c.animationsOn), isStatus: yes(c.isStatus) }) === yes(c.expect));

@@ -131,6 +131,13 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `the number at the bar's end and its room agree with the shared cases`() = each("barLabel") { case ->
+        val label = com.przunk.protracktor.ui.barTotalText(case.getValue("seconds").toDouble(), case.bool("approximate"))
+        assertEquals(case.why(), case.getValue("label"), label)
+        assertEquals(case.why(), case.bool("fits"), com.przunk.protracktor.ui.fitsBarLabel(label))
+    }
+
+    @Test
     fun `what a search matches agrees with the shared cases`() = each("searchMatch") { case ->
         // The page decides the same thing in `rules.js`. Both sides split the query and look for
         // every word; the row that expects `no` for a run-on query is there on purpose.

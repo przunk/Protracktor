@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,11 +61,13 @@ import com.przunk.protracktor.player.PlayerUiState
 @Composable
 fun ElapsedTime(state: PlayerUiState) {
     val seeking = stringResource(R.string.a11y_seeking)
-    Box(contentAlignment = Alignment.CenterStart) {
+    Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.widthIn(min = barLabelWidth())) {
         // Holds the width of a time, so the spinner does not pull the bar sideways.
         Text(
             text = formatTime(state.positionSeconds),
-            style = MaterialTheme.typography.labelSmall,
+            style = barLabelStyle(),
+            maxLines = 1,
+            softWrap = false,
             color = if (state.seekSlow) Color.Transparent else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (state.seekSlow) {
@@ -68,6 +76,41 @@ fun ElapsedTime(state: PlayerUiState) {
                 modifier = Modifier.size(12.dp).semantics { contentDescription = seeking },
             )
         }
+    }
+}
+
+/**
+ * The total at the end of the seek bar, in the same room as [ElapsedTime] and set against the bar's
+ * end, so the digits stay where they are and a `~` appears in space already kept for it (A58).
+ */
+@Composable
+fun BarTotal(state: PlayerUiState) {
+    Text(
+        text = formatBarTotal(state),
+        style = barLabelStyle(),
+        maxLines = 1,
+        softWrap = false,
+        textAlign = TextAlign.End,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.widthIn(min = barLabelWidth()),
+    )
+}
+
+/** Tabular figures: `1:11` and `8:08` are the same width, so the times do not jitter as they count. */
+@Composable
+private fun barLabelStyle(): TextStyle = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
+
+/**
+ * The room [BAR_LABEL_TEMPLATE] takes in the labels' own style, measured rather than written down
+ * as a number of dp, so it follows the font and the user's text size.
+ */
+@Composable
+private fun barLabelWidth(): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = barLabelStyle()
+    val density = LocalDensity.current
+    return remember(style, density) {
+        with(density) { measurer.measure(BAR_LABEL_TEMPLATE, style, maxLines = 1, softWrap = false).size.width.toDp() }
     }
 }
 
