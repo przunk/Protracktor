@@ -110,25 +110,17 @@ fun PlayerDock(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             ) {
-                Text(
-                    text = formatTime(state.positionSeconds),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                ElapsedTime(state)
                 SeekBar(
                     positionSeconds = state.positionSeconds,
-                    durationSeconds = state.durationSeconds,
+                    durationSeconds = state.bar.seconds,
                     enabled = state.seekable && loaded != null,
                     onSeek = onSeek,
                     compact = true,
                     label = stringResource(R.string.a11y_seek),
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                 )
-                Text(
-                    text = formatTotal(state.durationSeconds),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                BarTotal(state)
             }
 
             // Dead space between the seek bar and the button under it. The bar now claims a
@@ -403,6 +395,43 @@ internal fun formatTime(seconds: Double): String {
  */
 internal fun formatTotal(seconds: Double): String =
     if (seconds > 0.0) formatTime(seconds) else "--:--"
+
+/**
+ * The number at the end of the seek bar: the tune's length, or, when nothing knows it, where
+ * playback will stop, marked `~` because that is a fact about the player and not about the tune
+ * (`BarLength`, the owner's variant (a)).
+ */
+internal fun formatBarTotal(state: PlayerUiState): String =
+    if (state.current == null) formatTotal(0.0) else barTotalText(state.bar.seconds, state.bar.approximate)
+
+/** [formatBarTotal] without the state, so the page's `barTotalText` can be held to the same cases. */
+internal fun barTotalText(seconds: Double, approximate: Boolean): String = when {
+    seconds <= 0.0 -> formatTotal(0.0)
+    approximate -> "~" + formatTime(seconds)
+    else -> formatTime(seconds)
+}
+
+/**
+ * The widest text either side of the seek bar is given room for (`docs/BACKLOG.md` A58).
+ *
+ * **Both times take this width, always**, so the bar between them is the same length and in the
+ * same place for every tune: `~2:38` for one tune and `0:30` for the next used to be two widths,
+ * and the bar grew and shrank between them -- and within one tune, when a measured length replaced
+ * the approximation. The owner's choice, 2026-09-23: keep room for the `~` and make the two sides
+ * equal. Up to 99:59 fits; a longer time still shows whole and widens its side, which a
+ * twenty-minute cap on seeking makes a curiosity rather than a case.
+ */
+internal const val BAR_LABEL_TEMPLATE = "~00:00"
+
+/**
+ * Whether [text] fits the room [BAR_LABEL_TEMPLATE] keeps. Digits are drawn tabular and are the
+ * widest thing a time holds, so a label fits when it has no more digits than the template and no
+ * more characters in all: `100:00` is as long as `~00:00` and still wider, because a `1` takes a
+ * digit's width and the `~` does not.
+ */
+internal fun fitsBarLabel(text: String): Boolean =
+    text.count(Char::isDigit) <= BAR_LABEL_TEMPLATE.count(Char::isDigit) &&
+        text.length <= BAR_LABEL_TEMPLATE.length
 
 /**
  * Skip forward or back: a press moves by tune, a hold moves by file.

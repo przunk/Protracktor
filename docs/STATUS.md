@@ -427,6 +427,104 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C87. Online catalogues jumped while downloading — **FIXED 2026-09-23, merged, confirmed in a browser**
+
+The owner: while indexing, the rows vanished and came back, and the download button and its spinner
+moved. Two causes. Every download's start and end redraws the list, and the redraw **cleared it and
+the note first**, then read from IndexedDB, then drew -- an empty moment each time, and one row
+still waited mid-list for the stale-index check. And the spinner with "indexing…" under it was 84 px
+against the button's 44, so the row's text rewrapped. Now the list is built aside and swapped in at
+once, the note is rewritten only when it says something new, and the spinner takes the button's
+44 × 44 box with its word for screen readers only.
+
+### C86. GitHub Pages stopped deploying pushes to `gh-pages` — **worked around 2026-09-23; cause unknown**
+
+Two pushes to `gh-pages` on 2026-09-23 (`af27036`, `43a61d5`) reached GitHub, and no *pages build and
+deployment* run followed: the last was 2026-09-22 20:20 UTC, and the page kept serving that day's
+files (`last-modified` of `src/app.js`), without the round's Browse fixes. Settings were unchanged.
+**What worked:** *Settings → Pages → Branch: None → Save*, then *gh-pages, / (root) → Save*; a run
+started at once (20:13 UTC, success). **How to tell next time:** the repository's *Actions* tab shows
+no run after the push, or `curl -sI https://przunk.github.io/Protracktor/src/app.js` shows an old
+`last-modified`. Why the pushes did not trigger a build is not known -- it happened the day the
+`przunk.github.io` user-site repository was created, which may or may not be related.
+
+### C85. Protracktor was offered as a browser — **FIXED 2026-09-23, merged, confirmed on the phone**
+
+The owner, looking for "Open by default" for A40, found "Browser app" in the app's settings, with
+Protracktor as a choice. Mechanism: the filter for module links (B24) named `http` and `https` and
+no host, and Android ignores every path pattern in a filter without a host -- so it claimed every
+web address, which is what a browser is. In 0.8.0 as published. Now the web half names the
+archives' hosts (Modland, ASMA, The Mod Archive, UnExoticA) and the local half keeps `content` and
+`file` as before; a test holds every `http(s)` filter to a host. **Not changed, noticed:** the local
+half has no host either, so its patterns are ignored too and it matches any `content`/`file` link
+that comes without a type -- which the mime-type filter above it is there for anyway.
+
+### C84. Browse's search field stood over every list — **FIXED 2026-09-23, merged, confirmed in a browser**
+
+The owner: the field was visible across Browse, where the phone shows it only in Search. It now
+belongs to Search (`fix/web-search-in-its-place`).
+
+### C83. Several catalogue downloads at once wrote over each other in Browse's note — **FIXED 2026-09-23, merged, confirmed in a browser**
+
+The owner: pressing download on each catalogue made the note flicker between them. Progress is now
+only the row's spinner; the note says what is held and what failed (`fix/web-download-note`).
+
+### C82. Buttons with a label and no icon, outside dialogs — **found 2026-09-23; FIXED, merged and confirmed on the phone the same day**
+
+**Fixed, with the icons the owner agreed to:** Add a folder -- folder; Add files -- document; Clear
+history -- the cross; New playlist -- plus; Import -- download; Back to the playlist -- the playlist.
+One `IconLabel` for all six, the pairing screen's shape.
+
+Found while giving the pairing screen's two buttons their icons (`fix/scanner-button-icons`).
+**Corrected 2026-09-23:** the first version of this entry also listed the dialogs' *Cancel*, *Save*,
+*Delete* and *Close*. Those are not defects: `AGENTS.md` ("An action is an icon with a label")
+exempts a dialogue's confirm and cancel as Material's own convention. What is left, text only today:
+*Add folder* and *Add files* and *Clear history* in `BrowseScreen`; *New playlist* and *Import* in
+`PlaylistSwitcher`; *Back to playlist* in `PlaylistScreen`. Found by a search for buttons whose first
+child is a `Text`; a button built another way could be missing. Not fixed: outside the item it was
+found in; the owner decides whether it is its own item.
+
+### C81. An NSF refused as "invalid load/init/play address" — **reported 2026-09-22; diagnosed 2026-09-23; option (a) BUILT, merged and confirmed on the phone 2026-09-23; (b) still open**
+
+The owner: `Nintendo Sound Format/Y. Matuo/19 neunzehn.nsf` (Modland, 26,768 bytes) does not play;
+the reason shown is game-music-emu's "invalid load/init/play address".
+
+**Mechanism (checked 2026-09-23).** The file is a **Famicom Disk System** rip: header chip flags
+`0x04` (FDS), load `$6000`, init `$D000`, play `$D650`, bank bytes `01 01 01 01 01 00 01 01`.
+The NSF specification allows exactly this -- on the FDS, `$6000–$DFFF` is RAM, a rip may load below
+`$8000`, and two extra bank registers `$5FF6/$5FF7` map `$6000–$7FFF` -- while noting that it "is not
+universally supported" ([NESdev wiki, NSF](https://www.nesdev.org/wiki/NSF)). **The file is valid;
+game-music-emu 0.6.5 does not implement the FDS memory model.** `Nsf_Emu::load_` refuses any load
+address below `rom_begin` (`$8000`) outright and calls it "Corrupt file", and even without that check
+it maps `$8000–$DFFF` as read-only ROM and has no `$5FF6/$5FF7`. Reproduced on the host:
+`native/probe/gme/build/probe-gme` on the file prints
+`VERDICT reject:Corrupt file (invalid load/init/play address)`.
+
+The later, unreleased line of the same library (blargg's "0.6pre", kept in DeaDBeeF's
+`plugins/gme/game-music-emu-0.6pre/gme/Nsf_Impl.cpp`, LGPL-2.1 like ours) has it: the load address
+is only too low below `$6000` when FDS is on, `$8000–$DFFF` is mapped as FDS RAM, and banks under
+`$6000` are mapped for `$5FF6/$5FF7`. Read from its source 2026-09-23; not built here.
+
+**How many files:** not known. The Modland index does not carry NSF headers; counting means
+fetching every NSF, which B36's inventory step does anyway.
+
+**Options** -- the owner chose (a), 2026-09-23:
+
+- **(a) Chosen, BUILT: say it truthfully.** `GmeBackend::fdsLoadsLow` refuses the file before
+  game-music-emu sees it: *a Famicom Disk System NSF that loads below $8000, which the console
+  decoder (game-music-emu) cannot play yet*. Two engine checks: that file refused in those words,
+  an FDS NSF at $8000 still opening; the first fails with the check switched off.
+  The recommendation as written: The refusal becomes "a Famicom Disk
+  System NSF that loads below `$8000` — not supported yet" instead of "Corrupt file". A check of
+  the header in `GmeBackend` before gme sees it; a small change, both languages, no risk to what
+  plays today.
+- **(b) After the launch: teach gme the FDS memory model**, ported from 0.6pre's `Nsf_Impl` as a
+  patch in `native/patches/` (as libopenmpt's is): RAM at `$6000–$DFFF` when FDS is flagged, the
+  low load address, `$5FF6/$5FF7`. Checked with this file and other FDS rips; the existing NSF
+  checks must stay unchanged. Medium; it touches the emulator's memory map.
+- (c) Move the whole gme backend to 0.6pre. Would also be the moment to look at C26 (SPC tempo),
+  but it swaps the engine under every console format ten days before a launch.
+
 ### C80. A SID that needs the C64's BASIC ~~plays silence~~ — **found 2026-09-21; the silence FIXED the same day, merged 2026-09-22, confirmed on the phone; playing them still OPEN**
 
 **The small part is done:** the SID backend reads the header's own compatibility field and refuses a

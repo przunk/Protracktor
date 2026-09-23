@@ -71,23 +71,15 @@ fun NowPlaying(
 
         SeekBar(
             positionSeconds = state.positionSeconds,
-            durationSeconds = state.durationSeconds,
+            durationSeconds = state.bar.seconds,
             enabled = state.seekable && track != null,
             onSeek = onSeek,
             label = stringResource(R.string.a11y_seek),
         )
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = formatTime(state.positionSeconds),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            ElapsedTime(state)
             Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = formatTotal(state.durationSeconds),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            BarTotal(state)
         }
 
         // The filename and where it came from, which the title no longer shows once a tune's real

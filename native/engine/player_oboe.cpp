@@ -254,11 +254,21 @@ public:
     void seek(double seconds) {
         if (!backend_->canSeek()) return;
         const double target = seconds < 0.0 ? 0.0 : seconds;
+        // **The latest seek wins** (Q11). Numbered before the lock is taken, so a seek still waiting
+        // for it -- behind one that is running -- knows on arrival that a newer one exists, and the
+        // one running learns it between chunks through `seekAbandoned`. Ten clicks in a second are
+        // one seek, to the last place, not ten in a row.
+        const unsigned mine = seekRequests_.fetch_add(1, std::memory_order_acq_rel) + 1;
         // **On this thread, holding the lock**, however long it takes. The callback finds the lock
         // taken and plays silence meanwhile; nothing waits on anything that has a deadline. The
         // caller must not be the main thread -- `NativeEngine.Track.seekTo` says so and keeps to it.
         const std::lock_guard<std::mutex> held(decoderGuard_);
+        if (seekRequests_.load(std::memory_order_acquire) != mine) return;
+        backend_->seekAbandoned = [this, mine] {
+            return seekRequests_.load(std::memory_order_acquire) != mine;
+        };
         backend_->seek(target);
+        backend_->seekAbandoned = nullptr;
         finished_.store(false, std::memory_order_release);
         publishPosition();
     }
@@ -406,6 +416,8 @@ private:
      * not allowed to be. Nothing with a deadline ever blocks on it.
      */
     mutable std::mutex decoderGuard_;
+    // How many seeks have been asked for; the latest is the only one worth finishing (`seek`).
+    std::atomic<unsigned> seekRequests_{0};
     /** Published by the audio thread so the poll never touches a backend that is rendering. */
     std::atomic<double> position_{0.0};
     std::atomic<double> duration_{0.0};

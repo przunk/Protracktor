@@ -1,9 +1,9 @@
-Titles with accented letters now read correctly, whether written on an Amiga, a DOS PC or a C64: no more question marks in diamonds.
+Seek in C64 (SID) and Atari ST (SNDH) tunes; a spinner shows while it gets there.
 
-Search ignores accents: "michal" finds "Michał", and "akes lekhorna" finds "Åkes lekhörna".
+A tune with no stated length gets a seek bar up to where it will stop, marked ~.
 
-A title too long for the player bar scrolls slowly instead of being cut off.
+Opening a Modland author's folder downloads its tunes in the background, three at a time: Wi-Fi only by default (Settings → Online catalogues).
 
-History stays in order while you play from it.
+Links to the web player at przunk.github.io open in the app.
 
-A C64 tune written in BASIC now says why it cannot play, instead of playing silence.
+Protracktor no longer offers itself as a browser. More buttons have icons, and a file that will not play says more about why.

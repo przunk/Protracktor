@@ -178,3 +178,40 @@ yes	no	yes	a title that does not fit scrolls
 no	no	no	nothing moves with the system's animations off
 yes	yes	no	the loading line never scrolls
 no	yes	no	and certainly not with animations off
+
+# How far the seek bar runs (the owner's variant (a), 2026-09-22): the phone's BarLength.of and the
+# page's barLength. A known length is exact; an unknown one runs to where playback will stop -- the
+# earlier of the decoder's own end (`ends_at`) and the fallback length -- and is approximate.
+# `-` means the decoder states no end of its own.
+[barLength]
+duration	endsAt	fallback	seconds	approximate	why
+245	-	180	245	no	a length the file states is the bar, exactly
+30.5	158	180	30.5	no	a tune measured falling silent has a length, and it wins
+0	158	180	158	yes	a looping NSF: game-music-emu fades it at 2:30 plus eight seconds
+0	-	180	180	yes	nothing ends it but the fallback, so the bar runs to the fallback
+0	400	180	180	yes	the fallback comes first, so that is where it stops
+
+# The number at the bar's end, and whether it fits the room both times beside the bar are given
+# (`docs/BACKLOG.md` A58, the owner's choice 2026-09-23): the phone's barTotalText and fitsBarLabel,
+# the page's barTotalText and fitsBarLabel. The room is the width of `~00:00`, the same on both
+# sides, so the bar does not move when a `~` comes or goes.
+[barLabel]
+seconds	approximate	label	fits	why
+158	yes	~2:38	yes	an approximate length keeps its tilde, in room already kept for it
+158	no	2:38	yes	the same length known exactly: same room, so the bar stays where it was
+0	no	--:--	yes	no length at all
+5999	yes	~99:59	yes	the longest time the room is made for
+6000	no	100:00	no	a tune past 99:59 widens its side rather than being cut
+
+# The format a refused catalogue file is filed under, read from its address (`docs/BACKLOG.md` A51):
+# the phone's `OpenFailure.modlandFormatOf` and the page's `modlandFormatOf`. One extension can be
+# two formats -- `.gtk` is Graoumf Tracker and Beaver Sweeper -- and only Modland's directory knows
+# which, so a refusal names it. `-` means no clause: not a Modland file.
+[refusalFormat]
+url	expect	why
+https://modland.com/pub/modules/Beaver%20Sweeper/Steffo/nokia.gtk	Beaver Sweeper	the case that raised it: a .gtk that is not Graoumf Tracker
+https://modland.com/pub/modules/Protracker/4-Mat/elysium.mod	Protracker	an ordinary file names its directory too
+https://modland.com/pub/modules/Ad%20Lib/Unknown/a%2Bb.sng	Ad Lib	escapes are undone in the name shown
+https://asma.atari.org/asma/Composers/Aki/Robots.sap	-	ASMA's first folder is a grouping, not a format
+content://com.android.externalstorage.documents/document/primary%3AMusic%2Fx.mod	-	a file on the phone has no archive to quote
+https://modland.com/pub/modules/	-	an address with no format in it

@@ -83,6 +83,7 @@ const posted = [];
 let holdTrackFetch = false;
 window.fetch = async (url, options) => {
   const u = String(url);
+  if (u.endsWith('/pair/host') && window.__staticHost) return { ok: false, status: 404, json: async () => { throw new SyntaxError('not JSON'); } };
   if (u.endsWith('/pair/host')) return { ok: true, json: async () => ({ base: 'https://example.test' }) };
   if (u.includes('/next?')) return new Promise(() => {});   // a poll that never answers
   if (u.endsWith('engine.wasm')) return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
@@ -158,10 +159,15 @@ const rulesSource = fs.readFileSync('web/src/rules.js', 'utf8').replace(/^export
 const lengthsSource = fs.readFileSync('web/src/songlengths.js', 'utf8').replace(/^export /gm, '');
 const songdbSource = fs.readFileSync('web/src/songdb.js', 'utf8').replace(/^export /gm, '');
 const storeSource = fs.readFileSync('web/src/store.js', 'utf8').replace(/^export /gm, '');
+// The language module and its Polish table, inlined as the others are (W6). The table first: the
+// module's own import of it is the line that goes.
+const i18nSource = fs.readFileSync('web/src/i18n-pl.js', 'utf8').replace(/^export /gm, '')
+  + fs.readFileSync('web/src/i18n.js', 'utf8').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const source = fs.readFileSync('web/src/app.js', 'utf8')
   .replace(/^import .*from '\.\/rules\.js';$/gm, rulesSource)
   .replace(/^import .*from '\.\/songlengths\.js';$/gm, lengthsSource)
   .replace(/^import .*from '\.\/store\.js';$/gm, storeSource)
+  .replace(/^import .*from '\.\/i18n\.js';$/gm, i18nSource)
   // `catalogue.js` imports the store, which is already inlined above, so its own import line goes
   // and the rest is spliced in under the name `app.js` uses for it.
   .replace(/^import \* as archive from '\.\/catalogue\.js';$/gm,
@@ -173,13 +179,13 @@ const source = fs.readFileSync('web/src/app.js', 'utf8')
     + 'searchAuthors, parseFormats, absentDecoders, playable, onPhone, indexFingerprint, refreshPlayable, stampIndex, '
     + 'buildRandomTable, drawTrack, platformOf, downloadAsma, sources, sourceName, '
     + 'downloadSongLengths, songLengthsFor, songLengthsMeta, clearSongLengths, '
-    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata, forgetIndex }; })();')
+    + 'downloadSongMetadata, songMetadataFor, songMetadataMeta, clearSongMetadata, forgetIndex, modlandFormatOf }; })();')
   .replace(/^import .*$/gm, '')                       // no module loader here
   .replace(/\bawait /g, 'await ');                    // kept: the harness wraps it
 
 console.log('page:');
 try {
-  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__api = { setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
+  window.eval(`(async () => { ${source} \n globalThis.__archive = archive; globalThis.__i18n = { t, tn, useLanguage, resolveLanguage, translateStatic, staticTexts, hasPolish, language }; globalThis.__api = { pair, setQueue, entryFor, render, receive, showPanel, onWorklet, orderLength: () => order.length, playAt, playFromBrowse, renderBrowse, switchTo, runSearch, browseTo: (p) => { browsePath = p; return renderBrowse(); }, openRandom, endRandom, removeRandomAt, openAway, endSession, awayState: () => away, choosePlaylist, saveEdits, discardEdits, dirtyNow: () => dirty, randomState: () => random, queueNow: () => queue.map((e) => e.url), indexNow: () => index, useRandomSource: (fn) => { randomSource = fn; }, releaseYear, describeFields, sendToWeb, canSendToWeb, inflateFragment, downloadAsmaIndex, archiveMeta: (s) => archive.meta(s), catalogueStore: catalogue, searchTitlesNow: (q) => archive.searchTitles(q), randomTable: () => archive.buildRandomTable(), lastSentLink: () => lastSentLink, contextNow: () => context, afterOf: (i) => { index = i; return afterCurrent(); }, finishedNow: () => finished, endedByClockNow: () => endedByClock, beforeOf: (i) => { index = i; return beforeCurrent(); } }; })()`);
 } catch (error) {
   failures.push(`the script throws on load: ${error.message}`);
   console.log(`  ✗ the script throws on load: ${error.message}`);
@@ -482,7 +488,10 @@ if (window.__api) {
     'and Now Playing stops describing whatever worked last');
   check($('playglyph').getAttribute('d') !== 'M6 6h12v12H6z',
     'a refusal ends the load rather than leaving the button stuck');
-  check($('error').textContent === 'nothing claimed it', 'and says what the decoder said');
+  check($('error').textContent.startsWith('nothing claimed it.'), 'and says what the decoder said');
+  // The queued file is Modland's, so the refusal also names the directory it is filed under (A51).
+  check(/ Modland lists it as \S[^.]*\.$/.test($('error').textContent),
+    'and what Modland lists it as, after a full stop');
 
   // The keys somebody at a desk will try, and the one place they must not fire.
   let played = 0;
@@ -939,8 +948,15 @@ if (window.__api) {
   // Browsing writes into nothing now, so it is not shut on the phone's list.
   window.__api.showPanel('browse');
   await window.__api.browseTo([]);
-  check(!$('browsesearch').hidden && rows().some((li) => li.textContent.startsWith('Online catalogues')),
-    'Browse opens whole on the phone\'s list, search and archive both');
+  // The search field is Search's (the owner, 2026-09-23), so the root offers the row, not the field.
+  check($('browsesearch').hidden && rows().some((li) => li.textContent.startsWith('Online catalogues'))
+        && rows().some((li) => li.textContent.startsWith('Search')),
+    'Browse opens whole on the phone\'s list, search and archive both -- the field only in Search');
+  rows().find((li) => li.textContent.startsWith('Search')).click();
+  await settle();
+  check(!$('browsesearch').hidden && $('browsetitle').textContent === 'Search',
+    'choosing Search shows the field, as on the phone');
+  await window.__api.browseTo([]);
   check(!$('browse').hidden && window.document.querySelector('main').hidden && !window.document.querySelector('footer').hidden,
     'and stands where the list stands, with the dock still under it');
 
@@ -1065,10 +1081,15 @@ if (window.__api) {
   check($('browsetitle').textContent === 'Search' && !$('browseback').hidden
         && $('browsenote').textContent.startsWith('2 tunes by name or author'),
     'a search says what it found, and offers Back');
+  // Back clears the search and stays in Search; the next Back leaves it (the phone's order).
   $('browseback').click();
   await settle();
-  check(!$('browsesearch').value && $('browsetitle').textContent === 'Protracker',
-    'which clears it and returns to where it was typed');
+  check(!$('browsesearch').value && $('browsetitle').textContent === 'Search' && !$('browsesearch').hidden,
+    'which clears it and stays in Search');
+  $('browseback').click();
+  await settle();
+  check($('browsesearch').hidden && $('browsetitle').textContent === 'Browse',
+    'and the next Back leaves Search, taking the field with it');
   await window.__api.browseTo([]);
   window.__api.showPanel(null);
   await saved.remove('p-browse');
@@ -1936,6 +1957,10 @@ if (window.__api) {
     'the list is read with a size from HEAD and an ordinary range — never the suffix form a browser must ask about');
   const held = await api.archiveMeta('asma');
   check(held?.tracks === 3 && held.formats === 2, 'every .sap is listed and nothing else, under its section');
+  // The row's spinner is the progress (the owner, 2026-09-23): the note narrates no download, so
+  // two started at once cannot write over each other there.
+  check(!/ASMA: |storing |fetching |sections\./.test($('browsenote').textContent),
+    'a download does not narrate itself in the note -- its row has the spinner');
   await api.browseTo(['catalogues']);
   const asmaRow = [...$('browselist').children].find((li) => li.querySelector('.bname')?.textContent === 'ASMA');
   check(asmaRow && asmaRow.querySelector('.bmeta').textContent === '3 tunes' && asmaRow.querySelector('.bheld.yes'),
@@ -2321,7 +2346,8 @@ if (window.__api) {
   const settingsRow = () => [...$('settingsfields').querySelectorAll('dt')].find((n) => n.textContent === 'Song metadata');
   const remove = settingsRow()?.nextElementSibling.querySelector('button');
   check(labels.includes('Song metadata') && remove?.querySelector('svg') && remove.textContent.trim() === 'Delete'
-        && settingsRow().nextElementSibling.textContent.startsWith('1 tunes'),
+        // One tune, not "1 tunes": counts take their form since W6, in both languages.
+        && settingsRow().nextElementSibling.textContent.startsWith('1 tune ·'),
     'Settings says it is held, and offers Delete with an icon and a word');
   let asked = '';
   window.confirm = (text) => { asked = text; return false; };
@@ -2474,8 +2500,128 @@ if (window.__api) {
     const title = rest.pop();
     return catalogueModule.urlFor(format, rest.join('/'), title, 'asma') === `https://asma.atari.org/${c.expect}`;
   });
+  // The format a refusal names (A51), the same rows `RuleCasesTest` runs against `OpenFailure`.
+  each('refusalFormat', (c) => catalogueModule.modlandFormatOf(c.url) === (c.expect === '-' ? null : c.expect));
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
+  // --- the page in Polish, and in a light theme (W6, W7) ------------------------------------------
+  //
+  // **Every text has its Polish, or the check fails** -- the language table's exhaustive `when`.
+  // Three sources of text, each read from the files rather than from what one run happened to draw:
+  // the `t(...)` and `tn(...)` calls in `app.js`, the markup in `index.html`, and nothing else --
+  // a sentence left outside `t()` is caught by the third check.
+  {
+    const i18n = window.__i18n;
+    check(i18n.language() === 'en', 'a browser that speaks English gets the page in English');
+    const cases = [
+      [['system', ['pl-PL', 'en']], 'pl', 'the browser says Polish first: Polish'],
+      [['system', ['de-DE', 'en-GB']], 'en', 'the first language the page has wins, not the first listed'],
+      [['system', ['fr']], 'en', 'none it has: English'],
+      [['en', ['pl-PL']], 'en', 'a choice beats the browser'],
+      [['pl', ['en-US']], 'pl', 'and the other way round'],
+      [['system', []], 'en', 'a browser that says nothing: English'],
+    ];
+    for (const [[choice, list], want, what] of cases) check(i18n.resolveLanguage(choice, list) === want, what);
+
+    const appSource = fs.readFileSync('web/src/app.js', 'utf8');
+    const keys = new Set();
+    for (const m of appSource.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) keys.add(m[2].replace(/\\(['"\\])/g, '$1'));
+    for (const m of appSource.matchAll(/\btn\([^,]+,\s*(['"])(?:\\.|(?!\1).)*\1\s*,\s*(['"])((?:\\.|(?!\2).)*)\2/g)) {
+      keys.add(m[3].replace(/\\(['"\\])/g, '$1'));
+    }
+    const untranslated = [...keys].filter((k) => !i18n.hasPolish(k));
+    check(keys.size > 150 && untranslated.length === 0,
+      `every one of app.js's ${keys.size} texts has its Polish` + (untranslated.length ? ` -- missing: ${untranslated.slice(0, 5).join(' | ')}` : ''));
+
+    const markup = new JSDOM(fs.readFileSync('web/src/index.html', 'utf8')).window.document;
+    // Names that are names in both languages, and so have no entry to find.
+    const sameInBoth = new Set(['Protracktor', 'Modland', 'ASMA']);
+    const staticMissing = [...i18n.staticTexts(markup.body)].filter((text) => !sameInBoth.has(text) && !i18n.hasPolish(text));
+    check(staticMissing.length === 0,
+      'every text in index.html has its Polish' + (staticMissing.length ? ` -- missing: ${staticMissing.slice(0, 5).join(' | ')}` : ''));
+
+    // A sentence written into app.js without `t()` is English on a Polish page. What is left outside
+    // is data or plumbing, named here one by one so a new one has to be argued for.
+    const plumbing = new Set([
+      'insecure context', 'From the phone', 'fetching the list',
+      'fetching the whole archive (20 MB), this browser will not ask for part of it',
+      'bheld yes', 'bmeta bwarn', '${named} — Protracktor web',
+      "${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(lines.join('\\n'))}",
+    ]);
+    const code = appSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      .replace(/\btn?\((?:[^()'"`]|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`]*`|\((?:[^()]|\([^()]*\))*\))*\)/g, 'T()');
+    const loose = [];
+    for (const m of code.matchAll(/'((?:[^'\\\n]|\\.)*)'|`([^`]*)`|"((?:[^"\\\n]|\\.)*)"/g)) {
+      const text = m[1] ?? m[2] ?? m[3] ?? '';
+      if (/[A-Za-z]{3,} [a-z]{2,}/.test(text) && !/^(https?:|[#.]\w|\w+\(|M\d|<)/.test(text) && !plumbing.has(text)) loose.push(text);
+    }
+    check(loose.length === 0, 'no sentence in app.js is left outside t()' + (loose.length ? ` -- ${loose.slice(0, 3).join(' | ')}` : ''));
+
+    // The same page, drawn in Polish: the markup's texts and the three read attributes change, and a
+    // count takes the Polish form its number asks for.
+    const polish = new JSDOM(fs.readFileSync('web/src/index.html', 'utf8')).window.document;
+    i18n.useLanguage('pl');
+    i18n.translateStatic(polish.body);
+    check(polish.getElementById('tab-browse')?.textContent.includes('Przeglądaj'), 'in Polish, Browse reads Przeglądaj, as in the app');
+    check(polish.getElementById('seek')?.getAttribute('aria-label') === 'Pozycja'
+      && polish.getElementById('next')?.getAttribute('title') === 'Następny',
+      'and what a screen reader or a tooltip says is translated too');
+    check(i18n.tn(1, '{n} track', '{n} tracks') === '1 utwór'
+      && i18n.tn(3, '{n} track', '{n} tracks') === '3 utwory'
+      && i18n.tn(5, '{n} track', '{n} tracks') === '5 utworów'
+      && i18n.tn(22, '{n} track', '{n} tracks') === '22 utwory',
+      'a count takes its Polish form: 1 utwór, 3 utwory, 5 utworów, 22 utwory');
+    check(i18n.t('Nothing playing') === 'Nic nie gra', 'and a sentence its Polish');
+    i18n.useLanguage('en');
+    check(i18n.t('Nothing playing') === 'Nothing playing' && i18n.tn(2, '{n} track', '{n} tracks') === '2 tracks',
+      'back in English, English again');
+  }
+
+  // The theme (W7): the choice is written where the page reads it before the first frame, and
+  // "System" hands the decision back to the browser.
+  {
+    const html = window.document.documentElement;
+    const pick = (value) => {
+      const input = window.document.querySelector(`input[name="theme"][value="${value}"]`);
+      input.checked = true;
+      input.onchange();
+    };
+    pick('light');
+    check(html.dataset.theme === 'light' && window.localStorage.getItem('protracktor.theme') === 'light',
+      'Theme → Light pins the page light, and remembers it');
+    pick('dark');
+    check(html.dataset.theme === 'dark', 'Theme → Dark pins it dark');
+    pick('system');
+    check(!('theme' in html.dataset) && window.localStorage.getItem('protracktor.theme') === 'system',
+      'Theme → System lets the browser decide again');
+
+    // **Contrast in both themes**, from the tokens themselves: every pair the page sets text in,
+    // at 4.5:1, the WCAG level for body text. A light theme that nobody can read is not a theme.
+    const css = fs.readFileSync('web/src/index.html', 'utf8');
+    const token = {};
+    for (const m of css.matchAll(/--([a-z-]+): light-dark\((#[0-9A-Fa-f]{6}), (#[0-9A-Fa-f]{6})\)/g)) token[m[1]] = { light: m[2], dark: m[3] };
+    const luminance = (hex) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+    const pairs = [
+      ['on-surface', 'bg'], ['on-surface-variant', 'bg'], ['on-surface', 'surface-container'],
+      ['on-surface-variant', 'surface-container'], ['on-secondary-container', 'secondary-container'],
+      ['on-primary', 'primary'], ['primary', 'bg'], ['error', 'bg'],
+    ];
+    const weak = [];
+    for (const theme of ['light', 'dark']) {
+      for (const [fg, bg] of pairs) {
+        if (!token[fg] || !token[bg]) { weak.push(`${fg} or ${bg} has no light-dark token`); continue; }
+        const r = ratio(token[fg][theme], token[bg][theme]);
+        if (r < 4.5) weak.push(`${theme}: ${fg} on ${bg} is ${r.toFixed(2)}:1`);
+      }
+    }
+    check(weak.length === 0, 'text meets 4.5:1 in both themes' + (weak.length ? ` -- ${weak.join('; ')}` : ''));
+  }
+
   // --- what the page carries and says about itself (W4) ---------------------------------------
   //
   // **The page's engine links nothing it does not name.** The web build is `native/CMakeLists.txt`
@@ -2516,6 +2662,11 @@ if (window.__api) {
   }
   {
     const blocks = rules.privacyBlocks(fs.readFileSync('store/privacy-policy.md', 'utf8'));
+    // And in Polish, the phone's same rule: the date first, then the Polish section's own headings.
+    const polishBlocks = rules.privacyBlocks(fs.readFileSync('store/privacy-policy.md', 'utf8'), true);
+    check(polishBlocks[0]?.text.startsWith('Effective date:') && polishBlocks[1]?.kind === 'heading'
+      && polishBlocks[1]?.text === 'Administrator',
+      'the Polish page shows the policy\'s Polish section, under the same date');
     const english = fs.readFileSync('store/privacy-policy.md', 'utf8').split('## Polski')[0];
     const headings = [...english.matchAll(/^### (.+)$/gm)].map((m) => rules.cleanLegal(m[1]));
     check(blocks[0]?.text.startsWith('Effective date:'), 'the privacy policy opens with its date');
@@ -2530,6 +2681,11 @@ if (window.__api) {
     rules.recordsPlay({ walkingResults: yes(c.walkingResults), fromHistory: yes(c.fromHistory) }) === yes(c.expect));
   // A length as the time display shows it, the same rows `RuleCasesTest` runs against `formatTotal`.
   each('lengthTotal', (c) => rules.clockTotal(Number(c.seconds)) === c.expect);
+  // The number at the bar's end and the room it gets, the same rows `RuleCasesTest` runs (A58).
+  each('barLabel', (c) => {
+    const label = rules.barTotalText(Number(c.seconds), yes(c.approximate));
+    return label === c.label && rules.fitsBarLabel(label) === yes(c.fits);
+  });
   // When a now-playing line may scroll, the same rows `RuleCasesTest` runs against `DockMarquee`.
   each('lineScrolls', (c) =>
     rules.lineScrolls({ animationsOn: yes(c.animationsOn), isStatus: yes(c.isStatus) }) === yes(c.expect));
@@ -2539,6 +2695,11 @@ if (window.__api) {
     check(pass && pass.duration === 4000 && pass.pauseShare === 0.5,
       'a line 60 px too long: two seconds still, two seconds moving at 30 px a second');
   }
+  // How far the seek bar runs, the same rows `RuleCasesTest` runs against `BarLength`.
+  each('barLength', (c) => {
+    const bar = rules.barLength({ duration: Number(c.duration), endsAt: c.endsAt === '-' ? 0 : Number(c.endsAt), fallback: Number(c.fallback) });
+    return Math.abs(bar.seconds - Number(c.seconds)) < 0.001 && bar.approximate === yes(c.approximate);
+  });
   // What a search matches, the same rows `RuleCasesTest` runs against `SearchTerms`.
   each('searchMatch', (c) =>
     rules.searchMatches(c.query, c.title, c.author === '-' ? '' : c.author) === (c.expect === 'yes'));
@@ -2784,6 +2945,93 @@ if (window.__api) {
   await store.clear('modland:');
 }
 
+// --- a tune whose length nobody knows still has a bar (variant (a), 2026-09-22) ---------------------
+if (window.__api) {
+  console.log('\na bar to where playback stops:');
+  const api = window.__api;
+  api.setQueue(['https://modland.com/pub/modules/Nintendo%20Sound%20Format/3-108/new%20rally-x.nsf']);
+  api.onWorklet({ type: 'opened', duration: 0, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+                  describe: 'title\tnew rally-x\nseekable\t1\nends_at\t158', current: 0 });
+  api.onWorklet({ type: 'position', seconds: 10 });
+  check(!$('seek').disabled && $('remaining').textContent === '~2:38',
+    'a looping NSF can be seeked, over a bar that ends where playback will stop, marked ~',
+    `${$('seek').disabled ? 'disabled' : 'enabled'}, "${$('remaining').textContent}"`);
+  api.onWorklet({ type: 'opened', duration: 30.5, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+                  describe: 'title\tjingle\nseekable\t1', current: 0 });
+  api.onWorklet({ type: 'position', seconds: 10 });
+  check($('remaining').textContent === '0:30', 'and a measured one is a length, with no ~', $('remaining').textContent);
+}
+
+// --- a seek that takes a while (Q11) --------------------------------------------------------------
+//
+// A SID seeks by running its machine there. Until the worklet says it has landed the bar stays where
+// it was let go, a stale position cannot pull it back, and after 300 ms a spinner stands where the
+// elapsed time was -- the phone's SeekProgress.
+if (window.__api) {
+  console.log('\na seek that takes a while:');
+  const api = window.__api;
+  api.setQueue(['https://modland.com/pub/modules/Protracker/4-Mat/seek.mod']);
+  api.onWorklet({ type: 'opened', duration: 240, subsongs: 1, canSeek: true, preferredRate: 44100, rate: 44100,
+                  describe: 'title\tseek test\nseekable\t1', current: 0 });
+  await new Promise((r) => setTimeout(r, 30));
+  $('seek').value = 750;
+  $('seek').onchange();
+  api.onWorklet({ type: 'position', seconds: 12 });
+  check($('seek').value === '750' && !$('elapsed').classList.contains('seeking'),
+    'the bar stays where it was let go, and a quick seek shows no spinner');
+  await new Promise((r) => setTimeout(r, 350));
+  check($('elapsed').classList.contains('seeking') && $('elapsed').getAttribute('aria-label') === 'Seeking',
+    'a seek still running after 300 ms shows a spinner where the time was, named for a screen reader');
+  api.onWorklet({ type: 'seeked', seconds: 180 });
+  check(!$('elapsed').classList.contains('seeking') && $('elapsed').textContent === '3:00',
+    'and when it lands the time comes back, at the new place');
+  api.onWorklet({ type: 'position', seconds: 181 });
+  check($('elapsed').textContent === '3:01', 'and positions are followed again');
+
+  // Ten clicks while a seek runs: only the last is sent, and only once the running one lands.
+  // A seek of its own first, so one is running when the ten clicks arrive.
+  $('seek').value = 50;
+  $('seek').onchange();
+  const before = window.__toWorklet.length;
+  for (const value of [100, 200, 300, 400, 500, 600, 700, 800, 900, 950]) {
+    $('seek').value = value;
+    $('seek').onchange();
+  }
+  const posted = () => window.__toWorklet.slice(before).filter((m) => m?.type === 'seek').map((m) => m.seconds);
+  check(posted().length === 0, 'ten clicks while a seek runs send nothing yet', JSON.stringify(posted()));
+  api.onWorklet({ type: 'seeked', seconds: 12 });
+  check(posted().length === 1 && Math.abs(posted()[0] - 228) < 0.01,
+    'and when it lands, only the last place asked for is sent', JSON.stringify(posted()));
+  api.onWorklet({ type: 'seeked', seconds: 228 });
+  check($('elapsed').textContent === '3:48', 'which is where it ends up');
+}
+
+// --- the page's source, and what pairing sends (2026-09-22) -------------------------------------
+if (window.__api) {
+  console.log('\nsource and pairing notices:');
+  const settle = () => new Promise((r) => setTimeout(r, 60));
+  const source = $('open-source');
+  check(source?.querySelector('svg') && source.textContent.trim() === 'Source code'
+        && source.href.startsWith('https://github.com/przunk/protracktor'),
+    'Settings offers the source code, icon and word, linked to the repository');
+  const sending = $('sendingnote').textContent.replace(/\s+/g, ' ');
+  check(sending.includes('pass through the server that hosts this page') && sending.includes('nothing is written to disk'),
+    'and says what passes through the page\'s server when a phone sends');
+  check($('pairprivacy').textContent.replace(/\s+/g, ' ').includes('Pair only with a page you')
+        && $('pair-privacy').querySelector('svg') && $('pair-privacy').textContent.trim() === 'Privacy policy',
+    'the pairing code says the same beside it, with the privacy policy one press away');
+  $('pair-privacy').click();
+  await settle();
+  check(!$('legal').hidden && $('legaltitle').textContent === 'Privacy policy', 'which opens the policy');
+  window.__api.showPanel(null);
+  window.__staticHost = true;
+  await window.__api.pair();
+  check($('pairnote').textContent.startsWith('This page is served without its pairing service')
+        && !$('qr').children.length,
+    'on a static host with no pairing service, the pairing sheet says so instead of showing a dead code');
+  window.__staticHost = false;
+}
+
 // --- Browse as the phone draws it (W8) -------------------------------------------------------------
 //
 // The root's four rows, the catalogues with their held marks and one button each, the grouped Song
@@ -2843,6 +3091,18 @@ if (window.__api) {
   await settle();
   check(named('Modland')?.querySelector('.bbusy .spinner') && named('ASMA') && named('Song metadata'),
     'a download shows a spinner in its own row, and the other rows stay where they are');
+  // **Nothing jumps** (the owner, 2026-09-23): the spinner says nothing on screen -- a word under it
+  // made it twice the button's width -- and a redraw of the catalogues swaps the list in one go, so
+  // at no moment is it empty. Asked synchronously, before any read the redraw waits for.
+  const busy = named('Modland')?.querySelector('.bbusy');
+  check(busy && busy.textContent.trim() === '' && busy.getAttribute('aria-label'),
+    'the spinner stands in the button\'s place with no word beside it, and says it to a screen reader');
+  const before = $('browselist').children.length;
+  const note = $('browsenote').textContent;
+  const redraw = api.renderBrowse();
+  check(before > 0 && $('browselist').children.length === before && $('browsenote').textContent === note,
+    'a redraw of the catalogues never empties the list or the note on the way');
+  await redraw;
   holdTrackFetch = false;
   api.showPanel(null);
 }

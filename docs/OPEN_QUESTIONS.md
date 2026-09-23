@@ -154,7 +154,19 @@ start at speed, which takes real time for a position deep into a track.
 
 Recommendation: **(c)**. Threshold to be measured once something plays.
 
-## Q11 — Should the seek bar move a SID? — **to talk through, raised 2026-09-21**
+## Q11 — ~~Should the seek bar move a SID?~~ — **ANSWERED 2026-09-22: yes, SID and SNDH; merged, confirmed on the phone**
+
+The owner asked for it. Measured first, in the browser's engine on the host: a SID renders about
+41× faster than it plays, an SNDH about 265×. So a seek renders silently to the place --
+`seekByRendering`, forward from where it is, backward from the start -- and on the phone that
+happens on the control thread holding the decoder's lock while the callback plays silence, as UADE's
+seek already does. Commando to 180 s: 2.8 s; Beastbusters: 0.1–0.2 s. One seek renders at most
+twenty minutes of music. On the owner's phone (Normal People.sid, Commando, Little-Me-Odyssey.sndh)
+it works; a spinner replaces the elapsed time once a seek takes 300 ms, the bar stays where it was
+let go, and the latest of several quick clicks is the only seek that runs to its end.
+
+The question as first written:
+
 
 *The owner: "talk through whether the playback slider can be dragged for SID files".*
 

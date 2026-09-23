@@ -15,6 +15,35 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
+
+**Decided 2026-09-23 (the owner):** keep room for the tilde always, and the same room on both
+sides. **Built:** both times beside the bar take the width of `~00:00` in their own font, measured
+(`rememberTextMeasurer` on the phone, a hidden probe on the page), with tabular figures; the total
+sits against the bar's end, so its digits stay put and a `~` appears in space already kept for it.
+A minimum, not a width: past 99:59 a time still shows whole. The rule and its cases are
+`BAR_LABEL_TEMPLATE`, `barTotalText` and `fitsBarLabel`, shared through `docs/rules/queue-cases.tsv`
+`[barLabel]`. Now Playing uses the same labels, though its bar sits above them and never moved.
+
+**Checked:** the shared cases on both sides; shortening the template to `~0:00` fails both.
+**Not checked:** how it looks -- the page's checks run without layout, and the phone is the
+owner's.
+
+The problem as noted:
+
+*The owner: "think through how `~2:38` is written, because the tilde is there one time and not the
+next, so the bar has a different length."*
+
+The total beside the seek bar is `~2:38` for a tune whose length is unknown (where playback will
+stop, `BarLength`) and `0:30` once a length is known or for a tune that has one. The label's width
+changes with the tilde, and the bar, which takes the rest of the row, changes length with it --
+between tunes, and within one tune when a measured length replaces the approximation.
+
+To decide before building, not decided: a fixed width for the total (room for the tilde always),
+the approximation said another way (a different colour or style of the number, an icon, the bar's
+end drawn differently), or the tilde moved elsewhere. Whatever is chosen applies to the dock, Now
+Playing and the page alike.
+
 ## A57. The page catches up with the APK — **planned 2026-09-22; DONE the same day, W1–W11 merged; checked by the owner in a browser**
 
 Everything the app gained since the page was last brought level (2026-09-16/17), sorted: what the
@@ -45,7 +74,34 @@ under the finger that tapped it and the list reorders while it is being read.
   **no `play_count`**. History then says what was played elsewhere, and does not drift under the
   person reading it. And while History is open, it is not refreshed at all: it shows what it
   showed when it was opened.
-## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13**
+## A55. A folder's tracks cached ahead, three at a time — **planned 2026-09-21, round 13; D4–D6 decided 2026-09-23 (a, a, a), a prototype; BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone after the permission fix**
+
+**Built to the plan.** Opening a Modland author's folder -- by walking to it or by "more from this
+author" -- marks the rows already on the phone and, when *Settings → Online catalogues → Cache
+folders ahead* allows it (Wi-Fi only by default, Always, Off; an unmetered network counts as
+Wi-Fi), fetches the rest three at a time in the folder's order, stopping before the folder passes
+100 MB. A row being fetched shows a spinner in the checkbox's slot; a row on the phone shows the
+downloaded mark, with "On this phone" for a screen reader. Leaving the folder or changing the setting
+cancels what has not started; a download already running finishes into the cache, because every
+download of an address is one shared download (`SharedFetches`), which is also why a tap on a row
+being fetched waits for it rather than fetching it twice. A failure is not retried. The privacy
+policy's Modland line says so in both languages; `data-safety.md` re-read, no answer changes.
+
+**The owner's first look, 2026-09-23: Wi-Fi only fetched nothing, on any network; Always worked.**
+Mechanism: the app did not declare `ACCESS_NETWORK_STATE`, so asking whether the network is
+metered threw, and the code took that as "metered" without a word -- Wi-Fi only meant never.
+Always does not ask, which is why it worked. Fixed in the same commit: the permission (normal,
+granted at install), a log line if the question ever fails again, and a test that the manifest
+declares it. And at the owner's word the row's mark is **a phone with a tick** (`PlayerIcons.OnPhone`),
+not the catalogue's tick in a disc.
+
+**Checked:** the plan, the setting's network rule and the three-at-a-time runner as JVM tests
+(`FolderPrefetchTest`, `SharedFetchesTest`), each broken once to see it fail. **Not checked:** the
+controller's wiring (which folder, the spinner, the mark, leaving) -- that is the phone's, and the
+checks for it are under "What the owner checks" in `docs/PLAN_ROUND_13.md`.
+
+The plan as written:
+
 
 Opening a Modland author's folder fetches its tracks into the cache one after another, three at a
 time, with a spinner in each row's left slot while it runs. When it may run (Wi-Fi only by
@@ -77,7 +133,17 @@ are mostly the library's, read out of files. Worst-case search on the full index
 for query and stored text, a sparse folded column (the next free database version after A47's 18), the same rule in the
 browser. D2 in `docs/PLAN_ROUND_13.md`.
 
-## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18**
+## A51. One extension, two formats: a refusal that explains itself — **noted 2026-09-18; BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
+
+**Built:** a Modland file that this build claims and a decoder still refuses now ends its message
+with *Modland lists it as Beaver Sweeper.* (PL: *Modland zalicza ten plik do formatu …*), on the
+phone and on the page. The directory is read from the file's address rather than the index
+(`OpenFailure.modlandFormatOf`, the page's `modlandFormatOf`), so both sides use one rule, held by
+`docs/rules/queue-cases.tsv` `[refusalFormat]`; ASMA is left out, its first folder being a grouping.
+Both refusals about a claimed file get it -- with the decoder's reason and without one. **Checked:**
+the shared cases on both sides, the page's refusal text, and that a rule returning nothing fails
+all of them. **Not checked:** `nokia.gtk` refused on the phone.
+
 
 **Both halves are working as designed, and the answer is a measurement.**
 
@@ -575,7 +641,88 @@ the heading names the author, the heading's button offers the dice rather than t
 Back out of the author's folder resumes it. Eleven page checks walk the whole journey, including a
 playlist chosen mid-digression, which ends both.
 
-## A40. Protracktor links open in the app — **parked 2026-09-14, waiting for a fixed address**
+## A40. Protracktor links open in the app — **parked 2026-09-14; the app's side BUILT and merged 2026-09-23, confirmed on the phone with the link added by hand; verified 2026-09-23**
+
+**Verified, 2026-09-23.** The owner published `https://przunk.github.io/.well-known/assetlinks.json`
+with the Play app-signing fingerprint (`E2:02:EF:…:A9:9D`, taken from Google Play by the owner,
+confirmed 2026-09-23) and the hand-over APKs' (`F9:7A:F5:…:E4:7E`);
+Google's Digital Asset Links API reads both with no error, and on the owner's phone *Open by default*
+shows `przunk.github.io` as **verified** (no longer a box to untick) and a link from the page opens
+the app. A link to a page on another host -- the Pi behind a Cloudflare tunnel -- still opens the
+browser, as intended: only the permanent address is claimed.
+
+A first version of the file kept the placeholder beside a real fingerprint; the API reported it as
+`ERROR_CODE_MALFORMED_CONTENT`, so a malformed entry is worth checking for before trusting the file:
+`https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://przunk.github.io&relation=delegate_permission/common.handle_all_urls`.
+
+**Unparked 2026-09-23**: the page has a permanent address, `https://przunk.github.io/Protracktor/`.
+
+**Built (the app's side).** A link to that address -- a tune shared from the page (`#play:…`) or a
+queue (`#…`) -- opens in the app: `QueueLink.open` reads the fragment back (the inverse of `pack`;
+Modland rows become the ids the app's own index gives them, ASMA's keep their web address so they
+play whether or not ASMA is on the phone), and `openLink` plays the tunes **the way a search's
+results play: not filed, next and previous walking them**. A queue link is treated the same way; on
+the page it replaces "From the phone", which the app has no counterpart of. A link that cannot be
+read, or names nothing playable, says so. The manifest claims `https://przunk.github.io/Protracktor/…`
+with `autoVerify`; the lowercase path is not claimed, because it is a 404 on GitHub Pages.
+
+**Checked:** JVM tests -- a link made here read back to the same ids and titles, a queue link
+counting the files that stayed on a phone, a link deflated the way a browser does it, the address
+check, an unreadable link; the path check and the Modland id each broken once to see them fail.
+**Not checked:** a link tapped on the phone.
+
+**Why nothing happens yet, and what is the owner's.** Android opens an `https` link in an app only
+after checking `https://przunk.github.io/.well-known/assetlinks.json` -- **the root of the host**
+(developer.android.com, "Configure website associations", read 2026-09-23): served over HTTPS as
+`application/json`, with no redirect. The root of `przunk.github.io` is the owner's **user site**, a
+repository of its own named `przunk.github.io`; this project's `gh-pages` serves only
+`/Protracktor/` and cannot put a file there. Until that file exists and names this app's key, the
+link opens in the browser, unless the user turns links on by hand (*Settings → Apps → Protracktor →
+Open by default → Add link*).
+
+The file, ready but for one fingerprint:
+
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.przunk.protracktor",
+    "sha256_cert_fingerprints": [
+      "APP_SIGNING_KEY_SHA256_FROM_PLAY_CONSOLE",
+      "F9:7A:F5:0C:2D:86:9A:25:91:DD:82:D2:45:55:89:4A:2C:C9:59:27:AF:B6:C0:A1:FC:D4:BD:19:72:21:E4:7E"
+    ]
+  }
+}]
+```
+
+- **The first fingerprint is the app signing key's**, the one on users' phones under Play App
+  Signing, shown in Play Console under *App signing key certificate* → **SHA-256 certificate
+  fingerprint**. (**Not** under *Test and release → Setup → App signing*, where this entry first put
+  it: the owner did not find it there, 2026-09-23. Currently most likely *Test and release → App
+  integrity*; the owner found it, the exact place is not recorded.) (The same page offers a *Digital Asset Links
+  JSON* snippet with it filled in.) A locally computed fingerprint of the upload key is **not** it.
+- **The second is the certificate the hand-over APKs in `dist/` are signed with** (the Android debug
+  certificate, read from the APK with `apksigner verify --print-certs`, 2026-09-23), so a build
+  installed from a file verifies too. Remove it if only Play builds should.
+- Add the **upload key's** SHA-256 from the same Play Console page as a third, if release APKs signed
+  locally with the upload key are also installed by hand.
+
+The owner's steps, on GitHub (English as on screen):
+
+1. **New repository** → *Repository name* `przunk.github.io` → **Public** → **Create repository**.
+2. **Add file → Create new file** → name `.nojekyll`, empty → **Commit changes**. (Without it GitHub
+   Pages skips folders whose name starts with a dot.)
+3. **Add file → Create new file** → name `.well-known/assetlinks.json`, the JSON above with the
+   first fingerprint pasted → **Commit changes**.
+4. **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main`,
+   `/ (root)` → Save.**
+5. A minute later, `https://przunk.github.io/.well-known/assetlinks.json` shows the JSON.
+6. On the phone, after installing a build from this branch: *Settings → Apps → Protracktor → Open by
+   default* lists `przunk.github.io` as a verified link. Android verifies at install time, so a
+   build installed before step 5 has to be installed again.
+
+The problem as noted:
 
 A link to the page, opened on a phone that has the app, should open in the app.
 

@@ -39,6 +39,7 @@ import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.AppTheme
 import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
+import com.przunk.protracktor.player.CacheAhead
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.player.FallbackLength
@@ -82,6 +83,8 @@ fun SettingsScreen(
     onToggleAllSubsongs: () -> Unit,
     fallbackLengthSeconds: Int,
     onFallbackLengthChanged: (Int) -> Unit,
+    cacheAhead: CacheAhead,
+    onCacheAheadSelected: (CacheAhead) -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
@@ -245,6 +248,21 @@ fun SettingsScreen(
             }
         }
 
+        // **Fetching a folder ahead** (`docs/BACKLOG.md` A55). Its own group because it spends the
+        // user's data, and that is a question about the network, not about sound or looks.
+        item { HorizontalDivider(); Section(R.string.settings_online_section) }
+
+        item {
+            SettingChoice(
+                label = stringResource(R.string.settings_cache_ahead),
+                options = CacheAhead.entries,
+                selected = cacheAhead,
+                labelOf = { it.label() },
+                onSelect = onCacheAheadSelected,
+                supporting = stringResource(R.string.settings_cache_ahead_detail),
+            )
+        }
+
         // **Its own group, below the palette.** Under Playback it would sit between the language
         // picker and the appearance heading, which is where it least belongs: it is not a
         // preference about how music sounds, it is the address of a second copy of the app.
@@ -370,6 +388,15 @@ fun SettingsScreen(
 }
 
 private enum class Legal { NOTICES, PRIVACY }
+
+@Composable
+private fun CacheAhead.label(): String = stringResource(
+    when (this) {
+        CacheAhead.WIFI_ONLY -> R.string.settings_cache_ahead_wifi
+        CacheAhead.ALWAYS -> R.string.settings_cache_ahead_always
+        CacheAhead.OFF -> R.string.settings_cache_ahead_off
+    }
+)
 
 @Composable
 private fun AppTheme.label(): String = stringResource(

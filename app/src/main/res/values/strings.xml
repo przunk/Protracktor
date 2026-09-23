@@ -119,6 +119,7 @@
     <string name="open_failed_format">%1$s is a format Protracktor cannot play yet.</string>
     <string name="open_failed_file">%1$s would not open. Other files of this format do play, so it is this one.</string>
     <string name="open_failed_file_because">%1$s would not open: %2$s</string>
+    <string name="open_failed_modland_lists">%1$s Modland lists it as %2$s.</string>
     <string name="search_nothing_found">Nothing found for this search.</string>
     <string name="search_live_needs_query">The Mod Archive is searched live and needs something to search for.</string>
     <string name="search_not_yet">Search, or leave the field empty to find everything in scope.</string>
@@ -245,6 +246,7 @@
     <string name="notification_channel_playback">Playback</string>
 
     <string name="a11y_seek">Seek within the track</string>
+    <string name="a11y_seeking">Seeking</string>
     <string name="a11y_keep_track">Add this track to the playlist</string>
     <string name="a11y_preview">Play %1$s</string>
     <string name="a11y_play">Play</string>
@@ -296,6 +298,7 @@
     <string name="action_send_as_link">Send as a link instead</string>
     <string name="action_pair_again">Scan a different browser</string>
     <string name="scan_hint">Point this at the code on the player page.</string>
+    <string name="scan_privacy">What you send — titles, archive addresses and files from this phone — goes to the server that runs the page you scan. Send only to a page you, or somebody you trust, runs.</string>
     <string name="scan_refused">Without the camera the code cannot be read. You can still send the playlist as a link.</string>
     <string name="action_cancel">Cancel</string>
     <string name="paired_with">Paired with %1$s</string>
@@ -475,4 +478,22 @@
     <string name="notices_version_licence">%1$s · %2$s</string>
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_detail">What the app sends, and where</string>
+    <string name="settings_online_section">Online catalogues</string>
+    <string name="settings_cache_ahead">Cache folders ahead</string>
+    <string name="settings_cache_ahead_detail">When you open a Modland author\'s folder, its tracks are downloaded in the background, three at a time and up to 100 MB per folder, so they play without waiting.</string>
+    <string name="settings_cache_ahead_wifi">Wi-Fi only</string>
+    <string name="settings_cache_ahead_always">Always</string>
+    <string name="settings_cache_ahead_off">Off</string>
+    <string name="a11y_caching_ahead">Downloading in the background</string>
+    <string name="a11y_cached_here">On this phone</string>
+    <string name="notice_link_unreadable">This Protracktor link could not be read.</string>
+    <string name="notice_link_nothing_playable">This link names nothing this phone can play.</string>
+    <plurals name="notice_link_opened">
+        <item quantity="one">Opened a link: %1$,d tune.</item>
+        <item quantity="other">Opened a link: %1$,d tunes.</item>
+    </plurals>
+    <plurals name="notice_link_stayed">
+        <item quantity="one">%1$,d stayed on the phone that sent it.</item>
+        <item quantity="other">%1$,d stayed on the phone that sent them.</item>
+    </plurals>
 </resources>

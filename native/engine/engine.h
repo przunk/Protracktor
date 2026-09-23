@@ -16,6 +16,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -40,6 +41,14 @@ public:
 
     virtual bool canSeek() const = 0;
     virtual void seek(double seconds) = 0;
+
+    /**
+     * Asked, by a seek that takes time, whether it is still wanted (Q11). A SID or an SNDH seeks by
+     * running its machine to the place -- seconds on a long SID -- and a newer seek asked meanwhile
+     * makes the rest of this one pointless: the owner clicked ten times in a second and heard
+     * music ten seconds later. The host sets this before a seek; empty means "always wanted".
+     */
+    std::function<bool()> seekAbandoned;
     virtual void rewind() = 0;
     virtual double positionSeconds() const = 0;
     virtual double durationSeconds() const = 0;

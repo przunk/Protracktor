@@ -120,6 +120,24 @@ class RuleCasesTest {
     }
 
     @Test
+    fun `how far the seek bar runs agrees with the shared cases`() = each("barLength") { case ->
+        val bar = BarLength.of(
+            case.getValue("duration").toDouble(),
+            case.getValue("endsAt").takeIf { it != "-" }?.toDouble(),
+            case.getValue("fallback").toDouble(),
+        )
+        assertEquals(case.why(), case.getValue("seconds").toDouble(), bar.seconds, 0.001)
+        assertEquals(case.why(), case.bool("approximate"), bar.approximate)
+    }
+
+    @Test
+    fun `the number at the bar's end and its room agree with the shared cases`() = each("barLabel") { case ->
+        val label = com.przunk.protracktor.ui.barTotalText(case.getValue("seconds").toDouble(), case.bool("approximate"))
+        assertEquals(case.why(), case.getValue("label"), label)
+        assertEquals(case.why(), case.bool("fits"), com.przunk.protracktor.ui.fitsBarLabel(label))
+    }
+
+    @Test
     fun `what a search matches agrees with the shared cases`() = each("searchMatch") { case ->
         // The page decides the same thing in `rules.js`. Both sides split the query and look for
         // every word; the row that expects `no` for a run-on query is there on purpose.
@@ -212,6 +230,12 @@ class RuleCasesTest {
             "https://asma.atari.org/" + case.getValue("expect"),
             com.przunk.protracktor.net.Asma.fileUrlFor(case.getValue("path")),
         )
+    }
+
+    /** The format a refusal names (A51), from the file's address. */
+    @Test
+    fun `the format a refusal names agrees with the shared cases`() = each("refusalFormat") { case ->
+        assertEquals(case.why(), case.getValue("expect").takeIf { it != "-" }, OpenFailure.modlandFormatOf(case.getValue("url")))
     }
 
     private companion object {

@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.provider.OpenableColumns
 import android.text.format.DateUtils
 import com.przunk.protracktor.Appearance
+import android.net.ConnectivityManager
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueGroup
 import com.przunk.protracktor.data.CatalogueStore
@@ -63,6 +64,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,6 +95,13 @@ data class PlayerUiState(
     val metadata: Map<String, String> = emptyMap(),
     val positionSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0,
+    /**
+     * Where a seek under way is going, or null (`SeekProgress`). A SID seeks by running its machine
+     * there, for seconds; meanwhile the bar shows this, not where the engine still says it is.
+     */
+    val seekingTo: Double? = null,
+    /** The seek has run long enough to say so: the spinner in place of the elapsed time. */
+    val seekSlow: Boolean = false,
     /** Which tune inside the file is playing, counted from zero. */
     val subsong: Int = 0,
     /** How many tunes the file holds. One for a format that holds one. */
@@ -111,6 +123,8 @@ data class PlayerUiState(
      * statement from how long the tune is.
      */
     val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
+    /** When an opened folder's tracks are fetched ahead (A55, D4). */
+    val cacheAhead: CacheAhead = CacheAhead.DEFAULT,
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
@@ -196,7 +210,20 @@ data class PlayerUiState(
      * again from the start, so offering a slider there would be offering a control that cannot be
      * honoured (docs/ARCHITECTURE.md §5).
      */
-    val seekable: Boolean get() = metadata["seekable"] != "0" && durationSeconds > 0.0
+    /**
+     * How far the seek bar runs: the length, or where playback will stop when nothing knows the
+     * length (`BarLength`, the owner's variant (a)).
+     */
+    val bar: BarLength.Bar
+        get() = if (metadata.isEmpty()) {
+            // Not yet described: nothing is known, not even that the length is unknown. Without
+            // this the bar would flash the fallback for the moment a tune takes to open.
+            BarLength.Bar(0.0, approximate = false)
+        } else {
+            BarLength.of(durationSeconds, metadata["ends_at"]?.toDoubleOrNull(), fallbackLengthSeconds.toDouble())
+        }
+
+    val seekable: Boolean get() = metadata["seekable"] != "0" && current != null && bar.seconds > 0.0
 
     /**
      * The year the tune was released, or empty when nothing in the file says.
@@ -490,6 +517,11 @@ data class BrowseState(
 
     /** Whatever the current level lists, in the form the playlist takes. */
     val tracks: List<TrackRef> = emptyList(),
+
+    /** Rows of the open folder being fetched ahead right now: a spinner each (A55). */
+    val aheadFetching: Set<String> = emptySet(),
+    /** Rows of the open folder already on the phone: a mark each, whoever fetched them (A55, D5). */
+    val cachedHere: Set<String> = emptySet(),
 ) {
 
     /**
@@ -683,7 +715,7 @@ class PlaybackController private constructor(private val context: Context) {
         }, "protracktor-background")
     }.asCoroutineDispatcher()
 
-    private val _state = MutableStateFlow(PlayerUiState())
+    private val _state = MutableStateFlow(PlayerUiState(cacheAhead = Appearance.cacheAhead(context)))
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
 
     /**
@@ -875,6 +907,15 @@ class PlaybackController private constructor(private val context: Context) {
         // why this is the cheapest moment to do it.
         scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
 
+        // **An opened Modland folder fetches its tracks ahead** (A55). One place decides, from the
+        // folder on screen and the setting: a new folder, a left one, or a changed setting cancels
+        // the last run and starts the next, which is what makes "leaving stops the rest" true.
+        scope.launch {
+            combine(_browse.map(::aheadKeyOf), _state.map { it.cacheAhead }) { key, mode -> key to mode }
+                .distinctUntilChanged()
+                .collectLatest { (key, mode) -> fetchFolderAhead(key, mode) }
+        }
+
         // **What is on this phone, before anybody opens Browse.** The empty playlist has to
         // choose between offering Browse and offering the download sheet, and it cannot ask a
         // screen that has never been opened. Two small reads -- the `catalogues` table is one row
@@ -964,7 +1005,9 @@ class PlaybackController private constructor(private val context: Context) {
                 val before = _state.value
                 _state.update {
                     it.copy(
-                        positionSeconds = position,
+                        // Not while a seek is under way: the engine publishes the new place only
+                        // when it is there, and until then this would pull the bar back (Q11).
+                        positionSeconds = SeekProgress.shownPosition(position, it.seekingTo),
                         // Picked up here because a subsong switch is applied on the audio
                         // thread: the new tune's length does not exist until it has been.
                         durationSeconds = if (it.durationSeconds <= 0.0) {
@@ -2269,6 +2312,7 @@ class PlaybackController private constructor(private val context: Context) {
                 remoteFiles.clearCache()
                 before - remoteFiles.cacheBytes()
             }
+            _browse.update { it.copy(cachedHere = emptySet()) }
             _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }
@@ -2630,6 +2674,33 @@ class PlaybackController private constructor(private val context: Context) {
                 external = true,
             )
         }
+    }
+
+    /**
+     * A link to the page at its permanent address, opened here instead (`docs/BACKLOG.md` A40).
+     *
+     * **Played, not filed**, the way the page plays a tune sent to it: the tunes become what next and
+     * previous walk, as a search's results do, and no playlist is written. A queue link is treated
+     * the same way -- on the page it replaces "From the phone", which the app has no counterpart of,
+     * and a list somebody sent is still something to hear before deciding to keep.
+     *
+     * **Never silent**: a link that cannot be read, or that holds nothing playable, says so.
+     */
+    fun openLink(url: String) {
+        val opened = QueueLink.open(url)
+        if (opened == null || opened.tracks.isEmpty()) {
+            _state.update {
+                it.copy(message = Message(context.getString(
+                    if (opened == null) R.string.notice_link_unreadable else R.string.notice_link_nothing_playable,
+                )))
+            }
+            return
+        }
+        playFromResults(opened.tracks, 0)
+        val count = opened.tracks.size
+        val said = context.resources.getQuantityString(R.plurals.notice_link_opened, count, count) +
+            if (opened.stayed > 0) " " + context.resources.getQuantityString(R.plurals.notice_link_stayed, opened.stayed, opened.stayed) else ""
+        _state.update { it.copy(message = Message(said)) }
     }
 
     /**
@@ -3513,10 +3584,16 @@ class PlaybackController private constructor(private val context: Context) {
                     R.string.open_failed_format,
                     OpenFailure.formatName(catalogueFormatOf(ref), name),
                 )
-            OpenFailure.Kind.FILE_REFUSED_WITH_REASON ->
-                context.getString(R.string.open_failed_file_because, ref.title, reason)
-            OpenFailure.Kind.FILE_REFUSED ->
-                context.getString(R.string.open_failed_file, ref.title)
+            OpenFailure.Kind.FILE_REFUSED_WITH_REASON -> {
+                val refused = context.getString(R.string.open_failed_file_because, ref.title, reason)
+                OpenFailure.modlandFormatOf(ref.id)
+                    ?.let { context.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
+            }
+            OpenFailure.Kind.FILE_REFUSED -> {
+                val refused = context.getString(R.string.open_failed_file, ref.title)
+                OpenFailure.modlandFormatOf(ref.id)
+                    ?.let { context.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
+            }
         }
     }
 
@@ -3913,9 +3990,26 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun seekTo(seconds: Double) {
         val open = track ?: return
-        _state.update { it.copy(positionSeconds = seconds) }
-        scope.launch { withContext(Dispatchers.IO) { runCatching { open.seekTo(seconds) } } }
+        val generation = ++seekGeneration
+        _state.update { it.copy(positionSeconds = seconds, seekingTo = seconds, seekSlow = false) }
+        scope.launch {
+            // The spinner only for a seek that takes long enough to be seen waiting (`SeekProgress`).
+            val slow = launch {
+                delay(SeekProgress.SPINNER_AFTER_MS)
+                if (generation == seekGeneration) _state.update { it.copy(seekSlow = true) }
+            }
+            withContext(Dispatchers.IO) { runCatching { open.seekTo(seconds) } }
+            slow.cancel()
+            // Only the latest seek, on the tune it was made on, may say it has finished: a second
+            // drag, or another tune, has already taken the bar over.
+            if (generation == seekGeneration && track === open) {
+                _state.update { it.copy(seekingTo = null, seekSlow = false, positionSeconds = open.positionSeconds()) }
+            }
+        }
     }
+
+    /** Which seek is the latest; an earlier one finishing must not end a later one's spinner. */
+    private var seekGeneration = 0
 
     /**
      * Plays a tune inside the current file.
@@ -3969,6 +4063,11 @@ class PlaybackController private constructor(private val context: Context) {
      * the new limit ends within the second, which is the behaviour somebody dragging the slider
      * down is asking for.
      */
+    fun setCacheAhead(mode: CacheAhead) {
+        if (!Appearance.selectCacheAhead(context, mode)) return
+        _state.update { it.copy(cacheAhead = mode) }
+    }
+
     fun setFallbackLength(seconds: Int) {
         val wanted = FallbackLength.snap(seconds)
         if (wanted == _state.value.fallbackLengthSeconds) return
@@ -4222,6 +4321,9 @@ class PlaybackController private constructor(private val context: Context) {
     private fun load(ref: TrackRef) {
 
         openJob?.cancel()
+        // A seek belongs to the tune it was made on; a new tune ends it.
+        seekGeneration++
+        _state.update { it.copy(seekingTo = null, seekSlow = false) }
         openJob = scope.launch {
             track?.close()
             track = null
@@ -4489,6 +4591,79 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
+    /** A tapped track that arrived is on the phone too; its row says so if it is on screen (D5). */
+    private fun markCachedHere(id: String) = _browse.update { browse ->
+        if (id in browse.cachedHere || browse.tracks.none { it.id == id }) browse
+        else browse.copy(cachedHere = browse.cachedHere + id)
+    }
+
+    /** The folder fetching ahead is about: a Modland author's folder with its rows, or nothing. */
+    private data class AheadKey(val tracks: List<TrackRef>)
+
+    private fun aheadKeyOf(browse: BrowseState): AheadKey? {
+        // Only a folder, only when its rows are in, and only Modland: ASMA is whole on the phone, an
+        // UnExoticA folder is one archive fetched when its first tune plays, and The Mod Archive has
+        // no folders (`docs/PLAN_ROUND_13.md` A55).
+        if (browse.openAuthor == null || browse.loading || browse.tracks.isEmpty()) return null
+        if (browse.openCatalogue?.id != Modland.id) return null
+        return AheadKey(browse.tracks)
+    }
+
+    /**
+     * Marks what the open folder already holds, then, if the setting and the network allow it,
+     * fetches the rest [FolderPrefetch.PARALLEL] at a time. Cancelled by leaving the folder.
+     */
+    private suspend fun fetchFolderAhead(key: AheadKey?, mode: CacheAhead) {
+        if (key == null) {
+            _browse.update { it.copy(aheadFetching = emptySet(), cachedHere = emptySet()) }
+            return
+        }
+        val ids = key.tracks.map { it.id }
+        val cached = withContext(Dispatchers.IO) { ids.filterTo(HashSet()) { remoteFiles.isCached(it) } }
+        _browse.update { it.copy(cachedHere = cached, aheadFetching = emptySet()) }
+        if (!mode.allows(metered = networkIsMetered())) return
+
+        val wanted = FolderPrefetch.plan(
+            key.tracks.map { FolderPrefetch.Candidate(it.id, it.sizeBytes) },
+            cached,
+        )
+        try {
+            FolderPrefetch.run(
+                urls = wanted,
+                fetch = { url -> remoteFiles.fetch(url) != null },
+                // Asked before each start, so walking off Wi-Fi stops what has not begun.
+                mayContinue = { mode.allows(metered = networkIsMetered()) },
+                onStart = { url -> _browse.update { it.copy(aheadFetching = it.aheadFetching + url) } },
+                onDone = { url, ok ->
+                    _browse.update {
+                        it.copy(
+                            aheadFetching = it.aheadFetching - url,
+                            cachedHere = if (ok) it.cachedHere + url else it.cachedHere,
+                        )
+                    }
+                },
+            )
+        } finally {
+            _browse.update { it.copy(aheadFetching = emptySet()) }
+        }
+    }
+
+    /**
+     * Whether the network is one the user may pay for by the byte. Asked of the system, which counts
+     * a phone's hotspot as metered too -- the right answer for "Wi-Fi only", which means "not on my
+     * data".
+     */
+    private fun networkIsMetered(): Boolean =
+        runCatching {
+            (context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).isActiveNetworkMetered
+        }.getOrElse { error ->
+            // Taken as metered, which spends nothing -- but **said**, because a swallowed exception here
+            // was the whole of the first build's defect: without ACCESS_NETWORK_STATE this threw every
+            // time, and "Wi-Fi only" quietly meant "never".
+            android.util.Log.w("Protracktor", "cannot tell whether the network is metered", error)
+            true
+        }
+
     /** Reads a track's bytes, from wherever it lives. */
     private suspend fun loadBytes(ref: TrackRef): ByteArray? =
         if (UnExoticA.ENABLED && UnExoticA.pathFrom(ref.id) != null) {
@@ -4502,7 +4677,7 @@ class PlaybackController private constructor(private val context: Context) {
             // already on disk. No network, which is why an archive catalogue is worth its download.
             remoteFiles.readFromArchive(ref.id.substringBefore("://"), ref.id.substringAfter("://"))
         } else if (ref.id.startsWith("http")) {
-            remoteFiles.fetch(ref.id)
+            remoteFiles.fetch(ref.id)?.also { markCachedHere(ref.id) }
         } else {
             withContext(Dispatchers.IO) {
                 runCatching {

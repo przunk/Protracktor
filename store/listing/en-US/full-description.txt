@@ -8,13 +8,14 @@ Supported families include:
 • Atari ST YM and many SNDH files
 • Atari 8-bit SAP and related tracker formats
 • Commodore 64 SID, with subsong lengths from the HVSC database
-• Amiga formats including AHX and HVL
+• Amiga: AHX and HVL, and custom formats such as TFMX, Jochen Hippel, David Whittaker, Future Composer and Sonic Arranger through the UADE emulator, whose replay routines are downloaded on request
 • console and 8-bit computer formats including NSF, GBS, SPC, VGM, HES, AY and KSS
 
 Online archives you can browse:
 • Modland, indexed for offline browsing
 • ASMA, the Atari 8-bit collection
 • The Mod Archive, searched live
+• UnExoticA, Amiga game soundtracks
 
 Built for listening:
 • multiple named playlists, with favourites
@@ -23,12 +24,14 @@ Built for listening:
 • Random discovery — across everything, one platform, or your favourites — and a browse-the-author digression you can return from
 • every tune inside a file, for formats that hold more than one
 • instrument and sample names, where the author left something in them
-• play history and search
-• share a file, a catalogue link, or a link that plays the tune in a browser
+• play history, and search that ignores accents — michal finds Michał
+• song metadata on request: author, album, publisher and year for tunes whose files carry none, and lengths for Amiga tunes
+• titles written on an Amiga, a DOS PC or a C64 shown with their own letters
+• share a file or a catalogue link, and, with the optional web player you can run yourself, a link that plays the tune in a browser
 • Polish and English interface
 
 Protracktor has no ads, accounts, analytics or crash-reporting SDKs. Local library details and playlists stay on your device. Online catalogue searches and downloads contact the selected archive; see the privacy policy for details.
 
 No music is bundled with the app. Online content is provided by independent archives and remains subject to its authors' and publishers' terms. Protracktor is not affiliated with the platform manufacturers or catalogue operators named in compatibility descriptions.
 
-Protracktor is free software licensed under GPL-3.0-or-later. Source code and third-party notices: https://github.com/przunk/protracktor
+Protracktor is free software licensed under GPL-3.0-or-later. The open-source licences of every component and the privacy policy can be read in the app. Source code: https://github.com/przunk/protracktor

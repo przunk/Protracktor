@@ -8,8 +8,14 @@
   **The colours are sampled from the app, not guessed.** A phone running dynamic colour does not
   show the Material 3 baseline at all, so the scheme below was read out of screenshots pixel by
   pixel — `docs/reference/app-colours.json` records where each one was taken from. A browser cannot
-  read a wallpaper, so every reader sees that one scheme; that is the honest cost of looking like
-  the app rather than like a generic Material page.
+  read a wallpaper, so every reader of the dark theme sees that one scheme; that is the honest cost
+  of looking like the app rather than like a generic Material page. The light theme (W7) is the
+  app's own light fallback, Material's baseline (`docs/reference/material3-light.json`): there is no
+  light sample of the owner's scheme to take.
+
+  The page speaks English or Polish (W6, `i18n.js`). The English here is also the key its Polish is
+  found by, so a text changed here needs its entry in `i18n-pl.js` changed with it -- the page
+  checks fail until it has one.
 
   The structure follows the app screen for screen: a top bar of labelled actions, a list of rows that
   are index-title-subtitle, and a dock that is a seek row, a now-playing card and the transport.
@@ -17,6 +23,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+  // A theme or language chosen in Settings, applied before the first frame (W6, W7). Only a choice
+  // is applied here; following the system is CSS's and the language module's job. Wrapped, because
+  // storage can throw in a private window, and then the system decides.
+  try {
+    var chosen = localStorage.getItem('protracktor.theme');
+    if (chosen === 'light' || chosen === 'dark') document.documentElement.dataset.theme = chosen;
+  } catch (e) { /* the system decides */ }
+</script>
 <!-- No pinch to zoom: a player laid out as an app, not a document to magnify. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Protracktor</title>
@@ -42,6 +57,37 @@
     --shape-m: 12px;
     --shape-l: 16px;
     --shape-xl: 28px;
+  }
+  /*
+   * The light theme (docs/PLAN_WEB_PARITY.md W7): Material's baseline light scheme, which is what the
+   * app shows in light mode with dynamic colour off -- `docs/reference/material3-light.json`, read
+   * out of the library like the dark reference. There is no light sample of the owner's wallpaper
+   * scheme, so light follows the app's own fallback.
+   *
+   * **The system decides unless Settings → Theme has**, and CSS does the deciding: `light-dark()`
+   * picks by `color-scheme`, which follows the system until `data-theme` pins it. So the first frame
+   * is right without waiting for a script. A browser without `light-dark()` keeps the dark tokens
+   * above rather than losing its colours -- a custom property that fails at computed-value time
+   * would not fall back to the earlier declaration, it would become nothing.
+   */
+  @supports (color: light-dark(#000, #fff)) {
+    :root {
+      color-scheme: dark light;
+      --bg: light-dark(#FEF7FF, #180523);
+      --surface-container: light-dark(#F3EDF7, #2D133C);
+      --secondary-container: light-dark(#E8DEF8, #622B80);
+      --on-secondary-container: light-dark(#1D192B, #F5DDFD);
+      --primary: light-dark(#6750A4, #EE83ED);
+      --on-primary: light-dark(#FFFFFF, #3B0B3A);
+      --primary-container: light-dark(#EADDFF, #E9C1FB);
+      --on-surface: light-dark(#1D1B20, #F5DDFD);
+      --on-surface-variant: light-dark(#49454F, #BCA0C7);
+      --surface-variant: light-dark(#E7E0EC, #3F274C);
+      --outline: light-dark(#79747E, #8E4B92);
+      --error: light-dark(#B3261E, #FF9B9B);
+    }
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
   }
   /*
    * The Material 3 type scale, at the roles the app actually asks for.
@@ -560,8 +606,9 @@
                      padding: 10px; border-radius: 50%; flex: none; display: flex; }
   #browselist .bdl:hover { background: color-mix(in srgb, var(--on-surface) 12%, transparent); }
   #browselist .bdl svg { width: 24px; height: 24px; fill: currentColor; }
-  #browselist .bbusy { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none;
-                       width: 84px; color: var(--on-surface-variant); font-size: var(--label-small, 11px); }
+  /* Exactly the download button's box (10 + 24 + 10), so nothing in the row moves when it swaps. */
+  #browselist .bbusy { display: flex; align-items: center; justify-content: center; flex: none;
+                       width: 44px; height: 44px; }
   #browselist .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface-variant);
                          border-top-color: var(--primary); animation: spin 0.9s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -606,6 +653,7 @@
   .outlined { flex: 1 1 14em; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
               background: none; color: var(--primary); border: 1px solid var(--outline); border-radius: var(--shape-xl);
               padding: 9px 12px; font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  a.outlined { text-decoration: none; box-sizing: border-box; }
   .outlined:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
   .outlined svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
   .sheet .row { display: flex; gap: 10px; justify-content: flex-end; }
@@ -614,6 +662,15 @@
     padding: 10px 18px; font: inherit; border-radius: var(--shape-xl); cursor: pointer;
   }
   .legalrows { margin-top: 16px; }
+  /* Both times keep the same room (holdBarLabels, A58); the total sits against the bar's end, so its
+     digits stay put and a ~ appears in space already kept for it. */
+  #elapsed, #remaining { flex-shrink: 0; white-space: nowrap; }
+  #remaining { text-align: end; }
+  /* A seek that takes a while (Q11): a small spinner where the elapsed time was, the same width. */
+  #elapsed.seeking { color: transparent; position: relative; }
+  #elapsed.seeking::after { content: ''; position: absolute; left: 0; top: 50%; width: 12px; height: 12px;
+                            margin-top: -8px; border-radius: 50%; border: 2px solid var(--surface-variant);
+                            border-top-color: var(--primary); animation: spin 0.9s linear infinite; }
   /* The licence texts are other people's, formatted by them: kept as written, in a face that keeps
      their columns, and wrapped so a long line does not push the sheet sideways. */
   .legalbody { max-height: 70vh; overflow-y: auto; text-align: left; }
@@ -659,6 +716,10 @@
     .setting { margin: 18px 0 4px; }
     .setting > label { display: block; font-weight: 600; margin-bottom: 4px; }
     .setting > output { display: block; margin: 10px 0 2px; font-variant-numeric: tabular-nums; }
+    .setting.choice { border: 0; padding: 0; min-width: 0; }
+    .setting.choice > legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
+    .setting.choice > label { display: inline-flex; align-items: center; gap: 6px; margin: 6px 16px 0 0; min-height: 32px; }
+    .setting.choice input { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; }
     .setting > input[type=range] { width: 100%; }
 </style>
 </head>
@@ -842,7 +903,7 @@
     <div class="statusline error" id="error"></div>
 
     <div class="seekrow">
-      <span id="elapsed">0:00</span>
+      <span id="elapsed" aria-live="off">0:00</span>
       <input type="range" id="seek" min="0" max="1000" value="0" disabled aria-label="Position">
       <span id="remaining">0:00</span>
     </div>
@@ -950,6 +1011,24 @@
       <dl id="settingsfields"></dl>
 
       <!--
+        The app's two choices (docs/PLAN_WEB_PARITY.md W6, W7), in the app's words. A new language
+        reloads the page; a new theme does not.
+      -->
+      <fieldset class="setting choice">
+        <legend>Language</legend>
+        <p class="storage">Changing it reloads the page; what is playing stops.</p>
+        <label><input type="radio" name="language" value="system"> System</label>
+        <label><input type="radio" name="language" value="en"> English</label>
+        <label><input type="radio" name="language" value="pl"> Polski</label>
+      </fieldset>
+      <fieldset class="setting choice">
+        <legend>Theme</legend>
+        <label><input type="radio" name="theme" value="system"> System</label>
+        <label><input type="radio" name="theme" value="light"> Light</label>
+        <label><input type="radio" name="theme" value="dark"> Dark</label>
+      </fieldset>
+
+      <!--
         The one setting the page can actually change, and the phone has the same one
         (`docs/STATUS.md` C56). A SID carries no length; without this it played until somebody
         pressed next.
@@ -972,7 +1051,17 @@
       <div class="sheetbuttons legalrows">
         <button class="outlined" id="open-notices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM16 18H8v-2h8v2zM16 14H8v-2h8v2zM13 9V3.5L18.5 9H13z"/></svg>Open-source licences</button>
         <button class="outlined" id="open-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Privacy policy</button>
+        <a class="outlined" id="open-source" href="https://github.com/przunk/protracktor" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>Source code</a>
       </div>
+      <!--
+        What sending from a phone involves (the owner, 2026-09-22): said where the page's settings are
+        read, and again beside the pairing code, where it matters.
+      -->
+      <p class="storage" id="sendingnote">This page is free software under GPL-3.0-or-later; Source code
+        opens the exact version it was built from. When a phone pairs with it and sends a queue, the
+        titles, archive addresses and any files from the phone pass through the server that hosts this
+        page. It keeps the last thing sent in memory, so a page opened late still gets it, until
+        something newer replaces it or the server stops; nothing is written to disk.</p>
     </div>
   </div>
 
@@ -1039,6 +1128,10 @@
       <p class="note" id="pairnote">Scan this with Protracktor on your phone to send it a playlist.</p>
       <div id="qr" class="qr"></div>
       <p class="note mono" id="pairurl"></p>
+      <p class="storage" id="pairprivacy">What the phone sends — titles, archive addresses, and files from
+        its own storage — passes through the server that hosts this page. Pair only with a page you, or
+        somebody you trust, runs.</p>
+      <div class="sheetbuttons"><button class="outlined" id="pair-privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Privacy policy</button></div>
       <button class="text-button" data-close><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Close</button>
     </div>
   </div>

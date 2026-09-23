@@ -23,6 +23,11 @@
     <!-- Online catalogues: the index is downloaded once, then browsing works offline. The network
          is next needed when a track that is not cached is played. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Whether the network is one the user pays for by the byte: "Cache folders ahead" runs on
+         Wi-Fi only by default (docs/BACKLOG.md A55). A normal permission, granted at install, with
+         nothing to ask. **Without it the question throws**, and the first build treated that as
+         "metered", so on Wi-Fi only it never fetched anything, on any network. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Uninstalling means gone: `allowBackup="false"` turns off Auto Backup, and
          `dataExtractionRules` turns off device-to-device transfer, which that flag does not
@@ -93,8 +98,6 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" />
-                <data android:scheme="https" />
                 <data android:scheme="content" />
                 <data android:scheme="file" />
                 <data android:pathPattern="/.*\\.mod" />
@@ -208,6 +211,158 @@
                 <data android:pathPattern="/.*\\.gdm" />
                 <data android:pathPattern="/.*\\..*\\.gdm" />
                 <data android:pathPattern="/.*\\..*\\..*\\.gdm" />
+            </intent-filter>
+
+            <!--
+                **The same names on the web, from the archives we read, and only from them.** An
+                `http(s)` filter with no host takes every web address there is: Android ignores
+                every path pattern when a filter names no host ("If a host isn't specified for the
+                filter, the port attribute and all the path attributes are ignored",
+                developer.android.com, <data>), so the patterns above claimed nothing and the app was
+                offered as a browser. The owner found it as "Browser app" in the app's settings,
+                2026-09-23; it had been so since B24. Naming the hosts makes the patterns count.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="modland.com" />
+                <data android:host="ftp.modland.com" />
+                <data android:host="asma.atari.org" />
+                <data android:host="modarchive.org" />
+                <data android:host="api.modarchive.org" />
+                <data android:host="files.exotica.org.uk" />
+                <data android:pathPattern="/.*\\.mod" />
+                <data android:pathPattern="/.*\\..*\\.mod" />
+                <data android:pathPattern="/.*\\..*\\..*\\.mod" />
+                <data android:pathPattern="/.*\\.xm" />
+                <data android:pathPattern="/.*\\..*\\.xm" />
+                <data android:pathPattern="/.*\\..*\\..*\\.xm" />
+                <data android:pathPattern="/.*\\.s3m" />
+                <data android:pathPattern="/.*\\..*\\.s3m" />
+                <data android:pathPattern="/.*\\..*\\..*\\.s3m" />
+                <data android:pathPattern="/.*\\.it" />
+                <data android:pathPattern="/.*\\..*\\.it" />
+                <data android:pathPattern="/.*\\..*\\..*\\.it" />
+                <data android:pathPattern="/.*\\.med" />
+                <data android:pathPattern="/.*\\..*\\.med" />
+                <data android:pathPattern="/.*\\..*\\..*\\.med" />
+                <data android:pathPattern="/.*\\.ahx" />
+                <data android:pathPattern="/.*\\..*\\.ahx" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ahx" />
+                <data android:pathPattern="/.*\\.hvl" />
+                <data android:pathPattern="/.*\\..*\\.hvl" />
+                <data android:pathPattern="/.*\\..*\\..*\\.hvl" />
+                <data android:pathPattern="/.*\\.okt" />
+                <data android:pathPattern="/.*\\..*\\.okt" />
+                <data android:pathPattern="/.*\\..*\\..*\\.okt" />
+                <data android:pathPattern="/.*\\.dbm" />
+                <data android:pathPattern="/.*\\..*\\.dbm" />
+                <data android:pathPattern="/.*\\..*\\..*\\.dbm" />
+                <data android:pathPattern="/.*\\.digi" />
+                <data android:pathPattern="/.*\\..*\\.digi" />
+                <data android:pathPattern="/.*\\..*\\..*\\.digi" />
+                <data android:pathPattern="/.*\\.sndh" />
+                <data android:pathPattern="/.*\\..*\\.sndh" />
+                <data android:pathPattern="/.*\\..*\\..*\\.sndh" />
+                <data android:pathPattern="/.*\\.sc68" />
+                <data android:pathPattern="/.*\\..*\\.sc68" />
+                <data android:pathPattern="/.*\\..*\\..*\\.sc68" />
+                <data android:pathPattern="/.*\\.ym" />
+                <data android:pathPattern="/.*\\..*\\.ym" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ym" />
+                <data android:pathPattern="/.*\\.sap" />
+                <data android:pathPattern="/.*\\..*\\.sap" />
+                <data android:pathPattern="/.*\\..*\\..*\\.sap" />
+                <data android:pathPattern="/.*\\.rmt" />
+                <data android:pathPattern="/.*\\..*\\.rmt" />
+                <data android:pathPattern="/.*\\..*\\..*\\.rmt" />
+                <data android:pathPattern="/.*\\.sid" />
+                <data android:pathPattern="/.*\\..*\\.sid" />
+                <data android:pathPattern="/.*\\..*\\..*\\.sid" />
+                <data android:pathPattern="/.*\\.psid" />
+                <data android:pathPattern="/.*\\..*\\.psid" />
+                <data android:pathPattern="/.*\\..*\\..*\\.psid" />
+                <data android:pathPattern="/.*\\.nsf" />
+                <data android:pathPattern="/.*\\..*\\.nsf" />
+                <data android:pathPattern="/.*\\..*\\..*\\.nsf" />
+                <data android:pathPattern="/.*\\.nsfe" />
+                <data android:pathPattern="/.*\\..*\\.nsfe" />
+                <data android:pathPattern="/.*\\..*\\..*\\.nsfe" />
+                <data android:pathPattern="/.*\\.spc" />
+                <data android:pathPattern="/.*\\..*\\.spc" />
+                <data android:pathPattern="/.*\\..*\\..*\\.spc" />
+                <data android:pathPattern="/.*\\.gbs" />
+                <data android:pathPattern="/.*\\..*\\.gbs" />
+                <data android:pathPattern="/.*\\..*\\..*\\.gbs" />
+                <data android:pathPattern="/.*\\.vgm" />
+                <data android:pathPattern="/.*\\..*\\.vgm" />
+                <data android:pathPattern="/.*\\..*\\..*\\.vgm" />
+                <data android:pathPattern="/.*\\.vgz" />
+                <data android:pathPattern="/.*\\..*\\.vgz" />
+                <data android:pathPattern="/.*\\..*\\..*\\.vgz" />
+                <data android:pathPattern="/.*\\.hes" />
+                <data android:pathPattern="/.*\\..*\\.hes" />
+                <data android:pathPattern="/.*\\..*\\..*\\.hes" />
+                <data android:pathPattern="/.*\\.kss" />
+                <data android:pathPattern="/.*\\..*\\.kss" />
+                <data android:pathPattern="/.*\\..*\\..*\\.kss" />
+                <data android:pathPattern="/.*\\.pt3" />
+                <data android:pathPattern="/.*\\..*\\.pt3" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pt3" />
+                <data android:pathPattern="/.*\\.pt2" />
+                <data android:pathPattern="/.*\\..*\\.pt2" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pt2" />
+                <data android:pathPattern="/.*\\.stc" />
+                <data android:pathPattern="/.*\\..*\\.stc" />
+                <data android:pathPattern="/.*\\..*\\..*\\.stc" />
+                <data android:pathPattern="/.*\\.mtm" />
+                <data android:pathPattern="/.*\\..*\\.mtm" />
+                <data android:pathPattern="/.*\\..*\\..*\\.mtm" />
+                <data android:pathPattern="/.*\\.far" />
+                <data android:pathPattern="/.*\\..*\\.far" />
+                <data android:pathPattern="/.*\\..*\\..*\\.far" />
+                <data android:pathPattern="/.*\\.669" />
+                <data android:pathPattern="/.*\\..*\\.669" />
+                <data android:pathPattern="/.*\\..*\\..*\\.669" />
+                <data android:pathPattern="/.*\\.ptm" />
+                <data android:pathPattern="/.*\\..*\\.ptm" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ptm" />
+                <data android:pathPattern="/.*\\.stm" />
+                <data android:pathPattern="/.*\\..*\\.stm" />
+                <data android:pathPattern="/.*\\..*\\..*\\.stm" />
+                <data android:pathPattern="/.*\\.ult" />
+                <data android:pathPattern="/.*\\..*\\.ult" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ult" />
+                <data android:pathPattern="/.*\\.dmf" />
+                <data android:pathPattern="/.*\\..*\\.dmf" />
+                <data android:pathPattern="/.*\\..*\\..*\\.dmf" />
+                <data android:pathPattern="/.*\\.mdl" />
+                <data android:pathPattern="/.*\\..*\\.mdl" />
+                <data android:pathPattern="/.*\\..*\\..*\\.mdl" />
+                <data android:pathPattern="/.*\\.gdm" />
+                <data android:pathPattern="/.*\\..*\\.gdm" />
+                <data android:pathPattern="/.*\\..*\\..*\\.gdm" />
+            </intent-filter>
+
+            <!--
+                A link to the page at its permanent address (`docs/BACKLOG.md` A40), opened here when
+                the app is installed. **`autoVerify`**: Android checks
+                https://przunk.github.io/.well-known/assetlinks.json (the root of the host: the
+                owner's user-site repository, not this project's Pages), and until that file lists
+                this app's signing key the link opens in the browser unless the user turns "Open
+                supported links" on for the app. The path keeps its capital P: `/protracktor/` is a
+                404 on GitHub Pages, and claiming it would take links that go nowhere.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="przunk.github.io" />
+                <data android:pathPrefix="/Protracktor/" />
             </intent-filter>
 
             <!-- The share sheet. Same mime types as the tap, for the same reason. -->

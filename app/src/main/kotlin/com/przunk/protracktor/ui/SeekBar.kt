@@ -9,23 +9,36 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.przunk.protracktor.R
+import com.przunk.protracktor.player.PlayerUiState
 
 /**
  * The seek control, used by both the dock and Now Playing.
@@ -40,6 +53,67 @@ import androidx.compose.ui.unit.dp
  */
 // The slot-based Slider overloads are still marked experimental. Taken knowingly: the default
 // thumb and track are what make a progress line look unmovable, which is the fault being fixed.
+/**
+ * The elapsed time beside a seek bar, or, while a seek takes long enough to be seen waiting, a
+ * small spinner in its place (Q11, the owner's choice 2026-09-22): where the eye already is, beside
+ * the bar just dragged. The same width either way, so the bar does not move.
+ */
+@Composable
+fun ElapsedTime(state: PlayerUiState) {
+    val seeking = stringResource(R.string.a11y_seeking)
+    Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.widthIn(min = barLabelWidth())) {
+        // Holds the width of a time, so the spinner does not pull the bar sideways.
+        Text(
+            text = formatTime(state.positionSeconds),
+            style = barLabelStyle(),
+            maxLines = 1,
+            softWrap = false,
+            color = if (state.seekSlow) Color.Transparent else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (state.seekSlow) {
+            CircularProgressIndicator(
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(12.dp).semantics { contentDescription = seeking },
+            )
+        }
+    }
+}
+
+/**
+ * The total at the end of the seek bar, in the same room as [ElapsedTime] and set against the bar's
+ * end, so the digits stay where they are and a `~` appears in space already kept for it (A58).
+ */
+@Composable
+fun BarTotal(state: PlayerUiState) {
+    Text(
+        text = formatBarTotal(state),
+        style = barLabelStyle(),
+        maxLines = 1,
+        softWrap = false,
+        textAlign = TextAlign.End,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.widthIn(min = barLabelWidth()),
+    )
+}
+
+/** Tabular figures: `1:11` and `8:08` are the same width, so the times do not jitter as they count. */
+@Composable
+private fun barLabelStyle(): TextStyle = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
+
+/**
+ * The room [BAR_LABEL_TEMPLATE] takes in the labels' own style, measured rather than written down
+ * as a number of dp, so it follows the font and the user's text size.
+ */
+@Composable
+private fun barLabelWidth(): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = barLabelStyle()
+    val density = LocalDensity.current
+    return remember(style, density) {
+        with(density) { measurer.measure(BAR_LABEL_TEMPLATE, style, maxLines = 1, softWrap = false).size.width.toDp() }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeekBar(
@@ -112,11 +186,11 @@ fun SeekBar(
             // A visible grab point: a progress line with nothing to take hold of does not look
             // like something you can move.
             //
-            // **And nothing to take hold of when there is nothing to move.** SID and Atari ST
-            // cannot seek — libsidplayfp is running a program and has no notion of a position at
-            // all — and since HVSC supplies SID durations the bar shows a real length, so it
-            // would otherwise look exactly like a bar you could drag. A greyed thumb reads as "not
-            // now"; no thumb reads as "this is progress", which is the truth.
+            // **And nothing to take hold of when there is nothing to move.** A backend that cannot
+            // seek still shows a real length where a database supplies one, so the bar would
+            // otherwise look exactly like a bar you could drag. A greyed thumb reads as "not now".
+            // (SID and Atari ST were the reason once; since 2026-09-22 they seek by running their
+            // machines to the place, Q11.)
             //
             // **Drawn here rather than by `SliderDefaults.Thumb`**, which grows while pressed. The
             // track is inset by the thumb's radius, so a thumb that changes size makes the line

@@ -1,0 +1,16 @@
+{
+  "_": "Material 3 baseline LIGHT scheme, extracted 2026-09-23 from the material3 artifact the build resolves (material3-android 1.4.0 in the Gradle cache), by disassembling ColorLightTokens and PaletteTokens with javap -- the same way material3-dark.json was made. The app calls lightColorScheme() with no arguments when dynamic colour is off, so these are the colours of the app in light mode then.",
+  "_why": "The page's light theme (docs/PLAN_WEB_PARITY.md W7). The dark page uses the owner's sampled dynamic scheme (app-colours.json); no light sample of it exists, so the light page follows the app's own light fallback.",
+  "Background": "#FEF7FF",
+  "SurfaceContainer": "#F3EDF7",
+  "SecondaryContainer": "#E8DEF8",
+  "OnSecondaryContainer": "#1D192B",
+  "Primary": "#6750A4",
+  "OnPrimary": "#FFFFFF",
+  "PrimaryContainer": "#EADDFF",
+  "OnSurface": "#1D1B20",
+  "OnSurfaceVariant": "#49454F",
+  "SurfaceVariant": "#E7E0EC",
+  "Outline": "#79747E",
+  "Error": "#B3261E"
+}

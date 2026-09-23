@@ -5,6 +5,7 @@ package com.przunk.protracktor.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -17,6 +18,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -82,6 +88,15 @@ fun ScannerScreen(
     }
     LaunchedEffect(Unit) { if (!granted) ask.launch(Manifest.permission.CAMERA) }
 
+    // The policy, one press from where the sending is decided (the owner, 2026-09-22). Drawn in place
+    // of the scanner, as Settings draws it in place of its list; Back returns to the camera.
+    var readingPolicy by remember { mutableStateOf(false) }
+    if (readingPolicy) {
+        BackHandler { readingPolicy = false }
+        PrivacyPolicyScreen(contentPadding = contentPadding, onClose = { readingPolicy = false })
+        return
+    }
+
     Box(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
         if (granted) {
             CameraPreview(onScanned = onScanned)
@@ -99,10 +114,29 @@ fun ScannerScreen(
                 color = if (granted) Color.White else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
+            // **What sending involves, where it is decided.** A scanned code names a server, and the
+            // queue -- files from this phone included -- goes there; the policy says the same.
+            Text(
+                text = stringResource(R.string.scan_privacy),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (granted) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            OutlinedButton(onClick = { readingPolicy = true }) {
+                Icon(PlayerIcons.Shield, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.settings_privacy))
+            }
             TextButton(onClick = onSendLink) {
+                Icon(PlayerIcons.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.action_send_as_link))
             }
-            Button(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
+            Button(onClick = onCancel) {
+                Icon(PlayerIcons.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.action_cancel))
+            }
         }
     }
 }

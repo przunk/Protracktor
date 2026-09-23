@@ -169,9 +169,12 @@ const malformedSap = (() => {
   const { handle, error } = open(nsf, 'no-length.nsf');
   check('an NSF opens', handle !== 0, `said: ${error}`);
   if (handle) {
+    // Since 2026-09-22 (the owner's variant (a)) a tune that falls silent is measured, so this
+    // silent one has a length of about a second -- where it really ends. What must never come back
+    // is the library's invented 2:30.
     check(
-      'and a file that states no length reports none, rather than the library default of 2:30',
-      M._pt_duration(handle) === 0,
+      'and a file that states no length never reports the library default of 2:30',
+      M._pt_duration(handle) !== 150 && M._pt_duration(handle) < 150,
       `${M._pt_duration(handle)} s`,
     );
     M._pt_close(handle);
@@ -345,6 +348,118 @@ const describeOf = (bytes, name) => {
   if (handle) M._pt_close(handle);
   check('a SID that needs the BASIC ROM is refused, not played as silence', handle === 0, 'it opened');
   check('and the refusal says it is BASIC', /BASIC/.test(error), `said: ${error}`);
+}
+
+// --- seeking a SID: running the machine there ------------------------------------------------------
+//
+// libsidplayfp cannot jump, so a seek renders silently to the place (`seekByRendering`): forward
+// from where it is, backward from the start of the tune. The position it reports afterwards is the
+// place asked for, to the buffer.
+{
+  const header = Buffer.alloc(0x7c);
+  header.write('PSID', 0, 'latin1');
+  header.writeUInt16BE(2, 4);
+  header.writeUInt16BE(0x7c, 6);
+  header.writeUInt16BE(0x1000, 0x0a);
+  header.writeUInt16BE(0x1003, 0x0c);
+  header.writeUInt16BE(1, 0x0e);
+  header.writeUInt16BE(1, 0x10);
+  header.write('seek check', 0x16, 'latin1');
+  const sid = Buffer.concat([header, Buffer.from([0x00, 0x10, 0x60, 0xea, 0xea, 0x60])]);
+  const { handle: h } = open(sid, 'seek.sid');
+  check('the SID for seeking opens', h !== 0);
+  if (h) {
+    const describe = M.UTF8ToString(M._pt_describe(h));
+    check('a SID says it can seek now', describe.includes('seekable\t1'), describe.split('\n').find((l) => l.startsWith('seekable')));
+    const out = M._malloc(4096 * 8);
+    M._pt_render(h, 44100, 4096, out);
+    M._pt_seek(h, 30);
+    const forward = M._pt_position(h);
+    check('a seek forward arrives where it was asked', Math.abs(forward - 30) < 0.2, `at ${forward.toFixed(2)} s`);
+    M._pt_seek(h, 5);
+    const back = M._pt_position(h);
+    check('and a seek back goes back, through the start', Math.abs(back - 5) < 0.2, `at ${back.toFixed(2)} s`);
+    const started = Date.now();
+    M._pt_seek(h, 99999);
+    const far = M._pt_position(h);
+    check('a seek past any tune is bounded, not an hour of rendering', far <= 20 * 60 + 1 && Date.now() - started < 120000,
+      `at ${far.toFixed(0)} s after ${((Date.now() - started) / 1000).toFixed(1)} s`);
+    M._free(out);
+    M._pt_close(h);
+  }
+}
+
+// --- a Famicom Disk System NSF that loads below $8000 (C81) ------------------------------------------
+//
+// Valid by the NSF specification, unplayable by game-music-emu 0.6.5, which calls it "Corrupt file".
+// The refusal must name what the file is; an FDS NSF that loads at $8000 must still open.
+{
+  const fds = (load) => {
+    const nsf = Buffer.alloc(128 + 256);
+    nsf.write('NESM\x1a', 0, 'latin1');
+    nsf[5] = 1; nsf[6] = 1; nsf[7] = 1;
+    nsf.writeUInt16LE(load, 8);
+    nsf.writeUInt16LE(0x8000, 10);
+    nsf.writeUInt16LE(0x8003, 12);
+    nsf.writeUInt16LE(16666, 110);
+    nsf[123] = 0x04;                  // the FDS chip
+    nsf[128] = 0x60;
+    nsf[131] = 0x60;
+    return nsf;
+  };
+  const low = open(fds(0x6000), 'fds-low.nsf');
+  check('an FDS NSF loading at $6000 is refused as what it is, not as a corrupt file',
+    low.handle === 0 && /Famicom Disk System/.test(low.error ?? '') && !/Corrupt/.test(low.error ?? ''),
+    `said: ${low.error}`);
+  if (low.handle) M._pt_close(low.handle);
+  const high = open(fds(0x8000), 'fds-high.nsf');
+  check('an FDS NSF loading at $8000 still opens', high.handle !== 0, `said: ${high.error}`);
+  if (high.handle) M._pt_close(high.handle);
+}
+
+// --- an NSF's length: measured when it falls silent, "where it stops" when it loops ------------------
+//
+// The owner's variant (a), 2026-09-22. NSF states no length. A tune that falls silent is measured by
+// playing a copy of it to its end; one that never does -- game music loops -- keeps no length, and
+// the description says where game-music-emu will stop it (`ends_at`: its 2:30 default plus the fade).
+{
+  const nsf = (code) => {
+    const header = Buffer.alloc(0x80);
+    header.write('NESM\x1a', 0, 'latin1');
+    header[5] = 1; header[6] = 1; header[7] = 1;               // version, songs, starting song
+    header.writeUInt16LE(0x8000, 8);                           // load
+    header.writeUInt16LE(0x8000, 10);                          // init
+    header.writeUInt16LE(0x8020, 12);                          // play
+    header.write('length check', 0x0e, 'latin1');
+    header.writeUInt16LE(16666, 0x6e);                         // NTSC speed, 60 Hz
+    const body = Buffer.alloc(0x40, 0xea);                     // NOPs
+    code.copy(body, 0);
+    body[0x20] = 0x60;                                          // play: RTS
+    return Buffer.concat([header, body]);
+  };
+  // A square wave held on: enable pulse 1, constant volume, halt its length counter, set a period.
+  const tone = nsf(Buffer.from([0xa9, 0x01, 0x8d, 0x15, 0x40, 0xa9, 0xbf, 0x8d, 0x00, 0x40,
+                                0xa9, 0xfd, 0x8d, 0x02, 0x40, 0xa9, 0x00, 0x8d, 0x03, 0x40, 0x60]));
+  const silent = nsf(Buffer.from([0x60]));
+  const lineOf2 = (d, key) => (d.split('\n').find((l) => l.startsWith(`${key}\t`)) ?? '').slice(key.length + 1);
+  const loops = open(tone, 'tone.nsf');
+  check('the looping NSF opens', loops.handle !== 0, loops.error);
+  if (loops.handle) {
+    const d = M.UTF8ToString(M._pt_describe(loops.handle));
+    check('a looping NSF has no length, and says where it will stop',
+      M._pt_duration(loops.handle) === 0 && Math.abs(Number(lineOf2(d, 'ends_at')) - 158) < 0.5,
+      `duration ${M._pt_duration(loops.handle)}, ends_at "${lineOf2(d, 'ends_at')}"`);
+    M._pt_close(loops.handle);
+  }
+  const quiet = open(silent, 'silent.nsf');
+  if (quiet.handle) {
+    const d = M.UTF8ToString(M._pt_describe(quiet.handle));
+    const seconds = M._pt_duration(quiet.handle);
+    check('an NSF that falls silent is measured, and has a length of its own',
+      seconds > 0 && seconds < 150 && !lineOf2(d, 'ends_at'),
+      `duration ${seconds}, ends_at "${lineOf2(d, 'ends_at')}"`);
+    M._pt_close(quiet.handle);
+  }
 }
 
 console.log();
