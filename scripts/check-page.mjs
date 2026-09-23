@@ -1945,6 +1945,10 @@ if (window.__api) {
     'the list is read with a size from HEAD and an ordinary range — never the suffix form a browser must ask about');
   const held = await api.archiveMeta('asma');
   check(held?.tracks === 3 && held.formats === 2, 'every .sap is listed and nothing else, under its section');
+  // The row's spinner is the progress (the owner, 2026-09-23): the note narrates no download, so
+  // two started at once cannot write over each other there.
+  check(!/ASMA: |storing |fetching |sections\./.test($('browsenote').textContent),
+    'a download does not narrate itself in the note -- its row has the spinner');
   await api.browseTo(['catalogues']);
   const asmaRow = [...$('browselist').children].find((li) => li.querySelector('.bname')?.textContent === 'ASMA');
   check(asmaRow && asmaRow.querySelector('.bmeta').textContent === '3 tunes' && asmaRow.querySelector('.bheld.yes'),
