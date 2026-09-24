@@ -15,6 +15,21 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A61. Moving between screens — **noted 2026-09-24, to talk through**
+
+The owner: *"to discuss: moving between views."* Nothing decided and nothing asked beyond that: which
+screens lead where, what Back does from each, and how a jump (More from this author, a link) sits
+among them, are the likely subjects. To be talked through before anything is built.
+
+## A60. Say that the database is being prepared, while a migration runs — **noted 2026-09-24**
+
+The owner: *"when the database migrates, the GUI must say something is happening -- e.g. 'Preparing
+DB', with a database-connection icon and a clock."* A migration runs when the app opens a database
+from an older version, before the first screen has anything to show; the larger ones -- version 19's
+folded search copies, version 20's platforms re-decided at the next start -- take a moment on a phone
+with Modland indexed, and until now the screen simply waits. What to show, with an icon and a label,
+and from which point: the owner's word for it is the starting point.
+
 ## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
 
 **Decided 2026-09-23 (the owner):** keep room for the tilde always, and the same room on both
