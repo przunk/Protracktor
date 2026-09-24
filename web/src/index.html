@@ -112,7 +112,17 @@
   /* Scrolling stays, pinching does not: the browsers that honour `touch-action` stop the zoom here
      even where they ignore the viewport's `user-scalable=no`. */
   html { touch-action: pan-x pan-y; }
+  /* **The page is the viewport and does not move** (the owner, 2026-09-24: "the page should fit
+     and lock to the viewport"). Only the lists inside scroll. In a Safari tab the document itself
+     could still be dragged: WebKit rubber-bands a page that has nothing to scroll, a list that
+     reaches its end hands the drag on to the page, and the collapsing address bar gives the page
+     room to move. Pinned to the viewport the document has no position to move from, and
+     `overscroll-behavior` keeps a list's drag inside the list. */
+  html, body { overscroll-behavior: none; }
   body {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
     margin: 0;
     background: var(--bg);
     color: var(--on-surface);
