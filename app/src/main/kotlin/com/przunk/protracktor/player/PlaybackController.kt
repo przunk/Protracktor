@@ -172,6 +172,11 @@ data class PlayerUiState(
      * results, their words and their scope as they were.
      */
     val searchWaiting: Boolean = false,
+    /**
+     * Which list in Browse is playing, for the playlist's cover to name and lead back to (A61).
+     * Meaningful while [searchMode] -- a list is what plays -- and set where a list starts playing.
+     */
+    val sessionSource: SessionSource? = null,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
     /**
@@ -3288,7 +3293,10 @@ class PlaybackController private constructor(private val context: Context) {
         if (index !in results.indices) return
         // Where the list came from is known only here, from the screen it was tapped on (A56).
         val fromHistory = _browse.value.domain == BrowseDomain.HISTORY
-        _state.update { it.copy(resultsFromHistory = fromHistory) }
+        // **Where it plays from, remembered as it looks** (A61): the cover names it, and its way
+        // back returns to it -- the same words, the same folder -- rather than to a fresh Browse.
+        sessionBrowse = _browse.value
+        _state.update { it.copy(resultsFromHistory = fromHistory, sessionSource = SessionSource.of(_browse.value)) }
         playFromResultsQueue(PlayQueue(tracks = results).startAt(index))
     }
 
@@ -3327,6 +3335,21 @@ class PlaybackController private constructor(private val context: Context) {
      * stops and the results' tune waits paused, as the dice's does, because a queue whose current
      * tune is not the one sounding is a transport that lies.
      */
+    /**
+     * Browse back on the list that is playing, as it was when it started (A61) -- the playlist
+     * cover's way back, and what the Browse button opens while a list plays. Answers false when no
+     * list is playing, and Browse then opens as it always has, at its top.
+     *
+     * **A search opened from the uncovered playlist starts fresh; returning to one that plays keeps
+     * it** -- the owner's refinement, 2026-09-25: the reset was for a new search, not for coming back.
+     */
+    fun returnToSession(): Boolean {
+        val playingFrom = sessionBrowse ?: return false
+        if (!_state.value.searchMode) return false
+        _browse.value = BrowseNavigation.returningTo(playingFrom)
+        return true
+    }
+
     fun resumeSearch() {
         val waiting = waitingSearch ?: return
         waitingSearch = null
@@ -4153,6 +4176,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     /** The search a digression came from, and the results queue that was playing then (C-search). */
     private data class WaitingSearch(val browse: BrowseState, val results: PlayQueue?)
+
+    /** Browse as it was when the list now playing started: where the cover's way back leads (A61). */
+    private var sessionBrowse: BrowseState? = null
     private var waitingSearch: WaitingSearch? = null
 
     private var pendingRetry: (() -> Unit)? = null

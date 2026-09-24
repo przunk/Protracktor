@@ -496,4 +496,10 @@
         <item quantity="one">%1$,d stayed on the phone that sent it.</item>
         <item quantity="other">%1$,d stayed on the phone that sent them.</item>
     </plurals>
+    <string name="session_from_search">Playing from search: %1$s</string>
+    <string name="session_from_folder">Playing from %1$s</string>
+    <string name="session_from_history">Playing from History</string>
+    <string name="session_body">Nothing from this playlist is playing. Next and previous walk that list.</string>
+    <string name="action_back_to_list">Back to the list</string>
+    <string name="action_back_to_random">Back to Random</string>
 </resources>
