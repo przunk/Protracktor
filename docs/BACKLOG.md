@@ -72,8 +72,9 @@ of any catalogue, search results, History -- asks `OnPhone` of each row: a file 
 on the phone when the cache holds its address (Modland, The Mod Archive); an ASMA tune when ASMA is
 downloaded; an UnExoticA tune when its game's archive is cached. The marks are asked again when a
 tune arrives (an UnExoticA tune brings its game), when the cache is cleared and when an archive is
-deleted. **Not marked, deliberately:** the phone's own files -- every row of a local list is on the
-phone, and a tick on each would say nothing.
+deleted. **The phone's own files are marked too**, at the owner's word, 2026-09-25: the first
+version left them out as saying nothing, but the mark means "plays without the network", and in a
+search mixing the phone's files with the archives' that is what tells them apart.
 
 ## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
 

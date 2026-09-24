@@ -33,8 +33,9 @@ class OnPhoneTest {
     }
 
     @Test
-    fun `a file of the phone's own library is not marked`() {
-        assertEquals(OnPhone.Check.Never, OnPhone.checkFor("content://com.android.externalstorage.documents/document/primary%3AMusic%2Fx.mod"))
-        assertEquals(OnPhone.Check.Never, OnPhone.checkFor("file:///sdcard/x.mod"))
+    fun `a file of the phone's own library is on the phone`() {
+        assertEquals(OnPhone.Check.Local, OnPhone.checkFor("content://com.android.externalstorage.documents/document/primary%3AMusic%2Fx.mod"))
+        assertEquals(OnPhone.Check.Local, OnPhone.checkFor("file:///sdcard/x.mod"))
+        assertEquals(OnPhone.Check.Never, OnPhone.checkFor("something-else"))
     }
 }
