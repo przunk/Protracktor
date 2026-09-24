@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A62. Share a tune as audio -- M4A, for Messenger and the like — **planned 2026-09-24; BUILT the same day on `feature/a62-share-as-audio`, not yet seen on the phone**
+## A62. Share a tune as audio -- M4A, for Messenger and the like — **planned 2026-09-24; BUILT, merged and confirmed on the phone the same day ("works")**
 
 The owner: *"I want to share it, e.g. on Messenger."* *Share the file* sends the module itself, which
 Messenger cannot play; *Share a link* opens the web player, which means leaving the chat. So:
@@ -34,6 +34,8 @@ As built:
   nothing, is **cut at the setting and fades over 3 s**. The owner's words were "a limit, a
   setting in the options, just in case, e.g. 3 min", so the setting is a limit on every tune.
   **Settings → Length when shared as audio**: 1 / 3 / 5 / 10 min, default 3.
+- **On Now Playing, one Share button** opens a menu of the three ways to share (the owner chose
+  this 2026-09-24): six buttons left each about 60 dp, too narrow for any label.
 - **One subsong**: the one playing when the tune is the current one, else the one the file opens at.
 - **No tags.** `MediaMuxer` writes no title or artist into an M4A, and writing them means a
   hand-made `udta/meta/ilst` box or a library. So the **file name** carries them:
@@ -41,9 +43,7 @@ As built:
 - About a megabyte a minute; the file goes where copies made for sharing already go
   (`cache/shared`), and is cleared with them after an hour.
 - **Checked:** JVM tests for the plan, the fade and the file name (each broken once to see it
-  fail); the native code compiles into the release APK. **Not checked:** anything on the phone --
-  that the encoder runs, the file plays in Messenger, the length and the fade are right, and that
-  rendering beside a playing tune of the same engine (UADE, sc68) does not disturb it.
+  fail); the native code compiles into the release APK. **On the phone** (the owner, 2026-09-24): works.
 
 Open: whether the page gets it too (a browser can encode through `MediaRecorder`, as WebM/Opus
 rather than M4A) -- not now, the owner said APK only.
