@@ -6,6 +6,26 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 0.9.1 — versionCode 918
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v0.9.1`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-0.9.1-918.aab` |
+| Size | 21711041 bytes |
+| SHA-256 | `b598437ca03306633e1ac36e7f0da483ed601067cd059a4f741e0f4792f15f26` |
+| versionCode | 918 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 0.9.1 |
+| Commit | `49fc395` |
+| Tag | `v0.9.1` |
+| Built | 2026-09-24 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v0.9.0**: `git log --oneline v0.9.0..v0.9.1`, and
+`docs/STATUS.md` for the defects by number.
+
 ## 0.9.0 — versionCode 905
 
 Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v0.9.0`.
