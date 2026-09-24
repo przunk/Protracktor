@@ -238,6 +238,30 @@ class RuleCasesTest {
         assertEquals(case.why(), case.getValue("expect").takeIf { it != "-" }, OpenFailure.modlandFormatOf(case.getValue("url")))
     }
 
+    @Test
+    fun `how long a tune shared as audio runs agrees with the shared cases`() = each("shareAudioPlan") { case ->
+        val plan = AudioExport.plan(case.getValue("known").toDouble(), case.int("limit"))
+        assertEquals(case.why(), case.getValue("seconds").toDouble(), plan.seconds, 0.0)
+        assertEquals(case.why(), case.bool("fade"), plan.fade)
+    }
+
+    @Test
+    fun `the fade of a tune shared as audio agrees with the shared cases`() = each("shareAudioFade") { case ->
+        val gain = AudioExport.gainAt(case.getValue("frame").toLong(), case.getValue("total").toLong(), case.getValue("fadeFrames").toLong())
+        assertEquals(case.why(), case.getValue("gain").toFloat(), gain, 0.001f)
+    }
+
+    @Test
+    fun `the stored limit for sharing as audio agrees with the shared cases`() = each("shareAudioLimit") { case ->
+        assertEquals(case.why(), case.int("expect"), AudioExport.limitFromStored(case.int("stored")))
+    }
+
+    @Test
+    fun `the name of a tune shared as audio agrees with the shared cases`() = each("shareAudioName") { case ->
+        val blank = { key: String -> case.getValue(key).takeIf { it != "-" }.orEmpty() }
+        assertEquals(case.why(), case.getValue("expect"), AudioExport.fileName(blank("title"), blank("author")))
+    }
+
     private companion object {
         const val RULES = "docs/rules/queue-cases.tsv"
     }

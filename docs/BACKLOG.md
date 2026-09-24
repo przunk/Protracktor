@@ -45,8 +45,23 @@ As built:
 - **Checked:** JVM tests for the plan, the fade and the file name (each broken once to see it
   fail); the native code compiles into the release APK. **On the phone** (the owner, 2026-09-24): works.
 
-Open: whether the page gets it too (a browser can encode through `MediaRecorder`, as WebM/Opus
-rather than M4A) -- not now, the owner said APK only.
+**The page** (the owner, 2026-09-24: "yes", variant (a); built on `feature/a62-web-share-audio`,
+not yet seen in a browser): the same `.m4a`, no new dependency. `web/src/audio-export.js` is a module
+worker with an engine of its own; it renders, fades and hands the PCM to WebCodecs' `AudioEncoder`
+(AAC-LC, 128 kbit/s), and `web/src/m4a.js` writes the boxes a player needs -- the part `MediaMuxer`
+does on the phone. The rules are the phone's, held to the same answers by `docs/rules/queue-cases.tsv`.
+In every tune's menu, and on Now Playing behind one **Share** with Save the file and Copy a link, as the
+phone has it (the owner, 2026-09-24); the length setting is in Settings. Two things a browser
+makes different:
+- **Firefox has no AAC encoder.** There the action stays in place, greyed, and a press says that
+  Chrome, Edge and Safari can -- rather than a WebM the phone's Messenger may not play.
+- **A share sheet opens only straight after a press**, and rendering takes seconds. So a made file
+  waits in the snackbar with **Send**; where the browser cannot share a file it is saved instead.
+
+Checked on Node: the whole path but the encoder -- the engine renders, the plan cuts and fades
+(start, middle and end measured), the muxer's boxes nest and add up and point at the frames -- each
+check broken once to see it fail. **Not checked: any browser.** That the encoder runs, that the file
+plays, and that Send opens the share sheet are all unseen.
 
 ## A61. Moving between screens — **noted 2026-09-24; decided 2026-09-25: variant (A); BUILT, merged and confirmed on the phone the same day ("now it makes sense")**
 

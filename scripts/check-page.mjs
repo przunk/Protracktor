@@ -585,9 +585,18 @@ if (window.__api) {
   // Select stands first: it is the way into ticking rows, which a mouse has no long press to
   // find. The rest are in a fixed order, with Share with Protracktor beside the other link.
   check(open.map((b) => b.textContent).join(',')
-        === 'Select,Add to playlist,Save the file,Copy a link,Share with Protracktor,More from this author,Information',
+        === 'Select,Add to playlist,Save the file,Share as audio,Copy a link,Share with Protracktor,More from this author,Information',
     'with every action the phone\'s row menu has, in the same order');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
+
+  // **Share as audio where the browser cannot encode AAC** (A62): jsdom has no WebCodecs, as
+  // Firefox has no AAC encoder. The row stays in its place, greyed, and a press says why.
+  const audioRow = open.find((b) => b.textContent === 'Share as audio');
+  check(audioRow?.getAttribute('aria-disabled') === 'true' && !audioRow.disabled,
+    'Share as audio is greyed where this browser cannot make the file, and still answers a press');
+  audioRow?.click();
+  check($('snacktext').textContent.includes('Chrome, Edge and Safari') && $('snackbar').hidden === false,
+    'and the press says why and where it would work, rather than doing nothing');
 
   menus[1].click();
   const ghostMenu = [...window.document.querySelectorAll('#menu button')];
@@ -598,12 +607,25 @@ if (window.__api) {
   check($('menu').hidden === true, 'escape closes it');
 
   // The panel acts on what it is describing, so it follows the selection.
-  check($('np-save').disabled === false && $('np-link').disabled === false,
-    'the panel offers the same three for the track it describes');
+  // One Share, and the ways to share behind it, as on the phone (A62).
+  $('np-share').click();
+  const shareMenu = [...window.document.querySelectorAll('#menu button')];
+  check(shareMenu.map((b) => b.textContent).join(',') === 'Save the file,Share as audio,Copy a link'
+        && !shareMenu[0].disabled && !shareMenu[2].disabled,
+    'the panel\'s Share opens the ways to share the track it describes');
+  check(shareMenu[1].getAttribute('aria-disabled') === 'true', 'and Share as audio in it is greyed here, as in the row\'s menu');
+  window.document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   window.__api.receive({ queue: [{ url: 'content://x/1', title: 'Only Local', local: true }], index: 0 });
   await new Promise((r) => setTimeout(r, 20));
-  check($('np-save').disabled === true && $('np-link').disabled === true,
-    'and goes dead when there is nothing behind them');
+  check($('np-share').disabled === true, 'and goes dead when there is nothing behind it');
+
+  // The limit, kept per browser as the phone keeps it.
+  const five = window.document.querySelector('input[name="shareaudio"][value="5"]');
+  check(window.document.querySelector('input[name="shareaudio"][value="3"]')?.checked === true,
+    'the length for sharing as audio starts at three minutes');
+  five.checked = true;
+  five.dispatchEvent(new window.Event('change'));
+  check(window.localStorage.getItem('protracktor.shareaudio') === '5', 'and a choice is kept');
 
   // --- the files that stayed on the phone (A28) ---------------------------------------------------
   //
@@ -1015,7 +1037,7 @@ if (window.__api) {
   button(rows()[0], 'bmore').click();
   const menu = [...$('menu').children];
   check(menu.map((b) => b.textContent).join('|')
-        === "Add to another playlist|Information|More from this author|Save the file|Copy a link|Share with Protracktor",
+        === "Add to another playlist|Information|More from this author|Save the file|Share as audio|Copy a link|Share with Protracktor",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
   // The icon beside its word, centred on it: a later rule once made every item a block and left the
@@ -2520,6 +2542,17 @@ if (window.__api) {
   });
   // The format a refusal names (A51), the same rows `RuleCasesTest` runs against `OpenFailure`.
   each('refusalFormat', (c) => catalogueModule.modlandFormatOf(c.url) === (c.expect === '-' ? null : c.expect));
+  each('shareAudioPlan', (c) => {
+    const plan = rules.shareAudioPlan(Number(c.known), Number(c.limit));
+    return plan.seconds === Number(c.seconds) && plan.fade === yes(c.fade);
+  });
+  each('shareAudioFade', (c) =>
+    Math.abs(rules.fadeGain(Number(c.frame), Number(c.total), Number(c.fadeFrames)) - Number(c.gain)) < 0.001);
+  each('shareAudioLimit', (c) => rules.shareAudioMinutes(c.stored) === Number(c.expect));
+  each('shareAudioName', (c) => {
+    const blank = (v) => (v === '-' ? '' : v);
+    return rules.shareAudioName(blank(c.title), blank(c.author)) === c.expect;
+  });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
   // --- the page in Polish, and in a light theme (W6, W7) ------------------------------------------
