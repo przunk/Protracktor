@@ -3977,10 +3977,20 @@ addEventListener('keydown', (event) => {
   act();
 });
 
-// **No pinch to zoom**, in the two places the viewport and `touch-action` do not
+// **No pinch to zoom**, in the places the viewport and `touch-action` do not
 // reach: Safari's own gesture events, which ignore `user-scalable=no`, and a touchpad's pinch on a
 // computer, which a browser delivers as a wheel with Ctrl held.
+//
+// **And a second finger, refused where it lands.** A Safari tab still zoomed with only the gesture
+// events refused (a friend's iPhone, 2026-09-24): `user-scalable=no` is ignored there on purpose,
+// and a pinch is a two-finger `touchmove` before it is a gesture. Refusing that move is what a tab
+// cannot overrule, and it has to be said non-passively or the refusal is ignored. One finger is
+// never touched, so every list still scrolls.
 addEventListener('gesturestart', (event) => event.preventDefault());
+addEventListener('gesturechange', (event) => event.preventDefault());
+document.addEventListener('touchmove', (event) => {
+  if (event.touches.length > 1) event.preventDefault();
+}, { passive: false });
 addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault(); }, { passive: false });
 
 // Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
