@@ -15,26 +15,38 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A62. Share a tune as audio -- M4A, for Messenger and the like — **planned 2026-09-25, after the launch**
+## A62. Share a tune as audio -- M4A, for Messenger and the like — **planned 2026-09-24; BUILT the same day on `feature/a62-share-as-audio`, not yet seen on the phone**
 
 The owner: *"I want to share it, e.g. on Messenger."* *Share the file* sends the module itself, which
 Messenger cannot play; *Share a link* opens the web player, which means leaving the chat. So:
-**Share as audio**, in a tune's menu, beside the other two.
+**Share as audio**, in a tune's menu, beside the other two -- in the playlist, in every Browse list
+and on Now Playing. APK only (the owner, 2026-09-24).
 
-- **Every format the app plays**, one path for all: each decoder renders to PCM already, and the
-  export is that PCM encoded -- SAP, MOD, XM, SID, NSF, SPC, SNDH, UADE's Amiga formats alike. An MP3
-  is shared as it is.
-- **M4A (AAC)**, through Android's own `MediaCodec`: no new dependency, and what Messenger and any
-  player take. MP3 would need LAME, a native library of its own -- only if M4A proves not enough.
-- **The length**: the tune's own where it has one; otherwise **a setting, e.g. 3 minutes** (the
-  owner's word, 2026-09-25), ending in a short fade. A tune longer than the setting is cut at it.
-- **One subsong** -- the one playing or chosen.
-- **Tags**: title, author, year, as the app knows them.
-- About a megabyte a minute; rendered faster than real time; the file goes where copies made for
-  sharing already go, and is cleared with them.
+As built:
 
-To decide when it is built: the setting's default and range, and whether the page gets it too
-(a browser can encode through `MediaRecorder`, as WebM/Opus rather than M4A).
+- **Every format the app plays**, one path for all: a decoder of its own is opened beside the
+  player (`NativeEngine.openRendering`, the same `openFromJava` the player uses), asked for 16-bit
+  PCM, and the PCM encoded. Playback is not interrupted.
+- **M4A (AAC-LC, 128 kbit/s)**, through Android's own `MediaCodec` and `MediaMuxer`
+  (`M4aWriter`): no new dependency. Sent as `audio/mp4`.
+- **The length** (`AudioExport.plan`): the tune's own -- the decoder's, else HVSC/songdb/learnt, the
+  lengths the player asks -- when it is within the setting; a longer tune, or one that states
+  nothing, is **cut at the setting and fades over 3 s**. The owner's words were "a limit, a
+  setting in the options, just in case, e.g. 3 min", so the setting is a limit on every tune.
+  **Settings → Length when shared as audio**: 1 / 3 / 5 / 10 min, default 3.
+- **One subsong**: the one playing when the tune is the current one, else the one the file opens at.
+- **No tags.** `MediaMuxer` writes no title or artist into an M4A, and writing them means a
+  hand-made `udta/meta/ilst` box or a library. So the **file name** carries them:
+  `Author - Title.m4a`. Tags are a follow-up if the owner wants them.
+- About a megabyte a minute; the file goes where copies made for sharing already go
+  (`cache/shared`), and is cleared with them after an hour.
+- **Checked:** JVM tests for the plan, the fade and the file name (each broken once to see it
+  fail); the native code compiles into the release APK. **Not checked:** anything on the phone --
+  that the encoder runs, the file plays in Messenger, the length and the fade are right, and that
+  rendering beside a playing tune of the same engine (UADE, sc68) does not disturb it.
+
+Open: whether the page gets it too (a browser can encode through `MediaRecorder`, as WebM/Opus
+rather than M4A) -- not now, the owner said APK only.
 
 ## A61. Moving between screens — **noted 2026-09-24; decided 2026-09-25: variant (A); BUILT, merged and confirmed on the phone the same day ("now it makes sense")**
 

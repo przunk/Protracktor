@@ -56,6 +56,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,6 +126,8 @@ data class PlayerUiState(
     val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
     /** When an opened folder's tracks are fetched ahead (A55, D4). */
     val cacheAhead: CacheAhead = CacheAhead.DEFAULT,
+    /** The longest a tune shared as audio runs, in minutes (A62). */
+    val shareAudioMinutes: Int = AudioExport.DEFAULT_LIMIT_MINUTES,
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
@@ -726,7 +729,10 @@ class PlaybackController private constructor(private val context: Context) {
         }, "protracktor-background")
     }.asCoroutineDispatcher()
 
-    private val _state = MutableStateFlow(PlayerUiState(cacheAhead = Appearance.cacheAhead(context)))
+    private val _state = MutableStateFlow(PlayerUiState(
+        cacheAhead = Appearance.cacheAhead(context),
+        shareAudioMinutes = Appearance.shareAudioMinutes(context),
+    ))
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
 
     /**
@@ -1746,6 +1752,122 @@ class PlaybackController private constructor(private val context: Context) {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             )
+        }
+    }
+
+    /** The one tune being turned into audio; a second press while it runs says so instead. */
+    private var sharingAudio: Job? = null
+
+    /**
+     * Sends the tune as sound -- an `.m4a` a chat app plays -- rather than as the file only this
+     * kind of player can (`docs/BACKLOG.md` A62).
+     *
+     * **One subsong**: the one playing when [ref] is the current tune, else the one the file opens
+     * at. **As long as the tune says** -- from the decoder or the length databases the player asks
+     * -- when that is within the owner's setting; a longer tune, or one that states nothing, such
+     * as a looping SID, is cut at the setting and fades (`AudioExport.plan`). Rendered by a decoder
+     * of its own, beside whatever is playing, which goes on playing.
+     */
+    fun shareAsAudio(ref: TrackRef) {
+        if (sharingAudio?.isActive == true) {
+            say(Message(context.getString(R.string.notice_share_audio_busy)))
+            return
+        }
+        sharingAudio = scope.launch {
+            say(Message(context.getString(R.string.notice_share_audio_preparing, ref.title)))
+            val bytes = loadBytes(ref)
+            if (bytes == null) {
+                say(Message(context.getString(R.string.notice_track_unreadable, ref.title)))
+                return@launch
+            }
+            val companions = loadCompanions(ref)
+            val snapshot = _state.value
+            val playingSubsong = snapshot.subsong.takeIf { snapshot.current?.sameFileAs(ref) == true }
+            val minutes = snapshot.shareAudioMinutes
+            val uri = withContext(Dispatchers.Default) {
+                runCatching { renderToM4a(ref, bytes, companions, playingSubsong, minutes) }
+                    .onFailure { android.util.Log.w("Protracktor", "share as audio failed for ${ref.id}", it) }
+                    .getOrNull()
+            }
+            if (uri == null) {
+                say(Message(context.getString(R.string.notice_share_audio_failed, ref.title)))
+                return@launch
+            }
+            say(Message(context.getString(R.string.notice_share_audio_ready, ref.title)))
+            _share.tryEmit(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "audio/mp4"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, ref.title)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            )
+        }
+    }
+
+    /** The rendering itself, off the main thread. Null when no decoder took the file. */
+    private suspend fun renderToM4a(
+        ref: TrackRef,
+        bytes: ByteArray,
+        companions: List<Pair<String, ByteArray>>,
+        playingSubsong: Int?,
+        limitMinutes: Int,
+    ): Uri? {
+        val (rendering, reason) = NativeEngine.openRendering(bytes, ref.fileNameOrTitle, companions)
+        if (rendering == null) {
+            android.util.Log.w("Protracktor", "share as audio: no decoder for ${ref.id}: $reason")
+            return null
+        }
+        rendering.use { r ->
+            if (playingSubsong != null && playingSubsong != r.currentSubsong()) r.selectSubsong(playingSubsong)
+            val subsong = r.currentSubsong()
+
+            // The same lengths, in the same order, the player asks when it opens a tune.
+            val md5 = Md5.of(bytes)
+            val hvsc = songLengths.forMd5(md5).orEmpty()
+            val songdb = if (hvsc.any { it > 0.0 }) emptyList() else songDbLengths.forMd5(md5)
+            val known = LengthSource.fill(LengthSource.known(hvsc, songdb), learnedLengths.forMd5(md5))
+            val plan = AudioExport.plan(LengthSource.forSubsong(r.durationSeconds(), known, subsong), limitMinutes)
+
+            val rate = r.preferredSampleRate().takeIf { it in 8_000..96_000 } ?: AudioExport.SAMPLE_RATE
+            val total = (plan.seconds * rate).toLong()
+            val fadeFrames = if (plan.fade) (AudioExport.FADE_SECONDS * rate).toLong() else 0L
+            val file = remoteFiles.shareFile(AudioExport.fileName(ref.title, ref.author))
+            val pcm = ShortArray(4096 * 2)
+            var done = 0L
+            // A half-written file is deleted rather than left for the next share's sweep: nothing
+            // will ever send it, and it is megabytes.
+            try { M4aWriter(file, rate).use { writer ->
+                while (done < total) {
+                    currentCoroutineContext().ensureActive()
+                    val want = minOf(4096L, total - done).toInt()
+                    // The native side renders as many frames as the array holds, so the last,
+                    // shorter piece gets an array of its own size.
+                    val chunk = if (want == pcm.size / 2) pcm else ShortArray(want * 2)
+                    val got = r.render(rate, chunk)
+                    if (got < 0) error("decoder failed at frame $done")
+                    if (got == 0) break
+                    if (fadeFrames > 0 && done + got > total - fadeFrames) {
+                        for (i in 0 until got) {
+                            val g = AudioExport.gainAt(done + i, total, fadeFrames)
+                            chunk[2 * i] = (chunk[2 * i] * g).toInt().toShort()
+                            chunk[2 * i + 1] = (chunk[2 * i + 1] * g).toInt().toShort()
+                        }
+                    }
+                    writer.write(chunk, got)
+                    done += got
+                    if (got < want) break
+                }
+                writer.finish()
+            } } catch (failure: Throwable) {
+                file.delete()
+                throw failure
+            }
+            if (done == 0L) {
+                file.delete()
+                return null
+            }
+            return remoteFiles.shareUri(file)
         }
     }
 
@@ -4148,6 +4270,12 @@ class PlaybackController private constructor(private val context: Context) {
     fun setCacheAhead(mode: CacheAhead) {
         if (!Appearance.selectCacheAhead(context, mode)) return
         _state.update { it.copy(cacheAhead = mode) }
+    }
+
+    fun setShareAudioMinutes(minutes: Int) {
+        val wanted = AudioExport.limitFromStored(minutes)
+        if (!Appearance.selectShareAudioMinutes(context, wanted)) return
+        _state.update { it.copy(shareAudioMinutes = wanted) }
     }
 
     fun setFallbackLength(seconds: Int) {

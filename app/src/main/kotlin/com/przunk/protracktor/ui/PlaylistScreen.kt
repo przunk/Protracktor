@@ -87,6 +87,7 @@ fun PlaylistScreen(
     onMove: (Int, Int) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit = {},
@@ -120,7 +121,7 @@ fun PlaylistScreen(
     if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
             PlaylistBody(
-                state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {},
+                state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {}, {},
                 loadingCurrent = false, contentPadding = contentPadding, enabled = false,
             )
             AwayScrim(
@@ -170,6 +171,7 @@ fun PlaylistScreen(
         onMove = onMove,
         onShowNeighbours = onShowNeighbours,
         onShareFile = onShareFile,
+        onShareAudio = onShareAudio,
         onShareLink = onShareLink,
         onSendToWeb = onSendToWeb,
         onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -197,6 +199,7 @@ internal fun PlaylistBody(
     onMove: (Int, Int) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (TrackRef) -> Unit,
@@ -290,6 +293,7 @@ internal fun PlaylistBody(
                 onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                     ?.let { { onShowNeighbours(it) } },
                 onShareFile = { onShareFile(track) },
+                onShareAudio = { onShareAudio(track) },
                 // Absent for a local file, which has no address anyone else could open.
                 onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { { onShareLink(it) } },
@@ -474,6 +478,7 @@ private fun TrackRow(
     onAddToOtherPlaylist: () -> Unit,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
+    onShareAudio: () -> Unit,
     onShareLink: (() -> Unit)?,
     onSendToWeb: (() -> Unit)?,
     /**
@@ -562,6 +567,11 @@ private fun TrackRow(
                                 text = { Text(stringResource(R.string.action_share_file)) },
                                 leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
                                 onClick = { menuOpen = false; onShareFile() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_share_audio)) },
+                                leadingIcon = { Icon(PlayerIcons.AudioFile, contentDescription = null) },
+                                onClick = { menuOpen = false; onShareAudio() },
                             )
                             onShareLink?.let { share ->
                                 DropdownMenuItem(

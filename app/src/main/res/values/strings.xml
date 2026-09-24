@@ -180,6 +180,7 @@
         <item quantity="other">%1$,d selected</item>
     </plurals>
     <string name="a11y_track_menu">Actions for %1$s</string>
+    <string name="action_share">Share</string>
     <string name="action_share_file">Share the file</string>
     <string name="action_share_link">Share a link</string>
     <string name="action_send_to_web">Share with Protracktor</string>
@@ -332,6 +333,14 @@
     <string name="notice_file_no_tracks">No tracks in that file.</string>
     <string name="notice_track_unreadable">Could not read %1$s</string>
     <string name="notice_share_failed">Could not prepare %1$s for sharing.</string>
+    <string name="action_share_audio">Share as audio</string>
+    <string name="notice_share_audio_preparing">Preparing %1$s as audio…</string>
+    <string name="notice_share_audio_ready">Ready to send: %1$s</string>
+    <string name="notice_share_audio_failed">Could not turn %1$s into audio.</string>
+    <string name="notice_share_audio_busy">Still preparing the previous tune as audio.</string>
+    <string name="settings_share_audio_length">Length when shared as audio</string>
+    <string name="settings_share_audio_length_detail">The longest a tune shared as audio runs. A shorter tune is sent whole; a longer one, or one that does not say how long it is, is cut here and fades out.</string>
+    <string name="settings_share_audio_minutes">%1$,d min</string>
     <string name="notice_link_online_only">Only tracks from an online catalogue have a link.</string>
     <string name="notice_online_only_action">Only tracks from an online catalogue can do that.</string>
     <string name="notice_nothing_to_send">There is nothing in the playlist to send.</string>

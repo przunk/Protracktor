@@ -8,6 +8,8 @@
 // PCM never crosses the boundary (`docs/ARCHITECTURE.md` §4); whether it should be a separate
 // process instead is `docs/OPEN_QUESTIONS.md` Q9.
 
+#include <cmath>
+#include <algorithm>
 #include "engine.h"
 #include "log.h"
 
@@ -427,14 +429,15 @@ Player *asPlayer(jlong handle) { return reinterpret_cast<Player *>(handle); }
 
 }  // namespace
 
-extern "C" {
-
-JNIEXPORT jlong JNICALL
-Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, jbyteArray data,
-                                                          jstring fileName,
-                                                          jobjectArray companionNames,
-                                                          jobjectArray companionData,
-                                                          jobjectArray errorOut) {
+/**
+ * A backend for a file handed over from Kotlin, with its reason written back when there is none.
+ *
+ * Shared by the player and the renderer (`docs/BACKLOG.md` A62), so a tune shared as audio is opened
+ * exactly as one played is -- the same decoders, in the same order, with the same companions.
+ */
+static std::unique_ptr<Backend> openFromJava(JNIEnv *env, jbyteArray data, jstring fileName,
+                                             jobjectArray companionNames, jobjectArray companionData,
+                                             jobjectArray errorOut) {
     const jsize length = env->GetArrayLength(data);
 
     const char *nameChars = env->GetStringUTFChars(fileName, nullptr);
@@ -498,10 +501,89 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, 
         env->DeleteLocalRef(text);
     }
 
+    return backend;
+}
+
+extern "C" {
+
+JNIEXPORT jlong JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeOpen(JNIEnv *env, jclass, jbyteArray data,
+                                                          jstring fileName,
+                                                          jobjectArray companionNames,
+                                                          jobjectArray companionData,
+                                                          jobjectArray errorOut) {
+    std::unique_ptr<Backend> backend =
+        openFromJava(env, data, fileName, companionNames, companionData, errorOut);
     if (!backend) return 0;
     return guarded<jlong>(
         "starting the player", [&] { return reinterpret_cast<jlong>(new Player(std::move(backend))); },
         0);
+}
+
+// --- rendering to a file, not to the speaker (A62) ------------------------------------------------
+//
+// A backend of its own, opened beside whatever plays: a scan does the same. Nothing here touches a
+// stream; the caller asks for frames and gets them as 16-bit PCM, which is what the AAC encoder
+// takes.
+
+JNIEXPORT jlong JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderOpen(JNIEnv *env, jclass, jbyteArray data,
+                                                                jstring fileName,
+                                                                jobjectArray companionNames,
+                                                                jobjectArray companionData,
+                                                                jobjectArray errorOut) {
+    std::unique_ptr<Backend> backend =
+        openFromJava(env, data, fileName, companionNames, companionData, errorOut);
+    return reinterpret_cast<jlong>(backend.release());
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderClose(JNIEnv *, jclass, jlong handle) {
+    guardedVoid("renderClose", [&] { delete reinterpret_cast<Backend *>(handle); });
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderSelect(JNIEnv *, jclass, jlong handle, jint index) {
+    return guarded<jboolean>("renderSelect", [&] {
+        return reinterpret_cast<Backend *>(handle)->selectSubsong(index) ? JNI_TRUE : JNI_FALSE;
+    }, JNI_FALSE);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderSubsong(JNIEnv *, jclass, jlong handle) {
+    return guarded<jint>("renderSubsong", [&] { return reinterpret_cast<Backend *>(handle)->currentSubsong(); }, 0);
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderDuration(JNIEnv *, jclass, jlong handle) {
+    return guarded<jdouble>("renderDuration", [&] { return reinterpret_cast<Backend *>(handle)->durationSeconds(); }, 0.0);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRenderRate(JNIEnv *, jclass, jlong handle) {
+    return guarded<jint>("renderRate", [&] { return reinterpret_cast<Backend *>(handle)->preferredSampleRate(); }, 0);
+}
+
+/**
+ * Fills [out] with up to `out.length / 2` stereo frames at [sampleRate], as 16-bit PCM; answers how
+ * many frames came. Fewer than asked is the tune's own end. -1 when the decoder failed.
+ */
+JNIEXPORT jint JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRender(JNIEnv *env, jclass, jlong handle,
+                                                            jint sampleRate, jshortArray out) {
+    const jsize samples = env->GetArrayLength(out);
+    const std::size_t frames = static_cast<std::size_t>(samples) / 2;
+    return guarded<jint>("render", [&] {
+        std::vector<float> buffer(frames * 2);
+        const std::size_t got = reinterpret_cast<Backend *>(handle)->render(sampleRate, frames, buffer.data());
+        std::vector<jshort> pcm(got * 2);
+        for (std::size_t i = 0; i < got * 2; ++i) {
+            const float v = std::clamp(buffer[i], -1.0f, 1.0f);
+            pcm[i] = static_cast<jshort>(std::lround(v * 32767.0f));
+        }
+        env->SetShortArrayRegion(out, 0, static_cast<jsize>(got * 2), pcm.data());
+        return static_cast<jint>(got);
+    }, -1);
 }
 
 /**

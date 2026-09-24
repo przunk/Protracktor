@@ -184,6 +184,7 @@
     <string name="a11y_download_song_lengths">Pobierz bazę długości utworów HVSC</string>
 
     <string name="action_show_neighbours">Więcej tego autora</string>
+    <string name="action_share">Udostępnij</string>
     <string name="action_share_file">Udostępnij plik</string>
     <string name="action_share_link">Udostępnij link</string>
     <string name="action_send_to_web">Udostępnij przez Protracktor</string>
@@ -347,6 +348,14 @@
     <string name="notice_file_no_tracks">W tym pliku nie ma utworów.</string>
     <string name="notice_track_unreadable">Nie udało się odczytać %1$s</string>
     <string name="notice_share_failed">Nie udało się przygotować %1$s do udostępnienia.</string>
+    <string name="action_share_audio">Udostępnij jako audio</string>
+    <string name="notice_share_audio_preparing">Przygotowuję %1$s jako audio…</string>
+    <string name="notice_share_audio_ready">Gotowe do wysłania: %1$s</string>
+    <string name="notice_share_audio_failed">Nie udało się zamienić %1$s na audio.</string>
+    <string name="notice_share_audio_busy">Wciąż przygotowuję poprzedni utwór jako audio.</string>
+    <string name="settings_share_audio_length">Długość przy udostępnianiu jako audio</string>
+    <string name="settings_share_audio_length_detail">Najdłuższy czas utworu udostępnionego jako audio. Krótszy utwór idzie w całości; dłuższy, albo taki, który nie podaje swojej długości, zostaje tu ucięty i wyciszony.</string>
+    <string name="settings_share_audio_minutes">%1$,d min</string>
     <string name="notice_link_online_only">Odnośnik mają tylko utwory z katalogu online.</string>
     <string name="notice_online_only_action">To działa tylko dla utworów z katalogu online.</string>
     <string name="notice_nothing_to_send">Nie ma czego wysłać — playlista jest pusta.</string>

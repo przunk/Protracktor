@@ -35,6 +35,7 @@ object Appearance {
     private const val WEB_PLAYER = "web_player_base"
     private const val PAIRED = "paired_endpoint"
     private const val CACHE_AHEAD = "cache_ahead"
+    private const val SHARE_AUDIO_MINUTES = "share_audio_minutes"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -150,6 +151,16 @@ object Appearance {
     fun selectCacheAhead(context: Context, mode: com.przunk.protracktor.player.CacheAhead): Boolean {
         if (cacheAhead(context) == mode) return false
         prefs(context).edit().putString(CACHE_AHEAD, mode.stored).apply()
+        return true
+    }
+
+    /** The longest a tune shared as audio runs, in minutes (A62). */
+    fun shareAudioMinutes(context: Context): Int =
+        com.przunk.protracktor.player.AudioExport.limitFromStored(prefs(context).getInt(SHARE_AUDIO_MINUTES, 0))
+
+    fun selectShareAudioMinutes(context: Context, minutes: Int): Boolean {
+        if (shareAudioMinutes(context) == minutes) return false
+        prefs(context).edit().putInt(SHARE_AUDIO_MINUTES, minutes).apply()
         return true
     }
 }
