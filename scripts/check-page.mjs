@@ -34,7 +34,7 @@ const { window } = dom;
 
 // The engine, the audio device and the network are not what this checks, so they are stubbed
 // exactly as far as the page touches them.
-window.qrcode = () => ({ addData() {}, make() {}, createTableTag: () => '<table></table>' });
+window.qrcode = () => ({ addData() {}, make() {}, createTableTag: () => '<table></table>', createSvgTag: () => '<svg></svg>' });
 window.AudioContext = class {
   constructor() { this.state = 'suspended'; this.audioWorklet = { addModule: async () => {} }; }
   // Refused while `__audioBlocked` is set: a browser will not resume audio without a click on the
@@ -220,6 +220,17 @@ check($('status').textContent.length > 0, 'the status line says something');
   $('random-filter').hidden = true;
   check(window.getComputedStyle($('random-filter')).display === 'none', "and a button hidden later is too");
   $('random-filter').hidden = false;
+}
+// **Only Now Playing's squares grow to share their row** (the owner's screenshots, 2026-09-24). A
+// bare `.action` rule for them made every labelled button on the page stretch: the top bar's became
+// tall slabs and squeezed the playlist's name to "Se…".
+{
+  const grows = (id) => Number(window.getComputedStyle($(id)).flexGrow || 0) > 0;
+  const stretched = ['tab-browse', 'tab-pair', 'tab-paste', 'random-leave', 'sel-add'].filter(grows);
+  check(stretched.length === 0, `the top bar's and the headings' buttons keep their own size${stretched.length ? ` (growing: ${stretched.join(', ')})` : ''}`);
+  check(grows('np-show'), 'while Now Playing\'s squares share their row');
+  check(window.getComputedStyle(window.document.querySelector('#settings .sheet')).overflowY === 'auto',
+    'a sheet taller than the screen scrolls inside itself, since the page does not move');
 }
 check(!!window.__api, 'the script finished loading');
 

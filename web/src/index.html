@@ -164,7 +164,8 @@
   .playlist .chev { width: 20px; height: 20px; fill: var(--on-surface-variant); flex: none; }
   .playlist .name { font-size: var(--headline-small); font-weight: 400; letter-spacing: 0;
                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .playlist .count { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 1px; }
+  .playlist .count { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 1px;
+                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .spacer { flex: 1; }
 
   /* The owner asked for this shape twice (BACKLOG A16, A17, A23): an icon with its name underneath,
@@ -300,6 +301,17 @@
     text-align: center;
   }
   .sheet.wide { max-width: 560px; text-align: left; }
+  /* **A sheet taller than the screen scrolls inside itself.** The page no longer moves (C92), so a
+     sheet that runs past the bottom -- Settings on a phone -- had nothing that could bring the rest
+     into view. Its heading stays, so Close is always there. */
+  .sheet { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+  .sheet > .browsehead { position: sticky; top: 0; z-index: 1; background: var(--surface-container); }
+  @media (max-width: 560px) {
+    .overlay { padding: 12px; }
+    .sheet { padding: 18px 16px 12px; }
+    /* The owner, 2026-09-24: settings as a panel of nearly the whole height. */
+    #settings .sheet { height: 100%; }
+  }
   .sheet .note { margin-bottom: 14px; }
   .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
   .text-button {
@@ -314,6 +326,11 @@
   .qr { display: inline-block; background: #fff; padding: 12px; border-radius: var(--shape-m); line-height: 0; }
   .qr table { border-collapse: collapse; }
   .qr td { width: 5px; height: 5px; }
+  /* Drawn as a scalable picture so it fits a narrow sheet instead of pushing past it; and the
+     address under it breaks anywhere, since it has no spaces to break at. */
+  .qr { max-width: 100%; }
+  .qr svg { display: block; width: min(240px, 100%); height: auto; shape-rendering: crispEdges; }
+  #pairurl { overflow-wrap: anywhere; }
   textarea {
     width: 100%; height: 110px;
     background: var(--surface-container);
@@ -479,12 +496,15 @@
   .np-head { margin-bottom: 12px; }
   /* Labelled squares in a row, sized as the phone sizes them. */
   .npactions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  .action {
-    flex: 1 1 120px; min-width: 0;
-    background: var(--secondary-container); color: var(--on-surface);
-    border: 0; border-radius: var(--shape-l);
-    padding: 12px 6px 10px; font: inherit; font-size: 12px; cursor: pointer;
-    display: grid; justify-items: center; gap: 6px;
+  /* **Only these squares share the row's width.** Written as a bare `.action` this rule reached
+     every labelled button on the page -- the top bar's, Random's heading's, the selection bar's --
+     and let each of them grow to fill its row: on a phone Browse, Pair and Paste became tall slabs
+     and squeezed the playlist's name down to "Se…" (the owner's screenshots, 2026-09-24). */
+  .npactions .action {
+    flex: 1 1 0; min-width: 0;
+    border-radius: var(--shape-l);
+    padding: 12px 6px 10px; font-size: 12px;
+    display: grid; justify-items: center; align-content: start; gap: 6px;
   }
   .action:hover:not(:disabled) { filter: brightness(1.12); }
   .action:disabled { opacity: .38; cursor: default; }

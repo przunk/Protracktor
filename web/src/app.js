@@ -3870,7 +3870,8 @@ async function pair() {
   const qr = qrcode(0, 'M');
   qr.addData(post);
   qr.make();
-  $('qr').innerHTML = qr.createTableTag(5, 0);
+  // Scalable, so the sheet decides its size: a fixed 5-pixel cell ran past a phone's width.
+  $('qr').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0, scalable: true });
 
   const ready = t('Scan this with Protracktor on your phone to send it a playlist.');
   $('pairnote').textContent = ready;
