@@ -4693,6 +4693,7 @@ class PlaybackController private constructor(private val context: Context) {
                 is OnPhone.Check.Archive -> archives.getOrPut(check.catalogueId) {
                     remoteFiles.archiveFile(check.catalogueId).let { it.exists() && it.length() > 0 }
                 }
+                OnPhone.Check.Local -> true
                 OnPhone.Check.Never -> false
             }
         }

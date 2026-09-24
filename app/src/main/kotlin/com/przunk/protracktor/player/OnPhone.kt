@@ -14,8 +14,10 @@ import com.przunk.protracktor.net.UnExoticA
  * is in the cache by its address; ASMA's are all in the archive downloaded whole; UnExoticA's sit in
  * their game's `.lha`, cached by that archive's address once any tune of the game has played.
  *
- * **A file of the phone's own library is not marked.** Every row of a local list is on the phone, so
- * a tick on each would say nothing. No Android here, so the rule is a JVM test.
+ * **A file of the phone's own library is marked too** (the owner, 2026-09-25, overruling the first
+ * version, which left them out as saying nothing): the mark means "plays without the network", and in
+ * a search that mixes the phone's files with the archives' that is exactly what tells them apart. No
+ * Android here, so the rule is a JVM test.
  */
 object OnPhone {
 
@@ -24,7 +26,9 @@ object OnPhone {
         data class Cached(val url: String) : Check
         /** On the phone when the catalogue [catalogueId], downloaded as one archive, is here. */
         data class Archive(val catalogueId: String) : Check
-        /** Not a question with a useful answer: a local file, or nothing this app fetches. */
+        /** A file of the phone's own library: on the phone by definition. */
+        data object Local : Check
+        /** Nothing this app fetches or keeps. */
         data object Never : Check
     }
 
@@ -34,6 +38,7 @@ object OnPhone {
         }
         Catalogue.all.firstOrNull { it.isArchive && id.startsWith("${it.id}://") }?.let { return Check.Archive(it.id) }
         if (id.startsWith("http://") || id.startsWith("https://")) return Check.Cached(id)
+        if (id.startsWith("content://") || id.startsWith("file://")) return Check.Local
         return Check.Never
     }
 }
