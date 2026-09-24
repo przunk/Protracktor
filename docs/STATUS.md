@@ -427,6 +427,18 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C90. "More from this author" from search results left the search behind — **FIXED 2026-09-24 on `fix/search-author-digression`, not yet seen on the phone**
+
+The owner: from Random the jump shows the digression -- *Browsing author* over the folder, a way
+back -- and from Search it did not; "it has to work identically". **Mechanism:** the heading was
+drawn only while the dice waited (`randomMode || diceWaiting`), and Back after a jump
+(`arrivedByJump`) left Browse outright, so the results, their words and scope were gone. **Fixed:**
+a search is a place to come back to, like the dice. The jump keeps it (`BrowseNavigation.searchToReturnTo`,
+`searchWaiting`), the heading shows, next and previous walk the author when a result was what played
+-- and not when the playlist was playing, since a look must not move the music -- and Back returns
+to the results as they were (`resumeSearch`). A tune chosen in the folder meanwhile stops and the
+results' tune waits paused, as the dice's does; otherwise the music plays on.
+
 ### C89. Search filtered to Atari 8-bit never looks in ASMA — **OPEN, reported 2026-09-24; mechanism found**
 
 The owner: *Search → filter by platform → Atari 8-bit → "przunk"* finds nothing, while the same tunes

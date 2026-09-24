@@ -46,4 +46,20 @@ object BrowseNavigation {
         // come through here, so a search survives being walked away from and returned to.
         query = "",
     )
+
+    /**
+     * What a jump to an author's folder should return to, or null when there is nothing to return to.
+     *
+     * **A search is a place, like the dice** (the owner, 2026-09-24: "to ma działać identycznie").
+     * "More from this author" from a list of results used to throw the results away: the folder
+     * opened, and Back left Browse. Now the search -- its words, its scope and what it found -- is
+     * kept, and Back from the folder comes back to it. Only a search: a jump from a folder or from
+     * the playlist has nowhere of its own to go back to but where it was.
+     */
+    fun searchToReturnTo(current: BrowseState): BrowseState? =
+        current.takeIf { it.domain == BrowseDomain.SEARCH && !it.arrivedByJump }
+
+    /** The search a digression came from, as it is shown again: no longer a jump, and not loading. */
+    fun returningTo(search: BrowseState): BrowseState = search.copy(arrivedByJump = false, loading = false)
 }
+
