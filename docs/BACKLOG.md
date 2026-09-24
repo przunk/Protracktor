@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A61. Moving between screens — **noted 2026-09-24; talked through and decided 2026-09-25: variant (A)**
+## A61. Moving between screens — **noted 2026-09-24; decided 2026-09-25: variant (A); BUILT the same day on `feature/a61-sessions`, not yet seen on the phone**
 
 **The owner's scenarios, 2026-09-25.** Random: play, More from this author, Back returns to Random --
 good; then Back, or the Playlist button, returns to the playlist and **stops the music**. Search:
@@ -36,6 +36,13 @@ playlist (Random, a folder, search results, History, a link):
   same folder with the playing row marked;
 - **the Playlist button is the one way to end a session**: it stops and returns to the playlist,
   from every session alike. Random stops stopping on Back.
+
+**Built:** `SessionSource` names the list a tune was played from (search and its words; catalogue /
+format / author; a local folder; History), remembered with the Browse state it was played from. The
+playlist's cover is drawn for every session, Random included, and says truly what plays, with two
+ways out, each an icon with its name: back to the source as it was -- Random's screen, or Browse on
+that list (`returnToSession`) -- and back to the playlist, which ends it. Back out of Random no
+longer stops the music. The Browse button, while a list plays, opens on that list.
 
 **And search's reset, refined by the owner:** a search opened **from the uncovered playlist** starts
 fresh -- that is what the reset was for; **returning to a search that is playing** keeps its words,

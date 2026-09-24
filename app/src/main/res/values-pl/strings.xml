@@ -539,4 +539,10 @@
         <item quantity="many">%1$,d zostało na telefonie, który je wysłał.</item>
         <item quantity="other">%1$,d zostało na telefonie, który je wysłał.</item>
     </plurals>
+    <string name="session_from_search">Odtwarzanie z wyszukiwania: %1$s</string>
+    <string name="session_from_folder">Odtwarzanie z: %1$s</string>
+    <string name="session_from_history">Odtwarzanie z historii</string>
+    <string name="session_body">Nic z tej playlisty nie gra. Następny i poprzedni idą po tamtej liście.</string>
+    <string name="action_back_to_list">Wróć do listy</string>
+    <string name="action_back_to_random">Wróć do losowania</string>
 </resources>

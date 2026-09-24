@@ -156,6 +156,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun removeRandomAt(index: Int) = controller.removeRandomAt(index)
     fun keepTransient() = controller.keepTransient()
     fun returnToPlaylist() = controller.returnToPlaylist()
+    fun returnToSession(): Boolean = controller.returnToSession()
     fun playFromResults(results: List<TrackRef>, index: Int) {
         ensureServiceRunning()
         controller.playFromResults(results, index)

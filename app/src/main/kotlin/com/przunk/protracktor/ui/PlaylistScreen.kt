@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -66,6 +67,7 @@ import androidx.compose.ui.zIndex
 import com.przunk.protracktor.R
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.player.PlayerUiState
+import com.przunk.protracktor.player.SessionSource
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.TrackRef
@@ -105,21 +107,30 @@ fun PlaylistScreen(
     onReturnToPlaylist: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    /** Back to where the session plays from -- Random, or the list in Browse (A61). */
+    onReturnToSource: () -> Unit = {},
 ) {
     // Random and a search both play something that is not in this list, so the list goes behind
     // glass: visible, clearly not what you are listening to, and not touchable by accident. Cheaper
     // and more portable than a blur, which needs API 31 and this app runs from 29.
     // Random has a screen of its own now (`docs/PLAN_RANDOM.md`); the glass is for the two that
     // still have nothing to show — a file another app handed us, and a search result playing.
-    if (state.awayFromPlaylist && !state.randomMode) {
+    // **Every session, Random included** (A61): Back from Random no longer ends it, so the playlist
+    // is where it is left from as well, and the cover says what plays and leads back to it.
+    if (state.awayFromPlaylist) {
         Box(modifier = modifier.fillMaxSize()) {
             PlaylistBody(
                 state.queue.tracks, listState, null, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, {},
                 loadingCurrent = false, contentPadding = contentPadding, enabled = false,
             )
             AwayScrim(
-                externalMode = state.externalMode,
+                source = when {
+                    state.externalMode -> Away.External
+                    state.searchMode -> state.sessionSource?.let { Away.List(it) } ?: Away.List(SessionSource.Search(""))
+                    else -> Away.Random
+                },
                 onReturnToPlaylist = onReturnToPlaylist,
+                onReturnToSource = onReturnToSource,
                 contentPadding = contentPadding,
             )
         }
@@ -723,22 +734,57 @@ private fun EmptyPlaylist(
     }
 }
 
+/** What the cover is over: a file another app handed us, the dice, or a list in Browse (A61). */
+private sealed interface Away {
+    data object External : Away
+    data object Random : Away
+    data class List(val source: SessionSource) : Away
+}
+
 /**
- * The glass over the playlist while something else is playing, and the way out of it.
+ * The glass over the playlist while something else plays -- **saying truly what** (A61).
  *
- * One component for both detours — Random and a search — because they are the same situation from
- * the playlist's point of view: what you are hearing is not on this list. Only the wording differs.
+ * It said "Playing from search" for a folder, for History and for a local folder too, which the
+ * owner called a lie. Now it names the source and offers both ways out, each an icon with its name:
+ * back to that source as it was, and back to the playlist -- the one that ends the session.
  *
- * The way out is in the middle of the screen with a label rather than tucked into a corner: the
- * playlist is already covered, so there is room, and a mode you can enter but cannot obviously
- * leave is a trap.
+ * One component for every detour, because from the playlist they are the same situation: what you
+ * are hearing is not on this list. In the middle of the screen with labels rather than in a corner:
+ * the playlist is covered, so there is room, and a mode you can enter but not obviously leave is a
+ * trap.
  */
 @Composable
 private fun AwayScrim(
-    externalMode: Boolean,
+    source: Away,
     onReturnToPlaylist: () -> Unit,
+    onReturnToSource: () -> Unit,
     contentPadding: PaddingValues,
 ) {
+    val icon = when (source) {
+        Away.External -> PlayerIcons.Folder
+        Away.Random -> PlayerIcons.Dice
+        is Away.List -> when (source.source) {
+            is SessionSource.Search -> PlayerIcons.Search
+            is SessionSource.Folder -> PlayerIcons.Folder
+            SessionSource.History -> PlayerIcons.History
+        }
+    }
+    val title = when (source) {
+        Away.External -> stringResource(R.string.external_playing_title)
+        Away.Random -> stringResource(R.string.random_playing_title)
+        is Away.List -> when (val from = source.source) {
+            is SessionSource.Search ->
+                if (from.query.isBlank()) stringResource(R.string.search_playing_title)
+                else stringResource(R.string.session_from_search, from.query)
+            is SessionSource.Folder -> stringResource(R.string.session_from_folder, from.path)
+            SessionSource.History -> stringResource(R.string.session_from_history)
+        }
+    }
+    val body = when (source) {
+        Away.External -> stringResource(R.string.external_playing_body)
+        Away.Random -> stringResource(R.string.random_playing_body)
+        is Away.List -> stringResource(R.string.session_body)
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -751,32 +797,30 @@ private fun AwayScrim(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 24.dp),
         ) {
-            // Two ways left, since Random took a screen of its own. They differ in what next
-            // means: a file handed to us by another app has none at all, so the scrim must not
-            // promise one.
             Icon(
-                imageVector = if (externalMode) PlayerIcons.Folder else PlayerIcons.Search,
+                imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
+            Text(text = title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             Text(
-                text = stringResource(
-                    if (externalMode) R.string.external_playing_title
-                    else R.string.search_playing_title
-                ),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(
-                    if (externalMode) R.string.external_playing_body
-                    else R.string.search_playing_body
-                ),
+                text = body,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            // A file from another app has nowhere to go back to but here.
+            if (source !is Away.External) {
+                OutlinedButton(onClick = onReturnToSource) {
+                    IconLabel(
+                        icon,
+                        stringResource(if (source is Away.Random) R.string.action_back_to_random else R.string.action_back_to_list),
+                    )
+                }
+            }
             Button(onClick = onReturnToPlaylist) {
                 IconLabel(PlayerIcons.Playlist, stringResource(R.string.random_back_to_playlist))
             }

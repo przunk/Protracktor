@@ -162,8 +162,11 @@ fun ProtracktorApp(
     // Opening Browse from a button starts at the top; opening it from a jump does not, because the
     // jump has already aimed it. Tying the reset to the button rather than to the sheet being shown
     // is what keeps those two apart.
+    // **While a list plays, Browse opens on it** (A61): the same words, the same folder, the playing
+    // row marked. Only with nothing playing from Browse does it start at the top -- a new search from
+    // the uncovered playlist starts fresh, which is what the reset was for.
     val openBrowse = {
-        viewModel.openDomain(BrowseDomain.ROOT)
+        if (!viewModel.returnToSession()) viewModel.openDomain(BrowseDomain.ROOT)
         showBrowse = true
     }
     // **Out of Browse, and back to whatever sent us there** (`docs/BACKLOG.md` A41). `browseBack`
@@ -282,8 +285,9 @@ fun ProtracktorApp(
                     } else if (showRandom) {
                         // The same arrow Browse has: the two screens sit side by side, so one of
                         // them offering no way out of its bar would leave their headings out of
-                        // line as well.
-                        IconButton(onClick = { viewModel.returnToPlaylist(); showRandom = false }) {
+                        // line as well. **Back leaves, and the dice plays on** (A61): the playlist
+                        // it leaves to is covered, and the cover leads back here.
+                        IconButton(onClick = { showRandom = false }) {
                             Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                         }
                     }
@@ -512,6 +516,11 @@ fun ProtracktorApp(
                 stateKnown = state.restored && browse.knowsWhatIsHeld,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,
+                // Back to the source: the dice's screen, or the list in Browse as it was (A61).
+                onReturnToSource = {
+                    if (state.randomMode && !state.searchMode) showRandom = true
+                    else if (viewModel.returnToSession()) showBrowse = true
+                },
             )
         }
     }
@@ -530,10 +539,11 @@ fun ProtracktorApp(
         BackHandler(onBack = leaveBrowse)
     }
 
-    // Back out of Random is the same act as the button: the session ends and the playlist is where
-    // it was left.
+    // **Back out of Random leaves it playing** (A61, the owner's variant (A)): Back means look
+    // elsewhere, and only the Playlist button ends a session. The playlist it leaves to is covered,
+    // and the cover leads back here.
     if (showRandom) {
-        BackHandler { viewModel.returnToPlaylist(); showRandom = false }
+        BackHandler { showRandom = false }
 
         // **A file arriving from another app takes the screen.** It replaces what is playing, so
         // leaving the Random view up would show a record of a session that has been ended
