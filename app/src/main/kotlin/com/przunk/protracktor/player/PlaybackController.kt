@@ -3196,9 +3196,9 @@ class PlaybackController private constructor(private val context: Context) {
         // scope they were drawn under, which is why the row says what is set rather than what is
         // playing.
         val scope = _browse.value.randomScope
-        val formats = when (scope) {
+        val platforms = when (scope) {
             is RandomScope.Everything, is RandomScope.Favourites -> emptySet()
-            is RandomScope.OnPlatform -> Platforms.catalogueFormatsOf(setOf(scope.platformId))
+            is RandomScope.OnPlatform -> setOf(scope.platformId)
         }
         // **Drawn wide and filtered, because the query cannot exclude anything.** `randomSample`
         // is `ORDER BY RANDOM() LIMIT n` over the whole scope every time, so nothing stops it
@@ -3209,7 +3209,7 @@ class PlaybackController private constructor(private val context: Context) {
         val already = randomHistory.mapTo(mutableSetOf()) { it.id }
         val drawn = catalogues.randomSample(
             short * OVERDRAW,
-            formats = formats,
+            platforms = platforms,
             favouritesOnly = scope is RandomScope.Favourites,
         ).map(::toTrackRef).filter { already.add(it.id) }.take(short)
         // A pool smaller than the session can exhaust honestly — forty favourites cannot fill an
@@ -3221,7 +3221,7 @@ class PlaybackController private constructor(private val context: Context) {
         randomHistory += drawn.ifEmpty {
             catalogues.randomSample(
                 short,
-                formats = formats,
+                platforms = platforms,
                 favouritesOnly = scope is RandomScope.Favourites,
             ).map(::toTrackRef)
         }
@@ -3413,7 +3413,6 @@ class PlaybackController private constructor(private val context: Context) {
         // ticked means every platform, which is why an empty set has to become an empty filter
         // rather than an empty result -- the label says "All platforms" and the search must agree.
         val platformIds = (searching as? SearchScope.ByPlatform)?.platformIds.orEmpty()
-        val formats = Platforms.catalogueFormatsOf(platformIds)
 
         scope.launch {
             _browse.update { it.copy(loading = true, tracks = emptyList()) }
@@ -3453,7 +3452,7 @@ class PlaybackController private constructor(private val context: Context) {
             val dbCatalogues = wanted.filter { it != com.przunk.protracktor.net.ModArchive.id }.toSet()
             val fromOnline = if (searching.searchesOnline && dbCatalogues.isNotEmpty()) {
                 catalogues.search(
-                    current.query, dbCatalogues, SearchResults.PER_SOURCE_LIMIT, formats,
+                    current.query, dbCatalogues, SearchResults.PER_SOURCE_LIMIT, platformIds,
                 ).map(::toTrackRef)
             } else {
                 emptyList()
@@ -3504,7 +3503,7 @@ class PlaybackController private constructor(private val context: Context) {
             val matches = if (!capped) 0 else {
                 (if (searching.searchesLocal) libraryIndex.countMatches(current.query) else 0) +
                     (if (searching.searchesOnline && dbCatalogues.isNotEmpty()) {
-                        catalogues.countMatches(current.query, dbCatalogues, formats)
+                        catalogues.countMatches(current.query, dbCatalogues, platformIds)
                     } else {
                         0
                     })
@@ -3539,12 +3538,8 @@ class PlaybackController private constructor(private val context: Context) {
     /** Counts the platform chips from the catalogue index, which is what makes a dead chip honest. */
     private fun refreshPlatformCounts() {
         scope.launch {
-            val counts = catalogues.formatCounts()
-            val byPlatform = mutableMapOf<String, Int>()
-            for ((format, n) in counts) {
-                val platform = Platforms.forCatalogueFormat(format) ?: continue
-                byPlatform[platform.id] = (byPlatform[platform.id] ?: 0) + n
-            }
+            // Counted by the column each row carries (C89), so ASMA counts towards Atari 8-bit.
+            val byPlatform = catalogues.platformCounts()
             _browse.update { it.copy(platformCounts = byPlatform) }
         }
     }

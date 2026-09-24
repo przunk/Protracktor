@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 19
+    const val VERSION = 20
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -448,6 +448,20 @@ object SchemaSql {
      * `GLOB '*[^ -~]*'` is "holds a character outside printable ASCII", so only the rows that can
      * need a folded copy are read at all.
      */
+    /**
+     * **Version 20: each catalogue row knows its platform** (`docs/STATUS.md` C89).
+     *
+     * The filter used to match the `format` column against Modland's directory names, which ASMA's
+     * sections never are -- so the Atari 8-bit filter never saw one of ASMA's tunes. The column is
+     * written with the row, from `Platforms.forCatalogueRow`, and filled for rows already stored by
+     * the re-decision that runs when `Platforms.fingerprint` moves (`CatalogueStore.refreshPlayable`)
+     * -- which this version's arrival does. Empty means no platform; until that first start, every
+     * row is empty, which a filter reads as nothing on that platform for a moment rather than wrong.
+     */
+    internal val CATALOGUE_PLATFORM_V20: List<String> = listOf(
+        "ALTER TABLE catalogue_tracks ADD COLUMN platform TEXT NOT NULL DEFAULT ''",
+    )
+
     class FoldBackfill(val select: String, val update: String)
 
     val FOLDED_BACKFILL_V19: List<FoldBackfill> = listOf(
@@ -539,7 +553,7 @@ object SchemaSql {
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
         CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17 +
-        REREAD_DAMAGED_TITLES_V18 + SEARCH_FOLDED_V19
+        REREAD_DAMAGED_TITLES_V18 + SEARCH_FOLDED_V19 + CATALOGUE_PLATFORM_V20
 
 
 
@@ -569,6 +583,7 @@ object SchemaSql {
         17 to SONGDB_LENGTHS_V17,
         18 to REREAD_DAMAGED_TITLES_V18,
         19 to SEARCH_FOLDED_V19,
+        20 to CATALOGUE_PLATFORM_V20,
     )
 
     /**

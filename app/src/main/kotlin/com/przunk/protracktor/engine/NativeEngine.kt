@@ -70,7 +70,8 @@ object NativeEngine {
      * Both halves matter and only one used to be recorded. See `SupportedFormats.fingerprint`.
      */
     fun backendsFingerprint(): String =
-        nativeBackendsFingerprint() + ";" + SupportedFormats.fingerprint
+        nativeBackendsFingerprint() + ";" + SupportedFormats.fingerprint + ";" +
+            com.przunk.protracktor.player.Platforms.fingerprint
 
     /**
      * Opens a module from its bytes. Returns a handle, or `null` if the bytes are not a module the

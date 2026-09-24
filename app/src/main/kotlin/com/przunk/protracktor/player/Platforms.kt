@@ -91,7 +91,7 @@ object Platforms {
         id = "atari-8bit",
         name = "Atari 8-bit",
         catalogueFormats = setOf(
-            "slight atari player", "asma", "chaos music composer", "raster music tracker",
+            "slight atari player", "chaos music composer", "raster music tracker",
             "theta music composer", "delta music composer", "music protracker",
         ),
         names = setOf(
@@ -228,6 +228,65 @@ object Platforms {
 
     fun byId(id: String): Platform? = all.firstOrNull { it.id == id }
 
+    /**
+     * Archives that hold one machine's music and nothing else: every row is that platform, whatever
+     * directory or name it has (`docs/STATUS.md` C89). ASMA files its tunes under `Composers`,
+     * `Games`, `Unknown`, `Misc` and `Groups`, which say who and not what -- and so, matched by
+     * directory, not one of its 6,335 Atari tunes was ever Atari 8-bit to the filter.
+     */
+    val wholeCatalogues: Map<String, Platform> by lazy {
+        mapOf("asma" to ATARI_8BIT, "unexotica" to AMIGA)
+    }
+
+    /**
+     * The platform of a catalogue row, **the one rule** the index stores in its `platform` column
+     * and the filter, the chips and the dice read (C89): the archive when it is one machine's, then
+     * the directory the archive files it under, then the file's own name. The name comes last
+     * because it can be two things -- `psm` is Epic MegaGames and Pro Sound Maker -- and the
+     * directory knows which.
+     */
+    fun forCatalogueRow(catalogueId: String, format: String, fileName: String): Platform? =
+        wholeCatalogues[catalogueId] ?: forCatalogueFormat(format) ?: forFileName(fileName)
+
+    /**
+     * Changes whenever anything that decides a row's platform does, so an index stored before the
+     * change is re-decided at the next start -- part of `NativeEngine.backendsFingerprint`, beside
+     * the list of names, for the same reason.
+     */
+    val fingerprint: String by lazy {
+        val table = all.joinToString("|") { p ->
+            p.id + ":" + p.catalogueFormats.sorted().joinToString(",") + ":" + p.names.sorted().joinToString(",")
+        } + "|" + wholeCatalogues.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value.id}" }
+        "platforms:%08x".format(table.hashCode())
+    }
+
+    /**
+     * [forCatalogueRow] as one SQL `CASE`, over the `catalogue_id`, `format`, `ext` and `pre` columns,
+     * and its arguments. Built from the same maps the function reads, in the same order -- whole
+     * archive, directory, extension, prefix -- so the stored column and the function cannot
+     * disagree; `CatalogueStore` writes the column with it and `PlatformColumnTest` holds the two to
+     * one answer for every name and directory in the table.
+     */
+    fun sqlCase(): Pair<String, Array<String>> {
+        val parts = StringBuilder("CASE")
+        val arguments = mutableListOf<String>()
+        fun whenIn(column: String, values: Collection<String>, platform: Platform) {
+            if (values.isEmpty()) return
+            parts.append(" WHEN $column IN (${values.joinToString(",") { "?" }}) THEN ?")
+            arguments += values
+            arguments += platform.id
+        }
+        wholeCatalogues.forEach { (catalogue, platform) -> whenIn("catalogue_id", listOf(catalogue), platform) }
+        byCatalogueFormat.entries.groupBy({ it.value }, { it.key }).forEach { (platform, formats) ->
+            whenIn("lower(format)", formats, platform)
+        }
+        val byNameGrouped = byName.entries.groupBy({ it.value }, { it.key })
+        byNameGrouped.forEach { (platform, names) -> whenIn("ext", names, platform) }
+        byNameGrouped.forEach { (platform, names) -> whenIn("pre", names, platform) }
+        parts.append(" ELSE '' END")
+        return parts.toString() to arguments.toTypedArray()
+    }
+
     /** The platform a catalogue row belongs to, from its `format` column. Null when unmapped. */
     fun forCatalogueFormat(format: String): Platform? = byCatalogueFormat[format.trim().lowercase()]
 
@@ -244,10 +303,6 @@ object Platforms {
         byName[name.substringAfterLast('.')]?.let { return it }
         return byName[name.substringBefore('.')]
     }
-
-    /** Every Modland directory name the given platforms cover, for one `IN (…)` clause. */
-    fun catalogueFormatsOf(ids: Set<String>): Set<String> =
-        all.filter { it.id in ids }.flatMap { it.catalogueFormats }.toSet()
 
     /** True when the file belongs to one of the given platforms. */
     fun matches(fileName: String, ids: Set<String>): Boolean =

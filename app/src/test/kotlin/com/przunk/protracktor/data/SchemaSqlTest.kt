@@ -500,6 +500,34 @@ class SchemaSqlTest {
     }
 
     @Test
+    fun `a version 19 index keeps its rows through version 20 and gets their platforms on re-decision`() {
+        // C89: the column arrives empty and is filled by the re-decision the fingerprint triggers.
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 19))
+            connection.run(
+                listOf(
+                    "INSERT INTO catalogues (id, display_name) VALUES ('asma', 'ASMA')",
+                    "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, ext, pre, playable) " +
+                        "VALUES ('asma', 'asma/Composers/przunk/Bonio.sap', 'Composers', 'przunk', 'Bonio.sap', 7, 'sap', 'bonio', 1)",
+                )
+            )
+            connection.run(SchemaSql.migrationsBetween(19, SchemaSql.VERSION))
+            fun row(): List<String> = connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT title, size, playable, platform FROM catalogue_tracks").use { rows ->
+                    rows.next(); (1..4).map { rows.getString(it) }
+                }
+            }
+            assertEquals("the row survives, waiting for its platform", listOf("Bonio.sap", "7", "1", ""), row())
+            val (sql, arguments) = platformUpdate()
+            connection.prepareStatement(sql).use { statement ->
+                arguments.forEachIndexed { i, value -> statement.setString(i + 1, value) }
+                statement.execute()
+            }
+            assertEquals(listOf("Bonio.sap", "7", "1", "atari-8bit"), row())
+        }
+    }
+
+    @Test
     fun `the browse indexes cover only what is offered`() {
         // `docs/ROADMAP_FORMATS.md` step 0: the table holds the whole archive and every screen asks
         // for the playable part, so indexing the rest is 16 MB of b-tree nothing reads -- measured
