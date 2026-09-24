@@ -15,7 +15,33 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A61. Moving between screens — **noted 2026-09-24, to talk through**
+## A61. Moving between screens — **noted 2026-09-24; talked through and decided 2026-09-25: variant (A)**
+
+**The owner's scenarios, 2026-09-25.** Random: play, More from this author, Back returns to Random --
+good; then Back, or the Playlist button, returns to the playlist and **stops the music**. Search:
+play a result; the Playlist button stops and returns, but Back, Back leaves Browse with the music
+playing and the playlist covered by *"Playing from search"* -- and re-entering Browse shows a fresh
+search while the result plays on. The same after playing from a local folder or an online
+catalogue's folder: still *"Playing from search"*, **which is a lie**; returning there, the playing
+row is marked, which is right. What troubles him: the lie, and that Back means different things.
+
+**Decided (A):** one rule for every session -- anything playing from somewhere that is not the
+playlist (Random, a folder, search results, History, a link):
+
+- **the heading tells the truth** about where it plays from: at random, search for "przunk",
+  Modland / Protracker / 4-Mat, History, a local folder;
+- **Back never stops the music.** Leaving to the playlist keeps it playing, the playlist covered by
+  a bar naming the source;
+- **that bar leads back to the source as it was** -- Random, the same results with their words, the
+  same folder with the playing row marked;
+- **the Playlist button is the one way to end a session**: it stops and returns to the playlist,
+  from every session alike. Random stops stopping on Back.
+
+**And search's reset, refined by the owner:** a search opened **from the uncovered playlist** starts
+fresh -- that is what the reset was for; **returning to a search that is playing** keeps its words,
+its scope and its results.
+
+The note as it was:
 
 The owner: *"to discuss: moving between views."* Nothing decided and nothing asked beyond that: which
 screens lead where, what Back does from each, and how a jump (More from this author, a link) sits
