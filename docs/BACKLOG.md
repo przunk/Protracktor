@@ -45,8 +45,8 @@ As built:
 - **Checked:** JVM tests for the plan, the fade and the file name (each broken once to see it
   fail); the native code compiles into the release APK. **On the phone** (the owner, 2026-09-24): works.
 
-**The page** (the owner, 2026-09-24: "yes", variant (a); built on `feature/a62-web-share-audio`,
-not yet seen in a browser): the same `.m4a`, no new dependency. `web/src/audio-export.js` is a module
+**The page** (the owner, 2026-09-24: "yes", variant (a); merged the same day -- shared from Chrome
+on Android to Messenger, Firefox says it cannot; Safari not yet tried): the same `.m4a`, no new dependency. `web/src/audio-export.js` is a module
 worker with an engine of its own; it renders, fades and hands the PCM to WebCodecs' `AudioEncoder`
 (AAC-LC, 128 kbit/s), and `web/src/m4a.js` writes the boxes a player needs -- the part `MediaMuxer`
 does on the phone. The rules are the phone's, held to the same answers by `docs/rules/queue-cases.tsv`.
@@ -60,8 +60,8 @@ makes different:
 
 Checked on Node: the whole path but the encoder -- the engine renders, the plan cuts and fades
 (start, middle and end measured), the muxer's boxes nest and add up and point at the frames -- each
-check broken once to see it fail. **Not checked: any browser.** That the encoder runs, that the file
-plays, and that Send opens the share sheet are all unseen.
+check broken once to see it fail. **In a browser** (the owner, 2026-09-24): Chrome on Android makes the
+file and sends it; Firefox refuses and says so. Safari on an iPhone is not yet tried.
 
 ## A61. Moving between screens — **noted 2026-09-24; decided 2026-09-25: variant (A); BUILT, merged and confirmed on the phone the same day ("now it makes sense")**
 

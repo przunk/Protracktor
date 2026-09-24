@@ -479,6 +479,18 @@ drag on at the end, room left by the collapsing address bar. **Fixed:** a two-fi
 refused non-passively, the body is pinned to the viewport and only the lists inside scroll,
 `overscroll-behavior: none`. To check: on the iPhone, from a link; and that every view still scrolls
 to its end on a computer and on Android.
+
+### C93. The web page on a phone: stretched buttons, Settings that would not scroll, a QR code past its sheet — **FIXED and merged 2026-09-24; first look on the phone "ok", full check pending**
+
+The owner's screenshots (Chrome on Android, Safari on an iPhone): Browse, Pair and Paste were tall
+slabs, the playlist's name cut to "Se…", Random's Playlist button stretched across its row; Settings
+ran past the bottom with no way to scroll; the pairing code and address stuck out of their sheet.
+**Mechanism:** the sizing written for Now Playing's squares was a bare `.action` rule, so since A27 it
+reached every labelled button and let each grow to fill its row; a sheet taller than the screen had
+nothing to scroll it, which the pinned page (C92) made plain; the code was a table of fixed 5-pixel
+cells. **Fixed:** the rule is scoped to Now Playing (a page check fails if the top bar's buttons grow
+again), a sheet scrolls inside itself with its heading kept, Settings takes nearly the whole height
+on a phone, the code is a scalable picture and the address breaks anywhere.
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor
