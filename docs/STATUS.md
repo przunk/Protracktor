@@ -467,6 +467,18 @@ player then knows it; the owner's seven files. (b) Measure a SAP's natural end, 
 does -- only for tunes that fall silent. (c) B36's length database. Recommended: (a) for these, (b)
 after the launch.
 
+
+### C92. The web page zoomed and moved in a Safari tab on an iPhone — **FIXED and merged 2026-09-24; not yet seen on an iPhone**
+
+Reported by a friend of the owner, opening the page from a link (a Safari tab, not the installed
+app): pinch to zoom worked and the whole page could be dragged. The owner: the page should fit and
+lock to the viewport. **Mechanism** (WebKit's documented behaviour; there is no Safari here to watch
+it): a tab ignores `user-scalable=no` on purpose, and the earlier fix (2026-09-11) refused only
+Safari's gesture events; and the document itself could move -- rubber-banding, a list passing its
+drag on at the end, room left by the collapsing address bar. **Fixed:** a two-finger `touchmove` is
+refused non-passively, the body is pinned to the viewport and only the lists inside scroll,
+`overscroll-behavior: none`. To check: on the iPhone, from a link; and that every view still scrolls
+to its end on a computer and on Android.
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor
