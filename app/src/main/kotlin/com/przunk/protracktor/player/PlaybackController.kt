@@ -166,6 +166,12 @@ data class PlayerUiState(
      * folder returns to it; a playlist, an external file or a link end it for good.
      */
     val diceWaiting: Boolean = false,
+    /**
+     * A search waiting under a digression: "More from this author" from its results, the owner's
+     * "identically" to [diceWaiting] (2026-09-24). Back out of the author's folder returns to the
+     * results, their words and their scope as they were.
+     */
+    val searchWaiting: Boolean = false,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
     /**
@@ -2090,6 +2096,8 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val summary = catalogues.summaries().firstOrNull { it.id == from.id } ?: return@launch
+            // Read before Browse moves: the search this jump leaves, if it leaves one.
+            val search = BrowseNavigation.searchToReturnTo(_browse.value)
             _browse.update {
                 it.copy(
                     domain = BrowseDomain.ONLINE,
@@ -2120,6 +2128,20 @@ class PlaybackController private constructor(private val context: Context) {
                         resultsQueue = PlayQueue(tracks = found).startAt(at),
                         resultsFromHistory = false,
                         diceWaiting = true,
+                    )
+                }
+            } else if (search != null) {
+                // **The same for a search** (the owner, 2026-09-24). The results wait with their
+                // words and scope, and the heading says whose folder this is. Only when a result is
+                // what is playing does the transport move to the author -- a jump made while the
+                // playlist plays is a look, and must not take the music somewhere else.
+                val playingResults = _state.value.searchMode
+                waitingSearch = WaitingSearch(search, _state.value.resultsQueue)
+                val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
+                _state.update {
+                    it.copy(
+                        resultsQueue = if (playingResults) PlayQueue(tracks = found).startAt(at) else it.resultsQueue,
+                        searchWaiting = true,
                     )
                 }
             }
@@ -3049,6 +3071,7 @@ class PlaybackController private constructor(private val context: Context) {
                     randomIndex = -1,
                     randomExhausted = false,
                     diceWaiting = false,
+                    searchWaiting = false,
                     // Whatever was the source before this is not the source now. The list Browse
                     // was played from stays on screen there, but it has stopped driving playback,
                     // and leaving it in the state left two answers to "what is playing".
@@ -3284,6 +3307,35 @@ class PlaybackController private constructor(private val context: Context) {
      * [pendingRetry] and starts that tune; next rolls a new one. What played during the digression
      * is in the history, as everything played here is.
      */
+    /**
+     * Back to the search a digression came from -- [resumeDice]'s counterpart for results.
+     *
+     * The results come back as they were: words, scope, rows, and where the list was. **What was
+     * playing is left alone when it is still the results' tune** -- a look at the author and back
+     * does not stop the music. When something from the author's folder was chosen meanwhile, it
+     * stops and the results' tune waits paused, as the dice's does, because a queue whose current
+     * tune is not the one sounding is a transport that lies.
+     */
+    fun resumeSearch() {
+        val waiting = waitingSearch ?: return
+        waitingSearch = null
+        _browse.value = BrowseNavigation.returningTo(waiting.browse)
+        val results = waiting.results
+        val sounding = _state.value.current?.id
+        if (results != null && _state.value.searchMode && sounding != results.current?.id) {
+            stopPlayback()
+            pendingRetry = { playFromResultsQueue(results) }
+            _state.update {
+                it.copy(
+                    resultsQueue = results, searchWaiting = false, playing = false,
+                    positionSeconds = 0.0, durationSeconds = 0.0, metadata = emptyMap(),
+                )
+            }
+        } else {
+            _state.update { it.copy(resultsQueue = results ?: it.resultsQueue, searchWaiting = false) }
+        }
+    }
+
     fun resumeDice() {
         if (!_state.value.diceWaiting) return
         val pick = randomHistory.getOrNull(randomCursor) ?: return
@@ -3348,6 +3400,7 @@ class PlaybackController private constructor(private val context: Context) {
                 externalOpen = false,
                 resultsQueue = null,
                 diceWaiting = false,
+                searchWaiting = false,
                 randomHasPrevious = false,
                 randomPicks = emptyList(),
                 randomIndex = -1,
@@ -4087,6 +4140,10 @@ class PlaybackController private constructor(private val context: Context) {
      * then gives the same message a second time, which is honest; the alternative is an app that
      * sometimes obeys and sometimes substitutes, and unpredictable is worse than useless.
      */
+    /** The search a digression came from, and the results queue that was playing then (C-search). */
+    private data class WaitingSearch(val browse: BrowseState, val results: PlayQueue?)
+    private var waitingSearch: WaitingSearch? = null
+
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {
@@ -4283,6 +4340,7 @@ class PlaybackController private constructor(private val context: Context) {
                 externalOpen = external,
                 // A file from another app is not a digression to come back from.
                 diceWaiting = if (external) false else it.diceWaiting,
+                searchWaiting = if (external) false else it.searchWaiting,
                 randomHasPrevious = if (external) false else randomCursor > 0,
                 playing = false,
                 positionSeconds = 0.0,

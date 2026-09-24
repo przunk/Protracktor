@@ -441,21 +441,17 @@ Atari 8-bit; a migration test keeps a version-19 row through 20. Rows in a Modla
 does not map now get the platform of their name, where before they had none.
 
 The report as noted:
+### C90. "More from this author" from search results left the search behind — **FIXED 2026-09-24 on `fix/search-author-digression`, not yet seen on the phone**
 
-The owner: *Search → filter by platform → Atari 8-bit → "przunk"* finds nothing, while the same tunes
-are there when walked to (ASMA `Composers/przunk`, seven `.sap`). **Mechanism:** the platform filter
-matches the `format` column against `Platforms.ATARI_8BIT.catalogueFormats` -- Modland directory
-names, and `"asma"`. An ASMA row's `format` is its archive section (`Composers`, `Games`, `Unknown`,
-`Misc`, `Groups` -- `Catalogue.Asma`, `parts[1]`), never `asma`, so **no ASMA row ever passes the
-filter**: 6,335 tunes missing from every Atari 8-bit search, and from the chip's count, which reads
-the same column. Modland's `Slight Atari Player` still matches; the owner's tunes are in ASMA only.
-The page has no platform filter.
-
-**Options:** **(a) recommended:** a platform may claim a whole catalogue -- Atari 8-bit is Modland's
-directories **and all of ASMA** -- in the search and the chip count, with an SQLite test that the
-filter finds an ASMA row. (b) Filter by the file's extension instead of its directory: more general,
-but it changes the rule for every platform, and the directory map exists because some extensions
-(`.fc`) are two formats.
+The owner: from Random the jump shows the digression -- *Browsing author* over the folder, a way
+back -- and from Search it did not; "it has to work identically". **Mechanism:** the heading was
+drawn only while the dice waited (`randomMode || diceWaiting`), and Back after a jump
+(`arrivedByJump`) left Browse outright, so the results, their words and scope were gone. **Fixed:**
+a search is a place to come back to, like the dice. The jump keeps it (`BrowseNavigation.searchToReturnTo`,
+`searchWaiting`), the heading shows, next and previous walk the author when a result was what played
+-- and not when the playlist was playing, since a look must not move the music -- and Back returns
+to the results as they were (`resumeSearch`). A tune chosen in the folder meanwhile stops and the
+results' tune waits paused, as the dice's does; otherwise the music plays on.
 
 ### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **OPEN, reported 2026-09-24**
 

@@ -100,4 +100,30 @@ class BrowseNavigationTest {
         // just thrown away, so keeping it would leave the two halves of one screen disagreeing.
         // The test above owns it.
     }
+
+    @Test
+    fun `a jump from search results keeps the search to come back to`() {
+        val results = listOf(TrackRef(id = "https://modland.com/pub/modules/AHX/Pink/frog.ahx", title = "frog.ahx"))
+        val search = BrowseState(
+            domain = BrowseDomain.SEARCH, query = "frog", searchScope = SearchScope.Local, tracks = results,
+        )
+        val kept = BrowseNavigation.searchToReturnTo(search)
+        assertEquals(search, kept)
+        // Back from the folder: the same words, scope and rows, no longer a jump, not loading.
+        val back = BrowseNavigation.returningTo(kept!!.copy(arrivedByJump = true, loading = true))
+        assertEquals("frog", back.query)
+        assertEquals(SearchScope.Local, back.searchScope)
+        assertEquals(results, back.tracks)
+        assertEquals(false, back.arrivedByJump)
+        assertEquals(false, back.loading)
+    }
+
+    @Test
+    fun `a jump from anywhere but a search has no search to come back to`() {
+        assertEquals(null, BrowseNavigation.searchToReturnTo(BrowseState(domain = BrowseDomain.ONLINE)))
+        assertEquals(null, BrowseNavigation.searchToReturnTo(BrowseState(domain = BrowseDomain.ROOT)))
+        // A folder already reached by a jump is not a search, whatever the domain field says.
+        assertEquals(null, BrowseNavigation.searchToReturnTo(BrowseState(domain = BrowseDomain.SEARCH, arrivedByJump = true)))
+    }
 }
+
