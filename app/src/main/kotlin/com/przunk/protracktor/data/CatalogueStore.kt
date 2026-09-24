@@ -8,6 +8,7 @@ import android.content.Context
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.CatalogueEntry
 import com.przunk.protracktor.player.SupportedFormats
+import com.przunk.protracktor.player.Platforms
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -243,8 +244,8 @@ class CatalogueStore(context: Context) {
 
                 val insert = compileStatement(
                     "INSERT OR REPLACE INTO catalogue_tracks " +
-                        "(catalogue_id, path, format, author, title, size, ext, pre, playable, folded) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "(catalogue_id, path, format, author, title, size, ext, pre, playable, folded, platform) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
                 insert.use { statement ->
                     entries.forEach { entry ->
@@ -269,6 +270,11 @@ class CatalogueStore(context: Context) {
                         // Search's folded copy, for the few rows with accents (A53).
                         SearchTerms.foldedOrNull(entry.title, entry.author)
                             ?.let { statement.bindString(10, it) } ?: statement.bindNull(10)
+                        // Its machine, by the one rule (C89): the archive, the directory, the name.
+                        statement.bindString(
+                            11,
+                            Platforms.forCatalogueRow(catalogue.id, entry.format, entry.title)?.id.orEmpty(),
+                        )
                         statement.executeInsert()
                     }
                 }
@@ -316,6 +322,9 @@ class CatalogueStore(context: Context) {
         )
         helper.writableDatabase.transaction {
             execSQL(sql, bound)
+            // And every row's platform, by the same rule a new row is written with (C89).
+            val (platform, platformBound) = platformUpdate()
+            execSQL(platform, platformBound)
             // The count every catalogue shows follows the flags, or the number on screen is the
             // answer to a question the app stopped asking.
             execSQL(
@@ -359,7 +368,7 @@ class CatalogueStore(context: Context) {
     suspend fun countMatches(
         query: String,
         catalogueIds: Set<String>,
-        formats: Set<String> = emptySet(),
+        platforms: Set<String> = emptySet(),
     ): Int =
         withContext(Dispatchers.IO) {
             // Blank is allowed here too; see `search`. A count that refused would report zero
@@ -371,33 +380,26 @@ class CatalogueStore(context: Context) {
                 " AND catalogue_id IN ($placeholders)" to catalogueIds.toTypedArray()
             }
             val words = SearchTerms.sqlFor(query, "title", "author", sparse = "folded")
-            val byFormat = if (formats.isEmpty()) {
-                "" to emptyArray<String>()
-            } else {
-                val placeholders = formats.joinToString(",") { "?" }
-                " AND format COLLATE NOCASE IN ($placeholders)" to formats.toTypedArray()
-            }
+            val byPlatform = platformClause(platforms)
             helper.readableDatabase.rawQuery(
                 "SELECT COUNT(*) FROM catalogue_tracks " +
-                    "WHERE playable = 1 AND (${words.first})${scope.first}${byFormat.first}",
-                words.second + scope.second + byFormat.second,
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}",
+                words.second + scope.second + byPlatform.second,
             ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
         }
 
     /**
-     * How many indexed rows each format directory holds.
+     * How many playable rows each platform holds, by the `platform` column (C89).
      *
-     * What makes the platform chips honest. **A catalogue index only ever contains files this build
-     * claims** — `Catalogue.parseIndex` is handed a `keep` predicate and drops the rest at index
-     * time — so a count here is a count of tunes that will actually open, and a platform with none
-     * has nothing to offer rather than merely nothing indexed. That is the difference between
-     * greying a chip out for a reason and greying it out on a hunch.
+     * What makes the platform chips honest: a count of tunes that will actually open, so a platform
+     * with none has nothing to offer rather than merely nothing indexed. It used to be counted by
+     * directory, which left ASMA out of Atari 8-bit here as well as in the filter.
      *
      * One grouped scan, and only when the filter is drawn.
      */
-    suspend fun formatCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
+    suspend fun platformCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT format, COUNT(*) FROM catalogue_tracks WHERE playable = 1 GROUP BY format", emptyArray(),
+            "SELECT platform, COUNT(*) FROM catalogue_tracks WHERE playable = 1 AND platform <> '' GROUP BY platform", emptyArray(),
         ).use { row ->
             buildMap { while (row.moveToNext()) put(row.getString(0), row.getInt(1)) }
         }
@@ -407,14 +409,15 @@ class CatalogueStore(context: Context) {
      * Title and author search.
      *
      * @param catalogueIds empty means every indexed catalogue.
-     * @param formats empty means every format; otherwise Modland directory names, from `Platforms`.
+     * @param platforms empty means every platform; otherwise `Platforms` ids, matched against the
+     *   `platform` column each row is written with (C89).
      * @param query may be blank, which matches everything the other two allow.
      */
     suspend fun search(
         query: String,
         catalogueIds: Set<String>,
         limit: Int,
-        formats: Set<String> = emptySet(),
+        platforms: Set<String> = emptySet(),
     ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             // No blank guard. It made sense while typing was the only way to narrow a search --
@@ -434,19 +437,11 @@ class CatalogueStore(context: Context) {
             // escaping lives: a user typing % or _ searches for those characters rather than
             // matching everything.
             val words = SearchTerms.sqlFor(query, "title", "author", sparse = "folded")
-            // Modland's directory name is what the `format` column holds, so narrowing to a platform
-            // is one `IN (…)` over a column that already exists. `COLLATE NOCASE` because the table
-            // stores the archive's own capitalisation and `Platforms` states everything lower-cased.
-            val byFormat = if (formats.isEmpty()) {
-                "" to emptyArray<String>()
-            } else {
-                val placeholders = formats.joinToString(",") { "?" }
-                " AND format COLLATE NOCASE IN ($placeholders)" to formats.toTypedArray()
-            }
+            val byPlatform = platformClause(platforms)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
-                    "WHERE playable = 1 AND (${words.first})${scope.first}${byFormat.first} ORDER BY title LIMIT ?",
-                words.second + scope.second + byFormat.second + arrayOf(limit.toString()),
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first} ORDER BY title LIMIT ?",
+                words.second + scope.second + byPlatform.second + arrayOf(limit.toString()),
             ).use { it.toTracks() }
         }
 
@@ -491,12 +486,12 @@ class CatalogueStore(context: Context) {
     suspend fun randomSample(
         count: Int,
         catalogueIds: Set<String> = emptySet(),
-        formats: Set<String> = emptySet(),
+        platforms: Set<String> = emptySet(),
         favouritesOnly: Boolean = false,
     ): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             if (count <= 0) return@withContext emptyList()
-            val (where, arguments) = randomWhere(catalogueIds, formats, favouritesOnly)
+            val (where, arguments) = randomWhere(catalogueIds, platforms, favouritesOnly)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks" +
                     "$where ORDER BY RANDOM() LIMIT $count",
@@ -537,7 +532,7 @@ class CatalogueStore(context: Context) {
  */
 internal fun randomWhere(
     catalogueIds: Set<String>,
-    formats: Set<String>,
+    platforms: Set<String>,
     favouritesOnly: Boolean,
 ): Pair<String, Array<String>> {
     val clauses = mutableListOf("playable = 1")
@@ -546,9 +541,9 @@ internal fun randomWhere(
         clauses += "catalogue_id IN (${catalogueIds.joinToString(",") { "?" }})"
         arguments += catalogueIds
     }
-    if (formats.isNotEmpty()) {
-        clauses += "format COLLATE NOCASE IN (${formats.joinToString(",") { "?" }})"
-        arguments += formats
+    if (platforms.isNotEmpty()) {
+        clauses += "platform IN (${platforms.joinToString(",") { "?" }})"
+        arguments += platforms
     }
     if (favouritesOnly) {
         clauses += "catalogue_id = ?"
@@ -576,4 +571,18 @@ internal fun playableUpdate(
     return "UPDATE catalogue_tracks SET playable = " +
         "(CASE WHEN (ext IN ($ext) OR pre IN ($pre)) AND $refused THEN 1 ELSE 0 END)" to
         (extensions + prefixes + refusedDirectories).toTypedArray()
+}
+
+/**
+ * Narrowing to platforms: ` AND platform IN (…)`, or nothing for none -- the search's and the count's
+ * one clause, over the column every row is written with (C89).
+ */
+internal fun platformClause(platforms: Set<String>): Pair<String, Array<String>> =
+    if (platforms.isEmpty()) "" to emptyArray()
+    else " AND platform IN (${platforms.joinToString(",") { "?" }})" to platforms.toTypedArray()
+
+/** Re-decides every stored row's `platform`: [Platforms.sqlCase] as an `UPDATE`, and its arguments. */
+internal fun platformUpdate(): Pair<String, Array<String>> {
+    val (case, arguments) = Platforms.sqlCase()
+    return "UPDATE catalogue_tracks SET platform = $case" to arguments
 }

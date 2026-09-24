@@ -427,7 +427,20 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
-### C89. Search filtered to Atari 8-bit never looks in ASMA — **OPEN, reported 2026-09-24; mechanism found**
+### C89. Search filtered to Atari 8-bit never looks in ASMA — **reported 2026-09-24; FIXED the same day on `fix/c89-platform-in-index`, not yet seen on the phone**
+
+**Fixed, the owner's choice (c), 2026-09-24:** each catalogue row stores its platform. Schema **20**
+adds `catalogue_tracks.platform`; `Platforms.forCatalogueRow` is the one rule -- the archive when it is
+one machine's (ASMA: Atari 8-bit; UnExoticA: Amiga), then Modland's directory, then the file's name
+-- and `Platforms.sqlCase` is the same rule as the `UPDATE` that fills the column for rows already
+stored, run by the re-decision that `Platforms.fingerprint`, now part of the index stamp, triggers at
+the next start. Search, its count, the dice's platform scope and the chips' counts all read the
+column: **the dice had the same defect**, drawing no ASMA tune under Atari 8-bit. A test holds the
+`UPDATE` to the function for every name and directory in the table; another finds an ASMA row under
+Atari 8-bit; a migration test keeps a version-19 row through 20. Rows in a Modland directory the table
+does not map now get the platform of their name, where before they had none.
+
+The report as noted:
 
 The owner: *Search → filter by platform → Atari 8-bit → "przunk"* finds nothing, while the same tunes
 are there when walked to (ASMA `Composers/przunk`, seven `.sap`). **Mechanism:** the platform filter
