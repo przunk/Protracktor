@@ -29,7 +29,8 @@ from an older version, before the first screen has anything to show; the larger 
 folded search copies, version 20's platforms re-decided at the next start -- take a moment on a phone
 with Modland indexed, and until now the screen simply waits. What to show, with an icon and a label,
 and from which point: the owner's word for it is the starting point.
-## A59. The phone-with-a-tick on every catalogue tune that is on the phone — **asked 2026-09-24; BUILT the same day on `feature/on-phone-mark`, not yet seen on the phone**
+
+## A59. The phone-with-a-tick on every catalogue tune that is on the phone — **asked 2026-09-24; BUILT, merged and confirmed on the phone the same day**
 
 The owner, told ASMA's rows carry no mark because nothing needs fetching: *"let's add the phone for
 ASMA, so it shows they are there -- and the same for every other one we have on the phone."* The

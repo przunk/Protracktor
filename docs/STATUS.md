@@ -427,7 +427,7 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
-### C89. Search filtered to Atari 8-bit never looks in ASMA — **reported 2026-09-24; FIXED the same day on `fix/c89-platform-in-index`, not yet seen on the phone**
+### C89. Search filtered to Atari 8-bit never looks in ASMA — **reported 2026-09-24; FIXED, merged and confirmed on the phone the same day**
 
 **Fixed, the owner's choice (c), 2026-09-24:** each catalogue row stores its platform. Schema **20**
 adds `catalogue_tracks.platform`; `Platforms.forCatalogueRow` is the one rule -- the archive when it is
@@ -441,7 +441,7 @@ Atari 8-bit; a migration test keeps a version-19 row through 20. Rows in a Modla
 does not map now get the platform of their name, where before they had none.
 
 The report as noted:
-### C90. "More from this author" from search results left the search behind — **FIXED 2026-09-24 on `fix/search-author-digression`, not yet seen on the phone**
+### C90. "More from this author" from search results left the search behind — **FIXED, merged and confirmed on the phone 2026-09-24**
 
 The owner: from Random the jump shows the digression -- *Browsing author* over the folder, a way
 back -- and from Search it did not; "it has to work identically". **Mechanism:** the heading was

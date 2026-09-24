@@ -1,1 +1,5 @@
-Katalogi Deflemask, FamiTracker i Music Editor z Modlandu nie są już wyświetlane: ich pliki mają nazwy należące do innych formatów i żaden z nich nie zagrał. Pobrany już indeks aktualizuje się sam, bez ponownego pobierania.
+Filtr platformy znajduje utwory ze wszystkich archiwów: Atari 8-bit obejmuje ASMA, w wyszukiwaniu i w losowaniu.
+
+„Więcej tego autora” z wyników wyszukiwania zachowuje wyszukiwanie: Wstecz do niego wraca, tak jak przy losowaniu.
+
+Znacznik telefonu pokazuje każdy utwór, który już jest na telefonie, z każdego archiwum — widać, co zagra bez sieci.

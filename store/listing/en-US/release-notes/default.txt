@@ -1,1 +1,5 @@
-Modland's Deflemask, FamiTracker and Music Editor folders are no longer listed: their files carry names that belong to other formats, and none of them would play. The index you have already downloaded updates itself, with no new download.
+Filtering by platform now finds every archive's tunes: Atari 8-bit includes ASMA, in search and in Random.
+
+"More from this author" from search results keeps your search: Back returns to it, as it does from Random.
+
+A phone mark shows every tune already on your phone, in any archive, so you can see what plays without the network.
