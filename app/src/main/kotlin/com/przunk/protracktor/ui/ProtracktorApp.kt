@@ -172,11 +172,16 @@ fun ProtracktorApp(
     // ends: the dice is waiting, so Back returns to its record rather than to the playlist.
     val leaveBrowse = {
         if (!viewModel.browseBack()) {
-            if (state.diceWaiting) {
-                viewModel.resumeDice()
-                showRandom = true
+            when {
+                state.diceWaiting -> {
+                    viewModel.resumeDice()
+                    showRandom = true
+                    showBrowse = false
+                }
+                // A search waiting under the folder: back to its results, still in Browse.
+                state.searchWaiting -> viewModel.resumeSearch()
+                else -> showBrowse = false
             }
-            showBrowse = false
         }
     }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
@@ -453,7 +458,7 @@ fun ProtracktorApp(
                 // Whose folder, while the dice waits under it — from the moment the jump lands,
                 // not only once something here is playing.
                 digressionAuthor = browse.openAuthor
-                    ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting) },
+                    ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting || state.searchWaiting) },
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
                 onShareLink = viewModel::shareLink,

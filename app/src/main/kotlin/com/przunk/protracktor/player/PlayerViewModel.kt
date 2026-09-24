@@ -124,6 +124,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         ensureServiceRunning()
         controller.resumeDice()
     }
+    fun resumeSearch() {
+        // The same reason: a results tune left waiting paused is still what the notification plays.
+        ensureServiceRunning()
+        controller.resumeSearch()
+    }
     fun openCatalogue(summary: CatalogueSummary) = controller.openCatalogue(summary)
     fun openGroup(name: String) {
         // One handler for both levels: the format list and the author list look identical and the

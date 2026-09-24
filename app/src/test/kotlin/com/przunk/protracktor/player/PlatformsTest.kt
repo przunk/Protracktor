@@ -97,14 +97,19 @@ class PlatformsTest {
         assertTrue("an empty choice matches nothing here", !Platforms.matches("x.mod", emptySet()))
     }
 
-    /** One `IN (…)` clause per search, however many platforms were ticked. */
+    /** C89: the archive when it is one machine's, then the directory, then the name. */
     @Test
-    fun `catalogue formats of several platforms are one set`() {
-        val both = Platforms.catalogueFormatsOf(setOf("amiga", "c64"))
-        assertTrue("protracker" in both)
-        assertTrue("hvsc" in both)
-        assertTrue("sndh" !in both)
-        assertTrue(Platforms.catalogueFormatsOf(emptySet()).isEmpty())
+    fun `a catalogue row's platform comes from its archive, its directory, then its name`() {
+        // ASMA's sections say who, not what: every one of its rows is Atari 8-bit.
+        assertEquals("atari-8bit", Platforms.forCatalogueRow("asma", "Composers", "Bonio.sap")?.id)
+        assertEquals("atari-8bit", Platforms.forCatalogueRow("asma", "Games", "whatever.xyz")?.id)
+        assertEquals("amiga", Platforms.forCatalogueRow("unexotica", "Turrican", "mdat.title")?.id)
+        // Modland: the directory first, even against the name -- `psm` under Spectrum is Spectrum.
+        assertEquals("spectrum", Platforms.forCatalogueRow("modland", "Spectrum", "tune.psm")?.id)
+        assertEquals("atari-8bit", Platforms.forCatalogueRow("modland", "Slight Atari Player", "a.sap")?.id)
+        // A directory the table does not know: the name decides.
+        assertEquals("atari-8bit", Platforms.forCatalogueRow("modland", "Some New Folder", "a.sap")?.id)
+        assertEquals(null, Platforms.forCatalogueRow("modland", "Some New Folder", "readme"))
     }
 }
 

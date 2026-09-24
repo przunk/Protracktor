@@ -37,9 +37,10 @@ class CataloguePlayableTest {
         val pre = SupportedFormats.prefixOf(title)
         // The verdict `replaceIndex` writes, asked the same way.
         val playable = SupportedFormats.offeredInCatalogue(format, title)
+        val platform = com.przunk.protracktor.player.Platforms.forCatalogueRow("modland", format, title)?.id.orEmpty()
         prepareStatement(
-            "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, ext, pre, playable) " +
-                "VALUES ('modland', ?, ?, '4-Mat', ?, 1, ?, ?, ?)"
+            "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, ext, pre, playable, platform) " +
+                "VALUES ('modland', ?, ?, '4-Mat', ?, 1, ?, ?, ?, ?)"
         ).use {
             it.setString(1, "$format/4-Mat/$title")
             it.setString(2, format)
@@ -47,6 +48,7 @@ class CataloguePlayableTest {
             it.setString(4, ext)
             it.setString(5, pre)
             it.setInt(6, if (playable) 1 else 0)
+            it.setString(7, platform)
             it.execute()
         }
     }
@@ -151,8 +153,8 @@ class CataloguePlayableTest {
             for (scope in listOf(
                 Triple(emptySet<String>(), emptySet<String>(), false),
                 Triple(setOf("modland"), emptySet(), false),
-                Triple(emptySet(), setOf("Protracker"), false),
-                Triple(setOf("modland"), setOf("Protracker"), false),
+                Triple(emptySet(), setOf("amiga"), false),
+                Triple(setOf("modland"), setOf("amiga"), false),
             )) {
                 val (where, args) = randomWhere(scope.first, scope.second, scope.third)
                 val drawn = db.prepareStatement(
@@ -174,7 +176,7 @@ class CataloguePlayableTest {
         // scope added later cannot be `AND`-ed in front of it and quietly replace it.
         for (scope in listOf(
             Triple(emptySet<String>(), emptySet<String>(), false),
-            Triple(setOf("modland"), setOf("Protracker"), true),
+            Triple(setOf("modland"), setOf("amiga"), true),
         )) {
             assertTrue(
                 "scope $scope",

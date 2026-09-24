@@ -427,6 +427,46 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C89. Search filtered to Atari 8-bit never looks in ASMA — **reported 2026-09-24; FIXED, merged and confirmed on the phone the same day**
+
+**Fixed, the owner's choice (c), 2026-09-24:** each catalogue row stores its platform. Schema **20**
+adds `catalogue_tracks.platform`; `Platforms.forCatalogueRow` is the one rule -- the archive when it is
+one machine's (ASMA: Atari 8-bit; UnExoticA: Amiga), then Modland's directory, then the file's name
+-- and `Platforms.sqlCase` is the same rule as the `UPDATE` that fills the column for rows already
+stored, run by the re-decision that `Platforms.fingerprint`, now part of the index stamp, triggers at
+the next start. Search, its count, the dice's platform scope and the chips' counts all read the
+column: **the dice had the same defect**, drawing no ASMA tune under Atari 8-bit. A test holds the
+`UPDATE` to the function for every name and directory in the table; another finds an ASMA row under
+Atari 8-bit; a migration test keeps a version-19 row through 20. Rows in a Modland directory the table
+does not map now get the platform of their name, where before they had none.
+
+The report as noted:
+### C90. "More from this author" from search results left the search behind — **FIXED, merged and confirmed on the phone 2026-09-24**
+
+The owner: from Random the jump shows the digression -- *Browsing author* over the folder, a way
+back -- and from Search it did not; "it has to work identically". **Mechanism:** the heading was
+drawn only while the dice waited (`randomMode || diceWaiting`), and Back after a jump
+(`arrivedByJump`) left Browse outright, so the results, their words and scope were gone. **Fixed:**
+a search is a place to come back to, like the dice. The jump keeps it (`BrowseNavigation.searchToReturnTo`,
+`searchWaiting`), the heading shows, next and previous walk the author when a result was what played
+-- and not when the playlist was playing, since a look must not move the music -- and Back returns
+to the results as they were (`resumeSearch`). A tune chosen in the folder meanwhile stops and the
+results' tune waits paused, as the dice's does; otherwise the music plays on.
+
+### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **OPEN, reported 2026-09-24**
+
+The owner: `asma/Composers/przunk/Bonio.sap` (his own) is cut at ~3:00. **Mechanism, read from
+the file:** its header has no `TIME` line -- `AUTHOR`, `NAME`, `DATE`, `STEREO`, `TYPE`, `INIT`,
+`PLAYER` and nothing else -- and ASAP's length for a SAP is `TIME` alone, so the app knows none and
+the fallback ends it, marked `~`. ASMA does not state it elsewhere either: its only other record of
+the tune is a Demozoo entry with no length. B36's inventory put about 180 of Modland's SAPs in the
+same place.
+
+**Options:** (a) `TIME "m:ss"` added to the file, per subsong, and the file sent to ASMA -- every
+player then knows it; the owner's seven files. (b) Measure a SAP's natural end, as NSF's variant (a)
+does -- only for tunes that fall silent. (c) B36's length database. Recommended: (a) for these, (b)
+after the launch.
+
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor

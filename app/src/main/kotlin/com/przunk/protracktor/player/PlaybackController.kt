@@ -166,6 +166,12 @@ data class PlayerUiState(
      * folder returns to it; a playlist, an external file or a link end it for good.
      */
     val diceWaiting: Boolean = false,
+    /**
+     * A search waiting under a digression: "More from this author" from its results, the owner's
+     * "identically" to [diceWaiting] (2026-09-24). Back out of the author's folder returns to the
+     * results, their words and their scope as they were.
+     */
+    val searchWaiting: Boolean = false,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
     /**
@@ -910,6 +916,14 @@ class PlaybackController private constructor(private val context: Context) {
         // **An opened Modland folder fetches its tracks ahead** (A55). One place decides, from the
         // folder on screen and the setting: a new folder, a left one, or a changed setting cancels
         // the last run and starts the next, which is what makes "leaving stops the rest" true.
+        // **What is on the phone, in whatever Browse lists** (the owner, 2026-09-24): a folder of any
+        // catalogue, search results, History. Asked again whenever the rows change; a download that
+        // lands asks it again too (`refreshOnPhone`).
+        scope.launch {
+            _browse.map { browse -> browse.tracks.map { it.id } }
+                .distinctUntilChanged()
+                .collectLatest { ids -> val here = onPhoneOf(ids); _browse.update { it.copy(cachedHere = here) } }
+        }
         scope.launch {
             combine(_browse.map(::aheadKeyOf), _state.map { it.cacheAhead }) { key, mode -> key to mode }
                 .distinctUntilChanged()
@@ -2090,6 +2104,8 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val summary = catalogues.summaries().firstOrNull { it.id == from.id } ?: return@launch
+            // Read before Browse moves: the search this jump leaves, if it leaves one.
+            val search = BrowseNavigation.searchToReturnTo(_browse.value)
             _browse.update {
                 it.copy(
                     domain = BrowseDomain.ONLINE,
@@ -2120,6 +2136,20 @@ class PlaybackController private constructor(private val context: Context) {
                         resultsQueue = PlayQueue(tracks = found).startAt(at),
                         resultsFromHistory = false,
                         diceWaiting = true,
+                    )
+                }
+            } else if (search != null) {
+                // **The same for a search** (the owner, 2026-09-24). The results wait with their
+                // words and scope, and the heading says whose folder this is. Only when a result is
+                // what is playing does the transport move to the author -- a jump made while the
+                // playlist plays is a look, and must not take the music somewhere else.
+                val playingResults = _state.value.searchMode
+                waitingSearch = WaitingSearch(search, _state.value.resultsQueue)
+                val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
+                _state.update {
+                    it.copy(
+                        resultsQueue = if (playingResults) PlayQueue(tracks = found).startAt(at) else it.resultsQueue,
+                        searchWaiting = true,
                     )
                 }
             }
@@ -2312,7 +2342,8 @@ class PlaybackController private constructor(private val context: Context) {
                 remoteFiles.clearCache()
                 before - remoteFiles.cacheBytes()
             }
-            _browse.update { it.copy(cachedHere = emptySet()) }
+            // ASMA's tunes are still here; what went was the cache.
+            refreshOnPhone()
             _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }
@@ -2366,6 +2397,8 @@ class PlaybackController private constructor(private val context: Context) {
                 withContext(backgroundWork) {
                     if (Catalogue.byId(catalogueId)?.isArchive == true) remoteFiles.deleteArchive(catalogueId)
                 }
+                // Rows of that archive on screen are no longer on the phone.
+                refreshOnPhone()
                 _browse.update { current ->
                     current.copy(
                         // A deleted catalogue drops out of an online scope that named it. Left in, the
@@ -3049,6 +3082,7 @@ class PlaybackController private constructor(private val context: Context) {
                     randomIndex = -1,
                     randomExhausted = false,
                     diceWaiting = false,
+                    searchWaiting = false,
                     // Whatever was the source before this is not the source now. The list Browse
                     // was played from stays on screen there, but it has stopped driving playback,
                     // and leaving it in the state left two answers to "what is playing".
@@ -3196,9 +3230,9 @@ class PlaybackController private constructor(private val context: Context) {
         // scope they were drawn under, which is why the row says what is set rather than what is
         // playing.
         val scope = _browse.value.randomScope
-        val formats = when (scope) {
+        val platforms = when (scope) {
             is RandomScope.Everything, is RandomScope.Favourites -> emptySet()
-            is RandomScope.OnPlatform -> Platforms.catalogueFormatsOf(setOf(scope.platformId))
+            is RandomScope.OnPlatform -> setOf(scope.platformId)
         }
         // **Drawn wide and filtered, because the query cannot exclude anything.** `randomSample`
         // is `ORDER BY RANDOM() LIMIT n` over the whole scope every time, so nothing stops it
@@ -3209,7 +3243,7 @@ class PlaybackController private constructor(private val context: Context) {
         val already = randomHistory.mapTo(mutableSetOf()) { it.id }
         val drawn = catalogues.randomSample(
             short * OVERDRAW,
-            formats = formats,
+            platforms = platforms,
             favouritesOnly = scope is RandomScope.Favourites,
         ).map(::toTrackRef).filter { already.add(it.id) }.take(short)
         // A pool smaller than the session can exhaust honestly — forty favourites cannot fill an
@@ -3221,7 +3255,7 @@ class PlaybackController private constructor(private val context: Context) {
         randomHistory += drawn.ifEmpty {
             catalogues.randomSample(
                 short,
-                formats = formats,
+                platforms = platforms,
                 favouritesOnly = scope is RandomScope.Favourites,
             ).map(::toTrackRef)
         }
@@ -3284,6 +3318,35 @@ class PlaybackController private constructor(private val context: Context) {
      * [pendingRetry] and starts that tune; next rolls a new one. What played during the digression
      * is in the history, as everything played here is.
      */
+    /**
+     * Back to the search a digression came from -- [resumeDice]'s counterpart for results.
+     *
+     * The results come back as they were: words, scope, rows, and where the list was. **What was
+     * playing is left alone when it is still the results' tune** -- a look at the author and back
+     * does not stop the music. When something from the author's folder was chosen meanwhile, it
+     * stops and the results' tune waits paused, as the dice's does, because a queue whose current
+     * tune is not the one sounding is a transport that lies.
+     */
+    fun resumeSearch() {
+        val waiting = waitingSearch ?: return
+        waitingSearch = null
+        _browse.value = BrowseNavigation.returningTo(waiting.browse)
+        val results = waiting.results
+        val sounding = _state.value.current?.id
+        if (results != null && _state.value.searchMode && sounding != results.current?.id) {
+            stopPlayback()
+            pendingRetry = { playFromResultsQueue(results) }
+            _state.update {
+                it.copy(
+                    resultsQueue = results, searchWaiting = false, playing = false,
+                    positionSeconds = 0.0, durationSeconds = 0.0, metadata = emptyMap(),
+                )
+            }
+        } else {
+            _state.update { it.copy(resultsQueue = results ?: it.resultsQueue, searchWaiting = false) }
+        }
+    }
+
     fun resumeDice() {
         if (!_state.value.diceWaiting) return
         val pick = randomHistory.getOrNull(randomCursor) ?: return
@@ -3348,6 +3411,7 @@ class PlaybackController private constructor(private val context: Context) {
                 externalOpen = false,
                 resultsQueue = null,
                 diceWaiting = false,
+                searchWaiting = false,
                 randomHasPrevious = false,
                 randomPicks = emptyList(),
                 randomIndex = -1,
@@ -3413,7 +3477,6 @@ class PlaybackController private constructor(private val context: Context) {
         // ticked means every platform, which is why an empty set has to become an empty filter
         // rather than an empty result -- the label says "All platforms" and the search must agree.
         val platformIds = (searching as? SearchScope.ByPlatform)?.platformIds.orEmpty()
-        val formats = Platforms.catalogueFormatsOf(platformIds)
 
         scope.launch {
             _browse.update { it.copy(loading = true, tracks = emptyList()) }
@@ -3453,7 +3516,7 @@ class PlaybackController private constructor(private val context: Context) {
             val dbCatalogues = wanted.filter { it != com.przunk.protracktor.net.ModArchive.id }.toSet()
             val fromOnline = if (searching.searchesOnline && dbCatalogues.isNotEmpty()) {
                 catalogues.search(
-                    current.query, dbCatalogues, SearchResults.PER_SOURCE_LIMIT, formats,
+                    current.query, dbCatalogues, SearchResults.PER_SOURCE_LIMIT, platformIds,
                 ).map(::toTrackRef)
             } else {
                 emptyList()
@@ -3504,7 +3567,7 @@ class PlaybackController private constructor(private val context: Context) {
             val matches = if (!capped) 0 else {
                 (if (searching.searchesLocal) libraryIndex.countMatches(current.query) else 0) +
                     (if (searching.searchesOnline && dbCatalogues.isNotEmpty()) {
-                        catalogues.countMatches(current.query, dbCatalogues, formats)
+                        catalogues.countMatches(current.query, dbCatalogues, platformIds)
                     } else {
                         0
                     })
@@ -3539,12 +3602,8 @@ class PlaybackController private constructor(private val context: Context) {
     /** Counts the platform chips from the catalogue index, which is what makes a dead chip honest. */
     private fun refreshPlatformCounts() {
         scope.launch {
-            val counts = catalogues.formatCounts()
-            val byPlatform = mutableMapOf<String, Int>()
-            for ((format, n) in counts) {
-                val platform = Platforms.forCatalogueFormat(format) ?: continue
-                byPlatform[platform.id] = (byPlatform[platform.id] ?: 0) + n
-            }
+            // Counted by the column each row carries (C89), so ASMA counts towards Atari 8-bit.
+            val byPlatform = catalogues.platformCounts()
             _browse.update { it.copy(platformCounts = byPlatform) }
         }
     }
@@ -4092,6 +4151,10 @@ class PlaybackController private constructor(private val context: Context) {
      * then gives the same message a second time, which is honest; the alternative is an app that
      * sometimes obeys and sometimes substitutes, and unpredictable is worse than useless.
      */
+    /** The search a digression came from, and the results queue that was playing then (C-search). */
+    private data class WaitingSearch(val browse: BrowseState, val results: PlayQueue?)
+    private var waitingSearch: WaitingSearch? = null
+
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {
@@ -4288,6 +4351,7 @@ class PlaybackController private constructor(private val context: Context) {
                 externalOpen = external,
                 // A file from another app is not a digression to come back from.
                 diceWaiting = if (external) false else it.diceWaiting,
+                searchWaiting = if (external) false else it.searchWaiting,
                 randomHasPrevious = if (external) false else randomCursor > 0,
                 playing = false,
                 positionSeconds = 0.0,
@@ -4591,10 +4655,33 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** A tapped track that arrived is on the phone too; its row says so if it is on screen (D5). */
-    private fun markCachedHere(id: String) = _browse.update { browse ->
-        if (id in browse.cachedHere || browse.tracks.none { it.id == id }) browse
-        else browse.copy(cachedHere = browse.cachedHere + id)
+    /**
+     * Which of [ids] are on this phone, each asked its archive's way ([OnPhone]). An archive
+     * downloaded whole is looked at once, not once per row.
+     */
+    private suspend fun onPhoneOf(ids: List<String>): Set<String> = withContext(Dispatchers.IO) {
+        val archives = mutableMapOf<String, Boolean>()
+        ids.filterTo(HashSet()) { id ->
+            when (val check = OnPhone.checkFor(id)) {
+                is OnPhone.Check.Cached -> remoteFiles.isCached(check.url)
+                is OnPhone.Check.Archive -> archives.getOrPut(check.catalogueId) {
+                    remoteFiles.archiveFile(check.catalogueId).let { it.exists() && it.length() > 0 }
+                }
+                OnPhone.Check.Never -> false
+            }
+        }
+    }
+
+    /**
+     * The marks of the rows on screen, asked again: after a tune arrives -- an UnExoticA tune brings
+     * its whole game with it, so its neighbours change too -- and after a cache or an archive goes.
+     */
+    private fun refreshOnPhone() {
+        scope.launch {
+            val ids = _browse.value.tracks.map { it.id }
+            val here = onPhoneOf(ids)
+            _browse.update { if (it.tracks.map { t -> t.id } == ids) it.copy(cachedHere = here) else it }
+        }
     }
 
     /** The folder fetching ahead is about: a Modland author's folder with its rows, or nothing. */
@@ -4615,12 +4702,12 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private suspend fun fetchFolderAhead(key: AheadKey?, mode: CacheAhead) {
         if (key == null) {
-            _browse.update { it.copy(aheadFetching = emptySet(), cachedHere = emptySet()) }
+            // The marks are not this function's to clear: they follow whatever Browse lists.
+            _browse.update { it.copy(aheadFetching = emptySet()) }
             return
         }
-        val ids = key.tracks.map { it.id }
-        val cached = withContext(Dispatchers.IO) { ids.filterTo(HashSet()) { remoteFiles.isCached(it) } }
-        _browse.update { it.copy(cachedHere = cached, aheadFetching = emptySet()) }
+        val cached = onPhoneOf(key.tracks.map { it.id })
+        _browse.update { it.copy(aheadFetching = emptySet()) }
         if (!mode.allows(metered = networkIsMetered())) return
 
         val wanted = FolderPrefetch.plan(
@@ -4671,13 +4758,13 @@ class PlaybackController private constructor(private val context: Context) {
             // inside its game's `.lha`, so this fetches the archive -- cached like any other
             // download, so the rest of that soundtrack is free -- and unpacks the one member.
             // `docs/PLAN_UNEXOTICA.md` has the shape and the reason it is only three lines here.
-            loadFromUnExoticA(UnExoticA.pathFrom(ref.id).orEmpty())
+            loadFromUnExoticA(UnExoticA.pathFrom(ref.id).orEmpty())?.also { refreshOnPhone() }
         } else if (archiveCatalogueOf(ref.id) != null) {
             // "<catalogue>://<entry>" -- read out of the archive that catalogue shipped as, which is
             // already on disk. No network, which is why an archive catalogue is worth its download.
             remoteFiles.readFromArchive(ref.id.substringBefore("://"), ref.id.substringAfter("://"))
         } else if (ref.id.startsWith("http")) {
-            remoteFiles.fetch(ref.id)?.also { markCachedHere(ref.id) }
+            remoteFiles.fetch(ref.id)?.also { refreshOnPhone() }
         } else {
             withContext(Dispatchers.IO) {
                 runCatching {
