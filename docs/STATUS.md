@@ -444,6 +444,20 @@ filter finds an ASMA row. (b) Filter by the file's extension instead of its dire
 but it changes the rule for every platform, and the directory map exists because some extensions
 (`.fc`) are two formats.
 
+### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **OPEN, reported 2026-09-24**
+
+The owner: `asma/Composers/przunk/Bonio.sap` (his own) is cut at ~3:00. **Mechanism, read from
+the file:** its header has no `TIME` line -- `AUTHOR`, `NAME`, `DATE`, `STEREO`, `TYPE`, `INIT`,
+`PLAYER` and nothing else -- and ASAP's length for a SAP is `TIME` alone, so the app knows none and
+the fallback ends it, marked `~`. ASMA does not state it elsewhere either: its only other record of
+the tune is a Demozoo entry with no length. B36's inventory put about 180 of Modland's SAPs in the
+same place.
+
+**Options:** (a) `TIME "m:ss"` added to the file, per subsong, and the file sent to ASMA -- every
+player then knows it; the owner's seven files. (b) Measure a SAP's natural end, as NSF's variant (a)
+does -- only for tunes that fall silent. (c) B36's length database. Recommended: (a) for these, (b)
+after the launch.
+
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor
