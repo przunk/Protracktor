@@ -52,8 +52,14 @@ class SupportedFormatsFileTest {
     }
 
     @Test
+    fun `the refused directories are the phone's refused directories`() {
+        val inFile = rows.filter { it.kind == "directory" }.map { it.name }.toSet()
+        assertEquals(SupportedFormats.refusedDirectories.toSortedSet(), inFile.toSortedSet())
+    }
+
+    @Test
     fun `every row is a kind the page understands and names a decoder the engine has`() {
-        rows.forEach { row ->
+        rows.filter { it.kind != "directory" }.forEach { row ->
             assertTrue("unknown kind in $row", row.kind == "extension" || row.kind == "prefix")
             assertTrue("no decoder in $row", row.decoders.isNotEmpty())
             row.decoders.forEach { decoder ->
@@ -68,7 +74,7 @@ class SupportedFormatsFileTest {
      */
     @Test
     fun `every row names the platform the phone gives that name`() {
-        rows.forEach { row ->
+        rows.filter { it.kind != "directory" }.forEach { row ->
             val probe = if (row.kind == "extension") "x.${row.name}" else "${row.name}.x"
             val phone = Platforms.forFileName(probe)?.name ?: "-"
             assertEquals("platform of $row", phone, row.platform)

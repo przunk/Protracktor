@@ -1,0 +1,141 @@
+# B36 step 1: Modland's tunes with no length from any source. Seed 1, 20 per directory (150 for NSF), index and databases as fetched 2026-09-23. Engine: openmpt:0.8.9+r25652.pkg;sc68:sc68 3.0.0b;asap:8.0.0;gme:0.6.5;sidplayfp:3.1.1;minimp3:ea99364;uade:none; ZXTune via native/probe/zxtune/build/probe-zxtune; SPC 300
+format	decoder	files	sampled	refused	from_file	from_hvsc	from_songdb	no_length	est_files_without_length	commonest_file_length_s	times
+Protracker	openmpt	80716	20	0	20	0	0	0	0	83	2
+HVSC	sidplayfp	61157	20	1	0	19	0	0	0	0	0
+Fasttracker 2	openmpt	44269	20	0	20	0	0	0	0	245	2
+Nintendo SPC	gme	36903	300	0	272	0	0	28	3444	1	12
+Impulsetracker	openmpt	25570	20	0	20	0	0	0	0	211	2
+Video Game Music	gme	14168	20	0	20	0	0	0	0	3	2
+Screamtracker 3	openmpt	11186	20	0	20	0	0	0	0	290	1
+Spectrum/Pro Tracker 3	zxtune	7376	20	0	20	0	0	0	0	69	1
+Spectrum/Pro Tracker 2	zxtune	6245	20	0	20	0	0	0	0	162	2
+SNDH	sc68	5484	20	0	20	0	0	0	0	215	1
+Nintendo Sound Format	gme	5015	150	1	47	0	0	102	3433	23	2
+YM	zxtune	4962	20	0	20	0	0	0	0	61	2
+Spectrum/ST Song Compiler	zxtune	3639	20	1	19	0	0	0	0	222	2
+RealSID	sidplayfp	3540	20	2	0	14	0	4	787	0	0
+Slight Atari Player	asap	3230	20	2	17	0	0	1	179	39	2
+OctaMED MMD1	openmpt	2728	20	0	20	0	0	0	0	287	1
+Fasttracker	openmpt	2036	20	0	20	0	0	0	0	31	1
+Soundtracker	openmpt	1935	20	0	20	0	0	0	0	238	2
+Deflemask	openmpt	1807	20	20	0	0	0	0	all refused		
+FamiTracker	openmpt	1779	20	20	0	0	0	0	all refused		
+SC68	sc68	1775	20	0	20	0	0	0	0	139	1
+Spectrum/ASC Sound Master	zxtune	1706	20	0	20	0	0	0	0	153	2
+OctaMED MMD0	openmpt	1441	20	0	20	0	0	0	0	307	2
+AHX	hively	1390	20	0	20	0	0	0	0	13	3
+Gameboy Sound System	gme	918	20	0	6	0	0	14	643	3	1
+Spectrum/SQ Tracker	zxtune	880	20	0	20	0	0	0	0	56	1
+Spectrum/Vortex	zxtune	879	20	0	20	0	0	0	0	102	2
+Digibooster Pro	openmpt	843	20	0	20	0	0	0	0	122	1
+Musicline Editor	uade	817	20	0	0	0	20	0	0	0	0
+Multitracker	openmpt	790	20	0	20	0	0	0	0	223	1
+OctaMED MMD3	openmpt	660	20	0	20	0	0	0	0	455	1
+Spectrum/Sound Tracker Pro	zxtune	629	20	0	20	0	0	0	0	168	3
+Delitracker Custom	uade	476	20	0	0	0	20	0	0	0	0
+Oktalyzer	openmpt	449	20	0	20	0	0	0	0	253	1
+HES	gme	421	20	0	9	0	0	11	232	1	4
+KSS	gme	393	20	0	12	0	0	8	157	1	9
+TFMX	uade	368	20	0	0	0	18	2	37	0	0
+X-Tracker	openmpt	366	20	0	20	0	0	0	0	355	1
+SoundFX	openmpt	358	20	0	20	0	0	0	0	158	1
+OctaMED MMD2	openmpt	305	20	0	20	0	0	0	0	460	1
+Sonic Arranger	uade	251	20	0	0	0	20	0	0	0	0
+Ad Lib	openmpt	241	20	16	4	0	0	0	0	75	1
+Screamtracker 2	openmpt	234	20	0	20	0	0	0	0	31	2
+BP SoundMon 2	uade	212	20	0	0	0	20	0	0	0	0
+Art Of Noise	uade	211	20	0	0	0	20	0	0	0	0
+Future Composer 1.3	openmpt	175	20	0	20	0	0	0	0	92	2
+Symphonie	openmpt	174	20	0	20	0	0	0	0	270	1
+Composer 669	openmpt	172	20	0	20	0	0	0	0	230	2
+Digibooster	openmpt	168	20	0	20	0	0	0	0	392	1
+Digital Symphony	openmpt	160	20	0	20	0	0	0	0	69	2
+Future Composer 1.4	openmpt	152	20	0	20	0	0	0	0	77	3
+Digital Sound And Music Interface	openmpt	139	20	0	20	0	0	0	0	108	2
+Music Editor	openmpt	132	20	20	0	0	0	0	all refused		
+BP SoundMon 3	uade	121	20	0	0	0	20	0	0	0	0
+David Whittaker	uade	121	20	0	0	0	20	0	0	0	0
+Digital Tracker DTM	openmpt	114	20	0	20	0	0	0	0	169	2
+Octalyser	openmpt	111	20	0	20	0	0	0	0	187	2
+SidMon 2	uade	107	20	0	0	0	20	0	0	0	0
+Mad Tracker 2	openmpt	106	20	0	20	0	0	0	0	234	2
+His Master's Noise	openmpt	104	20	0	20	0	0	0	0	69	2
+Polytracker	openmpt	101	20	0	20	0	0	0	0	251	1
+Delta Music 2	uade	98	20	0	0	0	19	1	5	0	0
+Hippel ST COSO	uade	96	20	0	0	0	20	0	0	0	0
+Face The Music	openmpt	95	20	0	20	0	0	0	0	118	1
+Hippel COSO	uade	92	20	0	0	0	19	1	5	0	0
+Ultratracker	openmpt	91	20	0	20	0	0	0	0	77	1
+Epic Megagames MASI	openmpt	90	20	0	20	0	0	0	0	131	2
+MO3	openmpt	89	20	0	20	0	0	0	0	401	1
+Spectrum/Pro Tracker 1	zxtune	87	20	0	20	0	0	0	0	153	2
+Digital Mugician	uade	85	20	0	0	0	20	0	0	0	0
+MusicMaker V8	uade	69	20	0	0	0	20	0	0	0	0
+OpenMPT MPTM	openmpt	68	20	0	20	0	0	0	0	255	2
+General DigiMusic	openmpt	64	20	0	20	0	0	0	0	4	2
+Pretracker	uade	64	20	0	0	0	20	0	0	0	0
+Hippel	uade	63	20	0	0	0	20	0	0	0	0
+Digitrakker	openmpt	61	20	0	20	0	0	0	0	6	1
+Graoumf Tracker 2	openmpt	61	20	0	20	0	0	0	0	143	2
+SidMon 1	sidplayfp	61	20	20	0	0	0	0	all refused		
+FredMon	uade	59	20	0	0	0	20	0	0	0	0
+Game Music Creator	openmpt	59	20	0	20	0	0	0	0	46	2
+Graoumf Tracker	openmpt	52	20	0	20	0	0	0	0	260	1
+Spectrum/Fast Tracker	zxtune	51	20	1	19	0	0	0	0	61	2
+Spectrum/Pro Sound Maker	openmpt	51	20	0	20	0	0	0	0	394	1
+JamCracker	uade	48	20	0	0	0	20	0	0	0	0
+Startrekker AM	openmpt	47	20	0	20	0	0	0	0	61	3
+Chiptracker	openmpt	45	20	0	20	0	0	0	0	31	3
+Dave Lowe	uade	45	20	0	0	0	20	0	0	0	0
+Ben Daglish	uade	44	20	0	0	0	20	0	0	0	0
+HivelyTracker	hively	44	20	0	20	0	0	0	0	116	2
+MultiMedia Sound	openmpt	43	20	0	20	0	0	0	0	146	1
+Pumatracker	openmpt	43	20	0	20	0	0	0	0	61	3
+Asylum	openmpt	42	20	0	20	0	0	0	0	184	3
+Dave Lowe New	uade	41	20	0	0	0	20	0	0	0	0
+Picatune2	zxtune	39	20	20	0	0	0	0	all refused		
+Spectrum/Global Tracker	zxtune	38	20	0	20	0	0	0	0	161	2
+Farandole Composer	openmpt	37	20	0	20	0	0	0	0	184	2
+Composer 670 (CDFM)	openmpt	36	20	0	20	0	0	0	0	81	2
+Special FX ST	uade	36	20	0	0	0	20	0	0	0	0
+Synthesis	uade	36	20	0	0	0	20	0	0	0	0
+Mark II	uade	35	20	0	0	0	20	0	0	0	0
+Sound Images	uade	33	20	0	0	0	19	1	2	0	0
+Beathoven Synthesizer	uade	32	20	0	0	0	20	0	0	0	0
+Special FX	uade	31	20	0	0	0	20	0	0	0	0
+AProSys	uade	28	20	0	0	0	19	1	1	0	0
+Activision Pro	uade	26	20	0	0	0	15	5	7	0	0
+Velvet Studio	openmpt	25	20	0	20	0	0	0	0	249	1
+Digital Sound Interface Kit RIFF	openmpt	24	20	0	20	0	0	0	0	173	3
+TCB Tracker	openmpt	24	20	0	20	0	0	0	0	134	2
+Wally Beben	uade	24	20	0	0	0	20	0	0	0	0
+Hippel ST	uade	21	20	0	0	0	20	0	0	0	0
+Sound Master II v3	uade	19	19	0	0	0	19	0	0	0	0
+Soundtracker 2.6	openmpt	19	19	0	19	0	0	0	0	109	1
+DSMI Compact	openmpt	13	13	0	13	0	0	0	0	46	2
+TFMX ST	uade	13	13	0	0	0	13	0	0	0	0
+CBA	openmpt	11	11	0	11	0	0	0	0	312	1
+Protracker IFF	openmpt	11	11	0	11	0	0	0	0	645	1
+Astroidea XMF	openmpt	9	9	0	9	0	0	0	0	145	1
+Disorder Tracker 2	openmpt	9	9	0	9	0	0	0	0	34	1
+Imago Orpheus	openmpt	9	9	0	9	0	0	0	0	201	2
+Dynamic Studio Professional	openmpt	8	8	0	8	0	0	0	0	218	1
+EasyTrax	openmpt	8	8	0	8	0	0	0	0	117	1
+Digital Sound Interface Kit	openmpt	7	7	7	0	0	0	0	all refused		
+Digital Tracker MOD	openmpt	6	6	0	6	0	0	0	0	223	1
+Pollytracker	openmpt	5	5	5	0	0	0	0	all refused		
+Beaver Sweeper	openmpt	4	4	4	0	0	0	0	all refused		
+Quartet PSG	zxtune	4	4	2	1	0	1	0	0	36	1
+Extreme Tracker	openmpt	3	3	0	3	0	0	0	0	149	1
+IFF-SMUS	openmpt	3	3	3	0	0	0	0	all refused		
+Real Tracker	openmpt	3	3	0	3	0	0	0	0	165	1
+Soundtracker Pro II	zxtune	3	3	3	0	0	0	0	all refused		
+Digitrekker	openmpt	2	2	2	0	0	0	0	all refused		
+Unis 669	openmpt	2	2	0	2	0	0	0	0	318	1
+Audio Sculpture	openmpt	1	1	0	1	0	0	0	0	84	1
+BP SoundMon 1	uade	1	1	0	0	0	0	1	1	0	0
+Digital Mugician 3	uade	1	1	0	0	0	0	1	1	0	0
+FM sound driver (FMP)	openmpt	1	1	1	0	0	0	0	all refused		
+OPLLDRV	openmpt	1	1	1	0	0	0	0	all refused		
+Startrekker FLT8	openmpt	1	1	0	1	0	0	0	0	23	1
+Ultra64 Sound Format	openmpt	1	1	1	0	0	0	0	all refused		

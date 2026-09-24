@@ -1,9 +1,1 @@
-Seek in C64 (SID) and Atari ST (SNDH) tunes; a spinner shows while it gets there.
-
-A tune with no stated length gets a seek bar up to where it will stop, marked ~.
-
-Opening a Modland author's folder downloads its tunes in the background, three at a time: Wi-Fi only by default (Settings → Online catalogues).
-
-Links to the web player at przunk.github.io open in the app.
-
-Protracktor no longer offers itself as a browser. More buttons have icons, and a file that will not play says more about why.
+Modland's Deflemask, FamiTracker and Music Editor folders are no longer listed: their files carry names that belong to other formats, and none of them would play. The index you have already downloaded updates itself, with no new download.

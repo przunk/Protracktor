@@ -37,6 +37,49 @@ emulated — SNDH or NSF. Since `describe()` was guarded, a decoder that fails w
 metadata shows an **empty information block** rather than killing the app. An empty block is worth
 reporting with the file name; it is the visible end of a contained failure.
 
+## Before production: 0.9.1, 2026-09-24
+
+*The last look before the app goes public on 2026-10-02, on the release build of 0.9.1, installed
+over what was there so that nothing stored is lost. Fifteen to twenty minutes. What changed since
+0.8.0 first, then the paths every new user takes.*
+
+**Since 0.8.0**
+
+1. **SID and SNDH seek.** Drag the bar in a SID (HVSC) and an SNDH: it gets there, with a spinner
+   if it takes a moment; several drags in a row end at the last one.
+2. **A tune with no length.** An NSF that loops: the total reads `~3:00` or less, and the bar does
+   not change length between it and a MOD.
+3. **A folder fetched ahead.** On Wi-Fi, open a Modland author: spinners three at a time, then the
+   phone-with-a-tick; on mobile data with the default setting, nothing spins. *Settings → Online
+   catalogues* has the setting.
+4. **Links.** A *Share with Protracktor* link from https://przunk.github.io/Protracktor/ opens the
+   app; *Settings → Apps → Protracktor* shows no "Browser app".
+5. **Refusals.** `Nintendo Sound Format / Y. Matuo / 19 neunzehn.nsf` says Famicom Disk System;
+   `Beaver Sweeper / Steffo / nokia.gtk` ends "Modland lists it as Beaver Sweeper."
+6. **Modland's list.** No Deflemask, FamiTracker or Music Editor; SidMon 1 is there and plays.
+
+**What every new user does**
+
+7. **First start with nothing.** Clear the app's storage (*Settings → Apps → Protracktor → Storage →
+   Clear storage*) -- **this deletes playlists and history on the phone**, so only on a phone where
+   that does not matter, or skip it. The empty playlist offers the download; Modland downloads and
+   Browse fills.
+8. **Browse, search, play.** A search with an accent left out (`michal`), a result played, next and
+   previous walking the results, the playlist untouched.
+9. **Random.** Start it, next a few times, leave it: the playlist is where it was.
+10. **Playlists.** Add a tune to one, remove it, undo; switch playlists with an unsaved edit and see
+    the question.
+11. **The screen off.** Play, lock the phone, ten minutes: still playing, the notification there.
+12. **Settings → Language → Polski, then back**: every screen follows, nothing half-translated.
+
+A step that fails goes into `docs/STATUS.md` with the file and what was seen, before anything else.
+
+**Run by the owner, 2026-09-24,** on the C88 test build (`0.9.0-913`, the app code 0.9.1 will carry;
+0.9.1 itself not yet tagged): **1-6, 8, 9, 11, 12 pass.** 2: some NSFs show an approximate `~2:38`,
+others an exact time -- the measured and the looping, as intended -- and the bar holds its length.
+**10** (playlists, undo, the unsaved question) passes too, the same day. **7** (first start from
+nothing) not run, by the owner's choice: it clears the phone's playlists and history.
+
 ## When something was fixed, add its own check
 
 A fix that cannot be told apart from the bug by looking is not finished. Each entry below says what

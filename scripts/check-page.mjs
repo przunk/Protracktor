@@ -1121,6 +1121,24 @@ if (window.__api) {
   const phone = browser.replace(';zxtune:none', '').replace(';uade:none', '');
 
   check(table.extensions.size > 100 && table.prefixes.size > 10, 'the real list is read, extensions and prefixes');
+  // C88: a directory whose files nothing here plays is not offered, whatever the names say -- and the
+  // same name elsewhere still is. The index keeps the rows; only the verdict changes.
+  {
+    const decide = archive.playable(table, archive.absentDecoders(phone));
+    check(table.directories.has('FamiTracker') && table.directories.has('Deflemask') && table.directories.has('Music Editor'),
+      'the refused directories are read from the list');
+    check(!decide('route_19.ftm', 'FamiTracker') && !decide('sms.dmf', 'Deflemask') && !decide('minirave.med', 'Music Editor'),
+      'a file in a refused directory is not offered');
+    check(decide('tune.med', 'OctaMED MMD1') && decide('route_19.ftm', undefined),
+      'the same names elsewhere, or with no directory to go by, still are');
+    const { records } = archive.toRecords('100\tFamiTracker/A-KouZ1/route_19.ftm\n200\tProtracker/4-Mat/elysium.mod\n', 'modland', decide);
+    const held = records.filter((r) => r.tracks).flatMap((r) => r.tracks.map((e) => `${r.key}:${e.t}=${e.p}`));
+    check(held.some((h) => h.endsWith('route_19.ftm=0')) && held.some((h) => h.endsWith('elysium.mod=1')),
+      'an index keeps the refused row, unoffered, beside the rest');
+    const without = { ...table, directories: new Set() };
+    check(archive.indexFingerprint(phone, table) !== archive.indexFingerprint(phone, without),
+      'and a change to the refused directories changes the fingerprint, so stored indexes re-decide');
+  }
   check([...archive.absentDecoders(browser)].sort().join() === 'uade,zxtune', 'the browser engine lacks exactly ZXTune and UADE');
   check(archive.platformOf(table, 'zoolook.mod') === 'Amiga' && archive.platformOf(table, 'mod.zoolook') === 'Amiga',
     'a file\'s machine comes from its extension or its Amiga prefix');

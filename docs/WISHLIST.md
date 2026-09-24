@@ -10,6 +10,26 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B37. Google Cast and AirPlay — **noted 2026-09-23, not planned: the owner asked whether it can be done and whether it is worth it**
+
+**AirPlay: no.** A closed Apple protocol with no official SDK for Android; what exists are
+unofficial reimplementations, with the legal and breakage risk that comes with them.
+
+**Google Cast: possible, and expensive.** A Cast device plays what it can fetch and decode itself --
+MP3, AAC, Opus, a stream -- and none of this app's formats. So the phone would decode as it does now,
+**encode the audio live** into a stream, and **serve it on the local network** for the Cast device
+to read, while Cast's own controls stay in step with pause, seek and next. Measured in parts: a
+small HTTP server on the phone, a live encoder, background work that survives the screen going off,
+and the Cast SDK (`play-services-cast-framework`) -- a closed Google library, a large new
+dependency, and an awkward one beside GPL-3.0. Latency of a second or more on every action.
+
+**What already does most of it:** the web player on a computer or a TV browser, paired or sent a
+link with *Share with Protracktor*, plays on whatever that device is connected to; Bluetooth
+works as it is.
+
+**If it is ever wanted:** Cast only, after the launch, as its own plan -- the local stream first,
+proven with a plain URL in a browser, then the SDK.
+
 ## B36. Protracktor's own length database, measured by its own engines — **planned 2026-09-22, not started**
 
 Raised by the owner on 2026-09-22, after asking whether NSF could have lengths and a seek bar:
@@ -51,7 +71,10 @@ a length in some files and not in others (**not checked** how many). The real ga
 console formats -- NSF, GBS, HES, KSS, AY. After the launch, in two steps, with a decision between
 them:
 
-1. **Inventory.** A script walks Modland's index and counts, per format, the tunes with no length
+1. **Inventory -- DONE 2026-09-23, `docs/inventory/LENGTHS.md`:** about 8,900 of 342,000 measured
+   files have no length before playing, 7,900 of them game-music-emu's (NSF and SPC ~3,400 each,
+   GBS ~650, HES and KSS ~400); ZXTune, sc68, libopenmpt and HivelyTracker none. The plan as written:
+   A script walks Modland's index and counts, per format, the tunes with no length
    from any source. It says whether this is a database of 5,000 NSFs or of 50,000 files in many
    formats. Less than a day; nothing in the app changes.
 2. **An NSF pilot.** Loop detection on about 50 games, compared with joshw's hand-timed playlists.

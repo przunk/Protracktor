@@ -134,6 +134,17 @@ object SupportedFormats {
      */
     val localOnlyExtensions: Set<String> = setOf("mp3")
 
+    /**
+     * Catalogue directories whose files nothing here plays, **whatever their names say**
+     * (`docs/STATUS.md` C88). The index decides by name, and these names belong to other formats:
+     * Deflemask's `.dmf` is X-Tracker's to libopenmpt, FamiTracker's `.ftm` is Face The Music, Music
+     * Editor's old `.med` is not the MMD it expects. 3,718 files, none of which played on the
+     * owner's phone or in the page. Their rows stay in the index, unoffered; the page's copy is the
+     * `directory` rows of `web/src/formats.tsv`, and `SupportedFormatsFileTest` holds the two to one
+     * list. SidMon 1's `.sid` is not here: the phone plays it, through UADE.
+     */
+    val refusedDirectories: Set<String> = setOf("Deflemask", "FamiTracker", "Music Editor")
+
     /** Filename prefixes used instead of extensions by several Amiga trackers. */
     val prefixes: Set<String> = setOf(
         // "ahx" and "hvl" are listed for symmetry with the extensions, though Modland files all
@@ -175,7 +186,8 @@ object SupportedFormats {
      */
     val fingerprint: String
         get() = "names:%08x".format(
-            (extensions.sorted() + "|" + prefixes.sorted()).joinToString(",").hashCode()
+            (extensions.sorted() + "|" + prefixes.sorted() + "|" + refusedDirectories.sorted())
+                .joinToString(",").hashCode()
         )
 
     /**
@@ -196,6 +208,14 @@ object SupportedFormats {
      */
     fun inCatalogueIndex(fileName: String): Boolean =
         extensionOf(fileName) in extensions || prefixOf(fileName) in prefixes
+
+    /**
+     * Whether a catalogue row is offered: its name is one this build claims, and the directory the
+     * archive files it under is not one whose files are known to be something else (C88). What a
+     * stored index is written with and re-decided by -- `CatalogueStore` asks this and nothing else.
+     */
+    fun offeredInCatalogue(format: String, fileName: String): Boolean =
+        format !in refusedDirectories && inCatalogueIndex(fileName)
 
     /**
      * The two halves a name is judged by, **kept apart from the judging**.

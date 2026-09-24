@@ -1,9 +1,1 @@
-Przewijanie w utworach z C64 (SID) i Atari ST (SNDH); wskaźnik pokazuje, że trwa.
-
-Utwór bez zapisanej długości ma pasek do miejsca, w którym się zatrzyma, oznaczony ~.
-
-Otwarcie folderu autora z Modlandu pobiera jego utwory w tle, po trzy naraz: domyślnie tylko przez Wi-Fi (Ustawienia → Katalogi online).
-
-Linki do odtwarzacza na przunk.github.io otwierają się w aplikacji.
-
-Protracktor nie udaje już przeglądarki. Więcej przycisków ma ikony, a plik, który nie zagra, lepiej mówi dlaczego.
+Katalogi Deflemask, FamiTracker i Music Editor z Modlandu nie są już wyświetlane: ich pliki mają nazwy należące do innych formatów i żaden z nich nie zagrał. Pobrany już indeks aktualizuje się sam, bez ponownego pobierania.
