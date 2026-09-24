@@ -427,6 +427,23 @@ what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 changed — a name and a date belong to git history, and a quotation from a conversation belongs
 nowhere in a repository (`docs/BACKLOG.md` A49).
 
+### C89. Search filtered to Atari 8-bit never looks in ASMA — **OPEN, reported 2026-09-24; mechanism found**
+
+The owner: *Search → filter by platform → Atari 8-bit → "przunk"* finds nothing, while the same tunes
+are there when walked to (ASMA `Composers/przunk`, seven `.sap`). **Mechanism:** the platform filter
+matches the `format` column against `Platforms.ATARI_8BIT.catalogueFormats` -- Modland directory
+names, and `"asma"`. An ASMA row's `format` is its archive section (`Composers`, `Games`, `Unknown`,
+`Misc`, `Groups` -- `Catalogue.Asma`, `parts[1]`), never `asma`, so **no ASMA row ever passes the
+filter**: 6,335 tunes missing from every Atari 8-bit search, and from the chip's count, which reads
+the same column. Modland's `Slight Atari Player` still matches; the owner's tunes are in ASMA only.
+The page has no platform filter.
+
+**Options:** **(a) recommended:** a platform may claim a whole catalogue -- Atari 8-bit is Modland's
+directories **and all of ASMA** -- in the search and the chip count, with an SQLite test that the
+filter finds an ASMA row. (b) Filter by the file's extension instead of its directory: more general,
+but it changes the rule for every platform, and the directory map exists because some extensions
+(`.fc`) are two formats.
+
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor
