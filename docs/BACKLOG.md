@@ -15,6 +15,18 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A59. The phone-with-a-tick on every catalogue tune that is on the phone — **asked 2026-09-24; BUILT the same day on `feature/on-phone-mark`, not yet seen on the phone**
+
+The owner, told ASMA's rows carry no mark because nothing needs fetching: *"let's add the phone for
+ASMA, so it shows they are there -- and the same for every other one we have on the phone."* The
+mark used to be worked out for an open Modland folder alone (A55). Now every Browse list -- a folder
+of any catalogue, search results, History -- asks `OnPhone` of each row: a file fetched on its own is
+on the phone when the cache holds its address (Modland, The Mod Archive); an ASMA tune when ASMA is
+downloaded; an UnExoticA tune when its game's archive is cached. The marks are asked again when a
+tune arrives (an UnExoticA tune brings its game), when the cache is cleared and when an archive is
+deleted. **Not marked, deliberately:** the phone's own files -- every row of a local list is on the
+phone, and a tick on each would say nothing.
+
 ## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
 
 **Decided 2026-09-23 (the owner):** keep room for the tilde always, and the same room on both

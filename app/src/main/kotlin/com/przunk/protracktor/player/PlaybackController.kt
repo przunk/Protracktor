@@ -910,6 +910,14 @@ class PlaybackController private constructor(private val context: Context) {
         // **An opened Modland folder fetches its tracks ahead** (A55). One place decides, from the
         // folder on screen and the setting: a new folder, a left one, or a changed setting cancels
         // the last run and starts the next, which is what makes "leaving stops the rest" true.
+        // **What is on the phone, in whatever Browse lists** (the owner, 2026-09-24): a folder of any
+        // catalogue, search results, History. Asked again whenever the rows change; a download that
+        // lands asks it again too (`refreshOnPhone`).
+        scope.launch {
+            _browse.map { browse -> browse.tracks.map { it.id } }
+                .distinctUntilChanged()
+                .collectLatest { ids -> val here = onPhoneOf(ids); _browse.update { it.copy(cachedHere = here) } }
+        }
         scope.launch {
             combine(_browse.map(::aheadKeyOf), _state.map { it.cacheAhead }) { key, mode -> key to mode }
                 .distinctUntilChanged()
@@ -2312,7 +2320,8 @@ class PlaybackController private constructor(private val context: Context) {
                 remoteFiles.clearCache()
                 before - remoteFiles.cacheBytes()
             }
-            _browse.update { it.copy(cachedHere = emptySet()) }
+            // ASMA's tunes are still here; what went was the cache.
+            refreshOnPhone()
             _state.update { it.copy(message = Message(freedMessage(freed))) }
             refreshCatalogues()
         }
@@ -2366,6 +2375,8 @@ class PlaybackController private constructor(private val context: Context) {
                 withContext(backgroundWork) {
                     if (Catalogue.byId(catalogueId)?.isArchive == true) remoteFiles.deleteArchive(catalogueId)
                 }
+                // Rows of that archive on screen are no longer on the phone.
+                refreshOnPhone()
                 _browse.update { current ->
                     current.copy(
                         // A deleted catalogue drops out of an online scope that named it. Left in, the
@@ -4591,10 +4602,33 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** A tapped track that arrived is on the phone too; its row says so if it is on screen (D5). */
-    private fun markCachedHere(id: String) = _browse.update { browse ->
-        if (id in browse.cachedHere || browse.tracks.none { it.id == id }) browse
-        else browse.copy(cachedHere = browse.cachedHere + id)
+    /**
+     * Which of [ids] are on this phone, each asked its archive's way ([OnPhone]). An archive
+     * downloaded whole is looked at once, not once per row.
+     */
+    private suspend fun onPhoneOf(ids: List<String>): Set<String> = withContext(Dispatchers.IO) {
+        val archives = mutableMapOf<String, Boolean>()
+        ids.filterTo(HashSet()) { id ->
+            when (val check = OnPhone.checkFor(id)) {
+                is OnPhone.Check.Cached -> remoteFiles.isCached(check.url)
+                is OnPhone.Check.Archive -> archives.getOrPut(check.catalogueId) {
+                    remoteFiles.archiveFile(check.catalogueId).let { it.exists() && it.length() > 0 }
+                }
+                OnPhone.Check.Never -> false
+            }
+        }
+    }
+
+    /**
+     * The marks of the rows on screen, asked again: after a tune arrives -- an UnExoticA tune brings
+     * its whole game with it, so its neighbours change too -- and after a cache or an archive goes.
+     */
+    private fun refreshOnPhone() {
+        scope.launch {
+            val ids = _browse.value.tracks.map { it.id }
+            val here = onPhoneOf(ids)
+            _browse.update { if (it.tracks.map { t -> t.id } == ids) it.copy(cachedHere = here) else it }
+        }
     }
 
     /** The folder fetching ahead is about: a Modland author's folder with its rows, or nothing. */
@@ -4615,12 +4649,12 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private suspend fun fetchFolderAhead(key: AheadKey?, mode: CacheAhead) {
         if (key == null) {
-            _browse.update { it.copy(aheadFetching = emptySet(), cachedHere = emptySet()) }
+            // The marks are not this function's to clear: they follow whatever Browse lists.
+            _browse.update { it.copy(aheadFetching = emptySet()) }
             return
         }
-        val ids = key.tracks.map { it.id }
-        val cached = withContext(Dispatchers.IO) { ids.filterTo(HashSet()) { remoteFiles.isCached(it) } }
-        _browse.update { it.copy(cachedHere = cached, aheadFetching = emptySet()) }
+        val cached = onPhoneOf(key.tracks.map { it.id })
+        _browse.update { it.copy(aheadFetching = emptySet()) }
         if (!mode.allows(metered = networkIsMetered())) return
 
         val wanted = FolderPrefetch.plan(
@@ -4671,13 +4705,13 @@ class PlaybackController private constructor(private val context: Context) {
             // inside its game's `.lha`, so this fetches the archive -- cached like any other
             // download, so the rest of that soundtrack is free -- and unpacks the one member.
             // `docs/PLAN_UNEXOTICA.md` has the shape and the reason it is only three lines here.
-            loadFromUnExoticA(UnExoticA.pathFrom(ref.id).orEmpty())
+            loadFromUnExoticA(UnExoticA.pathFrom(ref.id).orEmpty())?.also { refreshOnPhone() }
         } else if (archiveCatalogueOf(ref.id) != null) {
             // "<catalogue>://<entry>" -- read out of the archive that catalogue shipped as, which is
             // already on disk. No network, which is why an archive catalogue is worth its download.
             remoteFiles.readFromArchive(ref.id.substringBefore("://"), ref.id.substringAfter("://"))
         } else if (ref.id.startsWith("http")) {
-            remoteFiles.fetch(ref.id)?.also { markCachedHere(ref.id) }
+            remoteFiles.fetch(ref.id)?.also { refreshOnPhone() }
         } else {
             withContext(Dispatchers.IO) {
                 runCatching {
