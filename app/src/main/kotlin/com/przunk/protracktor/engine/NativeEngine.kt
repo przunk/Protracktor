@@ -112,6 +112,42 @@ object NativeEngine {
         )
     }
 
+    /**
+     * A file opened to be rendered into another file rather than played (`docs/BACKLOG.md` A62):
+     * the same decoders the player opens it with, and no audio stream. Null with [error] when no
+     * decoder took it.
+     */
+    fun openRendering(
+        bytes: ByteArray,
+        fileName: String,
+        companions: List<Pair<String, ByteArray>> = emptyList(),
+    ): Pair<Rendering?, String> {
+        val reason = arrayOfNulls<String>(1)
+        val handle = nativeRenderOpen(
+            bytes, fileName,
+            companions.map { it.first }.toTypedArray(),
+            companions.map { it.second }.toTypedArray(),
+            reason,
+        )
+        return (if (handle == 0L) null else Rendering(handle)) to reason[0].orEmpty()
+    }
+
+    /** A decoder rendering to PCM on demand. Must be [close]d. One thread at a time. */
+    class Rendering internal constructor(private var handle: Long) : AutoCloseable {
+        fun selectSubsong(index: Int): Boolean = nativeRenderSelect(live(), index)
+        fun currentSubsong(): Int = nativeRenderSubsong(live())
+        fun durationSeconds(): Double = nativeRenderDuration(live())
+        /** 0 when the decoder has no preference. */
+        fun preferredSampleRate(): Int = nativeRenderRate(live())
+        /** Stereo frames into [out] (two shorts each); fewer than asked is the end, -1 a failure. */
+        fun render(sampleRate: Int, out: ShortArray): Int = nativeRender(live(), sampleRate, out)
+        override fun close() {
+            if (handle != 0L) nativeRenderClose(handle)
+            handle = 0L
+        }
+        private fun live(): Long = handle.also { check(it != 0L) { "rendering used after close" } }
+    }
+
     /** An open module. Must be [close]d; the native side owns memory that GC does not see. */
     class Track internal constructor(private val handle: Long) : AutoCloseable {
         private var closed = false
@@ -207,6 +243,19 @@ object NativeEngine {
         errorOut: Array<String?>,
     ): Long
     @JvmStatic private external fun nativeClose(handle: Long)
+    @JvmStatic private external fun nativeRenderOpen(
+        data: ByteArray,
+        fileName: String,
+        companionNames: Array<String>,
+        companionData: Array<ByteArray>,
+        errorOut: Array<String?>,
+    ): Long
+    @JvmStatic private external fun nativeRenderClose(handle: Long)
+    @JvmStatic private external fun nativeRenderSelect(handle: Long, index: Int): Boolean
+    @JvmStatic private external fun nativeRenderSubsong(handle: Long): Int
+    @JvmStatic private external fun nativeRenderDuration(handle: Long): Double
+    @JvmStatic private external fun nativeRenderRate(handle: Long): Int
+    @JvmStatic private external fun nativeRender(handle: Long, sampleRate: Int, out: ShortArray): Int
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
     @JvmStatic private external fun nativeKnownLengths(handle: Long, lengths: DoubleArray)
     @JvmStatic private external fun nativeStop(handle: Long)

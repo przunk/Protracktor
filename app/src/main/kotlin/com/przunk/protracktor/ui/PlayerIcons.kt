@@ -185,6 +185,15 @@ object PlayerIcons {
                 "4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z",
         )
     }
+    /** A file with a note on it: the tune sent as sound rather than as itself (A62). */
+    val AudioFile: ImageVector by lazy {
+        icon(
+            "AudioFile",
+            "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 11h-3v3.75" +
+                "c0 1.24-1.01 2.25-2.25 2.25S8.5 17.99 8.5 16.75s1.01-2.25 2.25-2.25c.46 0 .89.14 1.25.38" +
+                "V11h4v2zm-3-4V3.5L18.5 9H13z",
+        )
+    }
     /**
      * A QR code, for "there is nobody to send to yet — point me at a screen".
      *

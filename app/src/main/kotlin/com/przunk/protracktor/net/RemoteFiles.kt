@@ -144,6 +144,17 @@ class RemoteFiles(private val context: Context) {
      * not a crash.
      */
     fun shareableCopy(fileName: String, bytes: ByteArray): Uri? = runCatching {
+        val file = shareFile(fileName)
+        file.writeBytes(bytes)
+        shareUri(file)
+    }.getOrNull()
+
+    /**
+     * Where a file to be shared is written: a fresh place in the share directory, for a caller that
+     * writes the file itself rather than handing over bytes -- an encoder writing a tune rendered
+     * to audio (`docs/BACKLOG.md` A62). [shareUri] then turns it into what the chooser takes.
+     */
+    fun shareFile(fileName: String): File {
         // Copies made for earlier shares, an hour old or more. Not "everything except this one":
         // the receiving app reads the file after the chooser closes, and deleting the previous
         // share the moment a new one starts would sometimes pull it out from under a slow reader.
@@ -153,8 +164,10 @@ class RemoteFiles(private val context: Context) {
         // The name the other person sees. Separators would climb out of the directory, and a blank
         // name would produce a file called nothing at all.
         val named = fileName.ifBlank { "tune" }.replace('/', '_').replace('\\', '_')
-        val file = File(shareDir, named)
-        file.writeBytes(bytes)
+        return File(shareDir, named)
+    }
+
+    fun shareUri(file: File): Uri? = runCatching {
         FileProvider.getUriForFile(context, "${context.packageName}.shares", file)
     }.getOrNull()
 

@@ -39,6 +39,7 @@ import com.przunk.protracktor.AppLanguage
 import com.przunk.protracktor.AppTheme
 import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.R
+import com.przunk.protracktor.player.AudioExport
 import com.przunk.protracktor.player.CacheAhead
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.engine.NativeEngine
@@ -85,6 +86,8 @@ fun SettingsScreen(
     onFallbackLengthChanged: (Int) -> Unit,
     cacheAhead: CacheAhead,
     onCacheAheadSelected: (CacheAhead) -> Unit,
+    shareAudioMinutes: Int,
+    onShareAudioMinutesSelected: (Int) -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
     onClearCache: () -> Unit,
     onDeleteIndex: (String) -> Unit,
@@ -198,6 +201,20 @@ fun SettingsScreen(
                         )
                     }
                 },
+            )
+        }
+
+        // **The longest a tune shared as audio runs** (`docs/BACKLOG.md` A62). Beside the
+        // fallback length because it answers the same question for a different listener: the
+        // one at the other end of a chat, who gets a file rather than a player.
+        item {
+            SettingChoice(
+                label = stringResource(R.string.settings_share_audio_length),
+                options = AudioExport.LIMIT_MINUTES,
+                selected = shareAudioMinutes,
+                labelOf = { stringResource(R.string.settings_share_audio_minutes, it) },
+                onSelect = onShareAudioMinutesSelected,
+                supporting = stringResource(R.string.settings_share_audio_length_detail),
             )
         }
 
