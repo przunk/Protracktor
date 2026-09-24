@@ -74,6 +74,11 @@ over what was there so that nothing stored is lost. Fifteen to twenty minutes. W
 
 A step that fails goes into `docs/STATUS.md` with the file and what was seen, before anything else.
 
+**Run by the owner, 2026-09-24,** on the C88 test build (`0.9.0-913`, the app code 0.9.1 will carry;
+0.9.1 itself not yet tagged): **1-6, 8, 9, 11, 12 pass.** 2: some NSFs show an approximate `~2:38`,
+others an exact time -- the measured and the looping, as intended -- and the bar holds its length.
+**Not run: 7** (first start from nothing) **and 10** (playlists, undo, the unsaved question).
+
 ## When something was fixed, add its own check
 
 A fix that cannot be told apart from the bug by looking is not finished. Each entry below says what
