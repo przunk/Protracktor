@@ -77,7 +77,8 @@ A step that fails goes into `docs/STATUS.md` with the file and what was seen, be
 **Run by the owner, 2026-09-24,** on the C88 test build (`0.9.0-913`, the app code 0.9.1 will carry;
 0.9.1 itself not yet tagged): **1-6, 8, 9, 11, 12 pass.** 2: some NSFs show an approximate `~2:38`,
 others an exact time -- the measured and the looping, as intended -- and the bar holds its length.
-**Not run: 7** (first start from nothing) **and 10** (playlists, undo, the unsaved question).
+**10** (playlists, undo, the unsaved question) passes too, the same day. **7** (first start from
+nothing) not run, by the owner's choice: it clears the phone's playlists and history.
 
 ## When something was fixed, add its own check
 
