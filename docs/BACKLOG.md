@@ -63,9 +63,9 @@ Checked on Node: the whole path but the encoder -- the engine renders, the plan 
 check broken once to see it fail. **In a browser** (the owner, 2026-09-24): Chrome on Android makes the
 file and sends it; Firefox refuses and says so. Safari on an iPhone is not yet tried.
 
-## A61. Moving between screens — **noted 2026-09-24; decided 2026-09-25: variant (A); BUILT, merged and confirmed on the phone the same day ("now it makes sense")**
+## A61. Moving between screens — **noted 2026-09-24; decided 2026-09-24: variant (A); BUILT, merged and confirmed on the phone the same day ("now it makes sense")**
 
-**The owner's scenarios, 2026-09-25.** Random: play, More from this author, Back returns to Random --
+**The owner's scenarios, 2026-09-24.** Random: play, More from this author, Back returns to Random --
 good; then Back, or the Playlist button, returns to the playlist and **stops the music**. Search:
 play a result; the Playlist button stops and returns, but Back, Back leaves Browse with the music
 playing and the playlist covered by *"Playing from search"* -- and re-entering Browse shows a fresh
@@ -120,7 +120,7 @@ of any catalogue, search results, History -- asks `OnPhone` of each row: a file 
 on the phone when the cache holds its address (Modland, The Mod Archive); an ASMA tune when ASMA is
 downloaded; an UnExoticA tune when its game's archive is cached. The marks are asked again when a
 tune arrives (an UnExoticA tune brings its game), when the cache is cleared and when an archive is
-deleted. **The phone's own files are marked too**, at the owner's word, 2026-09-25: the first
+deleted. **The phone's own files are marked too**, at the owner's word, 2026-09-24: the first
 version left them out as saying nothing, but the mark means "plays without the network", and in a
 search mixing the phone's files with the archives' that is what tells them apart.
 
