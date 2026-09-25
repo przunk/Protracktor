@@ -102,7 +102,7 @@ The owner: *"to discuss: moving between views."* Nothing decided and nothing ask
 screens lead where, what Back does from each, and how a jump (More from this author, a link) sits
 among them, are the likely subjects. To be talked through before anything is built.
 
-## A60. Say that the database is being prepared, while a migration runs — **noted 2026-09-24; BUILT 2026-09-25 on `feature/a60-preparing-database`, not yet seen on the phone**
+## A60. Say that the database is being prepared, while a migration runs — **noted 2026-09-24; BUILT, merged and confirmed on the phone 2026-09-25 ("ok")**
 
 The owner: *"when the database migrates, the GUI must say something is happening -- e.g. 'Preparing
 DB', with a database-connection icon and a clock."* A migration runs when the app opens a database
@@ -118,8 +118,9 @@ to stop: playback and Settings go on, and it is the lists that wait. Shown while
 (`ProtracktorDatabase.onUpgrade`) and while the catalogues' rows are re-decided for a changed format
 list at start -- the two waits after an update -- counted by `DatabasePreparation`, so two
 overlapping ones do not end each other and a failed one still ends. **Checked:** the counter's tests,
-each broken once. **Not checked:** the strip on the phone. A real migration cannot be shown without a
-new schema version, so the test build forces the re-decision instead.
+each broken once. **On the phone** (the owner, 2026-09-25: "ok"): seen through a test build that
+forced the re-decision at every start and held the strip for four seconds -- a real migration cannot
+be shown without a new schema version. A real migration's strip is therefore still unseen.
 
 ## A59. The phone-with-a-tick on every catalogue tune that is on the phone — **asked 2026-09-24; BUILT, merged and confirmed on the phone the same day**
 
