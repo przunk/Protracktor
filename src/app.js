@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
@@ -1164,8 +1164,8 @@ function setPlaying(on) {
   const entry = queue[index];
   $('np-show').disabled = !entry;
   $('np-folder').disabled = !authorFolderOf(entry);
-  $('np-save').disabled = !entry || !!entry.local;
-  $('np-link').disabled = !entry || !entry.url;
+  // Dead only when nothing behind it can be done or explained -- a tune that stayed on the phone.
+  $('np-share').disabled = !entry || shareItems(entry).every(([, , enabled, , refusal]) => !enabled && !refusal?.());
 }
 
 /**
@@ -1429,6 +1429,8 @@ function openRowMenu(entry, anchor) {
     // gesture meant for many rows spent on one.
     [t('Add to playlist'), () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
     [t('Save the file'), () => saveFile(entry), !entry.local, ICON.save],
+    // A row that stayed on the phone has no bytes to render, which is not this browser's fault.
+    [t('Share as audio'), () => shareAsAudio(entry), !entry.local && audioShareWorks(), ICON.audio, entry.local ? null : audioShareRefusal],
     [t('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
     [t('Share with Protracktor'), () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
     // On every list, as on the phone, not in Browse alone.
@@ -1452,13 +1454,21 @@ function openRowMenu(entry, anchor) {
 function showMenu(items, anchor) {
   const menu = $('menu');
   menu.replaceChildren();
-  for (const [label, act, enabled, icon] of items) {
+  for (const [label, act, enabled, icon, refusal] of items) {
     const button = document.createElement('button');
     // An icon and its name, never the name alone -- the phone's menu has both, and so must this.
     button.innerHTML = iconSvg(icon);
     button.append(label);
-    button.disabled = !enabled;
-    button.onclick = () => { closeRowMenu(); act(); };
+    // **A row this browser cannot do answers with why** rather than going dead: greyed like the
+    // rest, and a press says what is missing (`refusal`, a function, since the reason is known
+    // only once asked). Rows with nothing to explain are plainly disabled.
+    if (!enabled && refusal?.()) {
+      button.setAttribute('aria-disabled', 'true');
+      button.onclick = () => { closeRowMenu(); showNote(refusal()); };
+    } else {
+      button.disabled = !enabled;
+      button.onclick = () => { closeRowMenu(); act(); };
+    }
     menu.append(button);
   }
   const box = anchor.getBoundingClientRect();
@@ -1756,6 +1766,9 @@ function answerUnsaved(go) {
 /** The phone's icons, the same paths, for controls the page builds rather than declares. */
 const ICON = {
   save: 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
+  // A file with a note on it: the tune sent as sound (A62). The phone's `AudioFile`.
+  audio: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 11h-3v3.75c0 1.24-1.01 2.25-2.25 2.25S8.5 17.99 8.5 16.75s1.01-2.25 2.25-2.25c.46 0 .89.14 1.25.38V11h4v2zm-3-4V3.5L18.5 9H13z',
+  share: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z',
   link: 'M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z',
   info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
   remove: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
@@ -2158,6 +2171,7 @@ async function renderSettings() {
 function showUndo(text) {
   $('snacktext').textContent = text;
   $('snackundo').hidden = false;
+  $('snacksend').hidden = true;
   $('snackbar').hidden = false;
   clearTimeout(undoTimer);
   undoTimer = setTimeout(hideUndo, 6000);
@@ -2172,9 +2186,23 @@ function showUndo(text) {
 function showNote(text) {
   $('snacktext').textContent = text;
   $('snackundo').hidden = true;
+  $('snacksend').hidden = true;
   $('snackbar').hidden = false;
   clearTimeout(undoTimer);
   undoTimer = setTimeout(hideUndo, 2500);
+}
+
+/**
+ * A made audio file, and the press that sends it (A62). Longer than an undo: the file took a
+ * while, and it is the thing the person came for.
+ */
+function showSend(text) {
+  $('snacktext').textContent = text;
+  $('snackundo').hidden = true;
+  $('snacksend').hidden = false;
+  $('snackbar').hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, 30_000);
 }
 
 function hideUndo() {
@@ -2811,6 +2839,7 @@ function openBrowseMenu(track, anchor, folder) {
     items.push([t('More from this author'), () => showAuthorFolder(track), true, ICON.folder]);
   }
   items.push([t('Save the file'), () => saveFile(track), true, ICON.save]);
+  items.push([t('Share as audio'), () => shareAsAudio(track), audioShareWorks(), ICON.audio, audioShareRefusal]);
   items.push([t('Copy a link'), () => copyLink(track), true, ICON.link]);
   items.push([t('Share with Protracktor'), () => sendToWeb(track), canSendToWeb(track), ICON.web]);
   showMenu(items, anchor);
@@ -3573,8 +3602,13 @@ applyVolume();
 // The panel's actions act on whatever is playing, which is the one thing the panel is about.
 $('np-show').onclick = () => { if (index >= 0) showInPlaylist(index); };
 $('np-folder').onclick = () => showAuthorFolder(queue[index]);
-$('np-save').onclick = () => { const e = queue[index]; if (e) saveFile(e); };
-$('np-link').onclick = () => { const e = queue[index]; if (e) copyLink(e); };
+$('np-share').onclick = (event) => {
+  // Kept from the page's click-away, which would otherwise close the menu this opens.
+  event.stopPropagation();
+  const e = queue[index];
+  if (e) showMenu(shareItems(e), $('np-share'));
+};
+$('snacksend').onclick = () => sendAudio();
 
 // --- the now-playing lines scroll when they do not fit (A54) --------------------------------------
 //
@@ -3830,6 +3864,125 @@ async function sendToWeb(entries) {
 }
 let lastSentLink = null;
 
+// --- share as audio (`docs/BACKLOG.md` A62) ------------------------------------------------------
+//
+// The phone's "Share as audio": the tune rendered and encoded to an `.m4a` a chat app plays. Done
+// in `audio-export.js`, a worker with an engine of its own, so what plays goes on playing.
+
+/**
+ * Whether this browser can encode AAC, asked once. **Firefox cannot** -- it has WebCodecs and no AAC
+ * encoder -- and there the action stays on screen, greyed, and says so when pressed (the owner's
+ * choice, 2026-09-24), rather than making a WebM the phone's Messenger may not play.
+ */
+let aacSupport = null;   // null: not yet known; then true or false
+(async () => {
+  try {
+    const answer = typeof AudioEncoder === 'undefined' ? null
+      : await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 2, bitrate: 128000 });
+    aacSupport = !!answer?.supported;
+  } catch {
+    aacSupport = false;
+  }
+  setPlaying(playing);
+})();
+function audioShareWorks() { return aacSupport !== false; }
+function audioShareRefusal() {
+  return aacSupport === false ? t('This browser cannot make an audio file. Chrome, Edge and Safari can.') : '';
+}
+
+/** How long a shared tune may run: the phone's setting, kept per browser. */
+let shareMinutes = 3;
+try { shareMinutes = shareAudioMinutes(localStorage.getItem('protracktor.shareaudio')); } catch { /* a private window */ }
+
+for (const input of document.querySelectorAll('input[name="shareaudio"]')) {
+  input.checked = Number(input.value) === shareMinutes;
+  input.onchange = () => {
+    shareMinutes = shareAudioMinutes(input.value);
+    try { localStorage.setItem('protracktor.shareaudio', String(shareMinutes)); } catch { /* private window */ }
+  };
+}
+
+let exportWorker = null;
+let exporting = false;
+/** The last file made, waiting for a press: a browser shares only straight after one. */
+let madeAudio = null;
+
+/**
+ * The ways to share a tune, behind Now Playing's one Share -- the phone's menu, in the page's
+ * words: saving the file, the tune as audio, and its address.
+ */
+function shareItems(entry) {
+  return [
+    [t('Save the file'), () => saveFile(entry), !entry.local, ICON.save],
+    [t('Share as audio'), () => shareAsAudio(entry), !entry.local && audioShareWorks(), ICON.audio, entry.local ? null : audioShareRefusal],
+    [t('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
+  ];
+}
+
+async function shareAsAudio(entry) {
+  if (exporting) { showNote(t('Still preparing the previous tune as audio.')); return; }
+  exporting = true;
+  const name = entry.name || entry.file || 'tune';
+  showNote(t('Preparing {name} as audio…', { name }));
+  try {
+    const bytes = await bytesOf(entry);
+    if (!bytes) { showNote(t('that one stayed on the phone — there is nothing here to save')); return; }
+    const knownLengths = await songLengthsFor(entry.file ?? entry.name, bytes);
+    // The subsong playing, when this is the tune that plays; else the one the file opens at.
+    const subsong = entry === queue[index] ? currentSubsong : null;
+    exportWorker ??= new Worker('./audio-export.js', { type: 'module' });
+    const answer = await new Promise((resolve) => {
+      exportWorker.onmessage = ({ data }) => resolve(data);
+      exportWorker.onerror = (event) => resolve({ ok: false, reason: event.message || t('the worker failed') });
+      exportWorker.postMessage({ bytes, name: entry.file ?? entry.name, subsong, knownLengths, limitMinutes: shareMinutes }, [bytes]);
+    });
+    if (!answer.ok) {
+      showNote(t('Could not turn {name} into audio.', { name }));
+      status(answer.reason);
+      return;
+    }
+    const meta = entry.meta ?? {};
+    const fileName = shareAudioName(meta.title || entry.name || entry.file, meta.artist || meta.author || '');
+    madeAudio = new File([answer.bytes], fileName, { type: 'audio/mp4' });
+    // **Where the browser can share a file, a press does it**; the one that started this is spent
+    // by now -- rendering takes seconds, and a share sheet opened without a fresh press is refused.
+    // Where it cannot, the file is saved, as "Save the file" saves one.
+    if (navigator.canShare?.({ files: [madeAudio] })) {
+      showSend(t('Ready to send: {name}', { name: fileName }));
+    } else {
+      downloadFile(madeAudio);
+      showNote(t('Saved {name}', { name: fileName }));
+    }
+  } catch (error) {
+    showNote(t('Could not turn {name} into audio.', { name }));
+    status(String(error?.message ?? error));
+  } finally {
+    exporting = false;
+  }
+}
+
+async function sendAudio() {
+  const file = madeAudio;
+  hideUndo();
+  if (!file) return;
+  try {
+    await navigator.share({ files: [file], title: file.name });
+  } catch (error) {
+    if (error?.name === 'AbortError') return;   // the share sheet was closed; nothing to say
+    downloadFile(file);
+    showNote(t('Saved {name}', { name: file.name }));
+  }
+}
+
+function downloadFile(file) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 /**
  * The pairing panel: a code that is always there, and a loop that is always asking.
  *
@@ -3870,7 +4023,8 @@ async function pair() {
   const qr = qrcode(0, 'M');
   qr.addData(post);
   qr.make();
-  $('qr').innerHTML = qr.createTableTag(5, 0);
+  // Scalable, so the sheet decides its size: a fixed 5-pixel cell ran past a phone's width.
+  $('qr').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0, scalable: true });
 
   const ready = t('Scan this with Protracktor on your phone to send it a playlist.');
   $('pairnote').textContent = ready;
@@ -3977,10 +4131,20 @@ addEventListener('keydown', (event) => {
   act();
 });
 
-// **No pinch to zoom**, in the two places the viewport and `touch-action` do not
+// **No pinch to zoom**, in the places the viewport and `touch-action` do not
 // reach: Safari's own gesture events, which ignore `user-scalable=no`, and a touchpad's pinch on a
 // computer, which a browser delivers as a wheel with Ctrl held.
+//
+// **And a second finger, refused where it lands.** A Safari tab still zoomed with only the gesture
+// events refused (a friend's iPhone, 2026-09-24): `user-scalable=no` is ignored there on purpose,
+// and a pinch is a two-finger `touchmove` before it is a gesture. Refusing that move is what a tab
+// cannot overrule, and it has to be said non-passively or the refusal is ignored. One finger is
+// never touched, so every list still scrolls.
 addEventListener('gesturestart', (event) => event.preventDefault());
+addEventListener('gesturechange', (event) => event.preventDefault());
+document.addEventListener('touchmove', (event) => {
+  if (event.touches.length > 1) event.preventDefault();
+}, { passive: false });
 addEventListener('wheel', (event) => { if (event.ctrlKey) event.preventDefault(); }, { passive: false });
 
 // Open on the code: on a fresh page the first useful act is to point a phone at it. It closes
