@@ -333,6 +333,8 @@
     <string name="notice_file_no_tracks">No tracks in that file.</string>
     <string name="notice_track_unreadable">Could not read %1$s</string>
     <string name="notice_share_failed">Could not prepare %1$s for sharing.</string>
+    <string name="preparing_database">Preparing the database…</string>
+    <string name="preparing_database_detail">Once, after an update. The lists fill in when it is done; the music plays on.</string>
     <string name="action_share_audio">Share as audio</string>
     <string name="notice_share_audio_preparing">Preparing %1$s as audio…</string>
     <string name="notice_share_audio_ready">Ready to send: %1$s</string>

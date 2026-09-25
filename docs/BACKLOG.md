@@ -102,7 +102,7 @@ The owner: *"to discuss: moving between views."* Nothing decided and nothing ask
 screens lead where, what Back does from each, and how a jump (More from this author, a link) sits
 among them, are the likely subjects. To be talked through before anything is built.
 
-## A60. Say that the database is being prepared, while a migration runs — **noted 2026-09-24**
+## A60. Say that the database is being prepared, while a migration runs — **noted 2026-09-24; BUILT 2026-09-25 on `feature/a60-preparing-database`, not yet seen on the phone**
 
 The owner: *"when the database migrates, the GUI must say something is happening -- e.g. 'Preparing
 DB', with a database-connection icon and a clock."* A migration runs when the app opens a database
@@ -110,6 +110,16 @@ from an older version, before the first screen has anything to show; the larger 
 folded search copies, version 20's platforms re-decided at the next start -- take a moment on a phone
 with Modland indexed, and until now the screen simply waits. What to show, with an icon and a label,
 and from which point: the owner's word for it is the starting point.
+
+As built: **a strip under the top bar**, on every screen -- a database with a clock on it,
+*Preparing the database…* and *Once, after an update. The lists fill in when it is done; the music
+plays on.*, over an indeterminate progress bar. A strip rather than a dialog because nothing else has
+to stop: playback and Settings go on, and it is the lists that wait. Shown while a migration runs
+(`ProtracktorDatabase.onUpgrade`) and while the catalogues' rows are re-decided for a changed format
+list at start -- the two waits after an update -- counted by `DatabasePreparation`, so two
+overlapping ones do not end each other and a failed one still ends. **Checked:** the counter's tests,
+each broken once. **Not checked:** the strip on the phone. A real migration cannot be shown without a
+new schema version, so the test build forces the re-decision instead.
 
 ## A59. The phone-with-a-tick on every catalogue tune that is on the phone — **asked 2026-09-24; BUILT, merged and confirmed on the phone the same day**
 
