@@ -348,6 +348,8 @@
     <string name="notice_file_no_tracks">W tym pliku nie ma utworów.</string>
     <string name="notice_track_unreadable">Nie udało się odczytać %1$s</string>
     <string name="notice_share_failed">Nie udało się przygotować %1$s do udostępnienia.</string>
+    <string name="preparing_database">Przygotowuję bazę danych…</string>
+    <string name="preparing_database_detail">Raz, po aktualizacji. Listy wypełnią się, gdy skończę; muzyka gra dalej.</string>
     <string name="action_share_audio">Udostępnij jako audio</string>
     <string name="notice_share_audio_preparing">Przygotowuję %1$s jako audio…</string>
     <string name="notice_share_audio_ready">Gotowe do wysłania: %1$s</string>

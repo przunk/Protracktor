@@ -30,6 +30,7 @@ import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.SearchTerms
 import com.przunk.protracktor.data.SongLengthStore
+import com.przunk.protracktor.data.DatabasePreparation
 import com.przunk.protracktor.data.Md5
 import com.przunk.protracktor.data.SongDbMetadata
 import com.przunk.protracktor.data.SongLengths
@@ -126,6 +127,8 @@ data class PlayerUiState(
     val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
     /** When an opened folder's tracks are fetched ahead (A55, D4). */
     val cacheAhead: CacheAhead = CacheAhead.DEFAULT,
+    /** The database is being migrated or re-decided, and the screen says so (A60). */
+    val preparingDatabase: Boolean = false,
     /** The longest a tune shared as audio runs, in minutes (A62). */
     val shareAudioMinutes: Int = AudioExport.DEFAULT_LIMIT_MINUTES,
     val scanning: Boolean = false,
@@ -968,15 +971,24 @@ class PlaybackController private constructor(private val context: Context) {
         //
         // Run only when the stamp actually moved. Recomputing on every start would be 228ms of
         // nothing, every time, for a list that changes with a release.
+        // Collected first, so a migration the next lines set off is on screen while it runs.
+        scope.launch {
+            DatabasePreparation.active.collect { running -> _state.update { it.copy(preparingDatabase = running > 0) } }
+        }
+
         scope.launch(Dispatchers.IO) {
             runCatching {
                 val current = NativeEngine.backendsFingerprint()
                 if (catalogues.summaries().any { it.indexedAt != null && it.backends != current }) {
-                    catalogues.refreshPlayable()
-                    // Re-stamped only where the index is whole. A partial one -- written before the
-                    // index stopped being a function of the format list -- is missing rows no
-                    // recompute can conjure, and has to go on saying it needs fetching again.
-                    catalogues.restampComplete(current)
+                    // Said on screen while it runs (A60): half a million rows re-decided is the
+                    // other moment, beside a migration, that the lists wait for after an update.
+                    DatabasePreparation.during {
+                        catalogues.refreshPlayable()
+                        // Re-stamped only where the index is whole. A partial one -- written before
+                        // the index stopped being a function of the format list -- is missing rows
+                        // no recompute can conjure, and has to go on saying it needs fetching again.
+                        catalogues.restampComplete(current)
+                    }
                     _browse.update { it.copy(catalogues = catalogues.summaries()) }
                 }
             }
