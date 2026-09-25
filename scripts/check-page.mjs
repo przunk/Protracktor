@@ -2564,6 +2564,43 @@ if (window.__api) {
     const blank = (v) => (v === '-' ? '' : v);
     return rules.shareAudioName(blank(c.title), blank(c.author)) === c.expect;
   });
+  // Shuffle from a tune chosen by hand, through the page's own row and its own next -- the path a
+  // click takes, not a copy of the rule.
+  {
+    // Not `each`: a click starts the tune after an await, so every case waits for it.
+    const cases = groups.shuffleFromTap ?? [];
+    check(cases.length > 0, "'shuffleFromTap' has cases to check");
+    let wrong = 0;
+    for (const c of cases) {
+      const count = Number(c.tracks);
+      window.__api.receive({ queue: Array.from({ length: count }, (_, i) => ({ url: `https://example.org/shuffle/${i}.mod`, title: `t${i}` })), index: 0 });
+      await new Promise((r) => setTimeout(r, 20));
+      const want = c.repeat === 'all' ? 'Repeat all' : 'Repeat off';
+      for (let i = 0; i < 3 && $('repeat').title !== want; i++) $('repeat').click();
+      if (!$('shuffle').classList.contains('on')) $('shuffle').click();
+      // Something played before the tap, so "back stops at the tapped tune" has something to refuse.
+      const rows = () => window.document.querySelectorAll('#queue li');
+      rows()[(Number(c.tapped) + 1) % count].click();
+      await new Promise((r) => setTimeout(r, 20));
+      rows()[Number(c.tapped)].click();
+      await new Promise((r) => setTimeout(r, 20));
+      const firstBack = window.__api.beforeOf(Number(c.tapped));
+      const second = window.__api.afterOf(Number(c.tapped));
+      if (second != null) await window.__api.playAt(second);
+      const backToTapped = second == null || window.__api.beforeOf(second) === Number(c.tapped);
+      window.__api.afterOf(Number(c.tapped));   // stand on the tapped tune again for the walk
+      const played = [Number(c.tapped)];
+      for (let next = window.__api.afterOf(played[0]); next != null && played.length < count * 3; next = window.__api.afterOf(next)) played.push(next);
+      const stops = played.length < count * 3;
+      const ok = firstBack == null && backToTapped
+        && (c.played === '-' ? !stops : stops && played.length === Number(c.played))
+        && new Set(played.slice(0, count)).size === Number(c.distinct);
+      if (!ok) { wrong++; console.log(`    ✗ ${c.why}\n      played ${played.join(',')}`); }
+    }
+    check(wrong === 0, `shuffleFromTap: ${cases.length} cases from the shared file`);
+  }
+  if ($('shuffle').classList.contains('on')) $('shuffle').click();
+  for (let i = 0; i < 3 && $('repeat').title !== 'Repeat off'; i++) $('repeat').click();
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
   // --- the page in Polish, and in a light theme (W6, W7) ------------------------------------------

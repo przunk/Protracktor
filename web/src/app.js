@@ -1258,7 +1258,14 @@ function render() {
     if (!entry.local) {
       li.onclick = () => {
         if (swallowRowClick) { swallowRowClick = false; return; }
-        if (selected.size) toggleSelected(entry); else playAt(i);
+        if (selected.size) { toggleSelected(entry); return; }
+        // **A tune chosen by hand deals the shuffle again, starting at it** (the owner, 2026-09-25):
+        // next walks the order from where the current tune stands in it, so a tune in the middle of
+        // an order dealt earlier played only what came after it -- the same tunes from any start,
+        // and the ones before it never. And it is the first: back stops at it, since what played
+        // before belonged to another order. The phone's `PlayQueue.startAt` does the same.
+        if (shuffle) { reshuffle(i); history = []; }
+        playAt(i);
       };
       holdToSelect(li, entry);
     }

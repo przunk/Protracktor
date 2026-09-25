@@ -512,6 +512,22 @@ nothing to scroll it, which the pinned page (C92) made plain; the code was a tab
 cells. **Fixed:** the rule is scoped to Now Playing (a page check fails if the top bar's buttons grow
 again), a sheet scrolls inside itself with its heading kept, Settings takes nearly the whole height
 on a phone, the code is a scalable picture and the address breaks anywhere.
+
+### C94. Shuffle played the same order from any tune, and stopped early — **FIXED 2026-09-25 on `fix/shuffle-from-the-tapped-tune`, APK and page; not yet seen on the phone**
+
+The owner, with his 41-tune Favorites, no repeat, shuffle on: from wherever he started, next next next
+ended on the same tune (*Studium Fałszu*), with no next; and choosing another tune by hand gave the same
+sequence. **Mechanism:** the shuffled order was one permutation dealt when shuffle came on and kept;
+a tune chosen by hand stood somewhere in its middle, and next walked only what came after it -- the
+same tunes from any start, ending on the permutation's last, and the ones before it never played.
+Both sides, each in its own code. **Fixed, as the owner decided:** a tune chosen by hand deals a
+fresh order starting at it, as does shuffle turned on (from what plays); next then plays every tune
+once before the end, and **the chosen tune is the first**: back stops at it rather than stepping into
+what played before the choice (the owner, on the first test build). **Repeat off + shuffle stops after one pass** and **repeat all + shuffle goes on,
+dealing again each lap** -- the owner's first idea, shuffle without repeat going on for ever, was
+talked through and dropped, since it would make the two the same. The rule is now in
+`docs/rules/queue-cases.tsv` (`shuffleFromTap`), run by the phone's `PlayQueue` and by the page
+through its own row and next; both failed before the fix.
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor

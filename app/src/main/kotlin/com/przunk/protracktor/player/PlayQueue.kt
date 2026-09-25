@@ -104,6 +104,11 @@ data class PlayQueue(
     val repeat: RepeatMode = RepeatMode.OFF,
     /** Fixes the shuffled permutation. A new value is a new shuffle. */
     private val shuffleSeed: Long = 0L,
+    /**
+     * The track the shuffled order starts at: the one chosen by hand, or playing when shuffle came
+     * on. Null for an order that starts anywhere -- a new lap, or nothing chosen yet.
+     */
+    private val shuffleFrom: Int? = null,
     private val history: List<Int> = emptyList(),
     private val historyCursor: Int = -1,
 ) {
@@ -116,7 +121,14 @@ data class PlayQueue(
      * the two impossible to disagree.
      */
     private val order: List<Int> by lazy(LazyThreadSafetyMode.NONE) {
-        if (shuffle) tracks.indices.shuffled(kotlin.random.Random(shuffleSeed)) else tracks.indices.toList()
+        if (!shuffle) return@lazy tracks.indices.toList()
+        val dealt = tracks.indices.shuffled(kotlin.random.Random(shuffleSeed))
+        // **The chosen track first, the rest after it.** Next walks the order from where the
+        // current track stands in it, so a track somewhere in the middle of a permutation dealt
+        // earlier played only what came after it -- the same tunes from any start, ending on the
+        // same one, and the ones before it never (the owner, 2026-09-25).
+        val first = shuffleFrom?.takeIf { it in tracks.indices } ?: return@lazy dealt
+        listOf(first) + dealt.filter { it != first }
     }
 
     /** Index into [tracks] of what is playing, or `null` before anything has started. */
@@ -137,6 +149,13 @@ data class PlayQueue(
     /** Starts (or restarts) at a specific track, discarding any forward history. */
     fun startAt(index: Int): PlayQueue {
         require(index in tracks.indices) { "no track at $index (size ${tracks.size})" }
+        // **A track chosen by hand deals the shuffle again**, starting at it: every other track
+        // then plays once before the end, in an order not heard from here before. **And it is the
+        // first**: back stops at it rather than stepping into what played before the choice (the
+        // owner, 2026-09-25) -- that was another order, and the choice ended it.
+        if (shuffle) {
+            return copy(history = listOf(index), historyCursor = 0, shuffleSeed = kotlin.random.Random.nextLong(), shuffleFrom = index)
+        }
         return copy(history = history.take(historyCursor + 1) + index, historyCursor = historyCursor + 1)
     }
 
@@ -201,7 +220,8 @@ data class PlayQueue(
      * were really played, across the change.
      */
     fun withShuffle(on: Boolean, seed: Long = kotlin.random.Random.nextLong()): PlayQueue =
-        if (on == shuffle) this else copy(shuffle = on, shuffleSeed = seed)
+        // Dealt from what is playing, for the same reason [startAt] deals from what was chosen.
+        if (on == shuffle) this else copy(shuffle = on, shuffleSeed = seed, shuffleFrom = currentIndex)
 
     /**
      * Replaces the track list.
@@ -223,7 +243,13 @@ data class PlayQueue(
             if (position <= historyCursor) newCursor = remapped.lastIndex
         }
 
-        return copy(tracks = newTracks, history = remapped, historyCursor = newCursor)
+        val sameTracks = newTracks.map { it.id } == tracks.map { it.id }
+        // **The same tracks keep their order**: a title learnt by playing replaces the list, and a
+        // new order at every tune would undo "every tune once". A list that really changed deals
+        // again from what is playing, since the old permutation's indices no longer mean anything.
+        val from = if (sameTracks) shuffleFrom else remapped.getOrNull(newCursor)
+        val seed = if (sameTracks) shuffleSeed else kotlin.random.Random.nextLong()
+        return copy(tracks = newTracks, history = remapped, historyCursor = newCursor, shuffleSeed = seed, shuffleFrom = from)
     }
 
     private fun advanced(): PlayQueue? {
@@ -247,7 +273,7 @@ data class PlayQueue(
             RepeatMode.PLAYLIST -> {
                 // A fresh permutation each lap: replaying the same shuffled order forever is not
                 // what anyone means by shuffle.
-                val lap = if (shuffle) copy(shuffleSeed = kotlin.random.Random.nextLong()) else this
+                val lap = if (shuffle) copy(shuffleSeed = kotlin.random.Random.nextLong(), shuffleFrom = null) else this
                 lap.order.firstOrNull()?.let {
                     lap.copy(history = history + it, historyCursor = historyCursor + 1)
                 }

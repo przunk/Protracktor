@@ -251,3 +251,18 @@ Bonio.sap	-	Bonio.m4a	the title alone when there is no author
 Dr. Who theme	-	Dr. Who theme.m4a	a dot inside the words is not an extension
 What? Yes/No	A|B	A_B - What_ Yes_No.m4a	what a file system refuses is replaced
 -	-	tune.m4a	a tune with no name at all still gets one
+
+# Shuffle from a tune chosen by hand (the owner, 2026-09-25): the choice deals a fresh order that
+# starts at it, and next then plays every tune once -- the tapped one first -- before it stops, or
+# goes on for ever, dealing again each lap, under repeat all. Which tunes, not in which order: the two
+# sides shuffle with different generators. `played` counts the tunes from the tapped one to the stop,
+# `-` for a walk that does not stop; `distinct` how many different tunes among the first `tracks`.
+# Every case also holds that the tapped tune is the first: back from it goes nowhere, whatever
+# played before the tap, and back from the tune after it returns to it.
+[shuffleFromTap]
+tracks	tapped	repeat	played	distinct	why
+41	20	off	41	41	a tune from the middle: every tune once, then the end
+41	0	off	41	41	the first row is no different
+41	40	off	41	41	nor the last
+8	3	all	-	8	repeat all does not stop, and its first lap is every tune once
+1	0	off	1	1	a playlist of one plays it and stops

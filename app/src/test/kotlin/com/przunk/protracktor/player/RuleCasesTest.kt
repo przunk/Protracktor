@@ -262,6 +262,24 @@ class RuleCasesTest {
         assertEquals(case.why(), case.getValue("expect"), AudioExport.fileName(blank("title"), blank("author")))
     }
 
+    @Test
+    fun `shuffle from a chosen tune agrees with the shared cases`() = each("shuffleFromTap") { case ->
+        val count = case.int("tracks")
+        val repeat = if (case.getValue("repeat") == "all") RepeatMode.PLAYLIST else RepeatMode.OFF
+        // Something played before the tap, so "back stops at the tapped tune" has something to refuse.
+        val before = PlayQueue(tracks = (0 until count).map { TrackRef(id = "t$it", title = "t$it") })
+            .withShuffle(true).withRepeat(repeat).next().next()
+        var q = before.startAt(case.int("tapped"))
+        assertEquals(case.why() + ": back from the tapped tune", false, q.hasPrevious)
+        if (q.hasNext) assertEquals(case.why() + ": back to the tapped tune", "t${case.int("tapped")}", q.next().previous().current!!.id)
+        val played = mutableListOf(q.current!!.id)
+        while (q.hasNext && played.size < count * 3) { q = q.next(); played += q.current!!.id }
+        val stops = played.size < count * 3
+        assertEquals(case.why(), "t${case.int("tapped")}", played.first())
+        assertEquals(case.why(), case.intOrNull("played"), if (stops) played.size else null)
+        assertEquals(case.why(), case.int("distinct"), played.take(count).toSet().size)
+    }
+
     private companion object {
         const val RULES = "docs/rules/queue-cases.tsv"
     }
