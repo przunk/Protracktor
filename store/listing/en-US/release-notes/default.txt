@@ -1,5 +1,9 @@
-Filtering by platform now finds every archive's tunes: Atari 8-bit includes ASMA, in search and in Random.
+Share as audio: send any tune as an M4A file that Messenger and other apps play. Its length is in Settings.
 
-"More from this author" from search results keeps your search: Back returns to it, as it does from Random.
+Shuffle starts from the tune you choose and plays every tune once; Back stops at the one you chose.
 
-A phone mark shows every tune already on your phone, in any archive, so you can see what plays without the network.
+Back never stops the music: the playlist says what is playing and leads back to it.
+
+Your own files carry the phone mark too.
+
+After an update, a bar says when the database is being prepared.
