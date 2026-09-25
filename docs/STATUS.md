@@ -513,7 +513,7 @@ cells. **Fixed:** the rule is scoped to Now Playing (a page check fails if the t
 again), a sheet scrolls inside itself with its heading kept, Settings takes nearly the whole height
 on a phone, the code is a scalable picture and the address breaks anywhere.
 
-### C94. Shuffle played the same order from any tune, and stopped early — **FIXED 2026-09-25 on `fix/shuffle-from-the-tapped-tune`, APK and page; not yet seen on the phone**
+### C94. Shuffle played the same order from any tune, and stopped early — **FIXED, merged and confirmed on the phone 2026-09-25 ("ok"), APK and page**
 
 The owner, with his 41-tune Favorites, no repeat, shuffle on: from wherever he started, next next next
 ended on the same tune (*Studium Fałszu*), with no next; and choosing another tune by hand gave the same
