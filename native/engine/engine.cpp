@@ -18,6 +18,7 @@ extern "C" {
 #include <sc68/sc68.h>
 #include <sc68/file68_rsc.h>
 #include <asap.h>
+#include <asap_measure.h>
 #include <gme.h>
 /* HivelyTracker. `types.h` is a generic name and its typedefs -- TEXT, BOOL, CONST, TRUE, FALSE --
  * are unqualified Amiga ones, so it goes last in this block, after the four headers that would
@@ -606,7 +607,7 @@ public:
     }
 
     AsapBackend(const std::vector<char> &bytes, const std::string &name)
-        : asap_(ASAP_New()) {
+        : asap_(ASAP_New()), bytes_(bytes), name_(name) {
         if (!asap_) throw std::runtime_error("the Atari 8-bit decoder (ASAP) would not initialise");
 
         ASAP_SetSampleRate(asap_, kSampleRate);
@@ -630,7 +631,40 @@ public:
     }
 
     ~AsapBackend() override {
+        stopMeasuring_.store(true, std::memory_order_release);
+#ifndef __EMSCRIPTEN__
+        if (measurer_.joinable()) measurer_.join();
+#endif
         if (asap_) ASAP_Delete(asap_);
+    }
+
+    /**
+     * Starts finding where a SAP that states no `TIME` really ends (`docs/STATUS.md` C91): ASAP's
+     * own `asapscan` detection, on a silent copy -- five seconds of silence, or three minutes of
+     * POKEY repeating what it played, which is one pass of a loop. Across ASMA's 8,316 subsongs
+     * that do state a `TIME`, it gave the same length to a second for 82% of them.
+     *
+     * **On the phone only.** The page's engine has no threads, and measuring at open would hold its
+     * audio thread for up to seconds; there a SAP with no `TIME` keeps the fallback, as before.
+     */
+    void startedPlaying() override {
+#ifndef __EMSCRIPTEN__
+        wanted_.store(song_, std::memory_order_release);
+        if (!measurer_.joinable()) measurer_ = std::thread([this] { measureLoop(); });
+#endif
+    }
+
+    /** Lengths the host already has from a database; a subsong with one is never measured. */
+    void knownLengths(const std::vector<double> &lengths) override { known_ = lengths; }
+
+    /** While a measurement may still give this subsong a length, the host keeps asking for one. */
+    bool durationArrivesLater() const override {
+#ifdef __EMSCRIPTEN__
+        return false;   // nothing measures on the page
+#endif
+        if (durationMs_ > 0 || knownFor(song_)) return false;
+        const std::int64_t measured = measured_.load(std::memory_order_acquire);
+        return measured == kNotMeasured || songOf(measured) != song_;
     }
 
     std::size_t render(int, std::size_t frames, float *out) override {
@@ -681,7 +715,11 @@ public:
     // A negative duration means the file does not say, which is common. Zero reads as "unknown" to
     // the rest of the app and disables the scrubber rather than offering a meaningless one.
     double durationSeconds() const override {
-        return durationMs_ > 0 ? durationMs_ / 1000.0 : 0.0;
+        if (durationMs_ > 0) return durationMs_ / 1000.0;
+        // A measured length, for the subsong playing now and not one measured before a switch.
+        const std::int64_t measured = measured_.load(std::memory_order_acquire);
+        if (measured != kNotMeasured && songOf(measured) == song_ && msOf(measured) > 0) return msOf(measured) / 1000.0;
+        return 0.0;
     }
 
     std::string describe() const override {
@@ -711,11 +749,61 @@ public:
         durationMs_ = ASAPInfo_GetDuration(info_, song_);
         if (!ASAP_PlaySong(asap_, song_, durationMs_)) return false;
         ended_ = false;
+#ifndef __EMSCRIPTEN__
+        // Asked for, not measured here: a pending subsong is applied on the audio thread.
+        wanted_.store(song_, std::memory_order_release);
+#endif
         return true;
     }
 
 private:
     static constexpr int kSampleRate = 44100;
+    /** How far a measurement runs before giving up: `asapscan`'s own default. */
+    static constexpr int kScanSeconds = 15 * 60;
+    /** The subsong and its length, in one word so a reader never pairs one with the other's. */
+    static constexpr std::int64_t kNotMeasured = -1;
+    static std::int64_t pack(int song, int ms) {
+        return (static_cast<std::int64_t>(song) << 32) | static_cast<std::uint32_t>(ms);
+    }
+    static int songOf(std::int64_t packed) { return static_cast<int>(packed >> 32); }
+    static int msOf(std::int64_t packed) { return static_cast<std::int32_t>(packed & 0xffffffff); }
+
+    bool knownFor(int song) const {
+        return song >= 0 && static_cast<std::size_t>(song) < known_.size() && known_[song] > 0.0;
+    }
+
+#ifndef __EMSCRIPTEN__
+    /** The measuring thread: measures whichever subsong is wanted, until the tune closes. */
+    void measureLoop() {
+        int done = -1;
+        while (!stopMeasuring_.load(std::memory_order_acquire)) {
+            const int wanted = wanted_.load(std::memory_order_acquire);
+            if (wanted >= 0 && wanted != done) {
+                done = wanted;
+                if (durationMsFor(wanted) > 0 || knownFor(wanted)) continue;
+                measuring_ = wanted;
+                bool loop = false;
+                const int ms = ProtracktorAsap_MeasureMs(
+                    name_.c_str(), reinterpret_cast<const uint8_t *>(bytes_.data()),
+                    static_cast<int>(bytes_.size()), wanted, kScanSeconds, &loop,
+                    [](void *self) {
+                        // Stopped when the tune closes, or when another subsong is wanted: its
+                        // answer would be for a tune nobody is listening to.
+                        auto *backend = static_cast<AsapBackend *>(self);
+                        return backend->stopMeasuring_.load(std::memory_order_acquire)
+                            || backend->wanted_.load(std::memory_order_acquire) != backend->measuring_;
+                    },
+                    this);
+                if (wanted_.load(std::memory_order_acquire) != wanted) { done = -1; continue; }
+                measured_.store(pack(wanted, ms > 0 ? ms : 0), std::memory_order_release);
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(40));
+            }
+        }
+    }
+#endif
+
+    int durationMsFor(int song) const { return ASAPInfo_GetDuration(info_, song); }
 
     ASAP *asap_ = nullptr;
     const ASAPInfo *info_ = nullptr;
@@ -723,6 +811,19 @@ private:
     int durationMs_ = -1;
     std::vector<short> scratch_;
     bool ended_ = false;
+
+    // The measurement's side: the file, kept for the copy it runs; what the host knows; the subsong
+    // asked for and the one being measured; what was found; the thread, on the phone only.
+    std::vector<char> bytes_;
+    std::string name_;
+    std::vector<double> known_;
+    std::atomic<int> wanted_{-1};
+    int measuring_ = -1;
+    std::atomic<std::int64_t> measured_{kNotMeasured};
+    std::atomic<bool> stopMeasuring_{false};
+#ifndef __EMSCRIPTEN__
+    std::thread measurer_;
+#endif
 };
 
 /**
