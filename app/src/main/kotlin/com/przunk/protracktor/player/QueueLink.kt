@@ -192,6 +192,18 @@ object QueueLink {
     const val PAGE_HOST = "przunk.github.io"
     const val PAGE_PATH = "/Protracktor/"
 
+    /**
+     * Where Share with Protracktor points, whatever this phone is paired with (the owner,
+     * 2026-09-25). The tune is for somebody else, and a link to this person's own computer -- the
+     * paired page, a tunnel, `localhost` -- opens nowhere on theirs; the public page opens anywhere,
+     * and in the app where the app is. **`src/`, not the root**: the root forwards with a refresh,
+     * and a refresh drops the fragment the tune travels in.
+     */
+    const val PUBLIC_BASE = "https://$PAGE_HOST${PAGE_PATH}src/"
+
+    /** Share with Protracktor's link: [tracksLink] to the public page. */
+    fun shareWithProtracktor(tracks: List<TrackRef>): String? = tracksLink(PUBLIC_BASE, tracks)
+
     /** Whether [url] is a queue or tune link to the page at its permanent address. */
     fun isPageLink(url: String): Boolean {
         val uri = runCatching { java.net.URI(url) }.getOrNull() ?: return false

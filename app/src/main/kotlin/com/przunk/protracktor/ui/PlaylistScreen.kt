@@ -492,6 +492,9 @@ private fun TrackRow(
 ) {
     val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
+    // The menu shows its Share entry's four ways instead of itself while this is set.
+    var sharing by remember { mutableStateOf(false) }
+    val shares = ShareActions(file = onShareFile, audio = onShareAudio, link = onShareLink, protracktor = onSendToWeb)
 
     val label = SupportedFormats.labelFor(track.fileNameOrTitle)
     // In both modes, for the same reason the dock shows it in both: a count you only see once you
@@ -545,7 +548,11 @@ private fun TrackRow(
                         IconButton(onClick = { menuOpen = true }) {
                             Icon(PlayerIcons.More, stringResource(R.string.a11y_track_actions, track.title))
                         }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false; sharing = false }) {
+                            if (sharing) {
+                                ShareMenuItems(shares, onBack = { sharing = false }, onDone = { menuOpen = false; sharing = false })
+                                return@DropdownMenu
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_info)) },
                                 leadingIcon = { Icon(PlayerIcons.Info, contentDescription = null) },
@@ -563,30 +570,7 @@ private fun TrackRow(
                                     onClick = { menuOpen = false; show() },
                                 )
                             }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_share_file)) },
-                                leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
-                                onClick = { menuOpen = false; onShareFile() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_share_audio)) },
-                                leadingIcon = { Icon(PlayerIcons.AudioFile, contentDescription = null) },
-                                onClick = { menuOpen = false; onShareAudio() },
-                            )
-                            onShareLink?.let { share ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.action_share_link)) },
-                                    leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
-                                    onClick = { menuOpen = false; share() },
-                                )
-                            }
-                            onSendToWeb?.let { send ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.action_send_to_web)) },
-                                    leadingIcon = { Icon(PlayerIcons.Web, contentDescription = null) },
-                                    onClick = { menuOpen = false; send() },
-                                )
-                            }
+                            ShareMenuEntry(shares) { sharing = true }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_delete)) },
                                 leadingIcon = { Icon(PlayerIcons.Remove, contentDescription = null) },

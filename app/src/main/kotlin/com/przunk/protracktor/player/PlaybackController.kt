@@ -2135,14 +2135,15 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Share with Protracktor: one tune as a link that opens the web player playing it.
      *
-     * Through the share sheet, like the queue's link, because where it goes is the person's choice
-     * -- their own browser, a message to somebody else. It points at the page this phone knows
-     * ([Appearance.webPlayer]), so it opens only where that address can be reached from.
+     * Through the share sheet, like the queue's link, because where it goes is the person's choice.
+     * **It points at the public page** ([QueueLink.PUBLIC_BASE]), not at the one this phone is
+     * paired with (the owner, 2026-09-25): shared with somebody else, a link to this person's own
+     * computer opened nowhere. Sending the queue to one's own browser still goes to the paired page.
      */
     fun sendToWeb(tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
         val sendable = tracks.filter(QueueLink::canSend)
-        val link = QueueLink.tracksLink(Appearance.webPlayer(context), tracks)
+        val link = QueueLink.shareWithProtracktor(tracks)
         if (link == null) {
             val one = tracks.singleOrNull()
             _state.update {

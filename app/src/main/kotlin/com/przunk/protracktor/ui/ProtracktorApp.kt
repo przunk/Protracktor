@@ -68,6 +68,7 @@ import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.PlaybackController
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.PlayerViewModel
+import com.przunk.protracktor.player.QueueLink
 import kotlinx.coroutines.launch
 
 /**
@@ -629,6 +630,9 @@ fun ProtracktorApp(
                 onShareLink = state.current
                     ?.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { track -> { viewModel.shareLink(track) } },
+                onSendToWeb = state.current
+                    ?.takeIf { QueueLink.canSend(it) }
+                    ?.let { track -> { viewModel.sendToWeb(listOf(track)) } },
                 onAddToOtherPlaylist = state.current?.let { track ->
                     {
                         showNowPlaying = false
