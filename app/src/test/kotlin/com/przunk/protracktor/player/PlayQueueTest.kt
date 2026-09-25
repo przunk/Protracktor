@@ -42,19 +42,31 @@ class PlayQueueTest {
     @Test
     fun `in shuffle, forward after backward replays the same track rather than picking a new one`() {
         // History has to DIVERGE from the play order for this to test anything. Built with plain
-        // next() calls the two are identical, so removing the redo branch entirely still produced
-        // the right answer by accident -- mutation testing caught exactly that. Jumping around with
-        // startAt is what makes the two disagree.
-        var q = queueOf(10).withShuffle(true, seed = 42L)
-        q = q.startAt(7).startAt(2).startAt(5)
+        // next() calls within one order the two are identical, so removing the redo branch entirely
+        // still produced the right answer by accident -- mutation testing caught exactly that.
+        // Taps used to make them disagree; since 2026-09-25 a tap starts history afresh (the tapped
+        // tune is the first). A lap does it now: repeat all deals a new order, and history runs
+        // across both.
+        var q = queueOf(4).withShuffle(true, seed = 42L).withRepeat(RepeatMode.PLAYLIST)
+        val played = mutableListOf<String>()
+        repeat(6) { q = q.next(); played += q.titleNow()!! }
 
-        q = q.previous().previous()
-        assertEquals("Track 7", q.titleNow())
+        repeat(3) { q = q.previous() }
+        assertEquals(played[2], q.titleNow())
+        q = q.next()
+        assertEquals(played[3], q.titleNow())
+        q = q.next()
+        assertEquals(played[4], q.titleNow())
+        q = q.next()
+        assertEquals(played[5], q.titleNow())
+    }
 
+    @Test
+    fun `under shuffle the tapped tune is the first, and back stops there`() {
+        var q = queueOf(10).withShuffle(true, seed = 42L).startAt(7).next().startAt(2)
+        assertFalse("back stepped into what played before the tap", q.hasPrevious)
         q = q.next()
-        assertEquals("Track 2", q.titleNow())
-        q = q.next()
-        assertEquals("Track 5", q.titleNow())
+        assertEquals("Track 2", q.previous().titleNow())
     }
 
     // --- what the buttons mean without shuffle ---------------------------------------------------
@@ -190,6 +202,57 @@ class PlayQueueTest {
 
         assertEquals(lapOne.toSet(), lapTwo.toSet())
         assertFalse("second lap repeated the first lap's order", lapOne == lapTwo)
+    }
+
+    /** Every tune [q] goes on to play with next, until it stops. */
+    private fun walk(start: PlayQueue): List<String> {
+        var q = start
+        val seen = mutableListOf(q.titleNow()!!)
+        while (q.hasNext && seen.size < 1000) {
+            q = q.next()
+            seen += q.titleNow()!!
+        }
+        return seen
+    }
+
+    @Test
+    fun `a tune chosen under shuffle starts a fresh order that plays every tune once`() {
+        // The owner, 2026-09-25, on a playlist of 41: from wherever he started, next next next
+        // ended on the same tune, and some were never played. The order was one permutation
+        // fixed for the session; a tapped tune sat somewhere in its middle, and next walked only
+        // what came after it.
+        for (tapped in listOf(0, 7, 20, 40)) {
+            val played = walk(queueOf(41).withShuffle(true, seed = 5L).startAt(tapped))
+            assertEquals("from track $tapped", "Track $tapped", played.first())
+            assertEquals("from track $tapped, every tune once: $played", 41, played.size)
+            assertEquals("from track $tapped, no tune twice", 41, played.toSet().size)
+        }
+    }
+
+    @Test
+    fun `choosing the same tune again deals a new order rather than the same one`() {
+        val shuffled = queueOf(41).withShuffle(true, seed = 5L)
+        val orders = (1..5).map { walk(shuffled.startAt(20)) }
+        assertTrue("five taps gave one order: ${orders.first()}", orders.toSet().size > 1)
+    }
+
+    @Test
+    fun `shuffle turned on part way plays every other tune once from there`() {
+        val playing = queueOf(30).next().next().next()
+        val played = walk(playing.withShuffle(true, seed = 9L))
+        assertEquals(playing.titleNow(), played.first())
+        assertEquals(30, played.size)
+        assertEquals(30, played.toSet().size)
+    }
+
+    @Test
+    fun `a tune's title learnt while playing does not deal the order again`() {
+        // The title is replaced by the tune's own name once it has been opened, which replaces the
+        // track list -- and a new order at every tune would undo "every tune once".
+        var q = queueOf(12).withShuffle(true, seed = 4L).startAt(3)
+        val ahead = walk(q)
+        q = q.withTracks(q.tracks.map { if (it.id == "t3") it.copy(title = "Track 3") else it })
+        assertEquals(ahead, walk(q))
     }
 
     // --- the invariant that broke on a device ---------------------------------------------------
