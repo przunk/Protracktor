@@ -467,6 +467,27 @@ player then knows it; the owner's seven files. (b) Measure a SAP's natural end, 
 does -- only for tunes that fall silent. (c) B36's length database. Recommended: (a) for these, (b)
 after the launch.
 
+**Found 2026-09-25: ASAP ships the tool that sets these `TIME` lines** -- `asapscan -t`, in
+`native/vendor/asap/asapscan.c`, which is how ASAP's and ASMA's maintainers measure them. It runs the
+tune without making sound and keeps POKEY's registers for every frame; it detects **silence** (five
+seconds of none: the tune ended there) and **a loop** (the last three minutes of registers repeating
+something already played: one pass ends where the repetition starts), scanning at most fifteen
+minutes. So (b) can do more than NSF's measurement, which finds silence only -- and most Atari music
+loops rather than ending.
+
+What (b) costs this way: `asapscan` reads ASAP's internals, which `asap.h` does not expose, so a small
+C file compiled in `asap.c`'s place (one translation unit, so the internals are visible and nothing is
+defined twice) carries the port -- about 150 lines, the hashing included, since a plain search over
+45,000 frames is too slow. Then a background measurement for a SAP with no `TIME`, as `GmeBackend`
+does for NSF (`startedPlaying`, `durationArrivesLater`): a second, silent copy, a second or two of one
+core on a phone. Tests on two SAPs built in the check -- one falling silent, one looping. **The page
+does not get it**, as it has no NSF measurement: its engine has no threads.
+
+**Recommended (2026-09-25), the owner agreeing to write it down:** now, the `TIME` lines for the
+owner's seven files, worked out with the same detection, for him to put in the files and send to
+ASMA -- every player anywhere then knows them, the page included. After the launch, (b) as above in
+the app.
+
 
 ### C92. The web page zoomed and moved in a Safari tab on an iPhone — **FIXED and merged 2026-09-24; not yet seen on an iPhone**
 
