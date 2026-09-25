@@ -15,6 +15,25 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A63. One Share, the same four ways everywhere; Share with Protracktor to the public page — **asked 2026-09-25; BUILT on `feature/share-menu`, APK and page; not yet seen on the phone**
+
+The owner: a row's menu had four ways to share and Now Playing's Share three -- no Share with
+Protracktor -- and Share with Protracktor pointed at the paired page. Decided the same day:
+
+- **One Share in every row menu and on Now Playing, the same four behind it**, in the same order:
+  Share the file, Share as audio, Share a link, Share with Protracktor (on the page: Save the file,
+  Share as audio, Copy a link, Share with Protracktor). In a row menu Share turns the menu into the
+  four, with Back to the rest -- Android has no nested menus, and the choice stays under the finger.
+  One list, drawn by one piece of code on each side (`ShareMenuItems`, `shareItems`), so the places
+  cannot drift apart again. A way a tune has not got -- no address for a file on the phone -- is
+  left out on the phone and greyed on the page, as before.
+- **Share with Protracktor always points at https://przunk.github.io/Protracktor/src/**
+  (`QueueLink.PUBLIC_BASE`, the page's `PUBLIC_PAGE`): the link is for somebody else, and the paired
+  page, a tunnel or `localhost` opened nowhere on their device; the public page opens anywhere, and in
+  the app where the app is, since the domain is verified. `src/`, because the root forwards with a
+  refresh that drops the fragment. **Sending the queue to one's own browser is unchanged** and still
+  goes to the paired or typed address.
+
 ## A62. Share a tune as audio -- M4A, for Messenger and the like — **planned 2026-09-24; BUILT, merged and confirmed on the phone the same day ("works")**
 
 The owner: *"I want to share it, e.g. on Messenger."* *Share the file* sends the module itself, which

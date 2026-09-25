@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
@@ -54,6 +53,7 @@ fun NowPlaying(
     onShareFile: (() -> Unit)?,
     onShareAudio: (() -> Unit)?,
     onShareLink: (() -> Unit)?,
+    onSendToWeb: (() -> Unit)? = null,
     onAddToOtherPlaylist: (() -> Unit)? = null,
     onSelectSubsong: (Int) -> Unit = {},
     onToggleAllSubsongs: () -> Unit = {},
@@ -138,15 +138,11 @@ fun NowPlaying(
             onAddToOtherPlaylist?.let {
                 LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
             }
-            // **One Share, with the ways to share behind it** (the owner, 2026-09-24). Six buttons
-            // left each about 60 dp, too narrow for any label; the lists already keep these three
-            // in a menu, and a fourth way to share will not widen the row again.
-            val shares = listOfNotNull(
-                onShareFile?.let { Triple(PlayerIcons.Share, R.string.action_share_file, it) },
-                onShareAudio?.let { Triple(PlayerIcons.AudioFile, R.string.action_share_audio, it) },
-                onShareLink?.let { Triple(PlayerIcons.Link, R.string.action_share_link, it) },
-            )
-            if (shares.isNotEmpty()) {
+            // **One Share, with the ways to share behind it** (the owner, 2026-09-24): six buttons
+            // left each about 60 dp, too narrow for any label. Behind it the same four ways a row's
+            // menu has (2026-09-25), drawn by the same `ShareMenuItems`.
+            val shares = ShareActions(file = onShareFile, audio = onShareAudio, link = onShareLink, protracktor = onSendToWeb)
+            if (shares.any) {
                 var shareMenuOpen by rememberSaveable { mutableStateOf(false) }
                 Box(modifier = Modifier.weight(1f)) {
                     LabelledAction(
@@ -156,13 +152,7 @@ fun NowPlaying(
                         Modifier.fillMaxWidth(),
                     )
                     DropdownMenu(expanded = shareMenuOpen, onDismissRequest = { shareMenuOpen = false }) {
-                        shares.forEach { (icon, label, action) ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(label)) },
-                                leadingIcon = { Icon(icon, contentDescription = null) },
-                                onClick = { shareMenuOpen = false; action() },
-                            )
-                        }
+                        ShareMenuItems(shares, onBack = null, onDone = { shareMenuOpen = false })
                     }
                 }
             }
