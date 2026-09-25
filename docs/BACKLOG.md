@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A63. One Share, the same four ways everywhere; Share with Protracktor to the public page — **asked 2026-09-25; BUILT on `feature/share-menu`, APK and page; not yet seen on the phone**
+## A63. One Share, the same four ways everywhere; Share with Protracktor to the public page — **asked 2026-09-25; BUILT, APK and page; merged and confirmed on the phone 2026-09-26 ("super")**
 
 The owner: a row's menu had four ways to share and Now Playing's Share three -- no Share with
 Protracktor -- and Share with Protracktor pointed at the paired page. Decided the same day:
