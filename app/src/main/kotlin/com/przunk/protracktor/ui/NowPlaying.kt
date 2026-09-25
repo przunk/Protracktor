@@ -6,6 +6,7 @@ package com.przunk.protracktor.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
@@ -49,6 +52,7 @@ fun NowPlaying(
     onShowInPlaylist: (() -> Unit)?,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: (() -> Unit)?,
+    onShareAudio: (() -> Unit)?,
     onShareLink: (() -> Unit)?,
     onAddToOtherPlaylist: (() -> Unit)? = null,
     onSelectSubsong: (Int) -> Unit = {},
@@ -134,11 +138,33 @@ fun NowPlaying(
             onAddToOtherPlaylist?.let {
                 LabelledAction(PlayerIcons.PlaylistAdd, stringResource(R.string.action_add_to_playlist), it, Modifier.weight(1f))
             }
-            onShareFile?.let {
-                LabelledAction(PlayerIcons.Share, stringResource(R.string.action_share_file), it, Modifier.weight(1f))
-            }
-            onShareLink?.let {
-                LabelledAction(PlayerIcons.Link, stringResource(R.string.action_share_link), it, Modifier.weight(1f))
+            // **One Share, with the ways to share behind it** (the owner, 2026-09-24). Six buttons
+            // left each about 60 dp, too narrow for any label; the lists already keep these three
+            // in a menu, and a fourth way to share will not widen the row again.
+            val shares = listOfNotNull(
+                onShareFile?.let { Triple(PlayerIcons.Share, R.string.action_share_file, it) },
+                onShareAudio?.let { Triple(PlayerIcons.AudioFile, R.string.action_share_audio, it) },
+                onShareLink?.let { Triple(PlayerIcons.Link, R.string.action_share_link, it) },
+            )
+            if (shares.isNotEmpty()) {
+                var shareMenuOpen by rememberSaveable { mutableStateOf(false) }
+                Box(modifier = Modifier.weight(1f)) {
+                    LabelledAction(
+                        PlayerIcons.Share,
+                        stringResource(R.string.action_share),
+                        { shareMenuOpen = true },
+                        Modifier.fillMaxWidth(),
+                    )
+                    DropdownMenu(expanded = shareMenuOpen, onDismissRequest = { shareMenuOpen = false }) {
+                        shares.forEach { (icon, label, action) ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(label)) },
+                                leadingIcon = { Icon(icon, contentDescription = null) },
+                                onClick = { shareMenuOpen = false; action() },
+                            )
+                        }
+                    }
+                }
             }
         }
 

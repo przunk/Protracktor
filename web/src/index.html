@@ -112,7 +112,17 @@
   /* Scrolling stays, pinching does not: the browsers that honour `touch-action` stop the zoom here
      even where they ignore the viewport's `user-scalable=no`. */
   html { touch-action: pan-x pan-y; }
+  /* **The page is the viewport and does not move** (the owner, 2026-09-24: "the page should fit
+     and lock to the viewport"). Only the lists inside scroll. In a Safari tab the document itself
+     could still be dragged: WebKit rubber-bands a page that has nothing to scroll, a list that
+     reaches its end hands the drag on to the page, and the collapsing address bar gives the page
+     room to move. Pinned to the viewport the document has no position to move from, and
+     `overscroll-behavior` keeps a list's drag inside the list. */
+  html, body { overscroll-behavior: none; }
   body {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
     margin: 0;
     background: var(--bg);
     color: var(--on-surface);
@@ -154,7 +164,8 @@
   .playlist .chev { width: 20px; height: 20px; fill: var(--on-surface-variant); flex: none; }
   .playlist .name { font-size: var(--headline-small); font-weight: 400; letter-spacing: 0;
                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .playlist .count { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 1px; }
+  .playlist .count { font-size: var(--body-medium); color: var(--on-surface-variant); margin-top: 1px;
+                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .spacer { flex: 1; }
 
   /* The owner asked for this shape twice (BACKLOG A16, A17, A23): an icon with its name underneath,
@@ -180,6 +191,7 @@
   /* Shut, and looking it. `aria-disabled` rather than `disabled`, because the button still has to
      answer a press -- with the reason, which a disabled button cannot give. */
   .action[aria-disabled="true"] { opacity: .45; }
+  #menu button[aria-disabled="true"] { opacity: .38; }
   .action[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
   .action svg { width: 22px; height: 22px; fill: currentColor; }
 
@@ -290,6 +302,17 @@
     text-align: center;
   }
   .sheet.wide { max-width: 560px; text-align: left; }
+  /* **A sheet taller than the screen scrolls inside itself.** The page no longer moves (C92), so a
+     sheet that runs past the bottom -- Settings on a phone -- had nothing that could bring the rest
+     into view. Its heading stays, so Close is always there. */
+  .sheet { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+  .sheet > .browsehead { position: sticky; top: 0; z-index: 1; background: var(--surface-container); }
+  @media (max-width: 560px) {
+    .overlay { padding: 12px; }
+    .sheet { padding: 18px 16px 12px; }
+    /* The owner, 2026-09-24: settings as a panel of nearly the whole height. */
+    #settings .sheet { height: 100%; }
+  }
   .sheet .note { margin-bottom: 14px; }
   .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
   .text-button {
@@ -304,6 +327,11 @@
   .qr { display: inline-block; background: #fff; padding: 12px; border-radius: var(--shape-m); line-height: 0; }
   .qr table { border-collapse: collapse; }
   .qr td { width: 5px; height: 5px; }
+  /* Drawn as a scalable picture so it fits a narrow sheet instead of pushing past it; and the
+     address under it breaks anywhere, since it has no spaces to break at. */
+  .qr { max-width: 100%; }
+  .qr svg { display: block; width: min(240px, 100%); height: auto; shape-rendering: crispEdges; }
+  #pairurl { overflow-wrap: anywhere; }
   textarea {
     width: 100%; height: 110px;
     background: var(--surface-container);
@@ -469,12 +497,15 @@
   .np-head { margin-bottom: 12px; }
   /* Labelled squares in a row, sized as the phone sizes them. */
   .npactions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  .action {
-    flex: 1 1 120px; min-width: 0;
-    background: var(--secondary-container); color: var(--on-surface);
-    border: 0; border-radius: var(--shape-l);
-    padding: 12px 6px 10px; font: inherit; font-size: 12px; cursor: pointer;
-    display: grid; justify-items: center; gap: 6px;
+  /* **Only these squares share the row's width.** Written as a bare `.action` this rule reached
+     every labelled button on the page -- the top bar's, Random's heading's, the selection bar's --
+     and let each of them grow to fill its row: on a phone Browse, Pair and Paste became tall slabs
+     and squeezed the playlist's name down to "Se…" (the owner's screenshots, 2026-09-24). */
+  .npactions .action {
+    flex: 1 1 0; min-width: 0;
+    border-radius: var(--shape-l);
+    padding: 12px 6px 10px; font-size: 12px;
+    display: grid; justify-items: center; align-content: start; gap: 6px;
   }
   .action:hover:not(:disabled) { filter: brightness(1.12); }
   .action:disabled { opacity: .38; cursor: default; }
@@ -844,13 +875,10 @@
           <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
           <span>More from this author</span>
         </button>
-        <button class="action" id="np-save">
-          <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
-          <span>Save the file</span>
-        </button>
-        <button class="action" id="np-link">
-          <svg viewBox="0 0 24 24"><path d="M3.9 12A3.1 3.1 0 0 1 7 8.9h4V7H7a5 5 0 0 0 0 10h4v-1.9H7A3.1 3.1 0 0 1 3.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 0 1 0 6.2h-4V17h4a5 5 0 0 0 0-10z"/></svg>
-          <span>Copy a link</span>
+        <!-- One Share with the ways to share behind it, as on the phone (the owner, 2026-09-24). -->
+        <button class="action" id="np-share">
+          <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+          <span>Share</span>
         </button>
       </div>
       <dl id="fields"></dl>
@@ -897,6 +925,10 @@
       <button class="snackaction" id="snackundo">
         <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
         Undo
+      </button>
+      <button class="snackaction" id="snacksend" hidden>
+        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+        Send
       </button>
     </div>
 
@@ -1041,6 +1073,16 @@
         <input type="range" id="fallback" min="3" max="10" step="1" value="3"
                aria-describedby="fallbackvalue">
       </div>
+
+      <!-- The phone's "Length when shared as audio" (docs/BACKLOG.md A62). -->
+      <fieldset class="setting choice">
+        <legend>Length when shared as audio</legend>
+        <p class="storage">The longest a tune shared as audio runs. A shorter tune is sent whole; a longer one, or one that does not say how long it is, is cut here and fades out.</p>
+        <label><input type="radio" name="shareaudio" value="1"> 1 min</label>
+        <label><input type="radio" name="shareaudio" value="3"> 3 min</label>
+        <label><input type="radio" name="shareaudio" value="5"> 5 min</label>
+        <label><input type="radio" name="shareaudio" value="10"> 10 min</label>
+      </fieldset>
 
       <p class="storage" id="settingsnote">More will live here; for now it is what the page knows about itself.</p>
 

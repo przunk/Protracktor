@@ -15,13 +15,94 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A61. Moving between screens — **noted 2026-09-24, to talk through**
+## A62. Share a tune as audio -- M4A, for Messenger and the like — **planned 2026-09-24; BUILT, merged and confirmed on the phone the same day ("works")**
+
+The owner: *"I want to share it, e.g. on Messenger."* *Share the file* sends the module itself, which
+Messenger cannot play; *Share a link* opens the web player, which means leaving the chat. So:
+**Share as audio**, in a tune's menu, beside the other two -- in the playlist, in every Browse list
+and on Now Playing. APK only (the owner, 2026-09-24).
+
+As built:
+
+- **Every format the app plays**, one path for all: a decoder of its own is opened beside the
+  player (`NativeEngine.openRendering`, the same `openFromJava` the player uses), asked for 16-bit
+  PCM, and the PCM encoded. Playback is not interrupted.
+- **M4A (AAC-LC, 128 kbit/s)**, through Android's own `MediaCodec` and `MediaMuxer`
+  (`M4aWriter`): no new dependency. Sent as `audio/mp4`.
+- **The length** (`AudioExport.plan`): the tune's own -- the decoder's, else HVSC/songdb/learnt, the
+  lengths the player asks -- when it is within the setting; a longer tune, or one that states
+  nothing, is **cut at the setting and fades over 3 s**. The owner's words were "a limit, a
+  setting in the options, just in case, e.g. 3 min", so the setting is a limit on every tune.
+  **Settings → Length when shared as audio**: 1 / 3 / 5 / 10 min, default 3.
+- **On Now Playing, one Share button** opens a menu of the three ways to share (the owner chose
+  this 2026-09-24): six buttons left each about 60 dp, too narrow for any label.
+- **One subsong**: the one playing when the tune is the current one, else the one the file opens at.
+- **No tags.** `MediaMuxer` writes no title or artist into an M4A, and writing them means a
+  hand-made `udta/meta/ilst` box or a library. So the **file name** carries them:
+  `Author - Title.m4a`. Tags are a follow-up if the owner wants them.
+- About a megabyte a minute; the file goes where copies made for sharing already go
+  (`cache/shared`), and is cleared with them after an hour.
+- **Checked:** JVM tests for the plan, the fade and the file name (each broken once to see it
+  fail); the native code compiles into the release APK. **On the phone** (the owner, 2026-09-24): works.
+
+**The page** (the owner, 2026-09-24: "yes", variant (a); merged the same day -- shared from Chrome
+on Android to Messenger, Firefox says it cannot; Safari not yet tried): the same `.m4a`, no new dependency. `web/src/audio-export.js` is a module
+worker with an engine of its own; it renders, fades and hands the PCM to WebCodecs' `AudioEncoder`
+(AAC-LC, 128 kbit/s), and `web/src/m4a.js` writes the boxes a player needs -- the part `MediaMuxer`
+does on the phone. The rules are the phone's, held to the same answers by `docs/rules/queue-cases.tsv`.
+In every tune's menu, and on Now Playing behind one **Share** with Save the file and Copy a link, as the
+phone has it (the owner, 2026-09-24); the length setting is in Settings. Two things a browser
+makes different:
+- **Firefox has no AAC encoder.** There the action stays in place, greyed, and a press says that
+  Chrome, Edge and Safari can -- rather than a WebM the phone's Messenger may not play.
+- **A share sheet opens only straight after a press**, and rendering takes seconds. So a made file
+  waits in the snackbar with **Send**; where the browser cannot share a file it is saved instead.
+
+Checked on Node: the whole path but the encoder -- the engine renders, the plan cuts and fades
+(start, middle and end measured), the muxer's boxes nest and add up and point at the frames -- each
+check broken once to see it fail. **In a browser** (the owner, 2026-09-24): Chrome on Android makes the
+file and sends it; Firefox refuses and says so. Safari on an iPhone is not yet tried.
+
+## A61. Moving between screens — **noted 2026-09-24; decided 2026-09-24: variant (A); BUILT, merged and confirmed on the phone the same day ("now it makes sense")**
+
+**The owner's scenarios, 2026-09-24.** Random: play, More from this author, Back returns to Random --
+good; then Back, or the Playlist button, returns to the playlist and **stops the music**. Search:
+play a result; the Playlist button stops and returns, but Back, Back leaves Browse with the music
+playing and the playlist covered by *"Playing from search"* -- and re-entering Browse shows a fresh
+search while the result plays on. The same after playing from a local folder or an online
+catalogue's folder: still *"Playing from search"*, **which is a lie**; returning there, the playing
+row is marked, which is right. What troubles him: the lie, and that Back means different things.
+
+**Decided (A):** one rule for every session -- anything playing from somewhere that is not the
+playlist (Random, a folder, search results, History, a link):
+
+- **the heading tells the truth** about where it plays from: at random, search for "przunk",
+  Modland / Protracker / 4-Mat, History, a local folder;
+- **Back never stops the music.** Leaving to the playlist keeps it playing, the playlist covered by
+  a bar naming the source;
+- **that bar leads back to the source as it was** -- Random, the same results with their words, the
+  same folder with the playing row marked;
+- **the Playlist button is the one way to end a session**: it stops and returns to the playlist,
+  from every session alike. Random stops stopping on Back.
+
+**Built:** `SessionSource` names the list a tune was played from (search and its words; catalogue /
+format / author; a local folder; History), remembered with the Browse state it was played from. The
+playlist's cover is drawn for every session, Random included, and says truly what plays, with two
+ways out, each an icon with its name: back to the source as it was -- Random's screen, or Browse on
+that list (`returnToSession`) -- and back to the playlist, which ends it. Back out of Random no
+longer stops the music. The Browse button, while a list plays, opens on that list.
+
+**And search's reset, refined by the owner:** a search opened **from the uncovered playlist** starts
+fresh -- that is what the reset was for; **returning to a search that is playing** keeps its words,
+its scope and its results.
+
+The note as it was:
 
 The owner: *"to discuss: moving between views."* Nothing decided and nothing asked beyond that: which
 screens lead where, what Back does from each, and how a jump (More from this author, a link) sits
 among them, are the likely subjects. To be talked through before anything is built.
 
-## A60. Say that the database is being prepared, while a migration runs — **noted 2026-09-24**
+## A60. Say that the database is being prepared, while a migration runs — **noted 2026-09-24; BUILT, merged and confirmed on the phone 2026-09-25 ("ok")**
 
 The owner: *"when the database migrates, the GUI must say something is happening -- e.g. 'Preparing
 DB', with a database-connection icon and a clock."* A migration runs when the app opens a database
@@ -29,6 +110,17 @@ from an older version, before the first screen has anything to show; the larger 
 folded search copies, version 20's platforms re-decided at the next start -- take a moment on a phone
 with Modland indexed, and until now the screen simply waits. What to show, with an icon and a label,
 and from which point: the owner's word for it is the starting point.
+
+As built: **a strip under the top bar**, on every screen -- a database with a clock on it,
+*Preparing the database…* and *Once, after an update. The lists fill in when it is done; the music
+plays on.*, over an indeterminate progress bar. A strip rather than a dialog because nothing else has
+to stop: playback and Settings go on, and it is the lists that wait. Shown while a migration runs
+(`ProtracktorDatabase.onUpgrade`) and while the catalogues' rows are re-decided for a changed format
+list at start -- the two waits after an update -- counted by `DatabasePreparation`, so two
+overlapping ones do not end each other and a failed one still ends. **Checked:** the counter's tests,
+each broken once. **On the phone** (the owner, 2026-09-25: "ok"): seen through a test build that
+forced the re-decision at every start and held the strip for four seconds -- a real migration cannot
+be shown without a new schema version. A real migration's strip is therefore still unseen.
 
 ## A59. The phone-with-a-tick on every catalogue tune that is on the phone — **asked 2026-09-24; BUILT, merged and confirmed on the phone the same day**
 
@@ -39,8 +131,9 @@ of any catalogue, search results, History -- asks `OnPhone` of each row: a file 
 on the phone when the cache holds its address (Modland, The Mod Archive); an ASMA tune when ASMA is
 downloaded; an UnExoticA tune when its game's archive is cached. The marks are asked again when a
 tune arrives (an UnExoticA tune brings its game), when the cache is cleared and when an archive is
-deleted. **Not marked, deliberately:** the phone's own files -- every row of a local list is on the
-phone, and a tick on each would say nothing.
+deleted. **The phone's own files are marked too**, at the owner's word, 2026-09-24: the first
+version left them out as saying nothing, but the mark means "plays without the network", and in a
+search mixing the phone's files with the archives' that is what tells them apart.
 
 ## A58. The `~` before an approximate length moves the bar — **noted 2026-09-22; decided and BUILT 2026-09-23; merged 2026-09-23, confirmed on the phone and in a browser**
 

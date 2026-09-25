@@ -1,5 +1,9 @@
-Filtr platformy znajduje utwory ze wszystkich archiwów: Atari 8-bit obejmuje ASMA, w wyszukiwaniu i w losowaniu.
+Udostępnij jako audio: wyślij dowolny utwór jako plik M4A, który zagra Messenger i inne aplikacje. Długość ustawisz w Ustawieniach.
 
-„Więcej tego autora” z wyników wyszukiwania zachowuje wyszukiwanie: Wstecz do niego wraca, tak jak przy losowaniu.
+Losowanie zaczyna od wybranego utworu i gra każdy raz; Wstecz zatrzymuje się na wybranym.
 
-Znacznik telefonu pokazuje każdy utwór, który już jest na telefonie, z każdego archiwum — widać, co zagra bez sieci.
+Wstecz nie zatrzymuje muzyki: playlista mówi, co gra, i do tego prowadzi.
+
+Twoje własne pliki też mają znacznik telefonu.
+
+Po aktualizacji pasek mówi, kiedy baza danych jest przygotowywana.

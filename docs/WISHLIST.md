@@ -10,6 +10,33 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B38. Pairing on the public page — **noted 2026-09-25, later: the owner accepts no pairing on GitHub Pages for now**
+
+The owner asked why the public copy (https://przunk.github.io/Protracktor/) has no pairing, and
+whether a static page can pair at all. **Why not:** pairing is `serve-web.mjs` relaying between the
+phone and the page, a running process; GitHub Pages serves files only. And what the phone sends
+passes through that process -- today only ever one the user runs.
+
+What exists without a server of ours:
+- **(A) A public relay, end-to-end encrypted** -- ntfy.sh, a public MQTT broker: the page listens on a
+  random channel, the QR code carries the channel and a key, the phone posts the queue encrypted.
+  No new library on either side; a dependency on somebody's service and its limits -- titles and
+  addresses fit, files from the phone's storage do not.
+- **(B) WebRTC**, phone to page directly: the offer and answer still have to be exchanged (a QR code
+  only goes one way), the APK would carry a WebRTC library of more than ten megabytes, and away from
+  one network a public STUN server is needed.
+- **(C) The phone as a server on the LAN**: refused by browsers -- an `https://` page may not fetch
+  from `http://192.168…`.
+- **(D) What already works**: *Share with Protracktor* sends a link that carries the queue, and it
+  opens on the public page with no server at all.
+
+**Or a server of our own** -- a small VPS (1 vCPU, 512 MB-1 GB, EU, about 5 EUR a month) and a
+domain, Caddy with Let's Encrypt in front of `serve-web.mjs`, long polls held 25 s and bodies up to
+about 11 MB allowed through. **Consequence to settle first:** phones pairing with the owner's server
+put what they send through it, so the privacy policy and Play's Data safety answers would change.
+
+Decided 2026-09-25: later; the public copy stays without pairing, and nothing changes.
+
 ## B37. Google Cast and AirPlay — **noted 2026-09-23, not planned: the owner asked whether it can be done and whether it is worth it**
 
 **AirPlay: no.** A closed Apple protocol with no official SDK for Android; what exists are

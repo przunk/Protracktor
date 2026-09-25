@@ -30,6 +30,7 @@ import com.przunk.protracktor.data.SavedPlaylist
 import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.SearchTerms
 import com.przunk.protracktor.data.SongLengthStore
+import com.przunk.protracktor.data.DatabasePreparation
 import com.przunk.protracktor.data.Md5
 import com.przunk.protracktor.data.SongDbMetadata
 import com.przunk.protracktor.data.SongLengths
@@ -56,6 +57,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,6 +127,10 @@ data class PlayerUiState(
     val fallbackLengthSeconds: Int = FallbackLength.DEFAULT_SECONDS,
     /** When an opened folder's tracks are fetched ahead (A55, D4). */
     val cacheAhead: CacheAhead = CacheAhead.DEFAULT,
+    /** The database is being migrated or re-decided, and the screen says so (A60). */
+    val preparingDatabase: Boolean = false,
+    /** The longest a tune shared as audio runs, in minutes (A62). */
+    val shareAudioMinutes: Int = AudioExport.DEFAULT_LIMIT_MINUTES,
     val scanning: Boolean = false,
     /** A track is being read. Shown, because on a network share this is seconds, not milliseconds. */
     val loadingTrack: Boolean = false,
@@ -172,6 +178,11 @@ data class PlayerUiState(
      * results, their words and their scope as they were.
      */
     val searchWaiting: Boolean = false,
+    /**
+     * Which list in Browse is playing, for the playlist's cover to name and lead back to (A61).
+     * Meaningful while [searchMode] -- a list is what plays -- and set where a list starts playing.
+     */
+    val sessionSource: SessionSource? = null,
     /** Whether Random has anything behind it. Kept in state so the dock can grey the button. */
     val randomHasPrevious: Boolean = false,
     /**
@@ -721,7 +732,10 @@ class PlaybackController private constructor(private val context: Context) {
         }, "protracktor-background")
     }.asCoroutineDispatcher()
 
-    private val _state = MutableStateFlow(PlayerUiState(cacheAhead = Appearance.cacheAhead(context)))
+    private val _state = MutableStateFlow(PlayerUiState(
+        cacheAhead = Appearance.cacheAhead(context),
+        shareAudioMinutes = Appearance.shareAudioMinutes(context),
+    ))
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
 
     /**
@@ -957,15 +971,24 @@ class PlaybackController private constructor(private val context: Context) {
         //
         // Run only when the stamp actually moved. Recomputing on every start would be 228ms of
         // nothing, every time, for a list that changes with a release.
+        // Collected first, so a migration the next lines set off is on screen while it runs.
+        scope.launch {
+            DatabasePreparation.active.collect { running -> _state.update { it.copy(preparingDatabase = running > 0) } }
+        }
+
         scope.launch(Dispatchers.IO) {
             runCatching {
                 val current = NativeEngine.backendsFingerprint()
                 if (catalogues.summaries().any { it.indexedAt != null && it.backends != current }) {
-                    catalogues.refreshPlayable()
-                    // Re-stamped only where the index is whole. A partial one -- written before the
-                    // index stopped being a function of the format list -- is missing rows no
-                    // recompute can conjure, and has to go on saying it needs fetching again.
-                    catalogues.restampComplete(current)
+                    // Said on screen while it runs (A60): half a million rows re-decided is the
+                    // other moment, beside a migration, that the lists wait for after an update.
+                    DatabasePreparation.during {
+                        catalogues.refreshPlayable()
+                        // Re-stamped only where the index is whole. A partial one -- written before
+                        // the index stopped being a function of the format list -- is missing rows
+                        // no recompute can conjure, and has to go on saying it needs fetching again.
+                        catalogues.restampComplete(current)
+                    }
                     _browse.update { it.copy(catalogues = catalogues.summaries()) }
                 }
             }
@@ -1741,6 +1764,122 @@ class PlaybackController private constructor(private val context: Context) {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             )
+        }
+    }
+
+    /** The one tune being turned into audio; a second press while it runs says so instead. */
+    private var sharingAudio: Job? = null
+
+    /**
+     * Sends the tune as sound -- an `.m4a` a chat app plays -- rather than as the file only this
+     * kind of player can (`docs/BACKLOG.md` A62).
+     *
+     * **One subsong**: the one playing when [ref] is the current tune, else the one the file opens
+     * at. **As long as the tune says** -- from the decoder or the length databases the player asks
+     * -- when that is within the owner's setting; a longer tune, or one that states nothing, such
+     * as a looping SID, is cut at the setting and fades (`AudioExport.plan`). Rendered by a decoder
+     * of its own, beside whatever is playing, which goes on playing.
+     */
+    fun shareAsAudio(ref: TrackRef) {
+        if (sharingAudio?.isActive == true) {
+            say(Message(context.getString(R.string.notice_share_audio_busy)))
+            return
+        }
+        sharingAudio = scope.launch {
+            say(Message(context.getString(R.string.notice_share_audio_preparing, ref.title)))
+            val bytes = loadBytes(ref)
+            if (bytes == null) {
+                say(Message(context.getString(R.string.notice_track_unreadable, ref.title)))
+                return@launch
+            }
+            val companions = loadCompanions(ref)
+            val snapshot = _state.value
+            val playingSubsong = snapshot.subsong.takeIf { snapshot.current?.sameFileAs(ref) == true }
+            val minutes = snapshot.shareAudioMinutes
+            val uri = withContext(Dispatchers.Default) {
+                runCatching { renderToM4a(ref, bytes, companions, playingSubsong, minutes) }
+                    .onFailure { android.util.Log.w("Protracktor", "share as audio failed for ${ref.id}", it) }
+                    .getOrNull()
+            }
+            if (uri == null) {
+                say(Message(context.getString(R.string.notice_share_audio_failed, ref.title)))
+                return@launch
+            }
+            say(Message(context.getString(R.string.notice_share_audio_ready, ref.title)))
+            _share.tryEmit(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "audio/mp4"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, ref.title)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            )
+        }
+    }
+
+    /** The rendering itself, off the main thread. Null when no decoder took the file. */
+    private suspend fun renderToM4a(
+        ref: TrackRef,
+        bytes: ByteArray,
+        companions: List<Pair<String, ByteArray>>,
+        playingSubsong: Int?,
+        limitMinutes: Int,
+    ): Uri? {
+        val (rendering, reason) = NativeEngine.openRendering(bytes, ref.fileNameOrTitle, companions)
+        if (rendering == null) {
+            android.util.Log.w("Protracktor", "share as audio: no decoder for ${ref.id}: $reason")
+            return null
+        }
+        rendering.use { r ->
+            if (playingSubsong != null && playingSubsong != r.currentSubsong()) r.selectSubsong(playingSubsong)
+            val subsong = r.currentSubsong()
+
+            // The same lengths, in the same order, the player asks when it opens a tune.
+            val md5 = Md5.of(bytes)
+            val hvsc = songLengths.forMd5(md5).orEmpty()
+            val songdb = if (hvsc.any { it > 0.0 }) emptyList() else songDbLengths.forMd5(md5)
+            val known = LengthSource.fill(LengthSource.known(hvsc, songdb), learnedLengths.forMd5(md5))
+            val plan = AudioExport.plan(LengthSource.forSubsong(r.durationSeconds(), known, subsong), limitMinutes)
+
+            val rate = r.preferredSampleRate().takeIf { it in 8_000..96_000 } ?: AudioExport.SAMPLE_RATE
+            val total = (plan.seconds * rate).toLong()
+            val fadeFrames = if (plan.fade) (AudioExport.FADE_SECONDS * rate).toLong() else 0L
+            val file = remoteFiles.shareFile(AudioExport.fileName(ref.title, ref.author))
+            val pcm = ShortArray(4096 * 2)
+            var done = 0L
+            // A half-written file is deleted rather than left for the next share's sweep: nothing
+            // will ever send it, and it is megabytes.
+            try { M4aWriter(file, rate).use { writer ->
+                while (done < total) {
+                    currentCoroutineContext().ensureActive()
+                    val want = minOf(4096L, total - done).toInt()
+                    // The native side renders as many frames as the array holds, so the last,
+                    // shorter piece gets an array of its own size.
+                    val chunk = if (want == pcm.size / 2) pcm else ShortArray(want * 2)
+                    val got = r.render(rate, chunk)
+                    if (got < 0) error("decoder failed at frame $done")
+                    if (got == 0) break
+                    if (fadeFrames > 0 && done + got > total - fadeFrames) {
+                        for (i in 0 until got) {
+                            val g = AudioExport.gainAt(done + i, total, fadeFrames)
+                            chunk[2 * i] = (chunk[2 * i] * g).toInt().toShort()
+                            chunk[2 * i + 1] = (chunk[2 * i + 1] * g).toInt().toShort()
+                        }
+                    }
+                    writer.write(chunk, got)
+                    done += got
+                    if (got < want) break
+                }
+                writer.finish()
+            } } catch (failure: Throwable) {
+                file.delete()
+                throw failure
+            }
+            if (done == 0L) {
+                file.delete()
+                return null
+            }
+            return remoteFiles.shareUri(file)
         }
     }
 
@@ -3288,7 +3427,10 @@ class PlaybackController private constructor(private val context: Context) {
         if (index !in results.indices) return
         // Where the list came from is known only here, from the screen it was tapped on (A56).
         val fromHistory = _browse.value.domain == BrowseDomain.HISTORY
-        _state.update { it.copy(resultsFromHistory = fromHistory) }
+        // **Where it plays from, remembered as it looks** (A61): the cover names it, and its way
+        // back returns to it -- the same words, the same folder -- rather than to a fresh Browse.
+        sessionBrowse = _browse.value
+        _state.update { it.copy(resultsFromHistory = fromHistory, sessionSource = SessionSource.of(_browse.value)) }
         playFromResultsQueue(PlayQueue(tracks = results).startAt(index))
     }
 
@@ -3327,6 +3469,21 @@ class PlaybackController private constructor(private val context: Context) {
      * stops and the results' tune waits paused, as the dice's does, because a queue whose current
      * tune is not the one sounding is a transport that lies.
      */
+    /**
+     * Browse back on the list that is playing, as it was when it started (A61) -- the playlist
+     * cover's way back, and what the Browse button opens while a list plays. Answers false when no
+     * list is playing, and Browse then opens as it always has, at its top.
+     *
+     * **A search opened from the uncovered playlist starts fresh; returning to one that plays keeps
+     * it** -- the owner's refinement, 2026-09-25: the reset was for a new search, not for coming back.
+     */
+    fun returnToSession(): Boolean {
+        val playingFrom = sessionBrowse ?: return false
+        if (!_state.value.searchMode) return false
+        _browse.value = BrowseNavigation.returningTo(playingFrom)
+        return true
+    }
+
     fun resumeSearch() {
         val waiting = waitingSearch ?: return
         waitingSearch = null
@@ -4127,6 +4284,12 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(cacheAhead = mode) }
     }
 
+    fun setShareAudioMinutes(minutes: Int) {
+        val wanted = AudioExport.limitFromStored(minutes)
+        if (!Appearance.selectShareAudioMinutes(context, wanted)) return
+        _state.update { it.copy(shareAudioMinutes = wanted) }
+    }
+
     fun setFallbackLength(seconds: Int) {
         val wanted = FallbackLength.snap(seconds)
         if (wanted == _state.value.fallbackLengthSeconds) return
@@ -4153,6 +4316,9 @@ class PlaybackController private constructor(private val context: Context) {
      */
     /** The search a digression came from, and the results queue that was playing then (C-search). */
     private data class WaitingSearch(val browse: BrowseState, val results: PlayQueue?)
+
+    /** Browse as it was when the list now playing started: where the cover's way back leads (A61). */
+    private var sessionBrowse: BrowseState? = null
     private var waitingSearch: WaitingSearch? = null
 
     private var pendingRetry: (() -> Unit)? = null
@@ -4667,6 +4833,7 @@ class PlaybackController private constructor(private val context: Context) {
                 is OnPhone.Check.Archive -> archives.getOrPut(check.catalogueId) {
                     remoteFiles.archiveFile(check.catalogueId).let { it.exists() && it.length() > 0 }
                 }
+                OnPhone.Check.Local -> true
                 OnPhone.Check.Never -> false
             }
         }

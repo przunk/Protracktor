@@ -58,7 +58,7 @@ class ProtracktorDatabase private constructor(context: Context) :
         db.transaction { SchemaSql.CREATE.forEach(::execSQL) }
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = DatabasePreparation.during {
         db.transaction {
             SchemaSql.migrationsBetween(oldVersion, newVersion).forEach(::execSQL)
             // The one migration SQL cannot finish by itself: folding needs Unicode tables SQLite

@@ -132,6 +132,7 @@ fun BrowseScreen(
     digressionAuthor: String? = null,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onPlay: (Int) -> Unit,
@@ -215,6 +216,7 @@ fun BrowseScreen(
                 loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
+                onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onPickFolder = onPickFolder,
@@ -234,6 +236,7 @@ fun BrowseScreen(
                 loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
+                onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onIndexCatalogue = onIndexCatalogue,
@@ -253,6 +256,7 @@ fun BrowseScreen(
                 loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
+                onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onClearHistory = onClearHistory,
@@ -268,6 +272,7 @@ fun BrowseScreen(
                 loadingId = loadingId,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
+                onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onQueryChange = onQueryChange,
@@ -523,6 +528,7 @@ private fun LocalDomain(
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onPickFolder: () -> Unit,
@@ -590,6 +596,7 @@ private fun LocalDomain(
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
+                onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
             )
@@ -653,6 +660,7 @@ private fun OnlineDomain(
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onIndexCatalogue: (String) -> Unit,
@@ -677,6 +685,7 @@ private fun OnlineDomain(
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
+            onShareAudio = onShareAudio,
             onShareLink = onShareLink,
             onSendToWeb = onSendToWeb,
         )
@@ -907,6 +916,7 @@ private fun SearchDomain(
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -980,6 +990,7 @@ private fun SearchDomain(
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
+                onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
             )
@@ -1035,6 +1046,7 @@ private fun HistoryDomain(
     loadingId: String?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
@@ -1076,6 +1088,7 @@ private fun HistoryDomain(
             onAddToOtherPlaylist = onAddToOtherPlaylist,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
+            onShareAudio = onShareAudio,
             onShareLink = onShareLink,
             onSendToWeb = onSendToWeb,
         )
@@ -1133,6 +1146,7 @@ private fun Selectable(
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
+    onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
 ) {
@@ -1264,6 +1278,7 @@ private fun Selectable(
                         onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
                             ?.let { { onShowNeighbours(it) } },
                         onShareFile = { onShareFile(track) },
+                        onShareAudio = { onShareAudio(track) },
                         onShareLink = track.takeIf { Catalogue.owning(it.id) != null }
                             ?.let { { onShareLink(it) } },
                         // Absent where [QueueLink.pack] would refuse it: a local file, an MP3.
@@ -1382,6 +1397,7 @@ private fun BrowseTrackRow(
     onInfo: () -> Unit,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
+    onShareAudio: () -> Unit,
     onShareLink: (() -> Unit)?,
     onSendToWeb: (() -> Unit)?,
 ) {
@@ -1457,6 +1473,11 @@ private fun BrowseTrackRow(
                             text = { Text(stringResource(R.string.action_share_file)) },
                             leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
                             onClick = { menuOpen = false; onShareFile() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_share_audio)) },
+                            leadingIcon = { Icon(PlayerIcons.AudioFile, contentDescription = null) },
+                            onClick = { menuOpen = false; onShareAudio() },
                         )
                         onShareLink?.let { share ->
                             DropdownMenuItem(

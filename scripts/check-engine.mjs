@@ -462,6 +462,126 @@ const describeOf = (bytes, name) => {
   }
 }
 
+// --- share as audio (`docs/BACKLOG.md` A62) -----------------------------------------------------
+//
+// The page's whole path but the browser's encoder: this engine renders, the plan decides the length
+// and the fade, and the muxer writes the file, which is then read back box by box. The encoder is a
+// stand-in that keeps the PCM it is given -- Node has no WebCodecs, so AAC itself stays unchecked.
+{
+  const { exportTune } = await import(path.resolve('web/src/audio-export.js'));
+
+  // A held tone, so that a fade has something to fade: one looping square-wave sample, one note.
+  const toneModule = (() => {
+    const module = Buffer.from(tinyModule);
+    module.writeUInt16BE(32, 42);                          // the sample: 32 words
+    module.writeUInt16BE(0, 46);                           // looped from its start
+    module.writeUInt16BE(32, 48);                          // for all of it
+    const sample = Buffer.alloc(64);
+    for (let i = 0; i < 64; i++) sample[i] = i < 32 ? 0x40 : 0xc0;
+    // Row 0, channel 0 as the sample number wants it: high nibble in byte 0, low in byte 2.
+    module[1084] = 0x01;
+    module[1086] = 0x10;
+    return Buffer.concat([module.subarray(0, 1084 + 1024), sample]);
+  })();
+
+  const standIn = () => {
+    const kept = { blocks: [], frames: 0 };
+    return {
+      kept,
+      make: async () => ({
+        async encode(block, count) { kept.blocks.push(block.slice(0, count * 2)); kept.frames += count; },
+        async finish() {
+          const frames = Array.from({ length: Math.ceil(kept.frames / 1024) }, (_, i) => Uint8Array.of(i & 0xff, 1, 2, 3, 4, 5));
+          return { frames, config: Uint8Array.of(0x12, 0x10) };
+        },
+      }),
+    };
+  };
+  const pcm = (kept) => {
+    const all = new Float32Array(kept.frames * 2);
+    let at = 0;
+    for (const block of kept.blocks) { all.set(block, at); at += block.length; }
+    return all;
+  };
+  const loudness = (samples, from, to) => {
+    let peak = 0;
+    for (let i = from * 2; i < to * 2; i++) peak = Math.max(peak, Math.abs(samples[i]));
+    return peak;
+  };
+
+  // Cut: the tone runs longer than a limit of 0.01 minutes (0.6 s), so it stops there and fades.
+  const cut = standIn();
+  const short = await exportTune(M, cut.make, { bytes: toneModule, name: 'tone.mod', limitMinutes: 0.01 });
+  const samples = pcm(cut.kept);
+  const rate = short.rate;
+  const total = cut.kept.frames;
+  check('a tune longer than the limit is cut at it, to the frame', short.plan.fade && total === Math.round(0.6 * rate),
+    `${total} frames at ${rate} Hz, plan ${JSON.stringify(short.plan)}`);
+  const start = loudness(samples, 0, Math.round(0.1 * rate));
+  const end = loudness(samples, total - Math.round(0.005 * rate), total);
+  // The limit is shorter than the fade here, so the whole file is fade: half way it is at half.
+  const middle = Math.round(total / 2);
+  const half = loudness(samples, middle - Math.round(0.005 * rate), middle + Math.round(0.005 * rate));
+  check('and it fades: loud at the start, half at the middle, all but silent at the end',
+    start > 0.01 && end < start * 0.05 && Math.abs(half / start - 0.5) < 0.15,
+    `peak ${start.toFixed(3)} at the start, ${half.toFixed(3)} in the middle, ${end.toFixed(3)} in the last 5 ms`);
+
+  // Whole: with a minute to spare, the tune ends by itself, at its own length.
+  const whole = standIn();
+  const full = await exportTune(M, whole.make, { bytes: toneModule, name: 'tone.mod', limitMinutes: 1 });
+  const own = (() => { const { handle } = open(toneModule, 'tone.mod'); const d = M._pt_duration(handle); M._pt_close(handle); return d; })();
+  check('a tune within the limit is sent whole and not faded',
+    !full.plan.fade && own > 0 && Math.abs(whole.kept.frames - own * full.rate) <= 4096,
+    `${whole.kept.frames} frames for a tune of ${own} s`);
+
+  // Read back: the boxes nest and add up, the tables agree with the frames, `stco` points at them.
+  const bytes = full.bytes;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const boxes = (from, to) => {
+    const found = [];
+    for (let at = from; at < to;) {
+      const size = view.getUint32(at);
+      const type = String.fromCharCode(...bytes.subarray(at + 4, at + 8));
+      if (size < 8 || at + size > to) return null;
+      found.push({ type, at, size, body: at + 8 });
+      at += size;
+    }
+    return found;
+  };
+  const top = boxes(0, bytes.length);
+  check('the file is ftyp, moov, mdat, in that order, and nothing overruns',
+    top && top.map((b) => b.type).join(',') === 'ftyp,moov,mdat', JSON.stringify(top?.map((b) => b.type)));
+  const find = (parent, ...path) => {
+    let box = parent;
+    for (const type of path) {
+      // Boxes that carry fields before their children: stsd's entry count, mp4a's sample entry.
+      const skip = { stsd: 8, mp4a: 28, dref: 8 }[box.type] ?? 0;
+      box = boxes(box.body + skip, box.at + box.size)?.find((b) => b.type === type);
+      if (!box) return null;
+    }
+    return box;
+  };
+  const moov = top?.[1];
+  const mdat = top?.[2];
+  const stbl = moov && find(moov, 'trak', 'mdia', 'minf', 'stbl');
+  const mdhd = moov && find(moov, 'trak', 'mdia', 'mdhd');
+  const stsz = stbl && find(stbl, 'stsz');
+  const stco = stbl && find(stbl, 'stco');
+  const esds = stbl && find(stbl, 'stsd', 'mp4a', 'esds');
+  const frames = Math.ceil(whole.kept.frames / 1024);
+  check('the track says its rate and length in its own timescale',
+    mdhd && view.getUint32(mdhd.body + 12) === full.rate && view.getUint32(mdhd.body + 16) === frames * 1024);
+  const count = stsz && view.getUint32(stsz.body + 8);
+  let sum = 0;
+  for (let i = 0; stsz && i < count; i++) sum += view.getUint32(stsz.body + 12 + 4 * i);
+  check('every frame is in the size table, and together they are all of mdat',
+    count === frames && mdat && sum === mdat.size - 8, `${count} sizes for ${frames} frames, ${sum} of ${mdat?.size - 8} bytes`);
+  check('the chunk offset points at the first frame', stco && view.getUint32(stco.body + 8) === mdat?.body);
+  const config = esds ? bytes.subarray(esds.body, esds.at + esds.size) : new Uint8Array();
+  check('the encoder\'s AAC configuration is in the sample description',
+    Buffer.from(config).includes(Buffer.from([0x05, 0x80, 0x80, 0x80, 0x02, 0x12, 0x10])));
+}
+
 console.log();
 if (failed) {
   console.error(`${failed} engine check${failed === 1 ? '' : 's'} failed`);

@@ -162,8 +162,11 @@ fun ProtracktorApp(
     // Opening Browse from a button starts at the top; opening it from a jump does not, because the
     // jump has already aimed it. Tying the reset to the button rather than to the sheet being shown
     // is what keeps those two apart.
+    // **While a list plays, Browse opens on it** (A61): the same words, the same folder, the playing
+    // row marked. Only with nothing playing from Browse does it start at the top -- a new search from
+    // the uncovered playlist starts fresh, which is what the reset was for.
     val openBrowse = {
-        viewModel.openDomain(BrowseDomain.ROOT)
+        if (!viewModel.returnToSession()) viewModel.openDomain(BrowseDomain.ROOT)
         showBrowse = true
     }
     // **Out of Browse, and back to whatever sent us there** (`docs/BACKLOG.md` A41). `browseBack`
@@ -254,94 +257,99 @@ fun ProtracktorApp(
 
     Scaffold(
         topBar = {
-            // The playlist screen's own header, because it is the one that can hold more than fits:
-            // the chip and five actions come to more than a phone is wide once Save and Discard
-            // appear, and a top bar cannot wrap (`docs/STATUS.md` C48).
-            if (!showSettings && !showBrowse && !showRandom) {
-                PlaylistTopBar(
-                    state = state,
-                    paired = browse.pairedBrowser,
-                    onChoosePlaylist = { showPlaylists = true },
-                    onBrowse = openBrowse,
-                    onDiscard = viewModel::discardChanges,
-                    onSave = viewModel::savePlaylist,
-                    onSendToBrowser = viewModel::sendQueueToBrowser,
-                    onRescan = viewModel::rescan,
-                    onSettings = { showSettings = true },
+            Column {
+                // The playlist screen's own header, because it is the one that can hold more than fits:
+                // the chip and five actions come to more than a phone is wide once Save and Discard
+                // appear, and a top bar cannot wrap (`docs/STATUS.md` C48).
+                if (!showSettings && !showBrowse && !showRandom) {
+                    PlaylistTopBar(
+                        state = state,
+                        paired = browse.pairedBrowser,
+                        onChoosePlaylist = { showPlaylists = true },
+                        onBrowse = openBrowse,
+                        onDiscard = viewModel::discardChanges,
+                        onSave = viewModel::savePlaylist,
+                        onSendToBrowser = viewModel::sendQueueToBrowser,
+                        onRescan = viewModel::rescan,
+                        onSettings = { showSettings = true },
+                    )
+                } else TopAppBar(
+                    navigationIcon = {
+                        if (showSettings) {
+                            IconButton(onClick = { showSettings = false }) {
+                                Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                            }
+                        } else if (showBrowse) {
+                            IconButton(onClick = leaveBrowse) {
+                                Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                            }
+                        } else if (showRandom) {
+                            // The same arrow Browse has: the two screens sit side by side, so one of
+                            // them offering no way out of its bar would leave their headings out of
+                            // line as well. **Back leaves, and the dice plays on** (A61): the playlist
+                            // it leaves to is covered, and the cover leads back here.
+                            IconButton(onClick = { showRandom = false }) {
+                                Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                            }
+                        }
+                    },
+                    title = {
+                        if (showSettings) {
+                            Text(stringResource(R.string.settings_title))
+                        } else if (showBrowse) {
+                            // The screen names itself; whose folder a digression is in is said by the
+                            // header under the bar, in the shape the dice's own heading has.
+                            Text(stringResource(R.string.browse_title))
+                        } else if (showRandom) {
+                            // The screen says "Playing at random" over its own list, so the bar stays
+                            // out of its way. The playlist chip in particular would be offering to
+                            // switch a playlist that nothing is playing from.
+                            Text(stringResource(R.string.domain_random_title))
+                        }
+                    },
+                    actions = {
+                        // The way out, as opposed to the way back. Back is a stack -- leave the
+                        // selection, then up a level, then out -- and from four levels deep that is
+                        // four presses even when it is behaving correctly. This is one, from anywhere.
+                        // Labelled as well as drawn, because an icon alone does not say where it goes.
+                        if (showBrowse) {
+                            LabelledAction(
+                                icon = PlayerIcons.Playlist,
+                                label = stringResource(R.string.action_to_playlist),
+                                // **Out, not back.** During a digression both screens count
+                                // themselves showing, so without this condition the button is drawn
+                                // twice. There is one: Back returns to whatever sent you here — the
+                                // dice — and this leaves for the playlist whatever is waiting.
+                                onClick = {
+                                    viewModel.returnToPlaylist()
+                                    showRandom = false
+                                    showBrowse = false
+                                },
+                                haptic = null,
+                                slim = true,
+                                modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
+                            )
+                        }
+                        // **Leaving ends the session**, which is what it has always done -- the record
+                        // goes, the tunes stay in the history, and the playlist is exactly where it was
+                        // left because nothing ever wrote to it.
+                        if (showRandom && !showBrowse) {
+                            LabelledAction(
+                                icon = PlayerIcons.Playlist,
+                                label = stringResource(R.string.action_to_playlist),
+                                onClick = { viewModel.returnToPlaylist(); showRandom = false },
+                                haptic = null,
+                                // **The same pill as Filter, one row below it.** See
+                                // `TOP_BAR_ACTION_EDGE`.
+                                slim = true,
+                                modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
+                            )
+                        }
+                    },
                 )
-            } else TopAppBar(
-                navigationIcon = {
-                    if (showSettings) {
-                        IconButton(onClick = { showSettings = false }) {
-                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
-                        }
-                    } else if (showBrowse) {
-                        IconButton(onClick = leaveBrowse) {
-                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
-                        }
-                    } else if (showRandom) {
-                        // The same arrow Browse has: the two screens sit side by side, so one of
-                        // them offering no way out of its bar would leave their headings out of
-                        // line as well.
-                        IconButton(onClick = { viewModel.returnToPlaylist(); showRandom = false }) {
-                            Icon(PlayerIcons.Back, stringResource(R.string.action_back))
-                        }
-                    }
-                },
-                title = {
-                    if (showSettings) {
-                        Text(stringResource(R.string.settings_title))
-                    } else if (showBrowse) {
-                        // The screen names itself; whose folder a digression is in is said by the
-                        // header under the bar, in the shape the dice's own heading has.
-                        Text(stringResource(R.string.browse_title))
-                    } else if (showRandom) {
-                        // The screen says "Playing at random" over its own list, so the bar stays
-                        // out of its way. The playlist chip in particular would be offering to
-                        // switch a playlist that nothing is playing from.
-                        Text(stringResource(R.string.domain_random_title))
-                    }
-                },
-                actions = {
-                    // The way out, as opposed to the way back. Back is a stack -- leave the
-                    // selection, then up a level, then out -- and from four levels deep that is
-                    // four presses even when it is behaving correctly. This is one, from anywhere.
-                    // Labelled as well as drawn, because an icon alone does not say where it goes.
-                    if (showBrowse) {
-                        LabelledAction(
-                            icon = PlayerIcons.Playlist,
-                            label = stringResource(R.string.action_to_playlist),
-                            // **Out, not back.** During a digression both screens count
-                            // themselves showing, so without this condition the button is drawn
-                            // twice. There is one: Back returns to whatever sent you here — the
-                            // dice — and this leaves for the playlist whatever is waiting.
-                            onClick = {
-                                viewModel.returnToPlaylist()
-                                showRandom = false
-                                showBrowse = false
-                            },
-                            haptic = null,
-                            slim = true,
-                            modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
-                        )
-                    }
-                    // **Leaving ends the session**, which is what it has always done -- the record
-                    // goes, the tunes stay in the history, and the playlist is exactly where it was
-                    // left because nothing ever wrote to it.
-                    if (showRandom && !showBrowse) {
-                        LabelledAction(
-                            icon = PlayerIcons.Playlist,
-                            label = stringResource(R.string.action_to_playlist),
-                            onClick = { viewModel.returnToPlaylist(); showRandom = false },
-                            haptic = null,
-                            // **The same pill as Filter, one row below it.** See
-                            // `TOP_BAR_ACTION_EDGE`.
-                            slim = true,
-                            modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
-                        )
-                    }
-                },
-            )
+                // Under whichever bar is showing: the lists wait on the database on every screen (A60).
+                if (state.preparingDatabase) PreparingDatabase()
+            }
         },
         bottomBar = {
             PlayerDock(
@@ -410,6 +418,8 @@ fun ProtracktorApp(
                 onFallbackLengthChanged = viewModel::setFallbackLength,
                 cacheAhead = state.cacheAhead,
                 onCacheAheadSelected = viewModel::setCacheAhead,
+                shareAudioMinutes = state.shareAudioMinutes,
+                onShareAudioMinutesSelected = viewModel::setShareAudioMinutes,
                 onLanguageSelected = onLanguageSelected,
                 onClearCache = viewModel::clearFetchedCache,
                 onDeleteIndex = viewModel::deleteCatalogueIndex,
@@ -461,6 +471,7 @@ fun ProtracktorApp(
                     ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting || state.searchWaiting) },
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
+                onShareAudio = viewModel::shareAsAudio,
                 onShareLink = viewModel::shareLink,
                 onSendToWeb = viewModel::sendToWeb,
                 onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
@@ -482,6 +493,7 @@ fun ProtracktorApp(
                 onFilter = { choosingRandomScope = true },
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
+                onShareAudio = viewModel::shareAsAudio,
                 onShareLink = viewModel::shareLink,
                 onSendToWeb = viewModel::sendToWeb,
                 onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
@@ -497,6 +509,7 @@ fun ProtracktorApp(
                 onMove = viewModel::moveTrack,
                 onShowNeighbours = viewModel::showNeighboursOf,
                 onShareFile = viewModel::shareFile,
+                onShareAudio = viewModel::shareAsAudio,
                 onShareLink = viewModel::shareLink,
                 onSendToWeb = viewModel::sendToWeb,
                 onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
@@ -512,6 +525,11 @@ fun ProtracktorApp(
                 stateKnown = state.restored && browse.knowsWhatIsHeld,
                 onReturnToPlaylist = viewModel::returnToPlaylist,
                 contentPadding = insets,
+                // Back to the source: the dice's screen, or the list in Browse as it was (A61).
+                onReturnToSource = {
+                    if (state.randomMode && !state.searchMode) showRandom = true
+                    else if (viewModel.returnToSession()) showBrowse = true
+                },
             )
         }
     }
@@ -530,10 +548,11 @@ fun ProtracktorApp(
         BackHandler(onBack = leaveBrowse)
     }
 
-    // Back out of Random is the same act as the button: the session ends and the playlist is where
-    // it was left.
+    // **Back out of Random leaves it playing** (A61, the owner's variant (A)): Back means look
+    // elsewhere, and only the Playlist button ends a session. The playlist it leaves to is covered,
+    // and the cover leads back here.
     if (showRandom) {
-        BackHandler { viewModel.returnToPlaylist(); showRandom = false }
+        BackHandler { showRandom = false }
 
         // **A file arriving from another app takes the screen.** It replaces what is playing, so
         // leaving the Random view up would show a record of a session that has been ended
@@ -606,6 +625,7 @@ fun ProtracktorApp(
                 onSelectSubsong = viewModel::selectSubsong,
                 onToggleAllSubsongs = viewModel::toggleAllSubsongs,
                 onShareFile = state.current?.let { track -> { viewModel.shareFile(track) } },
+                onShareAudio = state.current?.let { track -> { viewModel.shareAsAudio(track) } },
                 onShareLink = state.current
                     ?.takeIf { Catalogue.owning(it.id) != null }
                     ?.let { track -> { viewModel.shareLink(track) } },

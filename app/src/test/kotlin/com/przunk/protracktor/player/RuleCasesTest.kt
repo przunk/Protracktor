@@ -238,6 +238,48 @@ class RuleCasesTest {
         assertEquals(case.why(), case.getValue("expect").takeIf { it != "-" }, OpenFailure.modlandFormatOf(case.getValue("url")))
     }
 
+    @Test
+    fun `how long a tune shared as audio runs agrees with the shared cases`() = each("shareAudioPlan") { case ->
+        val plan = AudioExport.plan(case.getValue("known").toDouble(), case.int("limit"))
+        assertEquals(case.why(), case.getValue("seconds").toDouble(), plan.seconds, 0.0)
+        assertEquals(case.why(), case.bool("fade"), plan.fade)
+    }
+
+    @Test
+    fun `the fade of a tune shared as audio agrees with the shared cases`() = each("shareAudioFade") { case ->
+        val gain = AudioExport.gainAt(case.getValue("frame").toLong(), case.getValue("total").toLong(), case.getValue("fadeFrames").toLong())
+        assertEquals(case.why(), case.getValue("gain").toFloat(), gain, 0.001f)
+    }
+
+    @Test
+    fun `the stored limit for sharing as audio agrees with the shared cases`() = each("shareAudioLimit") { case ->
+        assertEquals(case.why(), case.int("expect"), AudioExport.limitFromStored(case.int("stored")))
+    }
+
+    @Test
+    fun `the name of a tune shared as audio agrees with the shared cases`() = each("shareAudioName") { case ->
+        val blank = { key: String -> case.getValue(key).takeIf { it != "-" }.orEmpty() }
+        assertEquals(case.why(), case.getValue("expect"), AudioExport.fileName(blank("title"), blank("author")))
+    }
+
+    @Test
+    fun `shuffle from a chosen tune agrees with the shared cases`() = each("shuffleFromTap") { case ->
+        val count = case.int("tracks")
+        val repeat = if (case.getValue("repeat") == "all") RepeatMode.PLAYLIST else RepeatMode.OFF
+        // Something played before the tap, so "back stops at the tapped tune" has something to refuse.
+        val before = PlayQueue(tracks = (0 until count).map { TrackRef(id = "t$it", title = "t$it") })
+            .withShuffle(true).withRepeat(repeat).next().next()
+        var q = before.startAt(case.int("tapped"))
+        assertEquals(case.why() + ": back from the tapped tune", false, q.hasPrevious)
+        if (q.hasNext) assertEquals(case.why() + ": back to the tapped tune", "t${case.int("tapped")}", q.next().previous().current!!.id)
+        val played = mutableListOf(q.current!!.id)
+        while (q.hasNext && played.size < count * 3) { q = q.next(); played += q.current!!.id }
+        val stops = played.size < count * 3
+        assertEquals(case.why(), "t${case.int("tapped")}", played.first())
+        assertEquals(case.why(), case.intOrNull("played"), if (stops) played.size else null)
+        assertEquals(case.why(), case.int("distinct"), played.take(count).toSet().size)
+    }
+
     private companion object {
         const val RULES = "docs/rules/queue-cases.tsv"
     }

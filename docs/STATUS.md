@@ -467,6 +467,67 @@ player then knows it; the owner's seven files. (b) Measure a SAP's natural end, 
 does -- only for tunes that fall silent. (c) B36's length database. Recommended: (a) for these, (b)
 after the launch.
 
+**Found 2026-09-25: ASAP ships the tool that sets these `TIME` lines** -- `asapscan -t`, in
+`native/vendor/asap/asapscan.c`, which is how ASAP's and ASMA's maintainers measure them. It runs the
+tune without making sound and keeps POKEY's registers for every frame; it detects **silence** (five
+seconds of none: the tune ended there) and **a loop** (the last three minutes of registers repeating
+something already played: one pass ends where the repetition starts), scanning at most fifteen
+minutes. So (b) can do more than NSF's measurement, which finds silence only -- and most Atari music
+loops rather than ending.
+
+What (b) costs this way: `asapscan` reads ASAP's internals, which `asap.h` does not expose, so a small
+C file compiled in `asap.c`'s place (one translation unit, so the internals are visible and nothing is
+defined twice) carries the port -- about 150 lines, the hashing included, since a plain search over
+45,000 frames is too slow. Then a background measurement for a SAP with no `TIME`, as `GmeBackend`
+does for NSF (`startedPlaying`, `durationArrivesLater`): a second, silent copy, a second or two of one
+core on a phone. Tests on two SAPs built in the check -- one falling silent, one looping. **The page
+does not get it**, as it has no NSF measurement: its engine has no threads.
+
+**Recommended (2026-09-25), the owner agreeing to write it down:** now, the `TIME` lines for the
+owner's seven files, worked out with the same detection, for him to put in the files and send to
+ASMA -- every player anywhere then knows them, the page included. After the launch, (b) as above in
+the app.
+
+
+### C92. The web page zoomed and moved in a Safari tab on an iPhone — **FIXED and merged 2026-09-24; not yet seen on an iPhone**
+
+Reported by a friend of the owner, opening the page from a link (a Safari tab, not the installed
+app): pinch to zoom worked and the whole page could be dragged. The owner: the page should fit and
+lock to the viewport. **Mechanism** (WebKit's documented behaviour; there is no Safari here to watch
+it): a tab ignores `user-scalable=no` on purpose, and the earlier fix (2026-09-11) refused only
+Safari's gesture events; and the document itself could move -- rubber-banding, a list passing its
+drag on at the end, room left by the collapsing address bar. **Fixed:** a two-finger `touchmove` is
+refused non-passively, the body is pinned to the viewport and only the lists inside scroll,
+`overscroll-behavior: none`. To check: on the iPhone, from a link; and that every view still scrolls
+to its end on a computer and on Android.
+
+### C93. The web page on a phone: stretched buttons, Settings that would not scroll, a QR code past its sheet — **FIXED and merged 2026-09-24; first look on the phone "ok", full check pending**
+
+The owner's screenshots (Chrome on Android, Safari on an iPhone): Browse, Pair and Paste were tall
+slabs, the playlist's name cut to "Se…", Random's Playlist button stretched across its row; Settings
+ran past the bottom with no way to scroll; the pairing code and address stuck out of their sheet.
+**Mechanism:** the sizing written for Now Playing's squares was a bare `.action` rule, so since A27 it
+reached every labelled button and let each grow to fill its row; a sheet taller than the screen had
+nothing to scroll it, which the pinned page (C92) made plain; the code was a table of fixed 5-pixel
+cells. **Fixed:** the rule is scoped to Now Playing (a page check fails if the top bar's buttons grow
+again), a sheet scrolls inside itself with its heading kept, Settings takes nearly the whole height
+on a phone, the code is a scalable picture and the address breaks anywhere.
+
+### C94. Shuffle played the same order from any tune, and stopped early — **FIXED, merged and confirmed on the phone 2026-09-25 ("ok"), APK and page**
+
+The owner, with his 41-tune Favorites, no repeat, shuffle on: from wherever he started, next next next
+ended on the same tune (*Studium Fałszu*), with no next; and choosing another tune by hand gave the same
+sequence. **Mechanism:** the shuffled order was one permutation dealt when shuffle came on and kept;
+a tune chosen by hand stood somewhere in its middle, and next walked only what came after it -- the
+same tunes from any start, ending on the permutation's last, and the ones before it never played.
+Both sides, each in its own code. **Fixed, as the owner decided:** a tune chosen by hand deals a
+fresh order starting at it, as does shuffle turned on (from what plays); next then plays every tune
+once before the end, and **the chosen tune is the first**: back stops at it rather than stepping into
+what played before the choice (the owner, on the first test build). **Repeat off + shuffle stops after one pass** and **repeat all + shuffle goes on,
+dealing again each lap** -- the owner's first idea, shuffle without repeat going on for ever, was
+talked through and dropped, since it would make the two the same. The rule is now in
+`docs/rules/queue-cases.tsv` (`shuffleFromTap`), run by the phone's `PlayQueue` and by the page
+through its own row and next; both failed before the fix.
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor

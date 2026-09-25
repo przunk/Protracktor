@@ -7,6 +7,21 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Share": "Udostępnij",
+  "Share as audio": "Udostępnij jako audio",
+  "This browser cannot make an audio file. Chrome, Edge and Safari can.": "Ta przeglądarka nie umie zrobić pliku audio. Chrome, Edge i Safari umieją.",
+  "Still preparing the previous tune as audio.": "Wciąż przygotowuję poprzedni utwór jako audio.",
+  "Preparing {name} as audio…": "Przygotowuję {name} jako audio…",
+  "Could not turn {name} into audio.": "Nie udało się zamienić {name} na audio.",
+  "Ready to send: {name}": "Gotowe do wysłania: {name}",
+  "the worker failed": "wątek roboczy zawiódł",
+  "Send": "Wyślij",
+  "Length when shared as audio": "Długość przy udostępnianiu jako audio",
+  "The longest a tune shared as audio runs. A shorter tune is sent whole; a longer one, or one that does not say how long it is, is cut here and fades out.": "Najdłuższy czas utworu udostępnionego jako audio. Krótszy utwór idzie w całości; dłuższy, albo taki, który nie podaje swojej długości, zostaje tu ucięty i wyciszony.",
+  "1 min": "1 min",
+  "3 min": "3 min",
+  "5 min": "5 min",
+  "10 min": "10 min",
   "A tune or an author, two letters or more.": "Utwór albo autor, co najmniej dwie litery.",
   " and ": " i ",
   "(no author)": "(bez autora)",

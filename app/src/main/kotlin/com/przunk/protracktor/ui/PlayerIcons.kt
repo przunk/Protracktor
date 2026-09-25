@@ -185,6 +185,30 @@ object PlayerIcons {
                 "4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z",
         )
     }
+    /** Stacked drives: the database, for "preparing the database" (A60). */
+    val Database: ImageVector by lazy {
+        icon(
+            "Database",
+            "M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z",
+        )
+    }
+    /** A clock face: the database's badge while it is being prepared -- this takes a moment (A60). */
+    val Clock: ImageVector by lazy {
+        icon(
+            "Clock",
+            "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20" +
+                "c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z",
+        )
+    }
+    /** A file with a note on it: the tune sent as sound rather than as itself (A62). */
+    val AudioFile: ImageVector by lazy {
+        icon(
+            "AudioFile",
+            "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 11h-3v3.75" +
+                "c0 1.24-1.01 2.25-2.25 2.25S8.5 17.99 8.5 16.75s1.01-2.25 2.25-2.25c.46 0 .89.14 1.25.38" +
+                "V11h4v2zm-3-4V3.5L18.5 9H13z",
+        )
+    }
     /**
      * A QR code, for "there is nobody to send to yet — point me at a screen".
      *

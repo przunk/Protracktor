@@ -102,6 +102,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()
     fun setFallbackLength(seconds: Int) = controller.setFallbackLength(seconds)
     fun setCacheAhead(mode: CacheAhead) = controller.setCacheAhead(mode)
+    fun setShareAudioMinutes(minutes: Int) = controller.setShareAudioMinutes(minutes)
     fun setWebPlayer(base: String) = controller.setWebPlayer(base)
 
     fun exportPlaylist(id: Long) = controller.exportPlaylist(id)
@@ -115,6 +116,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
 
     fun shareFile(track: TrackRef) = controller.shareFile(track)
+    fun shareAsAudio(track: TrackRef) = controller.shareAsAudio(track)
 
     fun shareLink(track: TrackRef) = controller.shareLink(track)
     fun sendToWeb(tracks: List<TrackRef>) = controller.sendToWeb(tracks)
@@ -156,6 +158,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun removeRandomAt(index: Int) = controller.removeRandomAt(index)
     fun keepTransient() = controller.keepTransient()
     fun returnToPlaylist() = controller.returnToPlaylist()
+    fun returnToSession(): Boolean = controller.returnToSession()
     fun playFromResults(results: List<TrackRef>, index: Int) {
         ensureServiceRunning()
         controller.playFromResults(results, index)

@@ -311,3 +311,52 @@ export function barLength({ duration, endsAt, fallback }) {
   const stop = endsAt > 0 ? Math.min(endsAt, fallback) : fallback;
   return { seconds: stop, approximate: true };
 }
+
+// --- sharing a tune as audio (`docs/BACKLOG.md` A62) ------------------------------------------------
+//
+// The phone's `AudioExport`, and `docs/rules/queue-cases.tsv` holds both to the same answers.
+
+/** The setting's choices, in minutes; the longest a tune shared as audio runs. */
+export const SHARE_AUDIO_MINUTES = [1, 3, 5, 10];
+export const DEFAULT_SHARE_AUDIO_MINUTES = 3;
+/** The fade a cut tune ends on, so it stops as music does rather than mid-note. */
+export const SHARE_AUDIO_FADE_SECONDS = 3;
+
+/** A stored choice, or the default for anything that is not one of the choices. */
+export function shareAudioMinutes(stored) {
+  const minutes = Number(stored);
+  return SHARE_AUDIO_MINUTES.includes(minutes) ? minutes : DEFAULT_SHARE_AUDIO_MINUTES;
+}
+
+/**
+ * How much to render and whether it ends on a fade: the tune's own length when it has one within
+ * the setting, else the setting, faded. The setting is a limit on every tune (the owner,
+ * 2026-09-24).
+ */
+export function shareAudioPlan(knownSeconds, limitMinutes) {
+  const limit = limitMinutes * 60;
+  return knownSeconds > 0 && knownSeconds <= limit
+    ? { seconds: knownSeconds, fade: false }
+    : { seconds: limit, fade: true };
+}
+
+/** The gain at [frame] of [total]: 1, falling linearly to 0 over the last [fadeFrames]. */
+export function fadeGain(frame, total, fadeFrames) {
+  if (fadeFrames <= 0 || frame < total - fadeFrames) return 1;
+  return Math.min(1, Math.max(0, (total - frame) / fadeFrames));
+}
+
+/**
+ * `Author - Title.m4a`, or the title alone: the file's own extension dropped, so `elysium.mod`
+ * does not arrive as `elysium.mod.m4a`, and what a file system or a chat app would stumble on
+ * replaced.
+ */
+export function shareAudioName(title, author) {
+  const trimmed = String(title ?? '').trim();
+  const dot = trimmed.lastIndexOf('.');
+  const bare = (dot > 0 && trimmed.length - dot >= 2 && trimmed.length - dot <= 6 ? trimmed.slice(0, dot) : trimmed) || 'tune';
+  const who = String(author ?? '').trim();
+  const named = who ? `${who} - ${bare}` : bare;
+  // eslint-disable-next-line no-control-regex
+  return `${named.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 120)}.m4a`;
+}
