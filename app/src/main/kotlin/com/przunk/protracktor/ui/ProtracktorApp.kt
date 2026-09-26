@@ -9,6 +9,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.WindowInsets
@@ -256,282 +259,289 @@ fun ProtracktorApp(
         }
     }
 
-    Scaffold(
-        topBar = {
-            Column {
-                // The playlist screen's own header, because it is the one that can hold more than fits:
-                // the chip and five actions come to more than a phone is wide once Save and Discard
-                // appear, and a top bar cannot wrap (`docs/STATUS.md` C48).
-                if (!showSettings && !showBrowse && !showRandom) {
-                    PlaylistTopBar(
+    // Over everything, so a row's menu dims all but its row (the owner, 2026-09-26).
+    val menuFocus = remember { MenuFocus() }
+    CompositionLocalProvider(LocalMenuFocus provides menuFocus) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                topBar = {
+                    Column {
+                        // The playlist screen's own header, because it is the one that can hold more than fits:
+                        // the chip and five actions come to more than a phone is wide once Save and Discard
+                        // appear, and a top bar cannot wrap (`docs/STATUS.md` C48).
+                        if (!showSettings && !showBrowse && !showRandom) {
+                            PlaylistTopBar(
+                                state = state,
+                                paired = browse.pairedBrowser,
+                                onChoosePlaylist = { showPlaylists = true },
+                                onBrowse = openBrowse,
+                                onDiscard = viewModel::discardChanges,
+                                onSave = viewModel::savePlaylist,
+                                onSendToBrowser = viewModel::sendQueueToBrowser,
+                                onRescan = viewModel::rescan,
+                                onSettings = { showSettings = true },
+                            )
+                        } else TopAppBar(
+                            navigationIcon = {
+                                if (showSettings) {
+                                    IconButton(onClick = { showSettings = false }) {
+                                        Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                                    }
+                                } else if (showBrowse) {
+                                    IconButton(onClick = leaveBrowse) {
+                                        Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                                    }
+                                } else if (showRandom) {
+                                    // The same arrow Browse has: the two screens sit side by side, so one of
+                                    // them offering no way out of its bar would leave their headings out of
+                                    // line as well. **Back leaves, and the dice plays on** (A61): the playlist
+                                    // it leaves to is covered, and the cover leads back here.
+                                    IconButton(onClick = { showRandom = false }) {
+                                        Icon(PlayerIcons.Back, stringResource(R.string.action_back))
+                                    }
+                                }
+                            },
+                            title = {
+                                if (showSettings) {
+                                    Text(stringResource(R.string.settings_title))
+                                } else if (showBrowse) {
+                                    // The screen names itself; whose folder a digression is in is said by the
+                                    // header under the bar, in the shape the dice's own heading has.
+                                    Text(stringResource(R.string.browse_title))
+                                } else if (showRandom) {
+                                    // The screen says "Playing at random" over its own list, so the bar stays
+                                    // out of its way. The playlist chip in particular would be offering to
+                                    // switch a playlist that nothing is playing from.
+                                    Text(stringResource(R.string.domain_random_title))
+                                }
+                            },
+                            actions = {
+                                // The way out, as opposed to the way back. Back is a stack -- leave the
+                                // selection, then up a level, then out -- and from four levels deep that is
+                                // four presses even when it is behaving correctly. This is one, from anywhere.
+                                // Labelled as well as drawn, because an icon alone does not say where it goes.
+                                if (showBrowse) {
+                                    LabelledAction(
+                                        icon = PlayerIcons.Playlist,
+                                        label = stringResource(R.string.action_to_playlist),
+                                        // **Out, not back.** During a digression both screens count
+                                        // themselves showing, so without this condition the button is drawn
+                                        // twice. There is one: Back returns to whatever sent you here — the
+                                        // dice — and this leaves for the playlist whatever is waiting.
+                                        onClick = {
+                                            viewModel.returnToPlaylist()
+                                            showRandom = false
+                                            showBrowse = false
+                                        },
+                                        haptic = null,
+                                        slim = true,
+                                        modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
+                                    )
+                                }
+                                // **Leaving ends the session**, which is what it has always done -- the record
+                                // goes, the tunes stay in the history, and the playlist is exactly where it was
+                                // left because nothing ever wrote to it.
+                                if (showRandom && !showBrowse) {
+                                    LabelledAction(
+                                        icon = PlayerIcons.Playlist,
+                                        label = stringResource(R.string.action_to_playlist),
+                                        onClick = { viewModel.returnToPlaylist(); showRandom = false },
+                                        haptic = null,
+                                        // **The same pill as Filter, one row below it.** See
+                                        // `TOP_BAR_ACTION_EDGE`.
+                                        slim = true,
+                                        modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
+                                    )
+                                }
+                            },
+                        )
+                        // Under whichever bar is showing: the lists wait on the database on every screen (A60).
+                        if (state.preparingDatabase) PreparingDatabase()
+                    }
+                },
+                bottomBar = {
+                    PlayerDock(
                         state = state,
-                        paired = browse.pairedBrowser,
-                        onChoosePlaylist = { showPlaylists = true },
+                        onSeek = viewModel::seekTo,
+                        onKeep = viewModel::keepTransient,
+                        onExpand = { showNowPlaying = true },
                         onBrowse = openBrowse,
-                        onDiscard = viewModel::discardChanges,
-                        onSave = viewModel::savePlaylist,
-                        onSendToBrowser = viewModel::sendQueueToBrowser,
-                        onRescan = viewModel::rescan,
-                        onSettings = { showSettings = true },
+                        onPlayPause = viewModel::togglePlayPause,
+                        onPrevious = viewModel::previous,
+                    onPreviousFile = viewModel::previousFile,
+                        onNext = viewModel::next,
+                    onNextFile = viewModel::nextFile,
+                        onShuffle = viewModel::toggleShuffle,
+                        onRepeat = viewModel::cycleRepeat,
                     )
-                } else TopAppBar(
-                    navigationIcon = {
-                        if (showSettings) {
-                            IconButton(onClick = { showSettings = false }) {
-                                Icon(PlayerIcons.Back, stringResource(R.string.action_back))
-                            }
-                        } else if (showBrowse) {
-                            IconButton(onClick = leaveBrowse) {
-                                Icon(PlayerIcons.Back, stringResource(R.string.action_back))
-                            }
-                        } else if (showRandom) {
-                            // The same arrow Browse has: the two screens sit side by side, so one of
-                            // them offering no way out of its bar would leave their headings out of
-                            // line as well. **Back leaves, and the dice plays on** (A61): the playlist
-                            // it leaves to is covered, and the cover leads back here.
-                            IconButton(onClick = { showRandom = false }) {
-                                Icon(PlayerIcons.Back, stringResource(R.string.action_back))
-                            }
-                        }
-                    },
-                    title = {
-                        if (showSettings) {
-                            Text(stringResource(R.string.settings_title))
-                        } else if (showBrowse) {
-                            // The screen names itself; whose folder a digression is in is said by the
-                            // header under the bar, in the shape the dice's own heading has.
-                            Text(stringResource(R.string.browse_title))
-                        } else if (showRandom) {
-                            // The screen says "Playing at random" over its own list, so the bar stays
-                            // out of its way. The playlist chip in particular would be offering to
-                            // switch a playlist that nothing is playing from.
-                            Text(stringResource(R.string.domain_random_title))
-                        }
-                    },
-                    actions = {
-                        // The way out, as opposed to the way back. Back is a stack -- leave the
-                        // selection, then up a level, then out -- and from four levels deep that is
-                        // four presses even when it is behaving correctly. This is one, from anywhere.
-                        // Labelled as well as drawn, because an icon alone does not say where it goes.
-                        if (showBrowse) {
-                            LabelledAction(
-                                icon = PlayerIcons.Playlist,
-                                label = stringResource(R.string.action_to_playlist),
-                                // **Out, not back.** During a digression both screens count
-                                // themselves showing, so without this condition the button is drawn
-                                // twice. There is one: Back returns to whatever sent you here — the
-                                // dice — and this leaves for the playlist whatever is waiting.
-                                onClick = {
-                                    viewModel.returnToPlaylist()
-                                    showRandom = false
-                                    showBrowse = false
-                                },
-                                haptic = null,
-                                slim = true,
-                                modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
-                            )
-                        }
-                        // **Leaving ends the session**, which is what it has always done -- the record
-                        // goes, the tunes stay in the history, and the playlist is exactly where it was
-                        // left because nothing ever wrote to it.
-                        if (showRandom && !showBrowse) {
-                            LabelledAction(
-                                icon = PlayerIcons.Playlist,
-                                label = stringResource(R.string.action_to_playlist),
-                                onClick = { viewModel.returnToPlaylist(); showRandom = false },
-                                haptic = null,
-                                // **The same pill as Filter, one row below it.** See
-                                // `TOP_BAR_ACTION_EDGE`.
-                                slim = true,
-                                modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
-                            )
-                        }
-                    },
-                )
-                // Under whichever bar is showing: the lists wait on the database on every screen (A60).
-                if (state.preparingDatabase) PreparingDatabase()
+                },
+                snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
+            ) { insets ->
+                if (scanning) {
+                    ScannerScreen(
+                        contentPadding = insets,
+                        onScanned = { endpoint ->
+                            scanning = false
+                            viewModel.pairWith(endpoint)
+                        },
+                        // The link keeps a home, and this is the right one: somebody who cannot scan is
+                        // looking at the scanner (`docs/PLAN_HANDOFF.md` §3).
+                        onSendLink = {
+                            scanning = false
+                            viewModel.sendQueueAsLink()
+                        },
+                        onCancel = { scanning = false },
+                    )
+                } else if (showSettings) {
+                    // The storage figures are read by `refreshCatalogues`, which until now only ran when
+                    // somebody opened the online catalogues. Settings can be reached without ever going
+                    // near Browse, and a storage section reporting zero because nobody asked would be
+                    // worse than one that is missing.
+                    LaunchedEffect(Unit) { viewModel.refreshCatalogues() }
+                    SettingsScreen(
+                        playAllSubsongs = state.playAllSubsongs,
+                        selectedLanguage = selectedLanguage,
+                        cacheBytes = browse.storageBytes.first,
+                        archiveBytes = browse.archiveBytes,
+                        databaseBytes = browse.databaseBytes,
+                        replayCount = browse.replayCount,
+                        playerCount = browse.playerCount,
+                        replayBytes = browse.replayBytes,
+                        catalogues = browse.catalogues,
+                        // From the collected state, not from the parameter: a successful pairing
+                        // rewrites this address, and a value captured where the screen is built would
+                        // show the one from before the scan.
+                        webPlayer = browse.webPlayer,
+                        onWebPlayerChanged = viewModel::setWebPlayer,
+                        songLengthCount = browse.songLengthCount,
+                        trackMetadataCount = browse.trackMetadataCount,
+                        songDbLengthCount = browse.songDbLengthCount,
+                        contentPadding = insets,
+                        selectedTheme = selectedTheme,
+                        dynamicColour = dynamicColour,
+                        onThemeSelected = onThemeSelected,
+                        onDynamicColourChanged = onDynamicColourChanged,
+                        onToggleAllSubsongs = viewModel::toggleAllSubsongs,
+                        fallbackLengthSeconds = state.fallbackLengthSeconds,
+                        onFallbackLengthChanged = viewModel::setFallbackLength,
+                        cacheAhead = state.cacheAhead,
+                        onCacheAheadSelected = viewModel::setCacheAhead,
+                        shareAudioMinutes = state.shareAudioMinutes,
+                        onShareAudioMinutesSelected = viewModel::setShareAudioMinutes,
+                        onLanguageSelected = onLanguageSelected,
+                        onClearCache = viewModel::clearFetchedCache,
+                        onDeleteIndex = viewModel::deleteCatalogueIndex,
+                        onDeleteSongMetadata = viewModel::deleteSongMetadata,
+                        onDeleteReplayRoutines = viewModel::deleteReplayRoutines,
+                    )
+                } else if (showBrowse) {
+                    BrowseScreen(
+                        browse = browse,
+                        playlistName = state.activePlaylistName,
+                        contentPadding = insets,
+                        onOpenDomain = viewModel::openDomain,
+                        onPickFolder = { folderPicker.launch(null) },
+                        onPickFiles = { filePicker.launch(arrayOf("*/*")) },
+                        onOpenFolder = viewModel::openFolder,
+                        onForgetFolder = viewModel::forgetFolder,
+                        onScanFolder = viewModel::scanFolder,
+                        onIndexCatalogue = viewModel::indexCatalogue,
+                        onDownloadSongMetadata = viewModel::downloadSongMetadata,
+                        onDownloadReplayRoutines = viewModel::downloadReplayRoutines,
+                        onOpenCatalogue = viewModel::openCatalogue,
+                        onOpenGroup = viewModel::openGroup,
+                        // **Open, not just play.** Starting a tune and dropping back onto a playlist
+                        // behind glass says nothing about what the dice did; this opens the record it is
+                        // about to fill, and rolls once so there is no second press between here and
+                        // music.
+                        onRandom = {
+                            viewModel.openRandom()
+                            showBrowse = false
+                            showRandom = true
+                        },
+                        onChooseRandomScope = { choosingRandomScope = true },
+                        onQueryChange = viewModel::setQuery,
+                        onScope = viewModel::setSearchScope,
+                        onTogglePlatform = viewModel::toggleSearchPlatform,
+                        onToggleCatalogue = viewModel::toggleSearchCatalogue,
+                        onSearch = viewModel::runSearch,
+                        // Playing from Browse never adds anything and never touches the playlist: whatever
+                        // is on screen becomes the queue for as long as you are looking at it.
+                        onClearHistory = viewModel::clearHistory,
+                        // Marks the row you are hearing. Browse plays through the results queue, so the
+                        // current track is the queue's, not the playlist's.
+                        playingId = state.current?.id,
+                        // What is being fetched, so its row says so by breathing (`docs/WISHLIST.md` B32).
+                        loadingId = state.current?.id?.takeIf { state.loadingTrack },
+                        // Whose folder, while the dice waits under it — from the moment the jump lands,
+                        // not only once something here is playing.
+                        digressionAuthor = browse.openAuthor
+                            ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting || state.searchWaiting) },
+                        onShowNeighbours = viewModel::showNeighboursOf,
+                        onShareFile = viewModel::shareFile,
+                        onShareAudio = viewModel::shareAsAudio,
+                        onShareLink = viewModel::shareLink,
+                        onSendToWeb = viewModel::sendToWeb,
+                        onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
+                        // Stays in Browse (`docs/STATUS.md` C46). Closing it on an add would take away
+                        // the list the tracks were picked from and leave the playlist behind the scrim,
+                        // since a search result is what is playing. The notice says what was added.
+                        onAdd = { tracks -> viewModel.addToPlaylist(tracks) },
+                        onAddToOtherPlaylist = { tracks ->
+                            pendingAddToPlaylist = tracks
+                        },
+                    )
+                } else if (showRandom) {
+                    RandomScreen(
+                        state = state,
+                        browse = browse,
+                        listState = randomState,
+                        onPlayAt = viewModel::playRandomAt,
+                        onRemoveAt = viewModel::removeRandomAt,
+                        onFilter = { choosingRandomScope = true },
+                        onShowNeighbours = viewModel::showNeighboursOf,
+                        onShareFile = viewModel::shareFile,
+                        onShareAudio = viewModel::shareAsAudio,
+                        onShareLink = viewModel::shareLink,
+                        onSendToWeb = viewModel::sendToWeb,
+                        onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
+                        onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
+                        contentPadding = insets,
+                    )
+                } else {
+                    PlaylistScreen(
+                        state = state,
+                        listState = playlistState,
+                        onPlayAt = viewModel::playAt,
+                        onRemoveAt = viewModel::removeTrack,
+                        onMove = viewModel::moveTrack,
+                        onShowNeighbours = viewModel::showNeighboursOf,
+                        onShareFile = viewModel::shareFile,
+                        onShareAudio = viewModel::shareAsAudio,
+                        onShareLink = viewModel::shareLink,
+                        onSendToWeb = viewModel::sendToWeb,
+                        onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
+                        onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
+                        onRemoveMany = viewModel::removeTracks,
+                        onBrowse = openBrowse,
+                        onPickDownloads = { choosingDownloads = true },
+                        // Nothing indexed and no folder granted means Browse opens on a list of
+                        // archives that all say "no index" -- a way in that leads nowhere.
+                        canBrowse = browse.hasSomethingToBrowse,
+                        // Both halves: the playlist comes from one read and what is held from
+                        // another, and the empty screen must not speak before either has landed.
+                        stateKnown = state.restored && browse.knowsWhatIsHeld,
+                        onReturnToPlaylist = viewModel::returnToPlaylist,
+                        contentPadding = insets,
+                        // Back to the source: the dice's screen, or the list in Browse as it was (A61).
+                        onReturnToSource = {
+                            if (state.randomMode && !state.searchMode) showRandom = true
+                            else if (viewModel.returnToSession()) showBrowse = true
+                        },
+                    )
+                }
             }
-        },
-        bottomBar = {
-            PlayerDock(
-                state = state,
-                onSeek = viewModel::seekTo,
-                onKeep = viewModel::keepTransient,
-                onExpand = { showNowPlaying = true },
-                onBrowse = openBrowse,
-                onPlayPause = viewModel::togglePlayPause,
-                onPrevious = viewModel::previous,
-            onPreviousFile = viewModel::previousFile,
-                onNext = viewModel::next,
-            onNextFile = viewModel::nextFile,
-                onShuffle = viewModel::toggleShuffle,
-                onRepeat = viewModel::cycleRepeat,
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
-    ) { insets ->
-        if (scanning) {
-            ScannerScreen(
-                contentPadding = insets,
-                onScanned = { endpoint ->
-                    scanning = false
-                    viewModel.pairWith(endpoint)
-                },
-                // The link keeps a home, and this is the right one: somebody who cannot scan is
-                // looking at the scanner (`docs/PLAN_HANDOFF.md` §3).
-                onSendLink = {
-                    scanning = false
-                    viewModel.sendQueueAsLink()
-                },
-                onCancel = { scanning = false },
-            )
-        } else if (showSettings) {
-            // The storage figures are read by `refreshCatalogues`, which until now only ran when
-            // somebody opened the online catalogues. Settings can be reached without ever going
-            // near Browse, and a storage section reporting zero because nobody asked would be
-            // worse than one that is missing.
-            LaunchedEffect(Unit) { viewModel.refreshCatalogues() }
-            SettingsScreen(
-                playAllSubsongs = state.playAllSubsongs,
-                selectedLanguage = selectedLanguage,
-                cacheBytes = browse.storageBytes.first,
-                archiveBytes = browse.archiveBytes,
-                databaseBytes = browse.databaseBytes,
-                replayCount = browse.replayCount,
-                playerCount = browse.playerCount,
-                replayBytes = browse.replayBytes,
-                catalogues = browse.catalogues,
-                // From the collected state, not from the parameter: a successful pairing
-                // rewrites this address, and a value captured where the screen is built would
-                // show the one from before the scan.
-                webPlayer = browse.webPlayer,
-                onWebPlayerChanged = viewModel::setWebPlayer,
-                songLengthCount = browse.songLengthCount,
-                trackMetadataCount = browse.trackMetadataCount,
-                songDbLengthCount = browse.songDbLengthCount,
-                contentPadding = insets,
-                selectedTheme = selectedTheme,
-                dynamicColour = dynamicColour,
-                onThemeSelected = onThemeSelected,
-                onDynamicColourChanged = onDynamicColourChanged,
-                onToggleAllSubsongs = viewModel::toggleAllSubsongs,
-                fallbackLengthSeconds = state.fallbackLengthSeconds,
-                onFallbackLengthChanged = viewModel::setFallbackLength,
-                cacheAhead = state.cacheAhead,
-                onCacheAheadSelected = viewModel::setCacheAhead,
-                shareAudioMinutes = state.shareAudioMinutes,
-                onShareAudioMinutesSelected = viewModel::setShareAudioMinutes,
-                onLanguageSelected = onLanguageSelected,
-                onClearCache = viewModel::clearFetchedCache,
-                onDeleteIndex = viewModel::deleteCatalogueIndex,
-                onDeleteSongMetadata = viewModel::deleteSongMetadata,
-                onDeleteReplayRoutines = viewModel::deleteReplayRoutines,
-            )
-        } else if (showBrowse) {
-            BrowseScreen(
-                browse = browse,
-                playlistName = state.activePlaylistName,
-                contentPadding = insets,
-                onOpenDomain = viewModel::openDomain,
-                onPickFolder = { folderPicker.launch(null) },
-                onPickFiles = { filePicker.launch(arrayOf("*/*")) },
-                onOpenFolder = viewModel::openFolder,
-                onForgetFolder = viewModel::forgetFolder,
-                onScanFolder = viewModel::scanFolder,
-                onIndexCatalogue = viewModel::indexCatalogue,
-                onDownloadSongMetadata = viewModel::downloadSongMetadata,
-                onDownloadReplayRoutines = viewModel::downloadReplayRoutines,
-                onOpenCatalogue = viewModel::openCatalogue,
-                onOpenGroup = viewModel::openGroup,
-                // **Open, not just play.** Starting a tune and dropping back onto a playlist
-                // behind glass says nothing about what the dice did; this opens the record it is
-                // about to fill, and rolls once so there is no second press between here and
-                // music.
-                onRandom = {
-                    viewModel.openRandom()
-                    showBrowse = false
-                    showRandom = true
-                },
-                onChooseRandomScope = { choosingRandomScope = true },
-                onQueryChange = viewModel::setQuery,
-                onScope = viewModel::setSearchScope,
-                onTogglePlatform = viewModel::toggleSearchPlatform,
-                onToggleCatalogue = viewModel::toggleSearchCatalogue,
-                onSearch = viewModel::runSearch,
-                // Playing from Browse never adds anything and never touches the playlist: whatever
-                // is on screen becomes the queue for as long as you are looking at it.
-                onClearHistory = viewModel::clearHistory,
-                // Marks the row you are hearing. Browse plays through the results queue, so the
-                // current track is the queue's, not the playlist's.
-                playingId = state.current?.id,
-                // What is being fetched, so its row says so by breathing (`docs/WISHLIST.md` B32).
-                loadingId = state.current?.id?.takeIf { state.loadingTrack },
-                // Whose folder, while the dice waits under it — from the moment the jump lands,
-                // not only once something here is playing.
-                digressionAuthor = browse.openAuthor
-                    ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting || state.searchWaiting) },
-                onShowNeighbours = viewModel::showNeighboursOf,
-                onShareFile = viewModel::shareFile,
-                onShareAudio = viewModel::shareAsAudio,
-                onShareLink = viewModel::shareLink,
-                onSendToWeb = viewModel::sendToWeb,
-                onPlay = { index -> viewModel.playFromResults(browse.tracks, index) },
-                // Stays in Browse (`docs/STATUS.md` C46). Closing it on an add would take away
-                // the list the tracks were picked from and leave the playlist behind the scrim,
-                // since a search result is what is playing. The notice says what was added.
-                onAdd = { tracks -> viewModel.addToPlaylist(tracks) },
-                onAddToOtherPlaylist = { tracks ->
-                    pendingAddToPlaylist = tracks
-                },
-            )
-        } else if (showRandom) {
-            RandomScreen(
-                state = state,
-                browse = browse,
-                listState = randomState,
-                onPlayAt = viewModel::playRandomAt,
-                onRemoveAt = viewModel::removeRandomAt,
-                onFilter = { choosingRandomScope = true },
-                onShowNeighbours = viewModel::showNeighboursOf,
-                onShareFile = viewModel::shareFile,
-                onShareAudio = viewModel::shareAsAudio,
-                onShareLink = viewModel::shareLink,
-                onSendToWeb = viewModel::sendToWeb,
-                onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
-                onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
-                contentPadding = insets,
-            )
-        } else {
-            PlaylistScreen(
-                state = state,
-                listState = playlistState,
-                onPlayAt = viewModel::playAt,
-                onRemoveAt = viewModel::removeTrack,
-                onMove = viewModel::moveTrack,
-                onShowNeighbours = viewModel::showNeighboursOf,
-                onShareFile = viewModel::shareFile,
-                onShareAudio = viewModel::shareAsAudio,
-                onShareLink = viewModel::shareLink,
-                onSendToWeb = viewModel::sendToWeb,
-                onAddToOtherPlaylist = { track -> pendingAddToPlaylist = listOf(track) },
-                onAddSelectedToPlaylist = { tracks -> pendingAddToPlaylist = tracks },
-                onRemoveMany = viewModel::removeTracks,
-                onBrowse = openBrowse,
-                onPickDownloads = { choosingDownloads = true },
-                // Nothing indexed and no folder granted means Browse opens on a list of
-                // archives that all say "no index" -- a way in that leads nowhere.
-                canBrowse = browse.hasSomethingToBrowse,
-                // Both halves: the playlist comes from one read and what is held from
-                // another, and the empty screen must not speak before either has landed.
-                stateKnown = state.restored && browse.knowsWhatIsHeld,
-                onReturnToPlaylist = viewModel::returnToPlaylist,
-                contentPadding = insets,
-                // Back to the source: the dice's screen, or the list in Browse as it was (A61).
-                onReturnToSource = {
-                    if (state.randomMode && !state.searchMode) showRandom = true
-                    else if (viewModel.returnToSession()) showBrowse = true
-                },
-            )
+            MenuFocusDimming(menuFocus)
         }
     }
 

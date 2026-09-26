@@ -1511,6 +1511,7 @@ private fun BrowseTrackRow(
                     Modifier.graphicsLayer { alpha = breath.value }
                 }
             )
+            .menuFocus(menuOpen)
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
             // into a scroll is claimed by the list before it ever becomes a long press. Both
             // matter: a long press firing at a twentieth of a second mid-scroll drops the reader

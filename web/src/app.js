@@ -1477,6 +1477,7 @@ function showMenu(items, anchor) {
     menu.append(button);
   }
   const box = anchor.getBoundingClientRect();
+  spotlight(anchor.closest('li') ?? anchor);
   menu.hidden = false;
   // Placed after it is shown, because a hidden element measures zero and would be pinned to the
   // top left on the first open of every session.
@@ -1485,7 +1486,23 @@ function showMenu(items, anchor) {
   menu.style.top = `${box.bottom + height > innerHeight ? Math.max(8, box.top - height) : box.bottom}px`;
 }
 
-function closeRowMenu() { $('menu').hidden = true; }
+function closeRowMenu() {
+  $('menu').hidden = true;
+  $('menublock').hidden = true;
+  $('menuspot').hidden = true;
+}
+
+/** Dims all but [element] -- the row a menu came from -- while the menu is open. */
+function spotlight(element) {
+  const box = element.getBoundingClientRect();
+  Object.assign($('menuspot').style, {
+    left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`,
+  });
+  $('menuspot').hidden = false;
+  $('menublock').hidden = false;
+}
+// A press beside the menu closes it and does nothing else: the rows under the block never see it.
+$('menublock').addEventListener('click', (event) => { event.stopPropagation(); closeRowMenu(); });
 addEventListener('click', (event) => {
   if (!$('menu').hidden && !$('menu').contains(event.target)) closeRowMenu();
 });
