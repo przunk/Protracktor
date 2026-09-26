@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A65. A row's menu dims everything but its row — **asked 2026-09-26; BUILT on `feature/menu-focus`, APK and page; not yet seen on the phone**
+## A65. A row's menu dims everything but its row — **asked 2026-09-26; BUILT, APK and page; merged and confirmed on the phone the same day ("works beautifully")**
 
 The owner: the three dots' menu is a rectangle somewhere over the list, not a bubble coming out of
 the row, and it does not say which tune it is about. His idea, over my suggestion of highlighting the
