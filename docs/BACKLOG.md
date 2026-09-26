@@ -26,12 +26,15 @@ is a couple of hundred bytes, so ten thousand tunes are about 2 MB. The page ari
 `docs/rules/queue-cases.tsv` (`historyPages`), run by the phone's `HistoryPages` and the page's rules.
 Playing from History walks the page on screen, which is the list a tap is about.
 
-**Opened slowly on the phone** (the owner, on the first build: "a few seconds"): it read every row and
-dated each one with `DateUtils` before showing any -- a cost that grows with History, now unlimited.
-Now it reads **one page and a count** (`PLAY_HISTORY_PAGE`, `PLAY_HISTORY_COUNT`), along the index,
-which a test holds to its query plan: a hundred rows and a hundred dates, however long History grows,
-and a switch to another page is another hundred. The mechanism is read from the code, not measured on
-the phone.
+**Opened slowly on the phone** (the owner: 3-4 s on the first opening after the app was killed).
+My first reading -- that it read every row and dated each with `DateUtils` -- was a guess, and wrong:
+reading a page and a count instead (`PLAY_HISTORY_PAGE`, `PLAY_HISTORY_COUNT`), which stays because
+an unlimited History must not be read whole, changed nothing. **The mechanism, confirmed by the owner's
+test:** Browse's first screen counts the tunes on each platform, `GROUP BY platform` over half a
+million rows, and the database ran every query on one connection, so History waited for the count.
+Waiting ten seconds on Browse first, History opened at once. **Fixed** with write-ahead logging, so
+reads run side by side, and schema version 21's `idx_catalogue_platform`, which makes the count
+itself read an index (0.42 s to 0.085 s on a desktop, 516,000 rows).
 
 ## A63. One Share, the same four ways everywhere; Share with Protracktor to the public page — **asked 2026-09-25; BUILT, APK and page; merged and confirmed on the phone 2026-09-26 ("super")**
 

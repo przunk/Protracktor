@@ -48,6 +48,15 @@ class ProtracktorDatabase private constructor(context: Context) :
             }
     }
 
+    init {
+        // **Write-ahead logging, so a read never queues behind another** (the owner, 2026-09-26).
+        // Without it Android gives the file one connection and runs every query in turn: History,
+        // opened a moment after Browse, waited seconds for Browse's count of the platforms to end,
+        // and opened at once when the count had been left to finish first. With it, reads run
+        // side by side, and beside a write.
+        setWriteAheadLoggingEnabled(true)
+    }
+
     override fun onConfigure(db: SQLiteDatabase) {
         // Off by default on Android. The schema leans on ON DELETE CASCADE, which without this is
         // decoration.

@@ -851,6 +851,36 @@ class SchemaSqlTest {
         }
     }
 
+    @Test
+    fun `version 21 counts the platforms from an index, and keeps every row it migrates`() {
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 20))
+            connection.run(listOf(
+                "INSERT INTO catalogues (id, display_name, track_count) VALUES ('modland', 'Modland', 3)",
+                "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, platform) " +
+                    "VALUES ('modland', 'a', 'Protracker', 'x', 'a', 1, 'amiga'), " +
+                    "('modland', 'b', 'Protracker', 'x', 'b', 1, 'amiga'), " +
+                    "('modland', 'c', 'SID', 'y', 'c', 1, 'c64')",
+            ))
+            connection.run(SchemaSql.migrationsBetween(20, SchemaSql.VERSION))
+
+            val counts = connection.createStatement().use { statement ->
+                statement.executeQuery(SchemaSql.PLATFORM_COUNTS).use { rows ->
+                    buildMap { while (rows.next()) put(rows.getString(1), rows.getInt(2)) }
+                }
+            }
+            assertEquals(mapOf("amiga" to 2, "c64" to 1), counts)
+            val plan = connection.createStatement().use { statement ->
+                statement.executeQuery("EXPLAIN QUERY PLAN " + SchemaSql.PLATFORM_COUNTS).use { rows ->
+                    buildString { while (rows.next()) append(rows.getString("detail")).append('\n') }
+                }
+            }
+            // The whole reason for the version: read along the index, nothing sorted.
+            assertTrue(plan, plan.contains("COVERING INDEX idx_catalogue_platform"))
+            assertTrue(plan, !plan.contains("TEMP B-TREE"))
+        }
+    }
+
     private fun Connection.indexRow(uri: String, folder: String, backends: String) =
         run(listOf(
             "INSERT INTO library_index (uri, folder_uri, path, file_name, indexed_at, backends) " +
