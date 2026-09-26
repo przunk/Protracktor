@@ -593,6 +593,14 @@ if (window.__api) {
   menus[0].click();
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
+  // **The rest dimmed, and a press beside the menu only closes it** (the owner, 2026-09-26).
+  check(!$('menuspot').hidden && !$('menublock').hidden, 'and the rest of the screen dims around the row');
+  const playingBefore = window.__api.indexNow();
+  $('menublock').click();
+  check($('menu').hidden && $('menuspot').hidden && $('menublock').hidden
+        && window.__api.indexNow() === playingBefore,
+    'a press beside the menu closes it, lifts the dimming, and starts nothing');
+  menus[0].click();
   // Select stands first: it is the way into ticking rows, which a mouse has no long press to
   // find. The rest are in a fixed order, and the four ways to share are one Share (2026-09-25).
   check(open.map((b) => b.textContent).join(',')

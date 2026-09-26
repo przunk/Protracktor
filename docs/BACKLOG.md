@@ -15,6 +15,16 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A65. A row's menu dims everything but its row — **asked 2026-09-26; BUILT on `feature/menu-focus`, APK and page; not yet seen on the phone**
+
+The owner: the three dots' menu is a rectangle somewhere over the list, not a bubble coming out of
+the row, and it does not say which tune it is about. His idea, over my suggestion of highlighting the
+row: **dim the rest of the screen** while the menu is open, so the eye is on that row; nothing else
+can be pressed until the menu closes, and a press beside it only closes it. On the phone a
+`MenuFocusDimming` over the whole app with the row cut out, told where the row is by
+`Modifier.menuFocus`; the menu's own popup already takes the press that closes it. On the page a
+spot on the row whose shadow dims the rest, and a block under it that takes the closing press.
+
 ## A63. One Share, the same four ways everywhere; Share with Protracktor to the public page — **asked 2026-09-25; BUILT, APK and page; merged and confirmed on the phone 2026-09-26 ("super")**
 
 The owner: a row's menu had four ways to share and Now Playing's Share three -- no Share with

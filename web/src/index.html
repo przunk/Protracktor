@@ -533,6 +533,14 @@
     min-width: 190px;
   }
   #menu[hidden] { display: none; }
+  /* **The row the menu came from, and nothing else** (the owner, 2026-09-26): a rectangle floating
+     over the list did not say which tune it was about. The spot sits on the row and its shadow dims
+     the rest of the screen; the block under it takes the press that closes the menu, so a press
+     beside it closes and does nothing else. */
+  #menublock { position: fixed; inset: 0; z-index: 28; }
+  #menuspot { position: fixed; z-index: 29; pointer-events: none; border-radius: var(--shape-s);
+              box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .55); }
+  #menublock[hidden], #menuspot[hidden] { display: none; }
   /* Every item an icon and its name, as the phone's row menu has them. */
   /* One rule for the item, not two: a second `#menu button` further down said `display: block`,
      won the cascade, and left every icon floating above its word with no gap (owner, 2026-09-11). */
@@ -995,6 +1003,9 @@
     </div>
   </footer>
 
+  <!-- While a row's menu is open: everything but the row dimmed, and nothing but the menu pressable. -->
+  <div id="menublock" hidden></div>
+  <div id="menuspot" hidden></div>
   <div id="menu" hidden role="menu"></div>
 
   <!--

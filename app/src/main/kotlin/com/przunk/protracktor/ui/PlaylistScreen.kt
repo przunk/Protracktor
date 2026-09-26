@@ -631,6 +631,7 @@ private fun TrackRow(
                     Modifier
                 }
             )
+            .menuFocus(menuOpen)
             .combinedClickable(
                 enabled = enabled,
                 // **Choosing a tune is the firm one** — it is the press this whole screen exists
