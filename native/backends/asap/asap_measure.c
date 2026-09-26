@@ -173,3 +173,8 @@ done:
     ASAP_Delete(m.asap);
     return result;
 }
+
+bool ProtracktorAsap_LengthStillComing(int measuredSubsong, int measuredMs, int playing)
+{
+    return measuredSubsong != playing || measuredMs > 0;
+}

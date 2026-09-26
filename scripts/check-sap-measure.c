@@ -91,5 +91,12 @@ int main(void)
     ms = ProtracktorAsap_MeasureMs("junk.sap", (const unsigned char *) "SAP\r\nnonsense", 13, 0, 60, &loop, NULL, NULL);
     check("a file that is not a tune is no answer", ms == -1, "it answered a length");
 
+    // The rule the host asks by: until a length it could take has been taken, keep asking.
+    check("before any measurement a length is still coming", ProtracktorAsap_LengthStillComing(-1, 0, 0), "it said no");
+    check("a measured length is still coming until the host has it -- it stops asking once it does",
+          ProtracktorAsap_LengthStillComing(0, 217887, 0), "it said no, and the length was never taken");
+    check("a measurement that found nothing ends the asking", !ProtracktorAsap_LengthStillComing(0, 0, 0), "it said yes");
+    check("another subsong's measurement says nothing about this one", ProtracktorAsap_LengthStillComing(1, 0, 0), "it said no");
+
     return failed ? 1 : 0;
 }

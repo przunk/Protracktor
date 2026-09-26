@@ -664,7 +664,7 @@ public:
 #endif
         if (durationMs_ > 0 || knownFor(song_)) return false;
         const std::int64_t measured = measured_.load(std::memory_order_acquire);
-        return measured == kNotMeasured || songOf(measured) != song_;
+        return measured == kNotMeasured || ProtracktorAsap_LengthStillComing(songOf(measured), msOf(measured), song_);
     }
 
     std::size_t render(int, std::size_t frames, float *out) override {

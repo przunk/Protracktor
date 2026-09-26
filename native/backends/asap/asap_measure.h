@@ -27,6 +27,19 @@ extern "C" {
 int ProtracktorAsap_MeasureMs(const char *filename, const uint8_t *module, int moduleLen, int song,
                               int scanSeconds, bool *loop, bool (*cancelled)(void *), void *context);
 
+/**
+ * Whether the host should go on asking for a length, given what the measurement has said so far:
+ * [measuredSubsong] is the subsong last measured (-1 before any), [measuredMs] what it found (0 for
+ * nothing), [playing] the subsong playing now.
+ *
+ * **Yes until the host has taken a length that exists.** The host asks only while this says yes,
+ * and stops once it holds a length -- so saying no the moment a measurement lands, as the first
+ * version did, stopped the asking exactly when there was something to take, and the length never
+ * reached the screen (the owner, 2026-09-27: Bonio.sap still showed `~`). No only when the playing
+ * subsong was measured and nothing was found.
+ */
+bool ProtracktorAsap_LengthStillComing(int measuredSubsong, int measuredMs, int playing);
+
 #ifdef __cplusplus
 }
 #endif
