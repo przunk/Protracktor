@@ -399,7 +399,7 @@ class CatalogueStore(context: Context) {
      */
     suspend fun platformCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT platform, COUNT(*) FROM catalogue_tracks WHERE playable = 1 AND platform <> '' GROUP BY platform", emptyArray(),
+            SchemaSql.PLATFORM_COUNTS, emptyArray(),
         ).use { row ->
             buildMap { while (row.moveToNext()) put(row.getString(0), row.getInt(1)) }
         }

@@ -804,18 +804,80 @@ class SchemaSqlTest {
     }
 
     @Test
-    fun `history forgets the oldest once it is over its limit`() {
+    fun `history keeps every tune played, past the 500 it used to stop at`() {
         memoryDatabase().use { connection ->
             connection.run(SchemaSql.CREATE)
-            val over = SchemaSql.PLAY_HISTORY_LIMIT + 5
-            (1..over).forEach { connection.record("t$it", "t$it", it.toLong()) }
-            connection.run(listOf(SchemaSql.PLAY_HISTORY_PRUNE))
+            (1..650).forEach { connection.record("t$it", "t$it", it.toLong()) }
 
             val rows = connection.historyRows()
-            assertEquals(SchemaSql.PLAY_HISTORY_LIMIT, rows.size)
-            // The newest survived and the oldest did not.
-            assertEquals("t$over", rows.first().first)
-            assertTrue(rows.none { it.first == "t1" })
+            assertEquals(650, rows.size)
+            assertEquals("t650", rows.first().first)
+            assertEquals("t1", rows.last().first)
+        }
+    }
+
+    @Test
+    fun `a page of history is its hundred, newest first, and the count is all of it`() {
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            (1..250).forEach { connection.record("t$it", "t$it", it.toLong()) }
+
+            val page = connection.prepareStatement(SchemaSql.PLAY_HISTORY_PAGE).use { statement ->
+                statement.setInt(1, 100)
+                statement.setInt(2, 100)
+                statement.executeQuery().use { rows -> buildList { while (rows.next()) add(rows.getString(1)) } }
+            }
+            assertEquals((150 downTo 51).map { "t$it" }, page)
+            val count = connection.createStatement().use { statement ->
+                statement.executeQuery(SchemaSql.PLAY_HISTORY_COUNT).use { rows -> rows.next(); rows.getInt(1) }
+            }
+            assertEquals(250, count)
+        }
+    }
+
+    @Test
+    fun `a page of history is read along the index, not by sorting the whole table`() {
+        // The point of reading a page (2026-09-26): its cost must not grow with History. A sort
+        // of the table would read all of it for every page.
+        memoryDatabase().use { connection ->
+            connection.run(SchemaSql.CREATE)
+            val plan = connection.createStatement().use { statement ->
+                statement.executeQuery("EXPLAIN QUERY PLAN " + SchemaSql.PLAY_HISTORY_PAGE.replace("?", "1")).use { rows ->
+                    buildString { while (rows.next()) append(rows.getString("detail")).append('\n') }
+                }
+            }
+            assertTrue(plan, plan.contains("idx_play_history_recent"))
+            assertTrue(plan, !plan.contains("TEMP B-TREE"))
+        }
+    }
+
+    @Test
+    fun `version 21 counts the platforms from an index, and keeps every row it migrates`() {
+        memoryDatabase().use { connection ->
+            connection.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, 20))
+            connection.run(listOf(
+                "INSERT INTO catalogues (id, display_name, track_count) VALUES ('modland', 'Modland', 3)",
+                "INSERT INTO catalogue_tracks (catalogue_id, path, format, author, title, size, platform) " +
+                    "VALUES ('modland', 'a', 'Protracker', 'x', 'a', 1, 'amiga'), " +
+                    "('modland', 'b', 'Protracker', 'x', 'b', 1, 'amiga'), " +
+                    "('modland', 'c', 'SID', 'y', 'c', 1, 'c64')",
+            ))
+            connection.run(SchemaSql.migrationsBetween(20, SchemaSql.VERSION))
+
+            val counts = connection.createStatement().use { statement ->
+                statement.executeQuery(SchemaSql.PLATFORM_COUNTS).use { rows ->
+                    buildMap { while (rows.next()) put(rows.getString(1), rows.getInt(2)) }
+                }
+            }
+            assertEquals(mapOf("amiga" to 2, "c64" to 1), counts)
+            val plan = connection.createStatement().use { statement ->
+                statement.executeQuery("EXPLAIN QUERY PLAN " + SchemaSql.PLATFORM_COUNTS).use { rows ->
+                    buildString { while (rows.next()) append(rows.getString("detail")).append('\n') }
+                }
+            }
+            // The whole reason for the version: read along the index, nothing sorted.
+            assertTrue(plan, plan.contains("COVERING INDEX idx_catalogue_platform"))
+            assertTrue(plan, !plan.contains("TEMP B-TREE"))
         }
     }
 

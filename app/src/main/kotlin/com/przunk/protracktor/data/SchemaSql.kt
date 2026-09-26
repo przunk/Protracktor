@@ -26,7 +26,7 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 20
+    const val VERSION = 21
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -462,6 +462,20 @@ object SchemaSql {
         "ALTER TABLE catalogue_tracks ADD COLUMN platform TEXT NOT NULL DEFAULT ''",
     )
 
+    /**
+     * Version 21: the platform chips counted from an index rather than from the table.
+     *
+     * **History stood in a queue behind them** (the owner, 2026-09-26): Browse's first screen counts
+     * the tunes on each platform, `GROUP BY platform` over every playable row -- half a million with
+     * Modland indexed, read whole and sorted, 0.42 s on a desktop and seconds on a phone. A History
+     * opened meanwhile waited for it; the owner waited ten seconds on Browse and History then opened
+     * at once. Partial like the other two, so it holds only what the count reads, and covering, so the
+     * count reads nothing else: 0.085 s on the same desktop.
+     */
+    internal val CATALOGUE_PLATFORM_INDEX_V21: List<String> = listOf(
+        "CREATE INDEX idx_catalogue_platform ON catalogue_tracks(platform) WHERE playable = 1",
+    )
+
     class FoldBackfill(val select: String, val update: String)
 
     val FOLDED_BACKFILL_V19: List<FoldBackfill> = listOf(
@@ -553,7 +567,8 @@ object SchemaSql {
         CATALOGUE_BACKENDS_V9 + PLAY_ALL_SUBSONGS_V10 + TRACK_METADATA_V11 +
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
         CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17 +
-        REREAD_DAMAGED_TITLES_V18 + SEARCH_FOLDED_V19 + CATALOGUE_PLATFORM_V20
+        REREAD_DAMAGED_TITLES_V18 + SEARCH_FOLDED_V19 + CATALOGUE_PLATFORM_V20 +
+        CATALOGUE_PLATFORM_INDEX_V21
 
 
 
@@ -584,7 +599,27 @@ object SchemaSql {
         18 to REREAD_DAMAGED_TITLES_V18,
         19 to SEARCH_FOLDED_V19,
         20 to CATALOGUE_PLATFORM_V20,
+        21 to CATALOGUE_PLATFORM_INDEX_V21,
     )
+
+    /**
+     * One page of History, newest first: `LIMIT` and `OFFSET` as the two arguments.
+     *
+     * **A page read, not the whole table** (the owner, 2026-09-26: History took seconds to open).
+     * It read every row and dated each one before showing any, and with no limit on History that
+     * only grows. Served by `idx_play_history_recent` in order, so a page costs the same whether
+     * History holds five hundred tunes or fifty thousand.
+     */
+    const val PLAY_HISTORY_PAGE: String =
+        "SELECT track_id, title, subtitle, file_name, author, size, played_at, play_count " +
+            "FROM play_history ORDER BY played_at DESC LIMIT ? OFFSET ?"
+
+    /** The playable tunes on each platform, for the platform chips; read from `idx_catalogue_platform`. */
+    const val PLATFORM_COUNTS: String =
+        "SELECT platform, COUNT(*) FROM catalogue_tracks WHERE playable = 1 AND platform <> '' GROUP BY platform"
+
+    /** How many tunes History holds, for "101–200 of 734". */
+    const val PLAY_HISTORY_COUNT: String = "SELECT COUNT(*) FROM play_history"
 
     /**
      * Records a play, or moves an existing one up and counts it.
@@ -609,13 +644,6 @@ object SchemaSql {
         )
     """.trimIndent()
 
-    /** How many tracks history remembers. Past this the oldest are forgotten. */
-    const val PLAY_HISTORY_LIMIT = 500
-
-    /** Forgets the oldest. Run in the same transaction as [PLAY_HISTORY_RECORD]. */
-    val PLAY_HISTORY_PRUNE: String =
-        "DELETE FROM play_history WHERE track_id NOT IN " +
-            "(SELECT track_id FROM play_history ORDER BY played_at DESC LIMIT $PLAY_HISTORY_LIMIT)"
 
     /**
      * Every table in the file, asked of the file rather than listed.

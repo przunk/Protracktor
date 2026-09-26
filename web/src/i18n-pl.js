@@ -7,6 +7,10 @@
 // (`app/src/main/res/values-pl/strings.xml`). `check-page.mjs` fails on a text with no entry here.
 
 export const PL = {
+  "Newer": "Nowsze",
+  "Older": "Starsze",
+  "{first}–{last} of {total}": "{first}–{last} z {total}",
+  "Nothing played yet. What the page plays is kept here, one row a tune.": "Nic jeszcze nie grało. To, co gra strona, jest tu zapisywane, jeden wiersz na utwór.",
   "Share": "Udostępnij",
   "Share as audio": "Udostępnij jako audio",
   "This browser cannot make an audio file. Chrome, Edge and Safari can.": "Ta przeglądarka nie umie zrobić pliku audio. Chrome, Edge i Safari umieją.",
@@ -137,7 +141,6 @@ export const PL = {
   "nothing has played yet": "jeszcze nic nie grało",
   "Nothing here yet": "Jeszcze tu pusto",
   "nothing matched {among}, in {ms} ms.": "nic nie pasuje {among}, w {ms} ms.",
-  "Nothing played yet. What the page plays is kept here — the last 500 tunes, one row each.": "Jeszcze nic nie grało. Tu zostaje to, co grała strona — ostatnie 500 utworów, każdy w jednym wierszu.",
   "Nothing playing": "Nic nie gra",
   "Nothing stored yet.": "Jeszcze nic nie zapisano.",
   "Nothing to browse yet. Download a catalogue and half a million tracks are yours to look through, offline — or send tunes from your phone with the pairing code.": "Nie ma jeszcze czego przeglądać. Pobierz katalog, a pół miliona utworów będzie do przejrzenia offline — albo wyślij utwory z telefonu kodem parowania.",

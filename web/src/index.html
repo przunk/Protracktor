@@ -609,6 +609,14 @@
   .browseview .browsehead .plain { background: none; color: var(--on-surface-variant); border: 0;
                                    padding: 10px 14px; font: inherit; border-radius: var(--shape-xl); cursor: pointer; }
   #browselist { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }
+  .historypager { display: flex; align-items: center; gap: 6px; padding: 0 0 6px; }
+  .historypager[hidden] { display: none; }
+  .historypager span { flex: 1; text-align: center; font-size: var(--body-medium); color: var(--on-surface-variant); }
+  .historypager .plain { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0;
+                         color: var(--primary); font: inherit; font-weight: 500; padding: 8px 10px;
+                         border-radius: var(--shape-xl); cursor: pointer; }
+  .historypager .plain:disabled { color: var(--on-surface-variant); opacity: .45; cursor: default; }
+  .historypager svg { width: 20px; height: 20px; fill: currentColor; }
   #browselist li {
     display: flex; align-items: center; gap: 10px;
     padding: 11px 12px; border-radius: var(--shape-s); cursor: pointer;
@@ -856,6 +864,12 @@
     <div id="browsedigression" class="randomhead digression" hidden></div>
     <input type="search" id="browsesearch" placeholder="Search Modland — a tune or an author">
     <p class="note" id="browsenote"></p>
+    <!-- History a hundred at a time, and the way on outside the list's scroll (the phone's pager). -->
+    <div id="historypager" class="historypager" hidden>
+      <button class="plain" id="history-newer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>Newer</button>
+      <span id="historyrange"></span>
+      <button class="plain" id="history-older">Older<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+    </div>
     <ol id="browselist"></ol>
   </section>
 

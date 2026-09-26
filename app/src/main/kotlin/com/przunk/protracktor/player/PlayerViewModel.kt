@@ -110,6 +110,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun importPlaylist(uri: Uri) = controller.importPlaylist(uri)
 
     fun clearHistory() = controller.clearHistory()
+    fun showHistoryPage(page: Int) = controller.showHistoryPage(page)
 
     fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)
 

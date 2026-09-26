@@ -84,6 +84,7 @@ import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.DownloadKeys
 import com.przunk.protracktor.player.DownloadSizes
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.HistoryPages
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
@@ -120,6 +121,7 @@ fun BrowseScreen(
     onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
+    onHistoryPage: (Int) -> Unit = {},
     playingId: String?,
     loadingId: String?,
     /**
@@ -260,6 +262,7 @@ fun BrowseScreen(
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onClearHistory = onClearHistory,
+                onHistoryPage = onHistoryPage,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -1050,6 +1053,7 @@ private fun HistoryDomain(
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
+    onHistoryPage: (Int) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -1058,7 +1062,7 @@ private fun HistoryDomain(
         Loading()
         return
     }
-    if (browse.history.isEmpty()) {
+    if (browse.historyTotal == 0) {
         Text(
             text = stringResource(R.string.history_empty),
             style = MaterialTheme.typography.bodyMedium,
@@ -1075,6 +1079,31 @@ private fun HistoryDomain(
         ) {
             TextButton(onClick = onClearHistory) {
                 IconLabel(PlayerIcons.Remove, stringResource(R.string.action_clear_history))
+            }
+        }
+        // **A hundred at a time, and the way on outside the list** (the owner, 2026-09-26): here,
+        // above it, so the next page is one press from wherever the list is scrolled. Only when
+        // there is more than one page.
+        val total = browse.historyTotal
+        if (HistoryPages.count(total) > 1) {
+            val page = browse.historyPage
+            val range = HistoryPages.range(page, total)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = { onHistoryPage(page - 1) }, enabled = page > 0) {
+                    IconLabel(PlayerIcons.ChevronLeft, stringResource(R.string.history_newer))
+                }
+                Text(
+                    text = stringResource(R.string.history_page_range, range.first, range.last, total),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { onHistoryPage(page + 1) }, enabled = page < HistoryPages.count(total) - 1) {
+                    IconLabel(PlayerIcons.ChevronRight, stringResource(R.string.history_older), iconAfter = true)
+                }
             }
         }
         Selectable(

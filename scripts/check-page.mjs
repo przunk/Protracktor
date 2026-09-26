@@ -1510,9 +1510,26 @@ if (window.__api) {
   check(rows[0].url.endsWith('h1.mod') && rows[0].playCount === 2 && rows[0].name === 'What it calls itself',
     'a replay moves to the top, is counted, and takes the better title');
 
-  await played.record(entry(3), { limit: 2 });
+  // **Nothing is forgotten** (the owner, 2026-09-26): it used to keep the last 500.
+  for (let n = 3; n <= 520; n++) await played.record(entry(n));
   rows = await played.recent();
-  check(rows.length === 2 && !rows.some((r) => r.url.endsWith('h2.mod')), 'past the limit the oldest is forgotten');
+  check(rows.length === 520 && rows.some((r) => r.url.endsWith('h2.mod')), 'past the 500 it used to stop at, nothing is forgotten');
+
+  // A hundred at a time, with the way on above the list rather than in it.
+  await window.__api.browseTo(['history']);
+  const pager = $('historypager');
+  check(!pager.hidden && $('historyrange').textContent === '1–100 of 520' && $('history-newer').disabled
+        && !$('history-older').disabled && $('browselist').children.length === 101,
+    'History shows the newest hundred, says which, and offers the older ones');
+  $('history-older').click();
+  await new Promise((r) => setTimeout(r, 50));
+  check($('historyrange').textContent === '101–200 of 520' && !$('history-newer').disabled,
+    'Older shows the next hundred');
+  for (let i = 0; i < 5; i++) { $('history-older').click(); await new Promise((r) => setTimeout(r, 50)); }
+  check($('historyrange').textContent === '501–520 of 520' && $('history-older').disabled,
+    'and stops at the last page, which holds what is left');
+  check([pager.querySelector('#history-newer'), pager.querySelector('#history-older')].every((b) => b.querySelector('svg')),
+    'each way with its icon');
 
   await played.clear();
   check((await played.recent()).length === 0, 'and clearing empties it');
@@ -2632,6 +2649,13 @@ if (window.__api) {
   }
   if ($('shuffle').classList.contains('on')) $('shuffle').click();
   for (let i = 0; i < 3 && $('repeat').title !== 'Repeat off'; i++) $('repeat').click();
+  each('historyPages', (c) => {
+    const total = Number(c.total);
+    const range = rules.historyPageRange(Number(c.page), total);
+    return rules.historyPageCount(total) === Number(c.pages)
+      && rules.historyPageClamp(Number(c.page), total) === Number(c.shown)
+      && (c.first === '-' ? range === null : range?.first === Number(c.first) && range?.last === Number(c.last));
+  });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
   // --- the page in Polish, and in a light theme (W6, W7) ------------------------------------------

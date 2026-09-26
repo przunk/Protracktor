@@ -185,6 +185,10 @@ object PlayerIcons {
                 "4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z",
         )
     }
+    /** Towards the newer page of History. */
+    val ChevronLeft: ImageVector by lazy { icon("ChevronLeft", "M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z") }
+    /** Towards the older page of History. */
+    val ChevronRight: ImageVector by lazy { icon("ChevronRight", "M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z") }
     /** Stacked drives: the database, for "preparing the database" (A60). */
     val Database: ImageVector by lazy {
         icon(

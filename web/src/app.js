@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
@@ -2664,6 +2664,7 @@ async function renderBrowse() {
   // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
   $('browsesearch').hidden = !!away?.dice || browsePath[0] !== 'search';
   $('browseclose').hidden = !!away?.dice;
+  $('historypager').hidden = true;
 
   // **Declared before anything uses it**, because the "From the phone" branch below calls it: a
   // `const` read before its declaration throws when Browse is opened on the phone's list with an
@@ -2737,12 +2738,22 @@ async function renderBrowse() {
 
   if (browsePath[0] === 'history') {
     $('browsetitle').textContent = t('History');
-    const rows = await played.recent();
-    if (!rows.length) {
-      note.textContent = t('Nothing played yet. What the page plays is kept here — the last 500 tunes, one row each.');
+    const all = await played.recent();
+    if (!all.length) {
+      note.textContent = t('Nothing played yet. What the page plays is kept here, one row a tune.');
       return;
     }
-    note.textContent = tn(rows.length, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+    note.textContent = tn(all.length, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+    // **Every tune, a hundred at a time** (the owner, 2026-09-26): it used to keep the last 500.
+    historyPage = historyPageClamp(historyPage, all.length);
+    const rows = all.slice(historyPage * HISTORY_PAGE, (historyPage + 1) * HISTORY_PAGE);
+    if (historyPageCount(all.length) > 1) {
+      const { first, last } = historyPageRange(historyPage, all.length);
+      $('historypager').hidden = false;
+      $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: all.length.toLocaleString() });
+      $('history-newer').disabled = historyPage === 0;
+      $('history-older').disabled = historyPage >= historyPageCount(all.length) - 1;
+    }
     const tracks = rows.filter((r) => r.replayable)
       .map(({ url, name, meta, file }) => ({ url, name, meta, file }));
     for (const r of rows) {
@@ -2868,8 +2879,15 @@ function openBrowseMenu(track, anchor, folder) {
 /** Browse → History. */
 async function openHistory() {
   browsePath = ['history'];
+  // Opened at the newest: a visit starts where the question usually is, "what was that".
+  historyPage = 0;
   await renderBrowse();
 }
+
+/** Which hundred of History is on screen, the newest first (the phone's `HistoryPages`). */
+let historyPage = 0;
+$('history-newer').onclick = async () => { historyPage -= 1; await renderBrowse(); $('browselist').scrollTop = 0; };
+$('history-older').onclick = async () => { historyPage += 1; await renderBrowse(); $('browselist').scrollTop = 0; };
 
 /**
  * Plays a tune found by browsing, **without touching the playlist**. The list it came from is
