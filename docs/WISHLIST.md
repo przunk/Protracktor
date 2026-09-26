@@ -10,6 +10,22 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B39. Screenshots made and checked without a phone — **noted 2026-09-26, the owner: "worth adding"; not started**
+
+The owner asked whether I can make screenshots myself and look at them, as Kratkoza does (read with
+his leave, 2026-09-26). Kratkoza renders Compose screens in JVM tests through **Robolectric** with
+native graphics (`@GraphicsMode(NATIVE)`, a size such as `w360dp-h800dp-xhdpi`), draws the window's
+view straight onto a bitmap and writes a PNG -- no emulator. I can read the PNGs, so a layout that
+does not fit, a label cut short or a dimming that does not dim is caught before an APK goes out.
+
+What it would take here: **Robolectric and Compose `ui-test` as test-only dependencies** (nothing in
+the APK; the owner agreed they are worth adding), a small render helper copied in rather than shared,
+and first screens -- the row menu with its dimming, History's pager, both themes, both languages.
+Limits: a dropdown menu is a separate window, which drawing the main view misses, so the render has
+to draw the popups too; fonts and dynamic colour may differ from a phone; the page is not covered (a
+headless browser would be another dependency and another conversation). The phone stays the last
+word.
+
 ## B38. Pairing on the public page — **noted 2026-09-25, later: the owner accepts no pairing on GitHub Pages for now**
 
 The owner asked why the public copy (https://przunk.github.io/Protracktor/) has no pairing, and

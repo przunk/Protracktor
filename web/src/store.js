@@ -187,12 +187,9 @@ export const catalogue = {
   },
 };
 
-/** The phone's `PLAY_HISTORY_LIMIT`: the last 500 tunes, the oldest forgotten. */
-export const PLAYED_LIMIT = 500;
-
 /**
- * Strictly increasing within a session, so two plays in one millisecond still have an order -- the
- * oldest is what the limit forgets, and a tie would make which one goes a coin toss.
+ * Strictly increasing within a session, so two plays in one millisecond still have an order, and
+ * History lists them the way they happened.
  */
 let lastStamp = 0;
 
@@ -205,20 +202,13 @@ let lastStamp = 0;
  * it has been opened, and afterwards under the name it gives itself.
  */
 export const played = {
-  async record(entry, { limit = PLAYED_LIMIT } = {}) {
+  // **Nothing is forgotten** (the owner, 2026-09-26): it used to keep the last 500, as the phone did.
+  async record(entry) {
     lastStamp = Math.max(Date.now(), lastStamp + 1);
     const before = await tx('played', 'readonly', (s) => s.get(entry.url));
     await tx('played', 'readwrite', (s) => s.put({
       ...before, ...entry, playedAt: lastStamp, playCount: (before?.playCount ?? 0) + 1,
     }));
-    // The oldest forgotten once the list is over its limit -- read whole only then, which for 500
-    // rows is nothing and on most plays does not happen at all.
-    if ((await tx('played', 'readonly', (s) => s.count())) > limit) {
-      const all = (await tx('played', 'readonly', (s) => s.getAll())) ?? [];
-      all.sort((a, b) => b.playedAt - a.playedAt);
-      const drop = all.slice(limit).map((row) => row.url);
-      await tx('played', 'readwrite', (s) => { drop.forEach((url) => s.delete(url)); return null; });
-    }
   },
 
   /** Most recently played first. */

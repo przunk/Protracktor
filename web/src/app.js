@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
@@ -1435,11 +1435,9 @@ function openRowMenu(entry, anchor) {
     // **One row, one press**, as the phone's row menu has it: ticking the row first would be a
     // gesture meant for many rows spent on one.
     [t('Add to playlist'), () => openAddTo([plain(entry)]), !entry.local, ICON.playlistAdd],
-    [t('Save the file'), () => saveFile(entry), !entry.local, ICON.save],
-    // A row that stayed on the phone has no bytes to render, which is not this browser's fault.
-    [t('Share as audio'), () => shareAsAudio(entry), !entry.local && audioShareWorks(), ICON.audio, entry.local ? null : audioShareRefusal],
-    [t('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
-    [t('Share with Protracktor'), () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
+    // **One Share, and the four ways behind it** (the owner, 2026-09-25): the same list Now
+    // Playing's Share opens, so the two cannot drift apart again.
+    shareEntry(entry, anchor, () => openRowMenu(entry, anchor)),
     // On every list, as on the phone, not in Browse alone.
     [t('More from this author'), () => showAuthorFolder(entry), !!authorFolderOf(entry), ICON.folder],
     [t('Information'), () => informAbout(entry), !entry.local, ICON.info],
@@ -1479,6 +1477,7 @@ function showMenu(items, anchor) {
     menu.append(button);
   }
   const box = anchor.getBoundingClientRect();
+  spotlight(anchor.closest('li') ?? anchor);
   menu.hidden = false;
   // Placed after it is shown, because a hidden element measures zero and would be pinned to the
   // top left on the first open of every session.
@@ -1487,7 +1486,23 @@ function showMenu(items, anchor) {
   menu.style.top = `${box.bottom + height > innerHeight ? Math.max(8, box.top - height) : box.bottom}px`;
 }
 
-function closeRowMenu() { $('menu').hidden = true; }
+function closeRowMenu() {
+  $('menu').hidden = true;
+  $('menublock').hidden = true;
+  $('menuspot').hidden = true;
+}
+
+/** Dims all but [element] -- the row a menu came from -- while the menu is open. */
+function spotlight(element) {
+  const box = element.getBoundingClientRect();
+  Object.assign($('menuspot').style, {
+    left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`,
+  });
+  $('menuspot').hidden = false;
+  $('menublock').hidden = false;
+}
+// A press beside the menu closes it and does nothing else: the rows under the block never see it.
+$('menublock').addEventListener('click', (event) => { event.stopPropagation(); closeRowMenu(); });
 addEventListener('click', (event) => {
   if (!$('menu').hidden && !$('menu').contains(event.target)) closeRowMenu();
 });
@@ -1773,6 +1788,7 @@ function answerUnsaved(go) {
 /** The phone's icons, the same paths, for controls the page builds rather than declares. */
 const ICON = {
   save: 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z',
+  back: 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
   // A file with a note on it: the tune sent as sound (A62). The phone's `AudioFile`.
   audio: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 11h-3v3.75c0 1.24-1.01 2.25-2.25 2.25S8.5 17.99 8.5 16.75s1.01-2.25 2.25-2.25c.46 0 .89.14 1.25.38V11h4v2zm-3-4V3.5L18.5 9H13z',
   share: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z',
@@ -2648,6 +2664,7 @@ async function renderBrowse() {
   // chosen, not over every list in Browse. Never inside a digression, whose way out is Back.
   $('browsesearch').hidden = !!away?.dice || browsePath[0] !== 'search';
   $('browseclose').hidden = !!away?.dice;
+  $('historypager').hidden = true;
 
   // **Declared before anything uses it**, because the "From the phone" branch below calls it: a
   // `const` read before its declaration throws when Browse is opened on the phone's list with an
@@ -2721,12 +2738,22 @@ async function renderBrowse() {
 
   if (browsePath[0] === 'history') {
     $('browsetitle').textContent = t('History');
-    const rows = await played.recent();
-    if (!rows.length) {
-      note.textContent = t('Nothing played yet. What the page plays is kept here — the last 500 tunes, one row each.');
+    const all = await played.recent();
+    if (!all.length) {
+      note.textContent = t('Nothing played yet. What the page plays is kept here, one row a tune.');
       return;
     }
-    note.textContent = tn(rows.length, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+    note.textContent = tn(all.length, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+    // **Every tune, a hundred at a time** (the owner, 2026-09-26): it used to keep the last 500.
+    historyPage = historyPageClamp(historyPage, all.length);
+    const rows = all.slice(historyPage * HISTORY_PAGE, (historyPage + 1) * HISTORY_PAGE);
+    if (historyPageCount(all.length) > 1) {
+      const { first, last } = historyPageRange(historyPage, all.length);
+      $('historypager').hidden = false;
+      $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: all.length.toLocaleString() });
+      $('history-newer').disabled = historyPage === 0;
+      $('history-older').disabled = historyPage >= historyPageCount(all.length) - 1;
+    }
     const tracks = rows.filter((r) => r.replayable)
       .map(({ url, name, meta, file }) => ({ url, name, meta, file }));
     for (const r of rows) {
@@ -2845,18 +2872,22 @@ function openBrowseMenu(track, anchor, folder) {
   if (folder && authorFolderOf(track)) {
     items.push([t('More from this author'), () => showAuthorFolder(track), true, ICON.folder]);
   }
-  items.push([t('Save the file'), () => saveFile(track), true, ICON.save]);
-  items.push([t('Share as audio'), () => shareAsAudio(track), audioShareWorks(), ICON.audio, audioShareRefusal]);
-  items.push([t('Copy a link'), () => copyLink(track), true, ICON.link]);
-  items.push([t('Share with Protracktor'), () => sendToWeb(track), canSendToWeb(track), ICON.web]);
+  items.push(shareEntry(track, anchor, () => openBrowseMenu(track, anchor, folder)));
   showMenu(items, anchor);
 }
 
 /** Browse → History. */
 async function openHistory() {
   browsePath = ['history'];
+  // Opened at the newest: a visit starts where the question usually is, "what was that".
+  historyPage = 0;
   await renderBrowse();
 }
+
+/** Which hundred of History is on screen, the newest first (the phone's `HistoryPages`). */
+let historyPage = 0;
+$('history-newer').onclick = async () => { historyPage -= 1; await renderBrowse(); $('browselist').scrollTop = 0; };
+$('history-older').onclick = async () => { historyPage += 1; await renderBrowse(); $('browselist').scrollTop = 0; };
 
 /**
  * Plays a tune found by browsing, **without touching the playlist**. The list it came from is
@@ -3829,6 +3860,9 @@ function startOnFirstTouch() {
   for (const type of events) addEventListener(type, firstTouch, true);
 }
 
+/** Where Share with Protracktor points: the public page, `src/` since the root's refresh drops a fragment. */
+const PUBLIC_PAGE = 'https://przunk.github.io/Protracktor/src/';
+
 /** Whether a row can go as a one-tune link: `QueueLink.canSend`, the page's side of it. */
 function canSendToWeb(entry) {
   return !!entry?.url && !entry.local && /^https?:\/\//.test(entry.url)
@@ -3853,7 +3887,10 @@ async function sendToWeb(entries) {
     return !title || title.toLowerCase() === file.toLowerCase() ? address : `${address}\t${title}`;
   });
   const entry = tunes[0];
-  const link = `${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(lines.join('\n'))}`;
+  // **The public page, wherever this one is served from** (the owner, 2026-09-25): the link is
+  // for somebody else, and this page's own address -- a computer at home, a tunnel -- opens
+  // nowhere on theirs. The phone's `QueueLink.PUBLIC_BASE`.
+  const link = `${PUBLIC_PAGE}#${PLAY_PREFIX}${await deflateFragment(lines.join('\n'))}`;
   lastSentLink = link;
   try {
     const named = tunes.length === 1 ? entry.name : tn(tunes.length, '{n} tune', '{n} tunes');
@@ -3918,12 +3955,29 @@ let madeAudio = null;
  * The ways to share a tune, behind Now Playing's one Share -- the phone's menu, in the page's
  * words: saving the file, the tune as audio, and its address.
  */
-function shareItems(entry) {
+function shareItems(entry, back = null) {
   return [
+    // Back to the menu this came from, where there was one: a row's menu, not Now Playing.
+    ...(back ? [[t('Back'), back, true, ICON.back]] : []),
     [t('Save the file'), () => saveFile(entry), !entry.local, ICON.save],
+    // A row that stayed on the phone has no bytes to render, which is not this browser's fault.
     [t('Share as audio'), () => shareAsAudio(entry), !entry.local && audioShareWorks(), ICON.audio, entry.local ? null : audioShareRefusal],
     [t('Copy a link'), () => copyLink(entry), !!entry.url, ICON.link],
+    [t('Share with Protracktor'), () => sendToWeb(entry), canSendToWeb(entry), ICON.web],
   ];
+}
+
+/**
+ * A row menu's Share: it turns the menu into [shareItems], in the same place, with Back to [reopen]
+ * the rest. Live while any of the four can be done or explained.
+ */
+function shareEntry(entry, anchor, reopen) {
+  const ways = shareItems(entry);
+  const live = ways.some(([, , enabled, , refusal]) => enabled || refusal?.());
+  // Drawn on the next turn: the press that chose Share is still on its way up to the page's
+  // click-away, which would close a menu drawn now under a button that is no longer in it.
+  const next = (draw) => () => setTimeout(draw);
+  return [t('Share'), next(() => showMenu(shareItems(entry, next(reopen)), anchor)), live, ICON.share];
 }
 
 async function shareAsAudio(entry) {

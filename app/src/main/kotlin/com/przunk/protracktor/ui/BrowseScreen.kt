@@ -84,6 +84,7 @@ import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.DownloadKeys
 import com.przunk.protracktor.player.DownloadSizes
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.HistoryPages
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
@@ -120,6 +121,7 @@ fun BrowseScreen(
     onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
+    onHistoryPage: (Int) -> Unit = {},
     playingId: String?,
     loadingId: String?,
     /**
@@ -260,6 +262,7 @@ fun BrowseScreen(
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onClearHistory = onClearHistory,
+                onHistoryPage = onHistoryPage,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -1050,6 +1053,7 @@ private fun HistoryDomain(
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
+    onHistoryPage: (Int) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -1058,7 +1062,7 @@ private fun HistoryDomain(
         Loading()
         return
     }
-    if (browse.history.isEmpty()) {
+    if (browse.historyTotal == 0) {
         Text(
             text = stringResource(R.string.history_empty),
             style = MaterialTheme.typography.bodyMedium,
@@ -1075,6 +1079,31 @@ private fun HistoryDomain(
         ) {
             TextButton(onClick = onClearHistory) {
                 IconLabel(PlayerIcons.Remove, stringResource(R.string.action_clear_history))
+            }
+        }
+        // **A hundred at a time, and the way on outside the list** (the owner, 2026-09-26): here,
+        // above it, so the next page is one press from wherever the list is scrolled. Only when
+        // there is more than one page.
+        val total = browse.historyTotal
+        if (HistoryPages.count(total) > 1) {
+            val page = browse.historyPage
+            val range = HistoryPages.range(page, total)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = { onHistoryPage(page - 1) }, enabled = page > 0) {
+                    IconLabel(PlayerIcons.ChevronLeft, stringResource(R.string.history_newer))
+                }
+                Text(
+                    text = stringResource(R.string.history_page_range, range.first, range.last, total),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { onHistoryPage(page + 1) }, enabled = page < HistoryPages.count(total) - 1) {
+                    IconLabel(PlayerIcons.ChevronRight, stringResource(R.string.history_older), iconAfter = true)
+                }
             }
         }
         Selectable(
@@ -1403,6 +1432,9 @@ private fun BrowseTrackRow(
 ) {
     val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
+    // The menu shows its Share entry's four ways instead of itself while this is set.
+    var sharing by remember { mutableStateOf(false) }
+    val shares = ShareActions(file = onShareFile, audio = onShareAudio, link = onShareLink, protracktor = onSendToWeb)
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -1451,7 +1483,11 @@ private fun BrowseTrackRow(
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(PlayerIcons.More, stringResource(R.string.a11y_track_menu, track.title))
                     }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false; sharing = false }) {
+                        if (sharing) {
+                            ShareMenuItems(shares, onBack = { sharing = false }, onDone = { menuOpen = false; sharing = false })
+                            return@DropdownMenu
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_add_to_playlist)) },
                             leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
@@ -1469,30 +1505,7 @@ private fun BrowseTrackRow(
                                 onClick = { menuOpen = false; show() },
                             )
                         }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_share_file)) },
-                            leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
-                            onClick = { menuOpen = false; onShareFile() },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_share_audio)) },
-                            leadingIcon = { Icon(PlayerIcons.AudioFile, contentDescription = null) },
-                            onClick = { menuOpen = false; onShareAudio() },
-                        )
-                        onShareLink?.let { share ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_share_link)) },
-                                leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
-                                onClick = { menuOpen = false; share() },
-                            )
-                        }
-                        onSendToWeb?.let { send ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_send_to_web)) },
-                                leadingIcon = { Icon(PlayerIcons.Web, contentDescription = null) },
-                                onClick = { menuOpen = false; send() },
-                            )
-                        }
+                        ShareMenuEntry(shares) { sharing = true }
                     }
                 }
             }
@@ -1527,6 +1540,7 @@ private fun BrowseTrackRow(
                     Modifier.graphicsLayer { alpha = breath.value }
                 }
             )
+            .menuFocus(menuOpen)
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
             // into a scroll is claimed by the list before it ever becomes a long press. Both
             // matter: a long press firing at a twentieth of a second mid-scroll drops the reader

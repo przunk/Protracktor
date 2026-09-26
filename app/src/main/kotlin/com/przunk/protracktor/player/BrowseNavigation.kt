@@ -33,7 +33,8 @@ object BrowseNavigation {
         openFolder = null,
         groups = emptyList(),
         tracks = emptyList(),
-        history = emptyList(),
+        historyTotal = 0,
+        historyPage = 0,
         folderUnscanned = false,
         folderStale = false,
         // A jump is a place you were put, not one you walked to. Choosing a domain by hand ends it.

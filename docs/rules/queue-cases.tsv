@@ -266,3 +266,16 @@ tracks	tapped	repeat	played	distinct	why
 41	40	off	41	41	nor the last
 8	3	all	-	8	repeat all does not stop, and its first lap is every tune once
 1	0	off	1	1	a playlist of one plays it and stops
+
+# History a hundred at a time (the owner, 2026-09-26): the phone's `HistoryPages`, the page's
+# `historyPage*`. `first`/`last` are the positions shown, counted from one, `-` when there are none.
+[historyPages]
+total	page	pages	shown	first	last	why
+734	0	8	0	1	100	the newest hundred first
+734	1	8	1	101	200	the second page
+734	7	8	7	701	734	the last page holds what is left
+734	9	8	7	701	734	a page past the end is the last one
+500	4	5	4	401	500	five full pages
+100	0	1	0	1	100	a hundred is one page
+101	1	2	1	101	101	and one more makes a second
+0	0	1	0	-	-	an empty history still has a page, with nothing on it
