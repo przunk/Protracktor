@@ -453,7 +453,7 @@ a search is a place to come back to, like the dice. The jump keeps it (`BrowseNa
 to the results as they were (`resumeSearch`). A tune chosen in the folder meanwhile stops and the
 results' tune waits paused, as the dice's does; otherwise the music plays on.
 
-### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **OPEN, reported 2026-09-24**
+### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **(b) BUILT on `feature/c91-sap-lengths`, confirmed on the phone 2026-09-27 ("it works"); not merged**
 
 The owner: `asma/Composers/przunk/Bonio.sap` (his own) is cut at ~3:00. **Mechanism, read from
 the file:** its header has no `TIME` line -- `AUTHOR`, `NAME`, `DATE`, `STEREO`, `TYPE`, `INIT`,
@@ -487,6 +487,17 @@ does not get it**, as it has no NSF measurement: its engine has no threads.
 owner's seven files, worked out with the same detection, for him to put in the files and send to
 ASMA -- every player anywhere then knows them, the page included. After the launch, (b) as above in
 the app.
+
+**(b) as built (2026-09-25..27).** `native/backends/asap/asap_measure.c`, compiled in `asap.c`'s place,
+ports `asapscan`'s silence and loop detection; `AsapBackend` measures a subsong with no `TIME` on a
+thread of its own when it starts playing, cancelled by a close or a switch. Across ASMA's 8,316
+subsongs that state a `TIME`: 72% to within 50 ms, 82% to within a second; the rest mostly a silent
+tail ASMA counts or a second pass of a loop; 4% nothing found in fifteen minutes, which keeps the
+fallback. `asapscan`'s "ultrasound" answer (registers standing still, reported as nothing) is refused.
+Bonio.sap measures 3:37.9. **The first phone build still showed `~`**: the decoder said no length was
+coming the moment one arrived, and the host, which asks only while one is coming, never took it --
+`ProtracktorAsap_LengthStillComing`, checked on the host, fixed that. The page does not measure: its
+engine has no threads.
 
 
 ### C92. The web page zoomed and moved in a Safari tab on an iPhone — **FIXED and merged 2026-09-24; not yet seen on an iPhone**
