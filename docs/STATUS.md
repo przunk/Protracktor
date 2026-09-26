@@ -453,7 +453,7 @@ a search is a place to come back to, like the dice. The jump keeps it (`BrowseNa
 to the results as they were (`resumeSearch`). A tune chosen in the folder meanwhile stops and the
 results' tune waits paused, as the dice's does; otherwise the music plays on.
 
-### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **(b) BUILT on `feature/c91-sap-lengths`, confirmed on the phone 2026-09-27 ("it works"); not merged**
+### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **(b) BUILT, merged and confirmed on the phone 2026-09-27 ("it works")**
 
 The owner: `asma/Composers/przunk/Bonio.sap` (his own) is cut at ~3:00. **Mechanism, read from
 the file:** its header has no `TIME` line -- `AUTHOR`, `NAME`, `DATE`, `STEREO`, `TYPE`, `INIT`,
