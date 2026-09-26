@@ -15,6 +15,24 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A64. History keeps everything, a hundred at a time — **asked 2026-09-26; BUILT on `feature/history-unlimited`, APK and page; not yet seen on the phone**
+
+The owner: *"history seems incomplete -- I have 500 tunes and have listened to hundreds more."* It was
+not a fault but a limit from its first version: `PLAY_HISTORY_LIMIT = 500`, the oldest forgotten on
+every play (the page's `PLAYED_LIMIT` the same). What went is gone. Decided: **no limit**, and History
+shown **a hundred at a time**, with the way to the next page outside the list's scroll -- *Newer*,
+"101–200 of 734", *Older*, above the list, each with its icon; a new visit opens at the newest. A row
+is a couple of hundred bytes, so ten thousand tunes are about 2 MB. The page arithmetic is in
+`docs/rules/queue-cases.tsv` (`historyPages`), run by the phone's `HistoryPages` and the page's rules.
+Playing from History walks the page on screen, which is the list a tap is about.
+
+**Opened slowly on the phone** (the owner, on the first build: "a few seconds"): it read every row and
+dated each one with `DateUtils` before showing any -- a cost that grows with History, now unlimited.
+Now it reads **one page and a count** (`PLAY_HISTORY_PAGE`, `PLAY_HISTORY_COUNT`), along the index,
+which a test holds to its query plan: a hundred rows and a hundred dates, however long History grows,
+and a switch to another page is another hundred. The mechanism is read from the code, not measured on
+the phone.
+
 ## A63. One Share, the same four ways everywhere; Share with Protracktor to the public page — **asked 2026-09-25; BUILT, APK and page; merged and confirmed on the phone 2026-09-26 ("super")**
 
 The owner: a row's menu had four ways to share and Now Playing's Share three -- no Share with

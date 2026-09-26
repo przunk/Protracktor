@@ -587,6 +587,21 @@ object SchemaSql {
     )
 
     /**
+     * One page of History, newest first: `LIMIT` and `OFFSET` as the two arguments.
+     *
+     * **A page read, not the whole table** (the owner, 2026-09-26: History took seconds to open).
+     * It read every row and dated each one before showing any, and with no limit on History that
+     * only grows. Served by `idx_play_history_recent` in order, so a page costs the same whether
+     * History holds five hundred tunes or fifty thousand.
+     */
+    const val PLAY_HISTORY_PAGE: String =
+        "SELECT track_id, title, subtitle, file_name, author, size, played_at, play_count " +
+            "FROM play_history ORDER BY played_at DESC LIMIT ? OFFSET ?"
+
+    /** How many tunes History holds, for "101–200 of 734". */
+    const val PLAY_HISTORY_COUNT: String = "SELECT COUNT(*) FROM play_history"
+
+    /**
      * Records a play, or moves an existing one up and counts it.
      *
      * Here rather than in [HistoryStore] because it is the one statement in the app with real logic
@@ -609,13 +624,6 @@ object SchemaSql {
         )
     """.trimIndent()
 
-    /** How many tracks history remembers. Past this the oldest are forgotten. */
-    const val PLAY_HISTORY_LIMIT = 500
-
-    /** Forgets the oldest. Run in the same transaction as [PLAY_HISTORY_RECORD]. */
-    val PLAY_HISTORY_PRUNE: String =
-        "DELETE FROM play_history WHERE track_id NOT IN " +
-            "(SELECT track_id FROM play_history ORDER BY played_at DESC LIMIT $PLAY_HISTORY_LIMIT)"
 
     /**
      * Every table in the file, asked of the file rather than listed.

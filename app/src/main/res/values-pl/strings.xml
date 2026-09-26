@@ -164,6 +164,9 @@
     <string name="domain_history_body">Odtworzone utwory, od najnowszych</string>
     <string name="history_empty">Nic jeszcze nie zagrało. Wszystko, co odtworzysz — z playlisty, z losowania czy z wyszukiwania — trafi tutaj.</string>
     <string name="action_clear_history">Wyczyść historię</string>
+    <string name="history_newer">Nowsze</string>
+    <string name="history_older">Starsze</string>
+    <string name="history_page_range">%1$,d–%2$,d z %3$,d</string>
 
     <string name="song_lengths_title">Długości utworów SID (HVSC)</string>
     <string name="song_lengths_none">Nie pobrano — utwory SID nie pokażą długości i grają, dopóki ich nie pominiesz</string>

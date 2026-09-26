@@ -360,3 +360,26 @@ export function shareAudioName(title, author) {
   // eslint-disable-next-line no-control-regex
   return `${named.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 120)}.m4a`;
 }
+
+// --- history a hundred at a time (the owner, 2026-09-26) ------------------------------------------
+//
+// The phone's `HistoryPages`; `docs/rules/queue-cases.tsv` holds both to the same answers.
+
+export const HISTORY_PAGE = 100;
+
+/** How many pages [total] tunes make: at least one. */
+export function historyPageCount(total) {
+  return Math.max(1, Math.ceil(total / HISTORY_PAGE));
+}
+
+/** [page] where it exists; the last one where the list has since shrunk under it. */
+export function historyPageClamp(page, total) {
+  return Math.min(Math.max(page, 0), historyPageCount(total) - 1);
+}
+
+/** The positions on [page], counted from one, for "101–200 of 734"; null when there are none. */
+export function historyPageRange(page, total) {
+  if (total === 0) return null;
+  const first = historyPageClamp(page, total) * HISTORY_PAGE + 1;
+  return { first, last: Math.min(first + HISTORY_PAGE - 1, total) };
+}

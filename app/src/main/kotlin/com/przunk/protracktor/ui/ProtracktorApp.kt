@@ -461,6 +461,7 @@ fun ProtracktorApp(
                 // Playing from Browse never adds anything and never touches the playlist: whatever
                 // is on screen becomes the queue for as long as you are looking at it.
                 onClearHistory = viewModel::clearHistory,
+                onHistoryPage = viewModel::showHistoryPage,
                 // Marks the row you are hearing. Browse plays through the results queue, so the
                 // current track is the queue's, not the playlist's.
                 playingId = state.current?.id,

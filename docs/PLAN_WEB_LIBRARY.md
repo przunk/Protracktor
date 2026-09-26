@@ -581,7 +581,7 @@ it, or it will drift the first time a backend moves.
 
 *`GOAL.md` round 8, item 4.* The phone's rules (`data/HistoryStore.kt`), kept in IndexedDB at
 database version 3 in a store keyed by address: **one row per tune**, moved to the top and counted
-when played again, the title written every time because it improves, **the last 500** kept and the
+when played again, the title written every time because it improves, **the last 500** kept (no longer: since 2026-09-26 nothing is forgotten, `docs/BACKLOG.md` A64) and the
 oldest forgotten. A stamp that only increases orders two plays in one millisecond.
 
 - **One recording path.** Every play is recorded in the `opened` handler — the one message every

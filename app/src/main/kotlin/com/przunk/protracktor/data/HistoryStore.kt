@@ -23,8 +23,9 @@ data class PlayedTrack(
  * What has been played.
  *
  * The question it answers is "that tune two days ago, what was it" — not "audit this app". That is
- * what decides the two things about it that are otherwise arguable: it holds one row per track
- * rather than one per play, and it forgets the oldest rather than growing forever.
+ * what decides that it holds one row per track rather than one per play. **It forgets nothing**
+ * (the owner, 2026-09-26): it used to keep the last 500 tunes, and a listener with more than that
+ * found the rest gone. A row is a couple of hundred bytes; History shows it a hundred at a time.
  */
 class HistoryStore(context: Context) {
 
@@ -54,18 +55,14 @@ class HistoryStore(context: Context) {
                     System.currentTimeMillis(), trackId,
                 ),
             )
-            // Forgetting the oldest, in the same transaction as the insert, so the table cannot
-            // be left over its limit by a crash between the two.
-            execSQL(SchemaSql.PLAY_HISTORY_PRUNE)
         }
     }
 
-    /** Most recently played first. */
-    suspend fun recent(): List<PlayedTrack> = withContext(Dispatchers.IO) {
+    /** [limit] tunes from [offset], most recently played first: one page of History. */
+    suspend fun page(offset: Int, limit: Int): List<PlayedTrack> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            "SELECT track_id, title, subtitle, file_name, author, size, played_at, play_count " +
-                "FROM play_history ORDER BY played_at DESC",
-            null,
+            SchemaSql.PLAY_HISTORY_PAGE,
+            arrayOf(limit.toString(), offset.toString()),
         ).use { row ->
             buildList {
                 while (row.moveToNext()) {
@@ -83,6 +80,13 @@ class HistoryStore(context: Context) {
                     )
                 }
             }
+        }
+    }
+
+    /** How many tunes History holds. */
+    suspend fun count(): Int = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(SchemaSql.PLAY_HISTORY_COUNT, null).use { row ->
+            if (row.moveToFirst()) row.getInt(0) else 0
         }
     }
 
