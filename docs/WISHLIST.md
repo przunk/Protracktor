@@ -10,6 +10,14 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B40. A SAP's measured lengths, remembered for every subsong — **noted 2026-09-28 from review F3; not planned**
+
+`AsapBackend` keeps one measured length, for the subsong last measured (C91 b). Switching back and
+forth between two subsongs that state no `TIME` measures each again every time -- a second or so of
+one core on a phone, nothing that breaks. A small map by subsong would keep them for as long as the
+file is open; the learnt-lengths store (A50) could keep them across plays, as it does for UADE.
+Worth it only if someone notices.
+
 ## B39. Screenshots made and checked without a phone — **noted 2026-09-26, the owner: "worth adding"; not started**
 
 The owner asked whether I can make screenshots myself and look at them, as Kratkoza does (read with
