@@ -2327,37 +2327,36 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun openHistory() {
-        scope.launch {
-            // Opened at the newest: a visit starts where the question usually is, "what was that".
-            _browse.update { it.copy(domain = BrowseDomain.HISTORY, loading = true, tracks = emptyList(), historyPage = 0) }
-            refreshHistory()
-        }
+        // Opened at the newest: a visit starts where the question usually is, "what was that".
+        _browse.update { it.copy(domain = BrowseDomain.HISTORY, loading = true, tracks = emptyList(), historyPage = 0) }
+        historyReads.open()
     }
-
-    /** The page of History a visit or a switch asked for, read while nothing newer was asked. */
-    private var historyRead: Job? = null
 
     /**
-     * Reads one page of History and its count -- **a page, not all of it** (the owner, 2026-09-26:
-     * it took seconds to open). It used to read every row and date each one with `DateUtils`
-     * before any could be shown; now it is a hundred rows and a hundred dates, however long
+     * History's reads, of which only the newest reaches the screen: a page on its way when *Clear
+     * history* is pressed must not put the cleared tunes back (`docs/review-2026-09-28.md` F1).
+     * **A page, not all of it** (the owner, 2026-09-26): a hundred rows and a count, however long
      * History has grown.
+     *
+     * Also the `tracks` list, because that is what the add-to-playlist machinery reads and there is
+     * no reason history should be the one list you cannot add from -- the page on screen, since
+     * that is the list the rows, a tap and next and previous are about.
      */
-    private suspend fun refreshHistory() {
-        val total = history.count()
-        val page = HistoryPages.clamp(_browse.value.historyPage, total)
-        val played = historyRows(page, total)
-        // Also the `tracks` list, because that is what the add-to-playlist machinery reads and
-        // there is no reason history should be the one list you cannot add from -- the page on
-        // screen, since that is the list the rows, a tap and next and previous are about.
-        _browse.update {
-            if (it.domain != BrowseDomain.HISTORY) return@update it
-            it.copy(historyTotal = total, historyPage = page, tracks = played, loading = false)
-        }
-    }
+    private val historyReads = HistoryReads(
+        scope = scope,
+        count = { history.count() },
+        page = { offset, limit -> historyRows(offset, limit) },
+        clear = { history.clear() },
+        show = { shown ->
+            _browse.update {
+                if (it.domain != BrowseDomain.HISTORY) return@update it
+                it.copy(historyTotal = shown.total, historyPage = shown.page, tracks = shown.rows, loading = false)
+            }
+        },
+    )
 
-    private suspend fun historyRows(page: Int, total: Int): List<TrackRef> =
-        history.page(HistoryPages.offset(page, total), HistoryPages.SIZE).map { entry ->
+    private suspend fun historyRows(offset: Int, limit: Int): List<TrackRef> =
+        history.page(offset, limit).map { entry ->
             TrackRef(
                 id = entry.trackId,
                 title = entry.title,
@@ -2381,16 +2380,8 @@ class PlaybackController private constructor(private val context: Context) {
     fun showHistoryPage(page: Int) {
         val now = _browse.value
         if (now.domain != BrowseDomain.HISTORY) return
-        val shown = HistoryPages.clamp(page, now.historyTotal)
-        _browse.update { it.copy(historyPage = shown) }
-        historyRead?.cancel()
-        historyRead = scope.launch {
-            val rows = historyRows(shown, now.historyTotal)
-            _browse.update {
-                if (it.domain != BrowseDomain.HISTORY || it.historyPage != shown) return@update it
-                it.copy(tracks = rows)
-            }
-        }
+        _browse.update { it.copy(historyPage = HistoryPages.clamp(page, now.historyTotal)) }
+        historyReads.turn(page, now.historyTotal)
     }
 
     /**
@@ -2411,8 +2402,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun clearHistory() {
         scope.launch {
-            history.clear()
-            _browse.update { it.copy(historyTotal = 0, historyPage = 0, tracks = emptyList()) }
+            historyReads.clearAll().join()
             _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }
         }
     }
