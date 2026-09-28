@@ -162,6 +162,16 @@ else
     echo "⚠️  SAP measurement checks skipped: no C compiler (cc) on this machine"
 fi
 
+# The page's database upgraded under data a browser already holds (a migration meets it once).
+if [ -d web/node_modules/fake-indexeddb ]; then
+    if ! upgrade_output=$(node scripts/check-web-store-upgrade.mjs 2>&1); then
+        echo "❌ Web database upgrade check failed:"
+        echo "$upgrade_output" | sed 's/^/   /'
+        exit 1
+    fi
+    echo "🗄  $upgrade_output"
+fi
+
 # The icons, both players' sets, walked rather than looked at. A path whose shape depends on where
 # the pen sits after `z` draws correctly here and wrongly on somebody else's phone
 # (`docs/STATUS.md` C66), which is not a thing an eye or a screenshot will catch.
