@@ -2738,21 +2738,23 @@ async function renderBrowse() {
 
   if (browsePath[0] === 'history') {
     $('browsetitle').textContent = t('History');
-    const all = await played.recent();
-    if (!all.length) {
+    // **A count and one page, not the whole store** (review F2): History keeps every tune now, and
+    // a read of all of it on every visit only grows. The phone's `PLAY_HISTORY_PAGE`.
+    const total = await played.count();
+    if (!total) {
       note.textContent = t('Nothing played yet. What the page plays is kept here, one row a tune.');
       return;
     }
-    note.textContent = tn(all.length, '{n} tune, most recent first.', '{n} tunes, most recent first.');
+    note.textContent = tn(total, '{n} tune, most recent first.', '{n} tunes, most recent first.');
     // **Every tune, a hundred at a time** (the owner, 2026-09-26): it used to keep the last 500.
-    historyPage = historyPageClamp(historyPage, all.length);
-    const rows = all.slice(historyPage * HISTORY_PAGE, (historyPage + 1) * HISTORY_PAGE);
-    if (historyPageCount(all.length) > 1) {
-      const { first, last } = historyPageRange(historyPage, all.length);
+    historyPage = historyPageClamp(historyPage, total);
+    const rows = await played.page(historyPage * HISTORY_PAGE, HISTORY_PAGE);
+    if (historyPageCount(total) > 1) {
+      const { first, last } = historyPageRange(historyPage, total);
       $('historypager').hidden = false;
-      $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: all.length.toLocaleString() });
+      $('historyrange').textContent = t('{first}–{last} of {total}', { first: first.toLocaleString(), last: last.toLocaleString(), total: total.toLocaleString() });
       $('history-newer').disabled = historyPage === 0;
-      $('history-older').disabled = historyPage >= historyPageCount(all.length) - 1;
+      $('history-older').disabled = historyPage >= historyPageCount(total) - 1;
     }
     const tracks = rows.filter((r) => r.replayable)
       .map(({ url, name, meta, file }) => ({ url, name, meta, file }));
