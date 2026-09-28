@@ -1514,6 +1514,12 @@ if (window.__api) {
   for (let n = 3; n <= 520; n++) await played.record(entry(n));
   rows = await played.recent();
   check(rows.length === 520 && rows.some((r) => r.url.endsWith('h2.mod')), 'past the 500 it used to stop at, nothing is forgotten');
+  // One page read along the order of play, not the store sorted whole (review F2).
+  const second = await played.page(100, 100);
+  check(second.length === 100 && second.every((r, i) => r.url === rows[100 + i].url) && await played.count() === 520,
+    'a page of History is its hundred, in the order they were played, and the count is all of them');
+  check((await played.page(500, 100)).length === 20 && (await played.page(0, 100))[0].url === rows[0].url,
+    'the last page holds what is left, and the first starts at the newest');
 
   // A hundred at a time, with the way on above the list rather than in it.
   await window.__api.browseTo(['history']);
