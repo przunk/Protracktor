@@ -8,7 +8,7 @@ package com.przunk.protracktor.player
  *
  * History used to forget all but the last 500 tunes; it keeps every one now, and a list of
  * thousands is read from the database a page at a time, with the way to the next page out of the list's scroll. Page
- * 0 is the newest. The page's `pageOf`/`pageRange` in `rules.js`; `docs/rules/queue-cases.tsv`
+ * 0 is the newest. The page's `historyPageCount`, `historyPageClamp` and `historyPageRange` in `rules.js`; `docs/rules/queue-cases.tsv`
  * holds both to the same answers.
  */
 object HistoryPages {
