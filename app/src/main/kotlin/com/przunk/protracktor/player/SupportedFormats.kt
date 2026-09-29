@@ -148,10 +148,10 @@ object SupportedFormats {
      * between them, so `.mp3` in that list would cost a re-index to gain nothing
      * (`docs/BACKLOG.md` A29).
      *
-     * A folder scan does not consult either list: it opens every file and lets the decoder answer
-     * (`MediaScanner.listFiles`), which is why an MP3 in a scanned folder needs nothing here at all.
-     * This set exists for the one place a *name* still has to be judged — deciding whether a
-     * failure means "this app cannot play this format" or "this file is broken".
+     * A folder scan reads only names on these lists since 2026-09-29 (`MediaScanner.worthReading`,
+     * A67) -- which is why an MP3 has to be here to be found in a scanned folder at all. This set is
+     * also what decides whether a failure means "this app cannot play this format" or "this file is
+     * broken".
      */
     val localOnlyExtensions: Set<String> = setOf("mp3")
 

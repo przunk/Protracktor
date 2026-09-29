@@ -43,8 +43,10 @@ the folder was opened again), twice a second, keeping the level on screen; while
 empty list says nothing rather than "nothing playable". **The slow stretch after 6,550** (the owner,
 on ASMA's folder of 11,582 files): the SAPs, opened four at a time, end there, and what is left --
 about 5,000 files whose names no decoder claims -- is opened one at a time, each tried by every
-decoder, UADE's content check included, about 160 ms a file. Waiting on the owner: skip plainly
-non-musical names (images, text, documents, archives), or remember what is not a tune.
+decoder, UADE's content check included, about 160 ms a file. **Decided by the owner, 2026-09-29: a
+scan reads only names a decoder claims** (`MediaScanner.worthReading`), turning A6's "the content
+decides" round -- a misnamed module is no longer found; a `.mid` or `.txt` is no longer opened. It
+also keeps them away from UADE, which crashed on one (`docs/STATUS.md` C96).
 
 ## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day**
 

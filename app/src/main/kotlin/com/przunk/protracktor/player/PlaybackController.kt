@@ -1020,6 +1020,11 @@ class PlaybackController private constructor(private val context: Context) {
             }
         }
 
+        // **A scan's notification left behind by a process that died** (the owner, 2026-09-29: the
+        // app crashed mid-scan and the bar stayed in the shade). No scan runs at start, so any bar
+        // there is a stale one.
+        ScanNotification.clear(context)
+
         restore()
         // One loop drives both the progress bar and end-of-track handling. The native side flags
         // completion rather than calling back, so something has to look; since the progress bar
