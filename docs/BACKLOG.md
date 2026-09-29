@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A67. Scanning a folder: a rescan opens only what changed, and says how long it took — **asked 2026-09-29; BUILT on `feature/faster-scan`; not yet seen on the phone**
+## A67. Scanning a folder: a rescan opens only what changed, and says how long it took — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day ("works well")**
 
 The owner: folders load very slowly. **Why, from the code:** a scan opens every file with a decoder
 -- read whole, opened, described -- one after another on one thread, and a rescan opened the same
