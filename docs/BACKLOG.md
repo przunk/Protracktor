@@ -15,6 +15,16 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT on `feature/local-folder-tree`; not yet seen on the phone**
+
+The owner: a scanned folder listed every file in one list; he wants its folders kept --
+`Music { Atari { good, bad }, Amiga { xray }, C64 { stupidsounds } }` walked as `Music/Atari/good`,
+each folder holding its own files. Built from what the scan already stores, each file's directory
+(`LocalTree`), so no second scan: a level shows its folders first -- icon, name, how many tunes
+below -- then its own files; a tap goes in, Back goes up a level and leaves the folder only from its
+top; the level's path shows above the list. Playing from a level walks that level's files. APK only:
+the page has no local folders.
+
 ## A65. A row's menu dims everything but its row — **asked 2026-09-26; BUILT, APK and page; merged and confirmed on the phone the same day ("works beautifully")**
 
 The owner: the three dots' menu is a rectangle somewhere over the list, not a bubble coming out of

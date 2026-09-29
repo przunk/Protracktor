@@ -44,7 +44,7 @@ object MediaScanner {
      * get a real filesystem path out of the storage access framework, and for a network share there
      * is not one to get -- so this is a label, not an address, and it is treated as one.
      */
-    private fun rootPathOf(treeUri: Uri): String =
+    internal fun rootPathOf(treeUri: Uri): String =
         runCatching {
             DocumentsContract.getTreeDocumentId(treeUri).substringAfter(':').trim('/')
         }.getOrNull()?.ifBlank { null } ?: labelOf(treeUri)

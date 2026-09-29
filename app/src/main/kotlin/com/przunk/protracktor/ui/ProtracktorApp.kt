@@ -443,6 +443,7 @@ fun ProtracktorApp(
                         onPickFolder = { folderPicker.launch(null) },
                         onPickFiles = { filePicker.launch(arrayOf("*/*")) },
                         onOpenFolder = viewModel::openFolder,
+                        onOpenSubfolder = viewModel::openSubfolder,
                         onForgetFolder = viewModel::forgetFolder,
                         onScanFolder = viewModel::scanFolder,
                         onIndexCatalogue = viewModel::indexCatalogue,

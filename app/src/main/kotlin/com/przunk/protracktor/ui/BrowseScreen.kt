@@ -106,6 +106,7 @@ fun BrowseScreen(
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
+    onOpenSubfolder: (String) -> Unit = {},
     onForgetFolder: (String) -> Unit,
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
@@ -224,6 +225,7 @@ fun BrowseScreen(
                 onPickFolder = onPickFolder,
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
+                onOpenSubfolder = onOpenSubfolder,
                 onForgetFolder = onForgetFolder,
                 onScanFolder = onScanFolder,
                 onPlay = onPlay,
@@ -539,6 +541,7 @@ private fun LocalDomain(
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
+    onOpenSubfolder: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -588,6 +591,23 @@ private fun LocalDomain(
                 }
             }
 
+            // Where in the folder's tree this is: the level's own path, since Back walks it up.
+            if (browse.folderAt.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(PlayerIcons.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        text = browse.folderAt.split('/').joinToString(" › "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+
             Selectable(
                 browse = browse,
                 scroll = scroll,
@@ -602,6 +622,7 @@ private fun LocalDomain(
                 onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
+                onOpenSubfolder = onOpenSubfolder,
             )
         }
         return
@@ -1178,8 +1199,9 @@ private fun Selectable(
     onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
+    onOpenSubfolder: (String) -> Unit = {},
 ) {
-    var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
+    var selected by remember(browse.openFolder?.uri, browse.folderAt, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
     }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
@@ -1245,7 +1267,7 @@ private fun Selectable(
             // An empty list is two different states and only one of them is a disappointment.
             // Nothing searched yet reads as ordinary text; nothing *found* borrows the colour the
             // stale-index warnings use, because it is the same kind of news.
-            browse.tracks.isEmpty() -> {
+            browse.tracks.isEmpty() && browse.subfolders.isEmpty() -> {
                 val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
                 Text(
                     text = stringResource(
@@ -1284,6 +1306,16 @@ private fun Selectable(
                 RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
                 Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                // **A local folder's own folders first** (the owner, 2026-09-29): the tree is
+                // walked, not flattened. Hidden while ticking rows: a folder is not a tune to tick.
+                if (!selecting) items(browse.subfolders, key = { "folder:" + it.path }) { sub ->
+                    ListItem(
+                        headlineContent = { Text(sub.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = { Text(pluralStringResource(R.plurals.track_count, sub.tunes, sub.tunes)) },
+                        leadingContent = { Icon(PlayerIcons.Folder, contentDescription = null) },
+                        modifier = Modifier.clickable { onOpenSubfolder(sub.path) },
+                    )
+                }
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
                     BrowseTrackRow(
                         track = track,
