@@ -37,6 +37,15 @@ folder's index, which on a resume holds thousands of rows from the start. Saves 
 new (`addToFolder`); the whole folder is written once, at the end. The cause is read from the code,
 not measured.
 Still not built: remembering files that are not tunes, which every rescan opens again.
+
+**The list fills in while a scan runs** (the owner: "nothing playable" stayed until the scan ended and
+the folder was opened again), twice a second, keeping the level on screen; while a scan runs the
+empty list says nothing rather than "nothing playable". **The slow stretch after 6,550** (the owner,
+on ASMA's folder of 11,582 files): the SAPs, opened four at a time, end there, and what is left --
+about 5,000 files whose names no decoder claims -- is opened one at a time, each tried by every
+decoder, UADE's content check included, about 160 ms a file. Waiting on the owner: skip plainly
+non-musical names (images, text, documents, archives), or remember what is not a tune.
+
 ## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day**
 
 The owner: a scanned folder listed every file in one list; he wants its folders kept --
