@@ -15,7 +15,7 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
-## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT on `feature/local-folder-tree`; not yet seen on the phone**
+## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day**
 
 The owner: a scanned folder listed every file in one list; he wants its folders kept --
 `Music { Atari { good, bad }, Amiga { xray }, C64 { stupidsounds } }` walked as `Music/Atari/good`,

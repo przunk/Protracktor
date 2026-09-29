@@ -540,7 +540,7 @@ talked through and dropped, since it would make the two the same. The rule is no
 `docs/rules/queue-cases.tsv` (`shuffleFromTap`), run by the phone's `PlayQueue` and by the page
 through its own row and next; both failed before the fix.
 
-### C95. Repeat-one did not repeat a tune played from Browse — **FIXED 2026-09-29 on `fix/repeat-in-browse`; not yet seen on the phone**
+### C95. Repeat-one did not repeat a tune played from Browse — **FIXED, merged and confirmed on the phone 2026-09-29**
 
 The owner: an MP3 from a local folder, repeat-one lit, went on to the next tune. Not MP3's doing:
 **every list played from Browse** -- a folder, results, History -- got a queue of its own built with
