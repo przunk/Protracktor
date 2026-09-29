@@ -1486,10 +1486,20 @@ class PlaybackController private constructor(private val context: Context) {
      * files, rather than every file in it in one list. `tracksIn` carries each file's directory in
      * its subtitle.
      */
-    private fun treeOf(state: BrowseState, folder: GrantedFolder, found: List<TrackRef>): BrowseState {
+    private fun treeOf(
+        state: BrowseState,
+        folder: GrantedFolder,
+        found: List<TrackRef>,
+        keepLevel: Boolean = false,
+    ): BrowseState {
         val all = found.map { it.subtitle to it }
         val root = LocalTree.root(all.map { it.first }, MediaScanner.rootPathOf(Uri.parse(folder.uri)))
-        return levelOf(state.copy(folderAll = all, folderRoot = root), root)
+        // **Where the reader is, kept** while a scan fills the tree in (the owner, 2026-09-29): the
+        // level on screen stays on screen as long as it is still inside the tree.
+        val at = state.folderAt.takeIf {
+            keepLevel && state.folderRoot == root && (it == root || it.startsWith("$root/"))
+        } ?: root
+        return levelOf(state.copy(folderAll = all, folderRoot = root), at)
     }
 
     private fun levelOf(state: BrowseState, at: String): BrowseState {
@@ -1574,6 +1584,13 @@ class PlaybackController private constructor(private val context: Context) {
                 if (at - shownAt < 500 && now != candidates.size) return
                 shownAt = at
                 ScanNotification.show(context, folder.displayName, now, candidates.size)
+                // **The list fills in as the scan goes** (the owner, 2026-09-29: it said "nothing
+                // playable" until the scan ended and the folder was opened again).
+                val sofar = synchronized(indexed) { indexed.toList() }
+                _browse.update { current ->
+                    if (current.openFolder?.uri != folder.uri) current
+                    else treeOf(current, folder, sofar.map(::toTrackRef), keepLevel = true).copy(loading = false, folderUnscanned = false)
+                }
             }
             notify(done.get())
             suspend fun opened(candidate: MediaScanner.Candidate, on: kotlinx.coroutines.CoroutineDispatcher) {
@@ -1630,8 +1647,8 @@ class PlaybackController private constructor(private val context: Context) {
             saved()
             ScanNotification.clear(context)
             _browse.update { current ->
-                // A fresh scan shows the tree from its top: the level that was open may be gone.
-                (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.toList().map(::toTrackRef)) else current).copy(
+                // The level on screen stays, if it is still there: the list filled in under it.
+                (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.toList().map(::toTrackRef), keepLevel = true) else current).copy(
                     scanProgress = null,
                     folderUnscanned = false,
                     folderStale = false,

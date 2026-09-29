@@ -1284,6 +1284,8 @@ private fun Selectable(
             // An empty list is two different states and only one of them is a disappointment.
             // Nothing searched yet reads as ordinary text; nothing *found* borrows the colour the
             // stale-index warnings use, because it is the same kind of news.
+            // A scan under way says so with its bar; "nothing playable" is not true yet.
+            browse.tracks.isEmpty() && browse.subfolders.isEmpty() && browse.scanProgress != null -> Unit
             browse.tracks.isEmpty() && browse.subfolders.isEmpty() -> {
                 val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
                 Text(
