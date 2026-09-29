@@ -15,6 +15,98 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A67. Scanning a folder: a rescan opens only what changed, and says how long it took — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day ("works well")**
+
+The owner: folders load very slowly. **Why, from the code:** a scan opens every file with a decoder
+-- read whole, opened, described -- one after another on one thread, and a rescan opened the same
+unchanged files again. **Built:** a rescan keeps what the last scan indexed at the same address and
+size (`IncrementalScan`), unless the decoders changed since; and the notice after a scan says how long
+it took and how many files were kept, so "slow" has a number. **The number** (the owner, adding ASMA's
+11,582 files): about 80 ms a file, a quarter of an hour, and no way to stop it. **Then built:** files
+whose names only instance-safe decoders claim -- libopenmpt, ASAP, game-music-emu, libsidplayfp, sc68;
+`SupportedFormats.scanInParallel`, derived from `web/src/formats.tsv` and held to it by a test -- are
+opened four at a time; UADE's, HivelyTracker's, ZXTune's and unknown names one at a time. **A Stop
+button beside the bar**, and what a scan has found is **saved every 200 files and on stopping**, so a
+scan stopped by the button or by the system killing the app is only paused: the next one keeps it.
+**A notification** with the bar and Stop (`ScanNotification`): ordinary rather than foreground, as the
+owner asked for -- a foreground one is a second service type, `dataSync`, with its own Play Console
+declaration and video, four days before the production application; the saves make a scan the system
+stops in the background a paused one, which is what the foreground service would have prevented.
+**A resumed scan was slow** (25 files in 3 s, against 1,000 in 4 s fresh): each save rewrote the whole
+folder's index, which on a resume holds thousands of rows from the start. Saves now add only what is
+new (`addToFolder`); the whole folder is written once, at the end. The cause is read from the code,
+not measured.
+Still not built: remembering files that are not tunes, which every rescan opens again.
+
+**The list fills in while a scan runs** (the owner: "nothing playable" stayed until the scan ended and
+the folder was opened again), twice a second, keeping the level on screen; while a scan runs the
+empty list says nothing rather than "nothing playable". **The slow stretch after 6,550** (the owner,
+on ASMA's folder of 11,582 files): the SAPs, opened four at a time, end there, and what is left --
+about 5,000 files whose names no decoder claims -- is opened one at a time, each tried by every
+decoder, UADE's content check included, about 160 ms a file. **Decided by the owner, 2026-09-29: a
+scan reads only names a decoder claims** (`MediaScanner.worthReading`), turning A6's "the content
+decides" round -- a misnamed module is no longer found; a `.mid` or `.txt` is no longer opened. It
+also keeps them away from UADE, which crashed on one (`docs/STATUS.md` C96).
+
+## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day**
+
+The owner: a scanned folder listed every file in one list; he wants its folders kept --
+`Music { Atari { good, bad }, Amiga { xray }, C64 { stupidsounds } }` walked as `Music/Atari/good`,
+each folder holding its own files. Built from what the scan already stores, each file's directory
+(`LocalTree`), so no second scan: a level shows its folders first -- icon, name, how many tunes
+below -- then its own files; a tap goes in, Back goes up a level and leaves the folder only from its
+top; the level's path shows above the list. Playing from a level walks that level's files. APK only:
+the page has no local folders.
+
+## A65. A row's menu dims everything but its row — **asked 2026-09-26; BUILT, APK and page; merged and confirmed on the phone the same day ("works beautifully")**
+
+The owner: the three dots' menu is a rectangle somewhere over the list, not a bubble coming out of
+the row, and it does not say which tune it is about. His idea, over my suggestion of highlighting the
+row: **dim the rest of the screen** while the menu is open, so the eye is on that row; nothing else
+can be pressed until the menu closes, and a press beside it only closes it. On the phone a
+`MenuFocusDimming` over the whole app with the row cut out, told where the row is by
+`Modifier.menuFocus`; the menu's own popup already takes the press that closes it. On the page a
+spot on the row whose shadow dims the rest, and a block under it that takes the closing press.
+## A64. History keeps everything, a hundred at a time — **asked 2026-09-26; BUILT, APK and page; merged and confirmed on the phone the same day ("ok")**
+
+The owner: *"history seems incomplete -- I have 500 tunes and have listened to hundreds more."* It was
+not a fault but a limit from its first version: `PLAY_HISTORY_LIMIT = 500`, the oldest forgotten on
+every play (the page's `PLAYED_LIMIT` the same). What went is gone. Decided: **no limit**, and History
+shown **a hundred at a time**, with the way to the next page outside the list's scroll -- *Newer*,
+"101–200 of 734", *Older*, above the list, each with its icon; a new visit opens at the newest. A row
+is a couple of hundred bytes, so ten thousand tunes are about 2 MB. The page arithmetic is in
+`docs/rules/queue-cases.tsv` (`historyPages`), run by the phone's `HistoryPages` and the page's rules.
+Playing from History walks the page on screen, which is the list a tap is about.
+
+**Opened slowly on the phone** (the owner: 3-4 s on the first opening after the app was killed).
+My first reading -- that it read every row and dated each with `DateUtils` -- was a guess, and wrong:
+reading a page and a count instead (`PLAY_HISTORY_PAGE`, `PLAY_HISTORY_COUNT`), which stays because
+an unlimited History must not be read whole, changed nothing. **The mechanism, confirmed by the owner's
+test:** Browse's first screen counts the tunes on each platform, `GROUP BY platform` over half a
+million rows, and the database ran every query on one connection, so History waited for the count.
+Waiting ten seconds on Browse first, History opened at once. **Fixed** with write-ahead logging, so
+reads run side by side, and schema version 21's `idx_catalogue_platform`, which makes the count
+itself read an index (0.42 s to 0.085 s on a desktop, 516,000 rows).
+
+## A63. One Share, the same four ways everywhere; Share with Protracktor to the public page — **asked 2026-09-25; BUILT, APK and page; merged and confirmed on the phone 2026-09-26 ("super")**
+
+The owner: a row's menu had four ways to share and Now Playing's Share three -- no Share with
+Protracktor -- and Share with Protracktor pointed at the paired page. Decided the same day:
+
+- **One Share in every row menu and on Now Playing, the same four behind it**, in the same order:
+  Share the file, Share as audio, Share a link, Share with Protracktor (on the page: Save the file,
+  Share as audio, Copy a link, Share with Protracktor). In a row menu Share turns the menu into the
+  four, with Back to the rest -- Android has no nested menus, and the choice stays under the finger.
+  One list, drawn by one piece of code on each side (`ShareMenuItems`, `shareItems`), so the places
+  cannot drift apart again. A way a tune has not got -- no address for a file on the phone -- is
+  left out on the phone and greyed on the page, as before.
+- **Share with Protracktor always points at https://przunk.github.io/Protracktor/src/**
+  (`QueueLink.PUBLIC_BASE`, the page's `PUBLIC_PAGE`): the link is for somebody else, and the paired
+  page, a tunnel or `localhost` opened nowhere on their device; the public page opens anywhere, and in
+  the app where the app is, since the domain is verified. `src/`, because the root forwards with a
+  refresh that drops the fragment. **Sending the queue to one's own browser is unchanged** and still
+  goes to the paired or typed address.
+
 ## A62. Share a tune as audio -- M4A, for Messenger and the like — **planned 2026-09-24; BUILT, merged and confirmed on the phone the same day ("works")**
 
 The owner: *"I want to share it, e.g. on Messenger."* *Share the file* sends the module itself, which

@@ -11,8 +11,11 @@ if(NOT EXISTS "${ASAP_SRC}/asap.c")
         "  expected: ${ASAP_SRC}/asap.c")
 endif()
 
-add_library(asap STATIC "${ASAP_SRC}/asap.c")
-target_include_directories(asap PUBLIC "${ASAP_SRC}")
+# **`asap_measure.c` in `asap.c`'s place**: it includes `asap.c` and adds the measurement of a SAP
+# that states no length (`docs/STATUS.md` C91), which needs ASAP's internals. One translation unit,
+# so every ASAP symbol is still defined exactly once.
+add_library(asap STATIC "${CMAKE_CURRENT_SOURCE_DIR}/asap_measure.c")
+target_include_directories(asap PUBLIC "${ASAP_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Transpiler output. The warnings are about how a generator writes C, not about anything we could
 # act on -- silenced so they do not bury a warning that is ours.

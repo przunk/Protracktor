@@ -13,7 +13,7 @@
 // callbacks in the page.
 
 const DB = 'protracktor';
-const VERSION = 3;
+const VERSION = 4;
 
 /** The playlist that is not a document: replaced wholesale by every handoff, never deleted. */
 export const PHONE = 'phone';
@@ -41,9 +41,12 @@ function open() {
         db.createObjectStore('catalogue', { keyPath: 'key' });
       }
       // Version 3: what has been played, one row per tune, keyed by its address.
-      if (!db.objectStoreNames.contains('played')) {
-        db.createObjectStore('played', { keyPath: 'url' });
-      }
+      const played = db.objectStoreNames.contains('played')
+        ? request.transaction.objectStore('played')
+        : db.createObjectStore('played', { keyPath: 'url' });
+      // Version 4: in the order it was played, so History reads its page and not the whole store
+      // (`docs/review-2026-09-28.md` F2) -- the phone's `idx_play_history_recent`.
+      if (!played.indexNames.contains('playedAt')) played.createIndex('playedAt', 'playedAt');
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -187,12 +190,9 @@ export const catalogue = {
   },
 };
 
-/** The phone's `PLAY_HISTORY_LIMIT`: the last 500 tunes, the oldest forgotten. */
-export const PLAYED_LIMIT = 500;
-
 /**
- * Strictly increasing within a session, so two plays in one millisecond still have an order -- the
- * oldest is what the limit forgets, and a tie would make which one goes a coin toss.
+ * Strictly increasing within a session, so two plays in one millisecond still have an order, and
+ * History lists them the way they happened.
  */
 let lastStamp = 0;
 
@@ -205,23 +205,42 @@ let lastStamp = 0;
  * it has been opened, and afterwards under the name it gives itself.
  */
 export const played = {
-  async record(entry, { limit = PLAYED_LIMIT } = {}) {
+  // **Nothing is forgotten** (the owner, 2026-09-26): it used to keep the last 500, as the phone did.
+  async record(entry) {
     lastStamp = Math.max(Date.now(), lastStamp + 1);
     const before = await tx('played', 'readonly', (s) => s.get(entry.url));
     await tx('played', 'readwrite', (s) => s.put({
       ...before, ...entry, playedAt: lastStamp, playCount: (before?.playCount ?? 0) + 1,
     }));
-    // The oldest forgotten once the list is over its limit -- read whole only then, which for 500
-    // rows is nothing and on most plays does not happen at all.
-    if ((await tx('played', 'readonly', (s) => s.count())) > limit) {
-      const all = (await tx('played', 'readonly', (s) => s.getAll())) ?? [];
-      all.sort((a, b) => b.playedAt - a.playedAt);
-      const drop = all.slice(limit).map((row) => row.url);
-      await tx('played', 'readwrite', (s) => { drop.forEach((url) => s.delete(url)); return null; });
-    }
   },
 
-  /** Most recently played first. */
+  /**
+   * [limit] tunes from [offset], most recently played first: one page of History, read backwards
+   * along the `playedAt` index, so its cost does not grow with History (review F2).
+   */
+  async page(offset, limit) {
+    const db = await open();
+    return new Promise((resolve, reject) => {
+      const rows = [];
+      let skipped = offset === 0;
+      const transaction = db.transaction('played', 'readonly');
+      const request = transaction.objectStore('played').index('playedAt').openCursor(null, 'prev');
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return;
+        if (!skipped) { skipped = true; cursor.advance(offset); return; }
+        rows.push(cursor.value);
+        if (rows.length < limit) cursor.continue();
+      };
+      transaction.oncomplete = () => resolve(rows);
+      transaction.onerror = () => reject(transaction.error);
+    });
+  },
+
+  /** How many tunes History holds. */
+  count() { return tx('played', 'readonly', (s) => s.count()); },
+
+  /** Most recently played first, the whole of it: for the checks, not for History's screen. */
   async recent() {
     const all = (await tx('played', 'readonly', (s) => s.getAll())) ?? [];
     return all.sort((a, b) => b.playedAt - a.playedAt);

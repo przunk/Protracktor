@@ -146,6 +146,32 @@ if [ -f web/vendor/engine.mjs ]; then
     echo "🔊 $engine_checks engine checks passed"
 fi
 
+# The SAP length measurement (`docs/STATUS.md` C91), built on the host from the same C the phone
+# compiles. Only where there is a C compiler, and said when there is not, since a check that quietly
+# did not run is a check that quietly passed.
+if command -v cc >/dev/null 2>&1; then
+    if ! sap_output=$(./scripts/check-sap-measure.sh 2>&1); then
+        echo "❌ SAP measurement checks failed:"
+        echo "$sap_output" | sed 's/^/   /'
+        exit 1
+    fi
+    sap_checks=$(echo "$sap_output" | grep -c '✓' || true)
+    [ "$sap_checks" -gt 0 ] || { echo "❌ SAP measurement: no checks ran"; exit 1; }
+    echo "📼 $sap_checks SAP measurement checks passed"
+else
+    echo "⚠️  SAP measurement checks skipped: no C compiler (cc) on this machine"
+fi
+
+# The page's database upgraded under data a browser already holds (a migration meets it once).
+if [ -d web/node_modules/fake-indexeddb ]; then
+    if ! upgrade_output=$(node scripts/check-web-store-upgrade.mjs 2>&1); then
+        echo "❌ Web database upgrade check failed:"
+        echo "$upgrade_output" | sed 's/^/   /'
+        exit 1
+    fi
+    echo "🗄  $upgrade_output"
+fi
+
 # The icons, both players' sets, walked rather than looked at. A path whose shape depends on where
 # the pen sits after `z` draws correctly here and wrongly on somebody else's phone
 # (`docs/STATUS.md` C66), which is not a thing an eye or a screenshot will catch.

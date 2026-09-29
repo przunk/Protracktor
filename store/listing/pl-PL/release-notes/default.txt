@@ -1,9 +1,9 @@
-Udostępnij jako audio: wyślij dowolny utwór jako plik M4A, który zagra Messenger i inne aplikacje. Długość ustawisz w Ustawieniach.
+Foldery lokalne zachowują swoje podfoldery, a ich skanowanie jest dużo szybsze: można je zatrzymać, widać je w powiadomieniu, a lista wypełnia się na bieżąco.
 
-Losowanie zaczyna od wybranego utworu i gra każdy raz; Wstecz zatrzymuje się na wybranym.
+Historia pamięta każdy utwór, po sto na stronę, i otwiera się od razu.
 
-Wstecz nie zatrzymuje muzyki: playlista mówi, co gra, i do tego prowadzi.
+Utwory Atari 8-bit bez podanej długości kończą się tam, gdzie naprawdę się kończą.
 
-Twoje własne pliki też mają znacznik telefonu.
+Jedno „Udostępnij” w każdym menu, z tymi samymi czterema opcjami.
 
-Po aktualizacji pasek mówi, kiedy baza danych jest przygotowywana.
+Powtarzanie i losowanie działają też dla utworów granych z ekranu Przeglądaj.

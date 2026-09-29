@@ -102,7 +102,7 @@ internal fun rememberBrowseScroll(): BrowseScroll = remember { BrowseScroll() }
  */
 internal fun BrowseState.levelKey(): String = when (domain) {
     BrowseDomain.ROOT -> "root"
-    BrowseDomain.LOCAL -> openFolder?.let { "local/${it.uri}" } ?: "local"
+    BrowseDomain.LOCAL -> openFolder?.let { "local/${it.uri}/$folderAt" } ?: "local"
     BrowseDomain.ONLINE ->
         listOfNotNull("online", openCatalogue?.id, openFormat, openAuthor).joinToString("/")
     // The query is part of it: searching for something else is a different list, not a scrolled
@@ -110,5 +110,7 @@ internal fun BrowseState.levelKey(): String = when (domain) {
     // without this the first one's scroll position is restored into the second. Quietly, and only
     // sometimes, which is the worst kind.
     BrowseDomain.SEARCH -> "search/${searchScope}/$query"
-    BrowseDomain.HISTORY -> "history"
+    // Each page its own place: the next hundred start at their top, and back returns to where
+    // the last page was left.
+    BrowseDomain.HISTORY -> "history/$historyPage"
 }

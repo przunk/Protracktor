@@ -453,7 +453,7 @@ a search is a place to come back to, like the dice. The jump keeps it (`BrowseNa
 to the results as they were (`resumeSearch`). A tune chosen in the folder meanwhile stops and the
 results' tune waits paused, as the dice's does; otherwise the music plays on.
 
-### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **OPEN, reported 2026-09-24**
+### C91. `Bonio.sap` plays to the ~3:00 fallback though its author knows its length — **(b) BUILT, merged and confirmed on the phone 2026-09-27 ("it works")**
 
 The owner: `asma/Composers/przunk/Bonio.sap` (his own) is cut at ~3:00. **Mechanism, read from
 the file:** its header has no `TIME` line -- `AUTHOR`, `NAME`, `DATE`, `STEREO`, `TYPE`, `INIT`,
@@ -487,6 +487,17 @@ does not get it**, as it has no NSF measurement: its engine has no threads.
 owner's seven files, worked out with the same detection, for him to put in the files and send to
 ASMA -- every player anywhere then knows them, the page included. After the launch, (b) as above in
 the app.
+
+**(b) as built (2026-09-25..27).** `native/backends/asap/asap_measure.c`, compiled in `asap.c`'s place,
+ports `asapscan`'s silence and loop detection; `AsapBackend` measures a subsong with no `TIME` on a
+thread of its own when it starts playing, cancelled by a close or a switch. Across ASMA's 8,316
+subsongs that state a `TIME`: 72% to within 50 ms, 82% to within a second; the rest mostly a silent
+tail ASMA counts or a second pass of a loop; 4% nothing found in fifteen minutes, which keeps the
+fallback. `asapscan`'s "ultrasound" answer (registers standing still, reported as nothing) is refused.
+Bonio.sap measures 3:37.9. **The first phone build still showed `~`**: the decoder said no length was
+coming the moment one arrived, and the host, which asks only while one is coming, never took it --
+`ProtracktorAsap_LengthStillComing`, checked on the host, fixed that. The page does not measure: its
+engine has no threads.
 
 
 ### C92. The web page zoomed and moved in a Safari tab on an iPhone — **FIXED and merged 2026-09-24; not yet seen on an iPhone**
@@ -528,6 +539,27 @@ dealing again each lap** -- the owner's first idea, shuffle without repeat going
 talked through and dropped, since it would make the two the same. The rule is now in
 `docs/rules/queue-cases.tsv` (`shuffleFromTap`), run by the phone's `PlayQueue` and by the page
 through its own row and next; both failed before the fix.
+
+### C95. Repeat-one did not repeat a tune played from Browse — **FIXED, merged and confirmed on the phone 2026-09-29**
+
+The owner: an MP3 from a local folder, repeat-one lit, went on to the next tune. Not MP3's doing:
+**every list played from Browse** -- a folder, results, History -- got a queue of its own built with
+repeat off, and the repeat and shuffle buttons changed only the playlist's. The button showed one mode
+and the list played another. **Fixed:** such a list is built with the modes the buttons show
+(`PlayQueue.results`), and follows them when they change; shuffle deals from the tune tapped, as in
+the playlist. The page did this right already.
+
+### C96. The app crashed in UADE while a scan tried a file UADE did not recognise — **OPEN, avoided since 2026-09-29; reported 2026-09-29**
+
+The owner, scanning a folder of 11,582 files (ASMA's SAPs, as many `.mid`, some `.txt`): the app
+died at about 6,600, and the scan's notification stayed behind. The native stack: the scan's
+one-at-a-time thread, `NativeEngine.open` → `openBackend` → UADE's `uade_cleanup_state` →
+`uade_arch_kill_and_wait_uadecore` → `uade_atomic_close`. **Read from that:** past the SAPs only the
+names no decoder claims were left, each tried by every decoder in turn; UADE checked one's content,
+did not take it, and crashed tearing its core down. Which file, and why the teardown fails, is not
+known. **Avoided, not fixed:** a scan now reads only names a decoder claims (A67), so a `.mid` or a
+`.txt` never reaches UADE; but a misnamed file played by hand, or a UADE name that fails, would take
+the same path. A stale scan notification is cleared at start.
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor

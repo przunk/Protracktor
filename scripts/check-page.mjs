@@ -593,16 +593,39 @@ if (window.__api) {
   menus[0].click();
   const open = [...window.document.querySelectorAll('#menu button')];
   check($('menu').hidden === false, 'the three dots open it');
+  // **The rest dimmed, and a press beside the menu only closes it** (the owner, 2026-09-26).
+  check(!$('menuspot').hidden && !$('menublock').hidden, 'and the rest of the screen dims around the row');
+  const playingBefore = window.__api.indexNow();
+  $('menublock').click();
+  check($('menu').hidden && $('menuspot').hidden && $('menublock').hidden
+        && window.__api.indexNow() === playingBefore,
+    'a press beside the menu closes it, lifts the dimming, and starts nothing');
+  menus[0].click();
   // Select stands first: it is the way into ticking rows, which a mouse has no long press to
-  // find. The rest are in a fixed order, with Share with Protracktor beside the other link.
+  // find. The rest are in a fixed order, and the four ways to share are one Share (2026-09-25).
   check(open.map((b) => b.textContent).join(',')
-        === 'Select,Add to playlist,Save the file,Share as audio,Copy a link,Share with Protracktor,More from this author,Information',
+        === 'Select,Add to playlist,Share,More from this author,Information',
     'with every action the phone\'s row menu has, in the same order');
   check(open.every((b) => !b.disabled), 'all live for a track with an address');
 
+  // Share turns the menu into the four ways, the same list Now Playing's Share opens, with Back.
+  open.find((b) => b.textContent === 'Share').click();
+  await new Promise((r) => setTimeout(r, 20));
+  const ways = [...window.document.querySelectorAll('#menu button')];
+  check($('menu').hidden === false && ways.map((b) => b.textContent).join(',')
+        === 'Back,Save the file,Share as audio,Copy a link,Share with Protracktor',
+    'Share turns the menu into the four ways to share, and a way back');
+  ways[0].click();
+  await new Promise((r) => setTimeout(r, 20));
+  check([...window.document.querySelectorAll('#menu button')].map((b) => b.textContent).join(',')
+        === 'Select,Add to playlist,Share,More from this author,Information',
+    'and Back is the row\'s menu again');
+  [...window.document.querySelectorAll('#menu button')].find((b) => b.textContent === 'Share').click();
+  await new Promise((r) => setTimeout(r, 20));
+
   // **Share as audio where the browser cannot encode AAC** (A62): jsdom has no WebCodecs, as
   // Firefox has no AAC encoder. The row stays in its place, greyed, and a press says why.
-  const audioRow = open.find((b) => b.textContent === 'Share as audio');
+  const audioRow = [...window.document.querySelectorAll('#menu button')].find((b) => b.textContent === 'Share as audio');
   check(audioRow?.getAttribute('aria-disabled') === 'true' && !audioRow.disabled,
     'Share as audio is greyed where this browser cannot make the file, and still answers a press');
   audioRow?.click();
@@ -621,8 +644,8 @@ if (window.__api) {
   // One Share, and the ways to share behind it, as on the phone (A62).
   $('np-share').click();
   const shareMenu = [...window.document.querySelectorAll('#menu button')];
-  check(shareMenu.map((b) => b.textContent).join(',') === 'Save the file,Share as audio,Copy a link'
-        && !shareMenu[0].disabled && !shareMenu[2].disabled,
+  check(shareMenu.map((b) => b.textContent).join(',') === 'Save the file,Share as audio,Copy a link,Share with Protracktor'
+        && !shareMenu[0].disabled && !shareMenu[2].disabled && !shareMenu[3].disabled,
     'the panel\'s Share opens the ways to share the track it describes');
   check(shareMenu[1].getAttribute('aria-disabled') === 'true', 'and Share as audio in it is greyed here, as in the row\'s menu');
   window.document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -1048,7 +1071,7 @@ if (window.__api) {
   button(rows()[0], 'bmore').click();
   const menu = [...$('menu').children];
   check(menu.map((b) => b.textContent).join('|')
-        === "Add to another playlist|Information|More from this author|Save the file|Share as audio|Copy a link|Share with Protracktor",
+        === "Add to another playlist|Information|More from this author|Share",
     'the tune\'s menu has the phone\'s actions');
   check(menu.every((b) => b.querySelector('svg')), 'each with its icon');
   // The icon beside its word, centred on it: a later rule once made every item a block and left the
@@ -1056,6 +1079,12 @@ if (window.__api) {
   const item = window.getComputedStyle(menu[0]);
   check(item.display === 'flex' && item.alignItems === 'center' && item.gap === '12px',
     'laid out as a row, the icon centred beside its word');
+  menu.find((b) => b.textContent === 'Share').click();
+  await new Promise((r) => setTimeout(r, 20));
+  check([...$('menu').children].map((b) => b.textContent).join('|')
+        === 'Back|Save the file|Share as audio|Copy a link|Share with Protracktor',
+    'and its Share opens the same four ways as a playlist row\'s');
+  $('menu').hidden = true;
   menu[2].click();
   await settle();
   check($('browsetitle').textContent === 'Protracker / 4-Mat' && !$('browsesearch').value,
@@ -1481,9 +1510,32 @@ if (window.__api) {
   check(rows[0].url.endsWith('h1.mod') && rows[0].playCount === 2 && rows[0].name === 'What it calls itself',
     'a replay moves to the top, is counted, and takes the better title');
 
-  await played.record(entry(3), { limit: 2 });
+  // **Nothing is forgotten** (the owner, 2026-09-26): it used to keep the last 500.
+  for (let n = 3; n <= 520; n++) await played.record(entry(n));
   rows = await played.recent();
-  check(rows.length === 2 && !rows.some((r) => r.url.endsWith('h2.mod')), 'past the limit the oldest is forgotten');
+  check(rows.length === 520 && rows.some((r) => r.url.endsWith('h2.mod')), 'past the 500 it used to stop at, nothing is forgotten');
+  // One page read along the order of play, not the store sorted whole (review F2).
+  const second = await played.page(100, 100);
+  check(second.length === 100 && second.every((r, i) => r.url === rows[100 + i].url) && await played.count() === 520,
+    'a page of History is its hundred, in the order they were played, and the count is all of them');
+  check((await played.page(500, 100)).length === 20 && (await played.page(0, 100))[0].url === rows[0].url,
+    'the last page holds what is left, and the first starts at the newest');
+
+  // A hundred at a time, with the way on above the list rather than in it.
+  await window.__api.browseTo(['history']);
+  const pager = $('historypager');
+  check(!pager.hidden && $('historyrange').textContent === '1–100 of 520' && $('history-newer').disabled
+        && !$('history-older').disabled && $('browselist').children.length === 101,
+    'History shows the newest hundred, says which, and offers the older ones');
+  $('history-older').click();
+  await new Promise((r) => setTimeout(r, 50));
+  check($('historyrange').textContent === '101–200 of 520' && !$('history-newer').disabled,
+    'Older shows the next hundred');
+  for (let i = 0; i < 5; i++) { $('history-older').click(); await new Promise((r) => setTimeout(r, 50)); }
+  check($('historyrange').textContent === '501–520 of 520' && $('history-older').disabled,
+    'and stops at the last page, which holds what is left');
+  check([pager.querySelector('#history-newer'), pager.querySelector('#history-older')].every((b) => b.querySelector('svg')),
+    'each way with its icon');
 
   await played.clear();
   check((await played.recent()).length === 0, 'and clearing empties it');
@@ -1831,8 +1883,8 @@ if (window.__api) {
     'the link is copied, and a snackbar says so, with nothing to press');
   await new Promise((r) => setTimeout(r, 2600));
   check($('snackbar').hidden, 'and goes by itself after two and a half seconds');
-  check(link?.startsWith(`${window.location.origin}${window.location.pathname}#play:`),
-    'the link points at this page, marked as one tune to play');
+  check(link?.startsWith('https://przunk.github.io/Protracktor/src/#play:'),
+    'the link points at the public page, wherever this one is served from, marked as one tune to play');
   const line = 'Protracker/Jogeir Liljedahl/zoolook.mod\tzoolook';
   check(await api.inflateFragment(link.split('#play:')[1]) === line,
     'and carries the tune the way the phone packs it: a Modland path, and the title the path lacks');
@@ -1913,6 +1965,8 @@ if (window.__api) {
 
   // Offered on every list: the queue's row menu here, Browse's in its own checks above.
   window.document.querySelector('#queue li .rowmenu').click();
+  [...$('menu').children].find((b) => b.textContent === 'Share').click();
+  await settle();
   const item = [...$('menu').children].find((b) => b.textContent === 'Share with Protracktor');
   check(item && !item.disabled && item.querySelector('svg'), 'a row\'s menu offers it, with its icon');
   // Copy a link says so the same way.
@@ -2601,6 +2655,13 @@ if (window.__api) {
   }
   if ($('shuffle').classList.contains('on')) $('shuffle').click();
   for (let i = 0; i < 3 && $('repeat').title !== 'Repeat off'; i++) $('repeat').click();
+  each('historyPages', (c) => {
+    const total = Number(c.total);
+    const range = rules.historyPageRange(Number(c.page), total);
+    return rules.historyPageCount(total) === Number(c.pages)
+      && rules.historyPageClamp(Number(c.page), total) === Number(c.shown)
+      && (c.first === '-' ? range === null : range?.first === Number(c.first) && range?.last === Number(c.last));
+  });
   each('randomFresh', (c) =>
     rules.freshPick({ drawn: c.drawn.split(','), seen: c.seen === '-' ? [] : c.seen.split(',') }) === c.expect);
   // --- the page in Polish, and in a light theme (W6, W7) ------------------------------------------
@@ -2645,7 +2706,7 @@ if (window.__api) {
       'insecure context', 'From the phone', 'fetching the list',
       'fetching the whole archive (20 MB), this browser will not ask for part of it',
       'bheld yes', 'bmeta bwarn', '${named} — Protracktor web',
-      "${location.origin}${location.pathname}#${PLAY_PREFIX}${await deflateFragment(lines.join('\\n'))}",
+      "${PUBLIC_PAGE}#${PLAY_PREFIX}${await deflateFragment(lines.join('\\n'))}",
     ]);
     const code = appSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
       .replace(/\btn?\((?:[^()'"`]|'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`]*`|\((?:[^()]|\([^()]*\))*\))*\)/g, 'T()');

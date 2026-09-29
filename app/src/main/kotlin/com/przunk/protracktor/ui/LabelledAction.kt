@@ -267,7 +267,14 @@ internal fun LabelledAction(
  * button with an icon.
  */
 @Composable
-fun RowScope.IconLabel(icon: ImageVector, label: String) {
+fun RowScope.IconLabel(icon: ImageVector, label: String, iconAfter: Boolean = false) {
+    // After the word for a way forward -- "Older >" -- so the arrow points where the press goes.
+    if (iconAfter) {
+        Text(label)
+        Spacer(Modifier.width(8.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        return
+    }
     Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
     Spacer(Modifier.width(8.dp))
     Text(label)

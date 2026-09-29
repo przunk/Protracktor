@@ -73,7 +73,7 @@ emcc "$ROOT/native/engine/engine.cpp" "$ROOT/native/engine/player_wasm.cpp" \
     -I"$B/sc68/generated" -I"$B/sc68/generated/sc68" -I"$V/sc68-3" -I"$V/sc68-3/libsc68" \
     -I"$V/sc68-3/libsc68/sc68" -I"$V/sc68-3/libsc68/emu68" -I"$V/sc68-3/libsc68/io68" \
     -I"$V/sc68-3/file68" -I"$V/sc68-3/file68/sc68" -I"$V/sc68-3/unice68" \
-    -I"$V/asap" -I"$V/gme" -I"$V/gme/gme" \
+    -I"$V/asap" -I"$B/asap" -I"$V/gme" -I"$V/gme/gme" \
     -I"$V/sidplayfp/src" -I"$V/sidplayfp/src/builders/sidlite-builder" -I"$B/sidplayfp/public" \
     -I"$V/hively/hvl2wav" -I"$V/minimp3" \
     -I"$V/zxtune/src" -I"$V/zxtune/include" -I"$V/zxtune" -I"$V/zxtune/3rdparty/fmt/include" \

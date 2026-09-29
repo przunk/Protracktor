@@ -54,6 +54,27 @@ object SupportedFormats {
     }
 
 
+    /**
+     * Names a folder scan may open several at a time (`docs/BACKLOG.md` A67): those only decoders
+     * that keep everything in their own instance ever claim -- libopenmpt, ASAP, game-music-emu,
+     * libsidplayfp and sc68, whose 3.0 was measured safe across four threads. UADE runs a second
+     * process, and HivelyTracker and ZXTune keep state of their own; their names are opened one at a
+     * time, as is every name not listed, since content decides who claims it. Derived from
+     * `web/src/formats.tsv`, which `SupportedFormatsFileTest` holds this to.
+     */
+    val scanInParallel: Set<String> = setOf(
+        "669", "amf", "ams", "ay", "c67", "cba", "cm3", "cmc", "cmr", "cms", "dbm", "digi", "dlt",
+        "dmc", "dmf", "dsm", "dsym", "dtm", "etx", "far", "fc", "fc13", "fc14", "ftm", "gbs",
+        "gdm", "gmc", "gt2", "gtk", "hes", "ice", "imf", "it", "j2b", "kris", "kss", "mdl", "med",
+        "mmcmp", "mmd0", "mmd1", "mmd2", "mmd3", "mms", "mo3", "mod", "mpd", "mpt", "mptm", "mt2",
+        "mtm", "nsf", "nsfe", "okt", "okta", "plm", "pp20", "psid", "ptm", "puma", "rmt", "rsid",
+        "rtm", "s3m", "sap", "sc68", "sfx", "sid", "smod", "sndh", "spc", "stk", "stm", "symmod",
+        "tcb", "tm2", "tm8", "tmc", "ult", "umx", "unic", "vgm", "vgz", "xm", "xmf", "xpk",
+    )
+
+    /** Whether [fileName] may be opened beside others during a scan. */
+    fun scansInParallel(fileName: String): Boolean = extensionOf(fileName.lowercase()) in scanInParallel
+
     /** What the backends handle today. Grows as more are added. */
     val extensions: Set<String> = setOf(
         // The mainstream trackers
@@ -127,10 +148,10 @@ object SupportedFormats {
      * between them, so `.mp3` in that list would cost a re-index to gain nothing
      * (`docs/BACKLOG.md` A29).
      *
-     * A folder scan does not consult either list: it opens every file and lets the decoder answer
-     * (`MediaScanner.listFiles`), which is why an MP3 in a scanned folder needs nothing here at all.
-     * This set exists for the one place a *name* still has to be judged — deciding whether a
-     * failure means "this app cannot play this format" or "this file is broken".
+     * A folder scan reads only names on these lists since 2026-09-29 (`MediaScanner.worthReading`,
+     * A67) -- which is why an MP3 has to be here to be found in a scanned folder at all. This set is
+     * also what decides whether a failure means "this app cannot play this format" or "this file is
+     * broken".
      */
     val localOnlyExtensions: Set<String> = setOf("mp3")
 

@@ -350,5 +350,17 @@ class QueueLinkTest {
         assertEquals(null, QueueLink.open("$page#not-deflate-at-all"))
         assertEquals(null, QueueLink.open(page))
     }
-}
 
+    @Test
+    fun `Share with Protracktor points at the public page, which the app itself opens`() {
+        // The owner, 2026-09-25: the link is for somebody else, so it goes to the page anybody can
+        // reach, not to the one this phone is paired with. And it lands in `src/`, since the root
+        // forwards with a refresh that drops the fragment.
+        val link = QueueLink.shareWithProtracktor(
+            listOf(TrackRef("https://modland.com/pub/modules/Protracker/4-Mat/elysium.mod", "elysium.mod"))
+        )!!
+        assertTrue(link, link.startsWith("https://przunk.github.io/Protracktor/src/#"))
+        assertTrue(link, QueueLink.isPageLink(link))
+        assertEquals(1, QueueLink.open(link)?.tracks?.size)
+    }
+}

@@ -280,6 +280,17 @@ class RuleCasesTest {
         assertEquals(case.why(), case.int("distinct"), played.take(count).toSet().size)
     }
 
+    @Test
+    fun `history's pages agree with the shared cases`() = each("historyPages") { case ->
+        val total = case.int("total")
+        assertEquals(case.why(), case.int("pages"), HistoryPages.count(total))
+        assertEquals(case.why(), case.int("shown"), HistoryPages.clamp(case.int("page"), total))
+        val range = HistoryPages.range(case.int("page"), total)
+        assertEquals(case.why(), case.intOrNull("first"), range.first.takeIf { !range.isEmpty() })
+        assertEquals(case.why(), case.intOrNull("last"), range.last.takeIf { !range.isEmpty() })
+        if (!range.isEmpty()) assertEquals(case.why(), range.first - 1, HistoryPages.offset(case.int("page"), total))
+    }
+
     private companion object {
         const val RULES = "docs/rules/queue-cases.tsv"
     }

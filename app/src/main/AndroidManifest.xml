@@ -374,6 +374,11 @@
             </intent-filter>
         </activity>
 
+        <!-- The scan notification's Stop (docs/BACKLOG.md A67). Nothing outside the app sends it. -->
+        <receiver
+            android:name=".player.ScanStopReceiver"
+            android:exported="false" />
+
         <service
             android:name=".player.PlaybackService"
             android:exported="false"

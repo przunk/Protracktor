@@ -54,6 +54,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun rememberFolder(treeUri: Uri) = controller.rememberFolder(treeUri)
     fun forgetFolder(uri: String) = controller.forgetFolder(uri)
     fun openFolder(folder: GrantedFolder) = controller.openFolder(folder)
+    fun openSubfolder(path: String) = controller.openSubfolder(path)
     fun closeFolder() = controller.closeFolder()
     fun openDomain(domain: BrowseDomain) = controller.openDomain(domain)
     fun browseBack(): Boolean = controller.browseBack()
@@ -110,8 +111,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun importPlaylist(uri: Uri) = controller.importPlaylist(uri)
 
     fun clearHistory() = controller.clearHistory()
+    fun showHistoryPage(page: Int) = controller.showHistoryPage(page)
 
     fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)
+    fun stopScan() = controller.stopScan()
 
     fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
 

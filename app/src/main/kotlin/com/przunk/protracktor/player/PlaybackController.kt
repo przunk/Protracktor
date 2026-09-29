@@ -375,6 +375,12 @@ data class BrowseState(
     // Local files
     val folders: List<GrantedFolder> = emptyList(),
     val openFolder: GrantedFolder? = null,
+    // The open folder as a tree (`LocalTree`): every tune in it with its directory, where the tree
+    // starts, which level is on screen, and the folders on that level. `tracks` is the level's files.
+    val folderAll: List<Pair<String, TrackRef>> = emptyList(),
+    val folderRoot: String = "",
+    val folderAt: String = "",
+    val subfolders: List<LocalTree.Folder> = emptyList(),
 
     // Online catalogues
     val catalogues: List<CatalogueSummary> = emptyList(),
@@ -490,8 +496,9 @@ data class BrowseState(
     /** Which decoders this build has, for telling a stale catalogue index from a current one. */
     val backends: String = "",
 
-    // What has been played
-    val history: List<TrackRef> = emptyList(),
+    // What has been played: how much of it, and which hundred is on screen (`HistoryPages`)
+    val historyTotal: Int = 0,
+    val historyPage: Int = 0,
 
     // Search
     val query: String = "",
@@ -725,6 +732,14 @@ class PlaybackController private constructor(private val context: Context) {
      * takes. One thread rather than a pool, because these tasks are sequential by nature and two of
      * them would only contend with each other.
      */
+    /** A folder scan's side-by-side opens (A67), at the background priority the single lane has. */
+    private val scanWork = Executors.newFixedThreadPool(IncrementalScan.PARALLEL) { runnable ->
+        Thread({
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+            runnable.run()
+        }, "protracktor-scan")
+    }.asCoroutineDispatcher()
+
     private val backgroundWork = Executors.newSingleThreadExecutor { runnable ->
         Thread({
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
@@ -1004,6 +1019,11 @@ class PlaybackController private constructor(private val context: Context) {
                 configureUade(version)
             }
         }
+
+        // **A scan's notification left behind by a process that died** (the owner, 2026-09-29: the
+        // app crashed mid-scan and the bar stayed in the shade). No scan runs at start, so any bar
+        // there is a stale one.
+        ScanNotification.clear(context)
 
         restore()
         // One loop drives both the progress bar and end-of-track handling. The native side flags
@@ -1397,7 +1417,10 @@ class PlaybackController private constructor(private val context: Context) {
             current.openFormat != null -> current.copy(openFormat = null, tracks = emptyList())
                 .also { current.openCatalogue?.let(::openCatalogue) }
             current.openCatalogue != null -> current.copy(openCatalogue = null, groups = emptyList())
-            current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList())
+            // Up the folder's own tree first, a level at a time, and out of it only from its top.
+            current.openFolder != null && LocalTree.parent(current.folderAt, current.folderRoot) != null ->
+                levelOf(current, LocalTree.parent(current.folderAt, current.folderRoot)!!)
+            current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList(), folderAll = emptyList(), subfolders = emptyList())
             // Search keeps its results and its query; every other domain drops them.
             current.domain == BrowseDomain.SEARCH -> current.copy(domain = BrowseDomain.ROOT)
             current.domain != BrowseDomain.ROOT -> current.copy(domain = BrowseDomain.ROOT, tracks = emptyList())
@@ -1454,14 +1477,44 @@ class PlaybackController private constructor(private val context: Context) {
             val stale = found.isNotEmpty() &&
                 libraryIndex.isStale(folder.uri, NativeEngine.backendsFingerprint())
             _browse.update {
-                it.copy(
-                    tracks = found,
+                treeOf(it, folder, found).copy(
                     loading = false,
                     folderUnscanned = found.isEmpty(),
                     folderStale = stale,
                 )
             }
         }
+    }
+
+    /**
+     * The open folder as a tree, at its top (the owner, 2026-09-29): its folders, then its own
+     * files, rather than every file in it in one list. `tracksIn` carries each file's directory in
+     * its subtitle.
+     */
+    private fun treeOf(
+        state: BrowseState,
+        folder: GrantedFolder,
+        found: List<TrackRef>,
+        keepLevel: Boolean = false,
+    ): BrowseState {
+        val all = found.map { it.subtitle to it }
+        val root = LocalTree.root(all.map { it.first }, MediaScanner.rootPathOf(Uri.parse(folder.uri)))
+        // **Where the reader is, kept** while a scan fills the tree in (the owner, 2026-09-29): the
+        // level on screen stays on screen as long as it is still inside the tree.
+        val at = state.folderAt.takeIf {
+            keepLevel && state.folderRoot == root && (it == root || it.startsWith("$root/"))
+        } ?: root
+        return levelOf(state.copy(folderAll = all, folderRoot = root), at)
+    }
+
+    private fun levelOf(state: BrowseState, at: String): BrowseState {
+        val level = LocalTree.level(state.folderAll, at)
+        return state.copy(folderAt = at, subfolders = level.folders, tracks = level.files)
+    }
+
+    /** Into a folder inside the open one. */
+    fun openSubfolder(path: String) {
+        _browse.update { if (it.openFolder == null) it else levelOf(it, path) }
     }
 
     /**
@@ -1483,6 +1536,14 @@ class PlaybackController private constructor(private val context: Context) {
      * (`native/probe/sc68/probe_concurrency.c`), which is what makes this a background job rather
      * than something the user has to stop the music for.
      */
+    /** Stops a scan; what it found so far is kept, and the next scan goes on from there. */
+    fun stopScan() {
+        scanJob?.cancel()
+        // Stopped while still listing the folder, before there is anything to keep, the bar goes too.
+        _browse.update { it.copy(scanProgress = null) }
+        ScanNotification.clear(context)
+    }
+
     fun scanFolder(folder: GrantedFolder) {
         scanJob?.cancel()
         scanJob = scope.launch {
@@ -1493,28 +1554,107 @@ class PlaybackController private constructor(private val context: Context) {
             _browse.update { it.copy(scanProgress = 0 to candidates.size) }
 
             val fingerprint = NativeEngine.backendsFingerprint()
-            val indexed = mutableListOf<IndexedFile>()
-            var done = 0
-            for (candidate in candidates) {
-                ensureActive()
-                withContext(backgroundWork) { probe(candidate, folder.uri) }?.let(indexed::add)
-                done++
-                // Every file would be a state update per file and a recomposition per file; every
-                // twenty-fifth is still movement on screen and costs almost nothing.
-                if (done % 25 == 0 || done == candidates.size) {
-                    _browse.update { it.copy(scanProgress = done to candidates.size) }
+            // **Only what is new or changed is opened** (the owner, 2026-09-29: folders scan very
+            // slowly). A file the last scan indexed, at the same address and size, is kept as it was.
+            val startedAt = SystemClock.elapsedRealtime()
+            val plan = IncrementalScan.plan(
+                candidates,
+                libraryIndex.indexedIn(folder.uri),
+                stale = libraryIndex.isStale(folder.uri, fingerprint),
+            )
+            // Found so far: what was kept, and what the workers add. Shared between them, and read
+            // whole for a save, so every touch holds its lock.
+            val indexed = java.util.Collections.synchronizedList(plan.kept.toMutableList())
+            val done = java.util.concurrent.atomic.AtomicInteger(plan.kept.size)
+            _browse.update { it.copy(scanProgress = done.get() to candidates.size) }
+            val (together, alone) = IncrementalScan.lanes(plan.toOpen)
+            val nextTogether = java.util.concurrent.ConcurrentLinkedQueue(together)
+            var savedAt = done.get()
+            // What is already in the index: everything kept from the last scan. A save adds only
+            // what came after -- rewriting the whole folder each time cost the size of the index.
+            var savedRows = plan.kept.size
+            suspend fun savedSoFar() {
+                val fresh = synchronized(indexed) { indexed.subList(savedRows, indexed.size).toList() }
+                savedRows += fresh.size
+                withContext(NonCancellable) { libraryIndex.addToFolder(fresh, fingerprint) }
+            }
+            suspend fun saved() {
+                val snapshot = synchronized(indexed) { indexed.toList() }
+                withContext(NonCancellable) { libraryIndex.replaceFolder(folder.uri, snapshot, fingerprint) }
+            }
+            var shownAt = 0L
+            fun notify(now: Int) {
+                // At most twice a second: a notification per file is one the system drops.
+                val at = SystemClock.elapsedRealtime()
+                if (at - shownAt < 500 && now != candidates.size) return
+                shownAt = at
+                ScanNotification.show(context, folder.displayName, now, candidates.size)
+                // **The list fills in as the scan goes** (the owner, 2026-09-29: it said "nothing
+                // playable" until the scan ended and the folder was opened again).
+                val sofar = synchronized(indexed) { indexed.toList() }
+                _browse.update { current ->
+                    if (current.openFolder?.uri != folder.uri) current
+                    else treeOf(current, folder, sofar.map(::toTrackRef), keepLevel = true).copy(loading = false, folderUnscanned = false)
                 }
             }
+            notify(done.get())
+            suspend fun opened(candidate: MediaScanner.Candidate, on: kotlinx.coroutines.CoroutineDispatcher) {
+                withContext(on) { probe(candidate, folder.uri) }?.let(indexed::add)
+                val now = done.incrementAndGet()
+                // Every file would be a state update per file and a recomposition per file; every
+                // twenty-fifth is still movement on screen and costs almost nothing.
+                if (now % 25 == 0 || now == candidates.size) {
+                    _browse.update { it.copy(scanProgress = now to candidates.size) }
+                    notify(now)
+                }
+            }
+            try {
+                kotlinx.coroutines.coroutineScope {
+                    // **Side by side where the name allows it** (A67: 11,582 ASMA files took about a
+                    // quarter of an hour, 80 ms each, one after another).
+                    val workers = List(IncrementalScan.PARALLEL) {
+                        launch {
+                            while (true) {
+                                ensureActive()
+                                opened(nextTogether.poll() ?: break, scanWork)
+                            }
+                        }
+                    } + launch {
+                        for (candidate in alone) {
+                            ensureActive()
+                            opened(candidate, backgroundWork)
+                        }
+                    }
+                    // **Saved as it goes**, so a scan stopped -- by the X, or by the system killing
+                    // the app in the background -- is only paused: the next one keeps what is saved.
+                    launch {
+                        while (workers.any { it.isActive }) {
+                            delay(1_000)
+                            if (done.get() - savedAt >= IncrementalScan.CHECKPOINT) {
+                                savedAt = done.get()
+                                savedSoFar()
+                            }
+                        }
+                    }
+                }
+            } catch (stopped: CancellationException) {
+                withContext(NonCancellable) {
+                    savedSoFar()
+                    ScanNotification.clear(context)
+                    _browse.update { it.copy(scanProgress = null) }
+                    _state.update {
+                        it.copy(message = Message(context.getString(R.string.notice_scan_stopped, done.get(), candidates.size)))
+                    }
+                }
+                throw stopped
+            }
 
-            libraryIndex.replaceFolder(folder.uri, indexed, fingerprint)
+            saved()
+            ScanNotification.clear(context)
             _browse.update { current ->
-                current.copy(
+                // The level on screen stays, if it is still there: the list filled in under it.
+                (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.toList().map(::toTrackRef), keepLevel = true) else current).copy(
                     scanProgress = null,
-                    tracks = if (current.openFolder?.uri == folder.uri) {
-                        indexed.map(::toTrackRef)
-                    } else {
-                        current.tracks
-                    },
                     folderUnscanned = false,
                     folderStale = false,
                 )
@@ -1522,9 +1662,12 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
+                        // With the time it took and how much was kept, so "slow" has a number.
                         context.getString(
-                            R.string.notice_scanned,
+                            R.string.notice_scanned_timed,
                             folder.displayName, indexed.size, candidates.size,
+                            DateUtils.formatElapsedTime((SystemClock.elapsedRealtime() - startedAt) / 1000),
+                            plan.kept.size,
                         )
                     )
                 )
@@ -2135,14 +2278,15 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Share with Protracktor: one tune as a link that opens the web player playing it.
      *
-     * Through the share sheet, like the queue's link, because where it goes is the person's choice
-     * -- their own browser, a message to somebody else. It points at the page this phone knows
-     * ([Appearance.webPlayer]), so it opens only where that address can be reached from.
+     * Through the share sheet, like the queue's link, because where it goes is the person's choice.
+     * **It points at the public page** ([QueueLink.PUBLIC_BASE]), not at the one this phone is
+     * paired with (the owner, 2026-09-25): shared with somebody else, a link to this person's own
+     * computer opened nowhere. Sending the queue to one's own browser still goes to the paired page.
      */
     fun sendToWeb(tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
         val sendable = tracks.filter(QueueLink::canSend)
-        val link = QueueLink.tracksLink(Appearance.webPlayer(context), tracks)
+        val link = QueueLink.shareWithProtracktor(tracks)
         if (link == null) {
             val one = tracks.singleOrNull()
             _state.update {
@@ -2272,7 +2416,7 @@ class PlaybackController private constructor(private val context: Context) {
                 val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
                 _state.update {
                     it.copy(
-                        resultsQueue = PlayQueue(tracks = found).startAt(at),
+                        resultsQueue = PlayQueue.results(found, at, it.queue),
                         resultsFromHistory = false,
                         diceWaiting = true,
                     )
@@ -2287,7 +2431,7 @@ class PlaybackController private constructor(private val context: Context) {
                 val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
                 _state.update {
                     it.copy(
-                        resultsQueue = if (playingResults) PlayQueue(tracks = found).startAt(at) else it.resultsQueue,
+                        resultsQueue = if (playingResults) PlayQueue.results(found, at, it.queue) else it.resultsQueue,
                         searchWaiting = true,
                     )
                 }
@@ -2325,14 +2469,36 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun openHistory() {
-        scope.launch {
-            _browse.update { it.copy(domain = BrowseDomain.HISTORY, loading = true, tracks = emptyList()) }
-            refreshHistory()
-        }
+        // Opened at the newest: a visit starts where the question usually is, "what was that".
+        _browse.update { it.copy(domain = BrowseDomain.HISTORY, loading = true, tracks = emptyList(), historyPage = 0) }
+        historyReads.open()
     }
 
-    private suspend fun refreshHistory() {
-        val played = history.recent().map { entry ->
+    /**
+     * History's reads, of which only the newest reaches the screen: a page on its way when *Clear
+     * history* is pressed must not put the cleared tunes back (`docs/review-2026-09-28.md` F1).
+     * **A page, not all of it** (the owner, 2026-09-26): a hundred rows and a count, however long
+     * History has grown.
+     *
+     * Also the `tracks` list, because that is what the add-to-playlist machinery reads and there is
+     * no reason history should be the one list you cannot add from -- the page on screen, since
+     * that is the list the rows, a tap and next and previous are about.
+     */
+    private val historyReads = HistoryReads(
+        scope = scope,
+        count = { history.count() },
+        page = { offset, limit -> historyRows(offset, limit) },
+        clear = { history.clear() },
+        show = { shown ->
+            _browse.update {
+                if (it.domain != BrowseDomain.HISTORY) return@update it
+                it.copy(historyTotal = shown.total, historyPage = shown.page, tracks = shown.rows, loading = false)
+            }
+        },
+    )
+
+    private suspend fun historyRows(offset: Int, limit: Int): List<TrackRef> =
+        history.page(offset, limit).map { entry ->
             TrackRef(
                 id = entry.trackId,
                 title = entry.title,
@@ -2351,9 +2517,13 @@ class PlaybackController private constructor(private val context: Context) {
                 author = entry.author,
             )
         }
-        // Also the `tracks` list, because that is what the add-to-playlist machinery reads and
-        // there is no reason history should be the one list you cannot add from.
-        _browse.update { it.copy(history = played, tracks = played, loading = false) }
+
+    /** Shows page [page] of History, a hundred tunes, the newest first (the owner, 2026-09-26). */
+    fun showHistoryPage(page: Int) {
+        val now = _browse.value
+        if (now.domain != BrowseDomain.HISTORY) return
+        _browse.update { it.copy(historyPage = HistoryPages.clamp(page, now.historyTotal)) }
+        historyReads.turn(page, now.historyTotal)
     }
 
     /**
@@ -2374,8 +2544,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun clearHistory() {
         scope.launch {
-            history.clear()
-            _browse.update { it.copy(history = emptyList(), tracks = emptyList()) }
+            historyReads.clearAll().join()
             _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }
         }
     }
@@ -3431,7 +3600,7 @@ class PlaybackController private constructor(private val context: Context) {
         // back returns to it -- the same words, the same folder -- rather than to a fresh Browse.
         sessionBrowse = _browse.value
         _state.update { it.copy(resultsFromHistory = fromHistory, sessionSource = SessionSource.of(_browse.value)) }
-        playFromResultsQueue(PlayQueue(tracks = results).startAt(index))
+        playFromResultsQueue(PlayQueue.results(results, index, _state.value.queue))
     }
 
     private fun playFromResultsQueue(results: PlayQueue) {
@@ -4394,14 +4563,21 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun toggleShuffle() {
-        _state.update { it.copy(queue = it.queue.withShuffle(!it.queue.shuffle)) }
+        // The list playing from Browse follows the button too: it is what next walks meanwhile.
+        _state.update {
+            val on = !it.queue.shuffle
+            it.copy(queue = it.queue.withShuffle(on), resultsQueue = it.resultsQueue?.withShuffle(on))
+        }
         scheduleSave()
         // Both of these change what comes next, so anything read ahead is now the wrong track.
         prefetchUpcoming()
     }
 
     fun cycleRepeat() {
-        _state.update { it.copy(queue = it.queue.withRepeat(it.queue.repeat.next())) }
+        _state.update {
+            val repeat = it.queue.repeat.next()
+            it.copy(queue = it.queue.withRepeat(repeat), resultsQueue = it.resultsQueue?.withRepeat(repeat))
+        }
         scheduleSave()
         prefetchUpcoming()
     }

@@ -84,6 +84,7 @@ import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.DownloadKeys
 import com.przunk.protracktor.player.DownloadSizes
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.HistoryPages
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
@@ -105,6 +106,8 @@ fun BrowseScreen(
     onPickFolder: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
+    onOpenSubfolder: (String) -> Unit = {},
+    onStopScan: () -> Unit = {},
     onForgetFolder: (String) -> Unit,
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
@@ -120,6 +123,7 @@ fun BrowseScreen(
     onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
     onClearHistory: () -> Unit,
+    onHistoryPage: (Int) -> Unit = {},
     playingId: String?,
     loadingId: String?,
     /**
@@ -222,6 +226,8 @@ fun BrowseScreen(
                 onPickFolder = onPickFolder,
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
+                onStopScan = onStopScan,
+                onOpenSubfolder = onOpenSubfolder,
                 onForgetFolder = onForgetFolder,
                 onScanFolder = onScanFolder,
                 onPlay = onPlay,
@@ -260,6 +266,7 @@ fun BrowseScreen(
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
                 onClearHistory = onClearHistory,
+                onHistoryPage = onHistoryPage,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -536,6 +543,8 @@ private fun LocalDomain(
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
+    onStopScan: () -> Unit,
+    onOpenSubfolder: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -546,23 +555,37 @@ private fun LocalDomain(
             // A scan reads every file in the tree, so it says how far it has got. On a network
             // share this is minutes, and a spinner with no number is indistinguishable from a hang.
             browse.scanProgress?.let { (done, total) ->
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(
-                        text = if (total > 0) {
-                            stringResource(R.string.scan_progress, done, total)
-                        } else {
-                            stringResource(R.string.scan_listing)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    if (total > 0) {
-                        LinearProgressIndicator(
-                            progress = { done.toFloat() / total },
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (total > 0) {
+                                stringResource(R.string.scan_progress, done, total)
+                            } else {
+                                stringResource(R.string.scan_listing)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                    } else {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        if (total > 0) {
+                            LinearProgressIndicator(
+                                progress = { done.toFloat() / total },
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            )
+                        } else {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        }
                     }
+                    // **A scan can be stopped** (the owner, 2026-09-29: a quarter of an hour, and no
+                    // way out). What it found is kept, and the next scan goes on from there.
+                    // The app's own button: icon above its name, on its tonal square (the owner).
+                    LabelledAction(
+                        icon = PlayerIcons.Close,
+                        label = stringResource(R.string.action_stop_scan),
+                        onClick = onStopScan,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
                 }
             }
 
@@ -585,6 +608,23 @@ private fun LocalDomain(
                 }
             }
 
+            // Where in the folder's tree this is: the level's own path, since Back walks it up.
+            if (browse.folderAt.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(PlayerIcons.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        text = browse.folderAt.split('/').joinToString(" › "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+
             Selectable(
                 browse = browse,
                 scroll = scroll,
@@ -599,6 +639,7 @@ private fun LocalDomain(
                 onShareAudio = onShareAudio,
                 onShareLink = onShareLink,
                 onSendToWeb = onSendToWeb,
+                onOpenSubfolder = onOpenSubfolder,
             )
         }
         return
@@ -1050,6 +1091,7 @@ private fun HistoryDomain(
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
+    onHistoryPage: (Int) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
@@ -1058,7 +1100,7 @@ private fun HistoryDomain(
         Loading()
         return
     }
-    if (browse.history.isEmpty()) {
+    if (browse.historyTotal == 0) {
         Text(
             text = stringResource(R.string.history_empty),
             style = MaterialTheme.typography.bodyMedium,
@@ -1075,6 +1117,31 @@ private fun HistoryDomain(
         ) {
             TextButton(onClick = onClearHistory) {
                 IconLabel(PlayerIcons.Remove, stringResource(R.string.action_clear_history))
+            }
+        }
+        // **A hundred at a time, and the way on outside the list** (the owner, 2026-09-26): here,
+        // above it, so the next page is one press from wherever the list is scrolled. Only when
+        // there is more than one page.
+        val total = browse.historyTotal
+        if (HistoryPages.count(total) > 1) {
+            val page = browse.historyPage
+            val range = HistoryPages.range(page, total)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = { onHistoryPage(page - 1) }, enabled = page > 0) {
+                    IconLabel(PlayerIcons.ChevronLeft, stringResource(R.string.history_newer))
+                }
+                Text(
+                    text = stringResource(R.string.history_page_range, range.first, range.last, total),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { onHistoryPage(page + 1) }, enabled = page < HistoryPages.count(total) - 1) {
+                    IconLabel(PlayerIcons.ChevronRight, stringResource(R.string.history_older), iconAfter = true)
+                }
             }
         }
         Selectable(
@@ -1149,8 +1216,9 @@ private fun Selectable(
     onShareAudio: (TrackRef) -> Unit,
     onShareLink: (TrackRef) -> Unit,
     onSendToWeb: (List<TrackRef>) -> Unit,
+    onOpenSubfolder: (String) -> Unit = {},
 ) {
-    var selected by remember(browse.openFolder?.uri, browse.openAuthor, browse.query) {
+    var selected by remember(browse.openFolder?.uri, browse.folderAt, browse.openAuthor, browse.query) {
         mutableStateOf(emptySet<String>())
     }
     var showingInfo by remember { mutableStateOf<TrackRef?>(null) }
@@ -1216,7 +1284,9 @@ private fun Selectable(
             // An empty list is two different states and only one of them is a disappointment.
             // Nothing searched yet reads as ordinary text; nothing *found* borrows the colour the
             // stale-index warnings use, because it is the same kind of news.
-            browse.tracks.isEmpty() -> {
+            // A scan under way says so with its bar; "nothing playable" is not true yet.
+            browse.tracks.isEmpty() && browse.subfolders.isEmpty() && browse.scanProgress != null -> Unit
+            browse.tracks.isEmpty() && browse.subfolders.isEmpty() -> {
                 val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
                 Text(
                     text = stringResource(
@@ -1255,6 +1325,16 @@ private fun Selectable(
                 RestorePosition(scroll, key, listState, browse.tracks.map { it.id }, browse.loading)
                 Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                // **A local folder's own folders first** (the owner, 2026-09-29): the tree is
+                // walked, not flattened. Hidden while ticking rows: a folder is not a tune to tick.
+                if (!selecting) items(browse.subfolders, key = { "folder:" + it.path }) { sub ->
+                    ListItem(
+                        headlineContent = { Text(sub.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = { Text(pluralStringResource(R.plurals.track_count, sub.tunes, sub.tunes)) },
+                        leadingContent = { Icon(PlayerIcons.Folder, contentDescription = null) },
+                        modifier = Modifier.clickable { onOpenSubfolder(sub.path) },
+                    )
+                }
                 itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
                     BrowseTrackRow(
                         track = track,
@@ -1403,6 +1483,9 @@ private fun BrowseTrackRow(
 ) {
     val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
+    // The menu shows its Share entry's four ways instead of itself while this is set.
+    var sharing by remember { mutableStateOf(false) }
+    val shares = ShareActions(file = onShareFile, audio = onShareAudio, link = onShareLink, protracktor = onSendToWeb)
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -1451,7 +1534,11 @@ private fun BrowseTrackRow(
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(PlayerIcons.More, stringResource(R.string.a11y_track_menu, track.title))
                     }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false; sharing = false }) {
+                        if (sharing) {
+                            ShareMenuItems(shares, onBack = { sharing = false }, onDone = { menuOpen = false; sharing = false })
+                            return@DropdownMenu
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_add_to_playlist)) },
                             leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
@@ -1469,30 +1556,7 @@ private fun BrowseTrackRow(
                                 onClick = { menuOpen = false; show() },
                             )
                         }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_share_file)) },
-                            leadingIcon = { Icon(PlayerIcons.Share, contentDescription = null) },
-                            onClick = { menuOpen = false; onShareFile() },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_share_audio)) },
-                            leadingIcon = { Icon(PlayerIcons.AudioFile, contentDescription = null) },
-                            onClick = { menuOpen = false; onShareAudio() },
-                        )
-                        onShareLink?.let { share ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_share_link)) },
-                                leadingIcon = { Icon(PlayerIcons.Link, contentDescription = null) },
-                                onClick = { menuOpen = false; share() },
-                            )
-                        }
-                        onSendToWeb?.let { send ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_send_to_web)) },
-                                leadingIcon = { Icon(PlayerIcons.Web, contentDescription = null) },
-                                onClick = { menuOpen = false; send() },
-                            )
-                        }
+                        ShareMenuEntry(shares) { sharing = true }
                     }
                 }
             }
@@ -1527,6 +1591,7 @@ private fun BrowseTrackRow(
                     Modifier.graphicsLayer { alpha = breath.value }
                 }
             )
+            .menuFocus(menuOpen)
             // `combinedClickable` uses the platform long-press timeout, and a gesture that turns
             // into a scroll is claimed by the list before it ever becomes a long press. Both
             // matter: a long press firing at a twentieth of a second mid-scroll drops the reader

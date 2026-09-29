@@ -190,6 +190,9 @@
     <string name="domain_history_body">Tunes you have played, most recent first</string>
     <string name="history_empty">Nothing played yet. Anything you play — from a playlist, from Random or from a search — turns up here.</string>
     <string name="action_clear_history">Clear history</string>
+    <string name="history_newer">Newer</string>
+    <string name="history_older">Older</string>
+    <string name="history_page_range">%1$,d–%2$,d of %3$,d</string>
         <string name="song_lengths_title">SID song lengths (HVSC)</string>
     <string name="song_lengths_none">Not downloaded — SID tunes show no length and play until you skip them</string>
     <string name="track_metadata_title">Track metadata and lengths (songdb)</string>
@@ -430,7 +433,11 @@
         <item quantity="one">Removed %1$,d track</item>
         <item quantity="other">Removed %1$,d tracks</item>
     </plurals>
-    <string name="notice_scanned">Scanned %1$s: %2$,d playable of %3$,d.</string>
+    <string name="notice_scanned_timed">Scanned %1$s: %2$,d playable of %3$,d, in %4$s; %5$,d unchanged, not opened again.</string>
+    <string name="notice_scan_stopped">Scan stopped at %1$,d of %2$,d files. What it found is kept, and scanning again goes on from there.</string>
+    <string name="action_stop_scan">Stop</string>
+    <string name="notification_channel_scanning">Folder scans</string>
+    <string name="scan_notification_title">Scanning %1$s</string>
     <plurals name="notice_imported">
         <item quantity="one">Imported %1$,d track into \"%2$s\".</item>
         <item quantity="other">Imported %1$,d tracks into \"%2$s\".</item>

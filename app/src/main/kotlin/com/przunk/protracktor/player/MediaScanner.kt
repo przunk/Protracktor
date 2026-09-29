@@ -44,7 +44,7 @@ object MediaScanner {
      * get a real filesystem path out of the storage access framework, and for a network share there
      * is not one to get -- so this is a label, not an address, and it is treated as one.
      */
-    private fun rootPathOf(treeUri: Uri): String =
+    internal fun rootPathOf(treeUri: Uri): String =
         runCatching {
             DocumentsContract.getTreeDocumentId(treeUri).substringAfter(':').trim('/')
         }.getOrNull()?.ifBlank { null } ?: labelOf(treeUri)
@@ -131,19 +131,20 @@ object MediaScanner {
     /**
      * Whether a scan should read this file at all.
      *
-     * **The name is a parameter and is deliberately unused.** That is the rule this function exists
-     * to hold: a scan decides what a file is by opening it, never by what it is called
-     * (`docs/BACKLOG.md` A6, `docs/STATUS.md` C4). It takes the name so that the day somebody
-     * reaches for it here, the change is visible in a diff and fails a test, instead of quietly
-     * restoring the behaviour this replaced.
-     *
-     * Size is content, not a name, and is the one thing it does judge on.
+     * **By its name now, as well as its size** (the owner, 2026-09-29). Until then a scan read
+     * every file and let the decoders decide (`docs/BACKLOG.md` A6, `docs/STATUS.md` C4), so a
+     * misnamed module was found. The price came due on a folder of 11,582 files where half were
+     * MIDI and some were text: every one of those was read whole and tried by every decoder, UADE's
+     * content check included -- about 160 ms each, a quarter of an hour of nothing. The owner chose
+     * the trade: only names a decoder here claims are opened, and a module under a name nobody would
+     * give it is no longer found. What a name admits is still opened and still decided by its
+     * content, so a photograph called `.mod` is still refused.
      */
     fun worthReading(
-        @Suppress("UNUSED_PARAMETER") displayName: String,
+        displayName: String,
         sizeBytes: Long,
         maxBytes: Long = MAX_PROBE_BYTES,
-    ): Boolean = sizeBytes <= maxBytes
+    ): Boolean = sizeBytes <= maxBytes && SupportedFormats.looksPlayable(displayName)
 
     /**
      * The largest file worth reading to find out what it is.

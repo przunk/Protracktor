@@ -1,9 +1,9 @@
-Share as audio: send any tune as an M4A file that Messenger and other apps play. Its length is in Settings.
+Local folders keep their own folders, and scanning them is much faster: it can be stopped, shows in a notification, and fills the list as it goes.
 
-Shuffle starts from the tune you choose and plays every tune once; Back stops at the one you chose.
+History keeps every tune, a hundred at a time, and opens at once.
 
-Back never stops the music: the playlist says what is playing and leads back to it.
+Atari 8-bit tunes that state no length now end where they really do.
 
-Your own files carry the phone mark too.
+One Share in every menu, with the same four ways; Share with Protracktor opens anywhere.
 
-After an update, a bar says when the database is being prepared.
+Repeat and shuffle apply to tunes played from Browse, too.
