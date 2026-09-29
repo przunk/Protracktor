@@ -102,7 +102,7 @@ internal fun rememberBrowseScroll(): BrowseScroll = remember { BrowseScroll() }
  */
 internal fun BrowseState.levelKey(): String = when (domain) {
     BrowseDomain.ROOT -> "root"
-    BrowseDomain.LOCAL -> openFolder?.let { "local/${it.uri}" } ?: "local"
+    BrowseDomain.LOCAL -> openFolder?.let { "local/${it.uri}/$folderAt" } ?: "local"
     BrowseDomain.ONLINE ->
         listOfNotNull("online", openCatalogue?.id, openFormat, openAuthor).joinToString("/")
     // The query is part of it: searching for something else is a different list, not a scrolled

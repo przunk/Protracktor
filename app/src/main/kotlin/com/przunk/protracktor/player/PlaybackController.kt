@@ -375,6 +375,12 @@ data class BrowseState(
     // Local files
     val folders: List<GrantedFolder> = emptyList(),
     val openFolder: GrantedFolder? = null,
+    // The open folder as a tree (`LocalTree`): every tune in it with its directory, where the tree
+    // starts, which level is on screen, and the folders on that level. `tracks` is the level's files.
+    val folderAll: List<Pair<String, TrackRef>> = emptyList(),
+    val folderRoot: String = "",
+    val folderAt: String = "",
+    val subfolders: List<LocalTree.Folder> = emptyList(),
 
     // Online catalogues
     val catalogues: List<CatalogueSummary> = emptyList(),
@@ -1398,7 +1404,10 @@ class PlaybackController private constructor(private val context: Context) {
             current.openFormat != null -> current.copy(openFormat = null, tracks = emptyList())
                 .also { current.openCatalogue?.let(::openCatalogue) }
             current.openCatalogue != null -> current.copy(openCatalogue = null, groups = emptyList())
-            current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList())
+            // Up the folder's own tree first, a level at a time, and out of it only from its top.
+            current.openFolder != null && LocalTree.parent(current.folderAt, current.folderRoot) != null ->
+                levelOf(current, LocalTree.parent(current.folderAt, current.folderRoot)!!)
+            current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList(), folderAll = emptyList(), subfolders = emptyList())
             // Search keeps its results and its query; every other domain drops them.
             current.domain == BrowseDomain.SEARCH -> current.copy(domain = BrowseDomain.ROOT)
             current.domain != BrowseDomain.ROOT -> current.copy(domain = BrowseDomain.ROOT, tracks = emptyList())
@@ -1455,14 +1464,34 @@ class PlaybackController private constructor(private val context: Context) {
             val stale = found.isNotEmpty() &&
                 libraryIndex.isStale(folder.uri, NativeEngine.backendsFingerprint())
             _browse.update {
-                it.copy(
-                    tracks = found,
+                treeOf(it, folder, found).copy(
                     loading = false,
                     folderUnscanned = found.isEmpty(),
                     folderStale = stale,
                 )
             }
         }
+    }
+
+    /**
+     * The open folder as a tree, at its top (the owner, 2026-09-29): its folders, then its own
+     * files, rather than every file in it in one list. `tracksIn` carries each file's directory in
+     * its subtitle.
+     */
+    private fun treeOf(state: BrowseState, folder: GrantedFolder, found: List<TrackRef>): BrowseState {
+        val all = found.map { it.subtitle to it }
+        val root = LocalTree.root(all.map { it.first }, MediaScanner.rootPathOf(Uri.parse(folder.uri)))
+        return levelOf(state.copy(folderAll = all, folderRoot = root), root)
+    }
+
+    private fun levelOf(state: BrowseState, at: String): BrowseState {
+        val level = LocalTree.level(state.folderAll, at)
+        return state.copy(folderAt = at, subfolders = level.folders, tracks = level.files)
+    }
+
+    /** Into a folder inside the open one. */
+    fun openSubfolder(path: String) {
+        _browse.update { if (it.openFolder == null) it else levelOf(it, path) }
     }
 
     /**
@@ -1509,13 +1538,9 @@ class PlaybackController private constructor(private val context: Context) {
 
             libraryIndex.replaceFolder(folder.uri, indexed, fingerprint)
             _browse.update { current ->
-                current.copy(
+                // A fresh scan shows the tree from its top: the level that was open may be gone.
+                (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.map(::toTrackRef)) else current).copy(
                     scanProgress = null,
-                    tracks = if (current.openFolder?.uri == folder.uri) {
-                        indexed.map(::toTrackRef)
-                    } else {
-                        current.tracks
-                    },
                     folderUnscanned = false,
                     folderStale = false,
                 )
