@@ -444,6 +444,7 @@ fun ProtracktorApp(
                         onPickFiles = { filePicker.launch(arrayOf("*/*")) },
                         onOpenFolder = viewModel::openFolder,
                         onOpenSubfolder = viewModel::openSubfolder,
+                        onStopScan = viewModel::stopScan,
                         onForgetFolder = viewModel::forgetFolder,
                         onScanFolder = viewModel::scanFolder,
                         onIndexCatalogue = viewModel::indexCatalogue,

@@ -548,6 +548,18 @@ repeat off, and the repeat and shuffle buttons changed only the playlist's. The 
 and the list played another. **Fixed:** such a list is built with the modes the buttons show
 (`PlayQueue.results`), and follows them when they change; shuffle deals from the tune tapped, as in
 the playlist. The page did this right already.
+
+### C96. The app crashed in UADE while a scan tried a file UADE did not recognise — **OPEN, avoided since 2026-09-29; reported 2026-09-29**
+
+The owner, scanning a folder of 11,582 files (ASMA's SAPs, as many `.mid`, some `.txt`): the app
+died at about 6,600, and the scan's notification stayed behind. The native stack: the scan's
+one-at-a-time thread, `NativeEngine.open` → `openBackend` → UADE's `uade_cleanup_state` →
+`uade_arch_kill_and_wait_uadecore` → `uade_atomic_close`. **Read from that:** past the SAPs only the
+names no decoder claims were left, each tried by every decoder in turn; UADE checked one's content,
+did not take it, and crashed tearing its core down. Which file, and why the teardown fails, is not
+known. **Avoided, not fixed:** a scan now reads only names a decoder claims (A67), so a `.mid` or a
+`.txt` never reaches UADE; but a misnamed file played by hand, or a UADE name that fails, would take
+the same path. A stale scan notification is cleared at start.
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor

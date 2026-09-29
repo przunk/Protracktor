@@ -732,6 +732,14 @@ class PlaybackController private constructor(private val context: Context) {
      * takes. One thread rather than a pool, because these tasks are sequential by nature and two of
      * them would only contend with each other.
      */
+    /** A folder scan's side-by-side opens (A67), at the background priority the single lane has. */
+    private val scanWork = Executors.newFixedThreadPool(IncrementalScan.PARALLEL) { runnable ->
+        Thread({
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+            runnable.run()
+        }, "protracktor-scan")
+    }.asCoroutineDispatcher()
+
     private val backgroundWork = Executors.newSingleThreadExecutor { runnable ->
         Thread({
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
@@ -1011,6 +1019,11 @@ class PlaybackController private constructor(private val context: Context) {
                 configureUade(version)
             }
         }
+
+        // **A scan's notification left behind by a process that died** (the owner, 2026-09-29: the
+        // app crashed mid-scan and the bar stayed in the shade). No scan runs at start, so any bar
+        // there is a stale one.
+        ScanNotification.clear(context)
 
         restore()
         // One loop drives both the progress bar and end-of-track handling. The native side flags
@@ -1478,10 +1491,20 @@ class PlaybackController private constructor(private val context: Context) {
      * files, rather than every file in it in one list. `tracksIn` carries each file's directory in
      * its subtitle.
      */
-    private fun treeOf(state: BrowseState, folder: GrantedFolder, found: List<TrackRef>): BrowseState {
+    private fun treeOf(
+        state: BrowseState,
+        folder: GrantedFolder,
+        found: List<TrackRef>,
+        keepLevel: Boolean = false,
+    ): BrowseState {
         val all = found.map { it.subtitle to it }
         val root = LocalTree.root(all.map { it.first }, MediaScanner.rootPathOf(Uri.parse(folder.uri)))
-        return levelOf(state.copy(folderAll = all, folderRoot = root), root)
+        // **Where the reader is, kept** while a scan fills the tree in (the owner, 2026-09-29): the
+        // level on screen stays on screen as long as it is still inside the tree.
+        val at = state.folderAt.takeIf {
+            keepLevel && state.folderRoot == root && (it == root || it.startsWith("$root/"))
+        } ?: root
+        return levelOf(state.copy(folderAll = all, folderRoot = root), at)
     }
 
     private fun levelOf(state: BrowseState, at: String): BrowseState {
@@ -1513,6 +1536,14 @@ class PlaybackController private constructor(private val context: Context) {
      * (`native/probe/sc68/probe_concurrency.c`), which is what makes this a background job rather
      * than something the user has to stop the music for.
      */
+    /** Stops a scan; what it found so far is kept, and the next scan goes on from there. */
+    fun stopScan() {
+        scanJob?.cancel()
+        // Stopped while still listing the folder, before there is anything to keep, the bar goes too.
+        _browse.update { it.copy(scanProgress = null) }
+        ScanNotification.clear(context)
+    }
+
     fun scanFolder(folder: GrantedFolder) {
         scanJob?.cancel()
         scanJob = scope.launch {
@@ -1523,23 +1554,106 @@ class PlaybackController private constructor(private val context: Context) {
             _browse.update { it.copy(scanProgress = 0 to candidates.size) }
 
             val fingerprint = NativeEngine.backendsFingerprint()
-            val indexed = mutableListOf<IndexedFile>()
-            var done = 0
-            for (candidate in candidates) {
-                ensureActive()
-                withContext(backgroundWork) { probe(candidate, folder.uri) }?.let(indexed::add)
-                done++
-                // Every file would be a state update per file and a recomposition per file; every
-                // twenty-fifth is still movement on screen and costs almost nothing.
-                if (done % 25 == 0 || done == candidates.size) {
-                    _browse.update { it.copy(scanProgress = done to candidates.size) }
+            // **Only what is new or changed is opened** (the owner, 2026-09-29: folders scan very
+            // slowly). A file the last scan indexed, at the same address and size, is kept as it was.
+            val startedAt = SystemClock.elapsedRealtime()
+            val plan = IncrementalScan.plan(
+                candidates,
+                libraryIndex.indexedIn(folder.uri),
+                stale = libraryIndex.isStale(folder.uri, fingerprint),
+            )
+            // Found so far: what was kept, and what the workers add. Shared between them, and read
+            // whole for a save, so every touch holds its lock.
+            val indexed = java.util.Collections.synchronizedList(plan.kept.toMutableList())
+            val done = java.util.concurrent.atomic.AtomicInteger(plan.kept.size)
+            _browse.update { it.copy(scanProgress = done.get() to candidates.size) }
+            val (together, alone) = IncrementalScan.lanes(plan.toOpen)
+            val nextTogether = java.util.concurrent.ConcurrentLinkedQueue(together)
+            var savedAt = done.get()
+            // What is already in the index: everything kept from the last scan. A save adds only
+            // what came after -- rewriting the whole folder each time cost the size of the index.
+            var savedRows = plan.kept.size
+            suspend fun savedSoFar() {
+                val fresh = synchronized(indexed) { indexed.subList(savedRows, indexed.size).toList() }
+                savedRows += fresh.size
+                withContext(NonCancellable) { libraryIndex.addToFolder(fresh, fingerprint) }
+            }
+            suspend fun saved() {
+                val snapshot = synchronized(indexed) { indexed.toList() }
+                withContext(NonCancellable) { libraryIndex.replaceFolder(folder.uri, snapshot, fingerprint) }
+            }
+            var shownAt = 0L
+            fun notify(now: Int) {
+                // At most twice a second: a notification per file is one the system drops.
+                val at = SystemClock.elapsedRealtime()
+                if (at - shownAt < 500 && now != candidates.size) return
+                shownAt = at
+                ScanNotification.show(context, folder.displayName, now, candidates.size)
+                // **The list fills in as the scan goes** (the owner, 2026-09-29: it said "nothing
+                // playable" until the scan ended and the folder was opened again).
+                val sofar = synchronized(indexed) { indexed.toList() }
+                _browse.update { current ->
+                    if (current.openFolder?.uri != folder.uri) current
+                    else treeOf(current, folder, sofar.map(::toTrackRef), keepLevel = true).copy(loading = false, folderUnscanned = false)
                 }
             }
+            notify(done.get())
+            suspend fun opened(candidate: MediaScanner.Candidate, on: kotlinx.coroutines.CoroutineDispatcher) {
+                withContext(on) { probe(candidate, folder.uri) }?.let(indexed::add)
+                val now = done.incrementAndGet()
+                // Every file would be a state update per file and a recomposition per file; every
+                // twenty-fifth is still movement on screen and costs almost nothing.
+                if (now % 25 == 0 || now == candidates.size) {
+                    _browse.update { it.copy(scanProgress = now to candidates.size) }
+                    notify(now)
+                }
+            }
+            try {
+                kotlinx.coroutines.coroutineScope {
+                    // **Side by side where the name allows it** (A67: 11,582 ASMA files took about a
+                    // quarter of an hour, 80 ms each, one after another).
+                    val workers = List(IncrementalScan.PARALLEL) {
+                        launch {
+                            while (true) {
+                                ensureActive()
+                                opened(nextTogether.poll() ?: break, scanWork)
+                            }
+                        }
+                    } + launch {
+                        for (candidate in alone) {
+                            ensureActive()
+                            opened(candidate, backgroundWork)
+                        }
+                    }
+                    // **Saved as it goes**, so a scan stopped -- by the X, or by the system killing
+                    // the app in the background -- is only paused: the next one keeps what is saved.
+                    launch {
+                        while (workers.any { it.isActive }) {
+                            delay(1_000)
+                            if (done.get() - savedAt >= IncrementalScan.CHECKPOINT) {
+                                savedAt = done.get()
+                                savedSoFar()
+                            }
+                        }
+                    }
+                }
+            } catch (stopped: CancellationException) {
+                withContext(NonCancellable) {
+                    savedSoFar()
+                    ScanNotification.clear(context)
+                    _browse.update { it.copy(scanProgress = null) }
+                    _state.update {
+                        it.copy(message = Message(context.getString(R.string.notice_scan_stopped, done.get(), candidates.size)))
+                    }
+                }
+                throw stopped
+            }
 
-            libraryIndex.replaceFolder(folder.uri, indexed, fingerprint)
+            saved()
+            ScanNotification.clear(context)
             _browse.update { current ->
-                // A fresh scan shows the tree from its top: the level that was open may be gone.
-                (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.map(::toTrackRef)) else current).copy(
+                // The level on screen stays, if it is still there: the list filled in under it.
+                (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.toList().map(::toTrackRef), keepLevel = true) else current).copy(
                     scanProgress = null,
                     folderUnscanned = false,
                     folderStale = false,
@@ -1548,9 +1662,12 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
+                        // With the time it took and how much was kept, so "slow" has a number.
                         context.getString(
-                            R.string.notice_scanned,
+                            R.string.notice_scanned_timed,
                             folder.displayName, indexed.size, candidates.size,
+                            DateUtils.formatElapsedTime((SystemClock.elapsedRealtime() - startedAt) / 1000),
+                            plan.kept.size,
                         )
                     )
                 )

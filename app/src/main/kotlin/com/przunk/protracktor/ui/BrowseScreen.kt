@@ -107,6 +107,7 @@ fun BrowseScreen(
     onPickFiles: () -> Unit,
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onOpenSubfolder: (String) -> Unit = {},
+    onStopScan: () -> Unit = {},
     onForgetFolder: (String) -> Unit,
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onIndexCatalogue: (String) -> Unit,
@@ -225,6 +226,7 @@ fun BrowseScreen(
                 onPickFolder = onPickFolder,
                 onPickFiles = onPickFiles,
                 onOpenFolder = onOpenFolder,
+                onStopScan = onStopScan,
                 onOpenSubfolder = onOpenSubfolder,
                 onForgetFolder = onForgetFolder,
                 onScanFolder = onScanFolder,
@@ -541,6 +543,7 @@ private fun LocalDomain(
     onOpenFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
     onForgetFolder: (String) -> Unit,
     onScanFolder: (com.przunk.protracktor.data.GrantedFolder) -> Unit,
+    onStopScan: () -> Unit,
     onOpenSubfolder: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
@@ -552,23 +555,37 @@ private fun LocalDomain(
             // A scan reads every file in the tree, so it says how far it has got. On a network
             // share this is minutes, and a spinner with no number is indistinguishable from a hang.
             browse.scanProgress?.let { (done, total) ->
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(
-                        text = if (total > 0) {
-                            stringResource(R.string.scan_progress, done, total)
-                        } else {
-                            stringResource(R.string.scan_listing)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    if (total > 0) {
-                        LinearProgressIndicator(
-                            progress = { done.toFloat() / total },
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (total > 0) {
+                                stringResource(R.string.scan_progress, done, total)
+                            } else {
+                                stringResource(R.string.scan_listing)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                    } else {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        if (total > 0) {
+                            LinearProgressIndicator(
+                                progress = { done.toFloat() / total },
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            )
+                        } else {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        }
                     }
+                    // **A scan can be stopped** (the owner, 2026-09-29: a quarter of an hour, and no
+                    // way out). What it found is kept, and the next scan goes on from there.
+                    // The app's own button: icon above its name, on its tonal square (the owner).
+                    LabelledAction(
+                        icon = PlayerIcons.Close,
+                        label = stringResource(R.string.action_stop_scan),
+                        onClick = onStopScan,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
                 }
             }
 
@@ -1267,6 +1284,8 @@ private fun Selectable(
             // An empty list is two different states and only one of them is a disappointment.
             // Nothing searched yet reads as ordinary text; nothing *found* borrows the colour the
             // stale-index warnings use, because it is the same kind of news.
+            // A scan under way says so with its bar; "nothing playable" is not true yet.
+            browse.tracks.isEmpty() && browse.subfolders.isEmpty() && browse.scanProgress != null -> Unit
             browse.tracks.isEmpty() && browse.subfolders.isEmpty() -> {
                 val searchedAndEmpty = browse.domain != BrowseDomain.SEARCH || browse.searched
                 Text(

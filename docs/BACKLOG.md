@@ -15,6 +15,39 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A67. Scanning a folder: a rescan opens only what changed, and says how long it took — **asked 2026-09-29; BUILT on `feature/faster-scan`; not yet seen on the phone**
+
+The owner: folders load very slowly. **Why, from the code:** a scan opens every file with a decoder
+-- read whole, opened, described -- one after another on one thread, and a rescan opened the same
+unchanged files again. **Built:** a rescan keeps what the last scan indexed at the same address and
+size (`IncrementalScan`), unless the decoders changed since; and the notice after a scan says how long
+it took and how many files were kept, so "slow" has a number. **The number** (the owner, adding ASMA's
+11,582 files): about 80 ms a file, a quarter of an hour, and no way to stop it. **Then built:** files
+whose names only instance-safe decoders claim -- libopenmpt, ASAP, game-music-emu, libsidplayfp, sc68;
+`SupportedFormats.scanInParallel`, derived from `web/src/formats.tsv` and held to it by a test -- are
+opened four at a time; UADE's, HivelyTracker's, ZXTune's and unknown names one at a time. **A Stop
+button beside the bar**, and what a scan has found is **saved every 200 files and on stopping**, so a
+scan stopped by the button or by the system killing the app is only paused: the next one keeps it.
+**A notification** with the bar and Stop (`ScanNotification`): ordinary rather than foreground, as the
+owner asked for -- a foreground one is a second service type, `dataSync`, with its own Play Console
+declaration and video, four days before the production application; the saves make a scan the system
+stops in the background a paused one, which is what the foreground service would have prevented.
+**A resumed scan was slow** (25 files in 3 s, against 1,000 in 4 s fresh): each save rewrote the whole
+folder's index, which on a resume holds thousands of rows from the start. Saves now add only what is
+new (`addToFolder`); the whole folder is written once, at the end. The cause is read from the code,
+not measured.
+Still not built: remembering files that are not tunes, which every rescan opens again.
+
+**The list fills in while a scan runs** (the owner: "nothing playable" stayed until the scan ended and
+the folder was opened again), twice a second, keeping the level on screen; while a scan runs the
+empty list says nothing rather than "nothing playable". **The slow stretch after 6,550** (the owner,
+on ASMA's folder of 11,582 files): the SAPs, opened four at a time, end there, and what is left --
+about 5,000 files whose names no decoder claims -- is opened one at a time, each tried by every
+decoder, UADE's content check included, about 160 ms a file. **Decided by the owner, 2026-09-29: a
+scan reads only names a decoder claims** (`MediaScanner.worthReading`), turning A6's "the content
+decides" round -- a misnamed module is no longer found; a `.mid` or `.txt` is no longer opened. It
+also keeps them away from UADE, which crashed on one (`docs/STATUS.md` C96).
+
 ## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day**
 
 The owner: a scanned folder listed every file in one list; he wants its folders kept --

@@ -464,7 +464,11 @@
         <item quantity="many">Usunięto %1$,d utworów</item>
         <item quantity="other">Usunięto %1$,d utworu</item>
     </plurals>
-    <string name="notice_scanned">Przeskanowano %1$s: %2$,d do odtworzenia z %3$,d.</string>
+    <string name="notice_scanned_timed">Przeskanowano %1$s: %2$,d do odtworzenia z %3$,d, w %4$s; %5$,d bez zmian, nieotwierane ponownie.</string>
+    <string name="notice_scan_stopped">Skan zatrzymany na %1$,d z %2$,d plików. To, co znalazł, zostaje, a kolejny skan zacznie od tego miejsca.</string>
+    <string name="action_stop_scan">Zatrzymaj</string>
+    <string name="notification_channel_scanning">Skanowanie folderów</string>
+    <string name="scan_notification_title">Skanuję %1$s</string>
     <plurals name="notice_imported">
         <item quantity="one">Zaimportowano %1$,d utwór do „%2$s”.</item>
         <item quantity="few">Zaimportowano %1$,d utwory do „%2$s”.</item>

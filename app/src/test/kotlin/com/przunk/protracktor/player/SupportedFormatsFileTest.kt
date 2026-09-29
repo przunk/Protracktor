@@ -97,4 +97,12 @@ class SupportedFormatsFileTest {
          */
         val DECODERS = setOf("openmpt", "hively", "sc68", "asap", "gme", "zxtune", "sidplayfp", "uade")
     }
+
+    @Test
+    fun `the names a scan opens side by side are exactly those only instance-safe decoders claim`() {
+        val safe = setOf("openmpt", "asap", "gme", "sidplayfp", "sc68")
+        val expected = rows.filter { it.kind == "extension" && it.decoders.isNotEmpty() && safe.containsAll(it.decoders) }
+            .map { it.name }.toSet()
+        assertEquals(expected, SupportedFormats.scanInParallel)
+    }
 }

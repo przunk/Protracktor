@@ -8,51 +8,35 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The rule that a scan does not judge a file by its name.
+ * Which files a scan reads: names a decoder claims, and not too large (`MediaScanner.worthReading`).
  *
- * This is `docs/STATUS.md` C4 and `docs/BACKLOG.md` A6: the old scan kept only files whose
- * extension looked playable, so a misnamed module was invisible and a misleadingly named photograph
- * was added and refused only when played. The scan now opens every file it lists and lets the
- * decoder decide.
- *
- * `MediaScanner.worthReading` is where that rule lives, and it is a separate function precisely so
- * this test can exist: the scan itself needs a `ContentResolver` and there is no emulator here.
+ * It used to be size alone -- `docs/STATUS.md` C4, `docs/BACKLOG.md` A6: the decoders decided. The
+ * owner turned that round on 2026-09-29, after a folder whose MIDI and text files took a quarter of
+ * an hour to be refused one by one (A67).
  */
 class MediaScannerTest {
 
     @Test
-    fun `a file is not admitted or rejected on its name`() {
-        val small = 4L * 1024
-        // Names a decoder would never be offered under the old rule.
-        listOf(
-            "readme.txt",
-            "cover.jpg",
-            "no-extension",
-            "MODULE.MOD",
-            "tune.sndh",
-            "something.exe",
-            "",
-            ".hidden",
-            "archive.zip",
-        ).forEach { name ->
-            assertTrue("$name should be read and let the decoder decide", MediaScanner.worthReading(name, small))
+    fun `a name a decoder claims is read, whatever its case`() {
+        listOf("MODULE.MOD", "tune.sndh", "Bonio.sap", "mdat.turrican", "song.xm", "live.mp3").forEach { name ->
+            assertTrue("$name should be read", MediaScanner.worthReading(name, 4L * 1024))
         }
     }
 
     @Test
-    fun `size is the only thing it judges on`() {
-        val limit = MediaScanner.MAX_PROBE_BYTES
-        assertTrue(MediaScanner.worthReading("anything", limit))
-        assertTrue(MediaScanner.worthReading("anything", limit - 1))
-        assertFalse(MediaScanner.worthReading("anything", limit + 1))
-        // A film named like a module is still not worth pulling off a network share.
-        assertFalse(MediaScanner.worthReading("holiday.mod", 4L * 1024 * 1024 * 1024))
+    fun `a name nothing here plays is not read at all`() {
+        // The owner's folder: as many MIDI files as SAPs, and some text.
+        listOf("song.mid", "readme.txt", "cover.jpg", "no-extension", "archive.zip", "", ".hidden").forEach { name ->
+            assertFalse("$name should not be read", MediaScanner.worthReading(name, 4L * 1024))
+        }
     }
 
     @Test
-    fun `a file whose size is unknown is still read`() {
-        // Some providers report no size at all. Refusing those would silently drop whole folders on
-        // exactly the network shares this app is for.
-        assertTrue(MediaScanner.worthReading("mystery", 0L))
+    fun `size still counts`() {
+        val limit = MediaScanner.MAX_PROBE_BYTES
+        assertTrue(MediaScanner.worthReading("tune.mod", limit))
+        assertFalse(MediaScanner.worthReading("tune.mod", limit + 1))
+        // Some providers report no size at all; refusing those would drop whole network shares.
+        assertTrue(MediaScanner.worthReading("tune.mod", 0L))
     }
 }
