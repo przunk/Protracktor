@@ -2274,7 +2274,7 @@ class PlaybackController private constructor(private val context: Context) {
                 val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
                 _state.update {
                     it.copy(
-                        resultsQueue = PlayQueue(tracks = found).startAt(at),
+                        resultsQueue = PlayQueue.results(found, at, it.queue),
                         resultsFromHistory = false,
                         diceWaiting = true,
                     )
@@ -2289,7 +2289,7 @@ class PlaybackController private constructor(private val context: Context) {
                 val at = found.indexOfFirst { it.sameFileAs(ref) }.coerceAtLeast(0)
                 _state.update {
                     it.copy(
-                        resultsQueue = if (playingResults) PlayQueue(tracks = found).startAt(at) else it.resultsQueue,
+                        resultsQueue = if (playingResults) PlayQueue.results(found, at, it.queue) else it.resultsQueue,
                         searchWaiting = true,
                     )
                 }
@@ -3458,7 +3458,7 @@ class PlaybackController private constructor(private val context: Context) {
         // back returns to it -- the same words, the same folder -- rather than to a fresh Browse.
         sessionBrowse = _browse.value
         _state.update { it.copy(resultsFromHistory = fromHistory, sessionSource = SessionSource.of(_browse.value)) }
-        playFromResultsQueue(PlayQueue(tracks = results).startAt(index))
+        playFromResultsQueue(PlayQueue.results(results, index, _state.value.queue))
     }
 
     private fun playFromResultsQueue(results: PlayQueue) {
@@ -4421,14 +4421,21 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun toggleShuffle() {
-        _state.update { it.copy(queue = it.queue.withShuffle(!it.queue.shuffle)) }
+        // The list playing from Browse follows the button too: it is what next walks meanwhile.
+        _state.update {
+            val on = !it.queue.shuffle
+            it.copy(queue = it.queue.withShuffle(on), resultsQueue = it.resultsQueue?.withShuffle(on))
+        }
         scheduleSave()
         // Both of these change what comes next, so anything read ahead is now the wrong track.
         prefetchUpcoming()
     }
 
     fun cycleRepeat() {
-        _state.update { it.copy(queue = it.queue.withRepeat(it.queue.repeat.next())) }
+        _state.update {
+            val repeat = it.queue.repeat.next()
+            it.copy(queue = it.queue.withRepeat(repeat), resultsQueue = it.resultsQueue?.withRepeat(repeat))
+        }
         scheduleSave()
         prefetchUpcoming()
     }
