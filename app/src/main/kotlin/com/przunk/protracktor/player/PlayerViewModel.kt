@@ -114,6 +114,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun showHistoryPage(page: Int) = controller.showHistoryPage(page)
 
     fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)
+    fun stopScan() = controller.stopScan()
 
     fun showNeighboursOf(track: TrackRef) = controller.showNeighboursOf(track)
 

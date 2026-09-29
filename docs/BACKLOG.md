@@ -21,9 +21,17 @@ The owner: folders load very slowly. **Why, from the code:** a scan opens every 
 -- read whole, opened, described -- one after another on one thread, and a rescan opened the same
 unchanged files again. **Built:** a rescan keeps what the last scan indexed at the same address and
 size (`IncrementalScan`), unless the decoders changed since; and the notice after a scan says how long
-it took and how many files were kept, so "slow" has a number. **Not built, waiting for that number:**
-opening several files at once -- UADE runs as a second process, and whether it takes several opens
-at a time is unmeasured -- and remembering files that are not tunes, which every rescan still opens.
+it took and how many files were kept, so "slow" has a number. **The number** (the owner, adding ASMA's
+11,582 files): about 80 ms a file, a quarter of an hour, and no way to stop it. **Then built:** files
+whose names only instance-safe decoders claim -- libopenmpt, ASAP, game-music-emu, libsidplayfp, sc68;
+`SupportedFormats.scanInParallel`, derived from `web/src/formats.tsv` and held to it by a test -- are
+opened four at a time; UADE's, HivelyTracker's, ZXTune's and unknown names one at a time. **A Stop
+button beside the bar**, and what a scan has found is **saved every 200 files and on stopping**, so a
+scan stopped by the button or by the system killing the app is only paused: the next one keeps it.
+**A foreground notification** for scanning, as the owner asked, would be a second foreground-service
+type (`dataSync`) with its own Play Console declaration and video, four days before the production
+application; offered instead, and waiting for his word: an ordinary progress notification with Stop.
+Still not built: remembering files that are not tunes, which every rescan opens again.
 ## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day**
 
 The owner: a scanned folder listed every file in one list; he wants its folders kept --

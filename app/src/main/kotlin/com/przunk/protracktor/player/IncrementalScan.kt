@@ -34,4 +34,14 @@ object IncrementalScan {
         }
         return Plan(kept, toOpen)
     }
+
+    /** How many files are opened side by side, where the name allows it. */
+    const val PARALLEL = 4
+
+    /** How many files between two saves of what a scan has found, so a stopped scan loses little. */
+    const val CHECKPOINT = 200
+
+    /** [toOpen] split into what may be opened side by side and what goes one at a time. */
+    fun lanes(toOpen: List<MediaScanner.Candidate>): Pair<List<MediaScanner.Candidate>, List<MediaScanner.Candidate>> =
+        toOpen.partition { SupportedFormats.scansInParallel(it.fileName) }
 }

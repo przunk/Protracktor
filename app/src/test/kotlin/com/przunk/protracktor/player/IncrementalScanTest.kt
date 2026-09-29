@@ -46,4 +46,13 @@ class IncrementalScanTest {
         assertEquals(listOf("a"), plan.kept.map { it.uri })
         assertEquals("Music/Atari", plan.kept.single().path)
     }
+
+    @Test
+    fun `only names safe decoders claim are opened side by side`() {
+        val (together, alone) = IncrementalScan.lanes(
+            listOf("a.sap", "b.mod", "c.ahx", "mdat.tune", "notes.txt").map { MediaScanner.Candidate(it, "Music", it, 1) }
+        )
+        assertEquals(listOf("a.sap", "b.mod"), together.map { it.fileName })
+        assertEquals(listOf("c.ahx", "mdat.tune", "notes.txt"), alone.map { it.fileName })
+    }
 }
