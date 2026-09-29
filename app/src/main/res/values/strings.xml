@@ -433,7 +433,7 @@
         <item quantity="one">Removed %1$,d track</item>
         <item quantity="other">Removed %1$,d tracks</item>
     </plurals>
-    <string name="notice_scanned">Scanned %1$s: %2$,d playable of %3$,d.</string>
+    <string name="notice_scanned_timed">Scanned %1$s: %2$,d playable of %3$,d, in %4$s; %5$,d unchanged, not opened again.</string>
     <plurals name="notice_imported">
         <item quantity="one">Imported %1$,d track into \"%2$s\".</item>
         <item quantity="other">Imported %1$,d tracks into \"%2$s\".</item>

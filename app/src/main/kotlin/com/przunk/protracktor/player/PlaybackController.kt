@@ -1494,9 +1494,18 @@ class PlaybackController private constructor(private val context: Context) {
             _browse.update { it.copy(scanProgress = 0 to candidates.size) }
 
             val fingerprint = NativeEngine.backendsFingerprint()
-            val indexed = mutableListOf<IndexedFile>()
-            var done = 0
-            for (candidate in candidates) {
+            // **Only what is new or changed is opened** (the owner, 2026-09-29: folders scan very
+            // slowly). A file the last scan indexed, at the same address and size, is kept as it was.
+            val startedAt = SystemClock.elapsedRealtime()
+            val plan = IncrementalScan.plan(
+                candidates,
+                libraryIndex.indexedIn(folder.uri),
+                stale = libraryIndex.isStale(folder.uri, fingerprint),
+            )
+            val indexed = plan.kept.toMutableList()
+            var done = plan.kept.size
+            _browse.update { it.copy(scanProgress = done to candidates.size) }
+            for (candidate in plan.toOpen) {
                 ensureActive()
                 withContext(backgroundWork) { probe(candidate, folder.uri) }?.let(indexed::add)
                 done++
@@ -1523,9 +1532,12 @@ class PlaybackController private constructor(private val context: Context) {
             _state.update {
                 it.copy(
                     message = Message(
+                        // With the time it took and how much was kept, so "slow" has a number.
                         context.getString(
-                            R.string.notice_scanned,
+                            R.string.notice_scanned_timed,
                             folder.displayName, indexed.size, candidates.size,
+                            DateUtils.formatElapsedTime((SystemClock.elapsedRealtime() - startedAt) / 1000),
+                            plan.kept.size,
                         )
                     )
                 )

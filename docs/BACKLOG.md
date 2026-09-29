@@ -15,6 +15,16 @@ branch off `develop`, one stage per commit, and nothing merges without the owner
 
 # A — open work
 
+## A67. Scanning a folder: a rescan opens only what changed, and says how long it took — **asked 2026-09-29; BUILT on `feature/faster-scan`; not yet seen on the phone**
+
+The owner: folders load very slowly. **Why, from the code:** a scan opens every file with a decoder
+-- read whole, opened, described -- one after another on one thread, and a rescan opened the same
+unchanged files again. **Built:** a rescan keeps what the last scan indexed at the same address and
+size (`IncrementalScan`), unless the decoders changed since; and the notice after a scan says how long
+it took and how many files were kept, so "slow" has a number. **Not built, waiting for that number:**
+opening several files at once -- UADE runs as a second process, and whether it takes several opens
+at a time is unmeasured -- and remembering files that are not tunes, which every rescan still opens.
+
 ## A65. A row's menu dims everything but its row — **asked 2026-09-26; BUILT, APK and page; merged and confirmed on the phone the same day ("works beautifully")**
 
 The owner: the three dots' menu is a rectangle somewhere over the list, not a bubble coming out of

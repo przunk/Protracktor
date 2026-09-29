@@ -82,6 +82,28 @@ class LibraryIndexStore(context: Context) {
         }
     }
 
+    /** What a folder's last scan stored, whole, for a rescan to keep what has not changed. */
+    suspend fun indexedIn(folderUri: String): List<IndexedFile> = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(
+            "SELECT uri, folder_uri, path, file_name, size, backend, format, title, author, duration_ms, subsongs " +
+                "FROM library_index WHERE folder_uri = ?",
+            arrayOf(folderUri),
+        ).use { row ->
+            buildList {
+                while (row.moveToNext()) {
+                    add(
+                        IndexedFile(
+                            uri = row.getString(0), folderUri = row.getString(1), path = row.getString(2),
+                            fileName = row.getString(3), sizeBytes = row.getLong(4), backend = row.getString(5),
+                            format = row.getString(6), title = row.getString(7), author = row.getString(8),
+                            durationMs = row.getLong(9), subsongs = row.getInt(10),
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     /** What a folder holds, in the form the playlist and browser take. */
     suspend fun tracksIn(folderUri: String): List<TrackRef> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
