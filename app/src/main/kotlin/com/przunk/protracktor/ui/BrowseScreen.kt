@@ -579,9 +579,13 @@ private fun LocalDomain(
                     }
                     // **A scan can be stopped** (the owner, 2026-09-29: a quarter of an hour, and no
                     // way out). What it found is kept, and the next scan goes on from there.
-                    TextButton(onClick = onStopScan) {
-                        IconLabel(PlayerIcons.Close, stringResource(R.string.action_stop_scan))
-                    }
+                    // The app's own button: icon above its name, on its tonal square (the owner).
+                    LabelledAction(
+                        icon = PlayerIcons.Close,
+                        label = stringResource(R.string.action_stop_scan),
+                        onClick = onStopScan,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
                 }
             }
 

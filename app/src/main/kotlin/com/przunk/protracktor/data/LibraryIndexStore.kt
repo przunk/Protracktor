@@ -49,35 +49,49 @@ class LibraryIndexStore(context: Context) {
         entries: List<IndexedFile>,
         backends: String,
     ) = withContext(Dispatchers.IO) {
-        val now = System.currentTimeMillis()
         helper.writableDatabase.transaction {
             delete("library_index", "folder_uri = ?", arrayOf(folderUri))
-            compileStatement(
-                "INSERT OR REPLACE INTO library_index " +
-                    "(uri, folder_uri, path, file_name, size, backend, format, title, author, " +
-                    " duration_ms, subsongs, indexed_at, backends, folded) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            ).use { statement ->
-                entries.forEach { entry ->
-                    statement.clearBindings()
-                    statement.bindString(1, entry.uri)
-                    statement.bindString(2, entry.folderUri)
-                    statement.bindString(3, entry.path)
-                    statement.bindString(4, entry.fileName)
-                    statement.bindLong(5, entry.sizeBytes)
-                    statement.bindString(6, entry.backend)
-                    statement.bindString(7, entry.format)
-                    statement.bindString(8, entry.title)
-                    statement.bindString(9, entry.author)
-                    statement.bindLong(10, entry.durationMs)
-                    statement.bindLong(11, entry.subsongs.toLong())
-                    statement.bindLong(12, now)
-                    statement.bindString(13, backends)
-                    // Search's folded copy, for names with accents in them (A53).
-                    SearchTerms.foldedOrNull(entry.title, entry.fileName, entry.author)
-                        ?.let { statement.bindString(14, it) } ?: statement.bindNull(14)
-                    statement.executeInsert()
-                }
+            insertAll(entries, backends)
+        }
+    }
+
+    /**
+     * Adds [entries] to a folder's index, leaving the rest of it as it is: what a scan saves as it
+     * goes (A67). Writing the whole folder every time instead made each save cost the size of the
+     * index, and a resumed scan, which starts with thousands of rows, spent its time rewriting them.
+     */
+    suspend fun addToFolder(entries: List<IndexedFile>, backends: String) = withContext(Dispatchers.IO) {
+        if (entries.isEmpty()) return@withContext
+        helper.writableDatabase.transaction { insertAll(entries, backends) }
+    }
+
+    private fun android.database.sqlite.SQLiteDatabase.insertAll(entries: List<IndexedFile>, backends: String) {
+        val now = System.currentTimeMillis()
+        compileStatement(
+            "INSERT OR REPLACE INTO library_index " +
+                "(uri, folder_uri, path, file_name, size, backend, format, title, author, " +
+                " duration_ms, subsongs, indexed_at, backends, folded) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).use { statement ->
+            entries.forEach { entry ->
+                statement.clearBindings()
+                statement.bindString(1, entry.uri)
+                statement.bindString(2, entry.folderUri)
+                statement.bindString(3, entry.path)
+                statement.bindString(4, entry.fileName)
+                statement.bindLong(5, entry.sizeBytes)
+                statement.bindString(6, entry.backend)
+                statement.bindString(7, entry.format)
+                statement.bindString(8, entry.title)
+                statement.bindString(9, entry.author)
+                statement.bindLong(10, entry.durationMs)
+                statement.bindLong(11, entry.subsongs.toLong())
+                statement.bindLong(12, now)
+                statement.bindString(13, backends)
+                // Search's folded copy, for names with accents in them (A53).
+                SearchTerms.foldedOrNull(entry.title, entry.fileName, entry.author)
+                    ?.let { statement.bindString(14, it) } ?: statement.bindNull(14)
+                statement.executeInsert()
             }
         }
     }

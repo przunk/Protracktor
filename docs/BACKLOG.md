@@ -28,9 +28,14 @@ whose names only instance-safe decoders claim -- libopenmpt, ASAP, game-music-em
 opened four at a time; UADE's, HivelyTracker's, ZXTune's and unknown names one at a time. **A Stop
 button beside the bar**, and what a scan has found is **saved every 200 files and on stopping**, so a
 scan stopped by the button or by the system killing the app is only paused: the next one keeps it.
-**A foreground notification** for scanning, as the owner asked, would be a second foreground-service
-type (`dataSync`) with its own Play Console declaration and video, four days before the production
-application; offered instead, and waiting for his word: an ordinary progress notification with Stop.
+**A notification** with the bar and Stop (`ScanNotification`): ordinary rather than foreground, as the
+owner asked for -- a foreground one is a second service type, `dataSync`, with its own Play Console
+declaration and video, four days before the production application; the saves make a scan the system
+stops in the background a paused one, which is what the foreground service would have prevented.
+**A resumed scan was slow** (25 files in 3 s, against 1,000 in 4 s fresh): each save rewrote the whole
+folder's index, which on a resume holds thousands of rows from the start. Saves now add only what is
+new (`addToFolder`); the whole folder is written once, at the end. The cause is read from the code,
+not measured.
 Still not built: remembering files that are not tunes, which every rescan opens again.
 ## A66. A local folder walked as its tree — **asked 2026-09-29; BUILT, merged and confirmed on the phone the same day**
 

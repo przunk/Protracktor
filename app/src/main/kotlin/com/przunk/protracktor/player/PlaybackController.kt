@@ -1526,6 +1526,7 @@ class PlaybackController private constructor(private val context: Context) {
         scanJob?.cancel()
         // Stopped while still listing the folder, before there is anything to keep, the bar goes too.
         _browse.update { it.copy(scanProgress = null) }
+        ScanNotification.clear(context)
     }
 
     fun scanFolder(folder: GrantedFolder) {
@@ -1554,10 +1555,27 @@ class PlaybackController private constructor(private val context: Context) {
             val (together, alone) = IncrementalScan.lanes(plan.toOpen)
             val nextTogether = java.util.concurrent.ConcurrentLinkedQueue(together)
             var savedAt = done.get()
+            // What is already in the index: everything kept from the last scan. A save adds only
+            // what came after -- rewriting the whole folder each time cost the size of the index.
+            var savedRows = plan.kept.size
+            suspend fun savedSoFar() {
+                val fresh = synchronized(indexed) { indexed.subList(savedRows, indexed.size).toList() }
+                savedRows += fresh.size
+                withContext(NonCancellable) { libraryIndex.addToFolder(fresh, fingerprint) }
+            }
             suspend fun saved() {
                 val snapshot = synchronized(indexed) { indexed.toList() }
                 withContext(NonCancellable) { libraryIndex.replaceFolder(folder.uri, snapshot, fingerprint) }
             }
+            var shownAt = 0L
+            fun notify(now: Int) {
+                // At most twice a second: a notification per file is one the system drops.
+                val at = SystemClock.elapsedRealtime()
+                if (at - shownAt < 500 && now != candidates.size) return
+                shownAt = at
+                ScanNotification.show(context, folder.displayName, now, candidates.size)
+            }
+            notify(done.get())
             suspend fun opened(candidate: MediaScanner.Candidate, on: kotlinx.coroutines.CoroutineDispatcher) {
                 withContext(on) { probe(candidate, folder.uri) }?.let(indexed::add)
                 val now = done.incrementAndGet()
@@ -1565,6 +1583,7 @@ class PlaybackController private constructor(private val context: Context) {
                 // twenty-fifth is still movement on screen and costs almost nothing.
                 if (now % 25 == 0 || now == candidates.size) {
                     _browse.update { it.copy(scanProgress = now to candidates.size) }
+                    notify(now)
                 }
             }
             try {
@@ -1591,14 +1610,15 @@ class PlaybackController private constructor(private val context: Context) {
                             delay(1_000)
                             if (done.get() - savedAt >= IncrementalScan.CHECKPOINT) {
                                 savedAt = done.get()
-                                saved()
+                                savedSoFar()
                             }
                         }
                     }
                 }
             } catch (stopped: CancellationException) {
                 withContext(NonCancellable) {
-                    saved()
+                    savedSoFar()
+                    ScanNotification.clear(context)
                     _browse.update { it.copy(scanProgress = null) }
                     _state.update {
                         it.copy(message = Message(context.getString(R.string.notice_scan_stopped, done.get(), candidates.size)))
@@ -1608,6 +1628,7 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             saved()
+            ScanNotification.clear(context)
             _browse.update { current ->
                 // A fresh scan shows the tree from its top: the level that was open may be gone.
                 (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.toList().map(::toTrackRef)) else current).copy(

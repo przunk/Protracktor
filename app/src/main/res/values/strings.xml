@@ -436,6 +436,8 @@
     <string name="notice_scanned_timed">Scanned %1$s: %2$,d playable of %3$,d, in %4$s; %5$,d unchanged, not opened again.</string>
     <string name="notice_scan_stopped">Scan stopped at %1$,d of %2$,d files. What it found is kept, and scanning again goes on from there.</string>
     <string name="action_stop_scan">Stop</string>
+    <string name="notification_channel_scanning">Folder scans</string>
+    <string name="scan_notification_title">Scanning %1$s</string>
     <plurals name="notice_imported">
         <item quantity="one">Imported %1$,d track into \"%2$s\".</item>
         <item quantity="other">Imported %1$,d tracks into \"%2$s\".</item>
