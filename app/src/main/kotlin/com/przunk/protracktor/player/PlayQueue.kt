@@ -283,6 +283,20 @@ data class PlayQueue(
         }
     }
 
+    companion object {
+        /**
+         * A list played from Browse -- a folder, results, History -- **with the modes the transport
+         * shows** ([like] is the playlist's queue, whose repeat and shuffle the buttons display).
+         * It used to be built with repeat off whatever the button said: repeat-one lit, a tune
+         * from a local folder ended and the next one played (the owner, 2026-09-29). Shuffle
+         * deals from [at], as a tap in the playlist does.
+         */
+        fun results(tracks: List<TrackRef>, at: Int, like: PlayQueue): PlayQueue =
+            PlayQueue(tracks = tracks, repeat = like.repeat)
+                .let { if (like.shuffle) it.withShuffle(true) else it }
+                .startAt(at)
+    }
+
     // Truncates the forward branch, the way startAt does. Reaching a genuinely new track after
     // stepping back abandons whatever was ahead, and appending without truncating would leave the
     // cursor pointing at a stale entry rather than at what was just added -- an inconsistency that

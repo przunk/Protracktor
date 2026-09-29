@@ -539,6 +539,15 @@ dealing again each lap** -- the owner's first idea, shuffle without repeat going
 talked through and dropped, since it would make the two the same. The rule is now in
 `docs/rules/queue-cases.tsv` (`shuffleFromTap`), run by the phone's `PlayQueue` and by the page
 through its own row and next; both failed before the fix.
+
+### C95. Repeat-one did not repeat a tune played from Browse — **FIXED, merged and confirmed on the phone 2026-09-29**
+
+The owner: an MP3 from a local folder, repeat-one lit, went on to the next tune. Not MP3's doing:
+**every list played from Browse** -- a folder, results, History -- got a queue of its own built with
+repeat off, and the repeat and shuffle buttons changed only the playlist's. The button showed one mode
+and the list played another. **Fixed:** such a list is built with the modes the buttons show
+(`PlayQueue.results`), and follows them when they change; shuffle deals from the tune tapped, as in
+the playlist. The page did this right already.
 ### C88. 3,800 files offered by name that their decoder reads as another format — **found 2026-09-23; FIXED the same day, merged 2026-09-24**
 
 **Checked on the owner's phone, 2026-09-23:** a file each from FamiTracker, Deflemask and Music Editor

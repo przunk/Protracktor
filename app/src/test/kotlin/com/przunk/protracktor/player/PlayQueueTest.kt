@@ -255,6 +255,24 @@ class PlayQueueTest {
         assertEquals(ahead, walk(q))
     }
 
+    @Test
+    fun `a list played from Browse repeats one when the button says so`() {
+        // The owner, 2026-09-29: repeat-one lit, an MP3 from a local folder ended, and the next
+        // one played -- the list was built with repeat off whatever the button showed.
+        val playlist = queueOf(3).withRepeat(RepeatMode.ONE)
+        val folder = PlayQueue.results(queueOf(5).tracks, 2, like = playlist)
+        assertEquals(folder, folder.onTrackEnded())
+        assertEquals("Track 2", folder.onTrackEnded()?.titleNow())
+    }
+
+    @Test
+    fun `a list played from Browse shuffles when the button says so, from the tune tapped`() {
+        val playlist = queueOf(3).withShuffle(true, seed = 1L)
+        val played = walk(PlayQueue.results(queueOf(20).tracks, 7, like = playlist))
+        assertEquals("Track 7", played.first())
+        assertEquals(20, played.toSet().size)
+    }
+
     // --- the invariant that broke on a device ---------------------------------------------------
 
     @Test
