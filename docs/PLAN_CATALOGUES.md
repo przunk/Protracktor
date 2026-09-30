@@ -156,6 +156,12 @@ that publishes it* is what keeps this clean; re-serving it is not.
 
 **What to do with that**, in order of what it buys:
 
+0. **ZXArt (zxart.ee), checked 2026-09-30, the best next catalogue.** ZX Spectrum, 29,715 tunes, a public
+   JSON API with length, author and year, and API and files both served with
+   `Access-Control-Allow-Origin: *` and ranges -- so the phone and the page alike. Its formats (PT3,
+   STC, PT2, STP, SQT, ASC) play through ZXTune; AY and TS, about a sixth, do not yet. robots.txt
+   disallows `/api` and `/file` for crawlers, so the owner wrote to them (2026-09-30) before anything
+   is built. The ZXTune app, which browses twelve archives, uses the same API.
 1. **Nothing, for now.** The 2026-09-04 recommendation below still holds and the numbers behind it
    got stronger, not weaker: **A32 alone is 26,537 more playable tunes in the browser** out of the
    archive already indexed, which beats any archive on this list at a fraction of the work.

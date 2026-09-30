@@ -18,7 +18,7 @@ one core on a phone, nothing that breaks. A small map by subsong would keep them
 file is open; the learnt-lengths store (A50) could keep them across plays, as it does for UADE.
 Worth it only if someone notices.
 
-## B39. Screenshots made and checked without a phone — **noted 2026-09-26, the owner: "worth adding"; BUILT 2026-09-30 on `feature/screenshots`**
+## B39. Screenshots made and checked without a phone — **noted 2026-09-26, the owner: "worth adding"; BUILT and merged 2026-09-30; the slim Stop confirmed on the phone**
 
 The owner asked whether I can make screenshots myself and look at them, as Kratkoza does (read with
 his leave, 2026-09-26). Kratkoza renders Compose screens in JVM tests through **Robolectric** with
