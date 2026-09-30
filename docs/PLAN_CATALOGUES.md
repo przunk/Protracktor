@@ -171,7 +171,8 @@ that publishes it* is what keeps this clean; re-serving it is not.
    domain), agreed by the owner 2026-09-30 as a new native dependency**; and the page, whose browser
    cannot unpack the mirror's archive (no CORS there), depends on DeepSID's answer. A reply asking
    whether the lengths may stay on the website until then, and a letter to Jens, were **sent by the
-   owner on 2026-09-30**. — the definitive SID collection, the
+   owner on 2026-09-30**. **Wilfred, the same evening: "Using it for now until your next solution is built is
+   fine."** So the lengths stay on the website until the archive route replaces them -- not after. — the definitive SID collection, the
    format Modland covers worst, and the archive whose song-length database the app already depends
    on. Phone-only, and honest about it.
 3. **Ask the ones worth asking.** ASMA and Modland send the header because somebody there decided
