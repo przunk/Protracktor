@@ -58,7 +58,10 @@ The reference collection of `.sap`. Natural pair with ASAP.
 ### The Mod Archive — search-only integration DONE 2026-09-02
 
 - `https://api.modarchive.org/` responds (2026-09-01). The official XML API requires an API key
-  that is no longer issued via automatic self-service (requires contacting staff).
+  that is no longer issued via automatic self-service (requires contacting staff). **Tried and closed**
+  (the owner, 2026-09-30): the forum's "Requesting an API Key" topic dates from 2009, last touched in
+  2014, and no key comes that way any more. The page-reading search stays; do not propose the API
+  route again unless The Mod Archive announces one.
 - Instead of waiting for API keys, **integrated via live web search parser** (2026-09-02):
   - Queries `https://modarchive.org/index.php?request=search&query=...` directly.
   - Direct downloads via `https://api.modarchive.org/downloads.php?moduleid=...` require no key
