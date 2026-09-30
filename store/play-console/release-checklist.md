@@ -16,7 +16,9 @@ signing and rollout remain the owner's actions.
 - [x] Make the exact corresponding source public and tag the release commit. *(Public; every release
       tagged by `scripts/release.sh`.)*
 - [ ] Confirm the access terms for Modland, ASMA, HVSC and The Mod Archive.
-- [ ] Re-audit network/data behaviour and reconcile the privacy policy with **Data safety**.
+- [x] Re-audit network/data behaviour and reconcile the privacy policy with **Data safety**.
+      *(2026-09-30 for 0.11.0: no new host, no answer changes; the policy's sharing paragraph now
+      names Share as audio and Share with Protracktor, `data-safety.md`.)*
 
 ## 2. Complete the application record
 
