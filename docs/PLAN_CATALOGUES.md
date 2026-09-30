@@ -156,7 +156,10 @@ that publishes it* is what keeps this clean; re-serving it is not.
 1. **Nothing, for now.** The 2026-09-04 recommendation below still holds and the numbers behind it
    got stronger, not weaker: **A32 alone is 26,537 more playable tunes in the browser** out of the
    archive already indexed, which beats any archive on this list at a fraction of the work.
-2. **If a third catalogue is wanted anyway, HVSC is the one** — the definitive SID collection, the
+2. **If a third catalogue is wanted anyway, HVSC is the one** -- *re-checked 2026-09-30: a single
+   `.sid` from `hvsc.c64.org` answers with `Access-Control-Allow-Origin: *` and ranges, so the page
+   could play it too; but `robots.txt` disallows `/download/`, the song lengths included, so the
+   team was asked by mail (`hvsc.crew@gmail.com`, sent 2026-09-30) before anything is built.* — the definitive SID collection, the
    format Modland covers worst, and the archive whose song-length database the app already depends
    on. Phone-only, and honest about it.
 3. **Ask the ones worth asking.** ASMA and Modland send the header because somebody there decided
