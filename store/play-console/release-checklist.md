@@ -17,7 +17,9 @@ signing and rollout remain the owner's actions.
       tagged by `scripts/release.sh`.)*
 - [ ] Confirm the access terms for Modland, ASMA, HVSC and The Mod Archive. *(2026-09-30: HVSC's
       robots.txt disallows `/download/`, where the song lengths come from -- asked by mail to
-      `hvsc.crew@gmail.com`, sent 2026-09-30, about the lengths and a possible catalogue.
+      `hvsc.crew@gmail.com`, sent 2026-09-30, about the lengths and a possible catalogue. Answered:
+      not the website; use the version API and the archive (`docs/PLAN_CATALOGUES.md`) -- whether the
+      lengths may stay on the website meanwhile is asked.
       UnExoticA, on in every release since 2026-09-09 and unanswered: kept, with a reminder that it
       stays unless ExoticA objects by 10 October, `docs/PLAN_UNEXOTICA.md`.)*
 - [x] Re-audit network/data behaviour and reconcile the privacy policy with **Data safety**.

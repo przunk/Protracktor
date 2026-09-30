@@ -159,7 +159,18 @@ that publishes it* is what keeps this clean; re-serving it is not.
 2. **If a third catalogue is wanted anyway, HVSC is the one** -- *re-checked 2026-09-30: a single
    `.sid` from `hvsc.c64.org` answers with `Access-Control-Allow-Origin: *` and ranges, so the page
    could play it too; but `robots.txt` disallows `/download/`, the song lengths included, so the
-   team was asked by mail (`hvsc.crew@gmail.com`, sent 2026-09-30) before anything is built.* — the definitive SID collection, the
+   team was asked by mail (`hvsc.crew@gmail.com`, sent 2026-09-30) before anything is built.*
+   **Answered the same day by Wilfred Bos:** not the website -- neither its API, nor downloading or
+   searching SID files there; it is for the website alone and may change. The sanctioned route:
+   `https://hvsc.de/api/v1/version` gives the version and the URLs of the complete HVSC
+   (`HVSC_85-all-of-them.7z`, 85 MB) and of the update (3.4 MB) on `hvsc.brona.dk`; download, unpack
+   on the device, index it ourselves, and use the same API to say when a new version is out. For
+   browsing and searching online he pointed to **DeepSID** (Jens, `chordian@gmail.com`). Consequences:
+   the song lengths, fetched today from the website, move to the archive's `Songlengths.md5`; HVSC
+   becomes a downloaded collection like ASMA; that needs **7z extraction -- the LZMA SDK (public
+   domain), agreed by the owner 2026-09-30 as a new native dependency**; and the page, whose browser
+   cannot unpack the mirror's archive (no CORS there), depends on DeepSID's answer. A reply asking
+   whether the lengths may stay on the website until then, and a letter to Jens, are drafted. — the definitive SID collection, the
    format Modland covers worst, and the archive whose song-length database the app already depends
    on. Phone-only, and honest about it.
 3. **Ask the ones worth asking.** ASMA and Modland send the header because somebody there decided
