@@ -554,40 +554,7 @@ private fun LocalDomain(
         Column(modifier = Modifier.fillMaxSize()) {
             // A scan reads every file in the tree, so it says how far it has got. On a network
             // share this is minutes, and a spinner with no number is indistinguishable from a hang.
-            browse.scanProgress?.let { (done, total) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (total > 0) {
-                                stringResource(R.string.scan_progress, done, total)
-                            } else {
-                                stringResource(R.string.scan_listing)
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        if (total > 0) {
-                            LinearProgressIndicator(
-                                progress = { done.toFloat() / total },
-                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                            )
-                        } else {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                        }
-                    }
-                    // **A scan can be stopped** (the owner, 2026-09-29: a quarter of an hour, and no
-                    // way out). What it found is kept, and the next scan goes on from there.
-                    // The app's own button: icon above its name, on its tonal square (the owner).
-                    LabelledAction(
-                        icon = PlayerIcons.Close,
-                        label = stringResource(R.string.action_stop_scan),
-                        onClick = onStopScan,
-                        modifier = Modifier.padding(start = 12.dp),
-                    )
-                }
-            }
+            browse.scanProgress?.let { (done, total) -> ScanProgress(done, total, onStopScan) }
 
             if (browse.scanProgress == null && (browse.folderUnscanned || browse.folderStale)) {
                 // Two different sentences, because they are two different situations: never looked,
@@ -1714,5 +1681,48 @@ private fun HeldIcon(held: Boolean) {
         Icon(PlayerIcons.Downloaded, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
     } else {
         Icon(PlayerIcons.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * A scan's progress: how far it has got, the bar, and the way to stop it (A67). Its own composable so
+ * a screenshot test can draw it (`docs/WISHLIST.md` B39).
+ */
+@Composable
+internal fun ScanProgress(done: Int, total: Int, onStop: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = if (total > 0) {
+                    stringResource(R.string.scan_progress, done, total)
+                } else {
+                    stringResource(R.string.scan_listing)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (total > 0) {
+                LinearProgressIndicator(
+                    progress = { done.toFloat() / total },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            }
+        }
+        // **A scan can be stopped** (the owner, 2026-09-29: a quarter of an hour, and no way out).
+        // What it found is kept, and the next scan goes on from there. The app's own button: icon
+        // above its name on its tonal square, as the owner asked -- **the slim one**, the top bar's:
+        // the full pill stood twice the height of the words and bar beside it (seen in a screenshot,
+        // B39, after the owner called it narrow and tall).
+        LabelledAction(
+            icon = PlayerIcons.Close,
+            label = stringResource(R.string.action_stop_scan),
+            onClick = onStop,
+            slim = true,
+            modifier = Modifier.padding(start = 12.dp),
+        )
     }
 }

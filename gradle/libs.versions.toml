@@ -38,6 +38,11 @@ junit = { group = "junit", name = "junit", version = "4.13.2" }
 # is the only way to test them at all here: there is no emulator, and a migration meets somebody's
 # data exactly once.
 sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version = "3.50.3.0" }
+# Screenshots in JVM tests (`docs/WISHLIST.md` B39): test-only, nothing of it reaches the APK.
+robolectric = { group = "org.robolectric", name = "robolectric", version = "4.16.1" }
+androidx-test-core = { group = "androidx.test", name = "core-ktx", version = "1.7.0" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit-ktx", version = "1.3.0" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
