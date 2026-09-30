@@ -15,7 +15,10 @@ signing and rollout remain the owner's actions.
       URL. *(The repository is public; checked 2026-09-22.)*
 - [x] Make the exact corresponding source public and tag the release commit. *(Public; every release
       tagged by `scripts/release.sh`.)*
-- [ ] Confirm the access terms for Modland, ASMA, HVSC and The Mod Archive.
+- [ ] Confirm the access terms for Modland, ASMA, HVSC and The Mod Archive. *(2026-09-30: HVSC's
+      robots.txt disallows `/download/`, where the song lengths come from -- a letter is drafted.
+      UnExoticA, on in every release since 2026-09-09 and unanswered: kept, with a reminder that it
+      stays unless ExoticA objects by 10 October, `docs/PLAN_UNEXOTICA.md`.)*
 - [x] Re-audit network/data behaviour and reconcile the privacy policy with **Data safety**.
       *(2026-09-30 for 0.11.0: no new host, no answer changes; the policy's sharing paragraph now
       names Share as audio and Share with Protracktor, `data-safety.md`.)*
