@@ -149,3 +149,4 @@ defensiveness — it is the difference between the feature working and not.
   catalogue stays in the public release unless ExoticA objects by **10 October 2026**, and that any
   later objection takes it out in the next update. On an objection: `UnExoticA.ENABLED = false`,
   which hides it and drops its stored rows.
+  **Sent 2026-09-30** by the owner, to BuZz (`buzz@exotica.org.uk`, ExoticA's admin).
