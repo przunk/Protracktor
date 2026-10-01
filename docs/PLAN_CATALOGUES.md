@@ -195,7 +195,18 @@ that publishes it* is what keeps this clean; re-serving it is not.
    STIL -- better than `Songlengths.md5` -- but sends no CORS header, so the page cannot read it, and
    v1 has no list of a folder's files (only their count) and no address for the SID file itself; the
    site does those through internal scripts, not to be used unasked. Next: ask Jens for CORS, a file
-   list and the file address, before choosing between the archive and DeepSID. — the definitive SID collection, the
+   list and the file address, before choosing between the archive and DeepSID.
+   **Found the same day without asking** (the owner did not want a second letter, and Jens's "any
+   information you want ... and also look up and play a tune" covers it): DeepSID serves the SID
+   files at `https://deepsid.chordian.net/music/_High Voltage SID Collection/<HVSC path>` (ranges, no
+   CORS), and **`Songlengths.md5` itself** at `.../DOCUMENTS/Songlengths.md5` -- byte for byte HVSC's
+   size. That file lists every HVSC path with its lengths, so it is also the catalogue's index. The
+   site's own folder listing (`php/music.php`) answers "Direct access not permitted" and is not used.
+   **Plan:** the app takes the lengths from DeepSID instead of the HVSC website (ending the interim
+   Wilfred allowed), and offers HVSC as a catalogue built from that file, its tunes fetched from
+   DeepSID one at a time, with a credit to DeepSID and HVSC. The page keeps the HVSC website's lengths
+   (allowed for now) and has no HVSC catalogue until DeepSID sends CORS -- one sentence to Jens, some
+   day. No 7z, no 376 MB. — the definitive SID collection, the
    format Modland covers worst, and the archive whose song-length database the app already depends
    on. Phone-only, and honest about it.
 3. **Ask the ones worth asking.** ASMA and Modland send the header because somebody there decided
