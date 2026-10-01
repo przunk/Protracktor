@@ -3,7 +3,7 @@
 //
 // The main thread: fetches bytes, drives the worklet, draws the queue. It never touches audio.
 
-import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
+import { nextIndex, previousIndex, nextSubsong, shouldRestart, randomNext, randomPrevious, freshPick, barLength, barTotalText, BAR_LABEL_TEMPLATE, parseNotices, parseSources, privacyBlocks, fillFromSongDb, recordsPlay, clock, clockTotal, lineScrolls, lineScrollPass, shareAudioMinutes, shareAudioName, SHARE_AUDIO_MINUTES, HISTORY_PAGE, historyPageCount, historyPageClamp, historyPageRange } from './rules.js';
 import { PHONE, playlists, settings, makePersistent, estimate, played } from './store.js';
 import * as archive from './catalogue.js';
 import { t, tn, useLanguage, resolveLanguage, translateStatic, language, LANGUAGE_CHOICES } from './i18n.js';
@@ -2052,6 +2052,37 @@ async function pointSourceAtBuild() {
   } catch { /* the front page is still the source */ }
 }
 
+/**
+ * Where the music comes from, with thanks (docs/WISHLIST.md B41): the phone's Music sources, from
+ * the same table. Each website is a link with its mark and its word, as every action here is.
+ */
+async function renderSources() {
+  $('legaltitle').textContent = t('Music sources');
+  $('legalback').hidden = true;
+  const table = await fetch('../vendor/notices/sources.tsv').then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  if (table === null) { legalMissing(t('The music sources table')); return; }
+  const body = $('legalbody');
+  body.replaceChildren();
+  for (const source of parseSources(table, language() === 'pl')) {
+    const row = document.createElement('div');
+    row.className = 'source';
+    const name = document.createElement('strong');
+    name.textContent = source.name;
+    const text = document.createElement('small');
+    text.textContent = source.text;
+    const link = document.createElement('a');
+    link.className = 'outlined';
+    link.href = source.url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h4v-2H5V8h14v10h-4v2h4c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2zm-7 6l-4 4h3v6h2v-6h3l-4-4z"/></svg>';
+    link.append(t('Website'));
+    row.append(name, text, link);
+    body.append(row);
+  }
+  body.scrollTop = 0;
+}
+
 async function renderLicences() {
   $('legaltitle').textContent = t('Open-source licences');
   $('legalback').hidden = true;
@@ -3335,6 +3366,7 @@ $('tab-settings').onclick = async () => {
   if (opening) { await renderSettings(); await pointSourceAtBuild(); }
   showPanel(opening ? 'settings' : null);
 };
+$('open-sources').onclick = () => renderSources().then(() => showPanel('legal'));
 $('open-notices').onclick = () => renderLicences().then(() => showPanel('legal'));
 $('open-privacy').onclick = () => renderPrivacy().then(() => showPanel('legal'));
 $('pair-privacy').onclick = () => renderPrivacy().then(() => showPanel('legal'));

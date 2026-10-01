@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Przunk
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Where the music and what is known about it come from, with thanks (`docs/WISHLIST.md` B41).
+# Settings → Music sources shows these rows, in the app and on the page.
+#
+# One table for both, as `components.tsv` is: the fourth column says which build shows a row --
+# `app`, `web`, or both. The texts are in the table rather than in each build's strings, so the
+# two cannot thank differently. `MusicSourcesTest` fails when an archive catalogue the app offers,
+# or the host the song lengths come from, has no `app` row here.
+#
+# id	name	address	builds	English	Polish
+modland	Modland	https://modland.com/	app,web	The archive behind most of the catalogue: half a million tunes in hundreds of formats, and its own list of favourites.	Archiwum, z którego pochodzi większość katalogu: pół miliona utworów w setkach formatów oraz własna lista ulubionych.
+asma	ASMA	https://asma.atari.org/	app,web	The Atari SAP Music Archive: music from the Atari 8-bit computers.	Atari SAP Music Archive: muzyka z 8-bitowych komputerów Atari.
+modarchive	The Mod Archive	https://modarchive.org/	app	Searched live, one module downloaded at a time.	Przeszukiwane na żywo, każdy moduł pobierany osobno.
+unexotica	UnExoticA	https://www.exotica.org.uk/wiki/UnExoticA	app	ExoticA's collection of Amiga game music, read from the games themselves.	Kolekcja muzyki z gier na Amigę prowadzona przez ExoticA, odczytywana z samych gier.
+hvsc	High Voltage SID Collection	https://www.hvsc.c64.org/	app,web	Commodore 64 music, and the hand-timed song lengths that give every SID tune its length. Thank you to the HVSC crew for allowing their use.	Muzyka z Commodore 64 i mierzone ręcznie długości, dzięki którym każdy utwór SID ma swój czas. Dziękujemy ekipie HVSC za zgodę na ich użycie.
+deepsid	DeepSID	https://deepsid.chordian.net/	app	The online SID player the app fetches HVSC's song lengths from. Thank you to its author for allowing it.	Odtwarzacz SID online, z którego aplikacja pobiera długości utworów HVSC. Dziękujemy jego autorowi za zgodę.
+songdb	songdb (audacious-uade-tools)	https://github.com/mvtiaine/audacious-uade-tools	app,web	Authors, years and lengths for hundreds of thousands of tunes, gathered by the audacious-uade project.	Autorzy, lata i długości setek tysięcy utworów, zebrane przez projekt audacious-uade.
+sc68	sc68	https://sourceforge.net/projects/sc68/	app	The Atari ST replay routines downloaded to play SNDH and SC68 tunes.	Procedury odtwarzania z Atari ST pobierane, by grać utwory SNDH i SC68.
+uade	UADE	https://gitlab.com/uade-music-player/uade	app	The Amiga replay routines downloaded to play Amiga formats.	Procedury odtwarzania z Amigi pobierane, by grać formaty Amigi.

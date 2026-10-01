@@ -144,6 +144,22 @@ export function searchMatches(query, ...texts) {
 }
 
 /**
+ * Where the music comes from (`app/notices/sources.tsv`, `docs/WISHLIST.md` B41): the rows [build]
+ * shows, with the text in Polish when [polish] -- the phone's `MusicSources.parse`, rule for rule.
+ */
+export function parseSources(text, polish = false, build = 'web') {
+  const rows = [];
+  for (const line of String(text ?? '').split('\n')) {
+    if (!line.trim() || line.startsWith('#')) continue;
+    const cells = line.split('\t');
+    if (cells.length < 6) continue;
+    if (!cells[3].split(',').map((b) => b.trim()).includes(build)) continue;
+    rows.push({ id: cells[0].trim(), name: cells[1].trim(), url: cells[2].trim(), text: (polish ? cells[5] : cells[4]).trim() });
+  }
+  return rows;
+}
+
+/**
  * The rows of the licence table (`app/notices/components.tsv`) that [build] carries -- `web` for
  * the page -- the phone's `OpenSourceNotices.parse`, rule for rule: comments and blank lines
  * skipped, a row short of its six cells refused, and each file named by where the staging puts it,

@@ -27,6 +27,8 @@ const table = fs.readFileSync(tablePath, 'utf8');
 fs.rmSync(path.join(out, 'notices'), { recursive: true, force: true });
 fs.mkdirSync(path.join(out, 'notices'), { recursive: true });
 fs.copyFileSync(tablePath, path.join(out, 'notices', 'components.tsv'));
+// And where the music comes from (docs/WISHLIST.md B41), read by Settings → Music sources.
+fs.copyFileSync(path.join(root, 'app', 'notices', 'sources.tsv'), path.join(out, 'notices', 'sources.tsv'));
 
 let copied = 0;
 const missing = [];
