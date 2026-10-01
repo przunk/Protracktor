@@ -627,16 +627,17 @@ class PlaybackController private constructor(private val context: Context) {
          * one -- and the one after that would be added without anybody noticing this line existed.
          */
         /**
-         * Where HVSC's song lengths come from -- the collection's own site, re-checked 2026-09-02
-         * and still serving the 5,205,150 bytes `docs/ARCHITECTURE.md` recorded on 2026-08-31.
+         * Where HVSC's song lengths come from -- DeepSID's copy of the collection, since 2026-10-01.
          *
-         * HVSC is distributed through mirrors and this address may one day stop answering;
-         * `hvsc.brona.dk/HVSC/C64Music/DOCUMENTS/Songlengths.md5` served a byte-identical copy on
-         * the same day and is the first place to look if it does. A dead URL here costs a message
-         * about a failed download, not a crash and not a wrong duration.
+         * HVSC asked, on 2026-09-30, that apps not fetch from its website; it allowed this file there
+         * only until something else was built. DeepSID's author allowed its API and files on
+         * 2026-10-01 (`docs/PLAN_CATALOGUES.md`). Byte-identical to HVSC's own copy that day: 5,205,150
+         * bytes, SHA-256 3f2bb5c1...dc397e. A dead URL here costs a message about a failed download,
+         * not a crash and not a wrong duration. The host is named in the privacy policy, and
+         * `LegalTextTest` fails when it is not.
          */
-        private const val SONG_LENGTHS_URL =
-            "https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5"
+        internal const val SONG_LENGTHS_URL =
+            "https://deepsid.chordian.net/music/_High%20Voltage%20SID%20Collection/DOCUMENTS/Songlengths.md5"
 
         /**
          * The songdb metadata table: author, publisher, album and year for 380,282 hashes.

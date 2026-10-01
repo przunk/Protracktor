@@ -173,6 +173,11 @@ the index exactly, with a real ProTracker header rather than an error page. The 
 `https://www.hvsc.c64.org/download/C64Music/DOCUMENTS/Songlengths.md5` is 5.2 MB and downloads
 directly, which settles Q4: exact SID durations are available and do not have to be guessed. Used
 since 2026-09-02 — re-checked that day, still 5,205,150 bytes; §14 records what it turned out to be.
+**Since 2026-10-01 the app fetches the same file from DeepSID instead**,
+`https://deepsid.chordian.net/music/_High%20Voltage%20SID%20Collection/DOCUMENTS/Songlengths.md5` --
+byte-identical that day. HVSC asked apps not to use its website and allowed it only until something
+else was built; DeepSID's author allowed his files (`docs/PLAN_CATALOGUES.md`). The web page still
+reads HVSC's copy: DeepSID sends no CORS header.
 
 `sndh.net` did not resolve from this machine. **Unverified** — whether the domain is gone or the
 network here blocks it is unknown. Atari ST material is also in Modland, so nothing depends on it

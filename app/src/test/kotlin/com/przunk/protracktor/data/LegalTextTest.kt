@@ -46,6 +46,18 @@ class LegalTextTest {
     }
 
     @Test
+    fun `the host the song lengths come from is named in both languages`() {
+        // Moved from HVSC's website to DeepSID on 2026-10-01; a move the policy does not follow
+        // is a host the user was never told about.
+        val host = java.net.URI(com.przunk.protracktor.player.PlaybackController.SONG_LENGTHS_URL).host
+        for (polish in listOf(false, true)) {
+            val bullets = LegalText.privacyBlocks(policy, polish)
+                .filterIsInstance<LegalText.Block.Bullet>().map { it.text }
+            assertTrue("$host, polish=$polish", bullets.any { it.startsWith(host) })
+        }
+    }
+
+    @Test
     fun `wrapped lines join into one paragraph`() {
         val blocks = LegalText.privacyBlocks(
             "Effective date: x\n\n## English\n\n### Title\n\nOne line\nand its wrap.\n\n- a bullet\n  and its wrap\n",
