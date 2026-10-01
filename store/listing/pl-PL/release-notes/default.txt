@@ -1,3 +1,5 @@
-Przycisk Zatrzymaj przy pasku skanowania folderu jest mniejszy i równa się z przyciskami nad nim.
+Protracktor 1.0, pierwsze publiczne wydanie.
 
-Polityka prywatności wymienia teraz wszystkie cztery sposoby udostępniania utworu, w tym Udostępnij jako audio i Udostępnij przez Protracktor.
+Nowość: Ustawienia → Źródła muzyki wymieniają archiwa i kolekcje, z których pochodzi muzyka, z linkiem do każdego, i dziękują tym, którzy zgodzili się na ich użycie.
+
+Długości utworów SID pochodzą teraz z kopii High Voltage SID Collection w serwisie DeepSID; same długości się nie zmieniły.

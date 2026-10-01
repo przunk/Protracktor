@@ -1,3 +1,5 @@
-The Stop button beside a folder scan's progress bar is smaller and lines up with the buttons above it.
+Protracktor 1.0, the first public release.
 
-The privacy policy now names all four ways to share a tune, including Share as audio and Share with Protracktor.
+New: Settings → Music sources names the archives and collections the music comes from, with a link to each, and thanks those who allowed their use.
+
+SID song lengths now come from DeepSID's copy of the High Voltage SID Collection; the lengths themselves are unchanged.

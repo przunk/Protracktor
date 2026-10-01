@@ -10,7 +10,7 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT 2026-10-02 on `feature/music-sources`, waiting for the phone**
+## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT and merged 2026-10-02; checked on the phone by the owner**
 
 *Claude and the owner, 2026-10-01, asked whether the right people are credited in the app.* Not
 quite: the archives are named where they are used (the catalogue list, "SID song lengths (HVSC, via
