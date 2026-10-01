@@ -3,7 +3,6 @@
     <string name="app_name">Protracktor</string>
 
     <string name="search_playing_title">Playing from search</string>
-    <string name="search_playing_body">Nothing from this playlist is playing.\nNext and previous walk the results.</string>
     <string name="external_playing_title">Playing a file from outside</string>
     <string name="external_playing_body">Another app handed this to Protracktor. Nothing follows it.\nThe plus keeps it.</string>
     <string name="random_playing_title">Playing at random</string>
@@ -29,13 +28,6 @@
 
     <string name="action_show_in_playlist">Show in playlist</string>
     <string name="action_browse">Browse</string>
-    <string name="replays_title">Atari ST replay routines</string>
-    <string name="replays_none">Needed by most .sc68 files. 98 small files, about 1.2 MB, downloaded from sc68\'s own site — they are other people\'s code and this app does not distribute them. SNDH does not need them.</string>
-    <string name="players_title">Amiga replay routines</string>
-    <string name="players_none">Needed by TFMX, Hippel, David Whittaker and the other Amiga custom formats. 176 small files, about 726 KB, downloaded from UADE\'s own repository — they are other people\'s code and this app does not distribute them.</string>
-    <string name="storage_confirm_players">They can be downloaded again from this screen. Until then the Amiga custom formats will not play.</string>
-    <string name="a11y_download_players">Download the Amiga replay routines</string>
-    <string name="storage_confirm_replays">They can be downloaded again from this screen. Until then, most .sc68 files will play silence. SNDH is unaffected.</string>
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
@@ -48,7 +40,6 @@
     <string name="settings_play_all_subsongs">Play every tune in a file</string>
     <string name="settings_play_all_subsongs_detail">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</string>
     <string name="settings_language">Language</string>
-    <string name="settings_language_detail">Choose the language used by Protracktor.</string>
     <string name="settings_language_system">System</string>
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
@@ -65,16 +56,8 @@
     <string name="catalogue_playable_of">%1$,d of %2$,d playable</string>
     <string name="catalogue_count_and_size">%1$s · %2$,d MB</string>
     <string name="storage_index_and_archive">%1$s, including a %2$,d MB archive</string>
-    <string name="storage_megabytes">%1$,d MB</string>
     <string name="storage_confirm_title">Delete %1$s?</string>
     <string name="storage_confirm_index">It can be downloaded again from this screen. Until then, this catalogue cannot be browsed or searched, and its tracks will not play.</string>
-    <string name="storage_confirm_track_metadata">It can be downloaded again from Browse. Until then, most tunes will show no year or author, and Amiga tunes no length until they have played a moment.</string>
-    <string name="storage_confirm_favourites">It can be downloaded again from Browse. Until then, Random cannot be scoped to the favourites.</string>
-    <plurals name="favourites_listed">
-        <item quantity="one">%1$,d tune</item>
-        <item quantity="other">%1$,d tunes</item>
-    </plurals>
-    <string name="storage_confirm_song_lengths">They can be downloaded again from this screen. Until then, SID tracks show no duration and end only at the fallback length set in Settings.</string>
     <string name="a11y_delete_storage">Delete %1$s</string>
     <plurals name="subsongs_count">
         <item quantity="one">%1$,d tune</item>
@@ -92,10 +75,8 @@
     <string name="folder_unscanned">Not scanned yet. Scanning opens every file to find out what it really is, rather than trusting its name.</string>
     <string name="folder_stale">This folder was scanned with a different set of decoders. Files that could not be played then may play now.</string>
     <string name="action_to_playlist">Playlist</string>
-    <string name="action_add_track">Add to the playlist</string>
     <string name="action_add_folder">Add a folder</string>
     <string name="action_add_files">Add files</string>
-    <string name="action_scanning">Scanning…</string>
 
     <string name="action_undo">Undo</string>
     <string name="action_info">Information</string>
@@ -158,8 +139,6 @@
 
     <string name="a11y_forget_folder">Forget the folder %1$s</string>
     <string name="a11y_playlist_menu">Actions for %1$s</string>
-    <string name="a11y_rename_playlist">Rename %1$s</string>
-    <string name="a11y_delete_playlist">Delete %1$s</string>
 
     <string name="domain_local_title">Local filesystem</string>
     <string name="domain_local_body">Folders and files on this device</string>
@@ -193,34 +172,17 @@
     <string name="history_newer">Newer</string>
     <string name="history_older">Older</string>
     <string name="history_page_range">%1$,d–%2$,d of %3$,d</string>
-        <string name="song_lengths_title">SID song lengths (HVSC)</string>
-    <string name="song_lengths_none">Not downloaded — SID tunes show no length and play until you skip them</string>
-    <string name="track_metadata_title">Track metadata and lengths (songdb)</string>
-    <string name="track_metadata_none">Not downloaded — most tunes will show no year or author, and Amiga tunes no length until they have played a moment</string>
-    <plurals name="track_metadata_count">
-        <item quantity="one">%1$,d tune described</item>
-        <item quantity="other">%1$,d tunes described</item>
-    </plurals>
-    <string name="a11y_download_track_metadata">Download the track metadata and lengths</string>
     <string name="settings_fallback_length">When nothing knows the length</string>
     <string name="settings_fallback_length_detail">A SID or an unlisted SNDH carries no length of its own. Without this, one would play until you skipped it.</string>
     <plurals name="minutes">
         <item quantity="one">%1$,d minute</item>
         <item quantity="other">%1$,d minutes</item>
     </plurals>
-    <plurals name="song_lengths_count">
-        <item quantity="one">%1$,d tune</item>
-        <item quantity="other">%1$,d tunes</item>
-    </plurals>
-    <string name="a11y_download_song_lengths">Download the HVSC song length database</string>
         <string name="catalogue_more_coming">More archives are planned. Only ones whose index format is implemented can appear here.</string>
     <string name="a11y_index_catalogue">Download the index for %1$s</string>
 
-    <string name="search_label">Title or author</string>
-    <string name="search_scope_online">Online catalogues</string>
     <string name="search_no_catalogues">No catalogue is indexed yet.</string>
     <string name="field_file">File</string>
-    <string name="search_scope_local">My library</string>
 
     <string name="browse_title">Add music</string>
 
@@ -244,7 +206,6 @@
     <string name="field_instrument_names">Instrument names</string>
     <string name="field_sample_names">Sample names</string>
 
-    <string name="a11y_remove_track">Remove %1$s from the playlist</string>
 
     <string name="notification_stop">Stop</string>
     <string name="notification_channel_playback">Playback</string>
@@ -252,7 +213,6 @@
     <string name="a11y_seek">Seek within the track</string>
     <string name="a11y_seeking">Seeking</string>
     <string name="a11y_keep_track">Add this track to the playlist</string>
-    <string name="a11y_preview">Play %1$s</string>
     <string name="a11y_play">Play</string>
     <string name="a11y_stop_loading">Stop loading</string>
     <string name="a11y_pause">Pause</string>
@@ -267,7 +227,6 @@
     <string name="a11y_repeat_one">Repeating this track</string>
 
     <string name="action_add_to_playlist">Add to playlist…</string>
-    <string name="action_add_to_other_playlist">Add to another playlist…</string>
     <string name="dialog_add_to_playlist_title">Add to playlist</string>
     <plurals name="dialog_add_tracks_to_playlist_title">
         <item quantity="one">Add %,d track to playlist</item>
@@ -282,14 +241,6 @@
     </plurals>
     <string name="notice_all_already_in_playlist">All tracks are already in %1$s.</string>
     <string name="catalogue_online_search">Live online search</string>
-    <plurals name="players_count">
-        <item quantity="one">%1$,d replay routine</item>
-        <item quantity="other">%1$,d replay routines</item>
-    </plurals>
-    <plurals name="replays_count">
-        <item quantity="one">%1$,d replay routine</item>
-        <item quantity="other">%1$,d replay routines</item>
-    </plurals>
     <string name="domain_random_title_scoped">Random · %1$s</string>
     <string name="domain_random_body_scoped">Hold to change what it picks from</string>
     <string name="a11y_choose_random_scope">Choose what Random picks from</string>
@@ -305,8 +256,6 @@
     <string name="scan_privacy">What you send — titles, archive addresses and files from this phone — goes to the server that runs the page you scan. Send only to a page you, or somebody you trust, runs.</string>
     <string name="scan_refused">Without the camera the code cannot be read. You can still send the playlist as a link.</string>
     <string name="action_cancel">Cancel</string>
-    <string name="paired_with">Paired with %1$s</string>
-    <string name="pair_forget">Forget the paired browser</string>
     <!-- Its own group in Settings, below the appearance one. The web player is a second copy of
          the app rather than a preference about this one. -->
     <string name="settings_web_player_section">Web player</string>
@@ -317,13 +266,6 @@
     <string name="random_scope_favourites_unindexed">None of the favourites are in your Modland index. Index Modland first.</string>
     <string name="random_scope_favourites_download">Download</string>
     <string name="random_scope_favourites_downloading">Downloading…</string>
-    <string name="favourites_title">Modland favourites</string>
-    <string name="favourites_none">Not downloaded — Random can be scoped to them once it is</string>
-    <plurals name="favourites_count">
-        <item quantity="one">%1$,d favourite in your index</item>
-        <item quantity="other">%1$,d favourites in your index</item>
-    </plurals>
-    <string name="a11y_download_favourites">Download the Modland favourites</string>
 
     <!-- Notices. Every sentence the app says to the user lives here, in both languages: a
          `Message("…")` built from a literal is a sentence that reaches a Polish phone in English.
@@ -367,9 +309,6 @@
     <string name="notice_no_author_live">%1$s is searched live and lists no author, so there is nowhere to jump to.</string>
     <string name="notice_not_in_index">That track is not in the %1$s index. Index it to jump to the author.</string>
     <string name="notice_history_cleared">History cleared.</string>
-    <string name="notice_song_lengths_deleted">Song lengths deleted.</string>
-    <string name="notice_track_metadata_deleted">Track metadata deleted.</string>
-    <string name="notice_favourites_deleted">Favourites deleted.</string>
     <string name="notice_index_deleted">Index deleted. Download it again any time.</string>
     <string name="notice_index_download_failed">Could not download the %1$s index.</string>
     <string name="notice_archive_store_failed">Could not store the %1$s archive.</string>
@@ -400,18 +339,8 @@
     <string name="notice_favourites_empty">The favourites list was empty.</string>
     <string name="notice_favourites_playable">%1$,d of %2$,d favourites are in your Modland index.</string>
     <string name="notice_favourites_need_index">%1$,d favourites downloaded. Index Modland to play them.</string>
-    <string name="notice_replays_failed">Could not download the replay routines.</string>
     <string name="open_failed_companion">\"%1$s\" needs %2$s beside it, and it could not be fetched.</string>
     <string name="open_failed_needs_players">\"%1$s\" needs the Amiga replay routines. Download them from Browse → Online catalogues.</string>
-    <string name="notice_players_failed">Could not download the Amiga replay routines.</string>
-    <plurals name="notice_replays_done">
-        <item quantity="one">%1$,d replay routine downloaded. .sc68 files should play now.</item>
-        <item quantity="other">%1$,d replay routines downloaded. .sc68 files should play now.</item>
-    </plurals>
-    <plurals name="notice_players_done">
-        <item quantity="one">%1$,d Amiga replay routine downloaded. TFMX, Hippel and the other custom formats should play now.</item>
-        <item quantity="other">%1$,d Amiga replay routines downloaded. TFMX, Hippel and the other custom formats should play now.</item>
-    </plurals>
     <string name="notice_random_gave_up">Several picks in a row would not open. Stopping here.</string>
     <string name="notice_random_nothing_indexed">Nothing is indexed yet. Index a catalogue first.</string>
     <string name="notice_random_nothing_for_platform">Nothing indexed for that platform.</string>
@@ -448,7 +377,6 @@
     <string name="notice_freed_megabytes">Freed %1$,d MB.</string>
     <string name="notice_audio_busy">Something else is using the audio.</string>
     <string name="notice_audio_device_failed">Could not open the audio device</string>
-    <string name="download_all_body">Pick what to fetch — up to %1$,d MB. It is stored on this phone, so browsing it afterwards needs no network.</string>
     <string name="download_pick_open">Get some music to browse</string>
     <string name="download_all_running">Downloading everything</string>
     <string name="notice_all_downloaded">Everything downloaded. Browse is full.</string>
@@ -461,7 +389,6 @@
     <string name="download_pick_held">Already on this phone</string>
     <string name="action_download_selected">Download %1$,d MB</string>
     <string name="action_stop_downloads">Stop</string>
-    <string name="a11y_download_pick">Choose what to download</string>
     <string name="song_metadata_title">Song metadata</string>
     <string name="song_metadata_none">Not downloaded — no lengths, authors or years</string>
     <plurals name="song_metadata_count">
