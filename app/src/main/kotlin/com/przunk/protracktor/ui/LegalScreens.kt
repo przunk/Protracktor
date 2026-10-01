@@ -27,8 +27,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.LegalText
+import com.przunk.protracktor.data.MusicSources
 import com.przunk.protracktor.data.OpenSourceNotices
 
 /**
@@ -100,6 +105,53 @@ fun LicencesScreen(contentPadding: PaddingValues, onClose: () -> Unit) {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Where the music comes from, with thanks (`docs/WISHLIST.md` B41): every row of
+ * `app/notices/sources.tsv` the app shows, in the phone's language when that is Polish.
+ *
+ * Each has its website behind a labelled button rather than a tappable row, as every action here
+ * does. A phone with nothing to open a link says so instead of doing nothing.
+ */
+@Composable
+fun MusicSourcesScreen(contentPadding: PaddingValues, onClose: () -> Unit) {
+    val context = LocalContext.current
+    val polish = context.resources.configuration.locales[0].language == "pl"
+    val sources = remember(polish) {
+        runCatching {
+            context.assets.open(MusicSources.TABLE_ASSET).bufferedReader().use { it.readText() }
+        }.map { MusicSources.parse(it, polish) }.getOrDefault(emptyList())
+    }
+    Pane(title = stringResource(R.string.settings_sources), contentPadding = contentPadding, onBack = onClose) { modifier, listPadding ->
+        LazyColumn(modifier, contentPadding = listPadding) {
+            items(sources, key = { it.id }) { source ->
+                val website = stringResource(R.string.action_website)
+                ListItem(
+                    headlineContent = { Text(source.name) },
+                    supportingContent = { Text(source.text, style = MaterialTheme.typography.bodySmall) },
+                    trailingContent = {
+                        LabelledAction(
+                            icon = PlayerIcons.Web,
+                            label = website,
+                            slim = true,
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source.url)))
+                                } catch (_: ActivityNotFoundException) {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.notice_no_browser, source.url),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                            },
+                        )
+                    },
+                )
             }
         }
     }

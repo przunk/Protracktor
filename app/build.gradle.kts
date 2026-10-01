@@ -219,6 +219,10 @@ val copyNotices = tasks.register<Sync>("copyNotices") {
     val table = rootProject.file("app/notices/components.tsv")
     inputs.file(table)
     from(table) { into("notices") }
+    // And where the music comes from (`docs/WISHLIST.md` B41): Settings → Music sources.
+    val sources = rootProject.file("app/notices/sources.tsv")
+    inputs.file(sources)
+    from(sources) { into("notices") }
     from(rootProject.file("store/privacy-policy.md")) { into("legal") }
     table.readLines()
         .filter { it.isNotBlank() && !it.startsWith("#") }
@@ -251,6 +255,7 @@ tasks.withType<Test>().configureEach {
     // And `NoticesCoverTheBuildTest` the licence table and the native build it is held to. Found by
     // taking a row out of the table: the test stayed green because Gradle had not re-run it.
     inputs.file(rootProject.file("app/notices/components.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file("app/notices/sources.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("native/CMakeLists.txt")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("store/privacy-policy.md")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("web/src/formats.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)

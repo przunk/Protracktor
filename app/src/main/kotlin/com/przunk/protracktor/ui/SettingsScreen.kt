@@ -124,6 +124,11 @@ fun SettingsScreen(
             LicencesScreen(contentPadding = contentPadding, onClose = { legal = null })
             return
         }
+        Legal.SOURCES -> {
+            BackHandler { legal = null }
+            MusicSourcesScreen(contentPadding = contentPadding, onClose = { legal = null })
+            return
+        }
         Legal.PRIVACY -> {
             BackHandler { legal = null }
             PrivacyPolicyScreen(contentPadding = contentPadding, onClose = { legal = null })
@@ -380,6 +385,17 @@ fun SettingsScreen(
         // What the app carries of other people's work, and what it sends where. Both open a full
         // screen over this one, and both show files the build copies in from where they are kept --
         // the licences from the code that brought them, the policy from the page that is published.
+        // Who the music comes from, above what the code is made of (`docs/WISHLIST.md` B41).
+        item {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_sources)) },
+                supportingContent = {
+                    Text(stringResource(R.string.settings_sources_detail), style = MaterialTheme.typography.bodySmall)
+                },
+                leadingContent = { Icon(PlayerIcons.Cloud, contentDescription = null) },
+                modifier = Modifier.clickable { legal = Legal.SOURCES },
+            )
+        }
         item {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.settings_notices)) },
@@ -404,7 +420,7 @@ fun SettingsScreen(
 
 }
 
-private enum class Legal { NOTICES, PRIVACY }
+private enum class Legal { SOURCES, NOTICES, PRIVACY }
 
 @Composable
 private fun CacheAhead.label(): String = stringResource(

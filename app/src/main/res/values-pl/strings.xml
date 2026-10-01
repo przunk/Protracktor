@@ -444,6 +444,10 @@
     <string name="settings_notices">Licencje open source</string>
     <string name="settings_notices_detail">Składniki tej aplikacji i ich licencje</string>
     <string name="notices_version_licence">%1$s · %2$s</string>
+    <string name="settings_sources">Źródła muzyki</string>
+    <string name="settings_sources_detail">Skąd pochodzi muzyka i wiedza o niej, z podziękowaniami</string>
+    <string name="action_website">Strona</string>
+    <string name="notice_no_browser">Żadna aplikacja na tym telefonie nie otworzy %1$s.</string>
     <string name="settings_privacy">Polityka prywatności</string>
     <string name="settings_privacy_detail">Co aplikacja wysyła i dokąd</string>
     <string name="settings_online_section">Katalogi online</string>

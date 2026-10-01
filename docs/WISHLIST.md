@@ -10,7 +10,7 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; after the release script**
+## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT 2026-10-02 on `feature/music-sources`, waiting for the phone**
 
 *Claude and the owner, 2026-10-01, asked whether the right people are credited in the app.* Not
 quite: the archives are named where they are used (the catalogue list, "SID song lengths (HVSC, via
@@ -23,6 +23,14 @@ with its name, one sentence of what it gives, and a link (icon and label) -- Mod
 Archive, UnExoticA / ExoticA, HVSC, DeepSID, songdb (audacious-uade-tools), sc68's and UADE's
 replay files -- and a thank-you for the permissions given (HVSC, DeepSID). ZXArt and an HVSC
 catalogue join it when they are built.
+
+*Built:* one table, `app/notices/sources.tsv`, read by both -- copied into the APK by the build and
+beside the page's engine by `stage-web-legal.mjs`. Settings → **Music sources** above the licences in
+the app; a **Music sources** button beside the licences on the page, which shows only its own rows
+(no Mod Archive, no DeepSID). Each source has its website behind an icon-and-label button.
+`MusicSourcesTest` fails when an archive catalogue the app offers, or the host the song lengths come
+from, has no row -- checked by deleting two rows. The page check fails when a link loses its label.
+Thanks are written without names: the HVSC crew, DeepSID's author.
 
 ## B40. A SAP's measured lengths, remembered for every subsong — **noted 2026-09-28 from review F3; not planned**
 

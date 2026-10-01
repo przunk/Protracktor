@@ -93,6 +93,7 @@ window.fetch = async (url, options) => {
     return { ok: true, headers: { get: () => String(bytes.length) }, arrayBuffer: async () => bytes.buffer };
   }
   // What the page shows about itself (W4), off disk where the staging takes it from.
+  if (u.endsWith('vendor/notices/sources.tsv')) return { ok: true, text: async () => fs.readFileSync('app/notices/sources.tsv', 'utf8') };
   if (u.endsWith('vendor/notices/components.tsv')) return { ok: true, text: async () => fs.readFileSync('app/notices/components.tsv', 'utf8') };
   if (u.endsWith('vendor/legal/privacy-policy.md')) return { ok: true, text: async () => fs.readFileSync('store/privacy-policy.md', 'utf8') };
   if (u.includes('vendor/notices/')) return { ok: true, text: async () => `licence text of ${u.slice(u.lastIndexOf('/') + 1)}` };
@@ -2366,6 +2367,26 @@ if (window.__api) {
   check(notices?.querySelector('svg') && notices.textContent.trim() === 'Open-source licences'
         && privacy?.querySelector('svg') && privacy.textContent.trim() === 'Privacy policy',
     'they offer the open-source licences and the privacy policy, each with its icon and its name');
+  // B41: who the music comes from, from the table the phone reads, each website a labelled link.
+  const sourcesButton = $('open-sources');
+  check(sourcesButton?.querySelector('svg') && sourcesButton.textContent.trim() === 'Music sources',
+    'Music sources is offered with its icon and its name');
+  sourcesButton.click();
+  await new Promise((r) => setTimeout(r, 40));
+  const webSources = (await import(path.resolve('web/src/rules.js')))
+    .parseSources(fs.readFileSync('app/notices/sources.tsv', 'utf8'), false, 'web');
+  const sourceRows = [...$('legalbody').querySelectorAll('.source')];
+  const links = sourceRows.map((r) => r.querySelector('a'));
+  check(!$('legal').hidden && $('legaltitle').textContent === 'Music sources' && webSources.length > 0
+        && sourceRows.length === webSources.length
+        && sourceRows.some((r) => r.textContent.startsWith('High Voltage SID Collection'))
+        && !sourceRows.some((r) => r.textContent.startsWith('DeepSID'))
+        && links.every((a, i) => a?.querySelector('svg') && a.textContent.trim() === 'Website'
+          && a.href === webSources[i].url && a.target === '_blank'),
+    `Music sources lists the page's ${webSources.length} sources, each with a Website link carrying its mark`);
+  $('legal').querySelector('[data-close]').click();
+  gear.click();
+  await new Promise((r) => setTimeout(r, 40));
   notices.click();
   await new Promise((r) => setTimeout(r, 40));
   const table = fs.readFileSync('app/notices/components.tsv', 'utf8');

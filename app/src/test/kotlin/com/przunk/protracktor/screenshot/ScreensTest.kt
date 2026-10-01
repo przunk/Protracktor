@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.AppTheme
+import androidx.compose.foundation.layout.PaddingValues
+import com.przunk.protracktor.ui.MusicSourcesScreen
 import com.przunk.protracktor.ui.ScanProgress
 import com.przunk.protracktor.ui.theme.ProtracktorTheme
 import org.junit.Test
@@ -45,5 +47,16 @@ class ScreensTest {
     fun `the scan's bar and its Stop`() {
         shot("scan-progress-dark", 110, dark = true) { ScanProgress(6550, 11582) {} }
         shot("scan-progress-light", 110, dark = false) { ScanProgress(0, 0) {} }
+    }
+
+    @Test
+    fun `Music sources`() {
+        shot("music-sources-dark", 800, dark = true) { MusicSourcesScreen(PaddingValues()) {} }
+    }
+
+    @Test
+    @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
+    fun `Music sources in Polish`() {
+        shot("music-sources-pl-light", 800, dark = false) { MusicSourcesScreen(PaddingValues()) {} }
     }
 }
