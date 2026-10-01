@@ -1691,7 +1691,10 @@ private fun HeldIcon(held: Boolean) {
 @Composable
 internal fun ScanProgress(done: Int, total: Int, onStop: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
+        // **The right edge the headers keep** (the owner, 2026-09-30: Stop stood further right than the
+        // button above it): the top bar's actions end 16 dp in, plus the pill's own seam, and so does
+        // this one now.
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = SESSION_HEADER_EDGE),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
