@@ -188,7 +188,9 @@ exists; the script goes back to the branch and prints how to finish from the tag
 **`./scripts/check-release.sh`** runs `release.sh` for real in throwaway clones, builds stubbed and
 a throwaway key: a release, `--check`, a failed bundle, a hotfix, a hotfix that conflicts with
 `develop`, and the refusals. Run it after changing `release.sh`. Verified by making the release merge
-instead of fast-forward: four checks failed.
+instead of fast-forward: four checks failed. **First real run: 1.0.0, 2026-10-02** -- the owner's keystore,
+`master` fast-forwarded onto `v1.0.0` with no merge commit, `develop` one evidence commit ahead,
+the bundle's SHA-256 matching the one recorded.
 
 ### Releasing from `master` — decided 2026-10-01, from the first release after the public launch
 
