@@ -571,7 +571,7 @@ places a condition on our distribution.
 | --- | --- | --- | --- |
 | Modland index | `modland.com` | ~40 MB | a list of what the archive holds |
 | ASMA | `asma.atari.org` | 20 MB | the Atari 8-bit collection itself, 6,335 `.sap` files |
-| HVSC song lengths | `hvsc.c64.org` | 5.2 MB | hand-timed durations for 61,157 SID tunes |
+| HVSC song lengths | `deepsid.chordian.net` (app), `hvsc.c64.org` (web page) | 5.2 MB | hand-timed durations for 61,157 SID tunes |
 
 Worth a second look **if that ever changes** — if it becomes tempting to bundle any of it to save
 the user a download, the terms of the collection publishing it become our problem, and each of these

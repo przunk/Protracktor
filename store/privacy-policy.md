@@ -1,6 +1,6 @@
 # Protracktor privacy policy
 
-Effective date: 2026-09-23
+Effective date: 2026-10-01
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -52,7 +52,8 @@ connect over HTTPS to:
 - `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
   module;
-- `hvsc.c64.org` to download the SID song-length database;
+- `deepsid.chordian.net` to download the SID song-length database of the High Voltage SID
+  Collection, from DeepSID's copy of it;
 - `raw.githubusercontent.com` to download song metadata and song lengths published by the
   audacious-uade-tools project, Modland's favourites list, and a song database used by the Amiga
   decoder;
@@ -167,7 +168,8 @@ może łączyć się przez HTTPS z:
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
 - `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;
-- `hvsc.c64.org`, aby pobrać bazę długości utworów SID;
+- `deepsid.chordian.net`, aby pobrać bazę długości utworów SID z High Voltage SID Collection,
+  z kopii tej kolekcji w serwisie DeepSID;
 - `raw.githubusercontent.com`, aby pobrać metadane i długości utworów publikowane przez projekt
   audacious-uade-tools, listę ulubionych Modlandu oraz bazę utworów używaną przez dekoder Amigi;
 - `svn.code.sf.net`, aby pobrać procedury odtwarzające Atari ST publikowane przez projekt sc68;
