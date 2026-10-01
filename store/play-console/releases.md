@@ -6,6 +6,26 @@ obligation in `gpl-and-notices.md` rests on.
 
 Record a build here **before** uploading it, and never edit a section afterwards.
 
+## 0.11.1 — versionCode 1021
+
+Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v0.11.1`.
+
+| | |
+| --- | --- |
+| Artifact | `dist/protracktor-0.11.1-1021.aab` |
+| Size | 21818057 bytes |
+| SHA-256 | `15e7a799589574ae33fbf505ff46bd023638de968e917ce182c5733188273a73` |
+| versionCode | 1021 — `git rev-list --count HEAD`, not written by hand |
+| versionName | 0.11.1 |
+| Commit | `4f031ee` |
+| Tag | `v0.11.1` |
+| Built | 2026-10-01 |
+
+**Signer**, read from the bundle by `release.sh`: `E2:02:EF:AD:A7:48:70:F0:8D:A3:63:28:D4:E0:74:00:04:93:EC:9E:FF:AA:43:39:95:84:13:60:D9:CC:A9:9D`.
+
+**What changed since v0.11.0**: `git log --oneline v0.11.0..v0.11.1`, and
+`docs/STATUS.md` for the defects by number.
+
 ## 0.11.0 — versionCode 1000
 
 Closed testing. Notes as uploaded: `store/listing/*/release-notes/default.txt` at `v0.11.0`.
