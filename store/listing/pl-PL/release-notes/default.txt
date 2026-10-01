@@ -1,9 +1,3 @@
-Foldery lokalne zachowują swoje podfoldery, a ich skanowanie jest dużo szybsze: można je zatrzymać, widać je w powiadomieniu, a lista wypełnia się na bieżąco.
+Przycisk Zatrzymaj przy pasku skanowania folderu jest mniejszy i równa się z przyciskami nad nim.
 
-Historia pamięta każdy utwór, po sto na stronę, i otwiera się od razu.
-
-Utwory Atari 8-bit bez podanej długości kończą się tam, gdzie naprawdę się kończą.
-
-Jedno „Udostępnij” w każdym menu, z tymi samymi czterema opcjami.
-
-Powtarzanie i losowanie działają też dla utworów granych z ekranu Przeglądaj.
+Polityka prywatności wymienia teraz wszystkie cztery sposoby udostępniania utworu, w tym Udostępnij jako audio i Udostępnij przez Protracktor.

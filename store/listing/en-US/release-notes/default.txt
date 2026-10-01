@@ -1,9 +1,3 @@
-Local folders keep their own folders, and scanning them is much faster: it can be stopped, shows in a notification, and fills the list as it goes.
+The Stop button beside a folder scan's progress bar is smaller and lines up with the buttons above it.
 
-History keeps every tune, a hundred at a time, and opens at once.
-
-Atari 8-bit tunes that state no length now end where they really do.
-
-One Share in every menu, with the same four ways; Share with Protracktor opens anywhere.
-
-Repeat and shuffle apply to tunes played from Browse, too.
+The privacy policy now names all four ways to share a tune, including Share as audio and Share with Protracktor.
