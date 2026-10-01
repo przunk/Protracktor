@@ -186,7 +186,16 @@ that publishes it* is what keeps this clean; re-serving it is not.
    and also look up and play a tune in it". No rate limit, no authentication; the REST API is
    documented under the site's *Help* tab; a credit or a link "if you find the space". So the page
    can have SID lengths and HVSC browsing through DeepSID, which the archive route cannot give a
-   browser; owe DeepSID a credit wherever it is used. — the definitive SID collection, the
+   browser; owe DeepSID a credit wherever it is used.
+   **Measured 2026-10-01, before building anything.** The archive route is heavy on a phone: HVSC 85 is
+   61,324 files, 376 MB unpacked, in a solid 7z whose LZMA dictionary is 340 MB and whose PPMd model is
+   256 MB -- about 350 MB of memory at once just to unpack, whatever the code, and 376 MB on disk.
+   DeepSID's public API (`/api/v1/?file=`, `?folder=`, `?profile=`, `?players`; source:
+   `Chordian/deepsid`, `api/v1.php`) gives a tune's lengths for every subsong, author, year, MD5 and
+   STIL -- better than `Songlengths.md5` -- but sends no CORS header, so the page cannot read it, and
+   v1 has no list of a folder's files (only their count) and no address for the SID file itself; the
+   site does those through internal scripts, not to be used unasked. Next: ask Jens for CORS, a file
+   list and the file address, before choosing between the archive and DeepSID. — the definitive SID collection, the
    format Modland covers worst, and the archive whose song-length database the app already depends
    on. Phone-only, and honest about it.
 3. **Ask the ones worth asking.** ASMA and Modland send the header because somebody there decided
