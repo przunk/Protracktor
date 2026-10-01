@@ -169,22 +169,38 @@ is otherwise invisible until an upload is rejected.
 ./scripts/release.sh 0.7.0             # do it
 ```
 
-Written 2026-09-21 on the owner's request, so a release is one command run from his terminal. It
-does, in order and stopping at the first failure: the tree (on `develop`, clean, tag free, version
-newer), the release notes in both languages, the web engine and the whole suite, `versionName`
-committed and tagged `v<version>`, the bundle through `build-bundle.sh` — which asks for the
-keystore passwords itself, so the release script never sees them — the evidence entry in
-`store/play-console/releases.md` read from the bundle itself, and `master` merged level with
-`develop`. **It does not push and does not upload**; its last lines say what to push and what to
-upload where. It asks once, by having the version typed again, before it changes anything.
+Written 2026-09-21 on the owner's request, so a release is one command run from his terminal;
+changed 2026-10-01 to release from `master` (below). Run on `develop` for a release, or on a
+`hotfix/<name>` branch for a hotfix. It does, in order and stopping at the first failure: the tree
+(on one of those, clean, tag free, version newer, `master` able to fast-forward), the release notes
+in both languages, the web engine and the whole suite, `versionName` committed on the branch,
+`master` fast-forwarded to that commit and tagged `v<version>`, the bundle built there through
+`build-bundle.sh` — which asks for the keystore passwords itself, so the release script never sees
+them — the evidence entry in `store/play-console/releases.md` read from the bundle and committed on
+the branch, and for a hotfix the branch merged back into `develop`. **It does not push and does not
+upload**; its last lines say what to push and what to upload where, and how to check the upload
+(App bundle explorer → the versionCode → Downloads → Original app bundle, and its SHA-256). It asks
+once, by having the version typed again, before it changes anything.
+
+**If the bundle fails** (a mistyped keystore password), `master` has already moved and the tag
+exists; the script goes back to the branch and prints how to finish from the tag.
+
+**`./scripts/check-release.sh`** runs `release.sh` for real in throwaway clones, builds stubbed and
+a throwaway key: a release, `--check`, a failed bundle, a hotfix, a hotfix that conflicts with
+`develop`, and the refusals. Run it after changing `release.sh`. Verified by making the release merge
+instead of fast-forward: four checks failed.
 
 ### Releasing from `master` — decided 2026-10-01, from the first release after the public launch
 
 *The owner, 2026-10-01: `master` is the release point. `develop` goes on; a release is `master`
-brought level with `develop`, a tag on `master`, and the build made from it. Until `release.sh` is
-changed to match (after the launch, on its own branch), the paragraph above still describes what the
-script does. The workspace-wide rule (`/mnt/workspace/AGENTS.md` §11) still says "from develop"; the
-owner will change it some other day.*
+brought level with `develop`, a tag on `master`, and the build made from it. `release.sh` does all of
+this; the commands below are what it runs, for reading and for a release by hand. The workspace-wide
+rule (`/mnt/workspace/AGENTS.md` §11) still says "from develop"; the owner will change it some other
+day.*
+
+**Once, when it changed:** the old script had left a merge commit on `master` that `develop` did not
+have, so `master` could not fast-forward. That merge was taken into `develop` once, with no file
+changes; from then on `master` is always an ancestor of `develop`.
 
 ```
 feature/* ──► develop ──(fast-forward at a release)──► master ── tag vX.Y.Z ── build
@@ -208,7 +224,18 @@ which Android refuses to install over it. Fast-forwarded, `master` *is* the comm
 and the numbers stay one sequence. `--ff-only` also refuses, rather than merging, when `master`
 holds something `develop` does not -- the tell of a hotfix not yet taken back.
 
-**A hotfix** for what is published, when `develop` already holds unreleased work:
+**A hotfix** for what is published, when `develop` already holds unreleased work. With the script:
+
+```
+git checkout -b hotfix/<name> master
+# fix, test, commit
+./scripts/release.sh X.Y.Z              # on the hotfix branch; merges it back into develop at the end
+git branch -d hotfix/<name>
+```
+
+Its evidence entry and `develop`'s latest one are both written at the top of `releases.md`, so that
+file always conflicts on the way back; the script resolves it (both entries, the hotfix on top) and
+stops for anything else, telling you to merge by hand. By hand, the same release is:
 
 ```
 git checkout -b hotfix/<name> master
