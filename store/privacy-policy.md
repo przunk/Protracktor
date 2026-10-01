@@ -69,9 +69,11 @@ Local playback and previously downloaded content remain usable without making th
 
 ### Sharing
 
-When the user chooses **Share file** or **Share link**, Protracktor sends the selected file or link
-to the application chosen in Android's system share sheet. This transfer happens only after that
-explicit action. The receiving application or service applies its own privacy policy. Temporary
+When the user chooses **Share the file**, **Share as audio**, **Share a link** or **Share with
+Protracktor**, Protracktor sends the selected file, an audio file it makes from the selected tune on
+the device, or a link, to the application chosen in Android's system share sheet. A *Share with
+Protracktor* link points at the public web player and carries the tune's archive address and title.
+This transfer happens only after that explicit action. The receiving application or service applies its own privacy policy. Temporary
 share copies are removed after their retention window when Protracktor next performs cleanup; the
 receiving application may keep its own copy.
 
@@ -181,9 +183,11 @@ Lokalne odtwarzanie i wcześniej pobrane materiały działają bez wykonywania t
 
 ### Udostępnianie
 
-Po wybraniu **Udostępnij plik** lub **Udostępnij link** Protracktor przekazuje wybrany plik albo
-odnośnik aplikacji wskazanej w systemowym arkuszu udostępniania Androida. Transfer następuje tylko
-po takim działaniu użytkownika. Aplikacja lub usługa odbierająca stosuje własną politykę
+Po wybraniu **Udostępnij plik**, **Udostępnij jako audio**, **Udostępnij link** lub **Udostępnij przez
+Protracktor** Protracktor przekazuje wybrany plik, plik audio utworzony na urządzeniu z wybranego
+utworu albo odnośnik aplikacji wskazanej w systemowym arkuszu udostępniania Androida. Odnośnik
+*Udostępnij przez Protracktor* prowadzi do publicznego odtwarzacza w przeglądarce i zawiera adres
+utworu w archiwum oraz jego tytuł. Transfer następuje tylko po takim działaniu użytkownika. Aplikacja lub usługa odbierająca stosuje własną politykę
 prywatności. Tymczasowe kopie są usuwane po okresie retencji podczas kolejnego sprzątania przez
 Protracktor; odbiorca może zachować własną kopię.
 

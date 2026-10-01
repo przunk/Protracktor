@@ -15,24 +15,31 @@ signing and rollout remain the owner's actions.
       URL. *(The repository is public; checked 2026-09-22.)*
 - [x] Make the exact corresponding source public and tag the release commit. *(Public; every release
       tagged by `scripts/release.sh`.)*
-- [ ] Confirm the access terms for Modland, ASMA, HVSC and The Mod Archive.
-- [ ] Re-audit network/data behaviour and reconcile the privacy policy with **Data safety**.
+- [ ] Confirm the access terms for Modland, ASMA, HVSC and The Mod Archive. *(2026-09-30: HVSC's
+      robots.txt disallows `/download/`, where the song lengths come from -- asked by mail to
+      `hvsc.crew@gmail.com`, sent 2026-09-30, about the lengths and a possible catalogue. Answered:
+      not the website; use the version API and the archive (`docs/PLAN_CATALOGUES.md`) -- the lengths
+      may stay on the website until the archive route is built (Wilfred Bos, 2026-09-30).
+      UnExoticA, on in every release since 2026-09-09 and unanswered: kept, with a reminder that it
+      stays unless ExoticA objects by 10 October, `docs/PLAN_UNEXOTICA.md`.)*
+- [x] Re-audit network/data behaviour and reconcile the privacy policy with **Data safety**.
+      *(2026-09-30 for 0.11.0: no new host, no answer changes; the policy's sharing paragraph now
+      names Share as audio and Share with Protracktor, `data-safety.md`.)*
 
 ## 2. Complete the application record
 
-- [ ] In **Settings → Developer account**, confirm developer identity and public contact details.
+- [x] In **Settings → Developer account**, confirm developer identity and public contact details. *(Done — the owner, 2026-09-30.)*
 - [x] Confirm `com.przunk.protracktor` is registered under Android developer verification. Package
       registration becomes mandatory on 30 September 2026. *(Done — the owner, 2026-09-22.)*
-- [ ] In **Grow users → Store presence → Store settings**, enter the owner-controlled support
-      email, category **Music & Audio**, and required developer details.
-- [ ] In **Grow users → Store presence → Main store listing**, paste both locale packages from
-      `store/listing/`. *(Refreshed 2026-09-22 for 0.8.0; to paste.)*
-- [ ] Upload the real screenshots and feature graphic described in `store/graphics/README.md`.
-      *(The screenshots predate the regrouped Browse of 2026-09-21; the owner retakes them.)*
-- [ ] Complete **Policy and programs → App content** from `app-content.md`.
-- [ ] Complete **Data safety** from `data-safety.md` and provide the hosted privacy URL.
-- [ ] Complete **Foreground service permissions → mediaPlayback**, including its video.
-- [ ] Complete the IARC content-rating questionnaire and archive its resulting certificate.
+- [x] In **Grow users → Store presence → Store settings**, enter the owner-controlled support
+      email, category **Music & Audio**, and required developer details. *(Done — the owner, 2026-09-30.)*
+- [x] In **Grow users → Store presence → Main store listing**, paste both locale packages from
+      `store/listing/`. *(Done — the owner, 2026-09-30.)*
+- [x] Upload the real screenshots and feature graphic described in `store/graphics/README.md`. *(Done — the owner, 2026-09-30.)*
+- [x] Complete **Policy and programs → App content** from `app-content.md`. *(Done — the owner, 2026-09-30.)*
+- [x] Complete **Data safety** from `data-safety.md` and provide the hosted privacy URL. *(Done — the owner, 2026-09-30.)*
+- [x] Complete **Foreground service permissions → mediaPlayback**, including its video. *(Done — the owner, 2026-09-30.)*
+- [x] Complete the IARC content-rating questionnaire and archive its resulting certificate. *(Done — the owner, 2026-09-30.)*
 
 ## 3. Prepare the release tree
 
@@ -70,9 +77,9 @@ below stay as the record of what it does and what it cannot.
       background/lock-screen playback, notification denial, sharing and session restore.
 - [ ] Review the automated pre-launch report and fix confirmed crashes, ANRs and accessibility
       failures.
-- [ ] If the personal developer account was created after 13 November 2023, complete a closed test
+- [x] If the personal developer account was created after 13 November 2023, complete a closed test
       with at least 12 continuously opted-in testers for 14 days before requesting production
-      access.
+      access. *(Done — the owner, 2026-09-30.)*
 - [ ] Upload localized release notes matching the final versionCode.
 - [ ] Use a staged production rollout; monitor Play Console vitals before expanding it.
 

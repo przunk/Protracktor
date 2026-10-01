@@ -18,7 +18,7 @@ one core on a phone, nothing that breaks. A small map by subsong would keep them
 file is open; the learnt-lengths store (A50) could keep them across plays, as it does for UADE.
 Worth it only if someone notices.
 
-## B39. Screenshots made and checked without a phone — **noted 2026-09-26, the owner: "worth adding"; not started**
+## B39. Screenshots made and checked without a phone — **noted 2026-09-26, the owner: "worth adding"; BUILT and merged 2026-09-30; the slim Stop confirmed on the phone**
 
 The owner asked whether I can make screenshots myself and look at them, as Kratkoza does (read with
 his leave, 2026-09-26). Kratkoza renders Compose screens in JVM tests through **Robolectric** with
@@ -33,6 +33,19 @@ Limits: a dropdown menu is a separate window, which drawing the main view misses
 to draw the popups too; fonts and dynamic colour may differ from a phone; the page is not covered (a
 headless browser would be another dependency and another conversation). The phone stays the last
 word.
+
+**As built (2026-09-30).** Robolectric 4.16.1 and Compose `ui-test` as test dependencies,
+`robolectric.properties` pinned to SDK 35 (already on this machine), and a `render` helper under
+`app/src/test/.../screenshot/` that composes at a fixed size and draws the window's view onto a
+bitmap. `CaptureProbeTest` proves real pixels come back; `ScreensTest` draws pieces of the app at
+360 dp, both themes, into `app/build/screenshots/` (ignored by git). **Run by
+`./scripts/screenshots.sh`, not by the suite**: Robolectric's own Android took the suite from about
+70 s to about 400 s, and pictures are wanted when a screen changes; the three pictures take about
+five minutes. Two things learnt on the first pictures: a Material `Surface` draws through a layer of
+its own, which drawing the view onto a bitmap leaves out, so the pictures give the background and
+text colour a screen gets without one; and the first real use -- the scan's Stop, which the owner
+called narrow and tall -- showed the full pill standing twice the height of the bar beside it, and
+the top bar's slim pill fits.
 
 ## B38. Pairing on the public page — **noted 2026-09-25, later: the owner accepts no pairing on GitHub Pages for now**
 

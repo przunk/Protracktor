@@ -1554,7 +1554,9 @@ visible. `targetSdk` is 36 and `minSdk` 29, both current enough.
   the Apple App Store problem people cite does not apply to Play. The **replay binaries** question
   (`docs/LICENSES.md`) is untouched by that and still the owner's to settle *before* publishing —
   it is now measured for both sc68 and UADE rather than argued.
-- **Content rating, listing text, screenshots, a feature graphic.** Mechanical, but none exists.
+- ~~**Content rating, listing text, screenshots, a feature graphic.**~~ Done: the listing and graphics
+  in `store/`, and the Play Console record completed by the owner by 2026-09-30
+  (`store/play-console/release-checklist.md` §2).
 - ~~**`versionCode` discipline.**~~ — done 2026-09-03, after it blocked an upload: it is the commit
   count now and nobody has to remember it.
 

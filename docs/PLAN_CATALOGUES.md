@@ -58,7 +58,10 @@ The reference collection of `.sap`. Natural pair with ASAP.
 ### The Mod Archive — search-only integration DONE 2026-09-02
 
 - `https://api.modarchive.org/` responds (2026-09-01). The official XML API requires an API key
-  that is no longer issued via automatic self-service (requires contacting staff).
+  that is no longer issued via automatic self-service (requires contacting staff). **Tried and closed**
+  (the owner, 2026-09-30): the forum's "Requesting an API Key" topic dates from 2009, last touched in
+  2014, and no key comes that way any more. The page-reading search stays; do not propose the API
+  route again unless The Mod Archive announces one.
 - Instead of waiting for API keys, **integrated via live web search parser** (2026-09-02):
   - Queries `https://modarchive.org/index.php?request=search&query=...` directly.
   - Direct downloads via `https://api.modarchive.org/downloads.php?moduleid=...` require no key
@@ -153,10 +156,57 @@ that publishes it* is what keeps this clean; re-serving it is not.
 
 **What to do with that**, in order of what it buys:
 
+0. **ZXArt (zxart.ee), checked 2026-09-30, the best next catalogue.** ZX Spectrum, 29,715 tunes, a public
+   JSON API with length, author and year, and API and files both served with
+   `Access-Control-Allow-Origin: *` and ranges -- so the phone and the page alike. Its formats (PT3,
+   STC, PT2, STP, SQT, ASC) play through ZXTune; AY and TS, about a sixth, do not yet. robots.txt
+   disallows `/api` and `/file` for crawlers, so the owner wrote to them (2026-09-30) before anything
+   is built. The ZXTune app, which browses twelve archives, uses the same API.
 1. **Nothing, for now.** The 2026-09-04 recommendation below still holds and the numbers behind it
    got stronger, not weaker: **A32 alone is 26,537 more playable tunes in the browser** out of the
    archive already indexed, which beats any archive on this list at a fraction of the work.
-2. **If a third catalogue is wanted anyway, HVSC is the one** — the definitive SID collection, the
+2. **If a third catalogue is wanted anyway, HVSC is the one** -- *re-checked 2026-09-30: a single
+   `.sid` from `hvsc.c64.org` answers with `Access-Control-Allow-Origin: *` and ranges, so the page
+   could play it too; but `robots.txt` disallows `/download/`, the song lengths included, so the
+   team was asked by mail (`hvsc.crew@gmail.com`, sent 2026-09-30) before anything is built.*
+   **Answered the same day by Wilfred Bos:** not the website -- neither its API, nor downloading or
+   searching SID files there; it is for the website alone and may change. The sanctioned route:
+   `https://hvsc.de/api/v1/version` gives the version and the URLs of the complete HVSC
+   (`HVSC_85-all-of-them.7z`, 85 MB) and of the update (3.4 MB) on `hvsc.brona.dk`; download, unpack
+   on the device, index it ourselves, and use the same API to say when a new version is out. For
+   browsing and searching online he pointed to **DeepSID** (Jens, `chordian@gmail.com`). Consequences:
+   the song lengths, fetched today from the website, move to the archive's `Songlengths.md5`; HVSC
+   becomes a downloaded collection like ASMA; that needs **7z extraction -- the LZMA SDK (public
+   domain), agreed by the owner 2026-09-30 as a new native dependency**; and the page, whose browser
+   cannot unpack the mirror's archive (no CORS there), depends on DeepSID's answer. A reply asking
+   whether the lengths may stay on the website until then, and a letter to Jens, were **sent by the
+   owner on 2026-09-30**. **Wilfred, the same evening: "Using it for now until your next solution is built is
+   fine."** So the lengths stay on the website until the archive route replaces them -- not after.
+   **DeepSID, Jens, 2026-10-01: yes** -- "you may use the DeepSID API to get any information you want
+   and also look up and play a tune in it". No rate limit, no authentication; the REST API is
+   documented under the site's *Help* tab; a credit or a link "if you find the space". So the page
+   can have SID lengths and HVSC browsing through DeepSID, which the archive route cannot give a
+   browser; owe DeepSID a credit wherever it is used.
+   **Measured 2026-10-01, before building anything.** The archive route is heavy on a phone: HVSC 85 is
+   61,324 files, 376 MB unpacked, in a solid 7z whose LZMA dictionary is 340 MB and whose PPMd model is
+   256 MB -- about 350 MB of memory at once just to unpack, whatever the code, and 376 MB on disk.
+   DeepSID's public API (`/api/v1/?file=`, `?folder=`, `?profile=`, `?players`; source:
+   `Chordian/deepsid`, `api/v1.php`) gives a tune's lengths for every subsong, author, year, MD5 and
+   STIL -- better than `Songlengths.md5` -- but sends no CORS header, so the page cannot read it, and
+   v1 has no list of a folder's files (only their count) and no address for the SID file itself; the
+   site does those through internal scripts, not to be used unasked. Next: ask Jens for CORS, a file
+   list and the file address, before choosing between the archive and DeepSID.
+   **Found the same day without asking** (the owner did not want a second letter, and Jens's "any
+   information you want ... and also look up and play a tune" covers it): DeepSID serves the SID
+   files at `https://deepsid.chordian.net/music/_High Voltage SID Collection/<HVSC path>` (ranges, no
+   CORS), and **`Songlengths.md5` itself** at `.../DOCUMENTS/Songlengths.md5` -- byte for byte HVSC's
+   size. That file lists every HVSC path with its lengths, so it is also the catalogue's index. The
+   site's own folder listing (`php/music.php`) answers "Direct access not permitted" and is not used.
+   **Plan:** the app takes the lengths from DeepSID instead of the HVSC website (ending the interim
+   Wilfred allowed), and offers HVSC as a catalogue built from that file, its tunes fetched from
+   DeepSID one at a time, with a credit to DeepSID and HVSC. The page keeps the HVSC website's lengths
+   (allowed for now) and has no HVSC catalogue until DeepSID sends CORS -- one sentence to Jens, some
+   day. No 7z, no 376 MB. — the definitive SID collection, the
    format Modland covers worst, and the archive whose song-length database the app already depends
    on. Phone-only, and honest about it.
 3. **Ask the ones worth asking.** ASMA and Modland send the header because somebody there decided

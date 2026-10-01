@@ -23,6 +23,10 @@ val gitCommitCount: Int = providers.exec {
 }.standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }.getOrElse(1)
 
 android {
+    // Robolectric reads the app's own resources -- strings, themes -- when it renders a screen.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
     namespace = "com.przunk.protracktor"
     compileSdk = 36
 
@@ -48,7 +52,7 @@ android {
         // fixes, minor for a round of work that added capability, major reserved for "publishable".
         // Bumping it per merge was considered and rejected -- twenty merges in a day would make it
         // a second, worse timestamp.
-        versionName = "0.11.0"
+        versionName = "0.11.1"
 
         // Stated explicitly rather than left to whatever the NDK defaults to that month, because
         // native decoder builds are the expensive part of this project and the ABI list drives
@@ -250,6 +254,17 @@ tasks.withType<Test>().configureEach {
     inputs.file(rootProject.file("native/CMakeLists.txt")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("store/privacy-policy.md")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file("web/src/formats.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
+
+    // **Screenshots run on their own** (`docs/WISHLIST.md` B39). Robolectric starts an Android of its
+    // own for them, which took the suite from about seventy seconds to about four hundred; a picture
+    // is wanted when a screen changes, not on every check. `scripts/screenshots.sh` asks for them.
+    val screenshots = providers.gradleProperty("screenshots").isPresent
+    inputs.property("screenshots", screenshots)
+    if (screenshots) {
+        filter { includeTestsMatching("com.przunk.protracktor.screenshot.*") }
+    } else {
+        exclude("com/przunk/protracktor/screenshot/**")
+    }
 }
 
 dependencies {
@@ -278,4 +293,12 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.sqlite.jdbc)
+    // **Screenshots without a phone** (`docs/WISHLIST.md` B39, the owner agreed 2026-09-26): Compose
+    // rendered to a bitmap in a JVM test through Robolectric's native graphics, as Kratkoza does, so a
+    // label cut short or a button the wrong shape is seen before an APK goes out. Test-only.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

@@ -142,3 +142,11 @@ defensiveness — it is the difference between the feature working and not.
   tracks appear. `displayName` does that in the browse list, and the licences screen that
   `docs/LICENSES.md` has been waiting for is still not written.
 - **The reply.** If it is no, the section above says exactly what to delete.
+- **Still on, and kept in the public release -- decided 2026-09-30.** The switch has been `true`
+  since the day it was built, so every release, the testers' included, has offered the catalogue;
+  the "private use" this plan began with did not hold, and that was found only at the pre-production
+  audit. No reply to the 2026-09-08 letter came. The owner chose to send a reminder saying the
+  catalogue stays in the public release unless ExoticA objects by **10 October 2026**, and that any
+  later objection takes it out in the next update. On an objection: `UnExoticA.ENABLED = false`,
+  which hides it and drops its stored rows.
+  **Sent 2026-09-30** by the owner, to BuZz (`buzz@exotica.org.uk`, ExoticA's admin).

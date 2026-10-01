@@ -1,6 +1,6 @@
 # Data safety declaration
 
-Prepared 2026-09-03 against commit `3d2946b`; re-audited 2026-09-21 for 0.7.0. Re-audit the release artifact and every dependency
+Prepared 2026-09-03 against commit `3d2946b`; re-audited 2026-09-21 for 0.7.0 and 2026-09-30 for 0.11.0. Re-audit the release artifact and every dependency
 before submission. The developer is responsible for the final form; this document records the
 evidence and the conservative answer, not a promise that Play Console will keep the same wording.
 
@@ -46,6 +46,15 @@ data as shared too. Do not change the answer to “not collected” merely to av
   Modland's favourites, UADE's song database), `svn.code.sf.net` (sc68's replay routines) and
   `gitlab.com` (UADE's replay routines). Ordinary HTTPS requests for public files; no identifier is
   added.
+- **Share as audio** (A62) renders the tune on the device and hands the resulting M4A to the app the
+  user chose, and **Share with Protracktor** (A63) hands over a link to the public web player
+  carrying the tune's archive address and title. Both are the same kind of specific,
+  user-initiated transfer as **Share**; neither sends anything to a server of ours, of which there
+  is none. Re-audited 2026-09-30 for 0.11.0: every host in the code is one listed above or in the
+  privacy policy -- `github.com` and `www.exotica.org.uk` appear only as links, `localhost` only as
+  the default address of a web player on the user's own computer. The scan notification (A67), SAP
+  lengths (C91), History without a limit (A64) and the database's write-ahead log all stay on the
+  device. **No answer changes.**
 - **Cache folders ahead** (`docs/BACKLOG.md` A55) downloads the tracks of a Modland folder the
   user opened, from the same host as a tapped track, on Wi-Fi only by default. Re-read 2026-09-23:
   the same kind of request as above, no new host and no new data type, so no answer changes.
