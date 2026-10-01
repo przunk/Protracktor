@@ -10,6 +10,20 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; after the release script**
+
+*Claude and the owner, 2026-10-01, asked whether the right people are credited in the app.* Not
+quite: the archives are named where they are used (the catalogue list, "SID song lengths (HVSC, via
+DeepSID)", "(songdb)") and a shared tune carries its archive's address, but nothing thanks them in
+one place, the Open-source licences screen lists code only, and the web page credits nobody.
+DeepSID's author asked for a credit or a link, and the owner promised one.
+
+A **Music sources** screen in Settings beside the licences, in the app and on the page: each source
+with its name, one sentence of what it gives, and a link (icon and label) -- Modland, ASMA, The Mod
+Archive, UnExoticA / ExoticA, HVSC, DeepSID, songdb (audacious-uade-tools), sc68's and UADE's
+replay files -- and a thank-you for the permissions given (HVSC, DeepSID). ZXArt and an HVSC
+catalogue join it when they are built.
+
 ## B40. A SAP's measured lengths, remembered for every subsong — **noted 2026-09-28 from review F3; not planned**
 
 `AsapBackend` keeps one measured length, for the subsong last measured (C91 b). Switching back and
