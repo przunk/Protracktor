@@ -44,7 +44,9 @@ signing and rollout remain the owner's actions.
 ## 3. Prepare the release tree
 
 `./scripts/release.sh X.Y.Z` does the repository half of §3 and §4 in this order and stops at the
-first failure; `--check` runs its checks without changing anything (`docs/BUILD.md`). The items
+first failure; `--check` runs its checks without changing anything (`docs/BUILD.md`). Since
+2026-10-01 it releases from `master`: fast-forwarded to `develop` (or to a `hotfix/*` branch), tagged
+and built there. The items
 below stay as the record of what it does and what it cannot.
 
 - [ ] Merge only owner-approved branches into `develop` and run the complete final documentation
