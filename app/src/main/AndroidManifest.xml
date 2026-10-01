@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Playback has to survive the app leaving the screen: Android stops caring about a process
          with no visible components, and a foreground service is how you say this one is doing
@@ -93,8 +94,14 @@
                 unverified web link opens the browser with no chooser at all; being offered needs an
                 `assetlinks.json` on the domain, and we own none of these archives. What this buys
                 is "Open by default -> Add link" for somebody who wants it, once, per domain.
+
+                **Lint's `AppLinkUrlError` is silenced here, not obeyed** (2026-10-01). It wants a
+                host on every `BROWSABLE` filter with a path, assuming a web link; a `content://`
+                or `file://` URI has no host to name. Dropping `BROWSABLE` instead would stop the
+                filter matching an app that sends the category with a file, which nobody has
+                checked, to quiet a rule that does not apply.
             -->
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

@@ -193,4 +193,19 @@ fi
 server_checks=$(echo "$server_output" | grep -c '✓' || true)
 echo "🌐 $server_checks server checks passed"
 
+# Lint, for its errors (warnings are reported, not fatal). Added 2026-10-01: an AppLinkUrlError had
+# sat in the manifest since the scan work because nothing here ran lint, and the release build's
+# lintVital checks a narrower set.
+set +e
+./gradlew :app:lintDebug --console=plain > "$PROTRACKTOR_LOG_PREFIX-lint.log" 2>&1
+lint_status=$?
+set -e
+if [ $lint_status -ne 0 ]; then
+    echo "❌ Lint found errors:"
+    grep -E "Error:|errors? and" "$PROTRACKTOR_LOG_PREFIX-lint.log" | sed 's/^ *//' | awk '!seen[$0]++' | sed 's/^/   /' | head -20
+    echo "   Full log: $PROTRACKTOR_LOG_PREFIX-lint.log"
+    exit 1
+fi
+echo "🧹 Lint: $(grep -oE '[0-9]+ errors? and [0-9]+ warnings?|No issues found' "$PROTRACKTOR_LOG_PREFIX-lint.log" | head -1 || echo 'no errors')"
+
 echo "✅ $total tests passed in $(($(date +%s) - started_at))s$cached"

@@ -362,3 +362,9 @@ nobody has actually run it against.
   and fifteen strings had drifted to English-only across three days before anyone looked.
 
 Both were verified by breaking the files deliberately and confirming the script exits non-zero.
+
+**Lint, since 2026-10-01** (`:app:lintDebug`; errors fail the run, warnings stay in the report). An
+`AppLinkUrlError` had sat in the manifest unnoticed because nothing ran lint and the release build's
+`lintVital` checks a narrower set. That one is silenced on its filter with the reason beside it --
+the rule wants a host, and `content://` has none. Verified by removing the silencing: the script
+failed and named the line. It adds about 45 s to a run.
