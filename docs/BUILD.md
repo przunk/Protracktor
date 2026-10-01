@@ -178,6 +178,55 @@ keystore passwords itself, so the release script never sees them — the evidenc
 `develop`. **It does not push and does not upload**; its last lines say what to push and what to
 upload where. It asks once, by having the version typed again, before it changes anything.
 
+### Releasing from `master` — decided 2026-10-01, from the first release after the public launch
+
+*The owner, 2026-10-01: `master` is the release point. `develop` goes on; a release is `master`
+brought level with `develop`, a tag on `master`, and the build made from it. Until `release.sh` is
+changed to match (after the launch, on its own branch), the paragraph above still describes what the
+script does. The workspace-wide rule (`/mnt/workspace/AGENTS.md` §11) still says "from develop"; the
+owner will change it some other day.*
+
+```
+feature/* ──► develop ──(fast-forward at a release)──► master ── tag vX.Y.Z ── build
+                  ▲                                       │
+                  └────────── hotfix/* merged back ───────┘
+```
+
+**A release:**
+
+```
+git checkout master
+git merge --ff-only develop          # master moves to the very commit develop is on
+git tag -a vX.Y.Z -m "Protracktor X.Y.Z"
+git checkout develop                 # work goes on here
+```
+
+**Fast-forward, never `--no-ff`.** `versionCode` is the commit count of what is built. A merge commit
+on `master` at every release would give `master` commits `develop` never has, the two counts would
+drift apart, and a test APK from a branch could carry a lower number than the published release --
+which Android refuses to install over it. Fast-forwarded, `master` *is* the commit `develop` was on,
+and the numbers stay one sequence. `--ff-only` also refuses, rather than merging, when `master`
+holds something `develop` does not -- the tell of a hotfix not yet taken back.
+
+**A hotfix** for what is published, when `develop` already holds unreleased work:
+
+```
+git checkout -b hotfix/<name> master
+# fix, test, commit
+git checkout master
+git merge --ff-only hotfix/<name>     # master moves to the fix
+git tag -a vX.Y.Z -m "Protracktor X.Y.Z"
+git checkout develop
+git merge --no-ff hotfix/<name>       # the same commit, taken back
+git branch -d hotfix/<name>
+```
+
+**Taken back by merging, not by cherry-picking.** A cherry-pick makes a copy with another hash, so
+`master` would keep a commit `develop` does not have, and the next release's `--ff-only` would refuse.
+The merge brings the very commit into `develop`, after which `master` is again behind `develop` and
+the next release fast-forwards as usual. `develop`'s count is then above `master`'s, so `versionCode`
+keeps rising.
+
 ### App Bundle (.aab)
 
 ```
