@@ -197,8 +197,7 @@ the bundle's SHA-256 matching the one recorded.
 *The owner, 2026-10-01: `master` is the release point. `develop` goes on; a release is `master`
 brought level with `develop`, a tag on `master`, and the build made from it. `release.sh` does all of
 this; the commands below are what it runs, for reading and for a release by hand. The workspace-wide
-rule (`/mnt/workspace/AGENTS.md` §11) still says "from develop"; the owner will change it some other
-day.*
+rules (`/mnt/workspace/AGENTS.md` §5 and §11) say the same since 2026-10-03.*
 
 **Once, when it changed:** the old script had left a merge commit on `master` that `develop` did not
 have, so `master` could not fast-forward. That merge was taken into `develop` once, with no file
