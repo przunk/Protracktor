@@ -82,6 +82,8 @@ below stay as the record of what it does and what it cannot.
 - [x] If the personal developer account was created after 13 November 2023, complete a closed test
       with at least 12 continuously opted-in testers for 14 days before requesting production
       access. *(Done — the owner, 2026-09-30.)*
+- [x] Apply for production access. *(Sent — the owner, 2026-10-02, after uploading 1.0.0,
+      versionCode 1055, to closed testing. Waiting for Google's answer.)*
 - [ ] Upload localized release notes matching the final versionCode.
 - [ ] Use a staged production rollout; monitor Play Console vitals before expanding it.
 
