@@ -1,7 +1,59 @@
 # Status
 
-Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
-songdb, the downloads grouped. versionCode is the commit count, schema version 19
+Updated: 2026-10-03 — version 1.0.0, schema version 21. versionCode is the commit count.
+The production-access application is pending. Historical dated checks below describe their own
+builds; they are not current test counts or proof of the refactoring branch's behaviour.
+
+## Architecture stabilization — in progress, not accepted
+
+Branch: `feature/architecture-stabilization`, based on `develop` at `1455422`.
+Released reference: `v1.0.0` at `2aaeeeb` (versionCode 1055). No merge or release is authorised by
+this work. The owner must approve long-term behaviour before any later release.
+
+Worktree: `user/worktrees/architecture-stabilization` within the main project checkout. Its build
+output is isolated at `/tmp/protracktor-architecture-build.Qogzrp`; set
+`PROTRACKTOR_BUILD_DIR_ROOT` to that path for every build/test command in this worktree.
+Existing vendored sources and npm packages are linked read-only by convention; do not fetch or
+patch through those links. The pre-existing WASM artefacts were copied, not shared for writing.
+
+### Baseline evidence — 2026-10-03
+
+- **Checked:** `scripts/check-tooling.sh` found JDK 17.0.19, SDK 36, NDK 29.0.14206865,
+  CMake 3.31.6 and Ninja 1.12.1.
+- **Checked:** `node scripts/check-page.mjs` exited 0; DOM/rule checks, not a real browser/audio
+  session. The existing harness inlines modules, so the web extraction must also verify real
+  module imports and the packaged entry point.
+- **Checked:** `node scripts/check-web-store-upgrade.mjs` preserved history/playlists from a v3
+  browser database through v4; `node scripts/check-server.mjs` passed all eight socket checks.
+- **Partly checked:** `node scripts/check-engine.mjs` exited 0 against the copied existing WASM
+  artefact. That demonstrates the artefact's boundary behaviour, not that current native sources
+  were rebuilt. A fresh build and repeatable audio comparisons remain outstanding.
+- **Checked:** 440 existing Android unit tests executed with no failures or skips before any
+  production change. Five added `StateContractsTest` checks also passed before extraction; five
+  deliberate contract mutations made all five fail, then were restored. The subsequent full
+  `scripts/test-protracktor.sh --really` passed **445 unit tests**, lint (no errors), 581 page
+  checks, 49 existing-WASM checks, 8 SAP checks, 135 icon paths, the web storage upgrade and 8
+  server checks. No production behaviour has changed yet.
+- **Baseline-run caveats:** the first sandboxed attempt could not open a network socket; the
+  permitted retry downloaded Gradle 9.6.0. Adding the new test file while the first lint pass was
+  running disrupted its analysis (`findFirCompiledSymbol`, new declaration not compiled). The
+  repeat ran on unchanged source files and passed; no lint rule was disabled or suppressed.
+- **In progress:** rebuilding the baseline WASM engine from source, with a separate Emscripten
+  cache at `/tmp/protracktor-architecture-build.Qogzrp/emscripten-cache`.
+- **Not checked:** release APK, current Android native/UADE probes, performance comparisons and
+  long-term behaviour on a phone or in a real browser.
+
+### Stages
+
+- Baseline and ownership map: initial Android/web gate and state contracts checked
+  (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
+  remain part of their respective extraction stages; this is not a completed refactor.
+- Controller/workflow boundaries: not started.
+- Compose boundaries: not started.
+- Web modules: not started.
+- Native adapters and both build paths: not started.
+- Comment correction/shortening: not started; separate commits after the structural work.
+- Final documentation, full gate, test artefacts and manual handover: pending.
 
 ## What works
 

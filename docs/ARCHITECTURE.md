@@ -3,10 +3,45 @@
 This document records what has been decided and **why**. A decision without its reason gets
 re-litigated every few weeks, or worse, applied in a situation it was never meant for.
 
-Nothing below is built yet. It is the shape we are building toward, and it will be corrected here
-when reality disagrees.
+The application is built and released as 1.0.0. The numbered sections preserve the decisions made
+as it grew; dated measurements and superseded designs are historical evidence, not a statement
+that every original proposal is the current implementation. The following ownership map records
+the current boundaries and the proposed post-1.0.0 extractions.
 
 ---
+
+## Current ownership and proposed boundaries — 2026-10-03
+
+Baseline: `1455422`, the accepted `develop` when `feature/architecture-stabilization` began.
+The release remains `v1.0.0` at `2aaeeeb`. No behaviour, storage schema, decoder version or release
+change is intended. This section distinguishes the current owners from proposed extractions;
+update each row when its boundary is actually implemented.
+
+| Area | Current owner and lifetime | Proposed boundary (not implemented yet) |
+| --- | --- | --- |
+| Playback state and events | Process singleton `PlaybackController`; main-immediate supervisor scope; read-only flows exposed to UI and service | Separate immutable state contracts from workflow implementation; retain one writer per state |
+| Native playback | Controller owns `NativeEngine.Track`, open/seek operations and focus; `stopPlayback` cancels opens/prefetch, closes the track and releases focus | Playback collaborator after the independent workflows have been extracted; retain operation order |
+| Scanning | Controller owns the scan job and two background-priority dispatchers; parallel-safe candidates use four workers, other probes share the serial metadata lane | Dedicated scan workflow with explicit probe, persistence and progress boundaries; same dispatchers and cancellation/checkpoint contract |
+| Persistence | `LibraryStore`/`LibraryIndexStore` and other stores own database access; controller owns the active working playlist and debounced save jobs | Separate restore/save/import/export orchestration without duplicating the working queue or changing transaction boundaries |
+| Catalogue browsing/search | Controller owns `BrowseState` and delegates data reads to catalogue/library stores; UI owns sheet/scroll/selection state | Narrow browse/search workflows; retain session returns, stale-result guards and screen state identity |
+| Downloads/cache | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns selected downloads, read-ahead bytes and jobs | Download/cache coordinators using the existing fetch owner, limits and cancellation semantics |
+| Android service | `PlaybackService` owns its coroutine scope, platform media session and notification; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
+| Compose | `ProtracktorApp`, `BrowseScreen`, `PlaylistScreen` mix wiring with sections, rows and dialogs | Cohesive UI components with explicit state/actions; no extra copies of domain state or altered effect keys |
+| Web | `app.js` owns queue/playback/session/DOM state; `store.js` owns IndexedDB access; `catalogue.js` handles archive/index operations; worklet owns its engine handle | Startup/composition entry point and explicit workflow/UI modules with acyclic imports; keep messages and storage keys |
+| Native engine | `engine.cpp` owns backend adapters and selection; `player_oboe.cpp` owns the locked audio host/JNI; `player_wasm.cpp` owns WASM handles | Adapter translation units behind the existing `Backend` contract; keep host ownership and probing order |
+
+The dependency direction remains UI/service → orchestration → domain rules and data/native
+adapters. Domain rules must not acquire an Android or UI dependency. An extraction must not turn
+the controller into a shared mutable context passed to every collaborator.
+
+State snapshots are values; jobs and resources are not. Moving a value type does not move its
+writer or its lifetime. Scan cancellation retains partial index writes; a completed scan replaces
+the folder snapshot. Read-ahead cancellation is distinct from cancelling another consumer of a
+shared download. The audio callback uses a non-blocking decoder lock while seek/subsong work runs
+on the caller thread. These are preservation constraints, not proposed changes.
+
+Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
+Long-term phone/browser acceptance and permission to merge or release remain the owner's.
 
 ## 1. Platform
 
