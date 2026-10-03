@@ -33,13 +33,15 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   deliberate contract mutations made all five fail, then were restored. The subsequent full
   `scripts/test-protracktor.sh --really` passed **445 unit tests**, lint (no errors), 581 page
   checks, 49 existing-WASM checks, 8 SAP checks, 135 icon paths, the web storage upgrade and 8
-  server checks. No production behaviour has changed yet.
+  server checks. Production code was still unchanged in this baseline run.
 - **Baseline-run caveats:** the first sandboxed attempt could not open a network socket; the
   permitted retry downloaded Gradle 9.6.0. Adding the new test file while the first lint pass was
   running disrupted its analysis (`findFirCompiledSymbol`, new declaration not compiled). The
   repeat ran on unchanged source files and passed; no lint rule was disabled or suppressed.
-- **In progress:** rebuilding the baseline WASM engine from source, with a separate Emscripten
-  cache at `/tmp/protracktor-architecture-build.Qogzrp/emscripten-cache`.
+- **Checked:** `scripts/build-web-engine.sh` rebuilt the baseline engine from current sources,
+  using `EM_CACHE=/tmp/protracktor-architecture-build.Qogzrp/emscripten-cache`. Its module/WASM and
+  build log are preserved locally in `dist/architecture-baseline/`. Boundary checks against this
+  fresh build and real-file audio comparisons are still being collected.
 - **Not checked:** release APK, current Android native/UADE probes, performance comparisons and
   long-term behaviour on a phone or in a real browser.
 
@@ -48,12 +50,27 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Baseline and ownership map: initial Android/web gate and state contracts checked
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
-- Controller/workflow boundaries: not started.
+- Controller/workflow boundaries: state contracts extracted; operational workflows still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
 - Comment correction/shortening: not started; separate commits after the structural work.
 - Final documentation, full gate, test artefacts and manual handover: pending.
+
+### State-contract extraction — 2026-10-03
+
+Preparation commit: `e48ccd8`. `Message`, `PlayerUiState`, `BrowseState` (with `BrowseDomain` and
+`HeldSets`) and `DownloadKeys` now live in their own files in the same package. Their definition
+bodies were compared byte for byte with the baseline, excluding file headers/imports. Defaults,
+derived properties, message identity and mutable state ownership are unchanged. Existing comments
+moved with their declarations; their correction remains a later, separate stage.
+
+`PlaybackController.kt`: 5,287 → 4,771 lines. This is only the state boundary, not completion of
+the controller refactor. No new dependency, storage change, dispatching change or version bump.
+
+**Checked:** `scripts/test-protracktor.sh --really` after extraction: 445 unit tests, lint without
+errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade
+and 8 server checks. **Not checked:** behaviour on a phone, release APK and long-term stability.
 
 ## What works
 

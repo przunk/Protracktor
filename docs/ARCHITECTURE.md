@@ -14,12 +14,12 @@ the current boundaries and the proposed post-1.0.0 extractions.
 
 Baseline: `1455422`, the accepted `develop` when `feature/architecture-stabilization` began.
 The release remains `v1.0.0` at `2aaeeeb`. No behaviour, storage schema, decoder version or release
-change is intended. This section distinguishes the current owners from proposed extractions;
-update each row when its boundary is actually implemented.
+change is intended. Boundaries marked **extracted** are implemented on this branch; the others
+remain proposals. Update each row when its boundary is actually implemented.
 
-| Area | Current owner and lifetime | Proposed boundary (not implemented yet) |
+| Area | Current owner and lifetime | Boundary and status |
 | --- | --- | --- |
-| Playback state and events | Process singleton `PlaybackController`; main-immediate supervisor scope; read-only flows exposed to UI and service | Separate immutable state contracts from workflow implementation; retain one writer per state |
+| Playback state and events | Process singleton `PlaybackController`; main-immediate supervisor scope; read-only flows exposed to UI and service | **Extracted:** `Message.kt`, `PlayerUiState.kt`, `BrowseState.kt`, `DownloadKeys.kt`; same package, definitions, defaults and derived rules; no change to state ownership |
 | Native playback | Controller owns `NativeEngine.Track`, open/seek operations and focus; `stopPlayback` cancels opens/prefetch, closes the track and releases focus | Playback collaborator after the independent workflows have been extracted; retain operation order |
 | Scanning | Controller owns the scan job and two background-priority dispatchers; parallel-safe candidates use four workers, other probes share the serial metadata lane | Dedicated scan workflow with explicit probe, persistence and progress boundaries; same dispatchers and cancellation/checkpoint contract |
 | Persistence | `LibraryStore`/`LibraryIndexStore` and other stores own database access; controller owns the active working playlist and debounced save jobs | Separate restore/save/import/export orchestration without duplicating the working queue or changing transaction boundaries |
