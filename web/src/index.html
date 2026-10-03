@@ -24,6 +24,8 @@
 <head>
 <meta charset="utf-8">
 <script>
+  // iOS home-screen apps can report standalone here while the display-mode media query is false.
+  if (navigator.standalone === true) document.documentElement.dataset.standalone = 'true';
   // A theme or language chosen in Settings, applied before the first frame (W6, W7). Only a choice
   // is applied here; following the system is CSS's and the language module's job. Wrapped, because
   // storage can throw in a private window, and then the system decides.
@@ -350,7 +352,14 @@
 
   /* --- the dock ----------------------------------------------------------------------------- */
 
-  footer { padding: 0 0 10px; }
+  footer { padding: 0 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
+  html[data-standalone="true"] footer {
+    padding-bottom: calc(10px + max(16px, env(safe-area-inset-bottom, 0px)));
+  }
+  @media (display-mode: standalone) {
+    /* Some home-screen browsers report a zero inset; keep a minimum gap above system gestures. */
+    footer { padding-bottom: calc(10px + max(16px, env(safe-area-inset-bottom, 0px))); }
+  }
   .seekrow {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 18px 2px;
@@ -414,7 +423,7 @@
   .nowcard svg { width: 22px; height: 22px; fill: var(--on-surface-variant); flex: none; }
 
   /*
-    Three parts: a spacer, the five buttons, the volume. **The spacer is the whole point.**
+    Three parts: settings, the five transport buttons, and volume.
     The volume used to be positioned absolutely so it could not decentre the transport, and at
     ordinary widths `space-evenly` then put `repeat` underneath it (`docs/STATUS.md` C22).
     Reserving a matching width on the left keeps play in the middle *and* keeps the two apart,
@@ -426,9 +435,14 @@
     --volume-width: 124px;
   }
   .transport .buttons {
-    flex: 1; display: flex; align-items: center; justify-content: space-evenly;
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; justify-content: space-evenly;
   }
-  .tspacer { flex: none; width: var(--volume-width); }
+  .tsettings {
+    flex: none; width: var(--volume-width);
+    display: flex; align-items: center; justify-content: flex-start;
+  }
+  .tsettings .tbutton { width: 36px; height: 36px; }
   /*
     Volume, at the right end of the transport — where every desktop player puts it, and the only
     control here the phone does not have: Android has hardware volume keys and a page has nothing.
@@ -447,7 +461,7 @@
   */
   @media (max-width: 560px) {
     .volume input[type=range] { display: none; }
-    /* The spacer shrinks with it, or the buttons sit off-centre by the width of a slider nobody
+    /* The settings area shrinks with it, or the buttons sit off-centre by the width of a slider nobody
        can see. One variable, so the two cannot drift apart. */
     .transport { --volume-width: 40px; }
   }
@@ -981,12 +995,13 @@
     </div>
 
     <div class="transport">
-      <div class="tspacer"></div>
-      <div class="buttons">
-      <!-- The page's own settings, left of shuffle. -->
+      <div class="tsettings">
+      <!-- Settings balances volume; only transport controls belong in the central group. -->
       <button class="tbutton" id="tab-settings" title="Settings">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
       </button>
+      </div>
+      <div class="buttons">
       <button class="tbutton" id="shuffle" title="Shuffle" disabled>
         <svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       </button>
