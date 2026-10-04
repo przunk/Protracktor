@@ -6,7 +6,6 @@ package com.przunk.protracktor.player
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.DocumentsContract
 import android.os.Process
 import android.os.SystemClock
 import android.provider.OpenableColumns
@@ -36,7 +35,6 @@ import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
-import com.przunk.protracktor.net.Lha
 import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.Modland
 import com.przunk.protracktor.net.RemoteFiles
@@ -167,9 +165,6 @@ class PlaybackController private constructor(private val context: Context) {
         private const val SONG_LENGTHS_LABEL = "SID song lengths"
         private const val REPLAYS_LABEL = "Atari ST replay routines"
         private const val PLAYERS_LABEL = "Amiga replay routines"
-
-        private fun archiveCatalogueOf(id: String): Catalogue? =
-            Catalogue.all.firstOrNull { it.isArchive && id.startsWith("${it.id}://") }
 
         /** Four megabytes. Comfortably above any tracker module and below anything worth holding. */
         private const val MAX_PREFETCH_BYTES = 4 * 1024 * 1024
@@ -357,6 +352,8 @@ class PlaybackController private constructor(private val context: Context) {
     private val store = LibraryStore(context)
     private val catalogues = CatalogueStore(context)
     private val remoteFiles = RemoteFiles(context)
+    private val trackFileAccess = AndroidTrackFileAccess(context.contentResolver, remoteFiles)
+    private val trackFiles = TrackFiles(trackFileAccess, backgroundWork, ::refreshOnPhone)
     private val songLengths = SongLengthStore(context)
     private val songDbLengths = com.przunk.protracktor.data.SongDbLengthStore(context)
     private val learnedLengths = com.przunk.protracktor.data.LearnedLengthStore(context)
@@ -1119,15 +1116,8 @@ class PlaybackController private constructor(private val context: Context) {
      * not streamed and a header is not enough to know a backend will accept the rest.
      */
     private fun probe(candidate: MediaScanner.Candidate, folderUri: String): IndexedFile? {
-        val bytes = runCatching {
-            context.contentResolver.openInputStream(Uri.parse(candidate.uri))?.use { it.readBytes() }
-        }.getOrNull() ?: return null
-
-        val companions = siblingDocuments(Uri.parse(candidate.uri)).mapNotNull { (name, uri) ->
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            }.getOrNull()?.let { name to it }
-        }
+        val bytes = trackFileAccess.readDocument(candidate.uri) ?: return null
+        val companions = trackFileAccess.readDocumentCompanions(candidate.uri)
         val opened = NativeEngine.open(bytes, candidate.fileName, companions).track ?: return null
         return try {
             val described = opened.describe()
@@ -1323,7 +1313,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun shareFile(ref: TrackRef) {
         scope.launch {
-            val bytes = loadBytes(ref)
+            val bytes = trackFiles.read(ref)
             if (bytes == null) {
                 _state.update { it.copy(message = Message(context.getString(R.string.notice_track_unreadable, ref.title))) }
                 return@launch
@@ -1367,12 +1357,12 @@ class PlaybackController private constructor(private val context: Context) {
         }
         sharingAudio = scope.launch {
             say(Message(context.getString(R.string.notice_share_audio_preparing, ref.title)))
-            val bytes = loadBytes(ref)
+            val bytes = trackFiles.read(ref)
             if (bytes == null) {
                 say(Message(context.getString(R.string.notice_track_unreadable, ref.title)))
                 return@launch
             }
-            val companions = loadCompanions(ref)
+            val companions = trackFiles.companions(ref)
             val snapshot = _state.value
             val playingSubsong = snapshot.subsong.takeIf { snapshot.current?.sameFileAs(ref) == true }
             val minutes = snapshot.shareAudioMinutes
@@ -1588,7 +1578,7 @@ class PlaybackController private constructor(private val context: Context) {
             val catalogue = Catalogue.owning(track.id)
             if (catalogue?.pathFrom(track.id)?.let(catalogue::fileUrlFor) != null) continue
             if (used >= WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
-            val bytes = loadBytes(track)
+            val bytes = trackFiles.read(track)
             if (bytes == null || used + bytes.size > WebRemote.LOCAL_BYTES_BUDGET) { left++; continue }
             packed[track.id] = bytes
             used += bytes.size
@@ -2425,7 +2415,7 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Plays a file another app handed us — a tap in a file manager, a share, a link.
      *
-     * **The playing half was already here**: `loadBytes` reads a `content://` through the resolver
+     * **The playing half was already here**: `trackFiles.read` reads a `content://` through the resolver
      * and an `http(s)` through the network, and `playTransient` plays something that is in no
      * playlist. All this adds is a name and a flag (`docs/WISHLIST.md` B24).
      *
@@ -4088,7 +4078,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             val bytes = ready ?: run {
                 _state.update { it.copy(loadingTrack = true) }
-                loadBytes(ref)
+                trackFiles.read(ref)
             }
             _state.update { it.copy(loadingTrack = false) }
             ensureActive()
@@ -4099,7 +4089,7 @@ class PlaybackController private constructor(private val context: Context) {
                 return@launch
             }
 
-            val companions = loadCompanions(ref)
+            val companions = trackFiles.companions(ref)
             val result = withContext(Dispatchers.IO) {
                 NativeEngine.open(bytes, ref.fileNameOrTitle, companions)
             }
@@ -4317,14 +4307,14 @@ class PlaybackController private constructor(private val context: Context) {
                 delay(RESOLVE_GAP_MS)
 
                 val startedAt = SystemClock.elapsedRealtime()
-                val bytes = loadBytes(ref) ?: continue
+                val bytes = trackFiles.read(ref) ?: continue
                 ensureActive()
                 if (track != null) continue // something started while the file was being read
 
                 // describe() and close() were on the caller's thread, which is the main one --
                 // close() destroys a decoder, and for sc68 that is an emulator being torn down.
                 // All of it belongs on the background thread, not just the open.
-                val companions = loadCompanions(ref)
+                val companions = trackFiles.companions(ref)
                 val described = withContext(backgroundWork) {
                     val opened = NativeEngine.open(bytes, ref.fileNameOrTitle, companions).track
                         ?: return@withContext null
@@ -4441,115 +4431,6 @@ class PlaybackController private constructor(private val context: Context) {
             true
         }
 
-    /** Reads a track's bytes, from wherever it lives. */
-    private suspend fun loadBytes(ref: TrackRef): ByteArray? =
-        if (UnExoticA.ENABLED && UnExoticA.pathFrom(ref.id) != null) {
-            // The one catalogue whose unit of download is not the tune: every UnExoticA file lives
-            // inside its game's `.lha`, so this fetches the archive -- cached like any other
-            // download, so the rest of that soundtrack is free -- and unpacks the one member.
-            // `docs/PLAN_UNEXOTICA.md` has the shape and the reason it is only three lines here.
-            loadFromUnExoticA(UnExoticA.pathFrom(ref.id).orEmpty())?.also { refreshOnPhone() }
-        } else if (archiveCatalogueOf(ref.id) != null) {
-            // "<catalogue>://<entry>" -- read out of the archive that catalogue shipped as, which is
-            // already on disk. No network, which is why an archive catalogue is worth its download.
-            remoteFiles.readFromArchive(ref.id.substringBefore("://"), ref.id.substringAfter("://"))
-        } else if (ref.id.startsWith("http")) {
-            remoteFiles.fetch(ref.id)?.also { refreshOnPhone() }
-        } else {
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver
-                        .openInputStream(Uri.parse(ref.id))?.use { it.readBytes() }
-                }.getOrNull()
-            }
-        }
-
-    /**
-     * The other files [ref]'s song needs, read from wherever [ref] itself came from.
-     *
-     * Empty for every single-file format, which is nearly all of them, and that costs one string
-     * comparison. For TFMX it is `smpl.name` beside `mdat.name` (`Companions`), and the source
-     * decides how "beside" is reached: the next URL in the same Modland directory, the next member
-     * of the same UnExoticA archive, the next document in the same granted folder.
-     *
-     * **A companion that cannot be found is not an error here.** The song is still opened without
-     * it, and UADE says it does not recognise it, which is the truth; failing before the decoder is
-     * asked would hide which half was missing.
-     */
-    private suspend fun loadCompanions(ref: TrackRef): List<Pair<String, ByteArray>> {
-        if (Companions.namesFor(ref.fileNameOrTitle.substringAfterLast('/')).isEmpty() &&
-            Companions.siblingPaths(ref.id).isEmpty()
-        ) {
-            return emptyList()
-        }
-        val unexotica = if (UnExoticA.ENABLED) UnExoticA.pathFrom(ref.id) else null
-        return when {
-            unexotica != null -> {
-                val archiveUrl = UnExoticA.archiveUrlFor(unexotica) ?: return emptyList()
-                val member = UnExoticA.split(unexotica)?.second ?: return emptyList()
-                val archive = remoteFiles.fetch(archiveUrl) ?: return emptyList()
-                withContext(backgroundWork) {
-                    Companions.siblingPaths(member).mapNotNull { sibling ->
-                        Lha.extract(archive, sibling)?.let { sibling.substringAfterLast('/') to it }
-                    }
-                }
-            }
-            ref.id.startsWith("http") ->
-                Companions.siblingPaths(ref.id).mapNotNull { url ->
-                    remoteFiles.fetch(url)?.let { bytes ->
-                        Uri.decode(url.substringAfterLast('/')) to bytes
-                    }
-                }
-            ref.id.startsWith("content:") -> withContext(Dispatchers.IO) {
-                siblingDocuments(Uri.parse(ref.id)).mapNotNull { (name, uri) ->
-                    runCatching {
-                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    }.getOrNull()?.let { name to it }
-                }
-            }
-            else -> emptyList()
-        }
-    }
-
-    /**
-     * The companions of a document in a granted folder, as (name, uri).
-     *
-     * **Best effort, and it says so.** The external-storage provider gives documents ids that are
-     * paths — `primary:Music/TFMX/mdat.unicorn` — so the sibling is the same id with the last
-     * segment renamed. Other providers give opaque ids with nothing to rename, and there this finds
-     * nothing: the tune opens alone and UADE refuses it, rather than this walking a whole folder
-     * tree on every play to look.
-     */
-    private fun siblingDocuments(uri: Uri): List<Pair<String, Uri>> = runCatching {
-        val documentId = DocumentsContract.getDocumentId(uri)
-        val treeId = DocumentsContract.getTreeDocumentId(uri)
-        val tree = DocumentsContract.buildTreeDocumentUri(uri.authority, treeId)
-        Companions.siblingPaths(documentId).map { siblingId ->
-            siblingId.substringAfterLast('/').substringAfterLast(':') to
-                DocumentsContract.buildDocumentUriUsingTree(tree, siblingId)
-        }
-    }.getOrDefault(emptyList())
-
-    /**
-     * A tune out of an UnExoticA game archive.
-     *
-     * Two steps and both can fail for reasons worth telling apart in a log: the archive did not
-     * arrive, or it arrived and does not hold what the index said it holds. The second means the
-     * index and the archive have drifted -- songdb's snapshot is not ExoticA's live tree -- and it
-     * is the failure worth watching for once real listening starts.
-     */
-    private suspend fun loadFromUnExoticA(path: String): ByteArray? {
-        val archiveUrl = UnExoticA.archiveUrlFor(path) ?: return null
-        val member = UnExoticA.split(path)?.second ?: return null
-        val archive = remoteFiles.fetch(archiveUrl) ?: return null
-        return withContext(backgroundWork) {
-            Lha.extract(archive, member) ?: run {
-                android.util.Log.w("Protracktor", "UnExoticA: $member is not in ${archiveUrl}")
-                null
-            }
-        }
-    }
-
     /**
      * Starts reading whatever comes next.
      *
@@ -4588,7 +4469,7 @@ class PlaybackController private constructor(private val context: Context) {
             // are visible on a device without needing a measurement.
             missing.forEach { ref ->
                 launch {
-                    val bytes = loadBytes(ref) ?: return@launch
+                    val bytes = trackFiles.read(ref) ?: return@launch
                     // A large file is not worth holding in memory to save a second; these formats
                     // are kilobytes and anything of this size is not one of them.
                     if (bytes.size > MAX_PREFETCH_BYTES) return@launch

@@ -56,8 +56,9 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Baseline and ownership map: initial Android/web gate and state contracts checked
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
-- Controller/workflow boundaries: state contracts, scan execution and search extracted; catalogue
-  browsing, download/cache, playlist/persistence and playback boundaries still pending.
+- Controller/workflow boundaries: state contracts, scan execution, search and track-file access
+  extracted; catalogue browsing, download/cache coordination, playlist/persistence and playback
+  boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
@@ -125,6 +126,37 @@ was checked against the saved source. Logs: `dist/architecture-baseline/20261004
 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
 checks (`dist/architecture-baseline/20261004-search-full-gate.log`).
 **Not checked:** live-network/phone interaction, release APK and long-term behaviour.
+
+### Track-file extraction — 2026-10-04
+
+`TrackFiles` now routes main/companion reads for playback, metadata probing, sharing and prefetch.
+`AndroidTrackFileAccess` binds the existing `RemoteFiles`, content resolver and LHA bridge; it has
+no independent cache, scope or decoder handle. The controller passes its existing archive worker
+and retains Browse refresh ownership. LHA is still initialized only when extraction is called.
+
+Preserved: HTTP/archive/local source precedence, success-only cache refresh, companion naming and
+missing-companion tolerance, IO dispatch for normal document reads, and archive-worker dispatch
+for LHA extraction. Scanning calls the synchronous document adapter on its existing scan lane.
+Streams remain closed per read, including when a provider fails. Playback and prefetch policies
+were not changed. `PlaybackController.kt`: 4,633 → 4,514 lines; routing: 111, Android adapter: 59.
+
+**Checked:** 12 routing/dispatcher tests and 4 Android-adapter tests, plus 5 existing companion-rule
+tests. The adapter tests use Robolectric API 29 and synthetic provider streams, not a phone.
+All 16 new checks failed under controlled mutations (15 in the first batch, the success-refresh
+check in a separate mutation); both source files were restored and compared with their saved
+copies. Evidence: `dist/architecture-baseline/20261004-track-{files-tests,files-mutations,refresh-mutation}.log`.
+**Checked:** post-integration `scripts/test-protracktor.sh --really`: **479 unit tests**, lint without
+errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and
+8 server checks (`dist/architecture-baseline/20261004-track-files-full-gate.log`).
+**Not checked:** real provider/network/decoder behaviour on a phone, release APK and long-term playback.
+
+### Pre-existing risk noticed during extraction — not changed
+
+`downloadSelected` tests `isActive` inside `withContext(NonCancellable)` before showing the stopped
+notice. Code inspection suggests this observes the non-cancellable scope rather than the cancelled
+download job, so the notice may not appear. **Not checked:** a focused reproduction and the phone
+interaction. Reproduce at the download-workflow boundary and ask before changing the behaviour;
+do not silently fix it as part of moving code.
 
 ## What works
 
