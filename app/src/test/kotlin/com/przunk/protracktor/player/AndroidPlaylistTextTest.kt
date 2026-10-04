@@ -26,6 +26,24 @@ class AndroidPlaylistTextTest {
     }
 
     @Test
+    fun `session notices retain their PL and EN resources and fresh message identity`() {
+        val cases = listOf(
+            PlaylistSessionState.Notice.CHANGES_DISCARDED to R.string.notice_changes_discarded,
+            PlaylistSessionState.Notice.PLAYLIST_EMPTIED to R.string.notice_playlist_emptied,
+        )
+        for (language in listOf("en", "pl")) {
+            val context = context(language)
+            val text = AndroidPlaylistText(context)
+            for ((notice, resource) in cases) {
+                val message = text.message(notice)
+                assertEquals(context.getString(resource), message.text)
+                assertNull(message.actionLabel)
+                assertNotEquals(message.id, text.message(notice).id)
+            }
+        }
+    }
+
+    @Test
     fun `failed exports and invalid imports keep their distinct PL and EN messages and identity`() {
         val cases = listOf(
             PlaylistTransfer.Notice.EmptyPlaylist to R.string.notice_playlist_empty,

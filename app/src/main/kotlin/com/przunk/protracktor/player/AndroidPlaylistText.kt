@@ -7,6 +7,11 @@ import android.content.Context
 import com.przunk.protracktor.R
 
 internal class AndroidPlaylistText(private val context: Context) {
+    fun message(notice: PlaylistSessionState.Notice): Message = Message(when (notice) {
+        PlaylistSessionState.Notice.CHANGES_DISCARDED -> context.getString(R.string.notice_changes_discarded)
+        PlaylistSessionState.Notice.PLAYLIST_EMPTIED -> context.getString(R.string.notice_playlist_emptied)
+    })
+
     fun message(notice: PlaylistTransfer.Notice): Message = Message(when (notice) {
         PlaylistTransfer.Notice.EmptyPlaylist -> context.getString(R.string.notice_playlist_empty)
         PlaylistTransfer.Notice.ExportFailed -> context.getString(R.string.notice_playlist_failed)

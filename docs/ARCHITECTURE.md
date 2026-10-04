@@ -22,7 +22,7 @@ remain proposals. Update each row when its boundary is actually implemented.
 | Playback state and events | Process singleton `PlaybackController`; main-immediate supervisor scope; read-only flows exposed to UI and service | **Extracted:** `Message.kt`, `PlayerUiState.kt`, `BrowseState.kt`, `DownloadKeys.kt`; same package, definitions, defaults and derived rules; no change to state ownership |
 | Native playback | Controller owns `NativeEngine.Track`, open/seek operations and focus; `stopPlayback` cancels opens/prefetch, closes the track and releases focus | Playback collaborator after the independent workflows have been extracted; retain operation order |
 | Scanning | Controller owns the scan job, folder/probe adapters and two background-priority dispatchers; `ScanBatch` owns only per-run candidate/result bookkeeping | **Extracted:** testable scan execution with injected probe, append/replace persistence and progress callbacks; four safe workers and the existing serial lane, checkpoint timing and cancellation boundary unchanged |
-| Persistence | `LibraryStore`/`LibraryIndexStore` and other stores own database access; controller owns the active working playlist and debounced save jobs | Restore/save orchestration and playlist editing remain pending; file transfer is separate below |
+| Playlist-session persistence | Existing stores own database access; `PlaylistSession` owns the persistence ID and both save jobs in the controller's scope; the working queue remains in the existing player flow | **Extracted:** restore, debounced settings/track writes, Save/Discard and create/rename/delete/switch. `PlaylistSessionState` applies narrow transitions to the same flows, including suspended list reads inside atomic retries; controller retains native stop and metadata callbacks. Queue editing remains separate |
 | Playlist file transfer | `PlaylistTransfer` uses the controller's scope and an immutable export selection; controller owns the active queue, playlist list and share/message flows | **Extracted:** M3U import/export and matching order through existing stores and `PlaylistFile`; `AndroidPlaylistFiles` binds document reads, shared copies and intents, and `AndroidPlaylistText` maps typed notices. Imports do not activate or edit the current playlist |
 | Catalogue browsing/search | Controller owns `BrowseState` and delegates data reads to catalogue/library stores; UI owns sheet/scroll/selection state | **Search extracted:** `LibrarySearch` runs the four-source query through narrow data operations, retaining order, caps, deduplication and live-outcome timing; controller publishes loading/results/messages. Browse/session boundaries remain pending |
 | Track bytes and companion files | `RemoteFiles` retains its cache and shared fetch jobs; content streams are opened/closed per read; controller retains scan/archive dispatchers | **Extracted:** `TrackFiles` routes the existing sources; `AndroidTrackFileAccess` binds resolver, shared cache and LHA operations. Playback/share/prefetch use the same reader; scanning calls its synchronous document adapter on the existing scan lane |
@@ -44,6 +44,12 @@ writer or its lifetime. Scan cancellation retains partial index writes; a comple
 the folder snapshot. Read-ahead cancellation is distinct from cancelling another consumer of a
 shared download. The audio callback uses a non-blocking decoder lock while seek/subsong work runs
 on the caller thread. These are preservation constraints, not proposed changes.
+
+The session persistence ID and the published active-playlist ID are deliberately not collapsed in
+this extraction: the former changes before an asynchronous track read, the latter on publication.
+Preserving that ordering exposes an existing pending-write race, and Save completion can also clear
+the dirty flag of a newer edit. `STATUS.md` records the controlled-store reproductions and the need
+for separately approved behaviour fixes; the architecture extraction does not declare them safe.
 
 Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.

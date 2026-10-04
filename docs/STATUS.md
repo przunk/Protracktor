@@ -57,14 +57,64 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
-  reference-data downloads, native replay installation, playback read-ahead and Browse cache/prefetch
-  and playlist file transfer extracted; catalogue browsing, playlist-session persistence/editing
-  and playback boundaries still pending.
+  reference-data downloads, native replay installation, playback read-ahead, Browse cache/prefetch,
+  playlist file transfer and playlist-session persistence/management extracted. Catalogue browsing,
+  library editing, sharing and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
 - Comment correction/shortening: not started; separate commits after the structural work.
 - Final documentation, full gate, test artefacts and manual handover: pending.
+
+### Playlist-session extraction — 2026-10-04
+
+`PlaylistSession` owns restoration, the active persistence ID, both debounced save jobs,
+Save/Discard and playlist create/rename/delete/switch sequencing. It uses the controller's existing
+scope and `LibraryStore`. `PlaylistSessionState` applies narrow session transitions to the same
+player/Browse flows, without an independent queue or state copy. Native stop and metadata-resolution
+callbacks remain controller-owned; construction performs no I/O.
+
+Preserved: restore without autoplay; the pre-restore settings-save guard; 400 ms settings and
+1500 ms track debounce; sampling after the delay; dynamic localized names/notices; explicit edits
+versus settings; last-playlist reset; exceptions/cancellation; and the suspended list reads inside
+atomic state-update retries. Other controller consumers read the session's single persistence ID,
+which still changes before the destination playlist's tracks finish loading.
+
+**Checked:** 18 initial workflow tests and one new PL/EN notice test passed before and after
+integration. The first edit-mutation batch exposed a weak assertion: the test copied `dirty` from
+the already-mutated state into its expectation. It now explicitly requires dirty state while the
+write is pending and supplies an independent dirty edit. One more test characterises a pending
+track write during a suspended switch. All **20 new tests** (19 session, one resource) subsequently
+failed under controlled mutations: 1 construction, 7 restore/resources, 10 edits, 2 switch-order.
+All three mutated sources were restored and compared with their pre-mutation copies.
+
+**Checked:** full `scripts/test-protracktor.sh --really`: **555 unit tests**, zero failures/errors/
+skips, lint without errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser
+storage upgrade and 8 server checks. Logs and mutation XML:
+`dist/architecture-baseline/20261004-playlist-session-*`.
+`PlaybackController.kt`: 3,938 → 3,727 lines; session workflow: 216, state adapter: 118.
+**Not checked:** this session against a real phone/SQLite instance, device UI, release APK or
+long-term behaviour. No schema, stored format, native ownership or lifecycle change.
+
+### Pre-existing session-write races — host sequence reproduced, not changed
+
+Two controlled-store tests expose timing risks already present in `c1b0f0c`, before this
+extraction. They exercise the real session/state pair, but do not measure how often either
+interleaving happens with Android SQLite or on a phone:
+
+- **Save completion can hide a newer edit.** Save captures the initial tracks, suspends in
+  `replaceTracks`, then clears `dirty` on the current UI state. An edit made during that write
+  remains visible but is marked clean, although only the earlier tracks were persisted.
+- **A pending metadata write can target the destination with the previous queue.** Switching sets
+  the persistence ID before awaiting destination tracks, while the UI queue still holds the old
+  list. If the 1500 ms write runs in that interval, its late reads pair the new ID with the old
+  tracks. The controlled store records that replacement; this is a data-loss risk, not a proposed
+  new persistence policy.
+
+The extraction preserves these sequences rather than silently introducing a behaviour fix.
+Separate owner-approved work should guard save completion against newer edits and make a pending
+write's playlist identity and track snapshot consistent across activation. The phone reproduction
+and the fix remain open; passing characterisation tests do not mean these risks were removed.
 
 ### State-contract extraction — 2026-10-03
 

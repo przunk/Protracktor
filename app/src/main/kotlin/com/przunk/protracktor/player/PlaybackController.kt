@@ -79,21 +79,12 @@ class PlaybackController private constructor(private val context: Context) {
 
         // Fast enough that a progress bar does not visibly step, slow enough to be free.
         private const val POLL_INTERVAL_MS = 200L
-        private const val SAVE_DEBOUNCE_MS = 400L
 
         /** How often the background metadata pass looks to see whether the user has stopped. */
         private const val IDLE_CHECK_MS = 500L
 
         /** Between files, so resolving hundreds does not saturate a network share. */
         private const val RESOLVE_GAP_MS = 120L
-
-        /**
-         * How long the track list waits before being written.
-         *
-         * Longer than [RESOLVE_GAP_MS] by an order of magnitude, so a run of resolutions collapses
-         * into one write rather than one write each.
-         */
-        private const val TRACK_WRITE_DEBOUNCE_MS = 1500L
 
         /** Recognised by the UI, which turns it into the localised label on the snackbar action. */
         const val UNDO = "undo"
@@ -310,6 +301,24 @@ class PlaybackController private constructor(private val context: Context) {
     private val libraryIndex = LibraryIndexStore(context)
 
     private val playlistText = AndroidPlaylistText(context)
+    private val playlistSession = PlaylistSession(
+        scope = scope,
+        store = object : PlaylistSession.Store {
+            override suspend fun loadPlayerState() = store.loadPlayerState()
+            override suspend fun savePlayerState(saved: SavedPlayerState) = store.savePlayerState(saved)
+            override suspend fun playlists() = store.playlists()
+            override suspend fun defaultPlaylistId(name: String) = store.defaultPlaylistId(name)
+            override suspend fun tracksIn(id: Long) = store.tracksIn(id)
+            override suspend fun replaceTracks(id: Long, tracks: List<TrackRef>) = store.replaceTracks(id, tracks)
+            override suspend fun createPlaylist(name: String) = store.createPlaylist(name)
+            override suspend fun renamePlaylist(id: Long, name: String) = store.renamePlaylist(id, name)
+            override suspend fun deletePlaylist(id: Long) = store.deletePlaylist(id)
+        },
+        state = PlaylistSessionState(_state, _browse, playlistText::message),
+        defaultPlaylistName = { defaultPlaylistName },
+        stopPlayback = ::stopPlayback,
+        resolveMetadataInBackground = ::resolveMetadataInBackground,
+    )
     private val playlistTransfer = PlaylistTransfer(
         scope = scope,
         store = object : PlaylistTransfer.Store {
@@ -453,13 +462,6 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private var randomPlayed = -1
 
-    /** Which playlist is being edited. Resolved during [restore]; there is only one so far. */
-    private var playlistId: Long = 0L
-
-    /** Debounces writes. Every transport press changes state; the disk does not need each one. */
-    private var saveJob: Job? = null
-    private var trackWriteJob: Job? = null
-
     init {
         // Before anything can be opened: sc68 reads its replay binaries from a path, and an asset
         // inside an APK does not have one.
@@ -551,7 +553,7 @@ class PlaybackController private constructor(private val context: Context) {
         // there is a stale one.
         ScanNotification.clear(context)
 
-        restore()
+        playlistSession.restore()
         // One loop drives both the progress bar and end-of-track handling. The native side flags
         // completion rather than calling back, so something has to look; since the progress bar
         // needs a tick anyway, this is that tick.
@@ -649,232 +651,19 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch { learnedLengths.remember(md5, subsong, seconds) }
     }
 
-    // --- persistence --------------------------------------------------------------------------
+    // --- playlist session ---------------------------------------------------------------------
 
-    private fun restore() {
-        scope.launch {
-            val saved = store.loadPlayerState()
-            // Read once and used twice. `defaultPlaylistId` can create one, so the list is read
-            // again only when it did; asking the database the same question twice at launch is a
-            // query nobody needs on the path A48 is about.
-            val known = store.playlists()
-            // The stored active playlist, unless it has since been deleted.
-            val stored = known.firstOrNull { it.id == saved?.activePlaylistId }?.id
-            playlistId = stored ?: store.defaultPlaylistId(defaultPlaylistName)
-            val playlists = if (stored != null) known else store.playlists()
-            val tracks = store.tracksIn(playlistId)
+    fun savePlaylist() = playlistSession.savePlaylist()
 
-            _state.update { current ->
-                var queue = current.queue
-                    .withTracks(tracks)
-                    .withRepeat(saved?.repeat ?: RepeatMode.OFF)
-                if (saved?.shuffle == true) queue = queue.withShuffle(true)
+    fun discardChanges() = playlistSession.discardChanges()
 
-                // The track it was on is made current but NOT started. Coming back to the app is
-                // not a request to make noise, and R2 asks for the view to be restored, not the
-                // playback (docs/OPEN_QUESTIONS.md Q6 is still open on resuming a position).
-                val index = tracks.indexOfFirst { it.id == saved?.currentTrackId }
-                if (index >= 0) queue = queue.startAt(index)
+    fun createPlaylist(name: String) = playlistSession.createPlaylist(name)
 
-                current.copy(
-                    queue = queue,
-                    playlists = playlists,
-                    activePlaylistId = playlistId,
-                    playAllSubsongs = saved?.playAllSubsongs ?: false,
-                    fallbackLengthSeconds =
-                        FallbackLength.fromStored(saved?.fallbackLengthSeconds ?: 0),
-                    restored = true,
-                )
-            }
-            // The dice's scope, kept between runs now that the Random view shows what is set.
-            _browse.update { it.copy(randomScope = storedRandomScope(saved?.randomScope)) }
-            resolveMetadataInBackground()
-        }
-    }
+    fun renamePlaylist(id: Long, name: String) = playlistSession.renamePlaylist(id, name)
 
-    /**
-     * Writes the track list, shortly.
-     *
-     * **Debounced, and it has to be.** `replaceTracks` deletes every row of the playlist and
-     * reinserts it — two inserts per track — and background metadata resolution identifies a
-     * track every 120 ms. Undebounced, a playlist of three hundred means some six hundred inserts
-     * eight times a second, into the same database the list is being read from, for as long as the
-     * resolution runs, and the list stutters for as long as it does.
-     *
-     * The state still updates per track, so titles appear as they are learned. It is only the disk
-     * that waits.
-     */
-    private fun scheduleTrackWrite() {
-        trackWriteJob?.cancel()
-        trackWriteJob = scope.launch {
-            delay(TRACK_WRITE_DEBOUNCE_MS)
-            store.replaceTracks(playlistId, _state.value.queue.tracks)
-            refreshPlaylists()
-        }
-    }
+    fun deletePlaylist(id: Long) = playlistSession.deletePlaylist(id)
 
-    /**
-     * The switcher counts what each playlist holds, so every write that changes a count says so.
-     *
-     * `docs/STATUS.md` C44: making, renaming and deleting a playlist already re-read the list;
-     * the writes that change only its **contents** did not, so "Add to playlist…" wrote the track
-     * and left the number on screen as it was until the playlist was opened.
-     */
-    private suspend fun refreshPlaylists() {
-        val known = store.playlists()
-        _state.update { it.copy(playlists = known) }
-    }
-
-    /**
-     * Writes the current state, shortly.
-     *
-     * Debounced because every press of shuffle, repeat, next and previous changes something worth
-     * keeping, and none of them is worth a disk write on its own.
-     */
-    private fun scheduleSave() {
-        saveJob?.cancel()
-        saveJob = scope.launch {
-            delay(SAVE_DEBOUNCE_MS)
-            saveNow()
-        }
-    }
-
-    /**
-     * Writes the settings, never the track list.
-     *
-     * Shuffle, repeat and where playback got to are the app's own business and are saved as they
-     * change. The track list belongs to the user's editing session and waits for [savePlaylist].
-     */
-    private suspend fun saveNow() {
-        if (!_state.value.restored) return // never overwrite stored state with an empty start-up one
-        val snapshot = _state.value
-        store.savePlayerState(
-            SavedPlayerState(
-                activePlaylistId = playlistId,
-                // The queue's track, never a transient one: a random pick is not where the user
-                // was, and restoring into it would be restoring somewhere they never chose to be.
-                currentTrackId = snapshot.queue.current?.id,
-                shuffle = snapshot.queue.shuffle,
-                repeat = snapshot.queue.repeat,
-                playAllSubsongs = snapshot.playAllSubsongs,
-                fallbackLengthSeconds = snapshot.fallbackLengthSeconds,
-                randomScope = _browse.value.randomScope.stored(),
-            )
-        )
-    }
-
-    /** Commits the edited list. The diskette button. */
-    fun savePlaylist() {
-        scope.launch {
-            val snapshot = _state.value
-            store.replaceTracks(playlistId, snapshot.queue.tracks)
-            // Saved silently. The Save button disappearing is the confirmation, and it is on
-            // screen already.
-            _state.update { it.copy(dirty = false) }
-        }
-    }
-
-    /** Throws the edits away and goes back to what is on disk. */
-    fun discardChanges() {
-        scope.launch {
-            val stored = store.tracksIn(playlistId)
-            _state.update {
-                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = Message(context.getString(R.string.notice_changes_discarded)))
-            }
-        }
-    }
-
-    // --- playlists ----------------------------------------------------------------------------
-
-    fun createPlaylist(name: String) {
-        scope.launch {
-            val id = store.createPlaylist(name.ifBlank { defaultPlaylistName })
-            _state.update { it.copy(playlists = store.playlists()) }
-            switchToPlaylist(id)
-        }
-    }
-
-    fun renamePlaylist(id: Long, name: String) {
-        if (name.isBlank()) return
-        scope.launch {
-            store.renamePlaylist(id, name)
-            _state.update { it.copy(playlists = store.playlists()) }
-        }
-    }
-
-    /**
-     * Deletes a playlist — or empties it, when it is the only one there is. The tracks stay in the
-     * library; only the list goes.
-     *
-     * **The last playlist is not refused, it is reset.** Refusing it means the user presses Delete,
-     * confirms, and nothing happens — and the notice explaining why loses a race with the sheet the
-     * button lives in, so not even the explanation arrives.
-     *
-     * Somebody deleting their only playlist wants it gone, and the closest thing to gone that can
-     * exist is empty and called what a new one would be called. There is nothing to undo that the
-     * confirmation did not already ask about.
-     */
-    fun deletePlaylist(id: Long) {
-        scope.launch {
-            if (store.playlists().size <= 1) {
-                store.replaceTracks(id, emptyList())
-                store.renamePlaylist(id, defaultPlaylistName)
-                stopPlayback()
-                _state.update {
-                    it.copy(
-                        queue = PlayQueue(tracks = emptyList(), shuffle = it.queue.shuffle, repeat = it.queue.repeat),
-                        playlists = store.playlists(),
-                        playing = false,
-                        dirty = false,
-                        metadata = emptyMap(),
-                        positionSeconds = 0.0,
-                        durationSeconds = 0.0,
-                        message = Message(context.getString(R.string.notice_playlist_emptied)),
-                    )
-                }
-                return@launch
-            }
-            store.deletePlaylist(id)
-            val remaining = store.playlists()
-            _state.update { it.copy(playlists = remaining) }
-            if (id == playlistId) switchToPlaylist(remaining.first().id)
-        }
-    }
-
-    /**
-     * Makes another playlist the active one.
-     *
-     * Playback stops. The queue *is* the active playlist, so carrying a playing track into a list
-     * that does not contain it would leave next and previous disagreeing with the screen -- the
-     * exact fault that made the transport feel random before.
-     */
-    /**
-     * Makes another playlist the active one, abandoning any unsaved edits to this one.
-     *
-     * The UI asks first when there are edits to lose; this method is what it calls after the answer.
-     */
-    fun switchToPlaylist(id: Long) {
-        scope.launch {
-            saveNow()
-            stopPlayback()
-            playlistId = id
-            val tracks = store.tracksIn(id)
-            _state.update {
-                it.copy(
-                    queue = PlayQueue(tracks = tracks, shuffle = it.queue.shuffle, repeat = it.queue.repeat),
-                    playlists = store.playlists(),
-                    activePlaylistId = id,
-                    playing = false,
-                    dirty = false,
-                    metadata = emptyMap(),
-                    positionSeconds = 0.0,
-                    durationSeconds = 0.0,
-                )
-            }
-            scheduleSave()
-            resolveMetadataInBackground()
-        }
-    }
+    fun switchToPlaylist(id: Long) = playlistSession.switchToPlaylist(id)
 
     // --- browsing -----------------------------------------------------------------------------
 
@@ -2528,7 +2317,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun setRandomScope(scope: RandomScope) {
         _browse.update { it.copy(randomScope = scope) }
         // A setting, so it is written like one.
-        scheduleSave()
+        playlistSession.scheduleSave()
         if (_state.value.randomMode) {
             randomHistory.subList(randomCursor + 1, randomHistory.size).clear()
         }
@@ -2877,7 +2666,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun addToPlaylist(targetPlaylistId: Long, tracks: List<TrackRef>) {
         if (tracks.isEmpty()) return
-        if (targetPlaylistId == playlistId) {
+        if (targetPlaylistId == playlistSession.playlistId) {
             addToPlaylist(tracks)
             return
         }
@@ -2894,7 +2683,7 @@ class PlaybackController private constructor(private val context: Context) {
             }
             if (added > 0) {
                 store.replaceTracks(targetPlaylistId, existing)
-                refreshPlaylists()
+                playlistSession.refreshPlaylists()
             }
             val message = when {
                 tracks.size == 1 && added == 1 ->
@@ -3014,8 +2803,8 @@ class PlaybackController private constructor(private val context: Context) {
             // Written from the state rather than from `found`, so it stores exactly the list the
             // screen is showing -- including whatever the de-duplication above decided.
             scope.launch {
-                store.replaceTracks(playlistId, _state.value.queue.tracks)
-                refreshPlaylists()
+                store.replaceTracks(playlistSession.playlistId, _state.value.queue.tracks)
+                playlistSession.refreshPlaylists()
             }
         }
 
@@ -3292,7 +3081,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun toggleAllSubsongs() {
         _state.update { it.copy(playAllSubsongs = !it.playAllSubsongs) }
-        scheduleSave()
+        playlistSession.scheduleSave()
     }
 
     /**
@@ -3322,7 +3111,7 @@ class PlaybackController private constructor(private val context: Context) {
         val wanted = FallbackLength.snap(seconds)
         if (wanted == _state.value.fallbackLengthSeconds) return
         _state.update { it.copy(fallbackLengthSeconds = wanted) }
-        scheduleSave()
+        playlistSession.scheduleSave()
     }
 
     /**
@@ -3427,7 +3216,7 @@ class PlaybackController private constructor(private val context: Context) {
             val on = !it.queue.shuffle
             it.copy(queue = it.queue.withShuffle(on), resultsQueue = it.resultsQueue?.withShuffle(on))
         }
-        scheduleSave()
+        playlistSession.scheduleSave()
         // Both of these change what comes next, so anything read ahead is now the wrong track.
         prefetchUpcoming()
     }
@@ -3437,7 +3226,7 @@ class PlaybackController private constructor(private val context: Context) {
             val repeat = it.queue.repeat.next()
             it.copy(queue = it.queue.withRepeat(repeat), resultsQueue = it.resultsQueue?.withRepeat(repeat))
         }
-        scheduleSave()
+        playlistSession.scheduleSave()
         prefetchUpcoming()
     }
 
@@ -3579,7 +3368,7 @@ class PlaybackController private constructor(private val context: Context) {
                 positionSeconds = 0.0,
             )
         }
-        scheduleSave()
+        playlistSession.scheduleSave()
         load(ref)
     }
 
@@ -3796,7 +3585,7 @@ class PlaybackController private constructor(private val context: Context) {
         // Written straight away rather than waiting for the user to press Save: this is not one of
         // their edits, it is the app learning something, and losing it would mean relearning it on
         // every launch.
-        scheduleTrackWrite()
+        playlistSession.scheduleTrackWrite()
         return improved
     }
 
