@@ -56,8 +56,8 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Baseline and ownership map: initial Android/web gate and state contracts checked
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
-- Controller/workflow boundaries: state contracts and scan execution extracted; search, catalogue,
-  download/cache, playlist/persistence and playback boundaries still pending.
+- Controller/workflow boundaries: state contracts, scan execution and search extracted; catalogue
+  browsing, download/cache, playlist/persistence and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
@@ -104,6 +104,27 @@ server checks. Evidence: `dist/architecture-baseline/20261004-scan-{tests,mutati
 `PlaybackController.kt`: 4,771 → 4,707 lines; `ScanBatch.kt`: 115 lines.
 **Not checked:** real SAF-provider cancellation/scan behaviour on a phone, release APK and long-term
 playback. The remaining architecture/comment stages are still open.
+
+### Library-search extraction — 2026-10-04
+
+`LibrarySearch` owns the sequential four-source query and its result calculation. The controller
+still owns the coroutine and Browse/player state, captures the query/scope/indexed catalogue IDs,
+and presents the same localized messages before the count queries. The injected operations call
+the existing stores and live search; no new job, cache, dispatcher or search policy was introduced.
+
+Preserved: index then playlist then catalogue then live reads; source precedence and display order
+through `SearchResults`; platform filtering; explicit/empty catalogue selections; per-source caps;
+counts only when index/catalogue results reach the cap; no live request for a blank query; separate
+unreachable/unreadable outcomes without discarding successful sources.
+
+**Checked:** 11 `LibrarySearchTest` cases and the existing `SearchResultsTest` pass. Controlled
+mutations of routing, filtering, limits and live search made all 11 new cases fail; restoration
+was checked against the saved source. Logs: `dist/architecture-baseline/20261004-search-{tests,mutations}.log`.
+`PlaybackController.kt`: 4,707 → 4,633 lines.
+**Checked:** full `scripts/test-protracktor.sh --really`: **463 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-search-full-gate.log`).
+**Not checked:** live-network/phone interaction, release APK and long-term behaviour.
 
 ## What works
 
