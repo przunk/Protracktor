@@ -18,8 +18,6 @@ The workspace-wide rule is unchanged and still says Polish for every other proje
 
 ## Merging waits for the owner
 
-Stated by the owner on 2026-09-02: *"szkoda, że już zmergowałeś — merguj jak zatwierdzę"*.
-
 **Finish an item on its branch and stop there.** Build it, test it, commit it, say it is ready — and
 leave it unmerged until he has run it on his phone and said so. This applies to `develop`, not only
 to `master`, which was already his call.
@@ -36,8 +34,7 @@ without his having seen it.
 
 ## Documents go straight to `develop`
 
-Stated by the owner on 2026-09-21: *"można dać regułę, że dokumenty aktualizujemy od razu do
-developa"*. **This overrides, for this project, the workspace rule that nobody commits to `develop`
+**This overrides, for this project, the workspace rule that nobody commits to `develop`
 directly** (`/mnt/workspace/AGENTS.md` §5).
 
 **A change that is only documents is committed on `develop` itself** — a noted defect, a backlog
