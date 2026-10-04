@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/protracktor-logo.png" alt="Protracktor logo" width="320">
+</p>
+
 # Protracktor
 
 An Android player for the music formats of retro platforms — Amiga, Atari ST, Atari 8-bit,
