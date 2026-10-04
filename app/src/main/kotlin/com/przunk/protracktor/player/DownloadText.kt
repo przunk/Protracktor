@@ -20,11 +20,12 @@ internal sealed interface DownloadNotice {
     data object SongMetadataDone : DownloadNotice
     data class AllDownloaded(val landed: Int, val failed: Int) : DownloadNotice
     data class DownloadsStopped(val landed: Int) : DownloadNotice
+    data class ReplaysDownloaded(val sc68: Int?, val uade: Int?) : DownloadNotice
 }
 
 /** Formats a notice when the workflow creates it, including notices retained for a later step. */
 internal interface DownloadText {
-    enum class Label { SONG_METADATA, ALL_RUNNING }
+    enum class Label { SONG_METADATA, ALL_RUNNING, REPLAY_ROUTINES }
     fun label(label: Label): String
     fun message(notice: DownloadNotice): Message
 }

@@ -33,6 +33,7 @@ class AndroidDownloadTextTest {
             val text = AndroidDownloadText(context)
             assertEquals(context.getString(R.string.song_metadata_title), text.label(DownloadText.Label.SONG_METADATA))
             assertEquals(context.getString(R.string.download_all_running), text.label(DownloadText.Label.ALL_RUNNING))
+            assertEquals(context.getString(R.string.replay_routines_title), text.label(DownloadText.Label.REPLAY_ROUTINES))
         }
     }
 
@@ -57,6 +58,24 @@ class AndroidDownloadTextTest {
                 assertEquals("$language: $notice", context.getString(resource), message.text)
                 assertNull(message.actionLabel)
                 assertNotEquals(message.id, text.message(notice).id)
+            }
+        }
+    }
+
+    @Test
+    fun `replay results distinguish combined partial and failed downloads in both languages`() {
+        for (language in listOf("en", "pl")) {
+            val context = context(language)
+            val text = AndroidDownloadText(context)
+            for ((sc68, uade) in listOf(1 to 1, 3 to 5, null to 5, 3 to null, null to null)) {
+                val expected = if (sc68 != null && uade != null) {
+                    context.resources.getQuantityString(R.plurals.notice_replay_routines_done, sc68 + uade, sc68 + uade)
+                } else if (sc68 == null && uade == null) {
+                    context.getString(R.string.notice_replay_routines_failed)
+                } else {
+                    context.getString(R.string.notice_replay_routines_partly)
+                }
+                assertEquals(expected, text.message(DownloadNotice.ReplaysDownloaded(sc68, uade)).text)
             }
         }
     }

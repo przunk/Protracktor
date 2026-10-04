@@ -10,6 +10,7 @@ internal class AndroidDownloadText(private val context: Context) : DownloadText 
     override fun label(label: DownloadText.Label): String = context.getString(when (label) {
         DownloadText.Label.SONG_METADATA -> R.string.song_metadata_title
         DownloadText.Label.ALL_RUNNING -> R.string.download_all_running
+        DownloadText.Label.REPLAY_ROUTINES -> R.string.replay_routines_title
     })
 
     override fun message(notice: DownloadNotice): Message = Message(when (notice) {
@@ -54,5 +55,12 @@ internal class AndroidDownloadText(private val context: Context) : DownloadText 
             context.getString(R.string.notice_all_downloaded_partly, notice.landed, notice.failed)
         }
         is DownloadNotice.DownloadsStopped -> context.getString(R.string.notice_downloads_stopped, notice.landed)
+        is DownloadNotice.ReplaysDownloaded -> when {
+            notice.sc68 != null && notice.uade != null -> context.resources.getQuantityString(
+                R.plurals.notice_replay_routines_done, notice.sc68 + notice.uade, notice.sc68 + notice.uade,
+            )
+            notice.sc68 == null && notice.uade == null -> context.getString(R.string.notice_replay_routines_failed)
+            else -> context.getString(R.string.notice_replay_routines_partly)
+        }
     })
 }

@@ -56,8 +56,8 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Baseline and ownership map: initial Android/web gate and state contracts checked
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
-- Controller/workflow boundaries: state contracts, scan execution, search, track-file access and
-  reference-data downloads extracted; catalogue browsing, native replay installation, cache/prefetch
+- Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
+  reference-data downloads and native replay installation extracted; catalogue browsing, cache/prefetch
   coordination, playlist/persistence and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
@@ -178,6 +178,31 @@ checks (`dist/architecture-baseline/20261004-downloads-full-gate.log`).
 **Not checked:** actual network/database/native-fingerprint integration on a phone, release APK and
 long-term behaviour. The source adapter was compiled and its forwarding reviewed, not run against
 the owner's database or live servers.
+
+### Native replay download coordination — 2026-10-04
+
+`ReplayDownloads` runs the sc68/UADE sequence through narrow native and presentation operations.
+The controller retains its existing scope/background dispatcher, progress owner and native
+bindings. Startup and post-delete UADE configuration remain in the controller. Constructing the
+new collaborator neither starts work nor initializes an engine.
+
+Preserved: sc68 before UADE; activation only for a nonzero result, on the existing background
+worker; separate group/source progress guards; partial/failed result messages; exception propagation
+and cleanup after success, failure or cancellation. The same `AndroidDownloadText` now formats
+replay notices; all resource strings and native/download implementations are unchanged.
+
+**Checked:** 6 new workflow tests and 4 resource-mapping tests passed before and after integration
+(7 new tests in total, plus an expanded existing label test). Controlled mutations of progress,
+guards, zero-result handling, dispatching, exception propagation, cancellation cleanup and replay
+text mapping made all 6 workflow tests and the 2 replay-related resource checks fail. Both mutated
+files were restored and compared byte for byte with their saved copies. Logs:
+`dist/architecture-baseline/20261004-replays-{before-integration-tests,integration-tests,mutations}.log`.
+`PlaybackController.kt`: 4,183 → 4,133 lines; `ReplayDownloads.kt`: 98 lines.
+**Checked:** full `scripts/test-protracktor.sh --really`: **502 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-replays-full-gate.log`).
+**Not checked:** actual network/filesystem/native activation on a phone, release APK and long-term
+playback. Injected host operations check orchestration, not the emulator's ability to use a download.
 
 ### Pre-existing cancellation-notice defect — reproduced, not changed
 

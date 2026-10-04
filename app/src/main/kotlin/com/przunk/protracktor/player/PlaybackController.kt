@@ -106,8 +106,6 @@ class PlaybackController private constructor(private val context: Context) {
          * uses its own id as the scheme, so a hard-coded prefix here would need editing for each new
          * one -- and the one after that would be added without anybody noticing this line existed.
          */
-        private const val REPLAYS_LABEL = "Atari ST replay routines"
-        private const val PLAYERS_LABEL = "Amiga replay routines"
 
         /** Four megabytes. Comfortably above any tracker module and below anything worth holding. */
         private const val MAX_PREFETCH_BYTES = 4 * 1024 * 1024
@@ -321,6 +319,8 @@ class PlaybackController private constructor(private val context: Context) {
             catalogues.countMatches(query, ids, platforms)
     })
 
+    private val downloadText = AndroidDownloadText(context)
+
     private val libraryDownloads = LibraryDownloads(
         scope = scope,
         sources = StoreDownloadSources(remoteFiles, catalogues, songLengths, trackMetadata, songDbLengths, favourites),
@@ -343,7 +343,34 @@ class PlaybackController private constructor(private val context: Context) {
             override fun refreshCatalogues() = this@PlaybackController.refreshCatalogues()
             override fun refreshPlatformCounts() = this@PlaybackController.refreshPlatformCounts()
         },
-        text = AndroidDownloadText(context),
+        text = downloadText,
+    )
+
+    private val replayDownloads = ReplayDownloads(
+        scope = scope,
+        backgroundWork = backgroundWork,
+        native = object : ReplayDownloads.Native {
+            override suspend fun downloadSc68(onProgress: (Int, Int) -> Unit) =
+                Sc68Replays.download(context, onProgress)
+            override suspend fun downloadUade(onProgress: (Int, Int) -> Unit) =
+                UadePlayers.download(context, onProgress)
+            override fun adoptSc68() { NativeData.adoptDownloadedReplays(context) }
+            override fun configureUade() {
+                val version = context.packageManager
+                    .getPackageInfo(context.packageName, 0).longVersionCode.toString()
+                this@PlaybackController.configureUade(version)
+            }
+        },
+        ui = object : ReplayDownloads.Ui {
+            override fun begin(key: String, label: String) = beginDownload(key, label)
+            override fun end(key: String) = endDownload(key)
+            override fun progress(key: String, label: String) {
+                _browse.update { it.copy(indexing = it.indexing + (key to label)) }
+            }
+            override fun say(message: Message) = this@PlaybackController.say(message)
+            override fun refreshCatalogues() = this@PlaybackController.refreshCatalogues()
+        },
+        text = downloadText,
     )
 
     private val audioFocus = AudioFocus(
@@ -2291,29 +2318,6 @@ class PlaybackController private constructor(private val context: Context) {
     fun cancelDownloads() = libraryDownloads.cancelDownloads()
 
     /**
-     * sc68's replay routines as one step: how many arrived, or null when none did. Progress shows
-     * under its own key; the message is the caller's to give. `docs/LICENSES.md` has why they are
-     * fetched rather than shipped.
-     */
-    private suspend fun fetchReplays(): Int? {
-        if (!beginDownload(DownloadKeys.REPLAYS, REPLAYS_LABEL)) return null
-        try {
-            val fetched = Sc68Replays.download(context) { done, total ->
-                _browse.update {
-                    it.copy(indexing = it.indexing + (DownloadKeys.REPLAYS to "$REPLAYS_LABEL $done/$total"))
-                }
-            }
-            if (fetched == null || fetched == 0) return null
-            // Put them where sc68 will look, now rather than at the next update. It is handed a
-            // path once and reads what is under it each time it opens a tune, so this is enough.
-            withContext(backgroundWork) { NativeData.adoptDownloadedReplays(context) }
-            return fetched
-        } finally {
-            endDownload(DownloadKeys.REPLAYS)
-        }
-    }
-
-    /**
      * Tells the engine where UADE's three paths are.
      *
      * Called at start-up and again after a download, because until the replay routines are there
@@ -2331,61 +2335,7 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** UADE's replay routines as one step: how many arrived, or null when none did. */
-    private suspend fun fetchPlayers(): Int? {
-        if (!beginDownload(DownloadKeys.PLAYERS, PLAYERS_LABEL)) return null
-        try {
-            val fetched = UadePlayers.download(context) { done, total ->
-                _browse.update {
-                    it.copy(indexing = it.indexing + (DownloadKeys.PLAYERS to "$PLAYERS_LABEL $done/$total"))
-                }
-            }
-            if (fetched == null || fetched == 0) return null
-            withContext(backgroundWork) {
-                val version = context.packageManager
-                    .getPackageInfo(context.packageName, 0).longVersionCode.toString()
-                configureUade(version)
-            }
-            return fetched
-        } finally {
-            endDownload(DownloadKeys.PLAYERS)
-        }
-    }
-
-    /**
-     * Both sets of replay routines, sc68's and UADE's, as one press with one message.
-     *
-     * **One button, because nobody should need to know which emulator a format runs on**
-     * (decided 2026-09-21). The note beside it still says what these are -- other people's code,
-     * fetched from the projects that publish it (`docs/LICENSES.md`).
-     */
-    fun downloadReplayRoutines() {
-        if (!beginDownload(DownloadKeys.REPLAY_ROUTINES, context.getString(R.string.replay_routines_title))) return
-        scope.launch {
-            try {
-                val sc68 = fetchReplays()
-                val uade = fetchPlayers()
-                say(
-                    Message(
-                        when {
-                            sc68 != null && uade != null ->
-                                context.resources.getQuantityString(
-                                    R.plurals.notice_replay_routines_done, sc68 + uade, sc68 + uade,
-                                )
-                            sc68 == null && uade == null ->
-                                context.getString(R.string.notice_replay_routines_failed)
-                            else -> context.getString(R.string.notice_replay_routines_partly)
-                        }
-                    )
-                )
-            } finally {
-                withContext(NonCancellable) {
-                    endDownload(DownloadKeys.REPLAY_ROUTINES)
-                    refreshCatalogues()
-                }
-            }
-        }
-    }
+    fun downloadReplayRoutines() = replayDownloads.download()
 
     /**
      * Throws both sets of replay routines away: `.sc68` goes back to mostly silent and the Amiga
