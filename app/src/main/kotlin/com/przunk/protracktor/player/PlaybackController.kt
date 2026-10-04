@@ -276,6 +276,31 @@ class PlaybackController private constructor(private val context: Context) {
     private val trackFileAccess = AndroidTrackFileAccess(context.contentResolver, remoteFiles)
     private val trackFiles = TrackFiles(trackFileAccess, backgroundWork, ::refreshOnPhone)
     private val readAhead = PlaybackReadAhead(scope, trackFiles::read)
+    private val browseCache = BrowseCache(
+        files = object : BrowseCache.Files {
+            override fun isCached(url: String) = remoteFiles.isCached(url)
+            override fun hasArchive(catalogueId: String) =
+                remoteFiles.archiveFile(catalogueId).let { it.exists() && it.length() > 0 }
+            override suspend fun fetch(url: String) = remoteFiles.fetch(url) != null
+        },
+        networkIsMetered = ::networkIsMetered,
+        progress = object : BrowseCache.Progress {
+            override fun clear() {
+                _browse.update { it.copy(aheadFetching = emptySet()) }
+            }
+            override fun started(url: String) {
+                _browse.update { it.copy(aheadFetching = it.aheadFetching + url) }
+            }
+            override fun finished(url: String, cached: Boolean) {
+                _browse.update {
+                    it.copy(
+                        aheadFetching = it.aheadFetching - url,
+                        cachedHere = if (cached) it.cachedHere + url else it.cachedHere,
+                    )
+                }
+            }
+        },
+    )
     private val songLengths = SongLengthStore(context)
     private val songDbLengths = com.przunk.protracktor.data.SongDbLengthStore(context)
     private val learnedLengths = com.przunk.protracktor.data.LearnedLengthStore(context)
@@ -425,12 +450,12 @@ class PlaybackController private constructor(private val context: Context) {
         scope.launch {
             _browse.map { browse -> browse.tracks.map { it.id } }
                 .distinctUntilChanged()
-                .collectLatest { ids -> val here = onPhoneOf(ids); _browse.update { it.copy(cachedHere = here) } }
+                .collectLatest { ids -> val here = browseCache.onPhoneOf(ids); _browse.update { it.copy(cachedHere = here) } }
         }
         scope.launch {
-            combine(_browse.map(::aheadKeyOf), _state.map { it.cacheAhead }) { key, mode -> key to mode }
+            combine(_browse.map { BrowseCache.folderOf(it) }, _state.map { it.cacheAhead }) { key, mode -> key to mode }
                 .distinctUntilChanged()
-                .collectLatest { (key, mode) -> fetchFolderAhead(key, mode) }
+                .collectLatest { (key, mode) -> browseCache.fetchFolderAhead(key, mode) }
         }
 
         // **What is on this phone, before anybody opens Browse.** The empty playlist has to
@@ -3937,83 +3962,14 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     /**
-     * Which of [ids] are on this phone, each asked its archive's way ([OnPhone]). An archive
-     * downloaded whole is looked at once, not once per row.
-     */
-    private suspend fun onPhoneOf(ids: List<String>): Set<String> = withContext(Dispatchers.IO) {
-        val archives = mutableMapOf<String, Boolean>()
-        ids.filterTo(HashSet()) { id ->
-            when (val check = OnPhone.checkFor(id)) {
-                is OnPhone.Check.Cached -> remoteFiles.isCached(check.url)
-                is OnPhone.Check.Archive -> archives.getOrPut(check.catalogueId) {
-                    remoteFiles.archiveFile(check.catalogueId).let { it.exists() && it.length() > 0 }
-                }
-                OnPhone.Check.Local -> true
-                OnPhone.Check.Never -> false
-            }
-        }
-    }
-
-    /**
      * The marks of the rows on screen, asked again: after a tune arrives -- an UnExoticA tune brings
      * its whole game with it, so its neighbours change too -- and after a cache or an archive goes.
      */
     private fun refreshOnPhone() {
         scope.launch {
             val ids = _browse.value.tracks.map { it.id }
-            val here = onPhoneOf(ids)
+            val here = browseCache.onPhoneOf(ids)
             _browse.update { if (it.tracks.map { t -> t.id } == ids) it.copy(cachedHere = here) else it }
-        }
-    }
-
-    /** The folder fetching ahead is about: a Modland author's folder with its rows, or nothing. */
-    private data class AheadKey(val tracks: List<TrackRef>)
-
-    private fun aheadKeyOf(browse: BrowseState): AheadKey? {
-        // Only a folder, only when its rows are in, and only Modland: ASMA is whole on the phone, an
-        // UnExoticA folder is one archive fetched when its first tune plays, and The Mod Archive has
-        // no folders (`docs/PLAN_ROUND_13.md` A55).
-        if (browse.openAuthor == null || browse.loading || browse.tracks.isEmpty()) return null
-        if (browse.openCatalogue?.id != Modland.id) return null
-        return AheadKey(browse.tracks)
-    }
-
-    /**
-     * Marks what the open folder already holds, then, if the setting and the network allow it,
-     * fetches the rest [FolderPrefetch.PARALLEL] at a time. Cancelled by leaving the folder.
-     */
-    private suspend fun fetchFolderAhead(key: AheadKey?, mode: CacheAhead) {
-        if (key == null) {
-            // The marks are not this function's to clear: they follow whatever Browse lists.
-            _browse.update { it.copy(aheadFetching = emptySet()) }
-            return
-        }
-        val cached = onPhoneOf(key.tracks.map { it.id })
-        _browse.update { it.copy(aheadFetching = emptySet()) }
-        if (!mode.allows(metered = networkIsMetered())) return
-
-        val wanted = FolderPrefetch.plan(
-            key.tracks.map { FolderPrefetch.Candidate(it.id, it.sizeBytes) },
-            cached,
-        )
-        try {
-            FolderPrefetch.run(
-                urls = wanted,
-                fetch = { url -> remoteFiles.fetch(url) != null },
-                // Asked before each start, so walking off Wi-Fi stops what has not begun.
-                mayContinue = { mode.allows(metered = networkIsMetered()) },
-                onStart = { url -> _browse.update { it.copy(aheadFetching = it.aheadFetching + url) } },
-                onDone = { url, ok ->
-                    _browse.update {
-                        it.copy(
-                            aheadFetching = it.aheadFetching - url,
-                            cachedHere = if (ok) it.cachedHere + url else it.cachedHere,
-                        )
-                    }
-                },
-            )
-        } finally {
-            _browse.update { it.copy(aheadFetching = emptySet()) }
         }
     }
 

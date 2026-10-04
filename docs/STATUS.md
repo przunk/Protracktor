@@ -57,9 +57,8 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
-  reference-data downloads, native replay installation and playback read-ahead extracted;
-  catalogue browsing, Browse cache/prefetch coordination, playlist/persistence and playback boundaries
-  still pending.
+  reference-data downloads, native replay installation, playback read-ahead and Browse cache/prefetch
+  extracted; catalogue browsing, playlist/persistence and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
@@ -229,6 +228,32 @@ its ID is no longer wanted. The test reproduces both cases; changing the policy 
 extraction. Folder cache-ahead and disk-cache ownership remain separate pending boundaries.
 **Not checked:** real network/provider read-ahead, playback latency or memory behaviour on a phone,
 release APK and long-term stability.
+
+### Browse cache coordination — 2026-10-04
+
+`BrowseCache` combines `OnPhone` source checks with the `FolderPrefetch` workflow. Disk-cache/shared
+fetches remain owned by the existing `RemoteFiles`. The controller retains both observers and their
+`collectLatest` cancellation, the refresh stale-result guard, the platform network check and Browse
+state. Source/progress operations only forward to those existing owners; construction does no I/O.
+
+Preserved: IO dispatch for cache checks, one archive-presence query per call, the full track-list
+folder key and Modland-only eligibility, existing network/budget/parallelism rules, progress events,
+and cleanup on cancellation. An absent folder clears fetch progress, not cached-row marks. The
+controller still checks file existence and nonzero length for an archive; that binding was reviewed
+and compiled, not exercised against a real Android cache.
+
+**Checked:** 9 new workflow cases and 16 existing `OnPhone`/`FolderPrefetch` cases passed before
+integration. The first run found a test assumption, not a production defect: a propagated exception
+was a different object with the same type/message. The corrected test checks type, message and
+the original instance in the cause chain. Controlled mutations made all 9 new tests fail; the
+restored production source matched the saved copy. Logs:
+`dist/architecture-baseline/20261004-browse-cache-{first-tests,tests,mutations}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **519 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-browse-cache-full-gate.log`).
+`PlaybackController.kt`: 4,087 → 4,043 lines; `BrowseCache.kt`: 91 lines.
+**Not checked:** real provider/network/Android cache behaviour, navigation on a phone, release APK
+and long-term playback. The unchanged observer wiring was reviewed, not executed in a device UI.
 
 ### Pre-existing cancellation-notice defect — reproduced, not changed
 
