@@ -24,7 +24,7 @@ remain proposals. Update each row when its boundary is actually implemented.
 | Scanning | Controller owns the scan job, folder/probe adapters and two background-priority dispatchers; `ScanBatch` owns only per-run candidate/result bookkeeping | **Extracted:** testable scan execution with injected probe, append/replace persistence and progress callbacks; four safe workers and the existing serial lane, checkpoint timing and cancellation boundary unchanged |
 | Playlist-session persistence | Existing stores own database access; `PlaylistSession` owns the persistence ID and both save jobs in the controller's scope; the working queue remains in the existing player flow | **Extracted:** restore, debounced settings/track writes, Save/Discard and create/rename/delete/switch. `PlaylistSessionState` applies narrow transitions to the same flows, including suspended list reads inside atomic retries; controller retains native stop and metadata callbacks. Queue editing remains separate |
 | Playlist file transfer | `PlaylistTransfer` uses the controller's scope and an immutable export selection; controller owns the active queue, playlist list and share/message flows | **Extracted:** M3U import/export and matching order through existing stores and `PlaylistFile`; `AndroidPlaylistFiles` binds document reads, shared copies and intents, and `AndroidPlaylistText` maps typed notices. Imports do not activate or edit the current playlist |
-| Catalogue browsing/search | Controller owns `BrowseState` and delegates data reads to catalogue/library stores; UI owns sheet/scroll/selection state | **Search extracted:** `LibrarySearch` runs the four-source query through narrow data operations, retaining order, caps, deduplication and live-outcome timing; controller publishes loading/results/messages. Browse/session boundaries remain pending |
+| Catalogue browsing/search | Controller owns the Browse flow; `CatalogueBrowser` runs catalogue/format/author reads and overview/count queries in the same scope; UI retains sheet/scroll/selection state | **Extracted:** `CatalogueBrowseState` applies narrow transitions to the existing flow; `AndroidCatalogueStorage` reads existing cache/replay/database files and pairing preferences. `CatalogueTracks` maps rows for browsing, search and Random. `LibrarySearch` retains the four-source query; controller still owns domain navigation, local folders and search result publication |
 | Track bytes and companion files | `RemoteFiles` retains its cache and shared fetch jobs; content streams are opened/closed per read; controller retains scan/archive dispatchers | **Extracted:** `TrackFiles` routes the existing sources; `AndroidTrackFileAccess` binds resolver, shared cache and LHA operations. Playback/share/prefetch use the same reader; scanning calls its synchronous document adapter on the existing scan lane |
 | Reference-data downloads | `LibraryDownloads` owns the selected-run job in the controller's existing scope; controller owns Browse progress/counts through a narrow UI port | **Extracted:** catalogue, SID/songdb and favourite workflows, with `StoreDownloadSources` reusing existing stores/cache and `AndroidDownloadText` formatting typed notices at the original points |
 | Native replay installation | `ReplayDownloads` runs in the existing controller scope; controller owns progress, native configuration and the background dispatcher | **Extracted:** guarded sc68 then UADE downloads, activation and combined notice. Native calls remain controller-bound, including startup/post-delete UADE configuration; construction performs no download or native initialization |
@@ -53,6 +53,14 @@ for separately approved behaviour fixes; the architecture extraction does not de
 
 Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.
+
+Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
+a separately launched sibling, not a prerequisite for the overview. File reads retain their IO
+blocks; pairing and the backend fingerprint remain on the caller context. The fingerprint is
+passed as a lambda so wiring does not initialize `NativeEngine`, and it is still evaluated inside
+the atomic Browse update, including retries. Catalogue selection is captured at the original
+call/job boundaries. Overlapping reads still publish in completion order, even if an older result
+arrives after navigation; adding stale-result protection would be a separate behaviour change.
 
 ## 1. Platform
 

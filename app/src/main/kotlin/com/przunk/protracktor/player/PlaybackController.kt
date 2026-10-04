@@ -15,7 +15,6 @@ import android.net.ConnectivityManager
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueStore
 import com.przunk.protracktor.data.CatalogueSummary
-import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.data.FavouriteStore
 import com.przunk.protracktor.data.GrantedFolder
 import com.przunk.protracktor.data.HistoryStore
@@ -23,7 +22,6 @@ import com.przunk.protracktor.data.IndexedFile
 import com.przunk.protracktor.data.LibraryIndexStore
 import com.przunk.protracktor.data.LibraryStore
 import com.przunk.protracktor.data.SavedPlayerState
-import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.SongLengthStore
 import com.przunk.protracktor.data.DatabasePreparation
 import com.przunk.protracktor.data.Md5
@@ -300,6 +298,30 @@ class PlaybackController private constructor(private val context: Context) {
     private val history = HistoryStore(context)
     private val libraryIndex = LibraryIndexStore(context)
 
+    private val catalogueBrowser = CatalogueBrowser(
+        scope = scope,
+        indexes = object : CatalogueBrowser.Indexes {
+            override suspend fun hasSongLengths() = songLengths.any()
+            override suspend fun hasTrackMetadata() = trackMetadata.any()
+            override suspend fun hasSongDbLengths() = songDbLengths.any()
+            override suspend fun summaries() = catalogues.summaries()
+            override suspend fun songLengthCount() = songLengths.count()
+            override suspend fun trackMetadataCount() = trackMetadata.count()
+            override suspend fun songDbLengthCount() = songDbLengths.count()
+            override suspend fun playableFavourites() = favourites.playableCount()
+            override suspend fun listedFavourites() = favourites.count()
+            override suspend fun platformCounts() = catalogues.platformCounts()
+            override suspend fun formats(catalogueId: String) = catalogues.formats(catalogueId)
+            override suspend fun authors(catalogueId: String, format: String) =
+                catalogues.authors(catalogueId, format)
+            override suspend fun tracks(catalogueId: String, format: String, author: String) =
+                catalogues.tracks(catalogueId, format, author)
+        },
+        files = AndroidCatalogueStorage(context, remoteFiles),
+        state = CatalogueBrowseState(_browse),
+        backends = { NativeEngine.backendsFingerprint() },
+    )
+
     private val playlistText = AndroidPlaylistText(context)
     private val playlistSession = PlaylistSession(
         scope = scope,
@@ -353,7 +375,7 @@ class PlaybackController private constructor(private val context: Context) {
         override suspend fun playlistTracks() = store.allTracks()
 
         override suspend fun searchCatalogues(query: String, ids: Set<String>, limit: Int, platforms: Set<String>) =
-            catalogues.search(query, ids, limit, platforms).map(::toTrackRef)
+            catalogues.search(query, ids, limit, platforms).map(CatalogueTracks::referenceOf)
 
         override suspend fun searchLive(query: String) = ModArchive.search(query)
 
@@ -1516,7 +1538,7 @@ class PlaybackController private constructor(private val context: Context) {
             _showBrowse.tryEmit(Unit)
 
             val found = catalogues.tracks(located.catalogueId, located.format, located.author)
-                .map(::toTrackRef)
+                .map(CatalogueTracks::referenceOf)
             _browse.update { it.copy(tracks = found, loading = false) }
 
             // **The transport follows the folder you walked into.** A digression leaves the dice's
@@ -1663,84 +1685,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- online catalogues --------------------------------------------------------------------
 
-    /**
-     * Also drops the platform counts, so the next screen that needs them recounts.
-     *
-     * Every path that changes what is indexed ends here — indexing a catalogue, deleting one, and
-     * the storage screen's clearing. The counts are derived from exactly that, so surviving one of
-     * these would leave a chip disabled after the index that would have lit it, for the rest of the
-     * session.
-     */
-    fun refreshCatalogues() {
-        scope.launch {
-            // **What is here, before how much** (C75). Five yes-or-no questions that stop at the
-            // first row or the first file, published at once; the counts below walk hundreds of
-            // thousands of rows and queue behind the platform counts, and the ticks waited seconds
-            // for them.
-            val held = HeldSets(
-                songLengths = songLengths.any(),
-                trackMetadata = trackMetadata.any(),
-                songDbLengths = songDbLengths.any(),
-                replays = withContext(Dispatchers.IO) { Sc68Replays.count(context) > 0 },
-                players = withContext(Dispatchers.IO) { UadePlayers.present(context) },
-            )
-            _browse.update { it.copy(held = held) }
-
-            // Recounted rather than kept: this runs whenever what is indexed has changed, and the
-            // platform counts are derived from exactly that.
-            refreshPlatformCounts()
-            val summaries = catalogues.summaries()
-            val lengths = songLengths.count()
-            val metadataRows = trackMetadata.count()
-            val lengthRows = songDbLengths.count()
-            // Counted here, with the index, and not where it is downloaded: it is a fact about the
-            // list *and* the Modland index together, so indexing Modland changes it as surely as
-            // downloading the list does.
-            val favouriteRows = favourites.playableCount()
-            val favouriteRowsListed = favourites.count()
-            val paired = Appearance.pairedEndpoint(context) != null
-            val storage = withContext(Dispatchers.IO) {
-                remoteFiles.cacheBytes() to remoteFiles.permanentBytes()
-            }
-            val archives = withContext(Dispatchers.IO) {
-                Catalogue.all.associate { it.id to remoteFiles.archiveBytes(it.id) }
-                    .filterValues { it > 0 }
-            }
-            // Measured as a file, because that is the only honest measurement available. Only an
-            // archive catalogue is a file of its own; Modland's index is rows in this database,
-            // sharing its pages, its indexes and its free list with the playlists and the history.
-            // Splitting that number between catalogues would be a guess presented as a size.
-            val database = withContext(Dispatchers.IO) {
-                context.getDatabasePath(SchemaSql.NAME).let { if (it.isFile) it.length() else 0L }
-            }
-            val replays = withContext(Dispatchers.IO) {
-                Sc68Replays.count(context) to Sc68Replays.bytes(context)
-            }
-            val players = withContext(Dispatchers.IO) {
-                UadePlayers.count(context) to UadePlayers.bytes(context)
-            }
-            _browse.update { current ->
-                current.copy(
-                    catalogues = summaries,
-                    songLengthCount = lengths,
-                    trackMetadataCount = metadataRows,
-                    songDbLengthCount = lengthRows,
-                    favouriteCount = favouriteRows,
-                    favouritesListed = favouriteRowsListed,
-                    pairedBrowser = paired,
-                    storageBytes = storage,
-                    archiveBytes = archives,
-                    databaseBytes = database,
-                    replayCount = replays.first,
-                    replayBytes = replays.second,
-                    playerCount = players.first,
-                    playerBytes = players.second,
-                    heldCountsKnown = true,
-                    backends = NativeEngine.backendsFingerprint(),
-                )
-            }
-        }
-    }
+    fun refreshCatalogues() = catalogueBrowser.refreshCatalogues()
 
     // --- giving the disk back -----------------------------------------------------------------
 
@@ -1914,14 +1859,7 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /** Recounts the favourites. Cheap: two `COUNT`s over about a thousand rows. */
-    private fun refreshFavouriteCount() {
-        scope.launch {
-            val playable = favourites.playableCount()
-            val listed = favourites.count()
-            _browse.update { it.copy(favouriteCount = playable, favouritesListed = listed) }
-        }
-    }
+    private fun refreshFavouriteCount() = catalogueBrowser.refreshFavouriteCount()
 
     /**
      * Plays a file another app handed us — a tap in a file manager, a share, a link.
@@ -2066,45 +2004,11 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    fun openCatalogue(summary: CatalogueSummary) {
-        scope.launch {
-            _browse.update {
-                it.copy(
-                    openCatalogue = summary, openFormat = null, openAuthor = null,
-                    loading = true, tracks = emptyList(), arrivedByJump = false,
-                )
-            }
-            val formats = catalogues.formats(summary.id)
-            _browse.update { it.copy(groups = formats, loading = false) }
-        }
-    }
+    fun openCatalogue(summary: CatalogueSummary) = catalogueBrowser.openCatalogue(summary)
 
-    fun openFormat(format: String) {
-        val catalogueId = _browse.value.openCatalogue?.id ?: return
-        scope.launch {
-            _browse.update {
-                it.copy(
-                    openFormat = format, openAuthor = null, loading = true,
-                    tracks = emptyList(), arrivedByJump = false,
-                )
-            }
-            val authors = catalogues.authors(catalogueId, format)
-            _browse.update { it.copy(groups = authors, loading = false) }
-        }
-    }
+    fun openFormat(format: String) = catalogueBrowser.openFormat(format)
 
-    fun openAuthor(author: String) {
-        val current = _browse.value
-        val catalogueId = current.openCatalogue?.id ?: return
-        val format = current.openFormat ?: return
-        scope.launch {
-            _browse.update {
-                it.copy(openAuthor = author, loading = true, tracks = emptyList(), arrivedByJump = false)
-            }
-            val found = catalogues.tracks(catalogueId, format, author).map(::toTrackRef)
-            _browse.update { it.copy(tracks = found, loading = false) }
-        }
-    }
+    fun openAuthor(author: String) = catalogueBrowser.openAuthor(author)
 
     /**
      * Opens a Random session: a fresh record, and a tune playing without a second press.
@@ -2291,7 +2195,7 @@ class PlaybackController private constructor(private val context: Context) {
             short * OVERDRAW,
             platforms = platforms,
             favouritesOnly = scope is RandomScope.Favourites,
-        ).map(::toTrackRef).filter { already.add(it.id) }.take(short)
+        ).map(CatalogueTracks::referenceOf).filter { already.add(it.id) }.take(short)
         // A pool smaller than the session can exhaust honestly — forty favourites cannot fill an
         // evening without repeating. Sooner than repeat silently or stop dead, the dice repeats,
         // which is what it did before any of this and what a small pool means.
@@ -2303,7 +2207,7 @@ class PlaybackController private constructor(private val context: Context) {
                 short,
                 platforms = platforms,
                 favouritesOnly = scope is RandomScope.Favourites,
-            ).map(::toTrackRef)
+            ).map(CatalogueTracks::referenceOf)
         }
     }
 
@@ -2573,14 +2477,7 @@ class PlaybackController private constructor(private val context: Context) {
         _browse.update { it.copy(searchScope = scope).withoutStaleResults() }
     }
 
-    /** Counts the platform chips from the catalogue index, which is what makes a dead chip honest. */
-    private fun refreshPlatformCounts() {
-        scope.launch {
-            // Counted by the column each row carries (C89), so ASMA counts towards Atari 8-bit.
-            val byPlatform = catalogues.platformCounts()
-            _browse.update { it.copy(platformCounts = byPlatform) }
-        }
-    }
+    private fun refreshPlatformCounts() = catalogueBrowser.refreshPlatformCounts()
 
     /**
      * What to tell the user when a track will not open.
@@ -2628,28 +2525,6 @@ class PlaybackController private constructor(private val context: Context) {
                     ?.let { context.getString(R.string.open_failed_modland_lists, OpenFailure.sentence(refused), it) } ?: refused
             }
         }
-    }
-
-    private fun toTrackRef(track: CatalogueTrack): TrackRef {
-        val catalogue = Catalogue.byId(track.catalogueId)
-        return TrackRef(
-            // The URL is the identity. A catalogue track has no document URI and never will, and
-            // the URL is what both the cache and the player key on.
-            id = catalogue?.urlFor(track.path) ?: track.path,
-            title = track.title,
-            // The source, as a path, the same shape a local file's is: "Modland/Protracker/4-Mat".
-            // A path rather than "format · author", which reads well in a row and badly everywhere
-            // else -- the information panel has to say where a file came from, and a search result
-            // has to answer "which one of these is it". The author keeps its own field, so nothing
-            // is lost.
-            subtitle = listOf(catalogue?.displayName, track.path.substringBeforeLast('/', ""))
-                .filter { !it.isNullOrBlank() }
-                .joinToString("/"),
-            sizeBytes = track.size,
-            fileName = track.title,
-            // Catalogues file by author, so this is known before the file is ever opened.
-            author = track.author,
-        )
     }
 
     /** Adds a chosen set to the active playlist. Duplicates are ignored rather than doubled. */

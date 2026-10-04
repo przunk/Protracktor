@@ -58,13 +58,54 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   remain part of their respective extraction stages; this is not a completed refactor.
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
   reference-data downloads, native replay installation, playback read-ahead, Browse cache/prefetch,
-  playlist file transfer and playlist-session persistence/management extracted. Catalogue browsing,
-  library editing, sharing and playback boundaries still pending.
+  playlist file transfer, playlist-session persistence/management and catalogue browsing extracted.
+  Local-folder/navigation, library editing, sharing and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
 - Comment correction/shortening: not started; separate commits after the structural work.
 - Final documentation, full gate, test artefacts and manual handover: pending.
+
+### Catalogue-browsing extraction — 2026-10-04
+
+`CatalogueBrowser` now owns catalogue/format/author reads and overview/platform/favourite counts
+in the existing scope, with the same stores. `CatalogueBrowseState` publishes into the existing
+Browse flow; `AndroidCatalogueStorage` reads the existing remote cache, replay stores, database
+file and pairing preferences. `CatalogueTracks` is the shared row mapping for browsing, search,
+neighbours and Random. Domain navigation, local folders and playback remain controller-owned.
+
+Preserved: early held-data flags, a separately launched platform count, store/file read order and
+dispatchers, selection capture before launching versus after starting, loading/error/cancellation
+behaviour and unrelated Browse fields. The backend fingerprint remains a deferred lambda evaluated
+inside atomic-update retries; construction performs no I/O or native initialization.
+
+**Checked:** 20 added tests (13 workflow/state, 4 Android storage, 3 mapping) passed before and
+after controller integration. The initial mapping fixture was corrected against the existing
+`asma://` URI and `ASMA (Atari 8-bit)` label, without changing production behaviour. All 20 failed
+under controlled mutations: 8 construction/storage/mapping checks, then 12 workflow checks.
+All four production helper files were restored and compared with their saved originals.
+
+**Checked:** full `scripts/test-protracktor.sh --really` with the JVM flags below: **575 unit
+tests**, zero failures/errors/skips, lint without errors, 581 page checks, 49 engine checks,
+8 SAP checks, 135 icon paths, browser storage upgrade and 8 server checks; 403 seconds overall.
+
+**Verification environment:** Kotlin daemon disconnects were followed by JVM SIGSEGVs in G1GC
+and then C2 compilation (`hs_err_pid30933.log`, `hs_err_pid33894.log`, archived with the checkpoint
+diagnostics). The SIGSEGV attempts stopped before test results and are not counted as mutation
+evidence. The successful second mutation batch and full gate used command-local
+`JAVA_TOOL_OPTIONS='-XX:+UseSerialGC -XX:TieredStopAtLevel=1'` and
+`-Pkotlin.compiler.execution.strategy=in-process --no-daemon`; no project/toolchain configuration
+was changed. Logs/XML: `dist/architecture-baseline/20261004-catalogue-browser-*`.
+
+**Existing race, not fixed:** a controlled read suspended the first catalogue query, completed a
+second selection, then released the first query. Its groups replace the newer list while the
+second catalogue remains selected. The same unguarded completion ordering exists in `6e14931`.
+This is host sequence evidence, not a phone reproduction; stale-result protection needs separately
+approved work, not a hidden behaviour change inside this extraction.
+
+`PlaybackController.kt`: 3,727 → 3,602 lines. The new workflow is 161 lines, state adapter 103,
+Android adapter 29 and shared mapping 31. **Not checked:** phone UI, actual SQLite-driven browse
+timing, release APK or long-term behaviour. No schema, cache policy, native lifetime or UI change.
 
 ### Playlist-session extraction — 2026-10-04
 
