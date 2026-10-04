@@ -58,7 +58,8 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   remain part of their respective extraction stages; this is not a completed refactor.
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
   reference-data downloads, native replay installation, playback read-ahead and Browse cache/prefetch
-  extracted; catalogue browsing, playlist/persistence and playback boundaries still pending.
+  and playlist file transfer extracted; catalogue browsing, playlist-session persistence/editing
+  and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
@@ -254,6 +255,35 @@ checks (`dist/architecture-baseline/20261004-browse-cache-full-gate.log`).
 `PlaybackController.kt`: 4,087 → 4,043 lines; `BrowseCache.kt`: 91 lines.
 **Not checked:** real provider/network/Android cache behaviour, navigation on a phone, release APK
 and long-term playback. The unchanged observer wiring was reviewed, not executed in a device UI.
+
+### Playlist file transfer — 2026-10-04
+
+`PlaylistTransfer` owns the M3U import/export sequence and matching precedence, reusing `PlaylistFile`
+and the existing `LibraryStore`/`LibraryIndexStore`. The controller retains the working queue,
+playlist activation and UI flows. The initial export selection is captured once; exporting an
+active playlist uses its unsaved queue, while another playlist reads the store. Import still creates
+a separate playlist, including when all offered entries remain unresolved, and passes duplicates
+to the store while reporting offered/found counts as before.
+
+Preserved: known ID → remote/catalogue ID → remote location → indexed filename/size resolution;
+Default-dispatcher parsing/writing; document-name fallback and filename sanitization; persistence
+and refresh/notice order; cancellation and exception propagation. `AndroidPlaylistFiles` reads UTF-8
+on IO through the existing document adapter and forwards shared copies without changing their
+calling dispatcher. The share intent fields, URI grant, manifest and PL/EN resources are unchanged.
+
+**Checked:** 11 new workflow tests, 3 Android-file/intent tests and 2 PL/EN notice tests passed
+before integration, alongside the existing `PlaylistFileTest` cases. Robolectric API 29 actually
+read a shared file through the manifest-declared `FileProvider`; synthetic document streams checked
+IO dispatch and closing on success/failure. This is host evidence, not another app opening a share
+on a phone. Two controlled mutation batches made all 16 new tests fail (9 then 7); all 3 mutated
+files were restored and compared with their saved copies. Logs:
+`dist/architecture-baseline/20261004-playlist-transfer-{tests,mutations-1,mutations-2}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **535 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-playlist-transfer-full-gate.log`).
+`PlaybackController.kt`: 4,043 → 3,938 lines; transfer workflow: 162, Android files: 35, text: 25.
+**Not checked:** real document providers, the chooser/receiving app, import against a phone database,
+release APK or long-term behaviour. No new database transaction, schema or persistence format.
 
 ### Pre-existing cancellation-notice defect — reproduced, not changed
 

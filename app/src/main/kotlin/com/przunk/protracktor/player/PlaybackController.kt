@@ -22,7 +22,6 @@ import com.przunk.protracktor.data.HistoryStore
 import com.przunk.protracktor.data.IndexedFile
 import com.przunk.protracktor.data.LibraryIndexStore
 import com.przunk.protracktor.data.LibraryStore
-import com.przunk.protracktor.data.PlaylistFile
 import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SchemaSql
 import com.przunk.protracktor.data.SongLengthStore
@@ -309,6 +308,34 @@ class PlaybackController private constructor(private val context: Context) {
 
     private val history = HistoryStore(context)
     private val libraryIndex = LibraryIndexStore(context)
+
+    private val playlistText = AndroidPlaylistText(context)
+    private val playlistTransfer = PlaylistTransfer(
+        scope = scope,
+        store = object : PlaylistTransfer.Store {
+            override suspend fun tracksIn(id: Long) = store.tracksIn(id)
+            override suspend fun allTracks() = store.allTracks()
+            override suspend fun findByFile(name: String, size: Long) = libraryIndex.findByFile(name, size)
+            override suspend fun createPlaylist(name: String) = store.createPlaylist(name)
+            override suspend fun replaceTracks(id: Long, tracks: List<TrackRef>) = store.replaceTracks(id, tracks)
+        },
+        files = AndroidPlaylistFiles(trackFileAccess, remoteFiles),
+        ui = object : PlaylistTransfer.Ui {
+            override fun exportSelection(): PlaylistTransfer.ExportSelection {
+                val current = _state.value
+                return PlaylistTransfer.ExportSelection(current.activePlaylistId, current.queue.tracks, current.playlists)
+            }
+            override suspend fun refreshPlaylists() {
+                _state.update { it.copy(playlists = store.playlists()) }
+            }
+            override fun say(notice: PlaylistTransfer.Notice) {
+                this@PlaybackController.say(playlistText.message(notice))
+            }
+            override fun share(uri: String, subject: String) {
+                _share.tryEmit(AndroidPlaylistFiles.shareIntent(uri, subject))
+            }
+        },
+    )
 
     private val librarySearch = LibrarySearch(object : LibrarySearch.Sources {
         override suspend fun searchLocal(query: String, limit: Int, platforms: Set<String>) =
@@ -1167,141 +1194,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- playlists as files -----------------------------------------------------------------
 
-    /**
-     * Writes one playlist out and offers it to be shared.
-     *
-     * Through the same copy-and-share path a track uses (`docs/ARCHITECTURE.md` §16), because a
-     * playlist is a file like any other and nothing else here can hand a file to another app.
-     */
-    fun exportPlaylist(id: Long) {
-        scope.launch {
-            val current = _state.value
-            // The open playlist is held in the queue, where reordering and removal have already
-            // happened; only for any other one is the database the truth.
-            val tracks =
-                if (id == current.activePlaylistId) current.queue.tracks else store.tracksIn(id)
-            if (tracks.isEmpty()) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_playlist_empty))) }
-                return@launch
-            }
-            val label = current.playlists.firstOrNull { it.id == id }?.name ?: "playlist"
-            val name = label.replace(Regex("[^\\w -]"), "_")
-            val bytes = withContext(Dispatchers.Default) {
-                PlaylistFile.write(label, tracks).toByteArray()
-            }
-            val uri = remoteFiles.shareableCopy("$name.m3u8", bytes)
-            if (uri == null) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_playlist_failed))) }
-                return@launch
-            }
-            _share.tryEmit(
-                Intent(Intent.ACTION_SEND).apply {
-                    // The registered type for M3U. Other players offer to open it; anything else
-                    // treats it as the text file it is.
-                    type = "audio/x-mpegurl"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_SUBJECT, name)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-            )
-        }
-    }
+    fun exportPlaylist(id: Long) = playlistTransfer.exportPlaylist(id)
 
-    /**
-     * Reads a playlist file into a new playlist of its own.
-     *
-     * **A new one, never the current one.** An import that appended to whatever happened to be open
-     * would be an edit nobody asked for, and undoing it means finding which rows were new.
-     *
-     * Each line gets two chances. Its recorded id first, which is exact and works on the device that
-     * wrote the file — a backup restored after a reinstall is the common case and deserves to be
-     * perfect. Failing that, a match on filename and size against the scanned library, which is how
-     * a list written on another phone finds the same tunes here. A catalogue URL needs neither: it
-     * means the same everywhere.
-     */
-    fun importPlaylist(uri: Uri) {
-        scope.launch {
-            val text = withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                }.getOrNull()?.toString(Charsets.UTF_8)
-            }
-            if (text.isNullOrBlank()) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_file_unreadable))) }
-                return@launch
-            }
-
-            val entries = withContext(Dispatchers.Default) { PlaylistFile.read(text) }
-            if (entries.isEmpty()) {
-                _state.update { it.copy(message = Message(context.getString(R.string.notice_file_no_tracks))) }
-                return@launch
-            }
-
-            val known = store.allTracks().associateBy { it.id }
-            // An M3U is a text file anybody can write and nothing stops it naming the same tune
-            // twice. `LibraryStore.replaceTracks` is where that is dealt with, for every writer at
-            // once; the count reported below is of what was found, which is what the file offered.
-            val found = entries.mapNotNull { entry -> resolve(entry, known) }
-
-            // The file's own name first. A filename is a poor second: `labelOf` reads a *tree*
-            // document id, and handed the document URI of a picked file it returned things like
-            // "primary:Download/Favorites" -- an identifier, not a title. Kept as the fallback for
-            // files written by other players, which carry no name at all.
-            val name = PlaylistFile.nameIn(text)
-                ?: MediaScanner.labelOf(uri).substringAfterLast('/').substringAfterLast(':')
-                    .substringBeforeLast('.')
-                    .ifBlank { "Imported" }
-            val playlistId = store.createPlaylist(name)
-            store.replaceTracks(playlistId, found)
-
-            _state.update { it.copy(playlists = store.playlists()) }
-            _state.update {
-                it.copy(
-                    message = Message(
-                        if (found.size == entries.size) {
-                            context.resources.getQuantityString(
-                                R.plurals.notice_imported, found.size, found.size, name,
-                            )
-                        } else {
-                            // Said, not swallowed. A playlist that silently arrived shorter than
-                            // the file it came from is worse than one that explains itself.
-                            context.getString(
-                                R.string.notice_imported_partial, found.size, entries.size, name,
-                            )
-                        }
-                    )
-                )
-            }
-        }
-    }
-
-    private suspend fun resolve(entry: PlaylistFile.Entry, known: Map<String, TrackRef>): TrackRef? {
-        // A catalogue URL, or an id this device issued: exact either way.
-        entry.id?.let { id ->
-            known[id]?.let { return it }
-            if (id.startsWith("http") || Catalogue.owning(id) != null) {
-                return TrackRef(
-                    id = id,
-                    title = entry.title,
-                    subtitle = entry.location.substringBeforeLast('/', ""),
-                    sizeBytes = entry.sizeBytes,
-                    fileName = entry.fileName,
-                    author = entry.author,
-                )
-            }
-        }
-        if (entry.location.startsWith("http")) {
-            return TrackRef(
-                id = entry.location,
-                title = entry.title,
-                subtitle = entry.location.substringBeforeLast('/', ""),
-                sizeBytes = entry.sizeBytes,
-                fileName = entry.fileName,
-                author = entry.author,
-            )
-        }
-        return libraryIndex.findByFile(entry.fileName, entry.sizeBytes)
-    }
+    fun importPlaylist(uri: Uri) = playlistTransfer.importPlaylist(uri.toString())
 
     // --- sharing ------------------------------------------------------------------------------
 
