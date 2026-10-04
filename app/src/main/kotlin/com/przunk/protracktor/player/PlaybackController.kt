@@ -107,12 +107,6 @@ class PlaybackController private constructor(private val context: Context) {
          * one -- and the one after that would be added without anybody noticing this line existed.
          */
 
-        /** Four megabytes. Comfortably above any tracker module and below anything worth holding. */
-        private const val MAX_PREFETCH_BYTES = 4 * 1024 * 1024
-
-        /** Total held for reading ahead. Three of the per-file limit would be twelve megabytes. */
-        private const val MAX_PREFETCH_TOTAL_BYTES = 8 * 1024 * 1024
-
         /**
          * How far ahead Random decides and fetches.
          *
@@ -261,18 +255,6 @@ class PlaybackController private constructor(private val context: Context) {
      */
     private var openJob: Job? = null
 
-    /**
-     * Tracks read ahead, keyed by reference id, in the order they were read.
-     *
-     * Read ahead because starting a track is dominated by **reading** it rather than by decoding
-     * it: a module is kilobytes and decodes in milliseconds, while opening one on a network share
-     * is a round trip measured in seconds (`docs/BACKLOG.md` R9). More than one entry because
-     * Random reads several ahead (`docs/BACKLOG.md` A11), and a single slot could only ever hold
-     * the very next one.
-     */
-    private val prefetched = LinkedHashMap<String, ByteArray>()
-    private var prefetchJob: Job? = null
-
     private var scanJob: Job? = null
 
     /** The background metadata pass. Cancelled and restarted whenever the track list changes. */
@@ -293,6 +275,7 @@ class PlaybackController private constructor(private val context: Context) {
     private val remoteFiles = RemoteFiles(context)
     private val trackFileAccess = AndroidTrackFileAccess(context.contentResolver, remoteFiles)
     private val trackFiles = TrackFiles(trackFileAccess, backgroundWork, ::refreshOnPhone)
+    private val readAhead = PlaybackReadAhead(scope, trackFiles::read)
     private val songLengths = SongLengthStore(context)
     private val songDbLengths = com.przunk.protracktor.data.SongDbLengthStore(context)
     private val learnedLengths = com.przunk.protracktor.data.LearnedLengthStore(context)
@@ -3693,7 +3676,7 @@ class PlaybackController private constructor(private val context: Context) {
             // Already read while the previous track was playing, which is the whole point.
             // Removed rather than left: it is about to be the current track, and holding a second
             // copy of it helps nobody.
-            val ready = prefetched.remove(ref.id)
+            val ready = readAhead.take(ref.id)
 
             val bytes = ready ?: run {
                 _state.update { it.copy(loadingTrack = true) }
@@ -4072,35 +4055,7 @@ class PlaybackController private constructor(private val context: Context) {
             listOfNotNull(_state.value.queue.upcoming)
         }
 
-        // The eviction rule, and it is exact rather than a budget: what is no longer coming is no
-        // longer wanted. Pressing previous or switching playlists drops what was read for the path
-        // not taken, at the moment it stops being the path.
-        prefetched.keys.retainAll(wanted.mapTo(mutableSetOf()) { it.id })
-
-        val missing = wanted.filter { it.id !in prefetched }
-        if (missing.isEmpty()) return
-
-        prefetchJob?.cancel()
-        prefetchJob = scope.launch {
-            // **Together, not one after another.** These fetches spend nearly all their time
-            // waiting on a network, so reading three in turn makes the third arrive three round
-            // trips late -- which is the wait this whole thing exists to remove. Serial reads here
-            // are visible on a device without needing a measurement.
-            missing.forEach { ref ->
-                launch {
-                    val bytes = trackFiles.read(ref) ?: return@launch
-                    // A large file is not worth holding in memory to save a second; these formats
-                    // are kilobytes and anything of this size is not one of them.
-                    if (bytes.size > MAX_PREFETCH_BYTES) return@launch
-                    // Back on the scope's dispatcher (main), so the budget check and the write
-                    // cannot interleave with another fetch finishing. The second bound is on the
-                    // total, because three files each under the per-file limit are not under it.
-                    if (prefetched.values.sumOf { it.size } + bytes.size <= MAX_PREFETCH_TOTAL_BYTES) {
-                        prefetched[ref.id] = bytes
-                    }
-                }
-            }
-        }
+        readAhead.prepare(wanted)
     }
 
     private fun stopPlayback() {
@@ -4110,8 +4065,7 @@ class PlaybackController private constructor(private val context: Context) {
         // different one.
         openJob?.cancel()
         openJob = null
-        prefetchJob?.cancel()
-        prefetched.clear()
+        readAhead.clear()
         track?.close()
         track = null
         // The retry goes with it. Everything that calls this is the user moving on -- switching

@@ -57,8 +57,9 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
-  reference-data downloads and native replay installation extracted; catalogue browsing, cache/prefetch
-  coordination, playlist/persistence and playback boundaries still pending.
+  reference-data downloads, native replay installation and playback read-ahead extracted;
+  catalogue browsing, Browse cache/prefetch coordination, playlist/persistence and playback boundaries
+  still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
@@ -203,6 +204,31 @@ files were restored and compared byte for byte with their saved copies. Logs:
 checks (`dist/architecture-baseline/20261004-replays-full-gate.log`).
 **Not checked:** actual network/filesystem/native activation on a phone, release APK and long-term
 playback. Injected host operations check orchestration, not the emulator's ability to use a download.
+
+### Playback read-ahead ownership — 2026-10-04
+
+`PlaybackReadAhead` owns the in-memory byte map and prefetch job. The controller retains selection
+of playlist/random/external-file candidates and uses the same `TrackFiles.read` path and process
+scope. The preparation body matches the former controller body byte for byte after substituting
+the injected reader. Opening consumes the same entry; stopping calls cancel/clear at the same point
+before closing the native track. No dispatcher, mutex, extra scope or disk cache was introduced.
+
+**Checked:** 8 new workflow tests: concurrent reads, consume-on-open, wanted-ID eviction, retained
+entries, 4 MB per-file/8 MB total limits, cancellation on replacement/stop, early-return ordering
+and propagated read errors. Two controlled mutation batches made all 8 tests fail (6 then 2);
+the source was restored and compared with its saved copy after each. Evidence:
+`dist/architecture-baseline/20261004-read-ahead-{tests,mutations-1,mutations-2}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **510 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-read-ahead-full-gate.log`).
+`PlaybackController.kt`: 4,133 → 4,087 lines; `PlaybackReadAhead.kt`: 73 lines.
+
+**Existing behaviour retained:** when a new candidate list is empty or entirely held, preparation
+returns before cancelling an older read. That read can subsequently store its bytes even though
+its ID is no longer wanted. The test reproduces both cases; changing the policy is outside this
+extraction. Folder cache-ahead and disk-cache ownership remain separate pending boundaries.
+**Not checked:** real network/provider read-ahead, playback latency or memory behaviour on a phone,
+release APK and long-term stability.
 
 ### Pre-existing cancellation-notice defect — reproduced, not changed
 
