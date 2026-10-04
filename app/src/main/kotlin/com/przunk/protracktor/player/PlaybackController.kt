@@ -1047,94 +1047,30 @@ class PlaybackController private constructor(private val context: Context) {
                 libraryIndex.indexedIn(folder.uri),
                 stale = libraryIndex.isStale(folder.uri, fingerprint),
             )
-            // Found so far: what was kept, and what the workers add. Shared between them, and read
-            // whole for a save, so every touch holds its lock.
-            val indexed = java.util.Collections.synchronizedList(plan.kept.toMutableList())
-            val done = java.util.concurrent.atomic.AtomicInteger(plan.kept.size)
-            _browse.update { it.copy(scanProgress = done.get() to candidates.size) }
-            val (together, alone) = IncrementalScan.lanes(plan.toOpen)
-            val nextTogether = java.util.concurrent.ConcurrentLinkedQueue(together)
-            var savedAt = done.get()
-            // What is already in the index: everything kept from the last scan. A save adds only
-            // what came after -- rewriting the whole folder each time cost the size of the index.
-            var savedRows = plan.kept.size
-            suspend fun savedSoFar() {
-                val fresh = synchronized(indexed) { indexed.subList(savedRows, indexed.size).toList() }
-                savedRows += fresh.size
-                withContext(NonCancellable) { libraryIndex.addToFolder(fresh, fingerprint) }
-            }
-            suspend fun saved() {
-                val snapshot = synchronized(indexed) { indexed.toList() }
-                withContext(NonCancellable) { libraryIndex.replaceFolder(folder.uri, snapshot, fingerprint) }
-            }
-            var shownAt = 0L
-            fun notify(now: Int) {
-                // At most twice a second: a notification per file is one the system drops.
-                val at = SystemClock.elapsedRealtime()
-                if (at - shownAt < 500 && now != candidates.size) return
-                shownAt = at
-                ScanNotification.show(context, folder.displayName, now, candidates.size)
-                // **The list fills in as the scan goes** (the owner, 2026-09-29: it said "nothing
-                // playable" until the scan ended and the folder was opened again).
-                val sofar = synchronized(indexed) { indexed.toList() }
-                _browse.update { current ->
-                    if (current.openFolder?.uri != folder.uri) current
-                    else treeOf(current, folder, sofar.map(::toTrackRef), keepLevel = true).copy(loading = false, folderUnscanned = false)
-                }
-            }
-            notify(done.get())
-            suspend fun opened(candidate: MediaScanner.Candidate, on: kotlinx.coroutines.CoroutineDispatcher) {
-                withContext(on) { probe(candidate, folder.uri) }?.let(indexed::add)
-                val now = done.incrementAndGet()
-                // Every file would be a state update per file and a recomposition per file; every
-                // twenty-fifth is still movement on screen and costs almost nothing.
-                if (now % 25 == 0 || now == candidates.size) {
-                    _browse.update { it.copy(scanProgress = now to candidates.size) }
-                    notify(now)
-                }
-            }
-            try {
-                kotlinx.coroutines.coroutineScope {
-                    // **Side by side where the name allows it** (A67: 11,582 ASMA files took about a
-                    // quarter of an hour, 80 ms each, one after another).
-                    val workers = List(IncrementalScan.PARALLEL) {
-                        launch {
-                            while (true) {
-                                ensureActive()
-                                opened(nextTogether.poll() ?: break, scanWork)
-                            }
-                        }
-                    } + launch {
-                        for (candidate in alone) {
-                            ensureActive()
-                            opened(candidate, backgroundWork)
-                        }
+            val indexed = ScanBatch(scanWork, backgroundWork, SystemClock::elapsedRealtime).run(
+                plan = plan,
+                total = candidates.size,
+                probe = { candidate -> probe(candidate, folder.uri) },
+                saveProgress = { fresh -> libraryIndex.addToFolder(fresh, fingerprint) },
+                saveCompleted = { snapshot -> libraryIndex.replaceFolder(folder.uri, snapshot, fingerprint) },
+                onProgress = { done -> _browse.update { it.copy(scanProgress = done to candidates.size) } },
+                onSnapshot = { done, sofar ->
+                    ScanNotification.show(context, folder.displayName, done, candidates.size)
+                    // **The list fills in as the scan goes** (the owner, 2026-09-29: it said "nothing
+                    // playable" until the scan ended and the folder was opened again).
+                    _browse.update { current ->
+                        if (current.openFolder?.uri != folder.uri) current
+                        else treeOf(current, folder, sofar.map(::toTrackRef), keepLevel = true).copy(loading = false, folderUnscanned = false)
                     }
-                    // **Saved as it goes**, so a scan stopped -- by the X, or by the system killing
-                    // the app in the background -- is only paused: the next one keeps what is saved.
-                    launch {
-                        while (workers.any { it.isActive }) {
-                            delay(1_000)
-                            if (done.get() - savedAt >= IncrementalScan.CHECKPOINT) {
-                                savedAt = done.get()
-                                savedSoFar()
-                            }
-                        }
-                    }
-                }
-            } catch (stopped: CancellationException) {
-                withContext(NonCancellable) {
-                    savedSoFar()
+                },
+                onStopped = { done ->
                     ScanNotification.clear(context)
                     _browse.update { it.copy(scanProgress = null) }
                     _state.update {
-                        it.copy(message = Message(context.getString(R.string.notice_scan_stopped, done.get(), candidates.size)))
+                        it.copy(message = Message(context.getString(R.string.notice_scan_stopped, done, candidates.size)))
                     }
-                }
-                throw stopped
-            }
-
-            saved()
+                },
+            )
             ScanNotification.clear(context)
             _browse.update { current ->
                 // The level on screen stays, if it is still there: the list filled in under it.

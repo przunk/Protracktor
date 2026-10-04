@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-03 — version 1.0.0, schema version 21. versionCode is the commit count.
+Updated: 2026-10-04 — version 1.0.0, schema version 21. versionCode is the commit count.
 The production-access application is pending. Historical dated checks below describe their own
 builds; they are not current test counts or proof of the refactoring branch's behaviour.
 
@@ -13,6 +13,8 @@ this work. The owner must approve long-term behaviour before any later release.
 Worktree: `user/worktrees/architecture-stabilization` within the main project checkout. Its build
 output is isolated at `/tmp/protracktor-architecture-build.Qogzrp`; set
 `PROTRACKTOR_BUILD_DIR_ROOT` to that path for every build/test command in this worktree.
+Since the 2026-10-04 environment restart, also set
+`PROTRACKTOR_GRADLE_USER_HOME=/tmp/protracktor-architecture-gradle` (task-specific dependency cache).
 Existing vendored sources and npm packages are linked read-only by convention; do not fetch or
 patch through those links. The pre-existing WASM artefacts were copied, not shared for writing.
 
@@ -40,8 +42,12 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   repeat ran on unchanged source files and passed; no lint rule was disabled or suppressed.
 - **Checked:** `scripts/build-web-engine.sh` rebuilt the baseline engine from current sources,
   using `EM_CACHE=/tmp/protracktor-architecture-build.Qogzrp/emscripten-cache`. Its module/WASM and
-  build log are preserved locally in `dist/architecture-baseline/`. Boundary checks against this
-  fresh build and real-file audio comparisons are still being collected.
+  build log are preserved locally in `dist/architecture-baseline/`. The fresh build subsequently
+  passed all 49 engine checks. A real-file probe on 2026-10-04 played 5/5 fixtures without silence
+  or refusal: libopenmpt's `test.mod` (two subsongs), gme's `test.nsf` (unknown duration), ASAP's
+  `International_Karate.sap`, Hively's `karma.ahx`, and minimp3's `MEANDR_PHASE0.mp3`. Input/engine
+  hashes and the probe log are in `dist/architecture-baseline/20261004-*`. This is a partial corpus,
+  not coverage of every backend or a rendered-audio equivalence check; those remain pending.
 - **Not checked:** release APK, current Android native/UADE probes, performance comparisons and
   long-term behaviour on a phone or in a real browser.
 
@@ -50,7 +56,8 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Baseline and ownership map: initial Android/web gate and state contracts checked
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
-- Controller/workflow boundaries: state contracts extracted; operational workflows still pending.
+- Controller/workflow boundaries: state contracts and scan execution extracted; search, catalogue,
+  download/cache, playlist/persistence and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
@@ -71,6 +78,32 @@ the controller refactor. No new dependency, storage change, dispatching change o
 **Checked:** `scripts/test-protracktor.sh --really` after extraction: 445 unit tests, lint without
 errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade
 and 8 server checks. **Not checked:** behaviour on a phone, release APK and long-term stability.
+
+### Scan-execution extraction — 2026-10-04
+
+`ScanBatch` now executes the existing `IncrementalScan.Plan`. The controller still owns the scan
+job, lists the SAF tree, takes the decoder fingerprint, probes through `NativeEngine`, binds the
+folder's index writes, and updates notifications/Browse. The helper receives those operations;
+it does not create a scope, dispatcher, database connection or second mutable UI state.
+
+Preserved: four parallel-safe workers plus one serial worker on the original dispatchers;
+200-file checkpoints polled every second; append-only partial writes; whole-folder replacement
+only at completion; cancellation writes under `NonCancellable` and rethrows; progress every 25
+files and snapshots at most twice a second, except completion. Native probing/stream lifetime
+and the cancellation boundary around worker execution were not redesigned.
+
+**Checked:** 7 new `ScanBatchTest` cases plus the 4 existing incremental-scan cases. Controlled
+mutations of persistence, the worker limit, dispatcher selection and snapshot throttling made
+all 7 new cases fail; the restored source matched the saved pre-mutation copy. A test initially
+compared thread names and failed because coroutine debugging appends a suffix; it now checks
+actual `Thread` identity, so it tests dispatching rather than a diagnostic label.
+
+**Checked:** full `scripts/test-protracktor.sh --really`: **452 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8
+server checks. Evidence: `dist/architecture-baseline/20261004-scan-{tests,mutations,full-gate}.log`.
+`PlaybackController.kt`: 4,771 → 4,707 lines; `ScanBatch.kt`: 115 lines.
+**Not checked:** real SAF-provider cancellation/scan behaviour on a phone, release APK and long-term
+playback. The remaining architecture/comment stages are still open.
 
 ## What works
 
