@@ -10,7 +10,7 @@ the current boundaries and the proposed post-1.0.0 extractions.
 
 ---
 
-## Current ownership and proposed boundaries — 2026-10-04
+## Current ownership and proposed boundaries — 2026-10-05
 
 Baseline: `1455422`, the accepted `develop` when `feature/architecture-stabilization` began.
 The release remains `v1.0.0` at `2aaeeeb`. No behaviour, storage schema, decoder version or release
@@ -28,6 +28,7 @@ remain proposals. Update each row when its boundary is actually implemented.
 | Track bytes and companion files | `RemoteFiles` retains its cache and shared fetch jobs; content streams are opened/closed per read; controller retains scan/archive dispatchers | **Extracted:** `TrackFiles` routes the existing sources; `AndroidTrackFileAccess` binds resolver, shared cache and LHA operations. Playback/share/prefetch use the same reader; scanning calls its synchronous document adapter on the existing scan lane |
 | Reference-data downloads | `LibraryDownloads` owns the selected-run job in the controller's existing scope; controller owns Browse progress/counts through a narrow UI port | **Extracted:** catalogue, SID/songdb and favourite workflows, with `StoreDownloadSources` reusing existing stores/cache and `AndroidDownloadText` formatting typed notices at the original points |
 | Native replay installation | `ReplayDownloads` runs in the existing controller scope; controller owns progress, native configuration and the background dispatcher | **Extracted:** guarded sc68 then UADE downloads, activation and combined notice. Native calls remain controller-bound, including startup/post-delete UADE configuration; construction performs no download or native initialization |
+| Downloaded-data removal | `LibraryMaintenance` runs cache, catalogue index/archive, metadata and replay deletion in the controller's existing scope; stores/cache and native configuration retain their owners | **Extracted:** `LibraryMaintenanceState` publishes into the existing flows; `AndroidMaintenanceFiles` and `AndroidMaintenanceText` bind file operations and notices. No new deletion target, scope or state copy; playback and local user data remain outside this workflow |
 | Playback read-ahead | `PlaybackReadAhead` owns the byte map and job in the controller's existing scope; controller selects upcoming candidates and consumes bytes when opening a track | **Extracted:** concurrent `TrackFiles.read` calls, wanted-ID eviction, 4 MB per-file/8 MB total limits, consume-on-open and stop/replacement cancellation. The existing no-missing-bytes early return remains before cancellation |
 | Browse cache/prefetch | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns Browse cache marks and both observers, including cancellation and stale-result protection | **Extracted:** `BrowseCache` combines `OnPhone` source checks with `FolderPrefetch` planning/execution. Narrow file/progress operations reuse the same remote cache and Browse writer; no new scope, cache or policy copy |
 | Android service | `PlaybackService` owns its coroutine scope, platform media session and notification; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
@@ -61,6 +62,34 @@ passed as a lambda so wiring does not initialize `NativeEngine`, and it is still
 the atomic Browse update, including retries. Catalogue selection is captured at the original
 call/job boundaries. Overlapping reads still publish in completion order, even if an older result
 arrives after navigation; adding stale-result protection would be a separate behaviour change.
+
+Downloaded-data deletion keeps its optimistic publication before asynchronous removal. Catalogue
+deletion reuses the download guard and clears both busy markers in non-cancellable cleanup.
+Modland's favourite scope is read after clearing its favourites. Replay removal still tries all
+three directories before reading the installed version and reconfiguring UADE on the background
+lane. Cache notices are rendered inside atomic player-update retries; other notices are rendered
+once before publication. These differences preserve existing timing, not a new error policy.
+
+### Refactoring completion ledger
+
+This ledger follows the seven starting files in local `GOAL.md`. Kotlin paths are relative to
+`app/src/main/kotlin/com/przunk/protracktor/`. Line counts include comments and indicate the state
+of the branch, not architectural quality. An unfinished row is not an accepted decision to retain
+the original file. Detailed preservation evidence is in the dated checkpoints in `STATUS.md`.
+
+| Starting file; baseline → current lines | Responsibilities and resulting owners | Checkpoint / evidence | Still owed |
+| --- | --- | --- | --- |
+| `player/PlaybackController.kt`; 5,287 → 3,456 | State contracts and independent scan/search/file/download/cache/playlist/catalogue/maintenance workflows moved to the named owners above | `e48ccd8`–`36f0130` plus the downloaded-data maintenance checkpoint: full gate 596 tests; all 21 added maintenance checks mutation-sensitive | Local folders/navigation, library editing, sharing and playback ownership; final dependency review and phone checks |
+| `ui/BrowseScreen.kt`; 1,731 → 1,731 | Screen orchestration, panels, menus and dialogs still in the original owner | No extraction checkpoint | Coherent sections; preserve state/effect/list identity, Browse re-entry and Add to playlist; phone checks |
+| `ui/ProtracktorApp.kt`; 939 → 939 | App wiring and screen/dialog composition still together | No extraction checkpoint | Separate composition responsibilities without changing launchers, collectors or navigation; phone checks |
+| `ui/PlaylistScreen.kt`; 824 → 824 | Screen state/actions and presentation still together | No extraction checkpoint | Cohesive presentation sections with unchanged gestures, selection and scrolling; phone checks |
+| `web/src/app.js`; 4,300 → 4,300 | Startup, playback, navigation, rendering and events still share the entry point | No extraction checkpoint; baseline DOM/storage checks only | Reconcile accepted web PRs before editing; explicit modules, real entry-point and packaged-import checks, browser checks |
+| `web/src/catalogue.js`; 877 → 877 | Catalogue access/indexing and related navigation remain unchanged | No extraction checkpoint | Determine cohesive boundary; record any justified intact portion; test real consumers and packaged paths |
+| `native/engine/engine.cpp`; 2,970 → 2,970 | Backend adapters, selection/probing and shared helpers still together | Fresh baseline WASM build and five-format playback probe; not audio equivalence | Adapter extraction with both source lists; Android/UADE and WASM metadata/refusal/PCM/subsong/seek comparisons |
+
+The separate first-party comment pass, final documentation reconciliation, release-variant test
+APK, packaged web player and candidate-specific manual checklist remain open. No row grants merge
+or release approval; long-term acceptance remains with the owner.
 
 ## 1. Platform
 

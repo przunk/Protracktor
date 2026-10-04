@@ -29,7 +29,6 @@ import com.przunk.protracktor.data.SongDbMetadata
 import com.przunk.protracktor.data.TrackMetadataStore
 import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
-import com.przunk.protracktor.net.CacheBudget
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.Modland
@@ -43,7 +42,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.BufferOverflow
@@ -437,6 +435,34 @@ class PlaybackController private constructor(private val context: Context) {
             override fun refreshCatalogues() = this@PlaybackController.refreshCatalogues()
         },
         text = downloadText,
+    )
+
+    private val maintenanceText = AndroidMaintenanceText(context)
+    private val libraryMaintenance = LibraryMaintenance(
+        scope = scope,
+        backgroundWork = backgroundWork,
+        store = object : LibraryMaintenance.Store {
+            override suspend fun clearIndex(catalogueId: String) { catalogues.clearIndex(catalogueId) }
+            override suspend fun clearFavourites() { favourites.clear() }
+            override suspend fun clearSongLengths() { songLengths.clear() }
+            override suspend fun clearTrackMetadata() { trackMetadata.clear() }
+            override suspend fun clearSongDbLengths() { songDbLengths.clear() }
+        },
+        files = AndroidMaintenanceFiles(context, remoteFiles),
+        state = LibraryMaintenanceState(_state, _browse, maintenanceText::message),
+        native = object : LibraryMaintenance.Native {
+            override fun installedVersion() = context.packageManager
+                .getPackageInfo(context.packageName, 0).longVersionCode.toString()
+            override fun configureUade(version: String) = this@PlaybackController.configureUade(version)
+        },
+        ui = object : LibraryMaintenance.Ui {
+            override fun beginDownload(key: String, label: String) = this@PlaybackController.beginDownload(key, label)
+            override fun endDownload(key: String) = this@PlaybackController.endDownload(key)
+            override fun refreshOnPhone() = this@PlaybackController.refreshOnPhone()
+            override fun refreshCatalogues() = this@PlaybackController.refreshCatalogues()
+            override fun leaveFavourites() = setRandomScope(RandomScope.Everything)
+        },
+        text = maintenanceText,
     )
 
     private val audioFocus = AudioFocus(
@@ -1689,118 +1715,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- giving the disk back -----------------------------------------------------------------
 
-    /**
-     * Everything here deletes something the app can fetch again.
-     *
-     * That is the rule, not a coincidence: the storage screen may only offer to delete what is a
-     * copy. The user's playlists, their granted folders and their history are not on it, and the
-     * one thing that looks like a copy but is not — a local library index, which is a record of
-     * files only that phone has seen — is only ever *rebuilt*, never dropped.
-     *
-     * Each of these ends in `refreshCatalogues()` so the numbers the user is looking at become
-     * true immediately. A delete that leaves the old size on screen reads as a delete that failed.
-     */
-    fun clearFetchedCache() {
-        scope.launch {
-            val freed = withContext(backgroundWork) {
-                val before = remoteFiles.cacheBytes()
-                remoteFiles.clearCache()
-                before - remoteFiles.cacheBytes()
-            }
-            // ASMA's tunes are still here; what went was the cache.
-            refreshOnPhone()
-            _state.update { it.copy(message = Message(freedMessage(freed))) }
-            refreshCatalogues()
-        }
-    }
+    fun clearFetchedCache() = libraryMaintenance.clearFetchedCache()
 
-    /**
-     * Throws away one catalogue's index.
-     *
-     * **Playback is deliberately left alone.** A queued catalogue track carries its own id, and
-     * the URL to fetch it is derived
-     * from that id by `Catalogue.urlFor` rather than read from `catalogue_tracks` — so a track that
-     * is playing keeps playing, and one further down the playlist still plays when it is reached.
-     * What actually degrades is the format label (`catalogueFormatOf` finds nothing and returns
-     * null) and "more from this author". Both are cosmetic and both come back with the index.
-     *
-     * **An archive catalogue's index and its archive are one thing**, so this deletes both. ASMA
-     * publishes a single zip that `indexCatalogue` stores whole and parses in place; removing the
-     * removing the rows and keeping the zip would leave a catalogue reporting its full track
-     * count, browsing normally and playing nothing.
-     */
-    fun deleteCatalogueIndex(catalogueId: String) {
-        // **The row answers at once** (`docs/STATUS.md` C76). Deleting Modland is half a million
-        // rows and their indexes -- 5.1 s on a desktop, measured, and 10 to 15 on a phone -- and
-        // for all of it the confirmed delete looked like a press that had done nothing. So the
-        // screen is told first: the catalogue shows as not indexed, its storage row goes, and its
-        // Browse row turns into "deleting…", which also refuses a new download until this is done.
-        if (!beginDownload(catalogueId, context.getString(R.string.browse_deleting_short))) return
-        // **Said now, with the row going, not when the database has finished** (C77). Several
-        // deletes in a row queue on the one database and used to finish -- and speak -- almost
-        // together, seconds after their rows had gone. The size is known before anything is
-        // deleted, so the message can be the true one. Only a failure speaks again later.
-        val displayName = _browse.value.catalogues.firstOrNull { it.id == catalogueId }?.displayName ?: catalogueId
-        val archived = _browse.value.archiveBytes[catalogueId] ?: 0L
-        say(Message(if (archived > 0L) freedMessage(archived) else context.getString(R.string.notice_index_deleted)))
-        _browse.update { current ->
-            current.copy(
-                deleting = current.deleting + catalogueId,
-                catalogues = current.catalogues.map {
-                    if (it.id == catalogueId) it.copy(trackCount = 0, indexedAt = null, archiveCount = 0) else it
-                },
-                archiveBytes = current.archiveBytes - catalogueId,
-            )
-        }
-        scope.launch {
-            try {
-                runCatching { catalogues.clearIndex(catalogueId) }.onFailure {
-                    say(Message(context.getString(R.string.notice_delete_failed, displayName)))
-                    return@launch
-                }
-                if (catalogueId == Modland.id) dropFavourites()
-                withContext(backgroundWork) {
-                    if (Catalogue.byId(catalogueId)?.isArchive == true) remoteFiles.deleteArchive(catalogueId)
-                }
-                // Rows of that archive on screen are no longer on the phone.
-                refreshOnPhone()
-                _browse.update { current ->
-                    current.copy(
-                        // A deleted catalogue drops out of an online scope that named it. Left in, the
-                        // label would go on claiming a source that no longer exists.
-                        searchScope = (current.searchScope as? SearchScope.Online)
-                            ?.let { SearchScope.Online(it.catalogueIds - catalogueId) }
-                            ?: current.searchScope,
-                        openCatalogue = current.openCatalogue?.takeIf { it.id != catalogueId },
-                    )
-                }
-                refreshCatalogues()
-            } finally {
-                withContext(NonCancellable) {
-                    endDownload(catalogueId)
-                    _browse.update { it.copy(deleting = it.deleting - catalogueId) }
-                }
-            }
-        }
-    }
-
-    /**
-     * Modland's favourites go with Modland's index: they are Modland paths, meaningless without it.
-     * Random leaves that scope, since a scope whose contents are gone would draw nothing -- and the
-     * chip that set it is then disabled, leaving no way back but a restart.
-     */
-    private suspend fun dropFavourites() {
-        favourites.clear()
-        if (_browse.value.randomScope is RandomScope.Favourites) setRandomScope(RandomScope.Everything)
-    }
-
-    /** The wording for what [CacheBudget.describeFreed] worked out. */
-    private fun freedMessage(bytes: Long): String =
-        when (val freed = CacheBudget.describeFreed(bytes)) {
-            CacheBudget.Freed.NOTHING -> context.getString(R.string.notice_freed_nothing)
-            CacheBudget.Freed.LESS_THAN_A_MEGABYTE -> context.getString(R.string.notice_freed_under_a_megabyte)
-            is CacheBudget.Freed.Megabytes -> context.getString(R.string.notice_freed_megabytes, freed.count)
-        }
+    fun deleteCatalogueIndex(catalogueId: String) = libraryMaintenance.deleteCatalogueIndex(catalogueId)
 
     /**
      * Marks [key] as downloading, or answers false if it already was.
@@ -1829,35 +1746,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun downloadSongMetadata() = libraryDownloads.downloadSongMetadata()
 
-    /**
-     * Throws away every downloaded fact about files: HVSC's lengths, songdb's credits and lengths.
-     *
-     * **What this phone learnt by playing stays** (`learned_lengths`, A50): it was not downloaded,
-     * cannot be downloaded again, and costs next to nothing. The button deletes what it fetched.
-     *
-     * The row goes and the message comes at the press; the tables empty behind them (C77).
-     */
-    fun deleteSongMetadata() {
-        say(Message(context.getString(R.string.notice_song_metadata_deleted)))
-        _browse.update {
-            it.copy(
-                held = it.held?.copy(songLengths = false, trackMetadata = false, songDbLengths = false),
-                songLengthCount = 0,
-                trackMetadataCount = 0,
-                songDbLengthCount = 0,
-            )
-        }
-        scope.launch {
-            runCatching {
-                songLengths.clear()
-                trackMetadata.clear()
-                songDbLengths.clear()
-            }.onFailure {
-                say(Message(context.getString(R.string.notice_delete_failed, context.getString(R.string.song_metadata_title))))
-            }
-            refreshCatalogues()
-        }
-    }
+    fun deleteSongMetadata() = libraryMaintenance.deleteSongMetadata()
 
     private fun refreshFavouriteCount() = catalogueBrowser.refreshFavouriteCount()
 
@@ -1967,42 +1856,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun downloadReplayRoutines() = replayDownloads.download()
 
-    /**
-     * Throws both sets of replay routines away: `.sc68` goes back to mostly silent and the Amiga
-     * custom formats stop playing; SNDH does not care. One delete, as there is one download.
-     *
-     * The size is known before anything goes, so the true message is said at the press (C77).
-     */
-    fun deleteReplayRoutines() {
-        val now = _browse.value
-        say(Message(freedMessage(now.replayBytes + now.playerBytes)))
-        _browse.update {
-            it.copy(
-                held = it.held?.copy(replays = false, players = false),
-                replayCount = 0,
-                replayBytes = 0L,
-                playerCount = 0,
-                playerBytes = 0L,
-            )
-        }
-        scope.launch {
-            val removed = withContext(backgroundWork) {
-                val sc68 = Sc68Replays.delete(context)
-                val uade = UadePlayers.delete(context)
-                // The copies UADE actually reads go too, or it would go on playing from them with
-                // nothing on the storage screen saying they were there.
-                java.io.File(context.filesDir, "uade").deleteRecursively()
-                sc68 && uade
-            }
-            if (!removed) {
-                say(Message(context.getString(R.string.notice_delete_failed, context.getString(R.string.replay_routines_title))))
-            }
-            val version = context.packageManager
-                .getPackageInfo(context.packageName, 0).longVersionCode.toString()
-            withContext(backgroundWork) { configureUade(version) }
-            refreshCatalogues()
-        }
-    }
+    fun deleteReplayRoutines() = libraryMaintenance.deleteReplayRoutines()
 
     fun openCatalogue(summary: CatalogueSummary) = catalogueBrowser.openCatalogue(summary)
 

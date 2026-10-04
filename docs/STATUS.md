@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-04 — version 1.0.0, schema version 21. versionCode is the commit count.
+Updated: 2026-10-05 — version 1.0.0, schema version 21. versionCode is the commit count.
 The production-access application is pending. Historical dated checks below describe their own
 builds; they are not current test counts or proof of the refactoring branch's behaviour.
 
@@ -58,13 +58,67 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   remain part of their respective extraction stages; this is not a completed refactor.
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
   reference-data downloads, native replay installation, playback read-ahead, Browse cache/prefetch,
-  playlist file transfer, playlist-session persistence/management and catalogue browsing extracted.
+  playlist file transfer, playlist-session persistence/management, catalogue browsing and
+  downloaded-data maintenance extracted.
   Local-folder/navigation, library editing, sharing and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
 - Comment correction/shortening: not started; separate commits after the structural work.
 - Final documentation, full gate, test artefacts and manual handover: pending.
+
+### Downloaded-data maintenance extraction — 2026-10-05
+
+Checkpoint scope: move cache, catalogue-index/archive, downloaded-metadata and replay deletion
+workflows into `LibraryMaintenance`, using the same stores, cache, scope, background dispatcher
+and native configuration callback. Publish through a narrow adapter to the existing player/Browse
+flows; keep file operations and localized messages Android-bound. Delete no new category of data.
+
+Preserve immediate notices/optimistic rows before launching work, the catalogue download guard,
+ordered store/file reads, Modland favourite-scope handling, archive deletion's ignored Boolean,
+metadata failure refreshes, replay adoption cleanup and package-version/configuration timing.
+Cache-cleared messages must still be created inside atomic state-update retries. Characterise
+failures and cancellation as they exist, including the non-cancellable catalogue cleanup; no
+rollback, new guard or improved error policy belongs in this extraction.
+
+The controller now delegates these four workflows to `LibraryMaintenance`. The state adapter
+writes the existing flows; Android adapters use the existing remote cache, replay directories and
+localized resources. The remaining controller code was compared with its pre-extraction copy.
+`PlaybackController.kt`: 3,602 → 3,456 lines. The workflow is 206 lines, state adapter 87,
+file adapter 23 and notice adapter 32; no second store, cache or playback owner was introduced.
+
+**Checked:** 21 added tests (15 workflow/state, 3 Android file boundaries, 3 PL/EN notice checks)
+passed before and after integration. Two initial exception-identity assertions were corrected:
+coroutine stack recovery can copy an exception across a dispatcher while retaining the original
+as its cause; the tests now require the same type/message and original cause. Production exception
+handling was not changed.
+
+**Checked:** all 21 tests failed under controlled mutations: 7 construction/file/message checks,
+then 14 workflow/state checks (the unchanged constructor test still passed in the second batch).
+The audit matched failed test names against the 21-test integration run. All four helper files
+were restored and compared with saved originals; the controller still matched its integrated copy.
+
+**Checked:** full `scripts/test-protracktor.sh --really --no-daemon
+-Pkotlin.compiler.execution.strategy=in-process`, with the environment below: **596 unit tests**
+in 84 suites, zero failures/errors/skips, lint without errors, 581 page checks, 49 existing-WASM
+checks, 8 SAP checks, 135 icon paths, browser storage upgrade, 8 server checks and store metadata;
+253 seconds overall. Unit tests were forced to execute, not served from cache.
+
+**Verification impediment:** JVM SIGSEGVs interrupted compilation, including SerialGC/C1 on both
+the shared JDK and a task-local copy, and SerialGC with JIT disabled. The interpreter attempt
+failed in `FastScanClosure<DefNewYoungerGenClosure>::do_oop`; this does not establish the cause.
+Those interrupted mutation attempts produced no test results and are not counted as evidence.
+A single read-only `rg` pipeline also exited 139; a subsequent narrower query succeeded. The
+later focused pass, both successful mutation batches and full gate used a task-local copy of the
+same JDK 17.0.19+10 (`PROTRACKTOR_JAVA_HOME=/tmp/protracktor-architecture-build.Qogzrp/toolchain/jdk`),
+`JAVA_TOOL_OPTIONS='-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:-UseCompressedOops -XX:-UseCompressedClassPointers'`
+and `-Pkotlin.compiler.execution.strategy=in-process --no-daemon`. This is a command-local
+workaround, not proof of the cause or lasting environment stability. No repository toolchain or
+shared configuration was changed. Logs, saved originals and diagnostics are under
+`dist/architecture-baseline/20261005-library-maintenance-*`.
+
+**Not checked:** real-phone deletion/SQLite/native timing, release APK and long-term behaviour.
+No schema, deletion policy, native lifetime or UI change was intended or included.
 
 ### Catalogue-browsing extraction — 2026-10-04
 
