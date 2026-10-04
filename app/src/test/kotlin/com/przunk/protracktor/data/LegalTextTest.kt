@@ -49,7 +49,7 @@ class LegalTextTest {
     fun `the host the song lengths come from is named in both languages`() {
         // Moved from HVSC's website to DeepSID on 2026-10-01; a move the policy does not follow
         // is a host the user was never told about.
-        val host = java.net.URI(com.przunk.protracktor.player.PlaybackController.SONG_LENGTHS_URL).host
+        val host = java.net.URI(com.przunk.protracktor.player.LibraryDownloads.SONG_LENGTHS_URL).host
         for (polish in listOf(false, true)) {
             val bullets = LegalText.privacyBlocks(policy, polish)
                 .filterIsInstance<LegalText.Block.Bullet>().map { it.text }

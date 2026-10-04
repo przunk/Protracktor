@@ -10,7 +10,7 @@ the current boundaries and the proposed post-1.0.0 extractions.
 
 ---
 
-## Current ownership and proposed boundaries — 2026-10-03
+## Current ownership and proposed boundaries — 2026-10-04
 
 Baseline: `1455422`, the accepted `develop` when `feature/architecture-stabilization` began.
 The release remains `v1.0.0` at `2aaeeeb`. No behaviour, storage schema, decoder version or release
@@ -25,7 +25,8 @@ remain proposals. Update each row when its boundary is actually implemented.
 | Persistence | `LibraryStore`/`LibraryIndexStore` and other stores own database access; controller owns the active working playlist and debounced save jobs | Separate restore/save/import/export orchestration without duplicating the working queue or changing transaction boundaries |
 | Catalogue browsing/search | Controller owns `BrowseState` and delegates data reads to catalogue/library stores; UI owns sheet/scroll/selection state | **Search extracted:** `LibrarySearch` runs the four-source query through narrow data operations, retaining order, caps, deduplication and live-outcome timing; controller publishes loading/results/messages. Browse/session boundaries remain pending |
 | Track bytes and companion files | `RemoteFiles` retains its cache and shared fetch jobs; content streams are opened/closed per read; controller retains scan/archive dispatchers | **Extracted:** `TrackFiles` routes the existing sources; `AndroidTrackFileAccess` binds resolver, shared cache and LHA operations. Playback/share/prefetch use the same reader; scanning calls its synchronous document adapter on the existing scan lane |
-| Downloads/cache | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns selected downloads, read-ahead bytes and jobs | Download/cache coordinators using the existing fetch owner, limits and cancellation semantics |
+| Reference-data downloads | `LibraryDownloads` owns the selected-run job in the controller's existing scope; controller owns Browse progress/counts through a narrow UI port | **Extracted:** catalogue, SID/songdb and favourite workflows, with `StoreDownloadSources` reusing existing stores/cache and `AndroidDownloadText` formatting typed notices at the original points. Native replay installation remains pending |
+| Cache/prefetch | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns read-ahead bytes and jobs | Cache/prefetch coordinators using the existing fetch owner, limits and cancellation semantics |
 | Android service | `PlaybackService` owns its coroutine scope, platform media session and notification; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
 | Compose | `ProtracktorApp`, `BrowseScreen`, `PlaylistScreen` mix wiring with sections, rows and dialogs | Cohesive UI components with explicit state/actions; no extra copies of domain state or altered effect keys |
 | Web | `app.js` owns queue/playback/session/DOM state; `store.js` owns IndexedDB access; `catalogue.js` handles archive/index operations; worklet owns its engine handle | Startup/composition entry point and explicit workflow/UI modules with acyclic imports; keep messages and storage keys |

@@ -56,9 +56,9 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Baseline and ownership map: initial Android/web gate and state contracts checked
   (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
   remain part of their respective extraction stages; this is not a completed refactor.
-- Controller/workflow boundaries: state contracts, scan execution, search and track-file access
-  extracted; catalogue browsing, download/cache coordination, playlist/persistence and playback
-  boundaries still pending.
+- Controller/workflow boundaries: state contracts, scan execution, search, track-file access and
+  reference-data downloads extracted; catalogue browsing, native replay installation, cache/prefetch
+  coordination, playlist/persistence and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
@@ -150,13 +150,43 @@ errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser
 8 server checks (`dist/architecture-baseline/20261004-track-files-full-gate.log`).
 **Not checked:** real provider/network/decoder behaviour on a phone, release APK and long-term playback.
 
-### Pre-existing risk noticed during extraction — not changed
+### Catalogue/metadata download extraction — 2026-10-04
+
+`LibraryDownloads` owns catalogue, SID-length, songdb and favourite workflows and their selected-run
+job. It receives the controller's existing scope, `StoreDownloadSources` reusing existing stores
+and cache, a narrow Browse/message port, and `AndroidDownloadText`. Progress guards/counts stay in
+the same Browse state. No second scope, state flow, store instance or download-policy implementation
+was added. Native replay installation and cache eviction/prefetch remain separate pending boundaries.
+
+Preserved: `DownloadPlan` ordering, archive storage before indexing, all listed formats passed to
+the store, parse dispatching, partial persisted results, busy-step skips, success/failure counting,
+per-step cleanup, and message creation/publication timing. `DownloadNotice` is exhaustive at the
+Android resource mapping. Both privacy/source-credit tests now read the URL from its actual owner;
+the first integration compile caught the second old reference, which was updated without relaxing
+the check. Source URLs, their pinned revisions and all PL/EN resource texts are unchanged.
+
+**Checked:** 13 workflow tests passed before controller integration; after integration those tests,
+3 Robolectric PL/EN resource-mapping tests, and the existing privacy/source-credit checks passed.
+Controlled mutations of persistence, routing/order, failure reporting, guards, cancellation cleanup
+and text mapping made all 16 new tests fail. Both changed files were then restored and compared
+with saved copies. Logs: `dist/architecture-baseline/20261004-downloads-{tests,integration-tests,mutations}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **495 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-downloads-full-gate.log`).
+`PlaybackController.kt`: 4,514 → 4,183 lines;
+`LibraryDownloads.kt`: 382 lines, including the existing comments and source constants.
+**Not checked:** actual network/database/native-fingerprint integration on a phone, release APK and
+long-term behaviour. The source adapter was compiled and its forwarding reviewed, not run against
+the owner's database or live servers.
+
+### Pre-existing cancellation-notice defect — reproduced, not changed
 
 `downloadSelected` tests `isActive` inside `withContext(NonCancellable)` before showing the stopped
-notice. Code inspection suggests this observes the non-cancellable scope rather than the cancelled
-download job, so the notice may not appear. **Not checked:** a focused reproduction and the phone
-interaction. Reproduce at the download-workflow boundary and ask before changing the behaviour;
-do not silently fix it as part of moving code.
+notice. This observes the non-cancellable scope, so the notice is not emitted. **Checked:** the
+production workflow's cancellation test completes ASMA, cancels while awaiting SID lengths, retains
+the completed data, clears progress and emits no notice. A subsequent run succeeds. This is host
+evidence with fake data ports, **not** a phone check. The copied cancellation boundary and its
+behaviour were preserved; correcting the notice requires the owner's separate approval.
 
 ## What works
 
