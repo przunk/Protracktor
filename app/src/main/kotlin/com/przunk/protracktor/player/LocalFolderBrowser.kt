@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Browses the existing local index; the controller retains scan and navigation ownership. */
+/** Browses the existing local index; the controller owns scanning and BrowseWorkflow routes Back. */
 internal class LocalFolderBrowser(
     private val scope: CoroutineScope,
     private val store: Store,

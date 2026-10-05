@@ -4,11 +4,8 @@
 package com.przunk.protracktor.player
 
 /**
- * Something to tell the user.
- *
- * Carries an id so that two identical texts in a row are two separate notices rather than one that
- * silently fails to reappear. [actionLabel] is the hook the undo work will hang on; nothing sets it
- * yet.
+ * A notice with a unique id so identical consecutive texts can appear separately.
+ * [actionLabel] carries an optional action token; the UI localizes the Undo token.
  */
 data class Message(
     val text: String,

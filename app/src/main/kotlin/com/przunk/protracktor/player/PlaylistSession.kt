@@ -43,7 +43,7 @@ internal class PlaylistSession(
         suspend fun deletePlaylist(id: Long)
     }
 
-    /** Which playlist is being edited. Resolved during [restore]; there is only one so far. */
+    /** Persistence target, updated before the destination queue is published during a switch. */
     var playlistId: Long = 0L
         private set
 
@@ -70,16 +70,8 @@ internal class PlaylistSession(
     }
 
     /**
-     * Writes the track list, shortly.
-     *
-     * **Debounced, and it has to be.** `replaceTracks` deletes every row of the playlist and
-     * reinserts it — two inserts per track — and background metadata resolution identifies a
-     * track every 120 ms. Undebounced, a playlist of three hundred means some six hundred inserts
-     * eight times a second, into the same database the list is being read from, for as long as the
-     * resolution runs, and the list stutters for as long as it does.
-     *
-     * The state still updates per track, so titles appear as they are learned. It is only the disk
-     * that waits.
+     * Debounces full playlist rewrites while metadata arrives; UI updates remain immediate.
+     * The target and queue are read after the delay; their switch-time race is recorded in STATUS.md.
      */
     fun scheduleTrackWrite() {
         trackWriteJob?.cancel()
@@ -191,16 +183,8 @@ internal class PlaylistSession(
     }
 
     /**
-     * Makes another playlist the active one.
-     *
-     * Playback stops. The queue *is* the active playlist, so carrying a playing track into a list
-     * that does not contain it would leave next and previous disagreeing with the screen -- the
-     * exact fault that made the transport feel random before.
-     */
-    /**
-     * Makes another playlist the active one, abandoning any unsaved edits to this one.
-     *
-     * The UI asks first when there are edits to lose; this method is what it calls after the answer.
+     * Switches the active playlist and abandons edits after the UI has confirmed their loss.
+     * Stops playback so transport and the replacement queue refer to the same playlist.
      */
     fun switchToPlaylist(id: Long) {
         scope.launch {

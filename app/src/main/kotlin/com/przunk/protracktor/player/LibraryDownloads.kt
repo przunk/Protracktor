@@ -111,12 +111,8 @@ internal class LibraryDownloads(
     private data class Fetched(val ok: Boolean, val message: Message)
 
     /**
-     * Downloads a catalogue's index and stores it.
-     *
-     * Only entries whose filename a backend might handle are kept. Modland lists about half a
-     * million files across formats nothing here can play yet; indexing them all would cost minutes
-     * and disk to browse a list of tracks that cannot be opened. Re-run this after adding a backend
-     * -- noted in docs/BACKLOG.md so it is not discovered by wondering where the SIDs went.
+     * Stores every parsed index entry; the store marks playability separately so backend changes
+     * can be applied locally without downloading the index again.
      */
     fun indexCatalogue(id: String) {
         val catalogue = Catalogue.byId(id) ?: return
