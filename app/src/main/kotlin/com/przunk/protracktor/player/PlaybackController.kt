@@ -398,6 +398,31 @@ class PlaybackController private constructor(private val context: Context) {
             catalogues.countMatches(query, ids, platforms)
     })
 
+    private val browseWorkflow = BrowseWorkflow(
+        scope = scope,
+        browse = _browse,
+        search = librarySearch,
+        actions = object : BrowseWorkflow.Actions {
+            override fun refreshFolders() = localFolders.refreshFolders()
+            override fun refreshCatalogues() = catalogueBrowser.refreshCatalogues()
+            override fun refreshPlatformCounts() = catalogueBrowser.refreshPlatformCounts()
+            override fun refreshFavouriteCount() = catalogueBrowser.refreshFavouriteCount()
+            override fun openHistory() = this@PlaybackController.openHistory()
+            override fun openFormat(format: String) = catalogueBrowser.openFormat(format)
+            override fun openCatalogue(summary: CatalogueSummary) = catalogueBrowser.openCatalogue(summary)
+            override fun localLevel(state: BrowseState, at: String) = localFolders.levelOf(state, at)
+        },
+        onLiveResult = { live ->
+            when (live) {
+                is ModArchive.Outcome.NotReached ->
+                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreachable))) }
+                is ModArchive.Outcome.Unreadable ->
+                    _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreadable))) }
+                is ModArchive.Outcome.Found -> Unit
+            }
+        },
+    )
+
     private val downloadText = AndroidDownloadText(context)
 
     private val libraryDownloads = LibraryDownloads(
@@ -730,83 +755,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- browsing -----------------------------------------------------------------------------
 
-    fun openDomain(domain: BrowseDomain) {
-        _browse.update { BrowseNavigation.enteringDomain(it, domain) }
-        when (domain) {
-            BrowseDomain.LOCAL -> refreshFolders()
-            BrowseDomain.ONLINE -> refreshCatalogues()
-            BrowseDomain.SEARCH -> {
-                refreshCatalogues()
-                refreshPlatformCounts()
-            }
-            BrowseDomain.HISTORY -> openHistory()
-            // The root has a consumer too: Random's scope sheet is opened from here and draws the
-            // same chips. Without the counts every platform reads as "nothing indexed" and the
-            // whole sheet is disabled.
-            //
-            // Only when they are absent. This is a grouped scan of every catalogue row, the root is
-            // returned to on every step back out of a folder, and the answer only changes when an
-            // index does.
-            BrowseDomain.ROOT -> {
-                if (_browse.value.platformCounts.isEmpty()) refreshPlatformCounts()
-                // And the favourite count, for the same sheet and the same reason: it is set by
-                // `refreshCatalogues`, which the root does not call, so without this the Favourites
-                // chip reads as "not downloaded" for anyone who has not visited the catalogue list
-                // this session. Unguarded, because unlike the
-                // platform counts it is one `COUNT` over a thousand rows rather than a grouped scan
-                // of half a million, and because zero is a real answer here rather than "not asked
-                // yet" -- a guard on emptiness could never tell the two apart.
-                refreshFavouriteCount()
-            }
-        }
-    }
+    fun openDomain(domain: BrowseDomain) = browseWorkflow.openDomain(domain)
 
-    /** One step back up the browse hierarchy. Returns false when already at the top. */
-    fun browseBack(): Boolean {
-        val current = _browse.value
-
-        // A jump is one step, not a descent. "More from this author" puts you three levels deep
-        // without your having passed through any of them, so back should return you to where you
-        // actually were -- the playlist -- rather than making you climb out of a hierarchy you
-        // never climbed into, one press per level.
-        if (current.arrivedByJump) {
-            _browse.update { it.copy(arrivedByJump = false) }
-            return false
-        }
-
-        // Inside search there is one level, and it is the scope. The filter row and the results are
-        // the same screen -- filters above, list below -- so there is nothing to navigate between;
-        // the only thing that can be undone is having narrowed the search. Back widens it, which is
-        // visible in the field's label going from `Amiga` to `Everywhere`, and a second press
-        // leaves.
-        //
-        // What back must never do here is destroy the typed query or the results. The rest of this
-        // method clears `tracks` on the way out of a domain, which is right for a folder you walked
-        // out of and wrong for a search you may be coming straight back to. See `docs/WISHLIST.md`
-        // B23: back always meaning "leave" is only safe because leaving costs nothing.
-        if (current.domain == BrowseDomain.SEARCH && current.searchScope != SearchScope.Everywhere) {
-            _browse.update { it.copy(searchScope = SearchScope.Everywhere).withoutStaleResults() }
-            return true
-        }
-
-        val next = when {
-            current.openAuthor != null -> current.copy(openAuthor = null, tracks = emptyList())
-                .also { openFormat(current.openFormat.orEmpty()) }
-            current.openFormat != null -> current.copy(openFormat = null, tracks = emptyList())
-                .also { current.openCatalogue?.let(::openCatalogue) }
-            current.openCatalogue != null -> current.copy(openCatalogue = null, groups = emptyList())
-            // Up the folder's own tree first, a level at a time, and out of it only from its top.
-            current.openFolder != null && LocalTree.parent(current.folderAt, current.folderRoot) != null ->
-                localFolders.levelOf(current, LocalTree.parent(current.folderAt, current.folderRoot)!!)
-            current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList(), folderAll = emptyList(), subfolders = emptyList())
-            // Search keeps its results and its query; every other domain drops them.
-            current.domain == BrowseDomain.SEARCH -> current.copy(domain = BrowseDomain.ROOT)
-            current.domain != BrowseDomain.ROOT -> current.copy(domain = BrowseDomain.ROOT, tracks = emptyList())
-            else -> return false
-        }
-        _browse.update { next }
-        return true
-    }
+    fun browseBack(): Boolean = browseWorkflow.browseBack()
 
     fun refreshFolders() = localFolders.refreshFolders()
 
@@ -1686,8 +1637,6 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun deleteSongMetadata() = libraryMaintenance.deleteSongMetadata()
 
-    private fun refreshFavouriteCount() = catalogueBrowser.refreshFavouriteCount()
-
     /**
      * Plays a file another app handed us — a tap in a file manager, a share, a link.
      *
@@ -2186,88 +2135,15 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- search -------------------------------------------------------------------------------
 
-    fun setQuery(query: String) = _browse.update { it.copy(query = query) }
+    fun setQuery(query: String) = browseWorkflow.setQuery(query)
 
-    /** Ticks one catalogue inside an online scope. Only meaningful while that is the scope. */
-    fun toggleSearchCatalogue(id: String) = _browse.update {
-        val scope = it.searchScope as? SearchScope.Online ?: return@update it
-        val ids = if (id in scope.catalogueIds) scope.catalogueIds - id else scope.catalogueIds + id
-        it.copy(searchScope = SearchScope.Online(ids))
-    }
+    fun toggleSearchCatalogue(id: String) = browseWorkflow.toggleSearchCatalogue(id)
 
-    /** Ticks one platform. Same shape, and the same rule: empty means all of them. */
-    fun toggleSearchPlatform(id: String) = _browse.update {
-        val scope = it.searchScope as? SearchScope.ByPlatform ?: return@update it
-        val ids = if (id in scope.platformIds) scope.platformIds - id else scope.platformIds + id
-        it.copy(searchScope = SearchScope.ByPlatform(ids))
-    }
+    fun toggleSearchPlatform(id: String) = browseWorkflow.toggleSearchPlatform(id)
 
-    /**
-     * Results belong to the *kind* of search that produced them.
-     *
-     * Left on screen after switching between local, online and by-platform they are a lie the app
-     * tells with a straight face: switching to `Online` and seeing local files sitting there makes
-     * them look like an answer. The label changing on its own makes it worse rather than better --
-     * two things on one screen disagreeing about what you are looking at.
-     *
-     * **Ticking one more catalogue or platform does not do this.** It
-     * widens the same question rather than asking a different one, so throwing the answer away
-     * because Modland has been joined by ASMA reads as the app losing your place. The results are
-     * incomplete until you search again, which is the ordinary state of a filter you are still
-     * adjusting.
-     *
-     * This is the counterpart to back keeping results, not a contradiction of it. What must survive
-     * is **leaving and returning**; what must not is a list produced by a different kind of search.
-     */
-    private fun BrowseState.withoutStaleResults() =
-        copy(tracks = emptyList(), searchMatches = 0, searched = false, liveSearchNeededQuery = false)
+    fun runSearch() = browseWorkflow.runSearch()
 
-    /**
-     * Runs the search the scope describes.
-     *
-     * **An empty query is a question, not a mistake.** `%%` matches every row, so "everything on
-     * the Amiga" is a scope with nothing typed, which is the natural way to ask it and must not
-     * return silently. The per-source cap and the count beside it are built for exactly this shape
-     * of answer.
-     */
-    fun runSearch() {
-        val current = _browse.value
-        val request = LibrarySearch.Request(
-            current.query, current.searchScope, current.catalogues.filter { it.indexed }.map { it.id }.toSet(),
-        )
-        scope.launch {
-            _browse.update { it.copy(loading = true, tracks = emptyList()) }
-            val result = librarySearch.run(request) { live ->
-                when (live) {
-                    is ModArchive.Outcome.NotReached ->
-                        _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreachable))) }
-                    is ModArchive.Outcome.Unreadable ->
-                        _state.update { it.copy(message = Message(context.getString(R.string.notice_modarchive_unreadable))) }
-                    is ModArchive.Outcome.Found -> Unit
-                }
-            }
-            _browse.update {
-                it.copy(
-                    tracks = result.tracks,
-                    searchMatches = result.matches,
-                    searched = true,
-                    liveSearchNeededQuery = result.liveSearchNeededQuery,
-                    loading = false,
-                )
-            }
-        }
-    }
-
-    /**
-     * Changes what the search covers.
-     *
-     * Does not re-run the search. Choosing a scope is setting up a question, not asking it -- and
-     * re-running on every tick of a platform chip would fire a query per tap while somebody picks
-     * three of them.
-     */
-    fun setSearchScope(scope: SearchScope) {
-        _browse.update { it.copy(searchScope = scope).withoutStaleResults() }
-    }
+    fun setSearchScope(scope: SearchScope) = browseWorkflow.setSearchScope(scope)
 
     private fun refreshPlatformCounts() = catalogueBrowser.refreshPlatformCounts()
 

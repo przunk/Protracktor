@@ -59,13 +59,61 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
   reference-data downloads, native replay installation, playback read-ahead, Browse cache/prefetch,
   playlist file transfer, playlist-session persistence/management, catalogue browsing and
-  downloaded-data maintenance and local-folder browsing extracted.
-  Navigation, library editing, sharing and playback boundaries still pending.
+  downloaded-data maintenance, local-folder browsing and Browse navigation/search publication extracted.
+  Library editing, sharing and playback boundaries (including playback digressions) still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
 - Comment correction/shortening: not started; separate commits after the structural work.
 - Final documentation, full gate, test artefacts and manual handover: pending.
+
+### Browse navigation and search publication extraction — 2026-10-05
+
+Moved domain entry, Back routing and query/scope/result publication into `BrowseWorkflow`, using
+the same Browse flow, coroutine scope, `BrowseNavigation` rules and `LibrarySearch` query service.
+A narrow actions port keeps catalogue/folder/history reads with their existing owners; the
+controller retains playback digressions and Android notice rendering. Construction must do no work.
+
+Preserved immediate domain publication before refresh callbacks, Back's precedence and return
+values, parent-read callbacks before the saved Back snapshot is published, and request capture
+before launching a search. Filter toggles remain distinct from changing scope, live-result notices
+keep their existing point, and failure/cancellation/late-result behaviour is unchanged. Tests exercise these through
+the extracted workflow with real search logic and controlled sources/actions, including overlapping
+reads and reentrant updates. No cancellation or stale-result guard was added during this move.
+
+The controller delegates these interactions to the workflow and binds its actions directly to the
+existing catalogue/folder readers and History entry point. The unused private favourite-count
+forwarder was removed. No new job, mutable state store, native initialization or read starts during
+construction. `PlaybackController.kt`: 3,394 → 3,270 lines; the workflow is 184 lines. The controller
+was compared against the planned substitutions, then its integrated snapshot after cleanup.
+
+**Checked:** 23 plain JVM tests passed before and after integration, using the actual
+`LibrarySearch` with controlled sources. Two initial fixture mistakes were corrected without
+changing production behaviour: a renderer callback shadowed its forwarding method and recursed,
+and one assertion assumed an equal-value assignment replaced the flow's stored state object.
+
+**Checked:** all 23 safeguards detected controlled mutations: 13 constructor/navigation checks,
+then 10 search checks. Failures were assertions/comparisons, not compilation or VM failures;
+the exact test names were matched against the passing integration report. The workflow was restored
+and compared with its saved original, and the controller with its integrated snapshot.
+
+**Checked:** full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process`: **639 tests in 87 suites**, zero
+failures/errors/skips; lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP checks,
+135 icon paths, browser storage upgrade, 8 server checks and store metadata; 226 seconds overall.
+The existing shared JDK and isolated build/cache paths were used, without diagnostic JVM overrides;
+`GRADLE_OPTS='-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2'` also limits the lint invocation.
+Tests executed with `--rerun-tasks`. Focused/mutation/full XML, unit/lint logs and saved originals
+are retained under `dist/architecture-baseline/20261005-browse-workflow-*`.
+
+**Existing timing risks, not fixed:** an older search can publish its rows after a newer search
+and a switch to History; Back can overwrite a reentrant parent-read publication with the snapshot
+captured before the callback. Both orderings exist in `b635b5f` and are reproduced through controlled
+sources/actions. Real database/main-dispatcher frequency and any cancellation/stale-result fix
+remain separate, unapproved work. This refactor preserves the ordering rather than changing it.
+
+**Not checked:** release APK, phone gestures/document providers, real-browser behaviour and
+long-term stability. Host workflow tests and wiring inspection do not establish those outcomes.
 
 ### Local-folder browsing extraction — 2026-10-05
 
