@@ -65,10 +65,64 @@ update to install.
 
 ## Technical verification and candidate
 
-Pending final full suite/lint, release APK and artifact/signature inspection. The last extraction
-checkpoint passed 639 tests in 87 suites plus lint and the enabled project checks; that is earlier
-evidence, not a claim that the final candidate has already been verified. Commands and exact
-artifact identity will be recorded here after execution.
+Technical closeout completed on 2026-10-05; phone acceptance is still pending. Scope/review record:
+`db925f7`. Limited comment corrections: `3defe38` (Undo token, index playability, persistence target,
+duplicate switch/debounce explanation and Browse ownership). The source diff was inspected in
+context: four files, comment text only, no executable changes. The broad comment pass was not done.
+
+**Checked:** at clean source commit `3defe38dbf35e1adb4fb34f71b913bd3d189cd9e`,
+`scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` passed **639 tests in 87 suites**, zero
+failures/errors/skips, in 219 seconds overall. XML timestamps and the executed test task were
+checked; the results were not reused from the previous checkpoint. Lint completed without errors.
+The same run passed 581 page checks, 49 existing-WASM checks, 8 SAP checks, 135 icon paths,
+the web v3→v4 storage upgrade, 8 server checks and store metadata validation.
+
+The initial sandboxed attempt failed before tests because Gradle could not obtain a usable wildcard
+IP for its local locking service. Its displayed counts came from older XML and are **not** a pass.
+The permitted run outside the sandbox produced the fresh results above. Existing shared JDK
+17.0.19 and the isolated build/cache paths from `STATUS.md` were used, without diagnostic JVM
+overrides. `GRADLE_OPTS='-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2'` also limited lint.
+
+**Checked:** `scripts/build-release.sh --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` completed in 690 seconds from the same clean
+commit. All three native ABIs built; R8 and resource shrinking ran. No publication credentials,
+release script, version-name change or branch synchronization was used. `CMAKE_BUILD_PARALLEL_LEVEL=2`
+was set for the build. The script-produced artifact was given an explicit release/SHA filename
+without changing its contents, then copied byte-for-byte to the main checkout's `dist/`.
+
+| Candidate property | Verified value |
+| --- | --- |
+| File in the main checkout's `dist/` | `protracktor-release-1.0.0-1076-3defe38-20261005-215545.apk` |
+| Application / version from APK | `com.przunk.protracktor`, `1.0.0 (1076)` |
+| Source commit | `3defe38dbf35e1adb4fb34f71b913bd3d189cd9e`, clean at build time |
+| Size | 11,678,630 bytes |
+| APK SHA-256 | `b218bfe0dfc39e91b9ba015424fa17db387fcf40cf4dae070139d88a00fd7ba3` |
+| Native ABIs | `arm64-v8a`, `armeabi-v7a`, `x86_64` |
+| Signature | APK v2 verified; Android Debug/test certificate, **not for publication** |
+| Certificate SHA-256 | `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e` |
+
+The certificate matches the preserved `protracktor-1.0.0-1057-20261002-002729.apk`; the new build
+number is higher. It does **not** match the separately test-signed baseline
+`protracktor-release-1.0.0-1055-2aaeeeb-20261004-234643-test-signed.apk` (certificate starts
+`feee33c9`). The installed phone copy and Google Play signing certificate have not been inspected:
+do not assume either can accept this APK as an update. If Android refuses it, retain the installed
+app and its data; resolve signing/version compatibility rather than uninstalling. Baseline APKs
+were not overwritten.
+
+Evidence is local to the implementation worktree under `dist/architecture-closeout/`: final unit
+XML, full test/lint/gate logs, release build/Gradle logs, APK metadata/signature reports, reference
+certificate reports and R8 mapping. `pre-run-*` and `sandbox-*` files are explicitly not final-run
+evidence. The later handover documentation commit does not change this candidate's source identity.
+Local Markdown link targets and `git diff --check` were checked.
+
+**Partly checked:** host workflow tests, Android compilation/minification and artifact inspection
+confirm those properties, not end-to-end playback or UI equivalence. The WASM checks exercise the
+existing artifact; no web/native refactor or new packaged-web handover was performed.
+
+**Not checked:** installation, real document providers, gestures, playback/audio equivalence,
+real-browser operation, performance and long-term stability on the owner's phone. The known
+pre-existing races above remain. No merge or release acceptance is implied.
 
 ## Owner's phone checklist — not checked
 

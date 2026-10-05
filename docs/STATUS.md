@@ -4,7 +4,7 @@ Updated: 2026-10-05 — version 1.0.0, schema version 21. versionCode is the com
 The production-access application is pending. Historical dated checks below describe their own
 builds; they are not current test counts or proof of the refactoring branch's behaviour.
 
-## Architecture stabilization — bounded closeout, not accepted
+## Architecture stabilization — test candidate built, not accepted
 
 Branch: `feature/architecture-stabilization`, based on `develop` at `1455422`.
 Released reference: `v1.0.0` at `2aaeeeb` (versionCode 1055). No merge or release is authorised by
@@ -26,6 +26,15 @@ focused boundary review, limited comment corrections, full tests/lint and a rele
 APK. Library editing, sharing, playback extraction, Compose, web and native restructuring and the
 repository-wide comment pass are **deferred, not completed**. No merge or release is authorised.
 The review, candidate and phone checklist are in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md).
+
+**Technical closeout checked — 2026-10-05:** clean candidate `3defe38`, version `1.0.0 (1076)`;
+639 tests in 87 suites (zero failures/errors/skips), lint without errors and all enabled project
+checks passed again. The minified, test-signed release APK was built for all three ABIs and copied
+to the main checkout's `dist/protracktor-release-1.0.0-1076-3defe38-20261005-215545.apk`.
+Its signature matches the preserved build 1057, not the separately test-signed 1055 baseline;
+compatibility with the installed phone copy is unverified. See the closeout report for hashes,
+commands and evidence. Phone/long-term checks and the previously recorded session-write risks
+remain open. No merge, publication or new extraction occurred during closeout.
 
 ### Baseline evidence — 2026-10-03
 
@@ -75,8 +84,9 @@ The review, candidate and phone checklist are in [Architecture closeout](ARCHITE
 - Native adapters and both build paths: no restructuring started; deferred.
 - Repository-wide comment correction/shortening: deferred; only concrete misleading comments in
   reviewed branch code are included in closeout, separately from executable changes.
-- Final documentation, full gate, test APK and manual handover: current closeout scope; results in
-  [Architecture closeout](ARCHITECTURE_CLOSEOUT.md). Earlier checkpoint evidence follows below.
+- Final documentation, full gate, test APK and manual checklist: technical closeout completed;
+  results in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md). Phone acceptance is still pending.
+  Earlier checkpoint evidence follows below.
 
 ### Browse navigation and search publication extraction — 2026-10-05
 
