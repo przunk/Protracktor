@@ -4,7 +4,7 @@ Updated: 2026-10-05 — version 1.0.0, schema version 21. versionCode is the com
 The production-access application is pending. Historical dated checks below describe their own
 builds; they are not current test counts or proof of the refactoring branch's behaviour.
 
-## Architecture stabilization — in progress, not accepted
+## Architecture stabilization — bounded closeout, not accepted
 
 Branch: `feature/architecture-stabilization`, based on `develop` at `1455422`.
 Released reference: `v1.0.0` at `2aaeeeb` (versionCode 1055). No merge or release is authorised by
@@ -17,6 +17,15 @@ Since the 2026-10-04 environment restart, also set
 `PROTRACKTOR_GRADLE_USER_HOME=/tmp/protracktor-architecture-gradle` (task-specific dependency cache).
 Existing vendored sources and npm packages are linked read-only by convention; do not fetch or
 patch through those links. The pre-existing WASM artefacts were copied, not shared for writing.
+
+### Scope decision — 2026-10-05
+
+The owner accepted stopping further extractions because the time cost did not justify completing
+the original seven-file plan. Close out the existing controller changes through `6eb5577` with a
+focused boundary review, limited comment corrections, full tests/lint and a release-variant test
+APK. Library editing, sharing, playback extraction, Compose, web and native restructuring and the
+repository-wide comment pass are **deferred, not completed**. No merge or release is authorised.
+The review, candidate and phone checklist are in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md).
 
 ### Baseline evidence — 2026-10-03
 
@@ -60,12 +69,14 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
   reference-data downloads, native replay installation, playback read-ahead, Browse cache/prefetch,
   playlist file transfer, playlist-session persistence/management, catalogue browsing and
   downloaded-data maintenance, local-folder browsing and Browse navigation/search publication extracted.
-  Library editing, sharing and playback boundaries (including playback digressions) still pending.
-- Compose boundaries: not started.
-- Web modules: not started.
-- Native adapters and both build paths: not started.
-- Comment correction/shortening: not started; separate commits after the structural work.
-- Final documentation, full gate, test artefacts and manual handover: pending.
+  Library editing, sharing and playback boundaries (including playback digressions) are deferred.
+- Compose boundaries: not started; deferred by the scope decision above.
+- Web modules: not started; deferred. No web PR synchronization is needed for this closeout.
+- Native adapters and both build paths: no restructuring started; deferred.
+- Repository-wide comment correction/shortening: deferred; only concrete misleading comments in
+  reviewed branch code are included in closeout, separately from executable changes.
+- Final documentation, full gate, test APK and manual handover: current closeout scope; results in
+  [Architecture closeout](ARCHITECTURE_CLOSEOUT.md). Earlier checkpoint evidence follows below.
 
 ### Browse navigation and search publication extraction — 2026-10-05
 

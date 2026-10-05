@@ -15,7 +15,9 @@ the current boundaries and the proposed post-1.0.0 extractions.
 Baseline: `1455422`, the accepted `develop` when `feature/architecture-stabilization` began.
 The release remains `v1.0.0` at `2aaeeeb`. No behaviour, storage schema, decoder version or release
 change is intended. Boundaries marked **extracted** are implemented on this branch; the others
-remain proposals. Update each row when its boundary is actually implemented.
+are deferred proposals, not further work required on this branch. On 2026-10-05 the owner reduced
+the workstream to closing out the existing extractions; the time cost did not justify the full
+plan. See [Architecture closeout](ARCHITECTURE_CLOSEOUT.md) for the boundary assessment and handover.
 
 | Area | Current owner and lifetime | Boundary and status |
 | --- | --- | --- |
@@ -86,14 +88,16 @@ original points. Changing scope clears stale-result fields; filter toggles do no
 adds neither cancellation nor a late-result guard. These preserved timing risks are recorded in
 `STATUS.md`; changing them would be separate behaviour work.
 
-### Refactoring completion ledger
+### Original refactoring inventory — remaining extractions deferred on 2026-10-05
 
 This ledger follows the seven starting files in local `GOAL.md`. Kotlin paths are relative to
 `app/src/main/kotlin/com/przunk/protracktor/`. Line counts include comments and indicate the state
-of the branch, not architectural quality. An unfinished row is not an accepted decision to retain
-the original file. Detailed preservation evidence is in the dated checkpoints in `STATUS.md`.
+of the branch, not architectural quality. The owner accepted leaving the unfinished portions in
+place for this closeout, not declaring them ideally structured. The last column records the former
+plan, now deferred; final boundary review and phone checks are tracked in `ARCHITECTURE_CLOSEOUT.md`.
+Detailed preservation evidence is in the dated checkpoints in `STATUS.md`.
 
-| Starting file; baseline → current lines | Responsibilities and resulting owners | Checkpoint / evidence | Still owed |
+| Starting file; baseline → current lines | Responsibilities and resulting owners | Checkpoint / evidence | Deferred plan / later checks |
 | --- | --- | --- | --- |
 | `player/PlaybackController.kt`; 5,287 → 3,270 | State contracts and independent scan/search/file/download/cache/playlist/catalogue/maintenance/local-folder/Browse workflows moved to the named owners above | `e48ccd8`–`b635b5f`, then Browse interactions: full gate 639 tests; all 23 new Browse checks mutation-sensitive | Library editing, sharing and playback ownership (including digressions); final dependency review and phone checks |
 | `ui/BrowseScreen.kt`; 1,731 → 1,731 | Screen orchestration, panels, menus and dialogs still in the original owner | No extraction checkpoint | Coherent sections; preserve state/effect/list identity, Browse re-entry and Add to playlist; phone checks |
@@ -103,9 +107,10 @@ the original file. Detailed preservation evidence is in the dated checkpoints in
 | `web/src/catalogue.js`; 877 → 877 | Catalogue access/indexing and related navigation remain unchanged | No extraction checkpoint | Determine cohesive boundary; record any justified intact portion; test real consumers and packaged paths |
 | `native/engine/engine.cpp`; 2,970 → 2,970 | Backend adapters, selection/probing and shared helpers still together | Fresh baseline WASM build and five-format playback probe; not audio equivalence | Adapter extraction with both source lists; Android/UADE and WASM metadata/refusal/PCM/subsong/seek comparisons |
 
-The separate first-party comment pass, final documentation reconciliation, release-variant test
-APK, packaged web player and candidate-specific manual checklist remain open. No row grants merge
-or release approval; long-term acceptance remains with the owner.
+The broad first-party comment pass and packaged-web handover are deferred with the untouched areas.
+Current closeout requires the focused boundary/comment check, reconciled documentation, full gate,
+release-variant test APK and candidate-specific manual checklist. No row grants merge or release
+approval; long-term acceptance remains with the owner.
 
 ## 1. Platform
 
