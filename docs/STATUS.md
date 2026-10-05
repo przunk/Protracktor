@@ -59,13 +59,83 @@ patch through those links. The pre-existing WASM artefacts were copied, not shar
 - Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
   reference-data downloads, native replay installation, playback read-ahead, Browse cache/prefetch,
   playlist file transfer, playlist-session persistence/management, catalogue browsing and
-  downloaded-data maintenance extracted.
-  Local-folder/navigation, library editing, sharing and playback boundaries still pending.
+  downloaded-data maintenance and local-folder browsing extracted.
+  Navigation, library editing, sharing and playback boundaries still pending.
 - Compose boundaries: not started.
 - Web modules: not started.
 - Native adapters and both build paths: not started.
 - Comment correction/shortening: not started; separate commits after the structural work.
 - Final documentation, full gate, test artefacts and manual handover: pending.
+
+### Local-folder browsing extraction — 2026-10-05
+
+Move grant/forget/index-read and local-tree publication into `LocalFolderBrowser`, using the
+existing scope, stores, Browse flow and `LocalTree` rules. Keep SAF grant/label/path handling in
+an Android adapter. Scan ownership and navigation routing stay in the controller; both reuse
+the extracted tree rendering instead of copying its rules.
+
+Preserve grant → remember → refreshed rows → launch open → scan ordering, suspended folder-list
+reads inside atomic retries, failure/cancellation behaviour, deferred native fingerprint reads
+only for non-empty indexes, and completion-order publication after navigation. Opening a remembered
+folder must not start a scan; explicitly granting one still does. Characterise root/level retention
+during scan snapshots and the exact fields cleared by forget/close. No stale-result fix or new
+permission/index policy belongs in this checkpoint.
+
+The controller is now wired to the extracted browser, including the shared tree renderer used by
+scan snapshots and Back. Its remaining body was compared with the prepared integration;
+`PlaybackController.kt`: 3,456 → 3,394 lines. The native fingerprint stays a deferred lambda,
+not a bound reference that could initialize the engine during construction.
+
+**Checked:** 20 added tests (17 workflow/state, 3 Android grant/path checks) passed before
+integration, in a temporary pre-integration control run, and after integration with build and
+configuration caches disabled and `-Pkotlin.incremental=false` (68 seconds). An initial test incorrectly
+expected an Unconfined nested launch to run before the scan callback; its expectations were
+corrected to the observed event-loop order, without changing production code. These are host
+checks, not measurements of Android's main dispatcher or real document providers.
+
+**Earlier interrupted checks:** two integrated-build attempts stopped in JVM SIGSEGVs before test
+execution (`MarkSweep::follow_array_chunk` and pointer adjustment in SerialGC), despite the
+uncompressed-pointer flags from the previous checkpoint. The control run and an uncached integrated
+run passed, but the first mutation batch then crashed in native method-signature rendering even
+without caches or incremental compilation. Disabling Gradle instrumentation for one more attempt
+(`-Dorg.gradle.internal.instrumentation.agent=false`, confirmed in the daemon context) also crashed,
+in `MarkSweep::follow_stack`. Those runs did not establish the cause; none of these failed compilations counts
+as mutation evidence. The integrated controller is retained, both deliberately changed helper files
+are restored and compared with their originals. Logs and diagnostics:
+`dist/architecture-baseline/20261005-local-folders-*`.
+
+**Existing race, not fixed:** suspend folder A's index read, finish opening folder B, then release
+A. The old tree is published while `openFolder` still names B. The same unguarded completion path
+exists in `870042b`. A controlled-store test reproduces it; real-provider/SQLite frequency and a
+stale-result fix remain separate, unapproved work.
+
+**Checked after normal work resumed:** all 20 focused tests passed on the existing shared JDK,
+without the earlier GC/JIT/pointer overrides. Controlled mutations then failed 4 constructor/Android
+checks and 16 workflow checks; the unchanged constructor check passed in the latter batch. An
+exact-name audit matched these failures to all 20 passing tests. Both helpers were restored and
+compared with their saved originals; the integrated controller's hash remained unchanged.
+
+**Checked:** full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process`: **616 unit tests in 86 suites**, zero
+failures/errors/skips; lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP checks,
+135 icon paths, browser storage upgrade, 8 server checks and store metadata; 231 seconds overall.
+The two isolated build/cache variables above were set, with
+`GRADLE_OPTS='-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2'` also limiting the separate lint
+invocation. Unit tests executed with `--rerun-tasks`. No Java distribution or project build setting
+was changed. Focused/mutation XML and logs plus the full-gate summary are retained under
+`dist/architecture-baseline/20261005-local-folders-normal-*`. Full-suite XML was inspected before
+the pause, but its temporary directory did not survive the turn boundary; it was not archived.
+
+**Not checked:** release APK, real document providers/phone behaviour and long-term stability.
+The full gate checks the host paths, not Android's main-dispatcher timing or device performance.
+
+**Owner decision — 2026-10-05:** the owner declined a different JDK, reported a faulty memory
+region under investigation, and requested normal work to continue. This is an owner-reported
+hardware finding, not an independently verified diagnosis by this agent. Resume checks with the
+existing toolchain and ordinary JVM settings; do not install Java, restart WSL, change shared
+tooling or investigate other projects. Three other agents are working elsewhere in the workspace.
+Keep this worktree's isolated build/cache paths and run one verification job at a time. A crashed
+attempt remains incomplete evidence; the full gate is still required before the next extraction.
 
 ### Downloaded-data maintenance extraction — 2026-10-05
 

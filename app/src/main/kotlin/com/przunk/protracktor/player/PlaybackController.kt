@@ -295,6 +295,21 @@ class PlaybackController private constructor(private val context: Context) {
 
     private val history = HistoryStore(context)
     private val libraryIndex = LibraryIndexStore(context)
+    private val localFolders = LocalFolderBrowser(
+        scope = scope,
+        store = object : LocalFolderBrowser.Store {
+            override suspend fun grantedFolders() = store.grantedFolders()
+            override suspend fun rememberFolder(folder: GrantedFolder) { store.rememberFolder(folder) }
+            override suspend fun forgetFolder(uri: String) { store.forgetFolder(uri) }
+            override suspend fun forgetIndex(uri: String) { libraryIndex.forgetFolder(uri) }
+            override suspend fun tracksIn(uri: String) = libraryIndex.tracksIn(uri)
+            override suspend fun isStale(uri: String, fingerprint: String) = libraryIndex.isStale(uri, fingerprint)
+        },
+        access = AndroidFolderAccess(context),
+        browse = _browse,
+        backendFingerprint = { NativeEngine.backendsFingerprint() },
+        startScan = ::scanFolder,
+    )
 
     private val catalogueBrowser = CatalogueBrowser(
         scope = scope,
@@ -782,7 +797,7 @@ class PlaybackController private constructor(private val context: Context) {
             current.openCatalogue != null -> current.copy(openCatalogue = null, groups = emptyList())
             // Up the folder's own tree first, a level at a time, and out of it only from its top.
             current.openFolder != null && LocalTree.parent(current.folderAt, current.folderRoot) != null ->
-                levelOf(current, LocalTree.parent(current.folderAt, current.folderRoot)!!)
+                localFolders.levelOf(current, LocalTree.parent(current.folderAt, current.folderRoot)!!)
             current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList(), folderAll = emptyList(), subfolders = emptyList())
             // Search keeps its results and its query; every other domain drops them.
             current.domain == BrowseDomain.SEARCH -> current.copy(domain = BrowseDomain.ROOT)
@@ -793,92 +808,15 @@ class PlaybackController private constructor(private val context: Context) {
         return true
     }
 
-    fun refreshFolders() {
-        scope.launch { _browse.update { it.copy(folders = store.grantedFolders()) } }
-    }
+    fun refreshFolders() = localFolders.refreshFolders()
 
-    fun rememberFolder(treeUri: Uri) {
-        scope.launch {
-            MediaScanner.persistPermission(context, treeUri, isTree = true)
-            val folder = GrantedFolder(treeUri.toString(), MediaScanner.labelOf(treeUri))
-            store.rememberFolder(folder)
-            _browse.update { it.copy(folders = store.grantedFolders()) }
-            openFolder(folder)
-            // Granting a folder *is* the user asking for it to be usable, so this is the one moment
-            // a scan starts without a second press. Nothing else starts one: not launching, not
-            // returning to the app, not opening the folder again.
-            scanFolder(folder)
-        }
-    }
+    fun rememberFolder(treeUri: Uri) = localFolders.rememberFolder(treeUri.toString())
 
-    fun forgetFolder(uri: String) {
-        scope.launch {
-            store.forgetFolder(uri)
-            // The index goes with the grant. Keeping rows for a tree we can no longer read would
-            // leave a browsable list of files that cannot be opened.
-            libraryIndex.forgetFolder(uri)
-            _browse.update { it.copy(folders = store.grantedFolders(), openFolder = null, tracks = emptyList()) }
-        }
-    }
+    fun forgetFolder(uri: String) = localFolders.forgetFolder(uri)
 
-    /**
-     * Shows what a folder holds, from the index rather than by walking it again.
-     *
-     * Walking the tree again would be seconds of waiting on a network share for an answer that
-     * has not changed, and would have to guess what is playable from filenames
-     * (`docs/STATUS.md` C4). The scan happens once, on purpose, and this reads its result.
-     */
-    fun openFolder(folder: GrantedFolder) {
-        scope.launch {
-            _browse.update {
-                it.copy(
-                    openFolder = folder, loading = true, tracks = emptyList(),
-                    folderUnscanned = false, folderStale = false,
-                )
-            }
-            val found = libraryIndex.tracksIn(folder.uri)
-            val stale = found.isNotEmpty() &&
-                libraryIndex.isStale(folder.uri, NativeEngine.backendsFingerprint())
-            _browse.update {
-                treeOf(it, folder, found).copy(
-                    loading = false,
-                    folderUnscanned = found.isEmpty(),
-                    folderStale = stale,
-                )
-            }
-        }
-    }
+    fun openFolder(folder: GrantedFolder) = localFolders.openFolder(folder)
 
-    /**
-     * The open folder as a tree, at its top (the owner, 2026-09-29): its folders, then its own
-     * files, rather than every file in it in one list. `tracksIn` carries each file's directory in
-     * its subtitle.
-     */
-    private fun treeOf(
-        state: BrowseState,
-        folder: GrantedFolder,
-        found: List<TrackRef>,
-        keepLevel: Boolean = false,
-    ): BrowseState {
-        val all = found.map { it.subtitle to it }
-        val root = LocalTree.root(all.map { it.first }, MediaScanner.rootPathOf(Uri.parse(folder.uri)))
-        // **Where the reader is, kept** while a scan fills the tree in (the owner, 2026-09-29): the
-        // level on screen stays on screen as long as it is still inside the tree.
-        val at = state.folderAt.takeIf {
-            keepLevel && state.folderRoot == root && (it == root || it.startsWith("$root/"))
-        } ?: root
-        return levelOf(state.copy(folderAll = all, folderRoot = root), at)
-    }
-
-    private fun levelOf(state: BrowseState, at: String): BrowseState {
-        val level = LocalTree.level(state.folderAll, at)
-        return state.copy(folderAt = at, subfolders = level.folders, tracks = level.files)
-    }
-
-    /** Into a folder inside the open one. */
-    fun openSubfolder(path: String) {
-        _browse.update { if (it.openFolder == null) it else levelOf(it, path) }
-    }
+    fun openSubfolder(path: String) = localFolders.openSubfolder(path)
 
     /**
      * Scans a folder by opening every file in it.
@@ -938,7 +876,7 @@ class PlaybackController private constructor(private val context: Context) {
                     // playable" until the scan ended and the folder was opened again).
                     _browse.update { current ->
                         if (current.openFolder?.uri != folder.uri) current
-                        else treeOf(current, folder, sofar.map(::toTrackRef), keepLevel = true).copy(loading = false, folderUnscanned = false)
+                        else localFolders.treeOf(current, folder, sofar.map(::toTrackRef), keepLevel = true).copy(loading = false, folderUnscanned = false)
                     }
                 },
                 onStopped = { done ->
@@ -952,7 +890,7 @@ class PlaybackController private constructor(private val context: Context) {
             ScanNotification.clear(context)
             _browse.update { current ->
                 // The level on screen stays, if it is still there: the list filled in under it.
-                (if (current.openFolder?.uri == folder.uri) treeOf(current, folder, indexed.toList().map(::toTrackRef), keepLevel = true) else current).copy(
+                (if (current.openFolder?.uri == folder.uri) localFolders.treeOf(current, folder, indexed.toList().map(::toTrackRef), keepLevel = true) else current).copy(
                     scanProgress = null,
                     folderUnscanned = false,
                     folderStale = false,
@@ -1015,7 +953,7 @@ class PlaybackController private constructor(private val context: Context) {
         subsongs = entry.subsongs,
     )
 
-    fun closeFolder() = _browse.update { it.copy(openFolder = null, tracks = emptyList()) }
+    fun closeFolder() = localFolders.closeFolder()
 
     /**
      * The format an online catalogue files a track under, if it came from one.
