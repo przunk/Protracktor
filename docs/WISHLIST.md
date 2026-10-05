@@ -10,6 +10,30 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B43. A track's listened status — noted 2026-10-05; to discuss, not scheduled
+
+Raised by the owner on 2026-10-05: consider a persistent indication that a track has been
+listened to, so it is easier to distinguish explored music from tracks still to try.
+
+Before implementation, decide whether the mark is manual or automatic and, if automatic, what
+counts as listening (starting, a duration threshold or reaching the end). Also decide whether it
+applies to a file or each subsong, how to clear it, and where to display or filter by it. Existing
+play history (B8, B15; `BACKLOG.md` A56/A64) records playback, but does not by itself define this
+status. No behaviour or storage change is approved by this entry.
+
+## B42. Saved artist folders — noted 2026-10-05; to discuss, not scheduled
+
+Raised by the owner on 2026-10-05: bookmark an artist's folder and provide a list of saved
+artists/folders to return to later, without adding every track to a playlist. Naming and the
+list's location remain open; this is one idea, not separate favourites and listen-later features.
+
+Before implementation, decide which sources it covers and whether a bookmark identifies an
+exact catalogue/folder or an artist across formats and archives. Reopening a saved location
+should be distinct from downloading its music. B2 already supports jumping to the current
+track's neighbours, but does not provide a saved collection of artist folders; track favourites
+and B27's curated Modland list are also separate. No duplicate of this wish was found in the
+wishlist, backlog or open questions when this entry was added.
+
 ## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT and merged 2026-10-02; checked on the phone by the owner**
 
 *Claude and the owner, 2026-10-01, asked whether the right people are credited in the app.* Not
