@@ -4,13 +4,18 @@ Updated: 2026-10-06 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Random feedback correction stack — in progress, 2026-10-06
+## Random feedback correction stack — host-verified, phone acceptance pending, 2026-10-06
 
 Owner authorised C97, then C98 and C99 on separate stacked branches, with analysis, regression
 checks and PR handoffs. No push, merge, publication or phone acceptance is implied. The first
 branch is `fix/random-scope-history` from `develop` at `a72d098`, followed by
-`fix/random-return-navigation` and `fix/random-filter-responsiveness`. C97 and C98 have verified
-release candidates; C99 verification is in progress. PR drafts and exact handoff evidence:
+`fix/random-return-navigation` and `fix/random-filter-responsiveness`. All three have separately
+verified release candidates. The final combined candidate is clean `9110e62`, **1.0.0 (1091)**:
+676 host tests, lint without errors and all enabled project checks passed; minified, test-signed
+release APK in main `dist/protracktor-release-1.0.0-1091-9110e62-20261006-234043.apk`.
+Phone/audio/latency checks remain unverified. Main `develop` stays clean at `a72d098`; its stored
+remote tracking ref is ahead/behind-diverged and owner synchronization precedes opening real PRs.
+No push or merge to develop/master occurred. PR drafts and exact handoff evidence:
 [Random feedback PRs](RANDOM_FEEDBACK_PRS.md).
 
 ## Architecture stabilization — merged after owner acceptance, 2026-10-06
