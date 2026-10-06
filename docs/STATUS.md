@@ -35,8 +35,26 @@ retry, missing vs unindexed favourites, cancellation and unavailable platforms.
 zero failures/errors/skips, lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP
 checks, 135 icon paths, web v3→v4 storage upgrade, 8 server checks and store metadata validation.
 The gate includes the eight Compose panel regressions and the new store-read test. Existing JDK
-and isolated build/cache directories were retained. A release APK is next; phone behaviour remains
-**not checked**. Local verification evidence is in `dist/random-filter-verification/` in the worktree.
+and isolated build/cache directories were retained. Local verification evidence is in
+`dist/random-filter-verification/` in the worktree.
+
+**Release-variant test APK checked, 2026-10-06:** `scripts/build-release.sh --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` passed in 164 seconds, with R8/resource shrinking.
+Built from clean `0ab8c7dfa729e58bcc33113e75d9414ca6286ffd`, version **1.0.0 (1084)**,
+all three ABIs. The copy in the main checkout is
+`dist/protracktor-release-1.0.0-1084-0ab8c7d-20261006-215744.apk` (11,681,970 bytes).
+SHA-256: `fff9efcc09fc0e4fa3212d1c85046ab862fdaf195c65b326184d60cbb64a235b`.
+APK v2 signature verified; the Android Debug/test certificate matches the previous 1076 APK
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`). This is a minified test
+release, not a Play publication artifact. No push, fix-branch merge or publication was performed.
+
+**Phone behaviour not checked:** install as an update without clearing data. Start Random and open
+Filter without first visiting Online Catalogues: available platforms should enable after the brief
+check, with genuinely absent platforms still disabled. Close/reopen Filter and confirm the same
+availability. If the favourites list is genuinely absent, download it with the sheet open and check
+that Favourites enables on completion when matching Modland tracks exist; no catalogue or song
+metadata re-download should be needed merely to refresh the chips. Keep existing data if Android
+rejects the update; the installed/Play copy's certificate has not been inspected.
 
 Worktree: `user/worktrees/architecture-stabilization` within the main project checkout. Its build
 output is isolated at `/tmp/protracktor-architecture-build.Qogzrp`; set
