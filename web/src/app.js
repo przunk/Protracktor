@@ -307,6 +307,13 @@ async function begin() {
   // would play 8.8% fast and about a semitone and a half sharp -- audible as a tune that sounds
   // quicker than it should. Android asks the backend and tells Oboe, which resamples; this is the
   // same answer by the only route a page has.
+  // WebKit needs a playback session to keep Web Audio active when the screen locks.
+  // Other browsers may not expose this API; session setup must not prevent playback.
+  try {
+    if ('audioSession' in navigator) navigator.audioSession.type = 'playback';
+  } catch (error) {
+    console.warn('audioSession.type=playback', error);
+  }
   context = new AudioContext({ sampleRate: 44100 });
   status(t('loading the engine…'));
   // Born suspended: no click has reached this page yet -- a link opened from another app. Chrome

@@ -2351,7 +2351,9 @@ if (window.__api) {
 if (window.__api) {
   console.log('\nthe page\'s settings:');
   const gear = $('tab-settings');
-  check(gear && gear.nextElementSibling === $('shuffle') && gear.querySelector('svg') && gear.title === 'Settings',
+  const transportButtons = $('shuffle').parentElement;
+  check(gear && gear.parentElement === transportButtons.previousElementSibling
+    && gear.querySelector('svg') && gear.title === 'Settings',
     'a gear stands left of shuffle, with its icon');
   check(!gear.disabled, 'and answers whether or not anything is playing');
   gear.click();
