@@ -7,7 +7,7 @@ preserved in STATUS C97–C99 and the TESTING feedback record. VersionName remai
 | Item | Head | PR base | State |
 | --- | --- | --- | --- |
 | C97 | `fix/random-scope-history` | `develop` (`a72d098` at start) | Host-verified; release APK built; phone pending |
-| C98 | `fix/random-return-navigation` | `fix/random-scope-history` | Planned |
+| C98 | `fix/random-return-navigation` | `fix/random-scope-history` (`f7dfceb`) | Implemented; verification in progress |
 | C99 | `fix/random-filter-responsiveness` | `fix/random-return-navigation` | Planned |
 
 ## PR 1 — Preserve Random history across scope changes (C97)
@@ -47,8 +47,21 @@ fix. That correction is carried forward with C99, not silently merged to develop
 
 ## PR 2 — Disable Browse and Web behind the return-choice cover (C98)
 
-Pending analysis and implementation. Expected: Browse and Web visibly unavailable, Settings and
-both return choices active. Check both paired/unpaired Web actions and normal uncovered navigation.
+**Report:** another user could open Browse from the covered playlist while Random kept playing.
+The owner also requested Web be unavailable there; Web was an expectation, not an original
+independent observation.
+
+**Analysis:** the cover's `awayFromPlaylist` condition only blocked its body, not the separate
+top bar. **Fix:** reuse that condition for Browse and WEB `enabled`, covering both touch and hold.
+Settings, both return actions and normal uncovered navigation stay available. The same condition
+also covers existing search/external sessions rather than introducing a second cover rule.
+
+**Evidence:** five production-component Compose/Robolectric checks passed; three failed on the
+missing guard before the fix. They cover paired/unpaired Web, disabled gestures, Settings/return
+callbacks and re-enabling. Local evidence: worktree `dist/c98-verification/`. The forced full gate
+passed **659 tests**, lint without errors and the same page/WASM/SAP/storage/icon/server checks
+listed for C97 (226 s). The release build is next; actual phone navigation and visual feedback
+remain unverified.
 
 ## PR 3 — Keep Random filters responsive while refreshing availability (C99)
 

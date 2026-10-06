@@ -1071,7 +1071,7 @@ the fallback guard made its regression test fail, then the guard was restored. F
 handoff is recorded in the PR document. Device playback, row highlighting and performance remain
 **not checked**; the reported device/build are still unknown.
 
-### C98. Browse remains usable behind the Random return-choice overlay — OPEN, user-reported 2026-10-06
+### C98. Browse remains usable behind the Random return-choice overlay — FIX IMPLEMENTED ON BRANCH, phone retest pending
 
 **Source:** a different app user, relayed by the owner. Installed version/build, device, Android
 version and installation channel were not provided.
@@ -1085,9 +1085,18 @@ playlist, Browse and Web should be visibly unavailable; Settings may remain usab
 demonstrates Browse remaining active. Web is part of the requested consistency check, not a
 separately confirmed observation. Both return actions must remain usable.
 
-**Verification/status:** user-reported navigation/interaction issue, not independently reproduced
-or diagnosed by the agent. No fix has been implemented. Retest Browse, Web, Settings and both
-return actions while the overlay is visible; do not describe Web as verified until it is checked.
+**Diagnosis and fix (2026-10-06):** `PlaylistScreen` covered its own body for `awayFromPlaylist`,
+but the independently composed `PlaylistTopBar` kept Browse and Web enabled. The bar now uses
+the same derived condition, including search/external covers, without adding another navigation
+state. `LabelledAction.enabled` disables both tap and long press and exposes disabled semantics.
+Settings and the two return actions are unchanged.
+
+**Checked on host:** five Compose/Robolectric interaction tests exercise the production top bar
+and covered playlist. Before the guard, three failed on enabled Browse/Web; after it all five
+passed, including both Web pairing states, touch/hold suppression, Settings/return callbacks and
+re-enabling after the cover disappears. This confirms component behaviour on the host, not a
+phone navigation journey. Full gate/APK evidence is in `RANDOM_FEEDBACK_PRS.md`. Phone checks of
+Browse, Web, Settings and both return actions remain **not checked**.
 
 ### C99. Random filters open with a perceptible delay and briefly appear unavailable — OPEN, owner testing 2026-10-06
 
