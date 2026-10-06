@@ -135,3 +135,32 @@ live in `user/` and are gitignored, so they never end up in the repository.
 
 **"It worked" is worth saying too.** Several fixes in `docs/STATUS.md` were closed on a build nobody
 confirmed, and two of them came back.
+
+## Feedback record
+
+Owner decision, 2026-10-06: retain the source of actual user/tester feedback alongside reproduction
+and follow-up, so the testing history can be described accurately when reapplying for Google Play
+production access. Reports below are paraphrased from the owner's messages, without personal data.
+Detailed defect records live in `STATUS.md`; this is an index, not a second set of defect statuses.
+
+| Recorded | Source | Report | Tracking |
+| --- | --- | --- | --- |
+| 2026-10-06 | App user, relayed by owner | Random list/history and selection become inconsistent after selecting an earlier track, changing scope and pressing Next | `STATUS.md` C97 |
+| 2026-10-06 | Different app user, relayed by owner | Browse opens while the playlist is covered by the Random return-choice overlay | `STATUS.md` C98 |
+| 2026-10-06 | Owner testing | Random filters open with a slight lag; unavailable chips become active after about a second in an uncertain sequence | `STATUS.md` C99 |
+| 2026-10-06 | Tester, relayed by owner | Android Auto support requested | `WISHLIST.md` B44; feature request, not a defect |
+
+The first two defects were explicitly attributed to different users; the third came from the
+owner's own tests. Do not reclassify the owner's observation as an independent tester report.
+The date above is the recording date, not an independently established occurrence timestamp.
+Installation channel and Play closed-test participation were not supplied for these reports;
+neither may be inferred from their existence. The offered sideload APK is not evidence of a Play
+closed-track installation or activity.
+
+For each follow-up, record the actual build and device/Android version when supplied, reproduction
+result, diagnosis, fix commit, APK or Play-track build delivered, and tester retest result/date.
+Keep missing information explicit. A recorded report is not a completed fix; passing host tests
+is not a phone retest; preparing an APK is not uploading or publishing an update. No fixes or
+retests for C97–C99 are recorded yet. Only completed, evidenced steps should be described as such
+in a production-access application. This record does not itself establish production eligibility
+or guarantee approval.

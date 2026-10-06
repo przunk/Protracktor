@@ -1009,9 +1009,83 @@ and whether `develop` should be merged to `master`.
 Numbered to match the A (open work) and B (wishlist) lists. A defect is something that does not do
 what it was meant to; work that was never started is in `docs/BACKLOG.md`.
 
-**Entries state the defect, not who found it.** What was wrong, how it was proved, and what was
-changed — a name and a date belong to git history, and a quotation from a conversation belongs
-nowhere in a repository (`docs/BACKLOG.md` A49).
+Entries describe the defect, reproduction, evidence and resolution in our own words, without
+personal names or conversation quotations. **From 2026-10-06, at the owner's request, also record
+the report date and source category** (user/tester, owner testing or code review), so real user
+feedback remains traceable through a fix and retest. A user report is not an independently
+reproduced defect or evidence of a fix. The feedback index is in [Testing](TESTING.md#feedback-record).
+
+### C97. Random history and selection become inconsistent after changing scope from an earlier track — OPEN, user-reported 2026-10-06
+
+**Source:** an app user, relayed by the owner. This is user-reported feedback, not a code-review
+finding. Installed version/build, device, Android version and installation channel were not
+provided. No screenshot, recording or log was supplied.
+
+**Reported reproduction:**
+
+1. Start Random with Everything or another scope.
+2. Play several tracks, for example ten, so the Random list has history.
+3. Select a track other than the last, for example track five, and let it play.
+4. Change the Random scope, for example to Atari 8-bit.
+5. Press Next, inspect the list and playing/selected row, then press Next again.
+
+**Observed by the reporter:** the list around the current selection is reset; existing entries
+disappear and three new-scope random tracks appear in their place. Further Next presses append
+tracks at the end, while the highlighted position and playback progression appear inconsistent.
+In the simplified example, row three is an Amiga track when the scope changes. The first Next
+plays an Atari 8-bit track at row four, with two additional Atari entries already at rows five and
+six. Another Next from row four appends row seven, which is marked as selected in the report.
+The exact audible/highlighted pair on that second Next and which old rows disappear still need
+confirmation; the description is retained as a report, not a measured queue trace.
+
+**Expected:** changing scope should not unexpectedly erase already-played history. Each Next
+should advance playback coherently, and the highlighted row should identify the track actually
+playing. Prefetched entries must not cause a selection jump or apparent skip. During diagnosis,
+distinguish already-played history from future queued picks before deciding what should be retained.
+
+**Verification/status:** reported on a user's device; not independently reproduced by the agent.
+Cause, affected builds and relation to the refactor/filter-refresh change are not established.
+No fix or regression test has been implemented for this report. Retest the same sequence after
+a fix, recording row order, selected row and audible track before/after both Next presses.
+
+### C98. Browse remains usable behind the Random return-choice overlay — OPEN, user-reported 2026-10-06
+
+**Source:** a different app user, relayed by the owner. Installed version/build, device, Android
+version and installation channel were not provided.
+
+**Reported reproduction:** start Random playback, then press Back. The playlist is dimmed and
+offers Back to Random and Back to Playlist; those two actions behave as expected. Press Browse
+instead: the normal Browse choices appear, including entry into Random again.
+
+**Expected behaviour proposed by the owner:** while that return-choice overlay covers the
+playlist, Browse and Web should be visibly unavailable; Settings may remain usable. The report
+demonstrates Browse remaining active. Web is part of the requested consistency check, not a
+separately confirmed observation. Both return actions must remain usable.
+
+**Verification/status:** user-reported navigation/interaction issue, not independently reproduced
+or diagnosed by the agent. No fix has been implemented. Retest Browse, Web, Settings and both
+return actions while the overlay is visible; do not describe Web as verified until it is checked.
+
+### C99. Random filters open with a perceptible delay and briefly appear unavailable — OPEN, owner testing 2026-10-06
+
+**Source:** the owner's hands-on testing, distinct from the two external-user reports above.
+Reported in follow-up to the offered release test APK 1.0.0 (1084), source `0ab8c7d`; the installed
+build was not explicitly confirmed. Device and Android version were not supplied.
+
+**Observed:** opening Random's filters has a slight lag. On another occasion, under uncertain
+conditions, the chips initially appeared unavailable and became active after roughly one second.
+The owner believes the interaction stayed within Random but is not certain. Availability
+eventually recovered; this report does not establish that filters remained permanently disabled.
+
+**Expected:** the filter sheet should feel responsive and communicate any availability check
+clearly, rather than briefly looking as if known music has become unavailable. A transition from
+loading to available should not be mistaken for missing indexes or require a re-download.
+
+**Verification/status:** owner-reported UX/performance concern; no timed measurement, independent
+reproduction or diagnosis yet. Related to the earlier Random availability report at the top of
+this document, but not proof of the same cause or a new regression. Investigate on a release APK,
+record cold/warm opening, loading text, time to enabled chips and any intervening downloads or
+navigation. No performance fix has been implemented or accepted for this report.
 
 ### C89. Search filtered to Atari 8-bit never looks in ASMA — **reported 2026-09-24; FIXED, merged and confirmed on the phone the same day**
 
