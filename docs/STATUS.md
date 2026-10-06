@@ -4,18 +4,24 @@ Updated: 2026-10-06 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Random feedback correction stack — host-verified, phone acceptance pending, 2026-10-06
+## Random feedback correction stack — owner-accepted and merged, 2026-10-06
 
 Owner authorised C97, then C98 and C99 on separate stacked branches, with analysis, regression
-checks and PR handoffs. No push, merge, publication or phone acceptance is implied. The first
+checks and PR handoffs. After the combined APK handoff, the owner reported successful operation
+and explicitly authorised sequential merges on 2026-10-06. The first
 branch is `fix/random-scope-history` from `develop` at `a72d098`, followed by
 `fix/random-return-navigation` and `fix/random-filter-responsiveness`. All three have separately
 verified release candidates. The final combined candidate is clean `9110e62`, **1.0.0 (1091)**:
 676 host tests, lint without errors and all enabled project checks passed; minified, test-signed
 release APK in main `dist/protracktor-release-1.0.0-1091-9110e62-20261006-234043.apk`.
-Phone/audio/latency checks remain unverified. Main `develop` stays clean at `a72d098`; its stored
-remote tracking ref is ahead/behind-diverged and owner synchronization precedes opening real PRs.
-No push or merge to develop/master occurred. PR drafts and exact handoff evidence:
+Merged into local `develop` in order: C97 `43963a0`, C98 `ed2b4aa`, C99 `98e605f`.
+Each merge tree exactly matched its corresponding branch tip; the final application sources
+match the tested candidate. No tests or APK builds were rerun for these content-identical merges.
+The owner's acceptance concerns the offered combined candidate; the installed build, device,
+Android version and individual scenario results were not separately restated. No quantitative
+latency measurements or independent external-user retests are claimed.
+No push, remote-web synchronization, master change or publication occurred. Historical PR drafts
+and exact handoff evidence:
 [Random feedback PRs](RANDOM_FEEDBACK_PRS.md).
 
 ## Architecture stabilization — merged after owner acceptance, 2026-10-06
@@ -25,14 +31,14 @@ Released reference: `v1.0.0` at `2aaeeeb` (versionCode 1055). The owner reported
 of most functions and authorised merging the bounded refactor on 2026-10-06. It is now in local
 `develop`; no push or release was performed. Long-term release approval remains separate.
 
-**Open: Random filter availability (reported 2026-10-06).** While Random played, platform and
+**Resolved with C99 after owner acceptance, 2026-10-06: Random filter availability.** While Random played, platform and
 Favourites filters were disabled. Downloading favourites with the sheet open enabled only that
 chip; visiting Online Catalogues and downloading Modland/song metadata restored platform chips.
 The exact installed build was not supplied. Code inspection found that opening the sheet does
 not refresh its counters and unread counts look like missing data. This predates the extraction;
 the exact sequence that left the owner's counts empty is not established.
 
-**Earlier candidate, now incorporated into the C99 task branch (not develop):**
+**Earlier candidate, subsequently incorporated into C99 and merged into develop:**
 `fix/random-filter-availability` first made each opening read platform and
 favourites availability from the existing stores, independently of saved Browse snapshots. The
 open sheet recounts after downloads and database preparation, distinguishes pending/failed reads
@@ -64,7 +70,8 @@ APK v2 signature verified; the Android Debug/test certificate matches the previo
 (`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`). This is a minified test
 release, not a Play publication artifact. No push, fix-branch merge or publication was performed.
 
-**Phone behaviour not checked:** install as an update without clearing data. Start Random and open
+**Historical phone checklist for the earlier candidate (superseded by combined-build acceptance above):**
+install as an update without clearing data. Start Random and open
 Filter without first visiting Online Catalogues: available platforms should enable after the brief
 check, with genuinely absent platforms still disabled. Close/reopen Filter and confirm the same
 availability. If the favourites list is genuinely absent, download it with the sheet open and check
@@ -1068,7 +1075,7 @@ the report date and source category** (user/tester, owner testing or code review
 feedback remains traceable through a fix and retest. A user report is not an independently
 reproduced defect or evidence of a fix. The feedback index is in [Testing](TESTING.md#feedback-record).
 
-### C97. Random history and selection become inconsistent after changing scope from an earlier track — FIX IMPLEMENTED ON BRANCH, phone retest pending
+### C97. ~~Random history and selection become inconsistent after changing scope from an earlier track~~ — FIXED, owner-accepted and merged 2026-10-06
 
 **Source:** an app user, relayed by the owner. This is user-reported feedback, not a code-review
 finding. Installed version/build, device, Android version and installation channel were not
@@ -1114,10 +1121,11 @@ unheard entries, serializes foreground/background fills and rejects obsolete wor
 database reads. Next from known history does not await another query. Publication and playback
 handoff of a selected pick have no intervening suspension. Fifteen targeted tests passed; removing
 the fallback guard made its regression test fail, then the guard was restored. Full gate/release
-handoff is recorded in the PR document. Device playback, row highlighting and performance remain
-**not checked**; the reported device/build are still unknown.
+handoff is recorded in the PR document. The owner subsequently accepted the combined candidate
+and authorised merge `43963a0`. No device model, per-scenario trace or measured timing was supplied;
+the original reporter's device/build remain unknown.
 
-### C98. Browse remains usable behind the Random return-choice overlay — FIX IMPLEMENTED ON BRANCH, phone retest pending
+### C98. ~~Browse remains usable behind the Random return-choice overlay~~ — FIXED, owner-accepted and merged 2026-10-06
 
 **Source:** a different app user, relayed by the owner. Installed version/build, device, Android
 version and installation channel were not provided.
@@ -1141,10 +1149,11 @@ Settings and the two return actions are unchanged.
 and covered playlist. Before the guard, three failed on enabled Browse/Web; after it all five
 passed, including both Web pairing states, touch/hold suppression, Settings/return callbacks and
 re-enabling after the cover disappears. This confirms component behaviour on the host, not a
-phone navigation journey. Full gate/APK evidence is in `RANDOM_FEEDBACK_PRS.md`. Phone checks of
-Browse, Web, Settings and both return actions remain **not checked**.
+phone navigation journey. Full gate/APK evidence is in `RANDOM_FEEDBACK_PRS.md`. The owner then
+accepted the combined candidate and authorised merge `ed2b4aa`; individual gesture results and
+an independent retest by the original reporter were not supplied.
 
-### C99. Random filters open with a perceptible delay and briefly appear unavailable — FIX IMPLEMENTED ON BRANCH, phone timing/retest pending
+### C99. ~~Random filters open with a perceptible delay and briefly appear unavailable~~ — FIXED, owner-accepted and merged 2026-10-06
 
 **Source:** the owner's hands-on testing, distinct from the two external-user reports above.
 Reported in follow-up to the offered release test APK 1.0.0 (1084), source `0ab8c7d`; the installed
@@ -1166,7 +1175,8 @@ main dispatcher. Two new Compose checks reproduced these resets before the corre
 owner's uncertain sequence and perceived timing have not been independently measured on a phone.
 
 **Implemented on `fix/random-filter-responsiveness`:** reuse the earlier availability correction
-as an ancestor of this branch, preserving its history and keeping develop untouched. Availability
+as an ancestor of this branch, preserving its history; merged into develop as `98e605f` after
+owner acceptance. Availability
 now lives beside the Random screen, preloads on entry, and survives opening/closing the sheet.
 Unchanged sheet reopenings and percentage progress do not recount. Valid known chips stay usable
 during refresh; database preparation/deletion invalidate them, inactive data changes clear the
@@ -1177,9 +1187,10 @@ new dependencies, arbitrary delays or speculative enablement were added.
 **Checked on host:** 16 Compose panel tests passed, including preloading/query counts, cold/warm
 opens, downloads, deletion, inactive invalidation, retry and late responses. Removing the final
 cancellation guard failed the obsolete-result test; the guard was restored. Full gate/APK evidence
-is recorded in `RANDOM_FEEDBACK_PRS.md`. **Not checked:** device timing, smoothness and the owner's
-exact sequence. Retest cold/warm Filter opening on the minified release, including after deleting
-or downloading an index; host query-count checks are not a measured latency improvement.
+is recorded in `RANDOM_FEEDBACK_PRS.md`. The owner subsequently reported successful operation
+and authorised the merge. This is acceptance of the correction, not a quantitative device timing
+measurement or a detailed trace of the original uncertain sequence. The cold/warm checklist
+remains available in TESTING for future regression checks.
 
 ### C89. Search filtered to Atari 8-bit never looks in ASMA — **reported 2026-09-24; FIXED, merged and confirmed on the phone the same day**
 

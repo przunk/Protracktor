@@ -160,13 +160,17 @@ closed-track installation or activity.
 For each follow-up, record the actual build and device/Android version when supplied, reproduction
 result, diagnosis, fix commit, APK or Play-track build delivered, and tester retest result/date.
 Keep missing information explicit. A recorded report is not a completed fix; passing host tests
-is not a phone retest; preparing an APK is not uploading or publishing an update. C97–C99 have branch
-implementations and host regression checks. No phone retest of these fixes
-is recorded. Only completed, evidenced steps should be described as such
+is not a phone retest; preparing an APK is not uploading or publishing an update. C97–C99 have
+host regression checks and were accepted by the owner on 2026-10-06 after the combined release
+APK handoff. The owner reported successful operation and authorised sequential merges; this is
+owner feedback, not an independent retest by the original reporters. The offered candidate was
+1.0.0 (1091), source `9110e62`; the installed build/device/Android version were not separately
+restated. No per-scenario checklist results or measured latency were supplied. Only completed,
+evidenced steps should be described as such
 in a production-access application. This record does not itself establish production eligibility
 or guarantee approval.
 
-### C97 phone retest (pending)
+### C97 regression checklist (owner acceptance recorded above)
 
 Use the release APK identified in [Random feedback PRs](RANDOM_FEEDBACK_PRS.md). Play ten Random
 tracks, select track five, and change the filter to Atari 8-bit. The current tune and all ten
@@ -177,7 +181,7 @@ the last row, switch filters rapidly, test Previous and the explicit dice re-rol
 leave/return to Random. Record the installed build, device/Android version and actual observations;
 background generation is host-tested but its latency and audible transitions need the phone.
 
-### C98 phone retest (pending)
+### C98 regression checklist (owner acceptance recorded above)
 
 While Random plays, press Back to the covered playlist. Browse and WEB must be visibly disabled;
 neither tapping nor holding WEB should open pairing or send anything. Settings must open normally;
@@ -185,7 +189,7 @@ return from Settings and check both Back to Random and Back to the playlist. Aft
 the playlist, Browse and WEB must work again. Repeat with a paired browser and a playlist containing
 tracks so WEB is present. The same guard applies to the existing search/external playback covers.
 
-### C99 phone retest and timing (pending)
+### C99 regression and timing checklist (accepted; quantitative timing unmeasured)
 
 Start the final release APK without visiting Online Catalogues. Enter Random, then open Filter
 immediately (cold) and after listening briefly (warm). A genuinely pending first read may show

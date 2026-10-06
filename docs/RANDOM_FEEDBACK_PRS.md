@@ -1,20 +1,26 @@
-# Random feedback: stacked PR handoff
+# Random feedback: stacked handoff and merge record
 
-Owner-authorised on 2026-10-06. These are local PR drafts, **not GitHub PRs**: the owner pushes
-and opens them. No correction is merged to develop or approved on a device. Report sources and uncertainty are
-preserved in STATUS C97–C99 and the TESTING feedback record. VersionName remains 1.0.0.
+Owner-authorised on 2026-10-06. The local PR drafts below were not opened on GitHub. After the
+combined release APK handoff the owner reported successful operation and authorised sequential
+local merges. All three are now in develop; report sources and uncertainty are preserved in
+STATUS C97–C99 and TESTING. VersionName remains 1.0.0. No push or publication occurred.
 
 | Item | Head | PR base | State |
 | --- | --- | --- | --- |
-| C97 | `fix/random-scope-history` | `develop` (`a72d098` at start) | Host-verified; release APK built; phone pending |
-| C98 | `fix/random-return-navigation` | `fix/random-scope-history` (`f7dfceb`) | Host-verified; release APK built; phone pending |
-| C99 | `fix/random-filter-responsiveness` | `fix/random-return-navigation` (`fccc802`) | Host-verified; combined release APK built; phone pending |
+| C97 | `fix/random-scope-history` | `develop` (`a72d098` at start) | Accepted; merged first as `43963a0` |
+| C98 | `fix/random-return-navigation` | `fix/random-scope-history` (`f7dfceb`) | Accepted; merged second as `ed2b4aa` |
+| C99 | `fix/random-filter-responsiveness` | `fix/random-return-navigation` (`fccc802`) | Accepted; merged third as `98e605f` |
 
-**Remote prerequisite:** local `develop` remains `a72d098`, clean, ahead 23/behind 2 of the stored
-`origin/develop` tracking ref at handoff. No fetch, remote synchronization or push was performed.
-Before opening PR 1, the owner needs to reconcile/publish the intended develop base; otherwise
-GitHub may include older local develop work in the comparison. Do not force-push over the accepted
-remote web changes. The head/base mapping above describes the local stack, not existing remote PRs.
+**Merge verification:** each merge tree matched its branch tip exactly. The final merge's
+application sources match `9110e62`; only handoff documents differ. The previous 676-test/full-lint
+evidence and owner acceptance concern that candidate, not a freshly built post-merge APK.
+Tests/builds were not rerun for this content-identical integration. The owner's overall acceptance
+does not establish individual scenario results, precise timings or a second external-user retest.
+
+**Remote state:** the two stored remote-only web commits (`2390307`, `75f3903`) remain unmerged.
+No fetch, push or remote synchronization was performed; do not force-push over them. The head/base
+mapping above preserves the original local review stack, not existing remote PRs. Branches and
+worktrees remain intact, but new work should start from the updated develop rather than their old tips.
 
 ## PR 1 — Preserve Random history across scope changes (C97)
 
@@ -36,8 +42,8 @@ before the fix; removing the fallback generation guard failed its regression che
 variants were restored. Local evidence: worktree `dist/c97-verification/`. The forced full gate
 passed **654 tests**, lint without errors, 581 page checks, 49 checks against the existing WASM,
 8 SAP checks, the web storage upgrade, 135 icon paths and 8 server checks (216 s). This is host
-evidence, not a rebuilt WASM or phone/audio test. Release artifact details follow after building.
-Phone checks are in TESTING and remain pending.
+evidence, not a rebuilt WASM or phone/audio test. Release artifact details follow below.
+The later combined candidate received owner acceptance as recorded above.
 
 **Candidate:** clean source `c855fab`, version **1.0.0 (1085)**, built in 108 s:
 `dist/protracktor-release-1.0.0-1085-c855fab-20261006-231633.apk` in the main checkout,
@@ -66,8 +72,8 @@ also covers existing search/external sessions rather than introducing a second c
 missing guard before the fix. They cover paired/unpaired Web, disabled gestures, Settings/return
 callbacks and re-enabling. Local evidence: worktree `dist/c98-verification/`. The forced full gate
 passed **659 tests**, lint without errors and the same page/WASM/SAP/storage/icon/server checks
-listed for C97 (226 s). The release build is next; actual phone navigation and visual feedback
-remain unverified.
+listed for C97 (226 s). The release artifact is recorded below; the later combined candidate
+received owner acceptance as recorded above.
 
 **Candidate:** clean source `7a602ba`, version **1.0.0 (1087)**, built in 94 s:
 `dist/protracktor-release-1.0.0-1087-7a602ba-20261006-232527.apk` in the main checkout,
@@ -97,8 +103,9 @@ PL/EN labels; no schema, dependency or persistent-cache change.
 **Evidence:** 16 panel Compose tests passed; removing the final cancellation check failed the
 late-response regression. Local evidence: worktree `dist/c99-verification/`. The forced full gate
 passed **676 tests**, lint without errors and all page/WASM/SAP/storage/icon/server checks listed
-above (273 s). The final release build follows. Real phone timing and the original uncertain interaction remain unverified;
-the final combined APK needs the C97, C98 and C99 phone scenarios in TESTING.
+above (273 s). The final release artifact follows. The owner later accepted the combined candidate;
+quantitative phone timing and the original uncertain interaction remain unmeasured. TESTING retains
+the C97, C98 and C99 scenarios for regression checks.
 
 **Final combined candidate:** clean source `9110e62`, version **1.0.0 (1091)**, built in 162 s:
 `dist/protracktor-release-1.0.0-1091-9110e62-20261006-234043.apk` in the main checkout,
@@ -106,5 +113,6 @@ the final combined APK needs the C97, C98 and C99 phone scenarios in TESTING.
 `7504b8aa980a198f28e100b51819205d24ddcf91c13460563f4894c8b4951cb7`.
 R8 and resource shrinking executed; non-debuggable release for arm64-v8a/armeabi-v7a/x86_64.
 `apksigner verify` passed with the same test certificate recorded for C97/1084. Source and build
-were clean; subsequent handoff commits change documentation only. No Play upload, publication,
-on-device test or permission to merge is claimed. Keep the user's app data intact when installing.
+were clean; subsequent handoff commits change documentation only. At handoff, phone acceptance
+and merge permission were still pending; both were subsequently supplied by the owner as recorded
+above. No Play upload or publication occurred. Keep the user's app data intact when installing.
