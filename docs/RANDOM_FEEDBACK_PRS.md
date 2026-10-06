@@ -17,10 +17,13 @@ evidence and owner acceptance concern that candidate, not a freshly built post-m
 Tests/builds were not rerun for this content-identical integration. The owner's overall acceptance
 does not establish individual scenario results, precise timings or a second external-user retest.
 
-**Remote state:** the two stored remote-only web commits (`2390307`, `75f3903`) remain unmerged.
-No fetch, push or remote synchronization was performed; do not force-push over them. The head/base
-mapping above preserves the original local review stack, not existing remote PRs. Branches and
-worktrees remain intact, but new work should start from the updated develop rather than their old tips.
+**Subsequent remote synchronization, 2026-10-06:** at the owner's request, fetched origin/develop
+to `485660b` and merged both accepted web PRs as `3cea6b0`. PR #2 contains `2390307`/`75f3903`;
+PR #1 contains `31b9eb9`/`485660b`. The integrated sources passed the forced 676-test/full-lint
+project gate again (341 s). No push or publication; origin/develop is an ancestor of local develop.
+Real iOS playback and browser layout remain unverified. The mapping above preserves the original
+local review stack, not existing remote PRs. Branches/worktrees remain intact; new work should
+start from updated develop rather than those old task tips.
 
 ## PR 1 — Preserve Random history across scope changes (C97)
 

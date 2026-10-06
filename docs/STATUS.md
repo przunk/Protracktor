@@ -4,6 +4,23 @@ Updated: 2026-10-06 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Remote develop integration — checked, 2026-10-06
+
+At the owner's request, fetched `origin/develop` to `485660b` and merged it into local develop
+as `3cea6b0`, preserving all local work. Both accepted web PRs are included: #2 (`2390307`, merge
+`75f3903`) centers transport controls and adjusts standalone bottom spacing; #1 (`31b9eb9`, merge
+`485660b`) configures the optional iOS audio playback session. No conflicts, history rewrite,
+push, master change or publication. `origin/develop` is now an ancestor of local develop.
+
+**Checked:** the forced full project gate on the integrated sources passed in 341 s: 676 tests,
+lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP checks, the web storage upgrade,
+135 icon paths, 8 server checks and store metadata validation. Logs:
+`/tmp/protracktor-Protracktor-test.log` and `/tmp/protracktor-Protracktor-lint.log`;
+isolated output: `/tmp/protracktor-origin-sync-build.S8adiD`. Android/native sources are unchanged
+from the owner-accepted local work. No new APK was needed or built for this web integration.
+**Not checked:** real iOS background/screen-lock audio and browser/standalone layout on devices.
+Host checks are not evidence of those behaviours; no new device result was supplied with the PRs.
+
 ## Random feedback correction stack — owner-accepted and merged, 2026-10-06
 
 Owner authorised C97, then C98 and C99 on separate stacked branches, with analysis, regression
@@ -20,7 +37,8 @@ match the tested candidate. No tests or APK builds were rerun for these content-
 The owner's acceptance concerns the offered combined candidate; the installed build, device,
 Android version and individual scenario results were not separately restated. No quantitative
 latency measurements or independent external-user retests are claimed.
-No push, remote-web synchronization, master change or publication occurred. Historical PR drafts
+At this step no push, remote-web synchronization, master change or publication occurred; the
+subsequent web integration and its repeated gate are recorded above. Historical PR drafts
 and exact handoff evidence:
 [Random feedback PRs](RANDOM_FEEDBACK_PRS.md).
 
