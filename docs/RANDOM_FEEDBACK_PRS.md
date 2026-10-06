@@ -7,7 +7,7 @@ preserved in STATUS C97–C99 and the TESTING feedback record. VersionName remai
 | Item | Head | PR base | State |
 | --- | --- | --- | --- |
 | C97 | `fix/random-scope-history` | `develop` (`a72d098` at start) | Host-verified; release APK built; phone pending |
-| C98 | `fix/random-return-navigation` | `fix/random-scope-history` (`f7dfceb`) | Implemented; verification in progress |
+| C98 | `fix/random-return-navigation` | `fix/random-scope-history` (`f7dfceb`) | Host-verified; release APK built; phone pending |
 | C99 | `fix/random-filter-responsiveness` | `fix/random-return-navigation` | Planned |
 
 ## PR 1 — Preserve Random history across scope changes (C97)
@@ -62,6 +62,13 @@ callbacks and re-enabling. Local evidence: worktree `dist/c98-verification/`. Th
 passed **659 tests**, lint without errors and the same page/WASM/SAP/storage/icon/server checks
 listed for C97 (226 s). The release build is next; actual phone navigation and visual feedback
 remain unverified.
+
+**Candidate:** clean source `7a602ba`, version **1.0.0 (1087)**, built in 94 s:
+`dist/protracktor-release-1.0.0-1087-7a602ba-20261006-232527.apk` in the main checkout,
+11,679,982 bytes; SHA-256
+`d904b255a2f34ace75f008c8cf07cf08bf9158ac333a46970334b0f3d3b3858a`.
+Minified, non-debuggable release for all three ABIs. `apksigner verify` passed with the same
+test certificate as C97/1084. Includes C97; excludes the older availability fix until C99.
 
 ## PR 3 — Keep Random filters responsive while refreshing availability (C99)
 
