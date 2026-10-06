@@ -449,10 +449,12 @@ private val DOMAIN_ROW_HEIGHT = 78.dp
 @Composable
 internal fun RandomScopeSheet(
     browse: BrowseState,
+    filters: RandomFilterState,
     onPick: (RandomScope) -> Unit,
     onDownloadFavourites: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val available = filters.availability
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
             text = stringResource(R.string.random_scope_title),
@@ -473,12 +475,12 @@ internal fun RandomScopeSheet(
             // chip that is simply dead is the complaint the platform chips already earned.
             FilterChip(
                 selected = browse.randomScope is RandomScope.Favourites,
-                enabled = browse.favouriteCount > 0,
+                enabled = available != null && available.favouriteCount > 0,
                 onClick = { onPick(RandomScope.Favourites) },
                 label = { Text(stringResource(R.string.random_scope_favourites)) },
             )
             Platforms.all.forEach { platform ->
-                val held = browse.platformCounts[platform.id] ?: 0
+                val held = available?.platformCounts?.get(platform.id) ?: 0
                 FilterChip(
                     selected = (browse.randomScope as? RandomScope.OnPlatform)?.platformId == platform.id,
                     enabled = held > 0,
@@ -488,12 +490,31 @@ internal fun RandomScopeSheet(
             }
         }
 
-        // **A disabled chip has to say why, and here it can also fix it.** What a dead Favourites
-        // chip needs is a 142 KB download the app can start from this sheet. Zero has two causes,
-        // and they take different advice -- the list was never downloaded, or it was and Modland
-        // is not indexed, in which case offering a download again would send somebody round a
-        // loop.
-        if (browse.favouriteCount == 0) {
+        if (available == null || filters.loading || filters.failed) {
+            Row(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(
+                        if (filters.failed) R.string.random_filters_failed else R.string.random_filters_loading
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                if (filters.failed) {
+                    LabelledAction(
+                        icon = PlayerIcons.Refresh,
+                        label = stringResource(R.string.random_filters_retry),
+                        onClick = filters.retry,
+                        slim = true,
+                    )
+                }
+            }
+        }
+
+        // Only a completed read can distinguish a missing list from an unindexed catalogue.
+        if (available != null && available.favouriteCount == 0) {
             val downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
@@ -501,22 +522,24 @@ internal fun RandomScopeSheet(
             ) {
                 Text(
                     text = stringResource(
-                        if (browse.favouritesListed > 0) R.string.random_scope_favourites_unindexed
+                        if (available.favouritesListed > 0) R.string.random_scope_favourites_unindexed
                         else R.string.random_scope_favourites_missing
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                if (browse.favouritesListed == 0) {
-                    TextButton(onClick = onDownloadFavourites, enabled = !downloading) {
-                        Text(
-                            stringResource(
-                                if (downloading) R.string.random_scope_favourites_downloading
-                                else R.string.random_scope_favourites_download
-                            )
-                        )
-                    }
+                if (available.favouritesListed == 0) {
+                    LabelledAction(
+                        icon = PlayerIcons.Download,
+                        label = stringResource(
+                            if (downloading) R.string.random_scope_favourites_downloading
+                            else R.string.random_scope_favourites_download
+                        ),
+                        onClick = onDownloadFavourites,
+                        enabled = !downloading,
+                        slim = true,
+                    )
                 }
             }
         }

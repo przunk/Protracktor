@@ -135,6 +135,12 @@ fun ProtracktorApp(
      * (`docs/PLAN_RANDOM.md`).
      */
     var showRandom by rememberSaveable { mutableStateOf(false) }
+    val randomFilters = rememberRandomFilterState(
+        active = showRandom || choosingRandomScope,
+        browse = browse,
+        preparingDatabase = state.preparingDatabase,
+        loadAvailability = viewModel::randomFilterAvailability,
+    )
     var showPlaylists by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -595,6 +601,7 @@ fun ProtracktorApp(
     if (choosingRandomScope) {
         RandomScopeSheet(
             browse = browse,
+            filters = randomFilters,
             onDownloadFavourites = viewModel::downloadFavourites,
             onPick = {
                 viewModel.setRandomScope(it)

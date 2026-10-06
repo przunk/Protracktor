@@ -1576,6 +1576,8 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun refreshCatalogues() = catalogueBrowser.refreshCatalogues()
 
+    internal suspend fun randomFilterAvailability() = catalogueBrowser.randomFilterAvailability()
+
     // --- giving the disk back -----------------------------------------------------------------
 
     fun clearFetchedCache() = libraryMaintenance.clearFetchedCache()

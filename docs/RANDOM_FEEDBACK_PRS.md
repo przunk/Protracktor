@@ -1,14 +1,20 @@
 # Random feedback: stacked PR handoff
 
 Owner-authorised on 2026-10-06. These are local PR drafts, **not GitHub PRs**: the owner pushes
-and opens them. No branch is merged or approved on a device. Report sources and uncertainty are
+and opens them. No correction is merged to develop or approved on a device. Report sources and uncertainty are
 preserved in STATUS C97–C99 and the TESTING feedback record. VersionName remains 1.0.0.
 
 | Item | Head | PR base | State |
 | --- | --- | --- | --- |
 | C97 | `fix/random-scope-history` | `develop` (`a72d098` at start) | Host-verified; release APK built; phone pending |
 | C98 | `fix/random-return-navigation` | `fix/random-scope-history` (`f7dfceb`) | Host-verified; release APK built; phone pending |
-| C99 | `fix/random-filter-responsiveness` | `fix/random-return-navigation` | Planned |
+| C99 | `fix/random-filter-responsiveness` | `fix/random-return-navigation` (`fccc802`) | Host-verified; combined release APK built; phone pending |
+
+**Remote prerequisite:** local `develop` remains `a72d098`, clean, ahead 23/behind 2 of the stored
+`origin/develop` tracking ref at handoff. No fetch, remote synchronization or push was performed.
+Before opening PR 1, the owner needs to reconcile/publish the intended develop base; otherwise
+GitHub may include older local develop work in the comparison. Do not force-push over the accepted
+remote web changes. The head/base mapping above describes the local stack, not existing remote PRs.
 
 ## PR 1 — Preserve Random history across scope changes (C97)
 
@@ -72,6 +78,33 @@ test certificate as C97/1084. Includes C97; excludes the older availability fix 
 
 ## PR 3 — Keep Random filters responsive while refreshing availability (C99)
 
-Pending analysis and implementation. Reuse the earlier unmerged availability correction; check
-cold/warm opens, delayed refresh, download/removal, stale results and retry. Do not claim measured
-phone speed or independent reproduction of the owner's uncertain sequence without evidence.
+**Report:** owner testing found a small delay and briefly disabled chips. Installed build and the
+exact sequence were not confirmed; no independent phone timing has been measured.
+
+**Analysis:** the 1084 candidate discarded sheet-local availability on reopening and explicitly
+cleared it before refresh, so an already known usable filter appeared unavailable while a new
+query ran. Its query already runs off the UI dispatcher. Two new component tests failed on that
+reset before the fix. There is no basis for blaming all perceived opening latency on the query.
+
+**Change:** incorporate `fix/random-filter-availability` (`1718ee6`, code `0ab8c7d`) into this
+stacked branch without rewriting its history or merging develop. Lift the ephemeral availability
+state above the sheet; prepare it when entering Random, retain valid results during refresh, and
+avoid recounts for sheet-only reopenings. Observe relevant catalogue/count/download changes;
+deletion/preparation and inactive data changes invalidate cached answers. Reject obsolete reads
+even if the loader ignores cancellation. Keep honest cold/error states with Retry and existing
+PL/EN labels; no schema, dependency or persistent-cache change.
+
+**Evidence:** 16 panel Compose tests passed; removing the final cancellation check failed the
+late-response regression. Local evidence: worktree `dist/c99-verification/`. The forced full gate
+passed **676 tests**, lint without errors and all page/WASM/SAP/storage/icon/server checks listed
+above (273 s). The final release build follows. Real phone timing and the original uncertain interaction remain unverified;
+the final combined APK needs the C97, C98 and C99 phone scenarios in TESTING.
+
+**Final combined candidate:** clean source `9110e62`, version **1.0.0 (1091)**, built in 162 s:
+`dist/protracktor-release-1.0.0-1091-9110e62-20261006-234043.apk` in the main checkout,
+11,687,250 bytes; SHA-256
+`7504b8aa980a198f28e100b51819205d24ddcf91c13460563f4894c8b4951cb7`.
+R8 and resource shrinking executed; non-debuggable release for arm64-v8a/armeabi-v7a/x86_64.
+`apksigner verify` passed with the same test certificate recorded for C97/1084. Source and build
+were clean; subsequent handoff commits change documentation only. No Play upload, publication,
+on-device test or permission to merge is claimed. Keep the user's app data intact when installing.

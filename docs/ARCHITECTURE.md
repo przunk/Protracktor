@@ -61,7 +61,18 @@ Verification and remaining gaps are recorded in `STATUS.md` under Architecture s
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.
 
 Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
-a separately launched sibling, not a prerequisite for the overview. File reads retain their IO
+a separately launched sibling, not a prerequisite for the overview. Random filters do not use
+those cached Browse counters as answers: `rememberRandomFilterState`, composed outside the sheet,
+reads `RandomFilterAvailability` through `CatalogueBrowser` and the existing stores. It preloads
+while Random is visible, retaining known availability during refreshes and across sheet dismissal.
+Sheet-only reopenings in the same Random view do not query. Catalogue/count/download changes
+trigger refresh; progress percentages and the selected Random scope do not. Database preparation
+and index deletion clear the cache immediately; changes while inactive invalidate it without
+querying. Superseded reads cannot publish even if their loader ignores cancellation. Unknown/error
+states are distinct from zero counts and offer checking text/Retry, not false download advice.
+The sheet renders this UI state; no persistent cache or second database connection was introduced
+(C99, 2026-10-06).
+File reads retain their IO
 blocks; pairing and the backend fingerprint remain on the caller context. The fingerprint is
 passed as a lambda so wiring does not initialize `NativeEngine`, and it is still evaluated inside
 the atomic Browse update, including retries. Catalogue selection is captured at the original

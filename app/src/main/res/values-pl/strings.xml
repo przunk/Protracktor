@@ -255,6 +255,9 @@
     <string name="domain_random_body_scoped">Przytrzymaj, żeby zmienić źródło losowania</string>
     <string name="a11y_choose_random_scope">Wybierz, z czego losować</string>
     <string name="random_scope_title">Losuj z</string>
+    <string name="random_filters_loading">Sprawdzanie dostępnych filtrów…</string>
+    <string name="random_filters_failed">Nie udało się sprawdzić dostępnych filtrów. Spróbuj ponownie.</string>
+    <string name="random_filters_retry">Ponów</string>
     <string name="random_scope_everything">Wszystkiego</string>
     <string name="action_send_to_browser">WEB</string>
     <string name="action_send_as_link">Wyślij zamiast tego linkiem</string>

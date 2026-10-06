@@ -160,8 +160,8 @@ closed-track installation or activity.
 For each follow-up, record the actual build and device/Android version when supplied, reproduction
 result, diagnosis, fix commit, APK or Play-track build delivered, and tester retest result/date.
 Keep missing information explicit. A recorded report is not a completed fix; passing host tests
-is not a phone retest; preparing an APK is not uploading or publishing an update. C97/C98 have branch
-implementations and host regression checks; C99 remains open. No phone retest of these fixes
+is not a phone retest; preparing an APK is not uploading or publishing an update. C97–C99 have branch
+implementations and host regression checks. No phone retest of these fixes
 is recorded. Only completed, evidenced steps should be described as such
 in a production-access application. This record does not itself establish production eligibility
 or guarantee approval.
@@ -184,3 +184,18 @@ neither tapping nor holding WEB should open pairing or send anything. Settings m
 return from Settings and check both Back to Random and Back to the playlist. After returning to
 the playlist, Browse and WEB must work again. Repeat with a paired browser and a playlist containing
 tracks so WEB is present. The same guard applies to the existing search/external playback covers.
+
+### C99 phone retest and timing (pending)
+
+Start the final release APK without visiting Online Catalogues. Enter Random, then open Filter
+immediately (cold) and after listening briefly (warm). A genuinely pending first read may show
+Checking available filters; it must not falsely recommend downloading favourites. Close/reopen
+Filter repeatedly: known available chips should not flash disabled. Check unavailable platforms
+remain disabled. Download a genuinely absent favourites list with the panel open, then verify
+availability updates without re-entering it. After removing/rebuilding an index, check the new
+availability rather than the old cached answer. A read failure should offer Retry.
+
+Compare with the preserved 1084 APK only if it is already installed or can be updated safely;
+do not uninstall/clear data or force a downgrade for this comparison. Record APK/build, device,
+Android version, cold/warm sequence and observed opening/enablement times. No on-device timing
+or performance improvement has been measured by the agent.

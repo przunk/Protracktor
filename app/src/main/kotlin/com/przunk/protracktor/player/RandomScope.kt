@@ -3,6 +3,13 @@
 
 package com.przunk.protracktor.player
 
+/** Index availability for Random filters, independent of Browse navigation snapshots. */
+internal data class RandomFilterAvailability(
+    val platformCounts: Map<String, Int>,
+    val favouriteCount: Int,
+    val favouritesListed: Int,
+)
+
 /**
  * What Random picks from.
  *
