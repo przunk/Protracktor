@@ -3,6 +3,13 @@
 
 package com.przunk.protracktor.player
 
+/** Fresh index counts for one opening of the Random filters, independent of Browse snapshots. */
+internal data class RandomFilterAvailability(
+    val platformCounts: Map<String, Int>,
+    val favouriteCount: Int,
+    val favouritesListed: Int,
+)
+
 /**
  * What Random picks from.
  *

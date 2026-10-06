@@ -87,6 +87,18 @@ class CatalogueBrowserTest {
         assertTrue(coroutineContext.job.children.none())
     }
 
+    @Test
+    fun `Random filters read every count anew without trusting or overwriting Browse`() = runBlocking {
+        val f = Fixture(this)
+        val stale = f.browse.value.copy(platformCounts = mapOf("old" to 99), favouriteCount = 0)
+        f.browse.value = stale
+        repeat(2) {
+            assertEquals(RandomFilterAvailability(f.platforms, 13, 17), f.browser.randomFilterAvailability())
+        }
+        assertEquals(listOf("platforms", "playable", "listed", "platforms", "playable", "listed"), f.events)
+        assertEquals(stale, f.browse.value)
+    }
+
     @Test(timeout = 5_000)
     fun `overview publishes held flags first and retains ordered counts and unrelated state`() = runBlocking {
         val entered = CompletableDeferred<Unit>()

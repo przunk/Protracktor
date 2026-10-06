@@ -16,8 +16,27 @@ Favourites filters were disabled. Downloading favourites with the sheet open ena
 chip; visiting Online Catalogues and downloading Modland/song metadata restored platform chips.
 The exact installed build was not supplied. Code inspection found that opening the sheet does
 not refresh its counters and unread counts look like missing data. This predates the extraction;
-the exact sequence that left the owner's counts empty is not established. Fix separately from
-the accepted refactor, with an opening/refresh regression check and a release APK for phone testing.
+the exact sequence that left the owner's counts empty is not established.
+
+**Implemented on `fix/random-filter-availability`, not merged:** each opening reads platform and
+favourites availability from the existing stores, independently of saved Browse snapshots. The
+open sheet recounts after downloads and database preparation, distinguishes pending/failed reads
+from empty indexes, and offers Retry on failure. No Random selection, database schema or playback
+rule changed. Download/Retry use labelled icon controls.
+
+**Partly checked:** a Compose/Robolectric test failed on the old code's incorrect Download advice.
+Eight panel tests then passed; deliberately removing refresh-effect keys made the download
+completion test fail because Favourites remained disabled. The mutation was restored. Tests cover
+fresh opening, stale counts on reopening, favourites download without closing, backfill completion,
+retry, missing vs unindexed favourites, cancellation and unavailable platforms.
+
+**Checked, 2026-10-06:** the full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` gate passed in 260 seconds: 648 tests in 88 suites,
+zero failures/errors/skips, lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP
+checks, 135 icon paths, web v3→v4 storage upgrade, 8 server checks and store metadata validation.
+The gate includes the eight Compose panel regressions and the new store-read test. Existing JDK
+and isolated build/cache directories were retained. A release APK is next; phone behaviour remains
+**not checked**. Local verification evidence is in `dist/random-filter-verification/` in the worktree.
 
 Worktree: `user/worktrees/architecture-stabilization` within the main project checkout. Its build
 output is isolated at `/tmp/protracktor-architecture-build.Qogzrp`; set

@@ -595,6 +595,8 @@ fun ProtracktorApp(
     if (choosingRandomScope) {
         RandomScopeSheet(
             browse = browse,
+            preparingDatabase = state.preparingDatabase,
+            loadAvailability = viewModel::randomFilterAvailability,
             onDownloadFavourites = viewModel::downloadFavourites,
             onPick = {
                 viewModel.setRandomScope(it)

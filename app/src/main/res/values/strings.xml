@@ -245,6 +245,9 @@
     <string name="domain_random_body_scoped">Hold to change what it picks from</string>
     <string name="a11y_choose_random_scope">Choose what Random picks from</string>
     <string name="random_scope_title">Random picks from</string>
+    <string name="random_filters_loading">Checking available filters…</string>
+    <string name="random_filters_failed">Could not check available filters. Try again.</string>
+    <string name="random_filters_retry">Retry</string>
     <string name="random_scope_everything">Everything</string>
     <!-- **WEB, and the same word in Polish.** It is the name of the other half of this project,
          not a sentence about where something is going. The prose around it still says "browser",

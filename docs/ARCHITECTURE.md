@@ -60,7 +60,13 @@ Verification and remaining gaps are recorded in `STATUS.md` under Architecture s
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.
 
 Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
-a separately launched sibling, not a prerequisite for the overview. File reads retain their IO
+a separately launched sibling, not a prerequisite for the overview. Random filters do not use
+those cached Browse counters: each sheet opening reads `RandomFilterAvailability` through
+`CatalogueBrowser` and the existing stores. The sheet owns only the temporary loading/result/error
+state, cancels reads on dismissal, waits for database preparation, and recounts when downloads
+start/end or favourites counts change. Progress-label changes alone do not trigger counts. Missing
+data advice appears only after a successful read; failures offer Retry (2026-10-06).
+File reads retain their IO
 blocks; pairing and the backend fingerprint remain on the caller context. The fingerprint is
 passed as a lambda so wiring does not initialize `NativeEngine`, and it is still evaluated inside
 the atomic Browse update, including retries. Catalogue selection is captured at the original

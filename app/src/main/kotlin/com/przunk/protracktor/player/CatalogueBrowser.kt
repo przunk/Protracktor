@@ -115,6 +115,13 @@ internal class CatalogueBrowser(
         }
     }
 
+    /** Read on opening the sheet; navigation snapshots must not decide whether filters exist. */
+    suspend fun randomFilterAvailability() = RandomFilterAvailability(
+        platformCounts = indexes.platformCounts(),
+        favouriteCount = indexes.playableFavourites(),
+        favouritesListed = indexes.listedFavourites(),
+    )
+
     /** Counts the platform chips from the catalogue index, which is what makes a dead chip honest. */
     fun refreshPlatformCounts() {
         scope.launch {

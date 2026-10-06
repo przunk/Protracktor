@@ -34,6 +34,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import com.przunk.protracktor.player.Platforms
 import com.przunk.protracktor.player.RandomScope
+import com.przunk.protracktor.player.RandomFilterAvailability
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -449,10 +451,31 @@ private val DOMAIN_ROW_HEIGHT = 78.dp
 @Composable
 internal fun RandomScopeSheet(
     browse: BrowseState,
+    preparingDatabase: Boolean,
+    loadAvailability: suspend () -> RandomFilterAvailability,
     onPick: (RandomScope) -> Unit,
     onDownloadFavourites: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var availability by remember { mutableStateOf<RandomFilterAvailability?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    var retry by remember { mutableStateOf(0) }
+    val readAvailability by rememberUpdatedState(loadAvailability)
+    // Recount after downloads or platform backfill, not on every download progress update.
+    LaunchedEffect(preparingDatabase, browse.indexing.keys.toSet(), browse.favouriteCount, browse.favouritesListed, retry) {
+        availability = null
+        failed = false
+        if (!preparingDatabase) {
+            try {
+                availability = readAvailability()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                failed = true
+            }
+        }
+    }
+    val available = availability
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
             text = stringResource(R.string.random_scope_title),
@@ -473,12 +496,12 @@ internal fun RandomScopeSheet(
             // chip that is simply dead is the complaint the platform chips already earned.
             FilterChip(
                 selected = browse.randomScope is RandomScope.Favourites,
-                enabled = browse.favouriteCount > 0,
+                enabled = available != null && available.favouriteCount > 0,
                 onClick = { onPick(RandomScope.Favourites) },
                 label = { Text(stringResource(R.string.random_scope_favourites)) },
             )
             Platforms.all.forEach { platform ->
-                val held = browse.platformCounts[platform.id] ?: 0
+                val held = available?.platformCounts?.get(platform.id) ?: 0
                 FilterChip(
                     selected = (browse.randomScope as? RandomScope.OnPlatform)?.platformId == platform.id,
                     enabled = held > 0,
@@ -488,12 +511,31 @@ internal fun RandomScopeSheet(
             }
         }
 
-        // **A disabled chip has to say why, and here it can also fix it.** What a dead Favourites
-        // chip needs is a 142 KB download the app can start from this sheet. Zero has two causes,
-        // and they take different advice -- the list was never downloaded, or it was and Modland
-        // is not indexed, in which case offering a download again would send somebody round a
-        // loop.
-        if (browse.favouriteCount == 0) {
+        if (available == null) {
+            Row(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(
+                        if (failed) R.string.random_filters_failed else R.string.random_filters_loading
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                if (failed) {
+                    LabelledAction(
+                        icon = PlayerIcons.Refresh,
+                        label = stringResource(R.string.random_filters_retry),
+                        onClick = { retry++ },
+                        slim = true,
+                    )
+                }
+            }
+        }
+
+        // Only a completed read can distinguish a missing list from an unindexed catalogue.
+        if (available != null && available.favouriteCount == 0) {
             val downloading = browse.indexing.containsKey(DownloadKeys.FAVOURITES)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
@@ -501,22 +543,24 @@ internal fun RandomScopeSheet(
             ) {
                 Text(
                     text = stringResource(
-                        if (browse.favouritesListed > 0) R.string.random_scope_favourites_unindexed
+                        if (available.favouritesListed > 0) R.string.random_scope_favourites_unindexed
                         else R.string.random_scope_favourites_missing
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                if (browse.favouritesListed == 0) {
-                    TextButton(onClick = onDownloadFavourites, enabled = !downloading) {
-                        Text(
-                            stringResource(
-                                if (downloading) R.string.random_scope_favourites_downloading
-                                else R.string.random_scope_favourites_download
-                            )
-                        )
-                    }
+                if (available.favouritesListed == 0) {
+                    LabelledAction(
+                        icon = PlayerIcons.Download,
+                        label = stringResource(
+                            if (downloading) R.string.random_scope_favourites_downloading
+                            else R.string.random_scope_favourites_download
+                        ),
+                        onClick = onDownloadFavourites,
+                        enabled = !downloading,
+                        slim = true,
+                    )
                 }
             }
         }
