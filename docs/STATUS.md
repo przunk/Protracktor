@@ -1,7 +1,582 @@
 # Status
 
-Updated: 2026-09-21 — version 0.7.0: the Amiga custom formats through UADE, their lengths from
-songdb, the downloads grouped. versionCode is the commit count, schema version 19
+Updated: 2026-10-05 — version 1.0.0, schema version 21. versionCode is the commit count.
+The production-access application is pending. Historical dated checks below describe their own
+builds; they are not current test counts or proof of the refactoring branch's behaviour.
+
+## Architecture stabilization — test candidate built, not accepted
+
+Branch: `feature/architecture-stabilization`, based on `develop` at `1455422`.
+Released reference: `v1.0.0` at `2aaeeeb` (versionCode 1055). No merge or release is authorised by
+this work. The owner must approve long-term behaviour before any later release.
+
+Worktree: `user/worktrees/architecture-stabilization` within the main project checkout. Its build
+output is isolated at `/tmp/protracktor-architecture-build.Qogzrp`; set
+`PROTRACKTOR_BUILD_DIR_ROOT` to that path for every build/test command in this worktree.
+Since the 2026-10-04 environment restart, also set
+`PROTRACKTOR_GRADLE_USER_HOME=/tmp/protracktor-architecture-gradle` (task-specific dependency cache).
+Existing vendored sources and npm packages are linked read-only by convention; do not fetch or
+patch through those links. The pre-existing WASM artefacts were copied, not shared for writing.
+
+### Scope decision — 2026-10-05
+
+The owner accepted stopping further extractions because the time cost did not justify completing
+the original seven-file plan. Close out the existing controller changes through `6eb5577` with a
+focused boundary review, limited comment corrections, full tests/lint and a release-variant test
+APK. Library editing, sharing, playback extraction, Compose, web and native restructuring and the
+repository-wide comment pass are **deferred, not completed**. No merge or release is authorised.
+The review, candidate and phone checklist are in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md).
+
+**Technical closeout checked — 2026-10-05:** clean candidate `3defe38`, version `1.0.0 (1076)`;
+639 tests in 87 suites (zero failures/errors/skips), lint without errors and all enabled project
+checks passed again. The minified, test-signed release APK was built for all three ABIs and copied
+to the main checkout's `dist/protracktor-release-1.0.0-1076-3defe38-20261005-215545.apk`.
+Its signature matches the preserved build 1057, not the separately test-signed 1055 baseline;
+compatibility with the installed phone copy is unverified. See the closeout report for hashes,
+commands and evidence. Phone/long-term checks and the previously recorded session-write risks
+remain open. No merge, publication or new extraction occurred during closeout.
+
+### Baseline evidence — 2026-10-03
+
+- **Checked:** `scripts/check-tooling.sh` found JDK 17.0.19, SDK 36, NDK 29.0.14206865,
+  CMake 3.31.6 and Ninja 1.12.1.
+- **Checked:** `node scripts/check-page.mjs` exited 0; DOM/rule checks, not a real browser/audio
+  session. The existing harness inlines modules, so the web extraction must also verify real
+  module imports and the packaged entry point.
+- **Checked:** `node scripts/check-web-store-upgrade.mjs` preserved history/playlists from a v3
+  browser database through v4; `node scripts/check-server.mjs` passed all eight socket checks.
+- **Partly checked:** `node scripts/check-engine.mjs` exited 0 against the copied existing WASM
+  artefact. That demonstrates the artefact's boundary behaviour, not that current native sources
+  were rebuilt. A fresh build and repeatable audio comparisons remain outstanding.
+- **Checked:** 440 existing Android unit tests executed with no failures or skips before any
+  production change. Five added `StateContractsTest` checks also passed before extraction; five
+  deliberate contract mutations made all five fail, then were restored. The subsequent full
+  `scripts/test-protracktor.sh --really` passed **445 unit tests**, lint (no errors), 581 page
+  checks, 49 existing-WASM checks, 8 SAP checks, 135 icon paths, the web storage upgrade and 8
+  server checks. Production code was still unchanged in this baseline run.
+- **Baseline-run caveats:** the first sandboxed attempt could not open a network socket; the
+  permitted retry downloaded Gradle 9.6.0. Adding the new test file while the first lint pass was
+  running disrupted its analysis (`findFirCompiledSymbol`, new declaration not compiled). The
+  repeat ran on unchanged source files and passed; no lint rule was disabled or suppressed.
+- **Checked:** `scripts/build-web-engine.sh` rebuilt the baseline engine from current sources,
+  using `EM_CACHE=/tmp/protracktor-architecture-build.Qogzrp/emscripten-cache`. Its module/WASM and
+  build log are preserved locally in `dist/architecture-baseline/`. The fresh build subsequently
+  passed all 49 engine checks. A real-file probe on 2026-10-04 played 5/5 fixtures without silence
+  or refusal: libopenmpt's `test.mod` (two subsongs), gme's `test.nsf` (unknown duration), ASAP's
+  `International_Karate.sap`, Hively's `karma.ahx`, and minimp3's `MEANDR_PHASE0.mp3`. Input/engine
+  hashes and the probe log are in `dist/architecture-baseline/20261004-*`. This is a partial corpus,
+  not coverage of every backend or a rendered-audio equivalence check; those remain pending.
+- **Not checked:** release APK, current Android native/UADE probes, performance comparisons and
+  long-term behaviour on a phone or in a real browser.
+
+### Stages
+
+- Baseline and ownership map: initial Android/web gate and state contracts checked
+  (`ARCHITECTURE.md`, Current ownership). Workflow characterisation and native audio comparisons
+  remain part of their respective extraction stages; this is not a completed refactor.
+- Controller/workflow boundaries: state contracts, scan execution, search, track-file access,
+  reference-data downloads, native replay installation, playback read-ahead, Browse cache/prefetch,
+  playlist file transfer, playlist-session persistence/management, catalogue browsing and
+  downloaded-data maintenance, local-folder browsing and Browse navigation/search publication extracted.
+  Library editing, sharing and playback boundaries (including playback digressions) are deferred.
+- Compose boundaries: not started; deferred by the scope decision above.
+- Web modules: not started; deferred. No web PR synchronization is needed for this closeout.
+- Native adapters and both build paths: no restructuring started; deferred.
+- Repository-wide comment correction/shortening: deferred; only concrete misleading comments in
+  reviewed branch code are included in closeout, separately from executable changes.
+- Final documentation, full gate, test APK and manual checklist: technical closeout completed;
+  results in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md). Phone acceptance is still pending.
+  Earlier checkpoint evidence follows below.
+
+### Browse navigation and search publication extraction — 2026-10-05
+
+Moved domain entry, Back routing and query/scope/result publication into `BrowseWorkflow`, using
+the same Browse flow, coroutine scope, `BrowseNavigation` rules and `LibrarySearch` query service.
+A narrow actions port keeps catalogue/folder/history reads with their existing owners; the
+controller retains playback digressions and Android notice rendering. Construction must do no work.
+
+Preserved immediate domain publication before refresh callbacks, Back's precedence and return
+values, parent-read callbacks before the saved Back snapshot is published, and request capture
+before launching a search. Filter toggles remain distinct from changing scope, live-result notices
+keep their existing point, and failure/cancellation/late-result behaviour is unchanged. Tests exercise these through
+the extracted workflow with real search logic and controlled sources/actions, including overlapping
+reads and reentrant updates. No cancellation or stale-result guard was added during this move.
+
+The controller delegates these interactions to the workflow and binds its actions directly to the
+existing catalogue/folder readers and History entry point. The unused private favourite-count
+forwarder was removed. No new job, mutable state store, native initialization or read starts during
+construction. `PlaybackController.kt`: 3,394 → 3,270 lines; the workflow is 184 lines. The controller
+was compared against the planned substitutions, then its integrated snapshot after cleanup.
+
+**Checked:** 23 plain JVM tests passed before and after integration, using the actual
+`LibrarySearch` with controlled sources. Two initial fixture mistakes were corrected without
+changing production behaviour: a renderer callback shadowed its forwarding method and recursed,
+and one assertion assumed an equal-value assignment replaced the flow's stored state object.
+
+**Checked:** all 23 safeguards detected controlled mutations: 13 constructor/navigation checks,
+then 10 search checks. Failures were assertions/comparisons, not compilation or VM failures;
+the exact test names were matched against the passing integration report. The workflow was restored
+and compared with its saved original, and the controller with its integrated snapshot.
+
+**Checked:** full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process`: **639 tests in 87 suites**, zero
+failures/errors/skips; lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP checks,
+135 icon paths, browser storage upgrade, 8 server checks and store metadata; 226 seconds overall.
+The existing shared JDK and isolated build/cache paths were used, without diagnostic JVM overrides;
+`GRADLE_OPTS='-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2'` also limits the lint invocation.
+Tests executed with `--rerun-tasks`. Focused/mutation/full XML, unit/lint logs and saved originals
+are retained under `dist/architecture-baseline/20261005-browse-workflow-*`.
+
+**Existing timing risks, not fixed:** an older search can publish its rows after a newer search
+and a switch to History; Back can overwrite a reentrant parent-read publication with the snapshot
+captured before the callback. Both orderings exist in `b635b5f` and are reproduced through controlled
+sources/actions. Real database/main-dispatcher frequency and any cancellation/stale-result fix
+remain separate, unapproved work. This refactor preserves the ordering rather than changing it.
+
+**Not checked:** release APK, phone gestures/document providers, real-browser behaviour and
+long-term stability. Host workflow tests and wiring inspection do not establish those outcomes.
+
+### Local-folder browsing extraction — 2026-10-05
+
+Move grant/forget/index-read and local-tree publication into `LocalFolderBrowser`, using the
+existing scope, stores, Browse flow and `LocalTree` rules. Keep SAF grant/label/path handling in
+an Android adapter. Scan ownership and navigation routing stay in the controller; both reuse
+the extracted tree rendering instead of copying its rules.
+
+Preserve grant → remember → refreshed rows → launch open → scan ordering, suspended folder-list
+reads inside atomic retries, failure/cancellation behaviour, deferred native fingerprint reads
+only for non-empty indexes, and completion-order publication after navigation. Opening a remembered
+folder must not start a scan; explicitly granting one still does. Characterise root/level retention
+during scan snapshots and the exact fields cleared by forget/close. No stale-result fix or new
+permission/index policy belongs in this checkpoint.
+
+The controller is now wired to the extracted browser, including the shared tree renderer used by
+scan snapshots and Back. Its remaining body was compared with the prepared integration;
+`PlaybackController.kt`: 3,456 → 3,394 lines. The native fingerprint stays a deferred lambda,
+not a bound reference that could initialize the engine during construction.
+
+**Checked:** 20 added tests (17 workflow/state, 3 Android grant/path checks) passed before
+integration, in a temporary pre-integration control run, and after integration with build and
+configuration caches disabled and `-Pkotlin.incremental=false` (68 seconds). An initial test incorrectly
+expected an Unconfined nested launch to run before the scan callback; its expectations were
+corrected to the observed event-loop order, without changing production code. These are host
+checks, not measurements of Android's main dispatcher or real document providers.
+
+**Earlier interrupted checks:** two integrated-build attempts stopped in JVM SIGSEGVs before test
+execution (`MarkSweep::follow_array_chunk` and pointer adjustment in SerialGC), despite the
+uncompressed-pointer flags from the previous checkpoint. The control run and an uncached integrated
+run passed, but the first mutation batch then crashed in native method-signature rendering even
+without caches or incremental compilation. Disabling Gradle instrumentation for one more attempt
+(`-Dorg.gradle.internal.instrumentation.agent=false`, confirmed in the daemon context) also crashed,
+in `MarkSweep::follow_stack`. Those runs did not establish the cause; none of these failed compilations counts
+as mutation evidence. The integrated controller is retained, both deliberately changed helper files
+are restored and compared with their originals. Logs and diagnostics:
+`dist/architecture-baseline/20261005-local-folders-*`.
+
+**Existing race, not fixed:** suspend folder A's index read, finish opening folder B, then release
+A. The old tree is published while `openFolder` still names B. The same unguarded completion path
+exists in `870042b`. A controlled-store test reproduces it; real-provider/SQLite frequency and a
+stale-result fix remain separate, unapproved work.
+
+**Checked after normal work resumed:** all 20 focused tests passed on the existing shared JDK,
+without the earlier GC/JIT/pointer overrides. Controlled mutations then failed 4 constructor/Android
+checks and 16 workflow checks; the unchanged constructor check passed in the latter batch. An
+exact-name audit matched these failures to all 20 passing tests. Both helpers were restored and
+compared with their saved originals; the integrated controller's hash remained unchanged.
+
+**Checked:** full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process`: **616 unit tests in 86 suites**, zero
+failures/errors/skips; lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP checks,
+135 icon paths, browser storage upgrade, 8 server checks and store metadata; 231 seconds overall.
+The two isolated build/cache variables above were set, with
+`GRADLE_OPTS='-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2'` also limiting the separate lint
+invocation. Unit tests executed with `--rerun-tasks`. No Java distribution or project build setting
+was changed. Focused/mutation XML and logs plus the full-gate summary are retained under
+`dist/architecture-baseline/20261005-local-folders-normal-*`. Full-suite XML was inspected before
+the pause, but its temporary directory did not survive the turn boundary; it was not archived.
+
+**Not checked:** release APK, real document providers/phone behaviour and long-term stability.
+The full gate checks the host paths, not Android's main-dispatcher timing or device performance.
+
+**Owner decision — 2026-10-05:** the owner declined a different JDK, reported a faulty memory
+region under investigation, and requested normal work to continue. This is an owner-reported
+hardware finding, not an independently verified diagnosis by this agent. Resume checks with the
+existing toolchain and ordinary JVM settings; do not install Java, restart WSL, change shared
+tooling or investigate other projects. Three other agents are working elsewhere in the workspace.
+Keep this worktree's isolated build/cache paths and run one verification job at a time. A crashed
+attempt remains incomplete evidence; the full gate is still required before the next extraction.
+
+### Downloaded-data maintenance extraction — 2026-10-05
+
+Checkpoint scope: move cache, catalogue-index/archive, downloaded-metadata and replay deletion
+workflows into `LibraryMaintenance`, using the same stores, cache, scope, background dispatcher
+and native configuration callback. Publish through a narrow adapter to the existing player/Browse
+flows; keep file operations and localized messages Android-bound. Delete no new category of data.
+
+Preserve immediate notices/optimistic rows before launching work, the catalogue download guard,
+ordered store/file reads, Modland favourite-scope handling, archive deletion's ignored Boolean,
+metadata failure refreshes, replay adoption cleanup and package-version/configuration timing.
+Cache-cleared messages must still be created inside atomic state-update retries. Characterise
+failures and cancellation as they exist, including the non-cancellable catalogue cleanup; no
+rollback, new guard or improved error policy belongs in this extraction.
+
+The controller now delegates these four workflows to `LibraryMaintenance`. The state adapter
+writes the existing flows; Android adapters use the existing remote cache, replay directories and
+localized resources. The remaining controller code was compared with its pre-extraction copy.
+`PlaybackController.kt`: 3,602 → 3,456 lines. The workflow is 206 lines, state adapter 87,
+file adapter 23 and notice adapter 32; no second store, cache or playback owner was introduced.
+
+**Checked:** 21 added tests (15 workflow/state, 3 Android file boundaries, 3 PL/EN notice checks)
+passed before and after integration. Two initial exception-identity assertions were corrected:
+coroutine stack recovery can copy an exception across a dispatcher while retaining the original
+as its cause; the tests now require the same type/message and original cause. Production exception
+handling was not changed.
+
+**Checked:** all 21 tests failed under controlled mutations: 7 construction/file/message checks,
+then 14 workflow/state checks (the unchanged constructor test still passed in the second batch).
+The audit matched failed test names against the 21-test integration run. All four helper files
+were restored and compared with saved originals; the controller still matched its integrated copy.
+
+**Checked:** full `scripts/test-protracktor.sh --really --no-daemon
+-Pkotlin.compiler.execution.strategy=in-process`, with the environment below: **596 unit tests**
+in 84 suites, zero failures/errors/skips, lint without errors, 581 page checks, 49 existing-WASM
+checks, 8 SAP checks, 135 icon paths, browser storage upgrade, 8 server checks and store metadata;
+253 seconds overall. Unit tests were forced to execute, not served from cache.
+
+**Verification impediment:** JVM SIGSEGVs interrupted compilation, including SerialGC/C1 on both
+the shared JDK and a task-local copy, and SerialGC with JIT disabled. The interpreter attempt
+failed in `FastScanClosure<DefNewYoungerGenClosure>::do_oop`; this does not establish the cause.
+Those interrupted mutation attempts produced no test results and are not counted as evidence.
+A single read-only `rg` pipeline also exited 139; a subsequent narrower query succeeded. The
+later focused pass, both successful mutation batches and full gate used a task-local copy of the
+same JDK 17.0.19+10 (`PROTRACKTOR_JAVA_HOME=/tmp/protracktor-architecture-build.Qogzrp/toolchain/jdk`),
+`JAVA_TOOL_OPTIONS='-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:-UseCompressedOops -XX:-UseCompressedClassPointers'`
+and `-Pkotlin.compiler.execution.strategy=in-process --no-daemon`. This is a command-local
+workaround, not proof of the cause or lasting environment stability. No repository toolchain or
+shared configuration was changed. Logs, saved originals and diagnostics are under
+`dist/architecture-baseline/20261005-library-maintenance-*`.
+
+**Not checked:** real-phone deletion/SQLite/native timing, release APK and long-term behaviour.
+No schema, deletion policy, native lifetime or UI change was intended or included.
+
+### Catalogue-browsing extraction — 2026-10-04
+
+`CatalogueBrowser` now owns catalogue/format/author reads and overview/platform/favourite counts
+in the existing scope, with the same stores. `CatalogueBrowseState` publishes into the existing
+Browse flow; `AndroidCatalogueStorage` reads the existing remote cache, replay stores, database
+file and pairing preferences. `CatalogueTracks` is the shared row mapping for browsing, search,
+neighbours and Random. Domain navigation, local folders and playback remain controller-owned.
+
+Preserved: early held-data flags, a separately launched platform count, store/file read order and
+dispatchers, selection capture before launching versus after starting, loading/error/cancellation
+behaviour and unrelated Browse fields. The backend fingerprint remains a deferred lambda evaluated
+inside atomic-update retries; construction performs no I/O or native initialization.
+
+**Checked:** 20 added tests (13 workflow/state, 4 Android storage, 3 mapping) passed before and
+after controller integration. The initial mapping fixture was corrected against the existing
+`asma://` URI and `ASMA (Atari 8-bit)` label, without changing production behaviour. All 20 failed
+under controlled mutations: 8 construction/storage/mapping checks, then 12 workflow checks.
+All four production helper files were restored and compared with their saved originals.
+
+**Checked:** full `scripts/test-protracktor.sh --really` with the JVM flags below: **575 unit
+tests**, zero failures/errors/skips, lint without errors, 581 page checks, 49 engine checks,
+8 SAP checks, 135 icon paths, browser storage upgrade and 8 server checks; 403 seconds overall.
+
+**Verification environment:** Kotlin daemon disconnects were followed by JVM SIGSEGVs in G1GC
+and then C2 compilation (`hs_err_pid30933.log`, `hs_err_pid33894.log`, archived with the checkpoint
+diagnostics). The SIGSEGV attempts stopped before test results and are not counted as mutation
+evidence. The successful second mutation batch and full gate used command-local
+`JAVA_TOOL_OPTIONS='-XX:+UseSerialGC -XX:TieredStopAtLevel=1'` and
+`-Pkotlin.compiler.execution.strategy=in-process --no-daemon`; no project/toolchain configuration
+was changed. Logs/XML: `dist/architecture-baseline/20261004-catalogue-browser-*`.
+
+**Existing race, not fixed:** a controlled read suspended the first catalogue query, completed a
+second selection, then released the first query. Its groups replace the newer list while the
+second catalogue remains selected. The same unguarded completion ordering exists in `6e14931`.
+This is host sequence evidence, not a phone reproduction; stale-result protection needs separately
+approved work, not a hidden behaviour change inside this extraction.
+
+`PlaybackController.kt`: 3,727 → 3,602 lines. The new workflow is 161 lines, state adapter 103,
+Android adapter 29 and shared mapping 31. **Not checked:** phone UI, actual SQLite-driven browse
+timing, release APK or long-term behaviour. No schema, cache policy, native lifetime or UI change.
+
+### Playlist-session extraction — 2026-10-04
+
+`PlaylistSession` owns restoration, the active persistence ID, both debounced save jobs,
+Save/Discard and playlist create/rename/delete/switch sequencing. It uses the controller's existing
+scope and `LibraryStore`. `PlaylistSessionState` applies narrow session transitions to the same
+player/Browse flows, without an independent queue or state copy. Native stop and metadata-resolution
+callbacks remain controller-owned; construction performs no I/O.
+
+Preserved: restore without autoplay; the pre-restore settings-save guard; 400 ms settings and
+1500 ms track debounce; sampling after the delay; dynamic localized names/notices; explicit edits
+versus settings; last-playlist reset; exceptions/cancellation; and the suspended list reads inside
+atomic state-update retries. Other controller consumers read the session's single persistence ID,
+which still changes before the destination playlist's tracks finish loading.
+
+**Checked:** 18 initial workflow tests and one new PL/EN notice test passed before and after
+integration. The first edit-mutation batch exposed a weak assertion: the test copied `dirty` from
+the already-mutated state into its expectation. It now explicitly requires dirty state while the
+write is pending and supplies an independent dirty edit. One more test characterises a pending
+track write during a suspended switch. All **20 new tests** (19 session, one resource) subsequently
+failed under controlled mutations: 1 construction, 7 restore/resources, 10 edits, 2 switch-order.
+All three mutated sources were restored and compared with their pre-mutation copies.
+
+**Checked:** full `scripts/test-protracktor.sh --really`: **555 unit tests**, zero failures/errors/
+skips, lint without errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser
+storage upgrade and 8 server checks. Logs and mutation XML:
+`dist/architecture-baseline/20261004-playlist-session-*`.
+`PlaybackController.kt`: 3,938 → 3,727 lines; session workflow: 216, state adapter: 118.
+**Not checked:** this session against a real phone/SQLite instance, device UI, release APK or
+long-term behaviour. No schema, stored format, native ownership or lifecycle change.
+
+### Pre-existing session-write races — host sequence reproduced, not changed
+
+Two controlled-store tests expose timing risks already present in `c1b0f0c`, before this
+extraction. They exercise the real session/state pair, but do not measure how often either
+interleaving happens with Android SQLite or on a phone:
+
+- **Save completion can hide a newer edit.** Save captures the initial tracks, suspends in
+  `replaceTracks`, then clears `dirty` on the current UI state. An edit made during that write
+  remains visible but is marked clean, although only the earlier tracks were persisted.
+- **A pending metadata write can target the destination with the previous queue.** Switching sets
+  the persistence ID before awaiting destination tracks, while the UI queue still holds the old
+  list. If the 1500 ms write runs in that interval, its late reads pair the new ID with the old
+  tracks. The controlled store records that replacement; this is a data-loss risk, not a proposed
+  new persistence policy.
+
+The extraction preserves these sequences rather than silently introducing a behaviour fix.
+Separate owner-approved work should guard save completion against newer edits and make a pending
+write's playlist identity and track snapshot consistent across activation. The phone reproduction
+and the fix remain open; passing characterisation tests do not mean these risks were removed.
+
+### State-contract extraction — 2026-10-03
+
+Preparation commit: `e48ccd8`. `Message`, `PlayerUiState`, `BrowseState` (with `BrowseDomain` and
+`HeldSets`) and `DownloadKeys` now live in their own files in the same package. Their definition
+bodies were compared byte for byte with the baseline, excluding file headers/imports. Defaults,
+derived properties, message identity and mutable state ownership are unchanged. Existing comments
+moved with their declarations; their correction remains a later, separate stage.
+
+`PlaybackController.kt`: 5,287 → 4,771 lines. This is only the state boundary, not completion of
+the controller refactor. No new dependency, storage change, dispatching change or version bump.
+
+**Checked:** `scripts/test-protracktor.sh --really` after extraction: 445 unit tests, lint without
+errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade
+and 8 server checks. **Not checked:** behaviour on a phone, release APK and long-term stability.
+
+### Scan-execution extraction — 2026-10-04
+
+`ScanBatch` now executes the existing `IncrementalScan.Plan`. The controller still owns the scan
+job, lists the SAF tree, takes the decoder fingerprint, probes through `NativeEngine`, binds the
+folder's index writes, and updates notifications/Browse. The helper receives those operations;
+it does not create a scope, dispatcher, database connection or second mutable UI state.
+
+Preserved: four parallel-safe workers plus one serial worker on the original dispatchers;
+200-file checkpoints polled every second; append-only partial writes; whole-folder replacement
+only at completion; cancellation writes under `NonCancellable` and rethrows; progress every 25
+files and snapshots at most twice a second, except completion. Native probing/stream lifetime
+and the cancellation boundary around worker execution were not redesigned.
+
+**Checked:** 7 new `ScanBatchTest` cases plus the 4 existing incremental-scan cases. Controlled
+mutations of persistence, the worker limit, dispatcher selection and snapshot throttling made
+all 7 new cases fail; the restored source matched the saved pre-mutation copy. A test initially
+compared thread names and failed because coroutine debugging appends a suffix; it now checks
+actual `Thread` identity, so it tests dispatching rather than a diagnostic label.
+
+**Checked:** full `scripts/test-protracktor.sh --really`: **452 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8
+server checks. Evidence: `dist/architecture-baseline/20261004-scan-{tests,mutations,full-gate}.log`.
+`PlaybackController.kt`: 4,771 → 4,707 lines; `ScanBatch.kt`: 115 lines.
+**Not checked:** real SAF-provider cancellation/scan behaviour on a phone, release APK and long-term
+playback. The remaining architecture/comment stages are still open.
+
+### Library-search extraction — 2026-10-04
+
+`LibrarySearch` owns the sequential four-source query and its result calculation. The controller
+still owns the coroutine and Browse/player state, captures the query/scope/indexed catalogue IDs,
+and presents the same localized messages before the count queries. The injected operations call
+the existing stores and live search; no new job, cache, dispatcher or search policy was introduced.
+
+Preserved: index then playlist then catalogue then live reads; source precedence and display order
+through `SearchResults`; platform filtering; explicit/empty catalogue selections; per-source caps;
+counts only when index/catalogue results reach the cap; no live request for a blank query; separate
+unreachable/unreadable outcomes without discarding successful sources.
+
+**Checked:** 11 `LibrarySearchTest` cases and the existing `SearchResultsTest` pass. Controlled
+mutations of routing, filtering, limits and live search made all 11 new cases fail; restoration
+was checked against the saved source. Logs: `dist/architecture-baseline/20261004-search-{tests,mutations}.log`.
+`PlaybackController.kt`: 4,707 → 4,633 lines.
+**Checked:** full `scripts/test-protracktor.sh --really`: **463 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-search-full-gate.log`).
+**Not checked:** live-network/phone interaction, release APK and long-term behaviour.
+
+### Track-file extraction — 2026-10-04
+
+`TrackFiles` now routes main/companion reads for playback, metadata probing, sharing and prefetch.
+`AndroidTrackFileAccess` binds the existing `RemoteFiles`, content resolver and LHA bridge; it has
+no independent cache, scope or decoder handle. The controller passes its existing archive worker
+and retains Browse refresh ownership. LHA is still initialized only when extraction is called.
+
+Preserved: HTTP/archive/local source precedence, success-only cache refresh, companion naming and
+missing-companion tolerance, IO dispatch for normal document reads, and archive-worker dispatch
+for LHA extraction. Scanning calls the synchronous document adapter on its existing scan lane.
+Streams remain closed per read, including when a provider fails. Playback and prefetch policies
+were not changed. `PlaybackController.kt`: 4,633 → 4,514 lines; routing: 111, Android adapter: 59.
+
+**Checked:** 12 routing/dispatcher tests and 4 Android-adapter tests, plus 5 existing companion-rule
+tests. The adapter tests use Robolectric API 29 and synthetic provider streams, not a phone.
+All 16 new checks failed under controlled mutations (15 in the first batch, the success-refresh
+check in a separate mutation); both source files were restored and compared with their saved
+copies. Evidence: `dist/architecture-baseline/20261004-track-{files-tests,files-mutations,refresh-mutation}.log`.
+**Checked:** post-integration `scripts/test-protracktor.sh --really`: **479 unit tests**, lint without
+errors, 581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and
+8 server checks (`dist/architecture-baseline/20261004-track-files-full-gate.log`).
+**Not checked:** real provider/network/decoder behaviour on a phone, release APK and long-term playback.
+
+### Catalogue/metadata download extraction — 2026-10-04
+
+`LibraryDownloads` owns catalogue, SID-length, songdb and favourite workflows and their selected-run
+job. It receives the controller's existing scope, `StoreDownloadSources` reusing existing stores
+and cache, a narrow Browse/message port, and `AndroidDownloadText`. Progress guards/counts stay in
+the same Browse state. No second scope, state flow, store instance or download-policy implementation
+was added. Native replay installation and cache eviction/prefetch remain separate pending boundaries.
+
+Preserved: `DownloadPlan` ordering, archive storage before indexing, all listed formats passed to
+the store, parse dispatching, partial persisted results, busy-step skips, success/failure counting,
+per-step cleanup, and message creation/publication timing. `DownloadNotice` is exhaustive at the
+Android resource mapping. Both privacy/source-credit tests now read the URL from its actual owner;
+the first integration compile caught the second old reference, which was updated without relaxing
+the check. Source URLs, their pinned revisions and all PL/EN resource texts are unchanged.
+
+**Checked:** 13 workflow tests passed before controller integration; after integration those tests,
+3 Robolectric PL/EN resource-mapping tests, and the existing privacy/source-credit checks passed.
+Controlled mutations of persistence, routing/order, failure reporting, guards, cancellation cleanup
+and text mapping made all 16 new tests fail. Both changed files were then restored and compared
+with saved copies. Logs: `dist/architecture-baseline/20261004-downloads-{tests,integration-tests,mutations}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **495 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-downloads-full-gate.log`).
+`PlaybackController.kt`: 4,514 → 4,183 lines;
+`LibraryDownloads.kt`: 382 lines, including the existing comments and source constants.
+**Not checked:** actual network/database/native-fingerprint integration on a phone, release APK and
+long-term behaviour. The source adapter was compiled and its forwarding reviewed, not run against
+the owner's database or live servers.
+
+### Native replay download coordination — 2026-10-04
+
+`ReplayDownloads` runs the sc68/UADE sequence through narrow native and presentation operations.
+The controller retains its existing scope/background dispatcher, progress owner and native
+bindings. Startup and post-delete UADE configuration remain in the controller. Constructing the
+new collaborator neither starts work nor initializes an engine.
+
+Preserved: sc68 before UADE; activation only for a nonzero result, on the existing background
+worker; separate group/source progress guards; partial/failed result messages; exception propagation
+and cleanup after success, failure or cancellation. The same `AndroidDownloadText` now formats
+replay notices; all resource strings and native/download implementations are unchanged.
+
+**Checked:** 6 new workflow tests and 4 resource-mapping tests passed before and after integration
+(7 new tests in total, plus an expanded existing label test). Controlled mutations of progress,
+guards, zero-result handling, dispatching, exception propagation, cancellation cleanup and replay
+text mapping made all 6 workflow tests and the 2 replay-related resource checks fail. Both mutated
+files were restored and compared byte for byte with their saved copies. Logs:
+`dist/architecture-baseline/20261004-replays-{before-integration-tests,integration-tests,mutations}.log`.
+`PlaybackController.kt`: 4,183 → 4,133 lines; `ReplayDownloads.kt`: 98 lines.
+**Checked:** full `scripts/test-protracktor.sh --really`: **502 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-replays-full-gate.log`).
+**Not checked:** actual network/filesystem/native activation on a phone, release APK and long-term
+playback. Injected host operations check orchestration, not the emulator's ability to use a download.
+
+### Playback read-ahead ownership — 2026-10-04
+
+`PlaybackReadAhead` owns the in-memory byte map and prefetch job. The controller retains selection
+of playlist/random/external-file candidates and uses the same `TrackFiles.read` path and process
+scope. The preparation body matches the former controller body byte for byte after substituting
+the injected reader. Opening consumes the same entry; stopping calls cancel/clear at the same point
+before closing the native track. No dispatcher, mutex, extra scope or disk cache was introduced.
+
+**Checked:** 8 new workflow tests: concurrent reads, consume-on-open, wanted-ID eviction, retained
+entries, 4 MB per-file/8 MB total limits, cancellation on replacement/stop, early-return ordering
+and propagated read errors. Two controlled mutation batches made all 8 tests fail (6 then 2);
+the source was restored and compared with its saved copy after each. Evidence:
+`dist/architecture-baseline/20261004-read-ahead-{tests,mutations-1,mutations-2}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **510 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-read-ahead-full-gate.log`).
+`PlaybackController.kt`: 4,133 → 4,087 lines; `PlaybackReadAhead.kt`: 73 lines.
+
+**Existing behaviour retained:** when a new candidate list is empty or entirely held, preparation
+returns before cancelling an older read. That read can subsequently store its bytes even though
+its ID is no longer wanted. The test reproduces both cases; changing the policy is outside this
+extraction. Folder cache-ahead and disk-cache ownership remain separate pending boundaries.
+**Not checked:** real network/provider read-ahead, playback latency or memory behaviour on a phone,
+release APK and long-term stability.
+
+### Browse cache coordination — 2026-10-04
+
+`BrowseCache` combines `OnPhone` source checks with the `FolderPrefetch` workflow. Disk-cache/shared
+fetches remain owned by the existing `RemoteFiles`. The controller retains both observers and their
+`collectLatest` cancellation, the refresh stale-result guard, the platform network check and Browse
+state. Source/progress operations only forward to those existing owners; construction does no I/O.
+
+Preserved: IO dispatch for cache checks, one archive-presence query per call, the full track-list
+folder key and Modland-only eligibility, existing network/budget/parallelism rules, progress events,
+and cleanup on cancellation. An absent folder clears fetch progress, not cached-row marks. The
+controller still checks file existence and nonzero length for an archive; that binding was reviewed
+and compiled, not exercised against a real Android cache.
+
+**Checked:** 9 new workflow cases and 16 existing `OnPhone`/`FolderPrefetch` cases passed before
+integration. The first run found a test assumption, not a production defect: a propagated exception
+was a different object with the same type/message. The corrected test checks type, message and
+the original instance in the cause chain. Controlled mutations made all 9 new tests fail; the
+restored production source matched the saved copy. Logs:
+`dist/architecture-baseline/20261004-browse-cache-{first-tests,tests,mutations}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **519 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-browse-cache-full-gate.log`).
+`PlaybackController.kt`: 4,087 → 4,043 lines; `BrowseCache.kt`: 91 lines.
+**Not checked:** real provider/network/Android cache behaviour, navigation on a phone, release APK
+and long-term playback. The unchanged observer wiring was reviewed, not executed in a device UI.
+
+### Playlist file transfer — 2026-10-04
+
+`PlaylistTransfer` owns the M3U import/export sequence and matching precedence, reusing `PlaylistFile`
+and the existing `LibraryStore`/`LibraryIndexStore`. The controller retains the working queue,
+playlist activation and UI flows. The initial export selection is captured once; exporting an
+active playlist uses its unsaved queue, while another playlist reads the store. Import still creates
+a separate playlist, including when all offered entries remain unresolved, and passes duplicates
+to the store while reporting offered/found counts as before.
+
+Preserved: known ID → remote/catalogue ID → remote location → indexed filename/size resolution;
+Default-dispatcher parsing/writing; document-name fallback and filename sanitization; persistence
+and refresh/notice order; cancellation and exception propagation. `AndroidPlaylistFiles` reads UTF-8
+on IO through the existing document adapter and forwards shared copies without changing their
+calling dispatcher. The share intent fields, URI grant, manifest and PL/EN resources are unchanged.
+
+**Checked:** 11 new workflow tests, 3 Android-file/intent tests and 2 PL/EN notice tests passed
+before integration, alongside the existing `PlaylistFileTest` cases. Robolectric API 29 actually
+read a shared file through the manifest-declared `FileProvider`; synthetic document streams checked
+IO dispatch and closing on success/failure. This is host evidence, not another app opening a share
+on a phone. Two controlled mutation batches made all 16 new tests fail (9 then 7); all 3 mutated
+files were restored and compared with their saved copies. Logs:
+`dist/architecture-baseline/20261004-playlist-transfer-{tests,mutations-1,mutations-2}.log`.
+**Checked:** full `scripts/test-protracktor.sh --really`: **535 unit tests**, lint without errors,
+581 page checks, 49 engine checks, 8 SAP checks, 135 icon paths, browser storage upgrade and 8 server
+checks (`dist/architecture-baseline/20261004-playlist-transfer-full-gate.log`).
+`PlaybackController.kt`: 4,043 → 3,938 lines; transfer workflow: 162, Android files: 35, text: 25.
+**Not checked:** real document providers, the chooser/receiving app, import against a phone database,
+release APK or long-term behaviour. No new database transaction, schema or persistence format.
+
+### Pre-existing cancellation-notice defect — reproduced, not changed
+
+`downloadSelected` tests `isActive` inside `withContext(NonCancellable)` before showing the stopped
+notice. This observes the non-cancellable scope, so the notice is not emitted. **Checked:** the
+production workflow's cancellation test completes ASMA, cancels while awaiting SID lengths, retains
+the completed data, clears progress and emits no notice. A subsequent run succeeds. This is host
+evidence with fake data ports, **not** a phone check. The copied cancellation boundary and its
+behaviour were preserved; correcting the notice requires the owner's separate approval.
 
 ## What works
 

@@ -4,7 +4,7 @@
 package com.przunk.protracktor.data
 
 import com.przunk.protracktor.net.Catalogue
-import com.przunk.protracktor.player.PlaybackController
+import com.przunk.protracktor.player.LibraryDownloads
 import java.io.File
 import java.net.URI
 import org.junit.Assert.assertEquals
@@ -30,7 +30,7 @@ class MusicSourcesTest {
 
     @Test
     fun `the host the song lengths come from is credited`() {
-        val host = URI(PlaybackController.SONG_LENGTHS_URL).host
+        val host = URI(LibraryDownloads.SONG_LENGTHS_URL).host
         val hosts = MusicSources.parse(table, polish = false).map { URI(it.url).host }
         assertTrue(host, host in hosts)
     }

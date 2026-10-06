@@ -3,10 +3,114 @@
 This document records what has been decided and **why**. A decision without its reason gets
 re-litigated every few weeks, or worse, applied in a situation it was never meant for.
 
-Nothing below is built yet. It is the shape we are building toward, and it will be corrected here
-when reality disagrees.
+The application is built and released as 1.0.0. The numbered sections preserve the decisions made
+as it grew; dated measurements and superseded designs are historical evidence, not a statement
+that every original proposal is the current implementation. The following ownership map records
+the current boundaries and the proposed post-1.0.0 extractions.
 
 ---
+
+## Current ownership and proposed boundaries — 2026-10-05
+
+Baseline: `1455422`, the accepted `develop` when `feature/architecture-stabilization` began.
+The release remains `v1.0.0` at `2aaeeeb`. No behaviour, storage schema, decoder version or release
+change is intended. Boundaries marked **extracted** are implemented on this branch; the others
+are deferred proposals, not further work required on this branch. On 2026-10-05 the owner reduced
+the workstream to closing out the existing extractions; the time cost did not justify the full
+plan. See [Architecture closeout](ARCHITECTURE_CLOSEOUT.md) for the boundary assessment and handover.
+
+| Area | Current owner and lifetime | Boundary and status |
+| --- | --- | --- |
+| Playback state and events | Process singleton `PlaybackController`; main-immediate supervisor scope; read-only flows exposed to UI and service | **Extracted:** `Message.kt`, `PlayerUiState.kt`, `BrowseState.kt`, `DownloadKeys.kt`; same package, definitions, defaults and derived rules; no change to state ownership |
+| Native playback | Controller owns `NativeEngine.Track`, open/seek operations and focus; `stopPlayback` cancels opens/prefetch, closes the track and releases focus | Playback collaborator after the independent workflows have been extracted; retain operation order |
+| Scanning | Controller owns the scan job, folder/probe adapters and two background-priority dispatchers; `ScanBatch` owns only per-run candidate/result bookkeeping | **Extracted:** testable scan execution with injected probe, append/replace persistence and progress callbacks; four safe workers and the existing serial lane, checkpoint timing and cancellation boundary unchanged |
+| Playlist-session persistence | Existing stores own database access; `PlaylistSession` owns the persistence ID and both save jobs in the controller's scope; the working queue remains in the existing player flow | **Extracted:** restore, debounced settings/track writes, Save/Discard and create/rename/delete/switch. `PlaylistSessionState` applies narrow transitions to the same flows, including suspended list reads inside atomic retries; controller retains native stop and metadata callbacks. Queue editing remains separate |
+| Playlist file transfer | `PlaylistTransfer` uses the controller's scope and an immutable export selection; controller owns the active queue, playlist list and share/message flows | **Extracted:** M3U import/export and matching order through existing stores and `PlaylistFile`; `AndroidPlaylistFiles` binds document reads, shared copies and intents, and `AndroidPlaylistText` maps typed notices. Imports do not activate or edit the current playlist |
+| Catalogue browsing/search | Controller owns the Browse flow; `CatalogueBrowser` runs catalogue/format/author reads and overview/count queries in the same scope; UI retains sheet/scroll/selection state | **Extracted:** `CatalogueBrowseState` applies narrow transitions to the existing flow; `AndroidCatalogueStorage` reads existing cache/replay/database files and pairing preferences. `CatalogueTracks` maps rows for browsing, search and Random. `LibrarySearch` retains the four-source query, called by `BrowseWorkflow` |
+| Browse interactions | `BrowseWorkflow` applies domain/Back/query/filter/result transitions to the existing Browse flow and scope; reads remain with their existing services | **Extracted:** a narrow actions port dispatches catalogue, local-folder and History reads; `BrowseNavigation` remains the pure rule owner. Controller retains playback digressions and Android notice rendering; no new job or state store |
+| Local-folder browsing | `LocalFolderBrowser` reads existing grants/indexes and publishes into the controller's Browse flow using the same scope; controller retains the scan job and `BrowseWorkflow` routes domain/Back actions | **Extracted:** `AndroidFolderAccess` reuses SAF permission/label/path handling; `LocalTree` remains the tree rule owner. Scan snapshots and Back share the browser's tree/level rendering; no scan starts merely because a folder is opened |
+| Track bytes and companion files | `RemoteFiles` retains its cache and shared fetch jobs; content streams are opened/closed per read; controller retains scan/archive dispatchers | **Extracted:** `TrackFiles` routes the existing sources; `AndroidTrackFileAccess` binds resolver, shared cache and LHA operations. Playback/share/prefetch use the same reader; scanning calls its synchronous document adapter on the existing scan lane |
+| Reference-data downloads | `LibraryDownloads` owns the selected-run job in the controller's existing scope; controller owns Browse progress/counts through a narrow UI port | **Extracted:** catalogue, SID/songdb and favourite workflows, with `StoreDownloadSources` reusing existing stores/cache and `AndroidDownloadText` formatting typed notices at the original points |
+| Native replay installation | `ReplayDownloads` runs in the existing controller scope; controller owns progress, native configuration and the background dispatcher | **Extracted:** guarded sc68 then UADE downloads, activation and combined notice. Native calls remain controller-bound, including startup/post-delete UADE configuration; construction performs no download or native initialization |
+| Downloaded-data removal | `LibraryMaintenance` runs cache, catalogue index/archive, metadata and replay deletion in the controller's existing scope; stores/cache and native configuration retain their owners | **Extracted:** `LibraryMaintenanceState` publishes into the existing flows; `AndroidMaintenanceFiles` and `AndroidMaintenanceText` bind file operations and notices. No new deletion target, scope or state copy; playback and local user data remain outside this workflow |
+| Playback read-ahead | `PlaybackReadAhead` owns the byte map and job in the controller's existing scope; controller selects upcoming candidates and consumes bytes when opening a track | **Extracted:** concurrent `TrackFiles.read` calls, wanted-ID eviction, 4 MB per-file/8 MB total limits, consume-on-open and stop/replacement cancellation. The existing no-missing-bytes early return remains before cancellation |
+| Browse cache/prefetch | `RemoteFiles` owns persistent cache and shared in-flight fetches; controller owns Browse cache marks and both observers, including cancellation and stale-result protection | **Extracted:** `BrowseCache` combines `OnPhone` source checks with `FolderPrefetch` planning/execution. Narrow file/progress operations reuse the same remote cache and Browse writer; no new scope, cache or policy copy |
+| Android service | `PlaybackService` owns its coroutine scope, platform media session and notification; observes the process controller | Keep this lifetime boundary; do not move playback ownership into screen composables |
+| Compose | `ProtracktorApp`, `BrowseScreen`, `PlaylistScreen` mix wiring with sections, rows and dialogs | Cohesive UI components with explicit state/actions; no extra copies of domain state or altered effect keys |
+| Web | `app.js` owns queue/playback/session/DOM state; `store.js` owns IndexedDB access; `catalogue.js` handles archive/index operations; worklet owns its engine handle | Startup/composition entry point and explicit workflow/UI modules with acyclic imports; keep messages and storage keys |
+| Native engine | `engine.cpp` owns backend adapters and selection; `player_oboe.cpp` owns the locked audio host/JNI; `player_wasm.cpp` owns WASM handles | Adapter translation units behind the existing `Backend` contract; keep host ownership and probing order |
+
+The dependency direction remains UI/service → orchestration → domain rules and data/native
+adapters. Domain rules must not acquire an Android or UI dependency. An extraction must not turn
+the controller into a shared mutable context passed to every collaborator.
+
+State snapshots are values; jobs and resources are not. Moving a value type does not move its
+writer or its lifetime. Scan cancellation retains partial index writes; a completed scan replaces
+the folder snapshot. Read-ahead cancellation is distinct from cancelling another consumer of a
+shared download. The audio callback uses a non-blocking decoder lock while seek/subsong work runs
+on the caller thread. These are preservation constraints, not proposed changes.
+
+The session persistence ID and the published active-playlist ID are deliberately not collapsed in
+this extraction: the former changes before an asynchronous track read, the latter on publication.
+Preserving that ordering exposes an existing pending-write race, and Save completion can also clear
+the dirty flag of a newer edit. `STATUS.md` records the controlled-store reproductions and the need
+for separately approved behaviour fixes; the architecture extraction does not declare them safe.
+
+Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
+Long-term phone/browser acceptance and permission to merge or release remain the owner's.
+
+Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
+a separately launched sibling, not a prerequisite for the overview. File reads retain their IO
+blocks; pairing and the backend fingerprint remain on the caller context. The fingerprint is
+passed as a lambda so wiring does not initialize `NativeEngine`, and it is still evaluated inside
+the atomic Browse update, including retries. Catalogue selection is captured at the original
+call/job boundaries. Overlapping reads still publish in completion order, even if an older result
+arrives after navigation; adding stale-result protection would be a separate behaviour change.
+
+Downloaded-data deletion keeps its optimistic publication before asynchronous removal. Catalogue
+deletion reuses the download guard and clears both busy markers in non-cancellable cleanup.
+Modland's favourite scope is read after clearing its favourites. Replay removal still tries all
+three directories before reading the installed version and reconfiguring UADE on the background
+lane. Cache notices are rendered inside atomic player-update retries; other notices are rendered
+once before publication. These differences preserve existing timing, not a new error policy.
+
+Local-folder reads retain their original launch boundaries. Remembering a grant persists it,
+refreshes rows, launches opening and requests a scan without awaiting the index read. The supplied
+scope controls nested-launch dispatch order. Folder-list reads remain inside atomic publication
+retries; root-path derivation does too, while the native fingerprint is read once only after a
+non-empty index result. Scan snapshots preserve the current tree level and the controller's
+selection guard. Ordinary opening retains its pre-existing completion-order race (`STATUS.md`).
+
+Browse domain entry publishes before invoking its refresh actions. Back invokes parent reads before
+publishing its captured snapshot; a reentrant publication can therefore still be overwritten. Search
+captures its request before launching, then publishes loading, live notices and results at their
+original points. Changing scope clears stale-result fields; filter toggles do not. The workflow
+adds neither cancellation nor a late-result guard. These preserved timing risks are recorded in
+`STATUS.md`; changing them would be separate behaviour work.
+
+### Original refactoring inventory — remaining extractions deferred on 2026-10-05
+
+This ledger follows the seven starting files in local `GOAL.md`. Kotlin paths are relative to
+`app/src/main/kotlin/com/przunk/protracktor/`. Line counts include comments and indicate the state
+of the branch, not architectural quality. The owner accepted leaving the unfinished portions in
+place for this closeout, not declaring them ideally structured. The last column records the former
+plan, now deferred; final boundary review and phone checks are tracked in `ARCHITECTURE_CLOSEOUT.md`.
+Detailed preservation evidence is in the dated checkpoints in `STATUS.md`.
+
+| Starting file; baseline → current lines | Responsibilities and resulting owners | Checkpoint / evidence | Deferred plan / later checks |
+| --- | --- | --- | --- |
+| `player/PlaybackController.kt`; 5,287 → 3,270 | State contracts and independent scan/search/file/download/cache/playlist/catalogue/maintenance/local-folder/Browse workflows moved to the named owners above | `e48ccd8`–`b635b5f`, then Browse interactions: full gate 639 tests; all 23 new Browse checks mutation-sensitive | Library editing, sharing and playback ownership (including digressions); final dependency review and phone checks |
+| `ui/BrowseScreen.kt`; 1,731 → 1,731 | Screen orchestration, panels, menus and dialogs still in the original owner | No extraction checkpoint | Coherent sections; preserve state/effect/list identity, Browse re-entry and Add to playlist; phone checks |
+| `ui/ProtracktorApp.kt`; 939 → 939 | App wiring and screen/dialog composition still together | No extraction checkpoint | Separate composition responsibilities without changing launchers, collectors or navigation; phone checks |
+| `ui/PlaylistScreen.kt`; 824 → 824 | Screen state/actions and presentation still together | No extraction checkpoint | Cohesive presentation sections with unchanged gestures, selection and scrolling; phone checks |
+| `web/src/app.js`; 4,300 → 4,300 | Startup, playback, navigation, rendering and events still share the entry point | No extraction checkpoint; baseline DOM/storage checks only | Reconcile accepted web PRs before editing; explicit modules, real entry-point and packaged-import checks, browser checks |
+| `web/src/catalogue.js`; 877 → 877 | Catalogue access/indexing and related navigation remain unchanged | No extraction checkpoint | Determine cohesive boundary; record any justified intact portion; test real consumers and packaged paths |
+| `native/engine/engine.cpp`; 2,970 → 2,970 | Backend adapters, selection/probing and shared helpers still together | Fresh baseline WASM build and five-format playback probe; not audio equivalence | Adapter extraction with both source lists; Android/UADE and WASM metadata/refusal/PCM/subsong/seek comparisons |
+
+The broad first-party comment pass and packaged-web handover are deferred with the untouched areas.
+Current closeout requires the focused boundary/comment check, reconciled documentation, full gate,
+release-variant test APK and candidate-specific manual checklist. No row grants merge or release
+approval; long-term acceptance remains with the owner.
 
 ## 1. Platform
 
