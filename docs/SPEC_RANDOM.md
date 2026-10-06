@@ -30,8 +30,10 @@ so the two runtimes can be held to one list rather than to a memory of a convers
 
 - **Three scopes**: everything indexed, one platform, or Modland's published favourites. Narrowing
   is a `format IN (…)` clause and nothing else; favourites is a join against the published list.
-- **Changing the scope mid-session discards the picks read ahead**, so the change is heard on the
-  next tune rather than three tunes later.
+- **Changing the scope discards only unheard picks**, preserving the current tune and all heard
+  history. Next walks the remaining history first; the new scope applies to picks after its end.
+  Replacement picks are prepared in the background as soon as the scope changes (owner decision,
+  2026-10-06; C97). The dice action explicitly re-rolls and appends a fresh pick instead.
 
 ### How it draws
 
@@ -41,7 +43,8 @@ so the two runtimes can be held to one list rather than to a memory of a convers
   session's record dropped — the query cannot exclude, so the drawing does.
 - **A pool too small to fill the session repeats rather than stopping.** Forty favourites cannot
   fill an evening otherwise.
-- **Three picks stand past the cursor** (`READ_AHEAD`), their bytes fetched before they are wanted.
+- **Three unheard picks are prepared past the history's end** (`READ_AHEAD`), replenished in the
+  background after playback advances. Byte read-ahead follows the next entries after the cursor.
   They are **not shown**: the list is a record of what played, not a schedule.
 
 ### The record, and moving through it

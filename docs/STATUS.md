@@ -4,6 +4,13 @@ Updated: 2026-10-06 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Random feedback correction stack — in progress, 2026-10-06
+
+Owner authorised C97, then C98 and C99 on separate stacked branches, with analysis, regression
+checks and PR handoffs. No push, merge, publication or phone acceptance is implied. The first
+branch is `fix/random-scope-history` from `develop` at `a72d098`; later corrections will branch
+from its verified tip. PR drafts and exact handoff evidence: [Random feedback PRs](RANDOM_FEEDBACK_PRS.md).
+
 ## Architecture stabilization — merged after owner acceptance, 2026-10-06
 
 Branch: `feature/architecture-stabilization`, based on `develop` at `1455422`.
@@ -1015,7 +1022,7 @@ the report date and source category** (user/tester, owner testing or code review
 feedback remains traceable through a fix and retest. A user report is not an independently
 reproduced defect or evidence of a fix. The feedback index is in [Testing](TESTING.md#feedback-record).
 
-### C97. Random history and selection become inconsistent after changing scope from an earlier track — OPEN, user-reported 2026-10-06
+### C97. Random history and selection become inconsistent after changing scope from an earlier track — FIX IMPLEMENTED ON BRANCH, phone retest pending
 
 **Source:** an app user, relayed by the owner. This is user-reported feedback, not a code-review
 finding. Installed version/build, device, Android version and installation channel were not
@@ -1043,10 +1050,26 @@ should advance playback coherently, and the highlighted row should identify the 
 playing. Prefetched entries must not cause a selection jump or apparent skip. During diagnosis,
 distinguish already-played history from future queued picks before deciding what should be retained.
 
-**Verification/status:** reported on a user's device; not independently reproduced by the agent.
-Cause, affected builds and relation to the refactor/filter-refresh change are not established.
-No fix or regression test has been implemented for this report. Retest the same sequence after
-a fix, recording row order, selected row and audible track before/after both Next presses.
+**Diagnosis (2026-10-06):** scope changes truncated the backing list after the selected cursor,
+including already-heard entries, but kept the old played boundary. New speculative entries then
+fell below that boundary and became visible as though heard. This truncation predates the refactor
+(`1918d93` introduced it). A regression test reproduced the lost history in the shared production
+state owner before the correction; the exact audible/highlight mismatch remains a user report,
+not independently reproduced audio behaviour. Suspended fallback draws also lacked a final
+generation check, allowing a stale-scope result to append after the scope changed.
+
+**Owner decision:** Next traverses all remaining heard history before consuming a new-scope pick.
+The filter change immediately prepares replacement speculation in the background, without
+changing the current tune or showing future entries. An explicit dice re-roll still requests a
+fresh tune at the end. A new tune replenishes the background queue.
+
+**Implemented:** `RandomHistory` shares one boundary/cursor rule with the controller, discards only
+unheard entries, serializes foreground/background fills and rejects obsolete work after both
+database reads. Next from known history does not await another query. Publication and playback
+handoff of a selected pick have no intervening suspension. Fifteen targeted tests passed; removing
+the fallback guard made its regression test fail, then the guard was restored. Full gate/release
+handoff is recorded in the PR document. Device playback, row highlighting and performance remain
+**not checked**; the reported device/build are still unknown.
 
 ### C98. Browse remains usable behind the Random return-choice overlay — OPEN, user-reported 2026-10-06
 
