@@ -748,7 +748,7 @@ private fun PlaylistSheet(
  * second line instead, and only while there is something to save.
  */
 @Composable
-private fun PlaylistTopBar(
+internal fun PlaylistTopBar(
     state: PlayerUiState,
     paired: Boolean,
     onChoosePlaylist: () -> Unit,
@@ -760,6 +760,8 @@ private fun PlaylistTopBar(
     onSettings: () -> Unit,
 ) {
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
+    // Match PlaylistScreen's cover: choose a return destination before browsing or pairing.
+    val navigationEnabled = !state.awayFromPlaylist
     Surface(color = MaterialTheme.colorScheme.surface) {
         Column(
             verticalArrangement = Arrangement.spacedBy(TOP_BAR_SEAM),
@@ -825,6 +827,7 @@ private fun PlaylistTopBar(
                     icon = PlayerIcons.Cloud,
                     label = stringResource(R.string.action_browse),
                     onClick = onBrowse,
+                    enabled = navigationEnabled,
                     // Arriving at Browse buzzes; pressing the way in as well would be two for one.
                     haptic = null,
                     slim = true,
@@ -856,6 +859,7 @@ private fun PlaylistTopBar(
                         icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
                         label = stringResource(R.string.action_send_to_browser),
                         onClick = onSendToBrowser,
+                        enabled = navigationEnabled,
                         onLongClick = onRescan,
                         longClickLabel = stringResource(R.string.action_pair_again),
                         slim = true,

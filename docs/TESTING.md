@@ -160,8 +160,8 @@ closed-track installation or activity.
 For each follow-up, record the actual build and device/Android version when supplied, reproduction
 result, diagnosis, fix commit, APK or Play-track build delivered, and tester retest result/date.
 Keep missing information explicit. A recorded report is not a completed fix; passing host tests
-is not a phone retest; preparing an APK is not uploading or publishing an update. C97 has a branch
-implementation and host regression checks; C98/C99 remain open. No phone retest of these fixes
+is not a phone retest; preparing an APK is not uploading or publishing an update. C97/C98 have branch
+implementations and host regression checks; C99 remains open. No phone retest of these fixes
 is recorded. Only completed, evidenced steps should be described as such
 in a production-access application. This record does not itself establish production eligibility
 or guarantee approval.
@@ -176,3 +176,11 @@ ones. Confirm that highlighted row, dock title and audible tune agree on each st
 the last row, switch filters rapidly, test Previous and the explicit dice re-roll, and briefly
 leave/return to Random. Record the installed build, device/Android version and actual observations;
 background generation is host-tested but its latency and audible transitions need the phone.
+
+### C98 phone retest (pending)
+
+While Random plays, press Back to the covered playlist. Browse and WEB must be visibly disabled;
+neither tapping nor holding WEB should open pairing or send anything. Settings must open normally;
+return from Settings and check both Back to Random and Back to the playlist. After returning to
+the playlist, Browse and WEB must work again. Repeat with a paired browser and a playlist containing
+tracks so WEB is present. The same guard applies to the existing search/external playback covers.
