@@ -517,38 +517,12 @@ class PlaybackController private constructor(private val context: Context) {
      * Random needs its own history: "previous" during Random has to mean the previous random pick,
      * not the previous row of a playlist the user is not listening to.
      */
-    private val randomHistory = mutableListOf<TrackRef>()
-    private var randomCursor = -1
+    private val randomHistory = RandomHistory()
 
-    /**
-     * Which Random session the work in flight belongs to.
-     *
-     * **The record and the cursor are fields, and the work that reads them suspends** — filling the
-     * queue asks the database. Start a session again, or leave for the playlist, while an advance
-     * is waiting, and it would resume against a record that is not its own — the cursor back at -1
-     * and the new session's first pick already in the list, which reads the list out of bounds.
-     * Raised wherever a session begins or ends; checked after every wait.
-     */
-    private var randomSession = 0
-
-    /**
-     * Copies the played part of the history into the state, for the Random view to draw.
-     *
-     * Called from every place that moves the cursor or edits the record. A single writer would be
-     * better; there is no single place the history changes, and inventing one would mean routing
-     * `advanceRandom`, `randomPrevious` and the list's own edits through a funnel that does nothing
-     * else.
-     */
+    /** Read-ahead remains invisible; only the played record and its cursor reach the view. */
     private fun publishRandomPicks() {
-        val played = randomHistory.take(randomPlayed + 1)
-        _state.update { it.copy(randomPicks = played, randomIndex = randomCursor) }
+        _state.update { it.copy(randomPicks = randomHistory.playedPicks, randomIndex = randomHistory.cursor) }
     }
-
-    /**
-     * How far into [randomHistory] has actually been played. Anything past it was picked ahead and
-     * never heard -- which is the difference between history and speculation, and the dice needs it.
-     */
-    private var randomPlayed = -1
 
     init {
         // Before anything can be opened: sc68 reads its replay binaries from a path, and an asset
@@ -1762,10 +1736,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun openRandom() {
         scope.launch {
-            randomSession++
             randomHistory.clear()
-            randomCursor = -1
-            randomPlayed = -1
             failedRandomPicks = 0
             _state.update {
                 it.copy(
@@ -1788,14 +1759,14 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Plays one of the picks already made, chosen by hand from the list.
      *
-     * Only backwards into the record — [randomPlayed] is the edge of what has been heard, and the
+     * Only backwards into the record — the played boundary is the edge of what has been heard, and the
      * picks past it are speculation nobody has been shown.
      */
     fun playRandomAt(index: Int) {
-        if (index < 0 || index > randomPlayed || index > randomHistory.lastIndex) return
-        randomCursor = index
-        playTransient(randomHistory[index])
+        val pick = randomHistory.select(index) ?: return
+        playTransient(pick)
         publishRandomPicks()
+        prepareRandomQueue()
     }
 
     /**
@@ -1807,11 +1778,9 @@ class PlaybackController private constructor(private val context: Context) {
      * surprise, and the dock still says what it is.
      */
     fun removeRandomAt(index: Int) {
-        if (index < 0 || index > randomPlayed || index > randomHistory.lastIndex) return
-        randomHistory.removeAt(index)
-        if (index <= randomCursor) randomCursor--
-        randomPlayed--
+        randomHistory.remove(index)
         publishRandomPicks()
+        prepareRandomQueue()
     }
 
     /**
@@ -1822,14 +1791,11 @@ class PlaybackController private constructor(private val context: Context) {
      * they go and everything actually played stays. Stepping back through the history and then
      * pressing the dice therefore re-rolls, while pressing next -- which means forward -- walks
      * into the queue as it should. Truncating at the cursor would throw away real history as well;
-     * keeping [randomPlayed] is what lets it throw away only the guesses.
+     * keeping the played boundary is what lets it throw away only the guesses.
      */
     fun playRandom() {
         scope.launch {
-            while (randomHistory.lastIndex > randomPlayed) {
-                randomHistory.removeAt(randomHistory.lastIndex)
-            }
-            randomCursor = randomPlayed
+            randomHistory.reroll()
             advanceRandom()
         }
     }
@@ -1863,27 +1829,20 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun randomPrevious() {
-        if (randomCursor <= 0) return
-        randomCursor--
-        playTransient(randomHistory[randomCursor])
+        val pick = randomHistory.previous() ?: return
+        playTransient(pick)
         publishRandomPicks()
+        prepareRandomQueue()
     }
 
-    /**
-     * Moves Random forward one, having decided what comes after it first.
-     *
-     * The order is the point of the whole item: picking at the moment the button is pressed leaves
-     * nothing to fetch in advance, so the read-ahead has nothing to work on however well it works.
-     * Deciding early is what makes the wait go.
-     */
+    /** Next walks heard history before consuming a new, previously invisible pick. */
     private suspend fun advanceRandom() {
-        val session = randomSession
-        // **Forward walks the record, and rolls only at its end.** With a list on screen, next
-        // means the next row: rolling from the middle of the record would leave a gap between what
-        // you are hearing and what you are looking at. The dice button is what always rolls.
-        fillRandomQueue()
-        if (session != randomSession) return
-        if (randomCursor >= randomHistory.lastIndex) {
+        val generation = randomHistory.generation
+        // Replaying history or a prepared pick must not wait for another database query.
+        if (!randomHistory.hasNext) fillRandomQueue(1)
+        if (generation != randomHistory.generation) return
+        val pick = randomHistory.advance()
+        if (pick == null) {
             // Which sentence depends on the scope, because "nothing is indexed" is only true of
             // the unnarrowed dice. The chips are disabled when they would draw nothing, so a
             // narrowed dice that comes back empty means the index went away underneath it -- and
@@ -1897,55 +1856,31 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
 
-        randomCursor++
-        randomPlayed = maxOf(randomPlayed, randomCursor)
         _state.update { it.copy(randomExhausted = false) }
         publishRandomPicks()
-        // Topped up before playing rather than after: `load` reads ahead when it finishes, and it
-        // can only read what has already been decided.
-        fillRandomQueue()
-        if (session != randomSession) return
-        // Read rather than indexed: the checks above say this session is still the one running, and
-        // this says the record still has the row it is pointing at.
-        val pick = randomHistory.getOrNull(randomCursor) ?: return
+        // No suspension between cursor publication and handing that same pick to playback.
         playTransient(pick)
+        prepareRandomQueue()
     }
 
-    /** Tops the queue up so [READ_AHEAD] picks stand past the cursor. */
-    private suspend fun fillRandomQueue() {
-        val session = randomSession
-        val short = READ_AHEAD - (randomHistory.lastIndex - randomCursor)
-        if (short <= 0) return
-        // The scope is read here rather than captured when Random started, so changing it takes
-        // effect on the next pick instead of at the next session. Picks already read ahead keep the
-        // scope they were drawn under, which is why the row says what is set rather than what is
-        // playing.
+    /** Replenish speculation at the end of the heard record, even when replaying its middle. */
+    private fun prepareRandomQueue() {
+        scope.launch {
+            val generation = randomHistory.generation
+            fillRandomQueue(READ_AHEAD)
+            if (generation == randomHistory.generation && _state.value.randomMode) prefetchUpcoming()
+        }
+    }
+
+    private suspend fun fillRandomQueue(ahead: Int) {
         val scope = _browse.value.randomScope
         val platforms = when (scope) {
             is RandomScope.Everything, is RandomScope.Favourites -> emptySet()
             is RandomScope.OnPlatform -> setOf(scope.platformId)
         }
-        // **Drawn wide and filtered, because the query cannot exclude anything.** `randomSample`
-        // is `ORDER BY RANDOM() LIMIT n` over the whole scope every time, so nothing stops it
-        // handing back a tune this session has already played -- which reads exactly like the dice
-        // replaying history, and is likelier the narrower the scope: Favourites is 991 tunes, not
-        // half a million. Asking for more than is needed and dropping the repeats is one query and
-        // no schema.
-        val already = randomHistory.mapTo(mutableSetOf()) { it.id }
-        val drawn = catalogues.randomSample(
-            short * OVERDRAW,
-            platforms = platforms,
-            favouritesOnly = scope is RandomScope.Favourites,
-        ).map(CatalogueTracks::referenceOf).filter { already.add(it.id) }.take(short)
-        // A pool smaller than the session can exhaust honestly — forty favourites cannot fill an
-        // evening without repeating. Sooner than repeat silently or stop dead, the dice repeats,
-        // which is what it did before any of this and what a small pool means.
-        // Drawing asked the database; by now the session may be another one, and these picks belong
-        // to nobody.
-        if (session != randomSession) return
-        randomHistory += drawn.ifEmpty {
+        randomHistory.fill(ahead, OVERDRAW) { count ->
             catalogues.randomSample(
-                short,
+                count,
                 platforms = platforms,
                 favouritesOnly = scope is RandomScope.Favourites,
             ).map(CatalogueTracks::referenceOf)
@@ -1955,17 +1890,17 @@ class PlaybackController private constructor(private val context: Context) {
     /**
      * Narrows what the dice picks from, and throws away the picks read ahead under the old scope.
      *
-     * Without the discard, choosing "Amiga" would still play three C64 tunes first — the read-ahead
-     * exists so a pick can be fetched before it is needed, and it is exactly what makes a scope
-     * change look ignored.
+     * Heard history still plays in order. Only new picks use the new scope, prepared in the
+     * background without changing the current tune or exposing the speculative tail.
      */
     fun setRandomScope(scope: RandomScope) {
+        if (_browse.value.randomScope == scope) return
         _browse.update { it.copy(randomScope = scope) }
         // A setting, so it is written like one.
         playlistSession.scheduleSave()
-        if (_state.value.randomMode) {
-            randomHistory.subList(randomCursor + 1, randomHistory.size).clear()
-        }
+        randomHistory.changeScope()
+        publishRandomPicks()
+        if (_state.value.randomMode || _state.value.diceWaiting) prepareRandomQueue()
     }
 
     /**
@@ -2058,7 +1993,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun resumeDice() {
         if (!_state.value.diceWaiting) return
-        val pick = randomHistory.getOrNull(randomCursor) ?: return
+        val pick = randomHistory.current ?: return
         stopPlayback()
         pendingRetry = { playTransient(pick) }
         _state.update {
@@ -2066,7 +2001,7 @@ class PlaybackController private constructor(private val context: Context) {
                 resultsQueue = null,
                 transient = pick,
                 diceWaiting = false,
-                randomHasPrevious = randomCursor > 0,
+                randomHasPrevious = randomHistory.cursor > 0,
                 playing = false,
                 positionSeconds = 0.0,
                 durationSeconds = 0.0,
@@ -2110,10 +2045,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun returnToPlaylist() {
         if (!_state.value.awayFromPlaylist) return
         stopPlayback()
-        randomSession++
         randomHistory.clear()
-        randomCursor = -1
-        randomPlayed = -1
         _state.update {
             it.copy(
                 transient = null,
@@ -2885,7 +2817,7 @@ class PlaybackController private constructor(private val context: Context) {
                 // A file from another app is not a digression to come back from.
                 diceWaiting = if (external) false else it.diceWaiting,
                 searchWaiting = if (external) false else it.searchWaiting,
-                randomHasPrevious = if (external) false else randomCursor > 0,
+                randomHasPrevious = if (external) false else randomHistory.cursor > 0,
                 playing = false,
                 positionSeconds = 0.0,
             )
@@ -3233,7 +3165,7 @@ class PlaybackController private constructor(private val context: Context) {
         val wanted = if (_state.value.transient != null) {
             // Nothing is coming after a file handed to us, so nothing is read ahead.
             if (_state.value.externalOpen) emptyList()
-            else randomHistory.drop(randomCursor + 1).take(READ_AHEAD)
+            else randomHistory.upcoming(READ_AHEAD)
         } else {
             listOfNotNull(_state.value.queue.upcoming)
         }

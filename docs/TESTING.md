@@ -160,7 +160,19 @@ closed-track installation or activity.
 For each follow-up, record the actual build and device/Android version when supplied, reproduction
 result, diagnosis, fix commit, APK or Play-track build delivered, and tester retest result/date.
 Keep missing information explicit. A recorded report is not a completed fix; passing host tests
-is not a phone retest; preparing an APK is not uploading or publishing an update. No fixes or
-retests for C97–C99 are recorded yet. Only completed, evidenced steps should be described as such
+is not a phone retest; preparing an APK is not uploading or publishing an update. C97 has a branch
+implementation and host regression checks; C98/C99 remain open. No phone retest of these fixes
+is recorded. Only completed, evidenced steps should be described as such
 in a production-access application. This record does not itself establish production eligibility
 or guarantee approval.
+
+### C97 phone retest (pending)
+
+Use the release APK identified in [Random feedback PRs](RANDOM_FEEDBACK_PRS.md). Play ten Random
+tracks, select track five, and change the filter to Atari 8-bit. The current tune and all ten
+rows must remain. Next should play rows six through ten in order; only the following Next appends
+and plays the first new-scope track at row eleven. One Next exposes one entry, never three future
+ones. Confirm that highlighted row, dock title and audible tune agree on each step. Repeat from
+the last row, switch filters rapidly, test Previous and the explicit dice re-roll, and briefly
+leave/return to Random. Record the installed build, device/Android version and actual observations;
+background generation is host-tested but its latency and audible transitions need the phone.
