@@ -10,6 +10,12 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B44. Android Auto support — noted 2026-10-06; not scheduled
+
+Requested by a tester and relayed by the owner on 2026-10-06: add Android Auto support.
+The car-facing browsing and playback scope, requirements and implementation remain to be
+discussed. This entry records the request; it does not approve implementation.
+
 ## B43. A track's listened status — noted 2026-10-05; to discuss, not scheduled
 
 Raised by the owner on 2026-10-05: consider a persistent indication that a track has been
@@ -1223,4 +1229,3 @@ it is cheap once the backend facade exposes it.
 ## B12. Gapless / crossfade between subsongs
 
 *Claude, 2026-08-31.*
-
