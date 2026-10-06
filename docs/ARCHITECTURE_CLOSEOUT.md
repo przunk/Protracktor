@@ -4,6 +4,13 @@ Owner decision, 2026-10-05: stop further extractions and finish evaluating the w
 `feature/architecture-stabilization`. The time cost no longer justified completing the original
 seven-file plan. This is a reduced deliverable, not completion of that plan.
 
+**Follow-up, 2026-10-06:** the owner reported that most functions worked during phone checks and
+authorised merging this refactor to `develop`. The merge is complete locally; no push or release
+was performed. The Random-filter availability defect reported afterwards is being handled
+separately: its missing opening refresh predates the refactor. The historical verification and
+unchecked detailed checklist below describe the original handover, not a claim that every
+scenario or long-term behaviour has now been verified.
+
 ## Boundary assessment
 
 Reviewed the production wiring and extracted workflows through `6eb5577` against the ownership

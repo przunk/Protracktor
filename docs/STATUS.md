@@ -1,14 +1,23 @@
 # Status
 
-Updated: 2026-10-05 — version 1.0.0, schema version 21. versionCode is the commit count.
-The production-access application is pending. Historical dated checks below describe their own
-builds; they are not current test counts or proof of the refactoring branch's behaviour.
+Updated: 2026-10-06 — version 1.0.0, schema version 21. versionCode is the commit count.
+Google requires another 14 days of closed testing before reapplying for production access.
+Historical dated checks below describe their own builds; they are not current test counts.
 
-## Architecture stabilization — test candidate built, not accepted
+## Architecture stabilization — merged after owner acceptance, 2026-10-06
 
 Branch: `feature/architecture-stabilization`, based on `develop` at `1455422`.
-Released reference: `v1.0.0` at `2aaeeeb` (versionCode 1055). No merge or release is authorised by
-this work. The owner must approve long-term behaviour before any later release.
+Released reference: `v1.0.0` at `2aaeeeb` (versionCode 1055). The owner reported successful checks
+of most functions and authorised merging the bounded refactor on 2026-10-06. It is now in local
+`develop`; no push or release was performed. Long-term release approval remains separate.
+
+**Open: Random filter availability (reported 2026-10-06).** While Random played, platform and
+Favourites filters were disabled. Downloading favourites with the sheet open enabled only that
+chip; visiting Online Catalogues and downloading Modland/song metadata restored platform chips.
+The exact installed build was not supplied. Code inspection found that opening the sheet does
+not refresh its counters and unread counts look like missing data. This predates the extraction;
+the exact sequence that left the owner's counts empty is not established. Fix separately from
+the accepted refactor, with an opening/refresh regression check and a release APK for phone testing.
 
 Worktree: `user/worktrees/architecture-stabilization` within the main project checkout. Its build
 output is isolated at `/tmp/protracktor-architecture-build.Qogzrp`; set
@@ -24,7 +33,8 @@ The owner accepted stopping further extractions because the time cost did not ju
 the original seven-file plan. Close out the existing controller changes through `6eb5577` with a
 focused boundary review, limited comment corrections, full tests/lint and a release-variant test
 APK. Library editing, sharing, playback extraction, Compose, web and native restructuring and the
-repository-wide comment pass are **deferred, not completed**. No merge or release is authorised.
+repository-wide comment pass are **deferred, not completed**. At closeout no merge or release was
+authorised; merge was subsequently approved on 2026-10-06, not a release.
 The review, candidate and phone checklist are in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md).
 
 **Technical closeout checked — 2026-10-05:** clean candidate `3defe38`, version `1.0.0 (1076)`;
@@ -85,7 +95,8 @@ remain open. No merge, publication or new extraction occurred during closeout.
 - Repository-wide comment correction/shortening: deferred; only concrete misleading comments in
   reviewed branch code are included in closeout, separately from executable changes.
 - Final documentation, full gate, test APK and manual checklist: technical closeout completed;
-  results in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md). Phone acceptance is still pending.
+  results in [Architecture closeout](ARCHITECTURE_CLOSEOUT.md). Owner acceptance for merge was
+  given on 2026-10-06; detailed per-scenario and long-term evidence was not supplied.
   Earlier checkpoint evidence follows below.
 
 ### Browse navigation and search publication extraction — 2026-10-05
