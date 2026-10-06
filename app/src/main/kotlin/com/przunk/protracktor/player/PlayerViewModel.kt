@@ -97,6 +97,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     /** Re-reads what is stored. Settings shows those numbers and can be opened without Browse. */
     fun refreshCatalogues() = controller.refreshCatalogues()
 
+    internal suspend fun randomFilterAvailability() = controller.randomFilterAvailability()
+
 
     fun selectSubsong(index: Int) = controller.selectSubsong(index)
 

@@ -8,8 +8,10 @@ Historical dated checks below describe their own builds; they are not current te
 
 Owner authorised C97, then C98 and C99 on separate stacked branches, with analysis, regression
 checks and PR handoffs. No push, merge, publication or phone acceptance is implied. The first
-branch is `fix/random-scope-history` from `develop` at `a72d098`; later corrections will branch
-from its verified tip. PR drafts and exact handoff evidence: [Random feedback PRs](RANDOM_FEEDBACK_PRS.md).
+branch is `fix/random-scope-history` from `develop` at `a72d098`, followed by
+`fix/random-return-navigation` and `fix/random-filter-responsiveness`. C97 and C98 have verified
+release candidates; C99 verification is in progress. PR drafts and exact handoff evidence:
+[Random feedback PRs](RANDOM_FEEDBACK_PRS.md).
 
 ## Architecture stabilization — merged after owner acceptance, 2026-10-06
 
@@ -23,8 +25,47 @@ Favourites filters were disabled. Downloading favourites with the sheet open ena
 chip; visiting Online Catalogues and downloading Modland/song metadata restored platform chips.
 The exact installed build was not supplied. Code inspection found that opening the sheet does
 not refresh its counters and unread counts look like missing data. This predates the extraction;
-the exact sequence that left the owner's counts empty is not established. Fix separately from
-the accepted refactor, with an opening/refresh regression check and a release APK for phone testing.
+the exact sequence that left the owner's counts empty is not established.
+
+**Earlier candidate, now incorporated into the C99 task branch (not develop):**
+`fix/random-filter-availability` first made each opening read platform and
+favourites availability from the existing stores, independently of saved Browse snapshots. The
+open sheet recounts after downloads and database preparation, distinguishes pending/failed reads
+from empty indexes, and offers Retry on failure. No Random selection, database schema or playback
+rule changed. Download/Retry use labelled icon controls. The following evidence describes that
+earlier 1084 candidate; C99 below supersedes its sheet-local lifetime, not these historical results.
+
+**Partly checked:** a Compose/Robolectric test failed on the old code's incorrect Download advice.
+Eight panel tests then passed; deliberately removing refresh-effect keys made the download
+completion test fail because Favourites remained disabled. The mutation was restored. Tests cover
+fresh opening, stale counts on reopening, favourites download without closing, backfill completion,
+retry, missing vs unindexed favourites, cancellation and unavailable platforms.
+
+**Checked, 2026-10-06:** the full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` gate passed in 260 seconds: 648 tests in 88 suites,
+zero failures/errors/skips, lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP
+checks, 135 icon paths, web v3→v4 storage upgrade, 8 server checks and store metadata validation.
+The gate includes the eight Compose panel regressions and the new store-read test. Existing JDK
+and isolated build/cache directories were retained. Local verification evidence is in
+`dist/random-filter-verification/` in the worktree.
+
+**Release-variant test APK checked, 2026-10-06:** `scripts/build-release.sh --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` passed in 164 seconds, with R8/resource shrinking.
+Built from clean `0ab8c7dfa729e58bcc33113e75d9414ca6286ffd`, version **1.0.0 (1084)**,
+all three ABIs. The copy in the main checkout is
+`dist/protracktor-release-1.0.0-1084-0ab8c7d-20261006-215744.apk` (11,681,970 bytes).
+SHA-256: `fff9efcc09fc0e4fa3212d1c85046ab862fdaf195c65b326184d60cbb64a235b`.
+APK v2 signature verified; the Android Debug/test certificate matches the previous 1076 APK
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`). This is a minified test
+release, not a Play publication artifact. No push, fix-branch merge or publication was performed.
+
+**Phone behaviour not checked:** install as an update without clearing data. Start Random and open
+Filter without first visiting Online Catalogues: available platforms should enable after the brief
+check, with genuinely absent platforms still disabled. Close/reopen Filter and confirm the same
+availability. If the favourites list is genuinely absent, download it with the sheet open and check
+that Favourites enables on completion when matching Modland tracks exist; no catalogue or song
+metadata re-download should be needed merely to refresh the chips. Keep existing data if Android
+rejects the update; the installed/Play copy's certificate has not been inspected.
 
 Worktree: `user/worktrees/architecture-stabilization` within the main project checkout. Its build
 output is isolated at `/tmp/protracktor-architecture-build.Qogzrp`; set
@@ -1098,7 +1139,7 @@ re-enabling after the cover disappears. This confirms component behaviour on the
 phone navigation journey. Full gate/APK evidence is in `RANDOM_FEEDBACK_PRS.md`. Phone checks of
 Browse, Web, Settings and both return actions remain **not checked**.
 
-### C99. Random filters open with a perceptible delay and briefly appear unavailable — OPEN, owner testing 2026-10-06
+### C99. Random filters open with a perceptible delay and briefly appear unavailable — FIX IMPLEMENTED ON BRANCH, phone timing/retest pending
 
 **Source:** the owner's hands-on testing, distinct from the two external-user reports above.
 Reported in follow-up to the offered release test APK 1.0.0 (1084), source `0ab8c7d`; the installed
@@ -1113,11 +1154,27 @@ eventually recovered; this report does not establish that filters remained perma
 clearly, rather than briefly looking as if known music has become unavailable. A transition from
 loading to available should not be mistaken for missing indexes or require a re-download.
 
-**Verification/status:** owner-reported UX/performance concern; no timed measurement, independent
-reproduction or diagnosis yet. Related to the earlier Random availability report at the top of
-this document, but not proof of the same cause or a new regression. Investigate on a release APK,
-record cold/warm opening, loading text, time to enabled chips and any intervening downloads or
-navigation. No performance fix has been implemented or accepted for this report.
+**Diagnosis (2026-10-06):** the 1084 candidate put availability in a sheet-local `remember` and
+reset it to null before every refresh. Reopening discarded a successful read; downloading or
+recounting temporarily disabled previously usable chips. The platform query runs on IO, not the
+main dispatcher. Two new Compose checks reproduced these resets before the correction, but the
+owner's uncertain sequence and perceived timing have not been independently measured on a phone.
+
+**Implemented on `fix/random-filter-responsiveness`:** reuse the earlier availability correction
+as an ancestor of this branch, preserving its history and keeping develop untouched. Availability
+now lives beside the Random screen, preloads on entry, and survives opening/closing the sheet.
+Unchanged sheet reopenings and percentage progress do not recount. Valid known chips stay usable
+during refresh; database preparation/deletion invalidate them, inactive data changes clear the
+snapshot, and cancellation guards reject late results. Cold/error states still show checking or
+Retry, rather than interpreting an unknown count as missing music. No database/schema changes,
+new dependencies, arbitrary delays or speculative enablement were added.
+
+**Checked on host:** 16 Compose panel tests passed, including preloading/query counts, cold/warm
+opens, downloads, deletion, inactive invalidation, retry and late responses. Removing the final
+cancellation guard failed the obsolete-result test; the guard was restored. Full gate/APK evidence
+is recorded in `RANDOM_FEEDBACK_PRS.md`. **Not checked:** device timing, smoothness and the owner's
+exact sequence. Retest cold/warm Filter opening on the minified release, including after deleting
+or downloading an index; host query-count checks are not a measured latency improvement.
 
 ### C89. Search filtered to Atari 8-bit never looks in ASMA — **reported 2026-09-24; FIXED, merged and confirmed on the phone the same day**
 
