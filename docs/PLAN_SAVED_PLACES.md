@@ -16,7 +16,7 @@ is inferred. The owner selected B42 after the B43 candidate, for a combined APK 
 
 ## Agreed user flow
 
-1. Open an author/game folder in an online catalogue and choose **Save for later**.
+1. Open an author/game folder in an online catalogue and toggle **Bookmark**.
 2. Open **Saved places** from Browse, separately from favourite tracks and playlists.
 3. Each entry shows its name, source catalogue and enough path context to distinguish namesakes.
 4. Open the bookmark to browse that location's current contents, not a frozen copy of its tracks.
@@ -122,7 +122,14 @@ read/write/open state. Catalogue availability and current tracks are read throug
 and the ordinary index APIs. Cancelled opens cannot take over Browse after Back. A completed open
 publishes the ordinary Online author view, with a one-step return to Saved places.
 
-Browse has a Saved places entry; supported author/game views have Save for later / Remove.
+Browse has a Saved places entry; supported author/game views have a **Bookmark** toggle.
 Unavailable entries retain their label and removal action, explain the cause, and offer Online
 catalogues for missing indexes/groups. Save/list/remove have no playback or download dependency.
 See [the local PR/handoff](PR_B42_SAVED_PLACES.md) for verification and the combined APK trial.
+
+Presentation refinement requested by the owner on 2026-10-07: replace Save for later / Remove
+with one stable Bookmark label (PL: Zakładka), using an outlined or filled bookmark for state.
+In Saved places, put the name above its path on the left; Open and the filled Bookmark sit
+beside it on the right, with Bookmark rightmost. Keep unavailable-location explanations and
+explicit catalogue recovery. Announce bookmark state to accessibility services, not only visually.
+Storage, navigation and B43 rules remain unchanged; phone acceptance is still required.

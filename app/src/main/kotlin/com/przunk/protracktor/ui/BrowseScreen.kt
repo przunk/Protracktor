@@ -322,7 +322,7 @@ private fun DomainChooser(
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             DomainRow(
-                icon = PlayerIcons.Save,
+                icon = PlayerIcons.BookmarkFilled,
                 title = stringResource(R.string.saved_places_title),
                 subtitle = stringResource(R.string.saved_places_body),
                 onClick = { onOpenDomain(BrowseDomain.SAVED) },

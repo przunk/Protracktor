@@ -2,13 +2,13 @@
 <resources>
     <string name="saved_places_title">Saved places</string>
     <string name="saved_places_body">Author and game folders to return to later.</string>
-    <string name="saved_places_empty">Nothing saved yet. Open an author or game folder in an online catalogue and choose Save for later.</string>
+    <string name="saved_places_empty">Nothing saved yet. Open an author or game folder in an online catalogue and choose Bookmark.</string>
     <string name="saved_places_loading">Updating saved places…</string>
     <string name="saved_places_retry">Refresh</string>
-    <string name="saved_place_save">Save for later</string>
-    <string name="saved_place_saved">Saved for later</string>
+    <string name="saved_place_bookmark">Bookmark</string>
+    <string name="saved_place_saved">Bookmarked</string>
+    <string name="saved_place_unsaved">Not bookmarked</string>
     <string name="saved_place_open">Open</string>
-    <string name="saved_place_remove">Remove</string>
     <string name="saved_place_prepare">Catalogues</string>
     <string name="saved_place_added">Place saved for later.</string>
     <string name="saved_place_exists">This place is already saved.</string>

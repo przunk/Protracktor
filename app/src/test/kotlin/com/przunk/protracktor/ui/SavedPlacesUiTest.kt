@@ -5,21 +5,24 @@ package com.przunk.protracktor.ui
 
 import android.view.View
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.R
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.player.*
+import org.junit.rules.ExternalResource
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.Assert.*
@@ -31,24 +34,26 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "en-w360dp-h800dp-xhdpi")
+@Config(sdk = [29], qualifiers = "en-w360dp-h800dp-xhdpi")
 class SavedPlacesUiTest {
-    @get:Rule val compose = createEmptyComposeRule()
-    private lateinit var activity: ActivityController<ComponentActivity>
+    private class HostActivity : ExternalResource() {
+        lateinit var controller: ActivityController<ComponentActivity>
+        override fun before() { controller = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible() }
+        override fun after() { controller.close() }
+    }
+    private val host = HostActivity()
+    @get:Rule val compose: ComposeContentTestRule = AndroidComposeTestRule(host) { it.controller.get() }
     private val place = SavedPlace(SavedPlaceKey("modland", "Protracker", "Artist"), "Modland", 1)
     private val saved = mutableStateOf(SavedPlacesState(loading = false))
     private val browse = mutableStateOf(BrowseState())
     private val calls = mutableListOf<String>()
 
-    @Before fun start() { activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible() }
-    @After fun stop() {
-        try { activity.get().setContent {}; compose.waitForIdle() }
-        finally { activity.close() }
-    }
-    private fun text(id: Int) = activity.get().getString(id)
+    @After fun finishPendingUpdates() { compose.waitForIdle() }
+
+    private fun text(id: Int) = host.controller.get().getString(id)
 
     private fun show() {
-        activity.get().setContent {
+        compose.setContent {
             MaterialTheme {
                 BrowseScreen(
                     browse = browse.value, savedPlaces = saved.value, playlistName = "Playlist", contentPadding = PaddingValues(),
@@ -78,7 +83,7 @@ class SavedPlacesUiTest {
             }
         }
         // Give the host a real viewport and deliver state writes explicitly, as in the other UI fixtures.
-        val view = activity.get().window.decorView
+        val view = host.controller.get().window.decorView
         view.measure(
             View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY),
@@ -97,10 +102,12 @@ class SavedPlacesUiTest {
         browse.value = BrowseState(domain = BrowseDomain.ONLINE,
             openCatalogue = CatalogueSummary("modland", "Modland", 1, 1), openFormat = "Protracker", openAuthor = "Artist")
         show()
-        compose.onNodeWithText(text(R.string.saved_place_save)).performClick()
-        compose.onNodeWithText(text(R.string.saved_place_saved)).assertExists()
-        compose.onNodeWithText(text(R.string.saved_place_remove)).performClick()
-        compose.onNodeWithText(text(R.string.saved_place_save)).assertExists()
+        val bookmark = compose.onNodeWithText("Bookmark")
+        bookmark.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not bookmarked"))
+        bookmark.performClick()
+        bookmark.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Bookmarked"))
+        bookmark.performClick()
+        bookmark.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not bookmarked"))
         assertEquals(listOf("save", "remove:${place.key}"), calls)
     }
 
@@ -109,8 +116,19 @@ class SavedPlacesUiTest {
         saved.value = SavedPlacesState(listOf(SavedPlaceRow(place, SavedPlaceAvailability.AVAILABLE)), loading = false)
         show()
         compose.onNodeWithText("Modland › Protracker").assertExists()
+        val title = compose.onNodeWithText("Artist").fetchSemanticsNode().boundsInRoot
+        val path = compose.onNodeWithText("Modland › Protracker").fetchSemanticsNode().boundsInRoot
+        val open = compose.onNodeWithText(text(R.string.saved_place_open)).fetchSemanticsNode().boundsInRoot
+        val bookmark = compose.onNodeWithText("Bookmark").fetchSemanticsNode().boundsInRoot
+        assertTrue(title.bottom <= path.top)
+        assertTrue(title.right <= open.left && path.right <= open.left)
+        assertTrue(open.top < path.bottom && open.bottom > title.top)
+        assertTrue(bookmark.left >= open.right)
+        compose.onNodeWithText("Bookmark")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Bookmarked"))
         compose.onNodeWithText(text(R.string.saved_place_open)).performClick()
-        compose.onNodeWithText(text(R.string.saved_place_remove)).performClick()
+        compose.onNodeWithText("Bookmark").performClick()
+        compose.onNodeWithText(text(R.string.saved_places_empty)).assertExists()
         assertEquals(listOf("open:${place.key}", "remove:${place.key}"), calls)
     }
 
@@ -130,7 +148,8 @@ class SavedPlacesUiTest {
         show()
         compose.onNodeWithText(text(R.string.saved_place_source_missing)).assertExists()
         compose.onNodeWithText(text(R.string.saved_place_prepare)).assertDoesNotExist()
-        compose.onNodeWithText(text(R.string.saved_place_remove)).performClick()
+        compose.onNodeWithText("Bookmark").performClick()
+        compose.onNodeWithText(text(R.string.saved_places_empty)).assertExists()
         assertEquals(listOf("remove:${place.key}"), calls)
     }
 
@@ -150,5 +169,16 @@ class SavedPlacesUiTest {
         compose.onNodeWithText("Zapisane miejsca").performClick()
         compose.onNodeWithText(text(R.string.saved_places_empty)).assertExists()
         assertEquals(listOf("domain:SAVED"), calls)
+    }
+
+    @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
+    fun `Polish bookmark exposes saved state and keeps its label when toggled`() {
+        browse.value = BrowseState(domain = BrowseDomain.ONLINE,
+            openCatalogue = CatalogueSummary("modland", "Modland", 1, 1), openFormat = "Protracker", openAuthor = "Artist")
+        show()
+        val bookmark = compose.onNodeWithText("Zakładka")
+        bookmark.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Brak zakładki"))
+        bookmark.performClick()
+        bookmark.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Dodano zakładkę"))
     }
 }

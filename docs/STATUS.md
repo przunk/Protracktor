@@ -38,6 +38,16 @@ in C100; see [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
 ## B42 Saved places — implemented, host verified, awaiting combined phone trial, 2026-10-07
 
+**Presentation refinement, host verified:** the owner requested outlined/filled Bookmark controls
+with a stable label, plus compact name/path rows with Open and Bookmark on the right.
+Schema 23 and B43 are unchanged. Full gate: **724 tests**, zero failures/errors/skips, lint without
+errors, all companion checks passed (137 icon paths); 211 s. Tests executed, not served from cache.
+Four updated UI tests failed against the old presentation; all eight interaction tests now pass.
+Native previews cover EN/PL and both themes. UI fixture lifecycle/shared-SDK failures and the
+successful API-29 isolation are recorded in [the PR handoff](PR_B42_SAVED_PLACES.md).
+The revised UI is not yet verified on the phone; the new APK handoff follows. The APK below is
+the preceding presentation candidate.
+
 The owner approved `feature/saved-places` from B43's `54a933a` to test both features in one APK.
 Schema **23 is reserved for B42**, above B43's 22. The B43 branch stays unmerged and unchanged
 during the owner's planned approximately 24-hour trial. The owner reported that its new layout

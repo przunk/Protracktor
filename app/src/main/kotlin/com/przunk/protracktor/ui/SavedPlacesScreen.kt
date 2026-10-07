@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
@@ -20,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
@@ -36,19 +37,27 @@ internal fun SavedPlaceHeader(
         Column(Modifier.weight(1f).padding(end = 8.dp)) {
             Text(key.author.ifBlank { stringResource(R.string.browse_unknown) }, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(key.format, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (saved) Text(stringResource(R.string.saved_place_saved), style = MaterialTheme.typography.labelSmall)
             if (state.loading || state.writing) Text(stringResource(R.string.saved_places_loading), style = MaterialTheme.typography.labelSmall)
             if (state.failed) Text(stringResource(R.string.saved_place_failed), style = MaterialTheme.typography.bodySmall)
         }
         if (state.failed) LabelledAction(PlayerIcons.Refresh, stringResource(R.string.saved_places_retry), onRetry, slim = true)
-        else LabelledAction(
-            icon = if (saved) PlayerIcons.Remove else PlayerIcons.Save,
-            label = stringResource(if (saved) R.string.saved_place_remove else R.string.saved_place_save),
+        else BookmarkAction(
+            saved = saved,
             onClick = if (saved) onRemove else onSave,
             enabled = !state.loading && !state.writing,
-            modifier = Modifier.width(116.dp), slim = true,
         )
     }
+}
+
+@Composable
+private fun BookmarkAction(saved: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val description = stringResource(if (saved) R.string.saved_place_saved else R.string.saved_place_unsaved)
+    LabelledAction(
+        icon = if (saved) PlayerIcons.BookmarkFilled else PlayerIcons.Bookmark,
+        label = stringResource(R.string.saved_place_bookmark),
+        onClick = onClick, enabled = enabled, slim = true,
+        modifier = Modifier.semantics { stateDescription = description },
+    )
 }
 
 @Composable
@@ -80,24 +89,26 @@ internal fun SavedPlacesScreen(
             }) { row ->
                 val place = row.place
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(place.key.author.ifBlank { stringResource(R.string.browse_unknown) }, style = MaterialTheme.typography.titleMedium)
-                    Text("${place.catalogueName} › ${place.key.format}", style = MaterialTheme.typography.bodySmall)
                     val reason = when (row.availability) {
                         SavedPlaceAvailability.AVAILABLE -> null
                         SavedPlaceAvailability.INDEX_MISSING -> R.string.saved_place_index_missing
                         SavedPlaceAvailability.GROUP_MISSING -> R.string.saved_place_group_missing
                         SavedPlaceAvailability.CATALOGUE_UNAVAILABLE -> R.string.saved_place_source_missing
                     }
-                    reason?.let { Text(stringResource(it), style = MaterialTheme.typography.bodyMedium) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        LabelledAction(PlayerIcons.Folder, stringResource(R.string.saved_place_open), { onOpen(place.key) },
-                            enabled = reason == null && !state.writing && state.opening == null, modifier = Modifier.weight(1f), slim = true)
-                        if (row.availability == SavedPlaceAvailability.INDEX_MISSING || row.availability == SavedPlaceAvailability.GROUP_MISSING) {
-                            LabelledAction(PlayerIcons.Cloud, stringResource(R.string.saved_place_prepare), onPrepare,
-                                modifier = Modifier.weight(1f), slim = true)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(Modifier.weight(1f).padding(end = 4.dp)) {
+                            Text(place.key.author.ifBlank { stringResource(R.string.browse_unknown) },
+                                style = MaterialTheme.typography.titleMedium)
+                            Text("${place.catalogueName} › ${place.key.format}", style = MaterialTheme.typography.bodySmall)
                         }
-                        LabelledAction(PlayerIcons.Remove, stringResource(R.string.saved_place_remove), { onRemove(place.key) },
-                            enabled = !state.writing && state.opening == null, modifier = Modifier.weight(1f), slim = true)
+                        LabelledAction(PlayerIcons.Folder, stringResource(R.string.saved_place_open), { onOpen(place.key) },
+                            enabled = reason == null && !state.writing && state.opening == null, slim = true)
+                        BookmarkAction(saved = true, enabled = !state.writing && state.opening == null,
+                            onClick = { onRemove(place.key) })
+                    }
+                    reason?.let { Text(stringResource(it), style = MaterialTheme.typography.bodyMedium) }
+                    if (row.availability == SavedPlaceAvailability.INDEX_MISSING || row.availability == SavedPlaceAvailability.GROUP_MISSING) {
+                        LabelledAction(PlayerIcons.Cloud, stringResource(R.string.saved_place_prepare), onPrepare, slim = true)
                     }
                 }
                 HorizontalDivider()

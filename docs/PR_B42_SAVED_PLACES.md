@@ -12,14 +12,43 @@ B42 for a combined trial with B43, whose branch remains unchanged while its appr
 trial continues. Features remain separately reviewable; positive feedback on B43's layout is not
 approval to merge either feature. [Plan and decisions](PLAN_SAVED_PLACES.md).
 
-Schema 23 adds persistent exact route bookmarks independently of indexes and History. The Save
-for later action appears only in supported online author/game views. Saved places in Browse lists
+Schema 23 adds persistent exact route bookmarks independently of indexes and History. The Bookmark
+action appears only in supported online author/game views. Saved places in Browse lists
 them offline, opens current indexed contents, prevents duplicates and offers explicit removal.
 Missing indexes/groups offer a route to Online catalogues, not an automatic download. Removed
 catalogues remain named, explained and removable. Back returns to the saved list in one step.
 
 No changes to B43 timing, History clearing semantics, Random draws, playlist ownership, source
 switches, versionName or publication policy. The existing Browse cover remains in force.
+
+## Bookmark presentation refinement — 2026-10-07
+
+The owner requested a stable Bookmark label (PL: Zakładka) with an outlined/filled icon instead
+of separate Save for later / Remove actions. The same control removes a saved entry from the list.
+Each list row places the name above its source/path on the left, with Open and then Bookmark
+at the right. Unavailable entries retain their explanation, disabled Open and explicit catalogue
+recovery below. Bookmark state has a localised accessibility description; it is not colour-only.
+This is a presentation-only refinement on the existing branch: schema 23, stored data, opening
+logic and B43 are unchanged. Four of eight UI tests failed against the previous presentation.
+Eight UI interaction tests now pass in a separate focused run; two render tests generated eight
+EN/PL light/dark previews, with EN-light header/list and PL-dark list inspected. Screenshot mode
+selects render tests only and is not evidence of passing interaction tests.
+
+Three full attempts and a focused diagnostic run exposed host UI lifecycle/synchronisation
+failures. Replacing content during teardown and then manual disposal did not resolve them.
+The fixture now uses AndroidComposeTestRule to own content and activity lifetime, explicitly checks
+the empty-list result after removing the last bookmark, and drains pending updates before teardown.
+The focused run passed, but shared-environment synchronisation still failed in the next full run.
+The interaction fixture now targets the supported minimum API 29, separate from the other UI
+fixtures' default SDK; native-render previews retain their default SDK. No app behaviour was
+changed to work around these test failures and no tests were excluded.
+
+Final full gate passed in **211 s: 724 tests**, zero failures/errors/skips, lint without errors,
+581 page checks, 49 existing-WASM checks (not rebuilt), 8 SAP checks, web database upgrade,
+137 icon paths, 8 server checks and store metadata. Command:
+`scripts/test-protracktor.sh --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process`.
+Changed test sources forced test execution; the test task was neither up-to-date nor from cache.
+Phone behaviour remains unverified; updated release artifact follows.
 
 ## Verification
 
@@ -61,12 +90,14 @@ The handoff documentation commit does not change app sources or this artifact.
 
 1. Install the combined release APK as an update without clearing data. Confirm History, B43
    marks, playlists and existing catalogue indexes remain intact.
-2. Browse to a Modland/ASMA author or UnExoticA game group. Save it for later; check the saved
-   indication. Playback should continue unchanged, and saving must not start a download.
+2. Browse to a Modland/ASMA author or UnExoticA game group. Tap Bookmark: its outlined icon should
+   fill without changing the label. Tap again to remove it. Playback should continue unchanged,
+   and saving must not start a download. Check Zakładka in Polish as well.
 3. Return to Browse → Saved places. Restart the app and reopen the bookmark at the same exact
    source/format/group. Back should return to Saved places, then the Browse root.
-4. Save same-named folders in different formats/catalogues. They must remain separate. Remove
-   a bookmark: tracks, favourites, playlists and B43 marks must remain unaffected.
+4. Save same-named folders in different formats/catalogues. They must remain separate. In the
+   list, check the name/path on the left, Open beside it and the filled Bookmark at the right.
+   Toggle that bookmark off: tracks, favourites, playlists and B43 marks must remain unaffected.
 5. Optionally remove only a re-downloadable catalogue index. Its bookmark must remain with an
    explanation and Catalogues action. Reindex explicitly and return; the bookmark should
    open the current folder contents. Do not clear all app data for this test.

@@ -358,6 +358,12 @@ object PlayerIcons {
     val DropDown: ImageVector by lazy {
         icon("DropDown", "M7 10l5 5 5-5z")
     }
+    val Bookmark: ImageVector by lazy {
+        icon("Bookmark", "M5 3H19V22L12 18L5 22ZM7 5V18.55L12 15.69L17 18.55V5Z", hollow = true)
+    }
+    val BookmarkFilled: ImageVector by lazy {
+        icon("BookmarkFilled", "M5 3H19V22L12 18L5 22Z")
+    }
     val Save: ImageVector by lazy {
         icon(
             "Save",
