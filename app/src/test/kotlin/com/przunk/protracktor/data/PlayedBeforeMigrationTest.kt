@@ -15,7 +15,7 @@ class PlayedBeforeMigrationTest {
         it.executeQuery(sql).use { row -> check(row.next()); row.getInt(1) }
     }
     private fun Connection.oldSchema() {
-        (SchemaSql.CREATE - SchemaSql.MIGRATIONS[22].orEmpty().toSet()).forEach { run(it) }
+        (SchemaSql.CREATE - SchemaSql.migrationsBetween(21, SchemaSql.VERSION).toSet()).forEach { run(it) }
     }
     private fun Connection.record(id: String) {
         prepareStatement(SchemaSql.PLAY_HISTORY_RECORD).use {

@@ -1,6 +1,6 @@
 # B42 — Save for later / Saved places
 
-Status: selected; implementation started on `feature/saved-places`, 2026-10-07.
+Status: implemented and host verified on `feature/saved-places`; combined phone trial pending, 2026-10-07.
 Recorded: 2026-10-07. Original wishlist entry: 2026-10-05.
 
 ## User feedback and purpose
@@ -113,3 +113,16 @@ or closed-test participation without an actual report.
 
 Relative effort/risk: lower than B43, with most risk in stable bookmark identity, index lifecycle
 and navigation rather than playback timing. No phone result is claimed before the trial.
+
+## Implementation record
+
+Schema 23 adds `saved_places`, keyed by the exact catalogue/format/author tuple, without a foreign
+key to downloadable indexes. `SavedPlacesStore` performs local I/O; `SavedPlaces` owns independent
+read/write/open state. Catalogue availability and current tracks are read through `CatalogueBrowser`
+and the ordinary index APIs. Cancelled opens cannot take over Browse after Back. A completed open
+publishes the ordinary Online author view, with a one-step return to Saved places.
+
+Browse has a Saved places entry; supported author/game views have Save for later / Remove.
+Unavailable entries retain their label and removal action, explain the cause, and offer Online
+catalogues for missing indexes/groups. Save/list/remove have no playback or download dependency.
+See [the local PR/handoff](PR_B42_SAVED_PLACES.md) for verification and the combined APK trial.

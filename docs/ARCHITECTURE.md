@@ -614,6 +614,29 @@ remain subject to the owner's release-APK trial; an unhelpful experiment may be 
 the old helper resets databases on downgrade. A rejected experiment needs a forward-compatible
 build without its behaviour, not data deletion. This task does not rewrite old installed binaries.
 
+### B42: saved catalogue places (2026-10-07)
+
+On `feature/saved-places`, stacked on B43 with owner approval, schema 23 adds `saved_places`.
+Identity is the exact `(catalogue_id, format, author)` tuple used by normal index browsing. It is
+case-sensitive and never inferred from a display label. Modland author paths, ASMA sections and
+UnExoticA game groups use the same existing route shape. Live searches and local folders do not
+expose the action. Duplicate inserts preserve the original save time; newest saved places come first.
+
+There is deliberately no foreign key to catalogue/index rows: deleting or rebuilding downloaded
+data must not delete user bookmarks. The stored source label keeps a removed catalogue readable.
+`SavedPlacesStore` handles I/O, while `SavedPlaces` serializes writes, refreshes state and cancels
+obsolete opening requests. Its UI state is separate from Browse navigation snapshots. Catalogue
+availability and exact current group contents are resolved through `CatalogueBrowser`, using the
+same local queries and track conversion as ordinary browsing. No fuzzy fallback or network fetch
+is added. Missing sources/indexes/groups remain distinct visible states, never empty success.
+
+Opening publishes an Online author view with a one-step return to Saved places. Save/list/remove
+cannot start playback, alter playlists or modify the Random record. Ordinary prefetch preferences
+still apply after a folder opens. Clearing History does not clear bookmarks. The feature is
+independent of B43's qualification logic, although this trial APK includes both schemas. Do not
+revert by installing schema-22 or older binaries; use a forward-compatible build if a trial is
+rejected. Neither feature is approved for merge by the combined trial.
+
 ## 16. Sharing has to copy
 
 Added 2026-09-02 with `docs/BACKLOG.md` A10.

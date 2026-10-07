@@ -34,6 +34,7 @@ internal class CatalogueBrowser(
         suspend fun formats(catalogueId: String): List<CatalogueGroup>
         suspend fun authors(catalogueId: String, format: String): List<CatalogueGroup>
         suspend fun tracks(catalogueId: String, format: String, author: String): List<CatalogueTrack>
+        suspend fun hasGroup(catalogueId: String, format: String, author: String): Boolean
     }
 
     interface Files {
@@ -164,5 +165,34 @@ internal class CatalogueBrowser(
             val found = indexes.tracks(catalogueId, format, author).map(CatalogueTracks::referenceOf)
             state.showTracks(found)
         }
+    }
+
+    suspend fun savedPlaceRows(places: List<SavedPlace>): List<SavedPlaceRow> {
+        val summaries = indexes.summaries().associateBy { it.id }
+        return places.map { place ->
+            val summary = summaries[place.key.catalogueId]
+            val unavailable = unavailableSource(summary)
+            val status = unavailable ?: if (indexes.hasGroup(place.key.catalogueId, place.key.format, place.key.author)) {
+                SavedPlaceAvailability.AVAILABLE
+            } else SavedPlaceAvailability.GROUP_MISSING
+            SavedPlaceRow(place, status)
+        }
+    }
+
+    suspend fun resolveSavedPlace(key: SavedPlaceKey): SavedPlaceDestination {
+        val summary = indexes.summaries().firstOrNull { it.id == key.catalogueId }
+        unavailableSource(summary)?.let { return SavedPlaceDestination.Unavailable(it) }
+        val tracks = indexes.tracks(key.catalogueId, key.format, key.author).map(CatalogueTracks::referenceOf)
+        return if (tracks.isEmpty()) SavedPlaceDestination.Unavailable(SavedPlaceAvailability.GROUP_MISSING)
+        else SavedPlaceDestination.Found(requireNotNull(summary), tracks)
+    }
+
+    fun showSavedPlace(key: SavedPlaceKey, destination: SavedPlaceDestination.Found) =
+        state.showSavedPlace(key, destination)
+
+    private fun unavailableSource(summary: CatalogueSummary?): SavedPlaceAvailability? = when {
+        summary == null || summary.isOnlineOnly -> SavedPlaceAvailability.CATALOGUE_UNAVAILABLE
+        summary.requiresIndex -> SavedPlaceAvailability.INDEX_MISSING
+        else -> null
     }
 }

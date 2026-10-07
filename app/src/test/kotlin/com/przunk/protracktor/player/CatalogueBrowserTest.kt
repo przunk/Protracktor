@@ -41,9 +41,9 @@ class CatalogueBrowserTest {
         val browser = CatalogueBrowser(scope, this, this, state) { note("backends"); fingerprint() }
         var before: suspend (String) -> Unit = {}
         var fingerprint: () -> String = { "test-backends" }
-        val summaries = listOf(CatalogueSummary("modland", "Modland", 7, 1L))
+        var summaries = listOf(CatalogueSummary("modland", "Modland", 7, 1L))
         val groups = listOf(CatalogueGroup("Group", 3))
-        val rows = listOf(CatalogueTrack("modland", "Protracker/Artist/tune.mod", "Protracker", "Artist", "Displayed", 123))
+        var rows = listOf(CatalogueTrack("modland", "Protracker/Artist/tune.mod", "Protracker", "Artist", "Displayed", 123))
         val platforms = mapOf("amiga" to 11)
         val held = HeldSets(songLengths = true, trackMetadata = false, songDbLengths = true, replays = true, players = true)
 
@@ -66,6 +66,8 @@ class CatalogueBrowserTest {
         override suspend fun tracks(catalogueId: String, format: String, author: String): List<CatalogueTrack> {
             read("tracks:$catalogueId:$format:$author"); return rows
         }
+        override suspend fun hasGroup(catalogueId: String, format: String, author: String): Boolean =
+            rows.any { it.catalogueId == catalogueId && it.format == format && it.author == author }
         override fun replayCount(): Int { note("replay-count"); return 3 }
         override fun replayBytes(): Long { note("replay-bytes"); return 29 }
         override fun playersPresent(): Boolean { note("players-present"); return true }
@@ -85,6 +87,38 @@ class CatalogueBrowserTest {
         assertTrue(f.events.isEmpty())
         assertEquals(BrowseState(), f.browse.value)
         assertTrue(coroutineContext.job.children.none())
+    }
+
+    @Test fun `saved route resolves exact keys against current contents and Back has a list destination`() = runBlocking {
+        val f = Fixture(this)
+        val key = SavedPlaceKey("modland", "Protracker", "Artist")
+        val old = f.browser.resolveSavedPlace(key) as SavedPlaceDestination.Found
+        f.rows = listOf(f.rows.single().copy(path = "new.mod", title = "New index contents"))
+        val fresh = f.browser.resolveSavedPlace(key) as SavedPlaceDestination.Found
+        assertEquals("New index contents", fresh.tracks.single().title)
+        assertFalse(old.tracks == fresh.tracks)
+        assertTrue(f.events.contains("tracks:modland:Protracker:Artist"))
+        f.browser.showSavedPlace(key, fresh)
+        assertEquals(BrowseDomain.ONLINE, f.browse.value.domain)
+        assertEquals(key, f.browse.value.saveablePlace())
+        assertEquals(fresh.tracks, f.browse.value.tracks)
+        assertTrue(f.browse.value.returnToSavedPlaces)
+    }
+
+    @Test fun `saved places distinguish missing index group and disabled catalogue`() = runBlocking {
+        val f = Fixture(this)
+        val key = SavedPlaceKey("modland", "Protracker", "Artist")
+        val place = SavedPlace(key, "Modland", 1)
+        assertEquals(SavedPlaceAvailability.AVAILABLE, f.browser.savedPlaceRows(listOf(place)).single().availability)
+        assertEquals(SavedPlaceAvailability.GROUP_MISSING,
+            f.browser.savedPlaceRows(listOf(place.copy(key = key.copy(format = "Other")))).single().availability)
+        f.rows = emptyList()
+        assertEquals(SavedPlaceDestination.Unavailable(SavedPlaceAvailability.GROUP_MISSING), f.browser.resolveSavedPlace(key))
+        f.summaries = listOf(f.summaries.single().copy(trackCount = 0))
+        assertEquals(SavedPlaceDestination.Unavailable(SavedPlaceAvailability.INDEX_MISSING), f.browser.resolveSavedPlace(key))
+        f.summaries = emptyList()
+        assertEquals(SavedPlaceDestination.Unavailable(SavedPlaceAvailability.CATALOGUE_UNAVAILABLE), f.browser.resolveSavedPlace(key))
+        assertEquals(SavedPlaceAvailability.CATALOGUE_UNAVAILABLE, f.browser.savedPlaceRows(listOf(place)).single().availability)
     }
 
     @Test

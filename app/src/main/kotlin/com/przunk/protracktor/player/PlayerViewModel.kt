@@ -57,6 +57,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun openSubfolder(path: String) = controller.openSubfolder(path)
     fun closeFolder() = controller.closeFolder()
     fun openDomain(domain: BrowseDomain) = controller.openDomain(domain)
+    val savedPlacesState get() = controller.savedPlacesState
+    fun saveCurrentPlace() = controller.saveCurrentPlace()
+    fun removeSavedPlace(key: SavedPlaceKey) = controller.removeSavedPlace(key)
+    fun openSavedPlace(key: SavedPlaceKey) = controller.openSavedPlace(key)
+    fun refreshSavedPlaces() = controller.refreshSavedPlaces()
     fun browseBack(): Boolean = controller.browseBack()
     fun indexCatalogue(id: String) = controller.indexCatalogue(id)
 

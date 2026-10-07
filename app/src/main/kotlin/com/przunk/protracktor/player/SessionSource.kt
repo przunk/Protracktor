@@ -32,7 +32,7 @@ sealed interface SessionSource {
                 )
             }
             BrowseDomain.LOCAL -> browse.openFolder?.let { Folder(it.displayName) }
-            BrowseDomain.ROOT -> null
+            BrowseDomain.ROOT, BrowseDomain.SAVED -> null
         }
     }
 }

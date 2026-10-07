@@ -88,6 +88,9 @@ import com.przunk.protracktor.player.HistoryPages
 import com.przunk.protracktor.player.QueueLink
 import com.przunk.protracktor.player.SearchScope
 import com.przunk.protracktor.player.TrackRef
+import com.przunk.protracktor.player.SavedPlacesState
+import com.przunk.protracktor.player.SavedPlaceKey
+import com.przunk.protracktor.player.saveablePlace
 
 /**
  * Browse: a full screen, one component, four domains.
@@ -142,6 +145,11 @@ fun BrowseScreen(
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
+    savedPlaces: SavedPlacesState = SavedPlacesState(),
+    onSavePlace: () -> Unit = {},
+    onRemovePlace: (SavedPlaceKey) -> Unit = {},
+    onOpenPlace: (SavedPlaceKey) -> Unit = {},
+    onRefreshPlaces: () -> Unit = {},
 ) {
     // One per Browse session. It dies when Browse closes, which is what makes a fresh entry start
     // at the top (`docs/STATUS.md` C6) while a descent and return does not.
@@ -206,6 +214,10 @@ fun BrowseScreen(
         // files -- shows the count in its own supporting line.
 
         when (browse.domain) {
+            BrowseDomain.SAVED -> SavedPlacesScreen(
+                state = savedPlaces, onOpen = onOpenPlace, onRemove = onRemovePlace,
+                onPrepare = { onOpenDomain(BrowseDomain.ONLINE) }, onRetry = onRefreshPlaces,
+            )
             BrowseDomain.ROOT -> DomainChooser(
                 browse = browse,
                 onOpenDomain = onOpenDomain,
@@ -234,26 +246,31 @@ fun BrowseScreen(
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
             )
-            BrowseDomain.ONLINE -> OnlineDomain(
-                browse = browse,
-                scroll = scroll,
-                playlistName = playlistName,
-                playingId = playingId,
-                loadingId = loadingId,
-                onShowNeighbours = onShowNeighbours,
-                onShareFile = onShareFile,
-                onShareAudio = onShareAudio,
-                onShareLink = onShareLink,
-                onSendToWeb = onSendToWeb,
-                onIndexCatalogue = onIndexCatalogue,
-                onDownloadSongMetadata = onDownloadSongMetadata,
-                onDownloadReplayRoutines = onDownloadReplayRoutines,
-                onOpenCatalogue = onOpenCatalogue,
-                onOpenGroup = onOpenGroup,
-                onPlay = onPlay,
-                onAdd = onAdd,
-                onAddToOtherPlaylist = onAddToOtherPlaylist,
-            )
+            BrowseDomain.ONLINE -> Column {
+                browse.saveablePlace()?.let { key ->
+                    SavedPlaceHeader(key, savedPlaces, onSavePlace, { onRemovePlace(key) }, onRefreshPlaces)
+                }
+                OnlineDomain(
+                    browse = browse,
+                    scroll = scroll,
+                    playlistName = playlistName,
+                    playingId = playingId,
+                    loadingId = loadingId,
+                    onShowNeighbours = onShowNeighbours,
+                    onShareFile = onShareFile,
+                    onShareAudio = onShareAudio,
+                    onShareLink = onShareLink,
+                    onSendToWeb = onSendToWeb,
+                    onIndexCatalogue = onIndexCatalogue,
+                    onDownloadSongMetadata = onDownloadSongMetadata,
+                    onDownloadReplayRoutines = onDownloadReplayRoutines,
+                    onOpenCatalogue = onOpenCatalogue,
+                    onOpenGroup = onOpenGroup,
+                    onPlay = onPlay,
+                    onAdd = onAdd,
+                    onAddToOtherPlaylist = onAddToOtherPlaylist,
+                )
+            }
             BrowseDomain.HISTORY -> HistoryDomain(
                 browse = browse,
                 scroll = scroll,
@@ -303,6 +320,14 @@ private fun DomainChooser(
     onChooseRandomScope: () -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+            DomainRow(
+                icon = PlayerIcons.Save,
+                title = stringResource(R.string.saved_places_title),
+                subtitle = stringResource(R.string.saved_places_body),
+                onClick = { onOpenDomain(BrowseDomain.SAVED) },
+            )
+        }
         item {
             DomainRow(
                 icon = PlayerIcons.Folder,

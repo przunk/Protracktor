@@ -62,7 +62,7 @@ class SchemaSqlTest {
     private fun freshTableNames(): Set<String> = setOf(
         "playlists", "tracks", "playlist_tracks", "granted_folders", "player_state",
         "catalogues", "catalogue_tracks", "song_lengths", "play_history", "library_index",
-        "track_metadata", "modland_favourites", "songdb_lengths", "learned_lengths",
+        "track_metadata", "modland_favourites", "songdb_lengths", "learned_lengths", "saved_places",
     )
 
     @Test

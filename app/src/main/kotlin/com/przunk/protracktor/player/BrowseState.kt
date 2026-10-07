@@ -8,7 +8,7 @@ import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.GrantedFolder
 
 /** Which part of Browse is on screen. Back moves one step towards [ROOT]. */
-enum class BrowseDomain { ROOT, LOCAL, ONLINE, SEARCH, HISTORY }
+enum class BrowseDomain { ROOT, LOCAL, ONLINE, SEARCH, HISTORY, SAVED }
 
 /**
  * Which downloadable sets are on the phone, **asked, not counted** (`docs/STATUS.md` C75).
@@ -95,6 +95,8 @@ data class BrowseState(
      * it. Back has to undo the jump instead of walking up a hierarchy the user never walked down.
      */
     val arrivedByJump: Boolean = false,
+    /** Saved places opens a complete route in one step; Back returns to that list. */
+    val returnToSavedPlaces: Boolean = false,
     /** How many SID tunes HVSC has given us a length for. Zero until the database is downloaded. */
     val songLengthCount: Int = 0,
     /** How many tunes the songdb metadata table describes. Zero until it is downloaded. */

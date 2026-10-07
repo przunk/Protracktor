@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-11 — version 1.0.0, schema version 22 on the B43 branch. versionCode is the commit count.
+Updated: 2026-10-11 — version 1.0.0, schema version 23 on the stacked trial branches. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
@@ -36,14 +36,23 @@ key and Random order. Downloading into cache alone does not extract decoder meta
 approved this presentation as a separate correction on 2026-10-11. No naming behaviour is changed
 in C100; see [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
-## B42 Saved places — selected, implementation in progress, 2026-10-07
+## B42 Saved places — implemented, host verified, awaiting combined phone trial, 2026-10-07
 
 The owner approved `feature/saved-places` from B43's `54a933a` to test both features in one APK.
 Schema **23 is reserved for B42**, above B43's 22. The B43 branch stays unmerged and unchanged
 during the owner's planned approximately 24-hour trial. The owner reported that its new layout
 looks acceptable; usefulness and longer-term behaviour are still under evaluation. No merge was
 authorised. B42 uses separate commits and independent bookmarking logic. See
-[the plan](PLAN_SAVED_PLACES.md); current implementation and device behaviour are not yet verified.
+[the plan](PLAN_SAVED_PLACES.md). The forced full gate passed in 234 s: **723 tests**, zero
+failures/errors/skips; lint without errors; 581 page, 49 existing-WASM (not rebuilt), 8 SAP and
+8 server checks, web database upgrade, 135 icon paths and store metadata validation. Two deliberate
+mutations failed the intended identity/navigation tests; they were restored before this gate.
+Two render tests produced eight previews. Device behaviour and usefulness remain unverified;
+the release APK handoff follows. [Evidence and trial checklist](PR_B42_SAVED_PLACES.md).
+B43's five-second rule and
+status-column placement are unchanged. Never reinstall a schema-22 (or older) APK after upgrading
+to this candidate: those older binaries retain a destructive downgrade path. A rejected feature
+requires a forward-compatible build preserving the installed schema and user data.
 
 ## User discovery feedback — B43 selected as an experiment, 2026-10-07
 
@@ -83,7 +92,7 @@ analysis → implementation → PR/handoff → user test process. At the initial
 documents changed; implementation and new tests followed on the separate B43 branch.
 The owner subsequently selected B43 for implementation as an experiment: it may be retained,
 revised or abandoned if ordinary use shows it is not useful. The remaining rule choices in its
-plan were confirmed before coding. B42 remains unselected. Schema 22 is reserved above;
+plan were confirmed before coding. B42 was subsequently selected as recorded above. Schema 22 is reserved above;
 no phone trial result is claimed yet. Technical correctness is
 required independently of usefulness; abandoning the trial must not delete data or require a
 destructive schema downgrade. The plan records the feedback and final-decision evidence required.

@@ -355,6 +355,13 @@ class CatalogueStore(context: Context) {
             ).use { it.toGroups() }
         }
 
+    suspend fun hasGroup(catalogueId: String, format: String, author: String): Boolean = withContext(Dispatchers.IO) {
+        helper.readableDatabase.rawQuery(
+            "SELECT 1 FROM catalogue_tracks WHERE catalogue_id = ? AND format = ? AND author = ? AND playable = 1 LIMIT 1",
+            arrayOf(catalogueId, format, author),
+        ).use { it.moveToFirst() }
+    }
+
     suspend fun tracks(catalogueId: String, format: String, author: String): List<CatalogueTrack> =
         withContext(Dispatchers.IO) {
             helper.readableDatabase.rawQuery(

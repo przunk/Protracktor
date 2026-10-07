@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="saved_places_title">Zapisane miejsca</string>
+    <string name="saved_places_body">Foldery autorów i gier, do których chcesz wrócić.</string>
+    <string name="saved_places_empty">Nie ma jeszcze zapisanych miejsc. Otwórz folder autora lub gry w katalogu online i wybierz Zapisz na później.</string>
+    <string name="saved_places_loading">Aktualizowanie zapisanych miejsc…</string>
+    <string name="saved_places_retry">Odśwież</string>
+    <string name="saved_place_save">Zapisz na później</string>
+    <string name="saved_place_saved">Zapisano na później</string>
+    <string name="saved_place_open">Otwórz</string>
+    <string name="saved_place_remove">Usuń</string>
+    <string name="saved_place_prepare">Katalogi</string>
+    <string name="saved_place_added">Miejsce zapisane na później.</string>
+    <string name="saved_place_exists">To miejsce jest już zapisane.</string>
+    <string name="saved_place_removed">Zakładka usunięta. Muzyka i playlisty pozostały bez zmian.</string>
+    <string name="saved_place_failed">Nie udało się zaktualizować zapisanych miejsc. Spróbuj ponownie.</string>
+    <string name="saved_place_unavailable">To miejsce jest niedostępne. Zakładka została zachowana.</string>
+    <string name="saved_place_index_missing">Pobierz indeks tego katalogu w Katalogach online, aby otworzyć miejsce. Zakładka jest zachowana.</string>
+    <string name="saved_place_group_missing">Ten folder nie zawiera odtwarzalnych utworów w bieżącym indeksie. Możesz odświeżyć indeks w Katalogach online; zakładka jest zachowana.</string>
+    <string name="saved_place_source_missing">Ten katalog nie jest dostępny w tej wersji aplikacji. Zakładka jest zachowana.</string>
     <string name="played_before">Już odsłuchane</string>
     <string name="notice_history_clear_failed">Nie udało się wyczyścić historii. Zapisana historia została zachowana; spróbuj ponownie.</string>
     <string name="played_before_explanation">Odtwarzano przez co najmniej 5 sekund albo do końca bez przewijania lub utwór był w historii przed dodaniem tej funkcji. Wyczyszczenie historii usuwa to oznaczenie.</string>

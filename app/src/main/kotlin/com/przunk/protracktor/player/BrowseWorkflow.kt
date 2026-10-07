@@ -24,6 +24,7 @@ internal class BrowseWorkflow(
         fun refreshPlatformCounts()
         fun refreshFavouriteCount()
         fun openHistory()
+        fun openSavedPlaces()
         fun openFormat(format: String)
         fun openCatalogue(summary: CatalogueSummary)
         fun localLevel(state: BrowseState, at: String): BrowseState
@@ -39,6 +40,7 @@ internal class BrowseWorkflow(
                 actions.refreshPlatformCounts()
             }
             BrowseDomain.HISTORY -> actions.openHistory()
+            BrowseDomain.SAVED -> actions.openSavedPlaces()
             // The root has a consumer too: Random's scope sheet is opened from here and draws the
             // same chips. Without the counts every platform reads as "nothing indexed" and the
             // whole sheet is disabled.
@@ -63,6 +65,11 @@ internal class BrowseWorkflow(
     /** One step back up the browse hierarchy. Returns false when already at the top. */
     fun browseBack(): Boolean {
         val current = browse.value
+
+        if (current.returnToSavedPlaces) {
+            openDomain(BrowseDomain.SAVED)
+            return true
+        }
 
         // A jump is one step, not a descent. "More from this author" puts you three levels deep
         // without your having passed through any of them, so back should return you to where you

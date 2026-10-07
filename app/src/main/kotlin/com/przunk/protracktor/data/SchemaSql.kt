@@ -26,7 +26,23 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 22
+    const val VERSION = 23
+
+    private val SAVED_PLACES_V23 = listOf("""
+        CREATE TABLE saved_places (
+            catalogue_id TEXT NOT NULL,
+            format TEXT NOT NULL,
+            author TEXT NOT NULL,
+            catalogue_name TEXT NOT NULL,
+            saved_at INTEGER NOT NULL,
+            PRIMARY KEY (catalogue_id, format, author)
+        )
+    """.trimIndent())
+
+    val SAVED_PLACE_INSERT = "INSERT OR IGNORE INTO saved_places " +
+        "(catalogue_id, format, author, catalogue_name, saved_at) VALUES (?, ?, ?, ?, ?)"
+    val SAVED_PLACES_LIST = "SELECT catalogue_id, format, author, catalogue_name, saved_at " +
+        "FROM saved_places ORDER BY saved_at DESC, catalogue_id, format, author"
 
     private val LISTENED_V22 = listOf(
         "ALTER TABLE play_history ADD COLUMN listened INTEGER NOT NULL DEFAULT 0",
@@ -574,7 +590,7 @@ object SchemaSql {
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
         CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17 +
         REREAD_DAMAGED_TITLES_V18 + SEARCH_FOLDED_V19 + CATALOGUE_PLATFORM_V20 +
-        CATALOGUE_PLATFORM_INDEX_V21 + LISTENED_V22
+        CATALOGUE_PLATFORM_INDEX_V21 + LISTENED_V22 + SAVED_PLACES_V23
 
 
 
@@ -607,6 +623,7 @@ object SchemaSql {
         20 to CATALOGUE_PLATFORM_V20,
         21 to CATALOGUE_PLATFORM_INDEX_V21,
         22 to LISTENED_V22,
+        23 to SAVED_PLACES_V23,
     )
 
     /**

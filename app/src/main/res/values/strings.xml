@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="saved_places_title">Saved places</string>
+    <string name="saved_places_body">Author and game folders to return to later.</string>
+    <string name="saved_places_empty">Nothing saved yet. Open an author or game folder in an online catalogue and choose Save for later.</string>
+    <string name="saved_places_loading">Updating saved places…</string>
+    <string name="saved_places_retry">Refresh</string>
+    <string name="saved_place_save">Save for later</string>
+    <string name="saved_place_saved">Saved for later</string>
+    <string name="saved_place_open">Open</string>
+    <string name="saved_place_remove">Remove</string>
+    <string name="saved_place_prepare">Catalogues</string>
+    <string name="saved_place_added">Place saved for later.</string>
+    <string name="saved_place_exists">This place is already saved.</string>
+    <string name="saved_place_removed">Bookmark removed. Music and playlists are unchanged.</string>
+    <string name="saved_place_failed">Could not update saved places. Please try again.</string>
+    <string name="saved_place_unavailable">This saved place is unavailable. Its bookmark has been kept.</string>
+    <string name="saved_place_index_missing">Download this catalogue’s index in Online catalogues to open this place. The bookmark is safe.</string>
+    <string name="saved_place_group_missing">This exact folder has no playable tracks in the current index. You can refresh the index in Online catalogues; the bookmark is kept.</string>
+    <string name="saved_place_source_missing">This catalogue is not available in this version of the app. The bookmark is kept.</string>
     <string name="played_before">Played before</string>
     <string name="notice_history_clear_failed">Could not clear History. Your saved history has been kept; please try again.</string>
     <string name="played_before_explanation">Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.</string>

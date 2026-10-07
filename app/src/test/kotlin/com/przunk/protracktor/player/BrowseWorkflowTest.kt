@@ -19,6 +19,7 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -64,6 +65,7 @@ class BrowseWorkflowTest {
         override fun refreshPlatformCounts() = action("platforms")
         override fun refreshFavouriteCount() = action("favourites")
         override fun openHistory() = action("history")
+        override fun openSavedPlaces() = action("saved")
         override fun openFormat(format: String) = action("format:$format")
         override fun openCatalogue(summary: CatalogueSummary) { assertSame(catalogue, summary); action("catalogue:${summary.id}") }
         override fun localLevel(state: BrowseState, at: String): BrowseState { action("level:$at"); return renderLevel(state, at) }
@@ -97,6 +99,18 @@ class BrowseWorkflowTest {
         assertTrue(coroutineContext.job.children.none())
     }
 
+    @Test fun `Back from a saved route returns to bookmarks in one step then Browse root`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.value = f.browse.value.copy(returnToSavedPlaces = true)
+        assertTrue(f.workflow.browseBack())
+        assertEquals(BrowseDomain.SAVED, f.browse.value.domain)
+        assertNull(f.browse.value.openAuthor)
+        assertTrue(f.browse.value.tracks.isEmpty())
+        assertEquals(listOf("saved"), f.events)
+        assertTrue(f.workflow.browseBack())
+        assertEquals(BrowseDomain.ROOT, f.browse.value.domain)
+    }
+
     @Test
     fun `every domain is published before its ordered refresh actions`() = runBlocking {
         for (domain in BrowseDomain.entries) {
@@ -112,6 +126,7 @@ class BrowseWorkflowTest {
                 BrowseDomain.ONLINE -> listOf("catalogues")
                 BrowseDomain.SEARCH -> listOf("catalogues", "platforms")
                 BrowseDomain.HISTORY -> listOf("history")
+                BrowseDomain.SAVED -> listOf("saved")
             }
             assertEquals(domain.toString(), actions, f.events)
             assertEquals(expected, f.browse.value)

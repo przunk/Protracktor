@@ -61,6 +61,8 @@ wishlist, backlog or open questions when this entry was added.
 implementation stages and test criteria. Selected on 2026-10-07 for implementation on
 `feature/saved-places`, explicitly based on the unmerged B43 candidate for a combined APK trial.
 Schema 23 is reserved; the two features remain separately reviewable and neither is approved for merge.
+Implementation and full host verification are complete; the combined phone trial remains pending.
+See [the local PR/handoff](PR_B42_SAVED_PLACES.md) for evidence and the trial checklist.
 
 ## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT and merged 2026-10-02; checked on the phone by the owner**
 

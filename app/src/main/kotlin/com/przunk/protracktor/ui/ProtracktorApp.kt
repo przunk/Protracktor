@@ -102,6 +102,7 @@ fun ProtracktorApp(
     onExternalOpened: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val savedPlaces by viewModel.savedPlacesState.collectAsStateWithLifecycle()
     val storedBrowse by viewModel.browse.collectAsStateWithLifecycle()
     val browse = remember(storedBrowse, state.listenedIds) {
         storedBrowse.copy(listenedHere = state.listenedIds)
@@ -446,6 +447,11 @@ fun ProtracktorApp(
                 } else if (showBrowse) {
                     BrowseScreen(
                         browse = browse,
+                        savedPlaces = savedPlaces,
+                        onSavePlace = viewModel::saveCurrentPlace,
+                        onRemovePlace = viewModel::removeSavedPlace,
+                        onOpenPlace = viewModel::openSavedPlace,
+                        onRefreshPlaces = viewModel::refreshSavedPlaces,
                         playlistName = state.activePlaylistName,
                         contentPadding = insets,
                         onOpenDomain = viewModel::openDomain,

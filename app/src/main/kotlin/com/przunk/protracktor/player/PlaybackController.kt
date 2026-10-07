@@ -340,11 +340,39 @@ class PlaybackController private constructor(private val context: Context) {
                 catalogues.authors(catalogueId, format)
             override suspend fun tracks(catalogueId: String, format: String, author: String) =
                 catalogues.tracks(catalogueId, format, author)
+            override suspend fun hasGroup(catalogueId: String, format: String, author: String) =
+                catalogues.hasGroup(catalogueId, format, author)
         },
         files = AndroidCatalogueStorage(context, remoteFiles),
         state = CatalogueBrowseState(_browse),
         backends = { NativeEngine.backendsFingerprint() },
     )
+
+    private val savedPlaces = SavedPlaces(
+        scope = scope,
+        store = com.przunk.protracktor.data.SavedPlacesStore(context),
+        availability = catalogueBrowser::savedPlaceRows,
+        resolve = catalogueBrowser::resolveSavedPlace,
+        show = catalogueBrowser::showSavedPlace,
+        isShowingList = { _browse.value.domain == BrowseDomain.SAVED },
+        notice = { notice -> say(Message(context.getString(when (notice) {
+            SavedPlaces.Notice.SAVED -> R.string.saved_place_added
+            SavedPlaces.Notice.ALREADY_SAVED -> R.string.saved_place_exists
+            SavedPlaces.Notice.REMOVED -> R.string.saved_place_removed
+            SavedPlaces.Notice.FAILED -> R.string.saved_place_failed
+            SavedPlaces.Notice.UNAVAILABLE -> R.string.saved_place_unavailable
+        }))) },
+    )
+    val savedPlacesState get() = savedPlaces.state
+
+    fun saveCurrentPlace() {
+        val current = _browse.value
+        val key = current.saveablePlace() ?: return
+        savedPlaces.save(SavedPlace(key, requireNotNull(current.openCatalogue).displayName, System.currentTimeMillis()))
+    }
+    fun removeSavedPlace(key: SavedPlaceKey) = savedPlaces.remove(key)
+    fun openSavedPlace(key: SavedPlaceKey) = savedPlaces.open(key)
+    fun refreshSavedPlaces() = savedPlaces.refresh()
 
     private val playlistText = AndroidPlaylistText(context)
     private val playlistSession = PlaylistSession(
@@ -419,6 +447,7 @@ class PlaybackController private constructor(private val context: Context) {
             override fun refreshPlatformCounts() = catalogueBrowser.refreshPlatformCounts()
             override fun refreshFavouriteCount() = catalogueBrowser.refreshFavouriteCount()
             override fun openHistory() = this@PlaybackController.openHistory()
+            override fun openSavedPlaces() = savedPlaces.refresh()
             override fun openFormat(format: String) = catalogueBrowser.openFormat(format)
             override fun openCatalogue(summary: CatalogueSummary) = catalogueBrowser.openCatalogue(summary)
             override fun localLevel(state: BrowseState, at: String) = localFolders.levelOf(state, at)
@@ -536,6 +565,12 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     init {
+        savedPlaces.refresh()
+        scope.launch {
+            _browse.map { it.catalogues }.distinctUntilChanged().collect {
+                if (savedPlaces.state.value.rows.isNotEmpty()) savedPlaces.refresh()
+            }
+        }
         // Before anything can be opened: sc68 reads its replay binaries from a path, and an asset
         // inside an APK does not have one.
         // Once at start-up, so an installation that grew past the ceiling before the limit existed
@@ -756,9 +791,15 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- browsing -----------------------------------------------------------------------------
 
-    fun openDomain(domain: BrowseDomain) = browseWorkflow.openDomain(domain)
+    fun openDomain(domain: BrowseDomain) {
+        savedPlaces.cancelOpening()
+        browseWorkflow.openDomain(domain)
+    }
 
-    fun browseBack(): Boolean = browseWorkflow.browseBack()
+    fun browseBack(): Boolean {
+        savedPlaces.cancelOpening()
+        return browseWorkflow.browseBack()
+    }
 
     fun refreshFolders() = localFolders.refreshFolders()
 

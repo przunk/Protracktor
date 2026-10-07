@@ -113,4 +113,5 @@ internal fun BrowseState.levelKey(): String = when (domain) {
     // Each page its own place: the next hundred start at their top, and back returns to where
     // the last page was left.
     BrowseDomain.HISTORY -> "history/$historyPage"
+    BrowseDomain.SAVED -> "saved-places"
 }

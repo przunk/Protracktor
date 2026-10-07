@@ -66,6 +66,15 @@ internal class CatalogueBrowseState(private val browse: MutableStateFlow<BrowseS
         browse.update { it.copy(tracks = tracks, loading = false) }
     }
 
+    fun showSavedPlace(key: SavedPlaceKey, destination: SavedPlaceDestination.Found) {
+        browse.update {
+            BrowseNavigation.enteringDomain(it, BrowseDomain.ONLINE).copy(
+                openCatalogue = destination.summary, openFormat = key.format, openAuthor = key.author,
+                tracks = destination.tracks, loading = false, returnToSavedPlaces = true,
+            )
+        }
+    }
+
     fun showHeld(held: HeldSets) {
         browse.update { it.copy(held = held) }
     }
