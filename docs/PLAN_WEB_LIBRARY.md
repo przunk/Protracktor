@@ -650,7 +650,8 @@ desk.
 ## What is still to decide
 
 1. **The relay, and therefore UnExoticA and The Mod Archive in the browser** — it changes who
-   fetches from ExoticA, and they have not answered the first letter yet.
+   fetches from ExoticA. Jools has approved the proposed Android client use (recorded
+   2026-10-07 in `PLAN_UNEXOTICA.md`); that does not settle permission for a server-side relay.
 2. ~~How much storage the page may take~~ — **answered by the measurement**: 18 MB held against
    256–473 GB offered, persistence granted on both machines. The page reports; it does not ration. Whether it *asks* before the
    first 5.76 MB download is still worth a word, and the answer is probably yes, once.

@@ -233,6 +233,7 @@ class RemoteFiles(private val context: Context) {
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
             connection.instanceFollowRedirects = true
+            connection.setRequestProperty("User-Agent", CatalogueHttp.USER_AGENT)
             // The name and value only. A cookie's attributes are the browser's business and this is
             // not one; sending `path=/; HttpOnly` back would be sending the server its own notes.
             if (cookie != null) connection.setRequestProperty("Cookie", cookie)

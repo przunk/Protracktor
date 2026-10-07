@@ -9,10 +9,9 @@ package com.przunk.protracktor.net
  * Modland is organised by musician and is mostly demoscene; that is the shape of the archive
  * rather than an omission, and it leaves out the music most people remember from games.
  *
- * **This whole file is the feature**, and deliberately: ExoticA have not answered whether per-file
- * fetching is acceptable (`docs/PLAN_UNEXOTICA.md`), so the catalogue has to be removable. [ENABLED]
- * is the switch, and the removal list is in that document — this file, two native files, and two
- * lines elsewhere.
+ * ExoticA approved per-file fetching and requested a stable client identity for whitelisting
+ * (recorded in `docs/PLAN_UNEXOTICA.md`). [RemoteFiles] sends [CatalogueHttp.USER_AGENT].
+ * [ENABLED] remains an operational switch; the plan documents removal if ever needed.
  *
  * Three things make it a different shape from every catalogue before it:
  *
@@ -37,9 +36,9 @@ object UnExoticA : Catalogue(
     /**
      * Whether the catalogue is offered at all.
      *
-     * A `const` rather than a setting: it answers a question ExoticA have not, so it is not the
-     * user's to decide. `false` hides the catalogue *and* makes [CatalogueStore] drop the rows
-     * already stored for it, which is the difference between "turned off" and "hidden".
+     * A build-time operational switch, not a user preference. `false` hides the catalogue and
+     * makes CatalogueStore drop its stored rows. Maintainer approval does not require removing
+     * this fallback.
      */
     const val ENABLED: Boolean = true
 

@@ -1,8 +1,57 @@
 # Status
 
-Updated: 2026-10-06 — version 1.0.0, schema version 21. versionCode is the commit count.
+Updated: 2026-10-07 — version 1.0.0, schema version 21. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## UnExoticA client identity — owner-confirmed playback, awaiting merge approval, 2026-10-07
+
+Branch `fix/unexotica-user-agent`, based on merged develop `9ed0359`. The owner approved the
+follow-up previously deferred during the architecture work. Inspection found that Mod Archive
+search already identifies the app, but `RemoteFiles` archive/index requests and their cookie
+retry did not. The change shares the existing stable User-Agent between these callers;
+no catalogue switch, cache, database or version policy changes are included.
+
+**Partly checked:** five local HTTP-server tests cover archive downloads/cache reuse, uncached
+index refreshes, verification retries, redirects and HTTP failures. All five failed before the
+change because the server received the JVM default identity, then passed after the change.
+A deliberate mutation omitting the header only on the cookie retry made exactly that test fail;
+the correct implementation was restored.
+
+**Checked:** forced full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` passed in 251 s: 681 tests, zero failures/errors,
+lint without errors, 581 page checks, 49 checks against the existing WASM, 8 SAP checks, web database
+upgrade, 135 icon paths, 8 server checks and store metadata validation. No WASM rebuild is claimed.
+Logs: `/tmp/protracktor-user-agent-{red,green,mutation}.log`,
+`/tmp/protracktor-Protracktor-{test,lint}.log`; output root
+`/tmp/protracktor-origin-sync-build.S8adiD`, Gradle cache `/tmp/protracktor-architecture-gradle`.
+Copies of these logs and the build log are retained in `dist/unexotica-user-agent-verification/`.
+
+**Release artifact checked:** `scripts/build-release.sh --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` passed in 611 s from clean `dfcc825`:
+**1.0.0 (1103)**, minified/non-debuggable, arm64-v8a, armeabi-v7a and x86_64, minSdk 29/targetSdk 36.
+The script copied the APK to `dist/`; its legacy filename was then renamed to include the variant
+and source SHA: `dist/protracktor-release-1.0.0-1103-dfcc825-20261007-101401.apk`
+(11,687,186 bytes). SHA-256: `a2574a0119583e331f6823a102e31867e4db0aed417a9249577e6ce5983db596`.
+APK Signature Scheme v2 verification passed; the test certificate matches the accepted 1091 APK
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`). No publishing key was used.
+The later handoff-documentation commit does not change the application sources in this APK.
+
+Jools's approval and the still-unconfirmed server whitelist are recorded in
+[the catalogue plan](PLAN_UNEXOTICA.md). Server whitelisting remains unconfirmed.
+No merge, push or publication is authorised by this implementation task.
+
+**Phone result reported by the owner, 2026-10-07:** following the 1103 APK handoff, the owner
+confirmed UnExoticA playback and the catalogue loading into cache. Device/Android version and the
+installed build number were not separately restated. This does not establish a cold archive
+download, subsequent archive reuse without a request, results for other catalogues/Mod Archive,
+or activation of the server whitelist. No merge approval was given with this test result.
+
+**Regression checklist (not all steps separately confirmed):** install the test release as an update without clearing data. In Online Catalogues,
+open UnExoticA and play a track from a game archive not already downloaded; another track from that
+game should still reuse the cached archive. Check one fresh download from another catalogue and a
+Mod Archive search. Refresh an index only if needed; no deletion of indexes or app data is required.
+If Android rejects the update signature, keep the installed app/data and report the mismatch.
 
 ## Remote develop integration — checked, 2026-10-06
 
