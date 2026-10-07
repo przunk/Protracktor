@@ -598,7 +598,11 @@ the UI, so returning to an old navigation snapshot cannot restore an obsolete ma
 view never opts into row decoration. Random drawing, queue rules and prefetch are unchanged.
 
 The tiny history glyph is informational, with a localised accessibility description and explanation
-in track details. It does not alter row text contrast or act as a button. Utility and appearance
+in track details. Following the owner's second visual trial request (2026-10-07), it occupies a
+fixed lower slot below Browse's cache indicator or Random's ordinal/play symbol. Missing cache
+status leaves the upper slot empty; selection replaces both with the checkbox. Subtitles remain
+plain text, and playlist rows retain their original leading slot. It does not alter row text
+contrast or act as a button. Utility and appearance
 remain subject to the owner's release-APK trial; an unhelpful experiment may be rejected. See
 [B43 plan](PLAN_PLAYED_BEFORE.md). Do not roll a schema-22 phone back to an old schema-21 APK:
 the old helper resets databases on downgrade. A rejected experiment needs a forward-compatible

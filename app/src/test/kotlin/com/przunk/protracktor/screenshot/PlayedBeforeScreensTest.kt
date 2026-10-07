@@ -15,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.AppTheme
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.BrowseDomain
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.TrackRef
 import com.przunk.protracktor.ui.RandomScreen
+import com.przunk.protracktor.ui.BrowseScreen
 import com.przunk.protracktor.ui.theme.ProtracktorTheme
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "en-w360dp-h800dp-xhdpi")
 class PlayedBeforeScreensTest {
-    private fun pictures(locale: String) {
+    private fun pictures(locale: String, browse: Boolean = false) {
         val tracks = listOf(
             TrackRef("a", "Previously explored track", "Modland", fileName = "song.mod", author = "Artist"),
             TrackRef("b", "Unplayed track", "Modland", fileName = "new.mod", author = "Artist"),
@@ -39,7 +41,19 @@ class PlayedBeforeScreensTest {
                 ProtracktorTheme(theme = if (dark) AppTheme.DARK else AppTheme.LIGHT, dynamicColour = false) {
                     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-                            RandomScreen(
+                            if (browse) BrowseScreen(
+                                browse = BrowseState(domain = BrowseDomain.HISTORY, tracks = tracks,
+                                    historyTotal = tracks.size, listenedHere = setOf("a", "c"), cachedHere = setOf("a", "b")),
+                                playlistName = "Saved playlist", contentPadding = PaddingValues(),
+                                onOpenDomain = {}, onPickFolder = {}, onPickFiles = {}, onOpenFolder = {},
+                                onForgetFolder = {}, onScanFolder = {}, onIndexCatalogue = {},
+                                onDownloadSongMetadata = {}, onDownloadReplayRoutines = {}, onOpenCatalogue = {},
+                                onOpenGroup = {}, onRandom = {}, onChooseRandomScope = {}, onQueryChange = {},
+                                onScope = {}, onToggleCatalogue = {}, onTogglePlatform = {}, onSearch = {},
+                                onClearHistory = {}, playingId = null, loadingId = null,
+                                onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
+                                onSendToWeb = {}, onPlay = {}, onAdd = {},
+                            ) else RandomScreen(
                                 state = PlayerUiState(randomPicks = tracks, randomIndex = 1, listenedIds = setOf("a", "c")),
                                 browse = BrowseState(), listState = rememberLazyListState(),
                                 onPlayAt = {}, onRemoveAt = {}, onFilter = {}, onShowNeighbours = {},
@@ -49,11 +63,14 @@ class PlayedBeforeScreensTest {
                         }
                     }
                 }
-            }.saveAs("b43-$locale-${if (dark) "dark" else "light"}")
+            }.saveAs("b43-column-${if (browse) "browse" else "random"}-$locale-${if (dark) "dark" else "light"}")
         }
     }
 
     @Test fun english() = pictures("en")
+    @Test fun englishBrowse() = pictures("en", browse = true)
     @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
     fun polish() = pictures("pl")
+    @Test @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
+    fun polishBrowse() = pictures("pl", browse = true)
 }

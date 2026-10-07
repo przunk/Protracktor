@@ -1481,38 +1481,38 @@ private fun BrowseTrackRow(
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = track.subtitle.takeIf { it.isNotBlank() || playedBefore }?.let { where ->
+        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
             // The full source rather than just the author: in a search result the question is
             // "which one is this", and two tunes with one name are told apart by where they live.
-            { TrackSubtitle(where, playedBefore) }
+            { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         },
         // The slot is always here, empty or not. Letting it appear along with the checkbox made
         // every row grow the moment selection started, so the list jumped by more than a row --
         // under the very finger that had just long-pressed one.
         leadingContent = {
             Box(modifier = Modifier.size(CHECKBOX_SLOT), contentAlignment = Alignment.Center) {
-                // One slot, three tenants, in this order (`docs/BACKLOG.md` A55): the checkbox
-                // while selecting -- a fetch goes on underneath it -- then a spinner while the row
-                // is fetched ahead, then a mark once it is on the phone, so a row says it will play
-                // without the network: a phone with a tick, not the catalogue's tick in a disc.
-                when {
-                    selecting -> Checkbox(
+                // Selection owns the whole slot; otherwise cache and listening status stack.
+                if (selecting) {
+                    Checkbox(
                         checked = ticked,
                         onCheckedChange = { on -> haptics.toggle(on); onToggle() },
                     )
-                    fetchingAhead -> {
-                        val caching = stringResource(R.string.a11y_caching_ahead)
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(18.dp).semantics { contentDescription = caching },
+                } else TrackLeadingStatus(playedBefore) {
+                    when {
+                        fetchingAhead -> {
+                            val caching = stringResource(R.string.a11y_caching_ahead)
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp).semantics { contentDescription = caching },
+                            )
+                        }
+                        cachedHere -> Icon(
+                            PlayerIcons.OnPhone,
+                            contentDescription = stringResource(R.string.a11y_cached_here),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
-                    cachedHere -> Icon(
-                        PlayerIcons.OnPhone,
-                        contentDescription = stringResource(R.string.a11y_cached_here),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
                 }
             }
         },

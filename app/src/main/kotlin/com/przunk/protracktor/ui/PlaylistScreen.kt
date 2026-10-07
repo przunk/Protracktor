@@ -207,8 +207,8 @@ internal fun PlaylistBody(
     onRemoveMany: (List<Int>) -> Unit,
     /** Whether the row the queue points at is being fetched, so it can say so by breathing. */
     loadingCurrent: Boolean = false,
-    /** Only Random opts in; playlist views never receive these markers. */
-    listenedIds: Set<String> = emptySet(),
+    /** Null opts out of the status column; Random passes a set even when no tracks qualify. */
+    listenedIds: Set<String>? = null,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -275,7 +275,7 @@ internal fun PlaylistBody(
             TrackRow(
                 index = index,
                 track = track,
-                playedBefore = track.id in listenedIds,
+                playedBefore = listenedIds?.contains(track.id),
                 playing = index == currentIndex,
                 loading = loadingCurrent && index == currentIndex,
                 enabled = enabled,
@@ -399,7 +399,7 @@ internal fun PlaylistBody(
     )
 
     showingInfo?.let { track ->
-        TrackInfoDialog(track = track, onDismiss = { showingInfo = null }, playedBefore = track.id in listenedIds)
+        TrackInfoDialog(track = track, onDismiss = { showingInfo = null }, playedBefore = listenedIds?.contains(track.id) == true)
     }
 }
 
@@ -466,7 +466,7 @@ private fun Modifier.dragToReorder(
 private fun TrackRow(
     index: Int,
     track: TrackRef,
-    playedBefore: Boolean,
+    playedBefore: Boolean?,
     playing: Boolean,
     loading: Boolean,
     enabled: Boolean,
@@ -514,34 +514,36 @@ private fun TrackRow(
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = subtitle.takeIf { it.isNotBlank() || playedBefore }?.let {
-            { TrackSubtitle(it, playedBefore) }
+        supportingContent = subtitle.takeIf { it.isNotBlank() }?.let {
+            { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         },
         leadingContent = {
             // The checkbox takes the ordinal's slot, which is already reserved and already this
             // size -- so entering selection moves nothing (`docs/ARCHITECTURE.md` §17). The
             // ordinal earns its place by saying where you are in three hundred rows; while
             // selecting, what matters is which rows are ticked.
-            Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(28.dp, if (playedBefore == null) 28.dp else 40.dp), contentAlignment = Alignment.Center) {
                 if (selecting) {
                     Checkbox(
                         checked = ticked,
                         onCheckedChange = { on -> haptics.toggle(on); onToggle() },
                     )
-                } else if (playing) {
-                    Icon(
-                        imageVector = PlayerIcons.Play,
-                        contentDescription = stringResource(R.string.a11y_now_playing_row),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                } else {
-                    Text(
-                        text = "${index + 1}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
+                } else TrackLeadingStatus(playedBefore) {
+                    if (playing) {
+                        Icon(
+                            imageVector = PlayerIcons.Play,
+                            contentDescription = stringResource(R.string.a11y_now_playing_row),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    } else {
+                        Text(
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
         },

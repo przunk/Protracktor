@@ -6,6 +6,18 @@ Historical dated checks below describe their own builds; they are not current te
 
 ## User discovery feedback — B43 selected as an experiment, 2026-10-07
 
+**Second visual trial requested, 2026-10-07:** the owner asked to move the listened marker from
+the subtitle to below the cache phone in Browse; Random uses the same lower slot below the
+ordinal/play symbol. Its position does not depend on the cache mark, and selection takes priority.
+Host verification passed: the forced full gate completed in 263 s with **705 tests**, zero
+failures/errors/skips, lint without errors and the same companion checks listed below. The two
+new layout tests failed on the old placement and passed after the change; seven UI tests include
+actual long-press selection. Four native-render tests generated eight previews; EN-light and
+PL-dark Browse/Random previews were inspected. Logs/previews are in
+`dist/b43-status-column-verification/`. The new release artifact is pending; the 1111 artifact
+below is the first visual trial. Playback, History qualification and schema 22 are unchanged.
+Phone appearance and usefulness remain unverified; no acceptance or merge is inferred.
+
 B43 implementation started on `feature/played-before` from `00abd8f` after the owner confirmed
 the remaining rules. Schema **22 is reserved for B43**. Playlist hiding is view-based, the threshold
 is strictly five active seconds, qualification is per file/play occurrence, and Clear cancels the

@@ -102,8 +102,9 @@ qualified set is empty. Keep playlists, favourites, bookmarks and the Random que
    track identity, no per-subsong marks and no cross-source hash deduplication.
 4. **Clear during playback:** cancel the current occurrence's eligibility until a
    new playback begins, so the clear action is not immediately undone by the still-playing track.
-5. **Visual treatment:** recommend a small neutral history/check glyph in the existing row metadata
-   area, with a localised accessibility description and an explanation in track details. It is a
+5. **Visual treatment:** a small neutral history glyph with a localised accessibility description
+   and an explanation in track details. The owner requested trying it below the cache phone in
+   Browse and below the ordinal/play symbol in Random (2026-10-07), instead of beside metadata. It is a
    status, not an icon-only action. Do not dim the whole row or rely solely on colour. Approve its
    appearance on a release APK in both themes; the final visual design is not settled here.
 
@@ -148,6 +149,8 @@ migration and clearing races all meet in this change.
 The candidate adds schema 22 and a qualification flag in History, a pure listening-time state
 machine, serialized writes and guarded batched reads. Browse/Random use a neutral 12 dp history
 glyph with PL/EN accessibility text; track details explain the rule. Playlist views omit it.
+The second visual trial moves the glyph to a fixed lower slot in the leading column, keeping its
+position when the cache phone is absent. Selection replaces the status column with a checkbox.
 No Random selection or navigation rules were changed. Exported schemas 1–22 are checked against
 real SQLite; the new migration additionally checks populated user data.
 

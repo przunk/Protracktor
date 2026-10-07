@@ -38,7 +38,7 @@ Command: `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
 `/tmp/protracktor-origin-sync-build.S8adiD`, Gradle cache `/tmp/protracktor-architecture-gradle`.
 Logs and previews are retained in `dist/b43-verification/`.
 
-### Release artifact
+### First visual trial artifact (superseded by the status-column trial below)
 
 - Source: clean `7ea74d3`; version **1.0.0 (1111)**, schema 22.
 - APK: [`protracktor-release-1.0.0-1111-7ea74d3-20261007-181629.apk`](../dist/protracktor-release-1.0.0-1111-7ea74d3-20261007-181629.apk), 11,706,010 bytes.
@@ -51,6 +51,29 @@ Logs and previews are retained in `dist/b43-verification/`.
 
 Install as an update without clearing app data. If Android reports a signature mismatch, stop and
 report it; do not uninstall the existing app to force installation.
+
+### Second visual trial — status column, 2026-10-07
+
+At the owner's request, move the mark out of the subtitle: below the cache phone/spinner in Browse,
+and below the ordinal/play symbol in Random. The lower slot remains fixed when the upper icon is
+absent; entering selection gives the whole slot to the checkbox. Playlist layout, playback rules,
+qualification and schema remain unchanged. This is another experimental layout, not acceptance.
+
+Two new Compose tests failed on the old placement, then passed with the new placement. They check
+vertical alignment, separation from text, stable row/transport bounds, absence of cache status,
+reactive clearing and selection entered through an actual long press. The seven-test UI class
+passes. During verification, subsequent tests stalled after selection; explicitly disposing the
+test content before closing its host activity resolved that full-class failure. The isolated
+Random scenario also passed; no timeout increase or removal of gesture assertions was used.
+
+Four native-render tests produced eight Browse/Random previews (EN/PL, light/dark). The EN-light
+and PL-dark previews of both screens were inspected: status is below the primary icon and text
+retains the available width. The forced full gate passed in **263 s: 705 tests**, zero
+failures/errors/skips, lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP checks,
+web database upgrade, 135 icon paths, 8 server checks and store metadata validation. The command
+and toolchain are the same as for the first trial. Logs/previews are retained separately in
+`dist/b43-status-column-verification/`; the new release artifact is pending. Phone behaviour and
+usefulness remain unverified.
 
 ## Owner trial (not yet run)
 

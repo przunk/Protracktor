@@ -15,6 +15,8 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.BrowseDomain
@@ -26,6 +28,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.android.controller.ActivityController
@@ -40,9 +44,15 @@ class PlayedBeforeUiTest {
     private lateinit var activity: ActivityController<ComponentActivity>
     private val track = TrackRef("song", "A long title that must remain readable", "Modland / Artist", fileName = "song.mod")
     private val heard = mutableStateOf(setOf("song"))
+    private val cached = mutableStateOf(setOf("song"))
 
     @Before fun start() { activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible() }
-    @After fun stop() { activity.close() }
+    @After fun stop() {
+        // Dispose selection's animated content before destroying the host activity.
+        activity.get().setContent { }
+        compose.waitForIdle()
+        activity.close()
+    }
 
     private fun show(screen: String, dark: Boolean = false) {
         activity.get().setContent {
@@ -65,7 +75,7 @@ class PlayedBeforeUiTest {
                     )
                     else -> BrowseScreen(
                         browse = BrowseState(domain = BrowseDomain.HISTORY, tracks = listOf(track),
-                            historyTotal = 1, listenedHere = heard.value),
+                            historyTotal = 1, listenedHere = heard.value, cachedHere = cached.value),
                         playlistName = "Saved playlist", contentPadding = PaddingValues(),
                         onOpenDomain = {}, onPickFolder = {}, onPickFiles = {}, onOpenFolder = {},
                         onForgetFolder = {}, onScanFolder = {}, onIndexCatalogue = {},
@@ -116,5 +126,45 @@ class PlayedBeforeUiTest {
             .performClick()
         compose.onNodeWithText(activity.get().getString(R.string.action_info)).performClick()
         compose.onNodeWithText(activity.get().getString(R.string.played_before_explanation)).assertExists()
+    }
+
+    @Test fun `browse keeps the mark below the phone independently of cache and selection`() {
+        show("browse")
+        val mark = compose.onNodeWithContentDescription("Played before", useUnmergedTree = true)
+        val bounds = mark.fetchSemanticsNode().boundsInRoot
+        val phone = compose.onNodeWithContentDescription(activity.get().getString(R.string.a11y_cached_here),
+            useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val subtitle = compose.onNodeWithText(track.subtitle, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val row = compose.onNodeWithText(track.title).fetchSemanticsNode().boundsInRoot
+        assertTrue(bounds.top >= phone.bottom)
+        assertEquals(phone.center.x, bounds.center.x, 0.5f)
+        assertTrue(bounds.right < subtitle.left)
+        compose.runOnIdle { cached.value = emptySet() }
+        assertEquals(bounds, mark.fetchSemanticsNode().boundsInRoot)
+        compose.runOnIdle { heard.value = emptySet() }
+        assertEquals(row, compose.onNodeWithText(track.title).fetchSemanticsNode().boundsInRoot)
+        compose.runOnIdle { heard.value = setOf("song") }
+        compose.onNodeWithText(track.title).performTouchInput { longClick() }
+        mark.assertDoesNotExist()
+    }
+
+    @Test fun `random keeps the mark below transport without moving the row or selection`() {
+        show("random")
+        val mark = compose.onNodeWithContentDescription("Played before", useUnmergedTree = true)
+        val bounds = mark.fetchSemanticsNode().boundsInRoot
+        val play = compose.onNodeWithContentDescription(activity.get().getString(R.string.a11y_now_playing_row),
+            useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val title = compose.onNodeWithText(track.title, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val row = compose.onNodeWithText(track.title).fetchSemanticsNode().boundsInRoot
+        assertTrue(bounds.top >= play.bottom)
+        assertEquals(play.center.x, bounds.center.x, 0.5f)
+        assertTrue(bounds.right < title.left)
+        compose.runOnIdle { heard.value = emptySet() }
+        assertEquals(play, compose.onNodeWithContentDescription(activity.get().getString(R.string.a11y_now_playing_row),
+            useUnmergedTree = true).fetchSemanticsNode().boundsInRoot)
+        assertEquals(row, compose.onNodeWithText(track.title).fetchSemanticsNode().boundsInRoot)
+        compose.runOnIdle { heard.value = setOf("song") }
+        compose.onNodeWithText(track.title).performTouchInput { longClick() }
+        mark.assertDoesNotExist()
     }
 }
