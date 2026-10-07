@@ -637,6 +637,13 @@ independent of B43's qualification logic, although this trial APK includes both 
 revert by installing schema-22 or older binaries; use a forward-compatible build if a trial is
 rejected. Neither feature is approved for merge by the combined trial.
 
+Removal from Saved places keeps an immutable record in a one-shot snackbar action. Undo uses
+the original timestamp and INSERT OR IGNORE, preserving ordering without overwriting an entry
+saved again meanwhile. Writes are queued through the same mutex so an in-flight edit cannot
+silently swallow Undo. `Message` may carry that action; `MessageSnackbar` invokes the displayed
+notice's callback, with the existing playlist-removal fallback for legacy Undo notices. Message-ID
+guarded dismissal cannot clear a newer notice. No undo record is persisted across app restarts.
+
 ## 16. Sharing has to copy
 
 Added 2026-09-02 with `docs/BACKLOG.md` A10.

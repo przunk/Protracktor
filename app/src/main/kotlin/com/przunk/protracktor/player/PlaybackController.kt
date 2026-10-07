@@ -362,6 +362,11 @@ class PlaybackController private constructor(private val context: Context) {
             SavedPlaces.Notice.FAILED -> R.string.saved_place_failed
             SavedPlaces.Notice.UNAVAILABLE -> R.string.saved_place_unavailable
         }))) },
+        removed = { undo -> say(Message(
+            context.getString(R.string.saved_place_removed),
+            actionLabel = if (undo != null) UNDO else null,
+            action = undo,
+        )) },
     )
     val savedPlacesState get() = savedPlaces.state
 
@@ -2485,7 +2490,8 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    fun dismissMessage() {
+    fun dismissMessage(messageId: Long) {
+        if (_state.value.message?.id != messageId) return
         lastRemoval = emptyList()
         _state.update { it.copy(message = null) }
     }

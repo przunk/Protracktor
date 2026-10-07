@@ -4,11 +4,13 @@
 package com.przunk.protracktor.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
@@ -50,13 +52,13 @@ internal fun SavedPlaceHeader(
 }
 
 @Composable
-private fun BookmarkAction(saved: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun BookmarkAction(saved: Boolean, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val description = stringResource(if (saved) R.string.saved_place_saved else R.string.saved_place_unsaved)
     LabelledAction(
         icon = if (saved) PlayerIcons.BookmarkFilled else PlayerIcons.Bookmark,
         label = stringResource(R.string.saved_place_bookmark),
         onClick = onClick, enabled = enabled, slim = true,
-        modifier = Modifier.semantics { stateDescription = description },
+        modifier = modifier.semantics { stateDescription = description },
     )
 }
 
@@ -101,10 +103,13 @@ internal fun SavedPlacesScreen(
                                 style = MaterialTheme.typography.titleMedium)
                             Text("${place.catalogueName} › ${place.key.format}", style = MaterialTheme.typography.bodySmall)
                         }
-                        LabelledAction(PlayerIcons.Folder, stringResource(R.string.saved_place_open), { onOpen(place.key) },
-                            enabled = reason == null && !state.writing && state.opening == null, slim = true)
-                        BookmarkAction(saved = true, enabled = !state.writing && state.opening == null,
-                            onClick = { onRemove(place.key) })
+                        Row(Modifier.width(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LabelledAction(PlayerIcons.Folder, stringResource(R.string.saved_place_open), { onOpen(place.key) },
+                                enabled = reason == null && !state.writing && state.opening == null,
+                                modifier = Modifier.weight(1f), slim = true)
+                            BookmarkAction(saved = true, enabled = !state.writing && state.opening == null,
+                                onClick = { onRemove(place.key) }, modifier = Modifier.weight(1f))
+                        }
                     }
                     reason?.let { Text(stringResource(it), style = MaterialTheme.typography.bodyMedium) }
                     if (row.availability == SavedPlaceAvailability.INDEX_MISSING || row.availability == SavedPlaceAvailability.GROUP_MISSING) {

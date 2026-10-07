@@ -133,3 +133,9 @@ In Saved places, put the name above its path on the left; Open and the filled Bo
 beside it on the right, with Bookmark rightmost. Keep unavailable-location explanations and
 explicit catalogue recovery. Announce bookmark state to accessibility services, not only visually.
 Storage, navigation and B43 rules remain unchanged; phone acceptance is still required.
+
+Follow-up requested by the owner on 2026-10-07: deleting a bookmark from Saved places must offer
+Undo in the snackbar. Restore the exact record and its original ordering, without changing
+playlists or playback; dismissal leaves it deleted. The two right-hand buttons must have equal
+widths/heights, sized for the longer translated label. The bookmark toggle in an ordinary author
+view remains a direct toggle. No database migration is needed.

@@ -37,7 +37,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun removeTracks(indices: List<Int>) = controller.removeTracks(indices)
     fun moveTrack(from: Int, to: Int) = controller.moveTrack(from, to)
-    fun dismissMessage() = controller.dismissMessage()
+    fun dismissMessage(messageId: Long) = controller.dismissMessage(messageId)
     fun undoRemoval() = controller.undoRemoval()
     fun savePlaylist() = controller.savePlaylist()
     fun discardChanges() = controller.discardChanges()

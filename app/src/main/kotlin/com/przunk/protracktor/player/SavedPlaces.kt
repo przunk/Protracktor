@@ -23,6 +23,7 @@ class SavedPlaces(
     private val show: (SavedPlaceKey, SavedPlaceDestination.Found) -> Unit,
     private val isShowingList: () -> Boolean,
     private val notice: (Notice) -> Unit,
+    private val removed: (undo: (() -> Unit)?) -> Unit = { notice(Notice.REMOVED) },
 ) {
     interface Store {
         suspend fun save(place: SavedPlace): Boolean
@@ -37,6 +38,7 @@ class SavedPlaces(
     private var read: Job? = null
     private var opening: Job? = null
     private var openTicket = 0L
+    private var pendingWrites = 0
 
     fun refresh() {
         read?.cancel()
@@ -55,20 +57,35 @@ class SavedPlaces(
         notice(if (store.save(place)) Notice.SAVED else Notice.ALREADY_SAVED)
     }
 
-    fun remove(key: SavedPlaceKey) = write {
-        store.remove(key)
-        notice(Notice.REMOVED)
+    fun remove(key: SavedPlaceKey) {
+        val offerUndo = isShowingList()
+        write {
+            val previous = store.list().firstOrNull { it.key == key }
+            store.remove(key)
+            var used = false
+            val undo: (() -> Unit)? = if (offerUndo && previous != null) {
+                {
+                    if (!used) {
+                        used = true
+                        save(previous)
+                    }
+                }
+            } else null
+            removed(undo)
+        }
     }
 
     private fun write(action: suspend () -> Unit) {
-        if (mutable.value.writing) return
+        // Undo must queue behind an in-flight edit, not disappear because the buttons are busy.
+        pendingWrites++
         mutable.update { it.copy(writing = true) }
         scope.launch {
             try { writes.withLock { action() } }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { notice(Notice.FAILED) }
             finally {
-                mutable.update { it.copy(writing = false) }
+                pendingWrites--
+                mutable.update { it.copy(writing = pendingWrites > 0) }
                 refresh()
             }
         }

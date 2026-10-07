@@ -23,6 +23,35 @@ switches, versionName or publication policy. The existing Browse cover remains i
 
 ## Bookmark presentation refinement — 2026-10-07
 
+### Follow-up: removal Undo and equal controls (host verified, phone trial pending)
+
+The owner requested Undo on the Saved places removal snackbar and reported unequal icons/controls.
+The icon boxes already share their slim size; the button surfaces grew independently with their
+labels. The added layout assertion failed before the fix: Open was 112 px, Bookmark 134 px.
+The pair now shares the wider intrinsic width, retaining equal heights and translated labels.
+
+Removal snapshots the persisted bookmark before deletion. Only removal initiated in Saved places
+offers Undo, capturing that exact record in a one-shot action on its own message. It restores the
+original timestamp/order; INSERT OR IGNORE preserves any independently re-saved bookmark.
+Undo queues behind an in-flight bookmark write rather than disappearing while busy. Failures
+remain visible, and unsuccessful removal offers no Undo. Dismissal/expiry does not restore data.
+The shared snackbar dispatches the displayed message's action; existing playlist Undo keeps its
+fallback. Dismissal is message-ID guarded so it cannot clear a newer notice. Schema 23, playback
+and B43 behaviour remain unchanged.
+
+Focused verification passed 22 tests: bookmark domain/store, real snackbar clicks, dismissal,
+legacy playlist Undo and equal button geometry. Disabling restoration and the snackbar action
+then broke four of 20 focused tests, as expected; both mutations were restored. The SQLite store
+test also confirms restoration with the original timestamp returns the entry to its former order.
+
+Full gate passed in **190 s: 731 tests**, zero failures/errors/skips, lint without errors,
+581 page checks, 49 existing-WASM checks (not rebuilt), 8 SAP checks, web database upgrade,
+137 icon paths, 8 server checks and store metadata validation. Command:
+`scripts/test-protracktor.sh --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process`.
+The test task executed, rather than returning an up-to-date/cached result. Two native-render tests
+produced eight previews; EN-light and PL-dark lists were inspected. Phone Undo, timeout/swipe,
+visual layout and playback continuity remain unverified. Updated release artifact follows.
+
 The owner requested a stable Bookmark label (PL: Zakładka) with an outlined/filled icon instead
 of separate Save for later / Remove actions. The same control removes a saved entry from the list.
 Each list row places the name above its source/path on the left, with Open and then Bookmark
@@ -110,6 +139,10 @@ The handoff documentation commit does not change app sources or this artifact.
    open the current folder contents. Do not clear all app data for this test.
 6. Check both themes, PL/EN, long group names, playing from a bookmarked folder, Back, and Random's
    return cover. Evaluate B42 and B43 independently; neither is assumed useful in advance.
+7. Remove a bookmark in Saved places and tap Undo: it should return to its previous list position.
+   Repeat and dismiss the snackbar (or let it expire): the entry should stay removed. Try two
+   removals and confirm Undo restores the entry from the latest removal, not a playlist
+   track. Check that Open and Bookmark have equal button sizes in both languages.
 
 **Do not install the previous B43-only APK after this schema-23 candidate.** Older binaries have a
 destructive database downgrade path. Ask for a forward-compatible build if either feature is

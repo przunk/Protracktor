@@ -7,6 +7,8 @@ import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -124,6 +126,9 @@ class SavedPlacesUiTest {
         assertTrue(title.right <= open.left && path.right <= open.left)
         assertTrue(open.top < path.bottom && open.bottom > title.top)
         assertTrue(bookmark.left >= open.right)
+        assertEquals(open.width, bookmark.width, 0.5f)
+        assertEquals(open.height, bookmark.height, 0.5f)
+        assertEquals(open.top, bookmark.top, 0.5f)
         compose.onNodeWithText("Bookmark")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Bookmarked"))
         compose.onNodeWithText(text(R.string.saved_place_open)).performClick()
@@ -180,5 +185,43 @@ class SavedPlacesUiTest {
         bookmark.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Brak zakładki"))
         bookmark.performClick()
         bookmark.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Dodano zakładkę"))
+    }
+
+    private fun showNotice(message: Message, onPlaylistUndo: () -> Unit, onDismiss: (Long) -> Unit): SnackbarHostState {
+        val snackbar = SnackbarHostState()
+        compose.setContent {
+            MaterialTheme {
+                SnackbarHost(snackbar) { SwipeableSnackbar(it) }
+                MessageSnackbar(message, snackbar, text(R.string.action_undo), onPlaylistUndo, onDismiss)
+            }
+        }
+        return snackbar
+    }
+
+    @Test fun `snackbar Undo performs its bookmark action rather than undoing a playlist edit`() {
+        var restored = 0
+        val dismissed = mutableListOf<Long>()
+        val message = Message("Bookmark removed", PlaybackController.UNDO, action = { restored++ })
+        showNotice(message, { error("Must not restore playlist tracks") }, dismissed::add)
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.runOnIdle {
+            assertEquals(1, restored)
+            assertEquals(listOf(message.id), dismissed)
+        }
+    }
+
+    @Test fun `existing playlist snackbar still dispatches its Undo`() {
+        var restored = 0
+        showNotice(Message("Track removed", PlaybackController.UNDO), { restored++ }, {})
+        compose.onNodeWithText(text(R.string.action_undo)).performClick()
+        compose.runOnIdle { assertEquals(1, restored) }
+    }
+
+    @Test fun `dismissing a bookmark snackbar does not restore its bookmark`() {
+        val dismissed = mutableListOf<Long>()
+        val message = Message("Bookmark removed", PlaybackController.UNDO, action = { error("Must not restore") })
+        val snackbar = showNotice(message, { error("Must not restore playlist") }, dismissed::add)
+        compose.runOnIdle { requireNotNull(snackbar.currentSnackbarData).dismiss() }
+        compose.runOnIdle { assertEquals(listOf(message.id), dismissed) }
     }
 }

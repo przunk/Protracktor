@@ -11,6 +11,7 @@ data class Message(
     val text: String,
     val actionLabel: String? = null,
     val id: Long = nextMessageId(),
+    val action: (() -> Unit)? = null,
 )
 
 private var messageCounter = 0L

@@ -53,6 +53,8 @@ class SavedPlacesStoreTest {
         assertEquals(listOf(d, c, b, a), SavedPlacesStore(context).list())
         store.remove(b.key)
         assertEquals(listOf(d, c, a), store.list())
+        assertTrue(store.save(b))
+        assertEquals(listOf(d, c, b, a), store.list())
     }
 
     @Test fun `group lookup uses all exact keys and current playable index contents`() = runBlocking {

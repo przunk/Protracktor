@@ -38,6 +38,17 @@ in C100; see [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
 ## B42 Saved places — implemented, host verified, awaiting combined phone trial, 2026-10-07
 
+**Follow-up feedback, 2026-10-07 — host verified, phone trial pending:** the owner requested snackbar Undo after
+bookmark removal in Saved places and reported unequal controls. A host layout test reproduced
+112 px Open versus 134 px Bookmark widths at the test density. The pair now shares the wider
+intrinsic width. Bookmark removal captures its exact saved record and exposes a one-shot Undo
+on that notice; restoration preserves the original save time and does not undo playlist edits.
+Schema 23 and B43 are unchanged. Full gate passed in **190 s: 731 tests**, zero failures/errors/skips,
+lint without errors and all companion checks. Tests executed rather than returning a cached result.
+Two deliberate undo mutations broke four tests; the code was then restored. Two native-render tests produced eight
+previews; EN-light and PL-dark list layouts were inspected. Release APK handoff follows; previous
+checks/APKs below do not verify this follow-up. Phone behaviour remains unverified.
+
 **Presentation refinement, host verified:** the owner requested outlined/filled Bookmark controls
 with a stable label, plus compact name/path rows with Open and Bookmark on the right.
 Schema 23 and B43 are unchanged. Full gate: **724 tests**, zero failures/errors/skips, lint without

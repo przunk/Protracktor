@@ -34,10 +34,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -257,17 +255,7 @@ fun ProtracktorApp(
         viewModel.reveal.collect { index -> playlistState.animateScrollToItem(index) }
     }
     val scope = rememberCoroutineScope()
-    state.message?.let { message ->
-        LaunchedEffect(message.id) {
-            val result = snackbarHostState.showSnackbar(
-                message = message.text,
-                actionLabel = if (message.actionLabel == PlaybackController.UNDO) undoLabel else null,
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) viewModel.undoRemoval()
-            viewModel.dismissMessage()
-        }
-    }
+    MessageSnackbar(state.message, snackbarHostState, undoLabel, viewModel::undoRemoval, viewModel::dismissMessage)
 
     // Over everything, so a row's menu dims all but its row (the owner, 2026-09-26).
     val menuFocus = remember { MenuFocus() }

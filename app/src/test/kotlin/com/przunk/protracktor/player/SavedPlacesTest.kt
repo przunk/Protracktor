@@ -22,14 +22,16 @@ class SavedPlacesTest {
     private class Store : SavedPlaces.Store {
         val rows = linkedMapOf<SavedPlaceKey, SavedPlace>()
         var fail = false
+        var saveGate: CompletableDeferred<Unit>? = null
         override suspend fun save(place: SavedPlace): Boolean {
+            saveGate?.await()
             check(!fail)
             if (place.key in rows) return false
             rows[place.key] = place
             return true
         }
         override suspend fun list() = rows.values.toList()
-        override suspend fun remove(key: SavedPlaceKey) { rows.remove(key) }
+        override suspend fun remove(key: SavedPlaceKey) { check(!fail); rows.remove(key) }
     }
 
     @Test fun `save list duplicate and removal do not resolve or open a location`() = runTest {
@@ -64,6 +66,69 @@ class SavedPlacesTest {
         gate.complete(Unit); runCurrent()
         assertTrue(opened.isEmpty())
         assertNull(saved.state.value.opening)
+    }
+
+    @Test fun `list removal offers a one-shot undo restoring the exact original bookmark after navigation`() = runTest {
+        val store = Store().apply { rows[key] = place }
+        var inList = true
+        val actions = mutableListOf<(() -> Unit)?>()
+        val saved = SavedPlaces(backgroundScope, store,
+            { it.map { p -> SavedPlaceRow(p, SavedPlaceAvailability.AVAILABLE) } },
+            { error("No track reads") }, { _, _ -> error("No navigation") }, { inList }, {}, actions::add)
+        saved.remove(key); runCurrent()
+        assertTrue(store.rows.isEmpty())
+        val undo = requireNotNull(actions.single())
+        inList = false
+        undo(); runCurrent()
+        assertEquals(place, store.rows[key])
+        saved.remove(key); runCurrent()
+        assertNull(actions.last())
+        undo(); runCurrent()
+        assertTrue(store.rows.isEmpty())
+    }
+
+    @Test fun `each undo owns its removal and never overwrites a bookmark saved again`() = runTest {
+        val other = place.copy(key = key.copy(format = "Other"), savedAt = 2)
+        val store = Store().apply { rows[key] = place; rows[other.key] = other }
+        val actions = mutableListOf<(() -> Unit)?>()
+        val saved = SavedPlaces(backgroundScope, store, { emptyList() }, { error("No reads") },
+            { _, _ -> error("No navigation") }, { true }, {}, actions::add)
+        saved.remove(key); runCurrent()
+        saved.remove(other.key); runCurrent()
+        val savedAgain = place.copy(savedAt = 99)
+        saved.save(savedAgain); runCurrent()
+        actions[0]!!.invoke(); runCurrent()
+        actions[1]!!.invoke(); runCurrent()
+        assertEquals(savedAgain, store.rows[key])
+        assertEquals(other, store.rows[other.key])
+    }
+
+    @Test fun `undo queues behind a busy write instead of silently dropping the restoration`() = runTest {
+        val store = Store().apply { rows[key] = place }
+        var undo: (() -> Unit)? = null
+        val saved = SavedPlaces(backgroundScope, store, { emptyList() }, { error("No reads") },
+            { _, _ -> error("No navigation") }, { true }, {}, { undo = it })
+        saved.remove(key); runCurrent()
+        val other = place.copy(key = key.copy(author = "Other"))
+        val gate = CompletableDeferred<Unit>()
+        store.saveGate = gate
+        saved.save(other); runCurrent()
+        requireNotNull(undo).invoke(); runCurrent()
+        assertTrue(saved.state.value.writing)
+        gate.complete(Unit); runCurrent()
+        assertEquals(setOf(place, other), store.rows.values.toSet())
+        assertFalse(saved.state.value.writing)
+    }
+
+    @Test fun `failed removal preserves data and offers no undo`() = runTest {
+        val store = Store().apply { rows[key] = place; fail = true }
+        val notices = mutableListOf<SavedPlaces.Notice>()
+        val saved = SavedPlaces(backgroundScope, store, { emptyList() }, { error("No reads") },
+            { _, _ -> error("No navigation") }, { true }, notices::add, { error("No removal happened") })
+        saved.remove(key); runCurrent()
+        assertEquals(place, store.rows[key])
+        assertEquals(listOf(SavedPlaces.Notice.FAILED), notices)
+        assertFalse(saved.state.value.writing)
     }
 
     @Test fun `missing group updates availability without deleting the bookmark or navigating`() = runTest {
