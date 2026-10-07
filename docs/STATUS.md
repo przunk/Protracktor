@@ -4,6 +4,17 @@ Updated: 2026-10-07 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## User discovery feedback — plans only, awaiting task selection, 2026-10-07
+
+At the owner's request, expanded existing wishlist B43 ([Played before](PLAN_PLAYED_BEFORE.md))
+and B42 ([Saved places](PLAN_SAVED_PLACES.md)) into separate implementation plans. The owner
+identified both as user feedback being addressed. The record attributes them as relayed user
+requests, without inventing individual reporters, closed-test participation or completed fixes.
+The plans distinguish agreed requirements from remaining choices and specify the feedback →
+analysis → implementation → PR/handoff → user test process. No application/schema change,
+implementation branch, build or new test run was made; content and relative links were checked.
+The owner will choose which task to implement. No schema version is reserved by these plans.
+
 ## UnExoticA client identity — merged after owner approval, 2026-10-07
 
 Branch `fix/unexotica-user-agent`, based on merged develop `9ed0359`. The owner approved the

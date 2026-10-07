@@ -16,29 +16,37 @@ Requested by a tester and relayed by the owner on 2026-10-06: add Android Auto s
 The car-facing browsing and playback scope, requirements and implementation remain to be
 discussed. This entry records the request; it does not approve implementation.
 
-## B43. A track's listened status — noted 2026-10-05; to discuss, not scheduled
+## B43. A track's listened status — noted 2026-10-05; planned for selection, 2026-10-07
 
 Raised by the owner on 2026-10-05: consider a persistent indication that a track has been
 listened to, so it is easier to distinguish explored music from tracks still to try.
 
-Before implementation, decide whether the mark is manual or automatic and, if automatic, what
-counts as listening (starting, a duration threshold or reaching the end). Also decide whether it
-applies to a file or each subsong, how to clear it, and where to display or filter by it. Existing
-play history (B8, B15; `BACKLOG.md` A56/A64) records playback, but does not by itself define this
-status. No behaviour or storage change is approved by this entry.
+On 2026-10-07 the owner identified this as user feedback being addressed and refined the scope:
+five seconds of playback, a discreet indication outside the playlist, initial seeding from
+existing History, and clearing the status together with History. Random must not exclude heard
+tracks. Current History records decoder opening, not five seconds, so future qualification needs
+an explicit rule without losing the existing History behaviour.
 
-## B42. Saved artist folders — noted 2026-10-05; to discuss, not scheduled
+[Task plan](PLAN_PLAYED_BEFORE.md): requirements, current-code evidence, migration/clear semantics,
+open decisions, implementation stages and test criteria. Playlist visibility interpretation and
+edge cases remain to be confirmed. Specified only; the owner has not selected implementation yet.
+
+## B42. Saved places / Save for later — noted 2026-10-05; planned for selection, 2026-10-07
 
 Raised by the owner on 2026-10-05: bookmark an artist's folder and provide a list of saved
-artists/folders to return to later, without adding every track to a playlist. Naming and the
-list's location remain open; this is one idea, not separate favourites and listen-later features.
+artists/folders to return to later, without adding every track to a playlist. This is one idea,
+not separate favourites and listen-later features.
 
-Before implementation, decide which sources it covers and whether a bookmark identifies an
-exact catalogue/folder or an artist across formats and archives. Reopening a saved location
-should be distinct from downloading its music. B2 already supports jumping to the current
+On 2026-10-07 the owner identified this as user feedback being addressed and accepted saving an
+exact author/game location with **Save for later**, then reopening it from **Saved places** in
+Browse. No automatic music download, duplicate bookmarks or global artist merging. B2 already
+supports jumping to the current
 track's neighbours, but does not provide a saved collection of artist folders; track favourites
 and B27's curated Modland list are also separate. No duplicate of this wish was found in the
 wishlist, backlog or open questions when this entry was added.
+
+[Task plan](PLAN_SAVED_PLACES.md): user flow, route identity, persistence, unavailable locations,
+implementation stages and test criteria. Specified only; implementation awaits the owner's choice.
 
 ## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT and merged 2026-10-02; checked on the phone by the owner**
 
