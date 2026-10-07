@@ -1,6 +1,6 @@
 # B42 — Save for later / Saved places
 
-Status: specified for owner selection; not implemented or scheduled.
+Status: selected; implementation started on `feature/saved-places`, 2026-10-07.
 Recorded: 2026-10-07. Original wishlist entry: 2026-10-05.
 
 ## User feedback and purpose
@@ -12,7 +12,7 @@ artist identity: an UnExoticA game soundtrack is useful even when it is not an a
 
 This is the existing B42 in [WISHLIST.md](WISHLIST.md), not two separate favourite-author and
 listen-later features. No individual reporter, closed-test membership or completed implementation
-is inferred. The owner will select which of B42/B43 to implement first.
+is inferred. The owner selected B42 after the B43 candidate, for a combined APK trial.
 
 ## Agreed user flow
 
@@ -75,7 +75,7 @@ copy are presentation decisions to validate on the release APK, not settled pixe
 
 1. **Analysis:** confirm stable route keys for every supported catalogue/group and map reopening to
    existing navigation. Inspect missing-index/disabled-catalogue paths and the return cover.
-   Reserve the next schema version against current develop; this plan reserves none (current: 21).
+   Schema **23 is reserved for B42** on `feature/saved-places`, above B43's schema 22.
 2. **Storage:** implement bookmark identity, duplicate handling, persistence, listing and removal.
    Write real SQLite migration tests preserving History, playlists, favourites and indexes, and
    export the schema. Test duplicate saves, same names in different sources/formats, restart,
@@ -99,9 +99,12 @@ Index-removal scenarios must use only re-downloadable data, never clearing all a
 
 ## Workflow and completion
 
-Start only after owner selection, on `feature/saved-places` from current develop. It is independent
-of B43; do not silently include listened-status work or stack it on an unaccepted feature branch.
-If both are selected later, coordinate their schema versions before development.
+The owner explicitly approved stacking `feature/saved-places` on B43 at `54a933a`, rather than
+develop, on 2026-10-07. B43 remains unmerged and frozen for the owner's approximately 24-hour
+trial. B42 has separate commits and no dependency on listened-status logic; the combined APK
+contains both for independent evaluation. Planned merges, only after explicit approval, are
+B43 into develop followed by B42. If B43 is rejected, preserve the installed database with a
+forward-compatible build; never send an older-schema APK as a rollback.
 
 Keep feedback → analysis → implementation → PR/handoff → user test traceability. Each verified
 stage gets its own commit. Update this plan, WISHLIST and STATUS, including what remains untested.
@@ -109,4 +112,4 @@ Push/publication belong to the owner; merge needs explicit approval. No claim of
 or closed-test participation without an actual report.
 
 Relative effort/risk: lower than B43, with most risk in stable bookmark identity, index lifecycle
-and navigation rather than playback timing. Recommended first task; the owner's choice is pending.
+and navigation rather than playback timing. No phone result is claimed before the trial.

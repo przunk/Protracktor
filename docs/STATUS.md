@@ -19,7 +19,7 @@ Requested: five active seconds **or natural completion**. This revises B43's ori
 threshold; it is not a regression from an earlier completion rule. `ListeningSession.sample`
 previously checked accumulated time without a completion input. At the owner's request on
 2026-10-11, C100 belongs directly to `feature/played-before`; C101 remains a separate correction.
-B42 is stacked above B43, not included in this branch. No schema change. On the original combined
+B42 is stacked above B43. C100 changes no schema. On the original combined
 B42/B43 trial at `0f70540`, the forced full gate passed in 270 s: **741 tests**, zero failures/errors/skips,
 lint without errors and all companion checks. The old rule failed four new tests; an isolated
 seek-guard mutation failed its intended test. [Evidence and phone checklist](PR_C100_SHORT_TRACK_LISTENED.md).
@@ -35,6 +35,15 @@ Recommended: a display-only learned title, filename/path still available, unchan
 key and Random order. Downloading into cache alone does not extract decoder metadata. The owner
 approved this presentation as a separate correction on 2026-10-11. No naming behaviour is changed
 in C100; see [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
+
+## B42 Saved places — selected, implementation in progress, 2026-10-07
+
+The owner approved `feature/saved-places` from B43's `54a933a` to test both features in one APK.
+Schema **23 is reserved for B42**, above B43's 22. The B43 branch stays unmerged and unchanged
+during the owner's planned approximately 24-hour trial. The owner reported that its new layout
+looks acceptable; usefulness and longer-term behaviour are still under evaluation. No merge was
+authorised. B42 uses separate commits and independent bookmarking logic. See
+[the plan](PLAN_SAVED_PLACES.md); current implementation and device behaviour are not yet verified.
 
 ## User discovery feedback — B43 selected as an experiment, 2026-10-07
 

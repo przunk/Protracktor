@@ -43,7 +43,7 @@ acceptable use so far on 2026-10-08 but explicitly withheld acceptance. B42/B43 
 the correction belongs to `feature/played-before`, as requested by the owner on 2026-10-11,
 and does not imply acceptance of either experiment.
 
-## B42. Saved places / Save for later — noted 2026-10-05; planned for selection, 2026-10-07
+## B42. Saved places / Save for later — selected, 2026-10-07
 
 Raised by the owner on 2026-10-05: bookmark an artist's folder and provide a list of saved
 artists/folders to return to later, without adding every track to a playlist. This is one idea,
@@ -58,7 +58,9 @@ and B27's curated Modland list are also separate. No duplicate of this wish was 
 wishlist, backlog or open questions when this entry was added.
 
 [Task plan](PLAN_SAVED_PLACES.md): user flow, route identity, persistence, unavailable locations,
-implementation stages and test criteria. Specified only; implementation awaits the owner's choice.
+implementation stages and test criteria. Selected on 2026-10-07 for implementation on
+`feature/saved-places`, explicitly based on the unmerged B43 candidate for a combined APK trial.
+Schema 23 is reserved; the two features remain separately reviewable and neither is approved for merge.
 
 ## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT and merged 2026-10-02; checked on the phone by the owner**
 
