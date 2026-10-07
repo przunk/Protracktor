@@ -72,8 +72,16 @@ retains the available width. The forced full gate passed in **263 s: 705 tests**
 failures/errors/skips, lint without errors, 581 page checks, 49 existing-WASM checks, 8 SAP checks,
 web database upgrade, 135 icon paths, 8 server checks and store metadata validation. The command
 and toolchain are the same as for the first trial. Logs/previews are retained separately in
-`dist/b43-status-column-verification/`; the new release artifact is pending. Phone behaviour and
-usefulness remain unverified.
+`dist/b43-status-column-verification/`. Phone behaviour and usefulness remain unverified.
+
+Current APK: [`protracktor-release-1.0.0-1113-d68f8d0-20261007-205016.apk`](../dist/protracktor-release-1.0.0-1113-d68f8d0-20261007-205016.apk).
+Built from clean `d68f8d0` in 98 s with the same release command: **1.0.0 (1113)**, 11,706,798 bytes,
+minified/non-debuggable, arm64-v8a/armeabi-v7a/x86_64, minSdk 29/targetSdk 36. Signature v2 verified
+with the same test certificate as 1111. SHA-256:
+`dfe9e2823d7d858231690220d44c8dbf89bddbc7352d4fbbdd40f620ac88758c`.
+The subsequent documentation commit changes no app sources. In addition to the checklist below,
+compare cached/uncached marked rows, Random's ordinal/play column and long-press selection;
+the subtitle should have no status prefix and rows should not grow or jump when status changes.
 
 ## Owner trial (not yet run)
 

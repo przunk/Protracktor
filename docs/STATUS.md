@@ -14,9 +14,16 @@ failures/errors/skips, lint without errors and the same companion checks listed 
 new layout tests failed on the old placement and passed after the change; seven UI tests include
 actual long-press selection. Four native-render tests generated eight previews; EN-light and
 PL-dark Browse/Random previews were inspected. Logs/previews are in
-`dist/b43-status-column-verification/`. The new release artifact is pending; the 1111 artifact
-below is the first visual trial. Playback, History qualification and schema 22 are unchanged.
+`dist/b43-status-column-verification/`. The 1111 artifact below is the first visual trial.
+Playback, History qualification and schema 22 are unchanged.
 Phone appearance and usefulness remain unverified; no acceptance or merge is inferred.
+
+**Current trial APK:** `dist/protracktor-release-1.0.0-1113-d68f8d0-20261007-205016.apk`,
+**1.0.0 (1113)**, built from clean `d68f8d0` in 98 s, 11,706,798 bytes. SHA-256:
+`dfe9e2823d7d858231690220d44c8dbf89bddbc7352d4fbbdd40f620ac88758c`.
+Minified/non-debuggable, all three ABIs, minSdk 29/targetSdk 36. APK Signature Scheme v2 verified;
+the test certificate matches 1111. Same release script/toolchain as below; artifact filename
+includes variant and source SHA. The following documentation commit does not change app sources.
 
 B43 implementation started on `feature/played-before` from `00abd8f` after the owner confirmed
 the remaining rules. Schema **22 is reserved for B43**. Playlist hiding is view-based, the threshold
