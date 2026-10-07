@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="played_before">Już odsłuchane</string>
+    <string name="notice_history_clear_failed">Nie udało się wyczyścić historii. Zapisana historia została zachowana; spróbuj ponownie.</string>
+    <string name="played_before_explanation">Odtwarzano przez co najmniej 5 sekund lub utwór był w historii przed dodaniem tej funkcji. Wyczyszczenie historii usuwa to oznaczenie.</string>
     <string name="app_name">Protracktor</string>
 
     <string name="search_playing_title">Odtwarzanie z wyszukiwania</string>

@@ -207,6 +207,8 @@ internal fun PlaylistBody(
     onRemoveMany: (List<Int>) -> Unit,
     /** Whether the row the queue points at is being fetched, so it can say so by breathing. */
     loadingCurrent: Boolean = false,
+    /** Only Random opts in; playlist views never receive these markers. */
+    listenedIds: Set<String> = emptySet(),
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -273,6 +275,7 @@ internal fun PlaylistBody(
             TrackRow(
                 index = index,
                 track = track,
+                playedBefore = track.id in listenedIds,
                 playing = index == currentIndex,
                 loading = loadingCurrent && index == currentIndex,
                 enabled = enabled,
@@ -396,7 +399,7 @@ internal fun PlaylistBody(
     )
 
     showingInfo?.let { track ->
-        TrackInfoDialog(track = track, onDismiss = { showingInfo = null })
+        TrackInfoDialog(track = track, onDismiss = { showingInfo = null }, playedBefore = track.id in listenedIds)
     }
 }
 
@@ -463,6 +466,7 @@ private fun Modifier.dragToReorder(
 private fun TrackRow(
     index: Int,
     track: TrackRef,
+    playedBefore: Boolean,
     playing: Boolean,
     loading: Boolean,
     enabled: Boolean,
@@ -510,8 +514,8 @@ private fun TrackRow(
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = subtitle.takeIf { it.isNotBlank() }?.let {
-            { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        supportingContent = subtitle.takeIf { it.isNotBlank() || playedBefore }?.let {
+            { TrackSubtitle(it, playedBefore) }
         },
         leadingContent = {
             // The checkbox takes the ordinal's slot, which is already reserved and already this

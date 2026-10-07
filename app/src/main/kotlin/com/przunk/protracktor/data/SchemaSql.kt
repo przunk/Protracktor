@@ -26,7 +26,13 @@ object SchemaSql {
     const val NAME = "protracktor.db"
 
     /** Reserve the next number before starting work; two branches must not both claim one. */
-    const val VERSION = 21
+    const val VERSION = 22
+
+    private val LISTENED_V22 = listOf(
+        "ALTER TABLE play_history ADD COLUMN listened INTEGER NOT NULL DEFAULT 0",
+        // Legacy History has no duration evidence; seed it once as agreed for the experiment.
+        "UPDATE play_history SET listened = 1",
+    )
 
     /**
      * Online catalogues and their contents, added at version 2.
@@ -568,7 +574,7 @@ object SchemaSql {
         MODLAND_FAVOURITES_V12 + RANDOM_SCOPE_V13 + FALLBACK_LENGTH_V14 +
         CATALOGUE_PLAYABLE_V15 + CATALOGUE_ARCHIVE_COUNT_V16 + SONGDB_LENGTHS_V17 +
         REREAD_DAMAGED_TITLES_V18 + SEARCH_FOLDED_V19 + CATALOGUE_PLATFORM_V20 +
-        CATALOGUE_PLATFORM_INDEX_V21
+        CATALOGUE_PLATFORM_INDEX_V21 + LISTENED_V22
 
 
 
@@ -600,6 +606,7 @@ object SchemaSql {
         19 to SEARCH_FOLDED_V19,
         20 to CATALOGUE_PLATFORM_V20,
         21 to CATALOGUE_PLATFORM_INDEX_V21,
+        22 to LISTENED_V22,
     )
 
     /**
@@ -637,10 +644,11 @@ object SchemaSql {
      */
     val PLAY_HISTORY_RECORD: String = """
         INSERT OR REPLACE INTO play_history
-            (track_id, title, subtitle, file_name, author, size, played_at, play_count)
+            (track_id, title, subtitle, file_name, author, size, played_at, play_count, listened)
         VALUES (
             ?, ?, ?, ?, ?, ?, ?,
-            COALESCE((SELECT play_count FROM play_history WHERE track_id = ?), 0) + 1
+            COALESCE((SELECT play_count FROM play_history WHERE track_id = ?8), 0) + 1,
+            COALESCE((SELECT listened FROM play_history WHERE track_id = ?8), 0)
         )
     """.trimIndent()
 

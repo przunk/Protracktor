@@ -28,11 +28,13 @@ tracks. Current History records decoder opening, not five seconds, so future qua
 an explicit rule without losing the existing History behaviour.
 
 [Task plan](PLAN_PLAYED_BEFORE.md): requirements, current-code evidence, migration/clear semantics,
-open decisions, implementation stages and test criteria. Playlist visibility interpretation and
-edge cases remain to be confirmed. On 2026-10-07 the owner selected implementation as a trial of
+implementation stages and test criteria. The owner confirmed the remaining rules: hiding is
+playlist-view-only, the threshold is strict, qualification is file-level within one occurrence,
+and clearing cancels that occurrence's eligibility. On 2026-10-07 the owner selected implementation as a trial of
 the user request, explicitly allowing rejection if it proves unhelpful. Technical correctness
-and user-perceived usefulness are separate acceptance criteria. No implementation or usefulness
-result is claimed yet; a retain/revise/abandon decision follows actual phone feedback. Ending the
+and user-perceived usefulness are separate acceptance criteria. Implementation is host-verified on
+`feature/played-before` (schema 22); no phone/usefulness result is claimed. A retain/revise/abandon
+decision follows actual phone feedback. Ending the
 trial must preserve user data, including on phones upgraded to its schema.
 
 ## B42. Saved places / Save for later — noted 2026-10-05; planned for selection, 2026-10-07

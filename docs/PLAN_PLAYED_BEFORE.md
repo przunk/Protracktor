@@ -1,6 +1,6 @@
 # B43 — Played before
 
-Status: experiment in progress on `feature/played-before`; rules approved, 2026-10-07.
+Status: host-verified experimental candidate on `feature/played-before`; phone trial pending, 2026-10-07.
 Recorded: 2026-10-07. Original wishlist entry: 2026-10-05.
 
 ## User feedback and purpose
@@ -52,7 +52,7 @@ schema cleanup is a separate, tested migration. Merge and publication still requ
 - Hide the mark in playlist views only; show it in Browse/search and Random regardless of
   whether the track also belongs to a saved playlist.
 
-## What the current code establishes
+## What the baseline code established (before B43)
 
 - `data/HistoryStore.kt` stores one `play_history` row per `track_id`, with last-play time/count,
   metadata and no listened-duration field. History is not limited to its first visible page.
@@ -142,3 +142,15 @@ actions; merge requires explicit approval. Update this plan, WISHLIST and STATUS
 
 Relative effort/risk: higher than B42 because playback timing, existing History semantics,
 migration and clearing races all meet in this change.
+
+## Implementation evidence — 2026-10-07
+
+The candidate adds schema 22 and a qualification flag in History, a pure listening-time state
+machine, serialized writes and guarded batched reads. Browse/Random use a neutral 12 dp history
+glyph with PL/EN accessibility text; track details explain the rule. Playlist views omit it.
+No Random selection or navigation rules were changed. Exported schemas 1–22 are checked against
+real SQLite; the new migration additionally checks populated user data.
+
+The local [PR/handoff](PR_B43_PLAYED_BEFORE.md) records verification and the phone checklist.
+Host tests and render inspection cannot settle phone behaviour or usefulness. Both trial outcomes
+remain pending; no retention decision, merge approval or publication is implied.

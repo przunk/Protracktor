@@ -5,6 +5,7 @@ package com.przunk.protracktor.data
 
 import java.sql.Connection
 import java.sql.DriverManager
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -17,6 +18,28 @@ import org.junit.Test
  * that will one day meet somebody's phone get executed before they do.
  */
 class SchemaSqlTest {
+
+    @Test
+    fun `every schema version has a matching exported snapshot`() {
+        for (version in 1..SchemaSql.VERSION) {
+            memoryDatabase().use { db ->
+                db.run(VERSION_1_SCHEMA + SchemaSql.migrationsBetween(1, version))
+                val sql = db.createStatement().use { statement ->
+                    statement.executeQuery(
+                        "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' " +
+                            "ORDER BY CASE type WHEN 'table' THEN 0 ELSE 1 END, name"
+                    ).use { rows -> buildList { while (rows.next()) add(rows.getString(1) + ";") } }
+                }.joinToString("\n\n", postfix = "\n")
+                val snapshot = File("schemas/$version.sql")
+                if (System.getProperty("protracktor.exportSchemas") == "true") {
+                    snapshot.parentFile.mkdirs()
+                    snapshot.writeText(sql)
+                }
+                assertTrue("Missing schema snapshot: $snapshot", snapshot.isFile)
+                assertEquals("Schema $version differs", snapshot.readText(), sql)
+            }
+        }
+    }
 
     private fun memoryDatabase(): Connection =
         DriverManager.getConnection("jdbc:sqlite::memory:").also { connection ->

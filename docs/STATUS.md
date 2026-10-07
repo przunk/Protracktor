@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-07 — version 1.0.0, schema version 21. versionCode is the commit count.
+Updated: 2026-10-07 — version 1.0.0, schema version 22 on the B43 branch. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
@@ -9,7 +9,8 @@ Historical dated checks below describe their own builds; they are not current te
 B43 implementation started on `feature/played-before` from `00abd8f` after the owner confirmed
 the remaining rules. Schema **22 is reserved for B43**. Playlist hiding is view-based, the threshold
 is strictly five active seconds, qualification is per file/play occurrence, and Clear cancels the
-current occurrence's eligibility. Code and phone behaviour are not yet verified. The baseline
+current occurrence's eligibility. Implementation and host verification are complete; the release
+artifact and phone trial are pending. The baseline
 helper's destructive downgrade is a known risk: never reinstall a schema-21 APK after the trial;
 abandonment requires a forward-compatible build preserving all user data.
 
@@ -18,14 +19,30 @@ and B42 ([Saved places](PLAN_SAVED_PLACES.md)) into separate implementation plan
 identified both as user feedback being addressed. The record attributes them as relayed user
 requests, without inventing individual reporters, closed-test participation or completed fixes.
 The plans distinguish agreed requirements from remaining choices and specify the feedback →
-analysis → implementation → PR/handoff → user test process. No application/schema change,
-implementation branch, build or new test run was made; content and relative links were checked.
+analysis → implementation → PR/handoff → user test process. At the initial planning stage only
+documents changed; implementation and new tests followed on the separate B43 branch.
 The owner subsequently selected B43 for implementation as an experiment: it may be retained,
 revised or abandoned if ordinary use shows it is not useful. The remaining rule choices in its
 plan were confirmed before coding. B42 remains unselected. Schema 22 is reserved above;
-no implementation or trial result is claimed yet. Technical correctness is
+no phone trial result is claimed yet. Technical correctness is
 required independently of usefulness; abandoning the trial must not delete data or require a
 destructive schema downgrade. The plan records the feedback and final-decision evidence required.
+
+**Checked on the host:** the forced full project gate passed in 240 s: **703 tests**, zero
+failures/errors/skips; lint without errors; 581 page checks, 49 existing-WASM checks (no rebuild),
+8 SAP checks, web database upgrade, 135 icon paths, 8 server checks and store metadata validation.
+Command: `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process`. Schema migration and production History SQL
+were exercised with real SQLite. Deliberate mutations broke 12 of 42 focused tests; changing only
+the exported schema broke its snapshot test. All mutations were restored before the full gate.
+Two additional native-render tests passed; four EN/PL light/dark previews were inspected.
+
+**Partly checked:** host Compose tests cover Browse/Random marks, playlist hiding, reactive
+updates, PL accessibility and the Info action. **Not checked:** actual phone playback/UI,
+background behaviour, upgrade on the owner's data and usefulness. See
+[the local PR/handoff](PR_B43_PLAYED_BEFORE.md) for evidence and the trial checklist.
+Verification logs/previews are retained in `dist/b43-verification/`. No merge, push, master/tag
+change, AAB or publication occurred. Version name remains 1.0.0 under the owner's publication freeze.
 
 ## UnExoticA client identity — merged after owner approval, 2026-10-07
 

@@ -247,6 +247,10 @@ tasks.named("preBuild") { dependsOn(copyNotices) }
 // `SupportedFormatsFileTest` the page's format list. Gradle cannot see that, so an edit to either
 // file alone left the test task "up to date" and the check that exists to catch drift never ran.
 tasks.withType<Test>().configureEach {
+    inputs.dir(layout.projectDirectory.dir("schemas")).withPathSensitivity(PathSensitivity.RELATIVE)
+    val exportSchemas = providers.gradleProperty("exportSchemas").isPresent
+    inputs.property("exportSchemas", exportSchemas)
+    systemProperty("protracktor.exportSchemas", exportSchemas.toString())
     inputs.file(rootProject.file("docs/rules/queue-cases.tsv")).withPathSensitivity(PathSensitivity.RELATIVE)
     // And `UadecoreCanBeExecutedTest` this build script and UADE's CMake, for the same reason:
     // three settings that only matter together, none of which any code path mentions.

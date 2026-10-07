@@ -1223,7 +1223,7 @@ private fun Selectable(
     BackHandler(enabled = selecting) { selected = emptySet() }
 
     showingInfo?.let { track ->
-        TrackInfoDialog(track = track, onDismiss = { showingInfo = null })
+        TrackInfoDialog(track = track, onDismiss = { showingInfo = null }, playedBefore = track.id in browse.listenedHere)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -1335,6 +1335,7 @@ private fun Selectable(
                         loading = track.id == loadingId,
                         fetchingAhead = track.id in browse.aheadFetching,
                         cachedHere = track.id in browse.cachedHere,
+                        playedBefore = track.id in browse.listenedHere,
                         onPlay = { onPlay(index) },
                         onToggle = {
                             selected = if (track.id in selected) selected - track.id
@@ -1460,6 +1461,7 @@ private fun BrowseTrackRow(
     loading: Boolean,
     fetchingAhead: Boolean,
     cachedHere: Boolean,
+    playedBefore: Boolean,
     onPlay: () -> Unit,
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
@@ -1479,10 +1481,10 @@ private fun BrowseTrackRow(
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
+        supportingContent = track.subtitle.takeIf { it.isNotBlank() || playedBefore }?.let { where ->
             // The full source rather than just the author: in a search result the question is
             // "which one is this", and two tunes with one name are told apart by where they live.
-            { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            { TrackSubtitle(where, playedBefore) }
         },
         // The slot is always here, empty or not. Letting it appear along with the checkbox made
         // every row grow the moment selection started, so the list jumped by more than a row --

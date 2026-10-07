@@ -94,4 +94,25 @@ class HistoryStore(context: Context) {
         helper.writableDatabase.delete("play_history", null, null)
         Unit
     }
+
+    /** Qualification never changes recency or counts, including playback started in History. */
+    suspend fun qualify(trackId: String) = withContext(Dispatchers.IO) {
+        helper.writableDatabase.execSQL(
+            "UPDATE play_history SET listened = 1 WHERE track_id = ? AND listened = 0",
+            arrayOf(trackId),
+        )
+    }
+
+    suspend fun listenedAmong(ids: Set<String>): Set<String> = withContext(Dispatchers.IO) {
+        buildSet {
+            // Stay below SQLite's bind limit even for a large Browse folder or Random record.
+            for (batch in ids.chunked(500)) {
+                val slots = batch.joinToString(",") { "?" }
+                helper.readableDatabase.rawQuery(
+                    "SELECT track_id FROM play_history WHERE listened = 1 AND track_id IN ($slots)",
+                    batch.toTypedArray(),
+                ).use { rows -> while (rows.moveToNext()) add(rows.getString(0)) }
+            }
+        }
+    }
 }

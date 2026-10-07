@@ -102,7 +102,10 @@ fun ProtracktorApp(
     onExternalOpened: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val browse by viewModel.browse.collectAsStateWithLifecycle()
+    val storedBrowse by viewModel.browse.collectAsStateWithLifecycle()
+    val browse = remember(storedBrowse, state.listenedIds) {
+        storedBrowse.copy(listenedHere = state.listenedIds)
+    }
     var showNowPlaying by remember { mutableStateOf(false) }
 
     // Keyed on the URI so the same file opened twice in a row still plays, and a recomposition

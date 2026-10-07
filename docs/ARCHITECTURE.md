@@ -557,8 +557,8 @@ question were "audit this app":
 
 - **One row per track, not one per play.** `played_at` moves and `play_count` rises. A true log
   fills with a repeat-one track fifty times over and buries the thing being looked for.
-- **It forgets.** Five hundred tracks, oldest first out, pruned in the same transaction as the
-  insert so a crash cannot leave the table over its limit.
+- **It is unbounded and paged.** The original 500-track pruning was removed on 2026-09-26;
+  opening History reads a page, not the whole table.
 - **The rows are self-contained** and reference nothing. A tune played from Random or from a search
   result is never added to a playlist and so has no row in `tracks` — and those are exactly the
   tunes this list exists for. A foreign key would have given history only for music you had already
@@ -575,6 +575,34 @@ it are the same code as everywhere else, and cost nothing.
 would have caught it: the JVM tests run against a current SQLite through `sqlite-jdbc`, and there is
 no emulator here. The statement is written as `INSERT OR REPLACE` with the previous count read back
 in the same statement, and it lives in `SchemaSql` where a test can reach it.
+
+### B43 experiment: qualification is distinct from a History entry (2026-10-07)
+
+On `feature/played-before`, schema 22 adds `play_history.listened`. The one-time migration marks
+legacy rows as qualified; their duration cannot be reconstructed. New plays retain the existing
+History-recording timing and only qualify after five active seconds. The existing upsert preserves
+qualification; qualification itself changes neither recency nor count. Playback from History still
+does not reorder the list. A repeated file does not acquire an extra History count merely because
+the experimental timer restarts.
+
+`ListeningSession` measures advancing decoder position bounded by monotonic elapsed time, with
+explicit boundaries for pause, seek, subsong changes, new playback and clearing. It never uses an
+absolute seek position as evidence of listening. `HistoryWrites` serializes record, qualify and
+clear commands; generation tokens reject old queued work, and a running old write finishes before
+the queued clear removes it. A failed clear is reported rather than presented as success.
+
+`PlayedStatusReads` queries only IDs in the current Browse list and Random record, in batches off
+the main thread. Qualification/clear revisions refresh the results; cancelled or stale reads cannot
+restore cleared marks. Status is held separately from saved Browse snapshots and projected into
+the UI, so returning to an old navigation snapshot cannot restore an obsolete mark. The playlist
+view never opts into row decoration. Random drawing, queue rules and prefetch are unchanged.
+
+The tiny history glyph is informational, with a localised accessibility description and explanation
+in track details. It does not alter row text contrast or act as a button. Utility and appearance
+remain subject to the owner's release-APK trial; an unhelpful experiment may be rejected. See
+[B43 plan](PLAN_PLAYED_BEFORE.md). Do not roll a schema-22 phone back to an old schema-21 APK:
+the old helper resets databases on downgrade. A rejected experiment needs a forward-compatible
+build without its behaviour, not data deletion. This task does not rewrite old installed binaries.
 
 ## 16. Sharing has to copy
 

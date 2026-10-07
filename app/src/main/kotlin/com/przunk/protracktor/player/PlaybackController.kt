@@ -294,6 +294,17 @@ class PlaybackController private constructor(private val context: Context) {
     private val favourites = FavouriteStore(context)
 
     private val history = HistoryStore(context)
+    private val listening = ListeningSession(SystemClock::elapsedRealtime)
+    private var listeningTrack: TrackRef? = null
+    private val historyWrites = HistoryWrites(
+        scope = scope,
+        record = { ref ->
+            history.record(ref.id, ref.title, ref.subtitle, ref.fileNameOrTitle, ref.author, ref.sizeBytes)
+        },
+        qualify = history::qualify,
+        erase = history::clear,
+        failed = { android.util.Log.w("Protracktor", "History write failed", it) },
+    )
     private val libraryIndex = LibraryIndexStore(context)
     private val localFolders = LocalFolderBrowser(
         scope = scope,
@@ -532,6 +543,18 @@ class PlaybackController private constructor(private val context: Context) {
         // why this is the cheapest moment to do it.
         scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
 
+        PlayedStatusReads(
+            scope = scope,
+            ids = combine(
+                _browse.map { it.tracks }.distinctUntilChanged().map { it.mapTo(mutableSetOf()) { row -> row.id } },
+                _state.map { it.randomPicks }.distinctUntilChanged().map { it.mapTo(mutableSetOf()) { row -> row.id } },
+            ) { browseIds, randomIds -> browseIds + randomIds },
+            revision = historyWrites.revision,
+            query = history::listenedAmong,
+            show = { ids -> _state.update { it.copy(listenedIds = ids) } },
+            failed = { android.util.Log.w("Protracktor", "Played status read failed", it) },
+        )
+
         // **An opened Modland folder fetches its tracks ahead** (A55). One place decides, from the
         // folder on screen and the setting: a new folder, a left one, or a changed setting cancels
         // the last run and starts the next, which is what makes "leaving stops the rest" true.
@@ -631,6 +654,8 @@ class PlaybackController private constructor(private val context: Context) {
                 // braces**, not because it fixed anything. The real cause was in the gesture, not
                 // in the player: see `PlayerDock.TransportButton`.
                 if (openJob?.isActive == true) continue
+
+                sampleListening()
 
                 if (open.isFinished()) {
                     handleTrackEnded()
@@ -1471,24 +1496,12 @@ class PlaybackController private constructor(private val context: Context) {
      * History itself started** (A56). Random is the reason this matters most — it is the only place that plays music nobody chose, and "what was
      * that" is a question you can only ask afterwards.
      */
-    private fun recordPlayed(ref: TrackRef) {
+    private fun recordPlayed(ref: TrackRef, generation: Long) {
         // A play History started leaves History as it is: no new time, no new place, no count
         // (A56, `HistoryRecording`).
         val now = _state.value
         if (!HistoryRecording.records(now.searchMode, now.resultsFromHistory)) return
-        scope.launch {
-            history.record(
-                trackId = ref.id,
-                title = ref.title,
-                subtitle = ref.subtitle,
-                fileName = ref.fileNameOrTitle,
-                author = ref.author,
-                sizeBytes = ref.sizeBytes,
-            )
-            // **Not refreshed while it is open** (A56). It used to be, so a row tapped in History
-            // jumped to the top under the finger that tapped it. History shows what it showed when
-            // it was opened, and the next visit reads it afresh.
-        }
+        historyWrites.record(ref, generation)
     }
 
     fun openHistory() {
@@ -1566,10 +1579,20 @@ class PlaybackController private constructor(private val context: Context) {
         ).toString()
 
     fun clearHistory() {
-        scope.launch {
-            historyReads.clearAll().join()
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }
-        }
+        listening.forget()
+        listeningTrack = null
+        _state.update { it.copy(listenedIds = emptySet()) }
+        // Queue Clear synchronously, before another play can enqueue its new History row.
+        val cleared = historyWrites.clear()
+        historyReads.clearAll(
+            clearAction = {
+                cleared.await()
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }
+            },
+            onFailure = {
+                _state.update { it.copy(message = Message(context.getString(R.string.notice_history_clear_failed))) }
+            },
+        )
     }
 
     // --- online catalogues --------------------------------------------------------------------
@@ -2500,6 +2523,8 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun seekTo(seconds: Double) {
         val open = track ?: return
+        sampleListening()
+        listening.baseline(open.positionSeconds(), playing = false)
         val generation = ++seekGeneration
         _state.update { it.copy(positionSeconds = seconds, seekingTo = seconds, seekSlow = false) }
         scope.launch {
@@ -2514,6 +2539,7 @@ class PlaybackController private constructor(private val context: Context) {
             // drag, or another tune, has already taken the bar over.
             if (generation == seekGeneration && track === open) {
                 _state.update { it.copy(seekingTo = null, seekSlow = false, positionSeconds = open.positionSeconds()) }
+                listening.baseline(open.positionSeconds(), _state.value.playing)
             }
         }
     }
@@ -2531,6 +2557,8 @@ class PlaybackController private constructor(private val context: Context) {
         val open = track ?: return
         val now = _state.value
         if (index < 0 || index >= now.subsongCount || index == now.subsong) return
+        sampleListening()
+        listening.baseline(0.0, playing = false)
         open.selectSubsong(index)
         // **Re-read once the switch has landed**, which is the audio thread's business and takes a
         // buffer. A GBS names each of its tunes and a SNDH often does; the phone went on showing the
@@ -2643,6 +2671,8 @@ class PlaybackController private constructor(private val context: Context) {
             return
         }
         if (_state.value.playing) {
+            sampleListening()
+            listening.baseline(open.positionSeconds(), playing = false)
             open.stop()
             audioFocus.release()
             _state.update { it.copy(playing = false) }
@@ -2662,6 +2692,8 @@ class PlaybackController private constructor(private val context: Context) {
                 durationSeconds = _state.value.durationSeconds,
             )
             val restarted = if (atEnd) open.restart() else open.start()
+            if (atEnd) beginListeningAgain(restarted)
+            else listening.baseline(open.positionSeconds(), restarted && _state.value.seekingTo == null)
             _state.update {
                 it.copy(playing = restarted, positionSeconds = if (atEnd) 0.0 else it.positionSeconds)
             }
@@ -2682,6 +2714,8 @@ class PlaybackController private constructor(private val context: Context) {
     /** Stops playing without forgetting what was loaded. Used by the notification's stop action. */
     fun pause() {
         val open = track ?: return
+        sampleListening()
+        listening.baseline(open.positionSeconds(), playing = false)
         open.stop()
         audioFocus.release()
         _state.update { it.copy(playing = false) }
@@ -2741,6 +2775,7 @@ class PlaybackController private constructor(private val context: Context) {
                 // Repeat-one hands back the identical queue.
                 advanced == results -> {
                     val playing = track?.restart() ?: false
+                    beginListeningAgain(playing)
                     _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
                 }
                 else -> playFromResultsQueue(advanced)
@@ -2762,6 +2797,7 @@ class PlaybackController private constructor(private val context: Context) {
             // contradicting its own button.
             if (_state.value.queue.repeat == RepeatMode.ONE) {
                 val playing = track?.restart() ?: false
+                beginListeningAgain(playing)
                 _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
             } else if (!_state.value.externalOpen) {
                 // **Not playing any more, said before the next pick is chosen, not after.**
@@ -2803,6 +2839,7 @@ class PlaybackController private constructor(private val context: Context) {
             // history entry to step back through.
             advanced == queue -> {
                 val playing = track?.restart() ?: false
+                beginListeningAgain(playing)
                 _state.update { it.copy(playing = playing, positionSeconds = 0.0) }
             }
             else -> openAndPlay(advanced)
@@ -2850,7 +2887,10 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun load(ref: TrackRef) {
-
+        sampleListening()
+        listening.forget()
+        listeningTrack = null
+        val historyGeneration = historyWrites.generation
         openJob?.cancel()
         // A seek belongs to the tune it was made on; a new tune ends it.
         seekGeneration++
@@ -2944,6 +2984,10 @@ class PlaybackController private constructor(private val context: Context) {
             opened.knownLengths(openSongLengths)
 
             val started = opened.start()
+            if (historyGeneration == historyWrites.generation) {
+                listeningTrack = ref
+                listening.begin(ref.id, historyGeneration, opened.positionSeconds(), started)
+            }
 
             // **Said out loud, once, because a listener cannot read logcat.** Backends that
             // synthesise at a fixed rate ask Oboe for it and Oboe is meant to resample; if it
@@ -2991,7 +3035,11 @@ class PlaybackController private constructor(private val context: Context) {
             }
             // Recorded with the name the tune calls itself rather than the filename it arrived
             // under, which is why this waits until after the metadata has been read.
-            recordPlayed(adoptTitleFrom(described, ref))
+            val describedRef = adoptTitleFrom(described, ref)
+            recordPlayed(describedRef, historyGeneration)
+            if (historyGeneration == historyWrites.generation) {
+                listeningTrack = describedRef
+            }
 
             prefetchUpcoming()
         }
@@ -3176,6 +3224,9 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun stopPlayback() {
+        sampleListening()
+        listening.forget()
+        listeningTrack = null
         // **The open in flight goes too.** Everything that calls this is the user moving on —
         // leaving Random for the playlist, say — and a fetch already running would finish
         // afterwards and start the tune nobody is asking for any more, over a screen naming a
@@ -3199,6 +3250,22 @@ class PlaybackController private constructor(private val context: Context) {
         resolveJob?.cancel()
         openJob?.cancel()
         stopPlayback()
+    }
+
+    private fun sampleListening() {
+        val open = track ?: return
+        val now = _state.value
+        listening.sample(open.positionSeconds(), now.playing && now.seekingTo == null && !open.isFinished())
+            ?.let(historyWrites::qualify)
+    }
+
+    private fun beginListeningAgain(playing: Boolean) {
+        // After Clear, only an explicit fresh occurrence may qualify; it also needs a History row.
+        val ref = listeningTrack ?: _state.value.current ?: return
+        val generation = historyWrites.generation
+        if (listeningTrack == null) recordPlayed(ref, generation)
+        listeningTrack = ref
+        listening.begin(ref.id, generation, 0.0, playing)
     }
 
 }

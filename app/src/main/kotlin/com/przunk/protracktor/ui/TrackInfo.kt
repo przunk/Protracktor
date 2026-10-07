@@ -27,12 +27,15 @@ import com.przunk.protracktor.player.TrackRef
  * it in.
  */
 @Composable
-internal fun TrackInfoDialog(track: TrackRef, onDismiss: () -> Unit) {
+internal fun TrackInfoDialog(track: TrackRef, onDismiss: () -> Unit, playedBefore: Boolean = false) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(track.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (playedBefore) {
+                    InfoLine(R.string.played_before, stringResource(R.string.played_before_explanation))
+                }
                 InfoLine(R.string.field_artist, track.displayAuthor)
                 InfoLine(R.string.field_format, SupportedFormats.labelFor(track.fileNameOrTitle))
                 InfoLine(R.string.field_file, track.fileNameOrTitle)

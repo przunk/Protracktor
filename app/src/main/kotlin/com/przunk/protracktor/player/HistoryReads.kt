@@ -4,6 +4,7 @@
 package com.przunk.protracktor.player
 
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -50,9 +51,18 @@ internal class HistoryReads<T>(
     }
 
     /** Everything forgotten, and nothing already on its way allowed to bring any of it back. */
-    fun clearAll() = request { ticket ->
-        clear()
-        if (newest.get() == ticket) show(Shown(0, 0, emptyList()))
+    fun clearAll(
+        clearAction: suspend () -> Unit = clear,
+        onFailure: (Throwable) -> Unit = { throw it },
+    ) = request { ticket ->
+        try {
+            clearAction()
+            if (newest.get() == ticket) show(Shown(0, 0, emptyList()))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            onFailure(error)
+        }
     }
 
     private fun request(read: suspend (Long) -> Unit): Job {

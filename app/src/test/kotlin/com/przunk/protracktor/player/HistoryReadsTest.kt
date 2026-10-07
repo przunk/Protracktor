@@ -14,6 +14,18 @@ import org.junit.Test
 /** `docs/review-2026-09-28.md` F1: a read already on its way must not undo *Clear history*. */
 class HistoryReadsTest {
 
+    @Test
+    fun `failed clear reports failure without publishing an empty history`() = runBlocking {
+        val fake = Fake(3)
+        val history = reads(fake, this)
+        history.open().join()
+        val before = fake.shown.toList()
+        var failures = 0
+        history.clearAll(clearAction = { error("disk unavailable") }, onFailure = { failures++ }).join()
+        assertEquals(1, failures)
+        assertEquals(before, fake.shown)
+    }
+
     /** A History of [total] tunes whose page reads wait for [gate] -- a read held open. */
     private class Fake(var total: Int) {
         var gate: CompletableDeferred<Unit>? = null

@@ -108,6 +108,21 @@ Python's buffer and a long run looks hung.
 
 ## Builds
 
+### Schema snapshots (B43, schema 22)
+
+`app/schemas/1.sql` through `22.sql` export each historical database shape. `SchemaSqlTest` builds
+each version through the real SQLite engine and compares the snapshot; the directory is a declared
+Gradle test input. To deliberately regenerate snapshots after a reviewed schema change, source the
+normal toolchain environment and run:
+
+```bash
+./gradlew :app:testDebugUnitTest --tests '*SchemaSqlTest' -PexportSchemas
+```
+
+Review and commit the resulting SQL. Normal tests do not rewrite snapshots. These describe schema
+shape, not a replacement for migration logic or a backup of user data. B43's legacy qualification
+backfill is tested separately with populated databases.
+
 ```bash
 ./scripts/build-debug.sh   [extra gradle args…]
 ./scripts/build-release.sh [extra gradle args…]

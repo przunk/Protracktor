@@ -85,6 +85,7 @@ fun RandomScreen(
 
         PlaylistBody(
             tracks = state.randomPicks,
+            listenedIds = state.listenedIds,
             listState = listState,
             currentIndex = state.randomIndex.takeIf { it >= 0 },
             onPlayAt = onPlayAt,

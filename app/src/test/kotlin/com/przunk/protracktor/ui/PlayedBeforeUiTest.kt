@@ -1,0 +1,120 @@
+// SPDX-FileCopyrightText: 2026 Przunk
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+package com.przunk.protracktor.ui
+
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.przunk.protracktor.R
+import com.przunk.protracktor.player.BrowseDomain
+import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.PlayQueue
+import com.przunk.protracktor.player.PlayerUiState
+import com.przunk.protracktor.player.TrackRef
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.android.controller.ActivityController
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "en-w360dp-h800dp-xhdpi")
+class PlayedBeforeUiTest {
+    @get:Rule val compose = createEmptyComposeRule()
+    private lateinit var activity: ActivityController<ComponentActivity>
+    private val track = TrackRef("song", "A long title that must remain readable", "Modland / Artist", fileName = "song.mod")
+    private val heard = mutableStateOf(setOf("song"))
+
+    @Before fun start() { activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible() }
+    @After fun stop() { activity.close() }
+
+    private fun show(screen: String, dark: Boolean = false) {
+        activity.get().setContent {
+            MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+                val state = PlayerUiState(queue = PlayQueue(listOf(track)), listenedIds = heard.value,
+                    randomPicks = listOf(track), randomIndex = 0)
+                when (screen) {
+                    "playlist" -> PlaylistScreen(
+                        state = state, listState = rememberLazyListState(),
+                        onPlayAt = {}, onRemoveAt = {}, onMove = { _, _ -> }, onShowNeighbours = {},
+                        onShareFile = {}, onShareAudio = {}, onShareLink = {}, onSendToWeb = {},
+                        onBrowse = {}, onPickDownloads = {}, canBrowse = true, stateKnown = true,
+                        onReturnToPlaylist = {}, contentPadding = PaddingValues(),
+                    )
+                    "random" -> RandomScreen(
+                        state = state, browse = BrowseState(), listState = rememberLazyListState(),
+                        onPlayAt = {}, onRemoveAt = {}, onFilter = {}, onShowNeighbours = {},
+                        onShareFile = {}, onShareAudio = {}, onShareLink = {}, onSendToWeb = {},
+                        onAddToOtherPlaylist = {}, onAddSelectedToPlaylist = {}, contentPadding = PaddingValues(),
+                    )
+                    else -> BrowseScreen(
+                        browse = BrowseState(domain = BrowseDomain.HISTORY, tracks = listOf(track),
+                            historyTotal = 1, listenedHere = heard.value),
+                        playlistName = "Saved playlist", contentPadding = PaddingValues(),
+                        onOpenDomain = {}, onPickFolder = {}, onPickFiles = {}, onOpenFolder = {},
+                        onForgetFolder = {}, onScanFolder = {}, onIndexCatalogue = {},
+                        onDownloadSongMetadata = {}, onDownloadReplayRoutines = {}, onOpenCatalogue = {},
+                        onOpenGroup = {}, onRandom = {}, onChooseRandomScope = {}, onQueryChange = {},
+                        onScope = {}, onToggleCatalogue = {}, onTogglePlatform = {}, onSearch = {},
+                        onClearHistory = {}, playingId = null, loadingId = null,
+                        onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
+                        onSendToWeb = {}, onPlay = {}, onAdd = {},
+                    )
+                }
+            }
+        }
+    }
+
+    @Test fun `playlist hides the mark even when its track qualifies`() {
+        show("playlist")
+        compose.onNodeWithText(track.title).assertExists()
+        compose.onNodeWithContentDescription("Played before", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test fun `random shows the mark even for a track that is also in the playlist`() {
+        show("random", dark = true)
+        compose.onNodeWithContentDescription("Played before", useUnmergedTree = true).assertExists()
+        compose.runOnIdle { heard.value = emptySet() }
+        compose.onNodeWithContentDescription("Played before", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test fun `browse updates qualification without closing or changing the row title`() {
+        heard.value = emptySet()
+        show("browse")
+        compose.onNodeWithContentDescription("Played before", useUnmergedTree = true).assertDoesNotExist()
+        compose.runOnIdle { heard.value = setOf("song") }
+        compose.onNodeWithContentDescription("Played before", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText(track.title).assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
+    fun `polish random exposes a localised status description`() {
+        show("random")
+        compose.onNodeWithContentDescription("Już odsłuchane", useUnmergedTree = true).assertExists()
+    }
+
+    @Test fun `random track details explain the mark and its history reset`() {
+        show("random")
+        compose.onNodeWithContentDescription(activity.get().getString(R.string.a11y_track_actions, track.title))
+            .performClick()
+        compose.onNodeWithText(activity.get().getString(R.string.action_info)).performClick()
+        compose.onNodeWithText(activity.get().getString(R.string.played_before_explanation)).assertExists()
+    }
+}
