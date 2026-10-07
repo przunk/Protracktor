@@ -48,11 +48,18 @@ failures/errors/skips; lint without errors; 581 page, 49 existing-WASM (not rebu
 8 server checks, web database upgrade, 135 icon paths and store metadata validation. Two deliberate
 mutations failed the intended identity/navigation tests; they were restored before this gate.
 Two render tests produced eight previews. Device behaviour and usefulness remain unverified;
-the release APK handoff follows. [Evidence and trial checklist](PR_B42_SAVED_PLACES.md).
+the release APK is ready. [Evidence and trial checklist](PR_B42_SAVED_PLACES.md).
 B43's five-second rule and
 status-column placement are unchanged. Never reinstall a schema-22 (or older) APK after upgrading
 to this candidate: those older binaries retain a destructive downgrade path. A rejected feature
 requires a forward-compatible build preserving the installed schema and user data.
+
+**Combined B42 + B43 trial APK:** `dist/protracktor-release-1.0.0-1116-3f8df94-20261007-214351.apk`,
+**1.0.0 (1116)**, built from clean `3f8df94` in 118 s, 11,739,334 bytes. SHA-256:
+`d43b15266783814cf7202918687fc60f34faee9b78b7645b23971c587c23222a`.
+Minified/non-debuggable release, three ABIs, APK Signature Scheme v2 verified with the same test
+certificate as B43. Logs and previews: `dist/b42-verification/`. The following handoff commit
+changes documentation only. No merge, push, tag, master change, AAB or publication.
 
 ## User discovery feedback — B43 selected as an experiment, 2026-10-07
 
