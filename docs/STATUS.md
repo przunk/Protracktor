@@ -25,7 +25,17 @@ upgrade, 135 icon paths, 8 server checks and store metadata validation. No WASM 
 Logs: `/tmp/protracktor-user-agent-{red,green,mutation}.log`,
 `/tmp/protracktor-Protracktor-{test,lint}.log`; output root
 `/tmp/protracktor-origin-sync-build.S8adiD`, Gradle cache `/tmp/protracktor-architecture-gradle`.
-Release APK verification is pending.
+Copies of these logs and the build log are retained in `dist/unexotica-user-agent-verification/`.
+
+**Release artifact checked:** `scripts/build-release.sh --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` passed in 611 s from clean `dfcc825`:
+**1.0.0 (1103)**, minified/non-debuggable, arm64-v8a, armeabi-v7a and x86_64, minSdk 29/targetSdk 36.
+The script copied the APK to `dist/`; its legacy filename was then renamed to include the variant
+and source SHA: `dist/protracktor-release-1.0.0-1103-dfcc825-20261007-101401.apk`
+(11,687,186 bytes). SHA-256: `a2574a0119583e331f6823a102e31867e4db0aed417a9249577e6ce5983db596`.
+APK Signature Scheme v2 verification passed; the test certificate matches the accepted 1091 APK
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`). No publishing key was used.
+The later handoff-documentation commit does not change the application sources in this APK.
 
 Jools's approval and the still-unconfirmed server whitelist are recorded in
 [the catalogue plan](PLAN_UNEXOTICA.md). Phone playback and server whitelisting are not checked.
