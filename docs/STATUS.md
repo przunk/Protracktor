@@ -4,7 +4,7 @@ Updated: 2026-10-07 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## UnExoticA client identity — host-checked, awaiting phone test, 2026-10-07
+## UnExoticA client identity — owner-confirmed playback, awaiting merge approval, 2026-10-07
 
 Branch `fix/unexotica-user-agent`, based on merged develop `9ed0359`. The owner approved the
 follow-up previously deferred during the architecture work. Inspection found that Mod Archive
@@ -38,10 +38,16 @@ APK Signature Scheme v2 verification passed; the test certificate matches the ac
 The later handoff-documentation commit does not change the application sources in this APK.
 
 Jools's approval and the still-unconfirmed server whitelist are recorded in
-[the catalogue plan](PLAN_UNEXOTICA.md). Phone playback and server whitelisting are not checked.
+[the catalogue plan](PLAN_UNEXOTICA.md). Server whitelisting remains unconfirmed.
 No merge, push or publication is authorised by this implementation task.
 
-**Phone check:** install the test release as an update without clearing data. In Online Catalogues,
+**Phone result reported by the owner, 2026-10-07:** following the 1103 APK handoff, the owner
+confirmed UnExoticA playback and the catalogue loading into cache. Device/Android version and the
+installed build number were not separately restated. This does not establish a cold archive
+download, subsequent archive reuse without a request, results for other catalogues/Mod Archive,
+or activation of the server whitelist. No merge approval was given with this test result.
+
+**Regression checklist (not all steps separately confirmed):** install the test release as an update without clearing data. In Online Catalogues,
 open UnExoticA and play a track from a game archive not already downloaded; another track from that
 game should still reuse the cached archive. Check one fresh download from another catalogue and a
 Mod Archive search. Refresh an index only if needed; no deletion of indexes or app data is required.
