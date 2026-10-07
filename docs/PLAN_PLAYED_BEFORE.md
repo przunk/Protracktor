@@ -1,6 +1,6 @@
 # B43 — Played before
 
-Status: specified for owner selection; not implemented or scheduled.
+Status: selected as an experiment; implementation authorised, pending the remaining rule decisions.
 Recorded: 2026-10-07. Original wishlist entry: 2026-10-05.
 
 ## User feedback and purpose
@@ -12,6 +12,33 @@ closed-test membership or completed implementation/test is inferred from that at
 Listeners want to recognise music they have already tried, including tracks they rejected after
 a short listen. This is an informational status, not a rating, favourite or instruction to skip.
 Keep the existing B43 identity in [WISHLIST.md](WISHLIST.md); do not create a duplicate feature.
+
+## Experimental status — owner decision, 2026-10-07
+
+The owner selected B43 for implementation as a trial of a user request, not a commitment to keep
+the feature permanently. A technically correct implementation may still prove unhelpful and be
+rejected. B42 remains unselected and is not part of this work.
+
+Evaluate two distinct outcomes:
+
+- **Technical correctness:** qualification, clearing, migration and rendering meet the agreed
+  contract without regressions. Passing tests does not establish that the feature is useful.
+- **Usefulness:** during ordinary listening, the owner/users can recognise previously explored
+  tracks without distracting row decoration, confusing the marker with favourites/cache status,
+  or needing more effort than the indication saves. The phone report determines this outcome;
+  no positive verdict or testing duration is assumed in advance.
+
+After the release-APK trial, record the actual feedback and the owner's decision: retain, revise,
+or abandon as not useful. An abandoned experiment is a valid outcome, not a reason to invent
+favourable feedback or quietly expand the feature. Record the feedback-to-decision trail even if
+the code never merges. No telemetry or collection of listening data outside the device is added.
+
+Keep the implementation isolated on its task branch and avoid coupling other features to it.
+If it is abandoned before merge, leave it unmerged. A phone that has already received a newer
+database schema must not be sent an older APK as a casual rollback: prefer a forward-compatible
+build disabling/removing the experimental behaviour while preserving History, playlists and all
+other user data. Do not lower the schema version or clear data to end the experiment. Any later
+schema cleanup is a separate, tested migration. Merge and publication still require owner approval.
 
 ## Confirmed requirements
 
@@ -110,8 +137,8 @@ draws previously heard tracks normally. Short-track and playlist scenarios follo
 ## Boundaries and workflow
 
 Android only in this task; web parity, listened-only filters, automatic Random exclusions, manual
-ratings and favourites changes are not included. No implementation starts until the owner chooses
-this task and the unresolved rules are settled. Use its own `feature/played-before` branch from
+ratings and favourites changes are not included. The owner has selected this task as an experiment;
+settle the remaining explicit rule choices before coding. Use its own `feature/played-before` branch from
 current develop, independently of B42. Keep a feedback → analysis → implementation → PR/handoff →
 user test record, with separate commits for verified stages. Push/publication remain the owner's
 actions; merge requires explicit approval. Update this plan, WISHLIST and STATUS truthfully.

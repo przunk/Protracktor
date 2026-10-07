@@ -16,7 +16,7 @@ Requested by a tester and relayed by the owner on 2026-10-06: add Android Auto s
 The car-facing browsing and playback scope, requirements and implementation remain to be
 discussed. This entry records the request; it does not approve implementation.
 
-## B43. A track's listened status — noted 2026-10-05; planned for selection, 2026-10-07
+## B43. A track's listened status — selected for an experiment, 2026-10-07
 
 Raised by the owner on 2026-10-05: consider a persistent indication that a track has been
 listened to, so it is easier to distinguish explored music from tracks still to try.
@@ -29,7 +29,11 @@ an explicit rule without losing the existing History behaviour.
 
 [Task plan](PLAN_PLAYED_BEFORE.md): requirements, current-code evidence, migration/clear semantics,
 open decisions, implementation stages and test criteria. Playlist visibility interpretation and
-edge cases remain to be confirmed. Specified only; the owner has not selected implementation yet.
+edge cases remain to be confirmed. On 2026-10-07 the owner selected implementation as a trial of
+the user request, explicitly allowing rejection if it proves unhelpful. Technical correctness
+and user-perceived usefulness are separate acceptance criteria. No implementation or usefulness
+result is claimed yet; a retain/revise/abandon decision follows actual phone feedback. Ending the
+trial must preserve user data, including on phones upgraded to its schema.
 
 ## B42. Saved places / Save for later — noted 2026-10-05; planned for selection, 2026-10-07
 

@@ -4,7 +4,7 @@ Updated: 2026-10-07 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## User discovery feedback — plans only, awaiting task selection, 2026-10-07
+## User discovery feedback — B43 selected as an experiment, 2026-10-07
 
 At the owner's request, expanded existing wishlist B43 ([Played before](PLAN_PLAYED_BEFORE.md))
 and B42 ([Saved places](PLAN_SAVED_PLACES.md)) into separate implementation plans. The owner
@@ -13,7 +13,12 @@ requests, without inventing individual reporters, closed-test participation or c
 The plans distinguish agreed requirements from remaining choices and specify the feedback →
 analysis → implementation → PR/handoff → user test process. No application/schema change,
 implementation branch, build or new test run was made; content and relative links were checked.
-The owner will choose which task to implement. No schema version is reserved by these plans.
+The owner subsequently selected B43 for implementation as an experiment: it may be retained,
+revised or abandoned if ordinary use shows it is not useful. The remaining rule choices in its
+plan are awaiting confirmation before coding. B42 remains unselected. No schema version has
+been reserved and no implementation or trial result is claimed yet. Technical correctness is
+required independently of usefulness; abandoning the trial must not delete data or require a
+destructive schema downgrade. The plan records the feedback and final-decision evidence required.
 
 ## UnExoticA client identity — merged after owner approval, 2026-10-07
 
