@@ -84,7 +84,7 @@ object ModArchive : Catalogue(
             val connection = (URL(SEARCH_URL + encoded).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 15_000
-                setRequestProperty("User-Agent", USER_AGENT)
+                setRequestProperty("User-Agent", CatalogueHttp.USER_AGENT)
                 setRequestProperty("Accept", "text/html,application/xhtml+xml")
                 instanceFollowRedirects = true
             }
@@ -114,14 +114,6 @@ object ModArchive : Catalogue(
     }
 
     private const val TAG = "ModArchive"
-
-    /**
-     * Named for the app rather than the version it was written in.
-     *
-     * The old one said 0.2.0 forever, which is the sort of thing that makes a server's logs lie
-     * about which build is calling it.
-     */
-    private const val USER_AGENT = "Protracktor (Android; +https://github.com/przunk/protracktor)"
 
     /** The heading a real result page carries. Verified against the live site on 2026-09-06. */
     private const val RESULTS_MARKER = "site-wide-page-head-title\">Search Results"

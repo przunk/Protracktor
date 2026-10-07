@@ -1,8 +1,41 @@
 # Status
 
-Updated: 2026-10-06 — version 1.0.0, schema version 21. versionCode is the commit count.
+Updated: 2026-10-07 — version 1.0.0, schema version 21. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## UnExoticA client identity — host-checked, awaiting phone test, 2026-10-07
+
+Branch `fix/unexotica-user-agent`, based on merged develop `9ed0359`. The owner approved the
+follow-up previously deferred during the architecture work. Inspection found that Mod Archive
+search already identifies the app, but `RemoteFiles` archive/index requests and their cookie
+retry did not. The change shares the existing stable User-Agent between these callers;
+no catalogue switch, cache, database or version policy changes are included.
+
+**Partly checked:** five local HTTP-server tests cover archive downloads/cache reuse, uncached
+index refreshes, verification retries, redirects and HTTP failures. All five failed before the
+change because the server received the JVM default identity, then passed after the change.
+A deliberate mutation omitting the header only on the cookie retry made exactly that test fail;
+the correct implementation was restored.
+
+**Checked:** forced full `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
+-Pkotlin.compiler.execution.strategy=in-process` passed in 251 s: 681 tests, zero failures/errors,
+lint without errors, 581 page checks, 49 checks against the existing WASM, 8 SAP checks, web database
+upgrade, 135 icon paths, 8 server checks and store metadata validation. No WASM rebuild is claimed.
+Logs: `/tmp/protracktor-user-agent-{red,green,mutation}.log`,
+`/tmp/protracktor-Protracktor-{test,lint}.log`; output root
+`/tmp/protracktor-origin-sync-build.S8adiD`, Gradle cache `/tmp/protracktor-architecture-gradle`.
+Release APK verification is pending.
+
+Jools's approval and the still-unconfirmed server whitelist are recorded in
+[the catalogue plan](PLAN_UNEXOTICA.md). Phone playback and server whitelisting are not checked.
+No merge, push or publication is authorised by this implementation task.
+
+**Phone check:** install the test release as an update without clearing data. In Online Catalogues,
+open UnExoticA and play a track from a game archive not already downloaded; another track from that
+game should still reuse the cached archive. Check one fresh download from another catalogue and a
+Mod Archive search. Refresh an index only if needed; no deletion of indexes or app data is required.
+If Android rejects the update signature, keep the installed app/data and report the mismatch.
 
 ## Remote develop integration — checked, 2026-10-06
 

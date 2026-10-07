@@ -4,6 +4,23 @@
 the letter in `docs/letters/2026-09-08-exotica-unexotica.md`. That order is deliberate and this
 document exists to make it reversible.*
 
+## Current permission and client identity — recorded 2026-10-07
+
+The owner supplied replies from Jools Wills (BuZz) approving the proposed use and asking for a
+custom User-Agent so that he can whitelist it if the site's JavaScript protection affects
+downloads. The earlier pending-reply policy below is historical, not the current permission
+state. `UnExoticA.ENABLED` remains `true`; the switch is retained for operational reversibility.
+
+The agreed identity is the same one already used by the Android Mod Archive search:
+`Protracktor (Android; +https://github.com/przunk/protracktor)`. It is deliberately stable across
+versions so that a server whitelist does not need updating for each build. `CatalogueHttp.USER_AGENT`
+is shared by that search and `RemoteFiles`, covering archive and index downloads, including the
+verification-cookie retry. Other catalogue downloads through `RemoteFiles` receive the same
+identity. Cache behaviour, URLs and the existing one-retry policy are unchanged.
+
+Permission does not establish that the server whitelist has been configured. That remains
+unconfirmed; local request tests cannot verify the server's policy or Android playback.
+
 ## Why it exists
 
 The owner went looking for an Amiga game's soundtrack on 2026-09-07, found only the SNES rip under
@@ -12,7 +29,7 @@ demoscene — that is the shape of the archive rather than an omission, and it l
 category of music most people actually remember. UnExoticA is the archive for that, and it is
 indexed by game.
 
-## Why it is built before the answer
+## Historical decision: why it was built before the answer
 
 `files.exotica.org.uk/robots.txt` is a blanket `Disallow: /`. Our reading, which has not changed, is
 that robots.txt governs crawlers rather than a user's own client fetching a file they asked for. But
@@ -141,8 +158,9 @@ defensiveness — it is the difference between the feature working and not.
 - **No attribution in the app.** The letter promises UnExoticA is credited by name wherever its
   tracks appear. `displayName` does that in the browse list, and the licences screen that
   `docs/LICENSES.md` has been waiting for is still not written.
-- **The reply.** If it is no, the section above says exactly what to delete.
-- **Still on, and kept in the public release -- decided 2026-09-30.** The switch has been `true`
+- **The reply — resolved; recorded 2026-10-07.** Jools approved the proposed use; see the current
+  permission and User-Agent section above. Server whitelisting is not yet confirmed.
+- **Historical policy, superseded by approval -- decided 2026-09-30.** The switch has been `true`
   since the day it was built, so every release, the testers' included, has offered the catalogue;
   the "private use" this plan began with did not hold, and that was found only at the pre-production
   audit. No reply to the 2026-09-08 letter came. The owner chose to send a reminder saying the

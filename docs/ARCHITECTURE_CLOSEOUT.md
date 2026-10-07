@@ -51,7 +51,8 @@ Library/queue editing, sharing and native playback orchestration remain in `Play
 `native/engine/engine.cpp` are unchanged by this branch. `git diff 1455422..6eb5577` also shows no
 changes to build configuration, scripts, database schema or dependencies. No web PR was merged or
 rebased into this branch during closeout. Those refactors and a broad comment pass are deferred,
-not scheduled automatically after the APK. The UnExoticA User-Agent remains a separate follow-up.
+not scheduled automatically after the APK. The UnExoticA User-Agent was left as a separate follow-up;
+its implementation and verification are tracked in `STATUS.md` and `PLAN_UNEXOTICA.md`.
 
 ## Known risks retained, not repaired
 
