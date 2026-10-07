@@ -4,7 +4,7 @@ Updated: 2026-10-07 — version 1.0.0, schema version 21. versionCode is the com
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## UnExoticA client identity — owner-confirmed playback, awaiting merge approval, 2026-10-07
+## UnExoticA client identity — merged after owner approval, 2026-10-07
 
 Branch `fix/unexotica-user-agent`, based on merged develop `9ed0359`. The owner approved the
 follow-up previously deferred during the architecture work. Inspection found that Mod Archive
@@ -39,13 +39,17 @@ The later handoff-documentation commit does not change the application sources i
 
 Jools's approval and the still-unconfirmed server whitelist are recorded in
 [the catalogue plan](PLAN_UNEXOTICA.md). Server whitelisting remains unconfirmed.
-No merge, push or publication is authorised by this implementation task.
+After the phone report below, the owner explicitly authorised merging on 2026-10-07.
+Merged into local `develop` as `3b22b92`, without conflicts. The merge tree exactly matches
+`fix/unexotica-user-agent` at `1f8bfff`; app/native sources match the tested APK source `dfcc825`.
+Tests and APK were not rebuilt for this content-identical merge. No push, master/tag change or
+publication occurred; the task branch and other worktrees were retained.
 
 **Phone result reported by the owner, 2026-10-07:** following the 1103 APK handoff, the owner
 confirmed UnExoticA playback and the catalogue loading into cache. Device/Android version and the
 installed build number were not separately restated. This does not establish a cold archive
 download, subsequent archive reuse without a request, results for other catalogues/Mod Archive,
-or activation of the server whitelist. No merge approval was given with this test result.
+or activation of the server whitelist. Merge approval followed in a separate message.
 
 **Regression checklist (not all steps separately confirmed):** install the test release as an update without clearing data. In Online Catalogues,
 open UnExoticA and play a track from a game archive not already downloaded; another track from that
