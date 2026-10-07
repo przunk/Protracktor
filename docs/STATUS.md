@@ -9,8 +9,8 @@ Historical dated checks below describe their own builds; they are not current te
 B43 implementation started on `feature/played-before` from `00abd8f` after the owner confirmed
 the remaining rules. Schema **22 is reserved for B43**. Playlist hiding is view-based, the threshold
 is strictly five active seconds, qualification is per file/play occurrence, and Clear cancels the
-current occurrence's eligibility. Implementation and host verification are complete; the release
-artifact and phone trial are pending. The baseline
+current occurrence's eligibility. Implementation, host verification and the test-signed release
+artifact are complete; the phone trial is pending. The baseline
 helper's destructive downgrade is a known risk: never reinstall a schema-21 APK after the trial;
 abandonment requires a forward-compatible build preserving all user data.
 
@@ -43,6 +43,16 @@ background behaviour, upgrade on the owner's data and usefulness. See
 [the local PR/handoff](PR_B43_PLAYED_BEFORE.md) for evidence and the trial checklist.
 Verification logs/previews are retained in `dist/b43-verification/`. No merge, push, master/tag
 change, AAB or publication occurred. Version name remains 1.0.0 under the owner's publication freeze.
+
+**Release artifact checked:** built in 132 s from clean `7ea74d3` using
+`scripts/build-release.sh --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process`.
+APK: `dist/protracktor-release-1.0.0-1111-7ea74d3-20261007-181629.apk`, **1.0.0 (1111)**,
+11,706,010 bytes, minified/non-debuggable, arm64-v8a/armeabi-v7a/x86_64.
+SHA-256: `d34b968427a24ef84fff0c039c02cf61aa678ded37eae2a4fe26146e7f6a6d84`.
+Signature v2 verified with the same test certificate as the previous accepted APK
+(`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`), not a publication key.
+The build script copied the APK to `dist/`; its legacy filename was renamed to include variant
+and source SHA. The subsequent handoff-documentation commit does not change application sources.
 
 ## UnExoticA client identity — merged after owner approval, 2026-10-07
 

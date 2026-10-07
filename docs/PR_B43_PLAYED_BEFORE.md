@@ -1,7 +1,7 @@
 # B43 — Played before (experimental local PR handoff)
 
 Branch: `feature/played-before`, from `develop` at `00abd8f`.
-Status: host-verified candidate, release build and phone trial pending; no GitHub PR opened,
+Status: host-verified candidate with release APK; phone trial pending; no GitHub PR opened,
 push or merge performed.
 
 ## Feedback → analysis → implementation
@@ -36,7 +36,21 @@ The forced full gate passed in 240 s: **703 tests, zero failures/errors/skips**,
 Command: `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
 -Pkotlin.compiler.execution.strategy=in-process`; existing toolchain, output root
 `/tmp/protracktor-origin-sync-build.S8adiD`, Gradle cache `/tmp/protracktor-architecture-gradle`.
-Logs and previews are retained in `dist/b43-verification/`. APK evidence follows after building.
+Logs and previews are retained in `dist/b43-verification/`.
+
+### Release artifact
+
+- Source: clean `7ea74d3`; version **1.0.0 (1111)**, schema 22.
+- APK: [`protracktor-release-1.0.0-1111-7ea74d3-20261007-181629.apk`](../dist/protracktor-release-1.0.0-1111-7ea74d3-20261007-181629.apk), 11,706,010 bytes.
+- SHA-256: `d34b968427a24ef84fff0c039c02cf61aa678ded37eae2a4fe26146e7f6a6d84`.
+- `build-release.sh --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process`
+  passed in 132 s; R8 minification ran, APK is non-debuggable with all three configured ABIs.
+- APK Signature Scheme v2 verified. Test certificate SHA-256:
+  `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e` (matches the accepted previous APK).
+  No publication key or AAB was used. Later documentation changes do not alter these sources.
+
+Install as an update without clearing app data. If Android reports a signature mismatch, stop and
+report it; do not uninstall the existing app to force installation.
 
 ## Owner trial (not yet run)
 
