@@ -46,8 +46,15 @@ on that notice; restoration preserves the original save time and does not undo p
 Schema 23 and B43 are unchanged. Full gate passed in **190 s: 731 tests**, zero failures/errors/skips,
 lint without errors and all companion checks. Tests executed rather than returning a cached result.
 Two deliberate undo mutations broke four tests; the code was then restored. Two native-render tests produced eight
-previews; EN-light and PL-dark list layouts were inspected. Release APK handoff follows; previous
-checks/APKs below do not verify this follow-up. Phone behaviour remains unverified.
+previews; EN-light and PL-dark list layouts were inspected. Previous checks/APKs below do not
+verify this follow-up. Phone behaviour remains unverified.
+
+**Current APK:** `dist/protracktor-release-1.0.0-1120-3c7ae8e-20261007-224320.apk`,
+**1.0.0 (1120)**, clean source `3c7ae8e`, built in 118 s; 11,742,546 bytes.
+SHA-256: `1c587ca3013d7c29e8105e127c2627db05427c291f91fafed052c0bff24d2383`.
+Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs; verified v2 test signature matches
+1118. Evidence: `dist/b42-undo-verification/`. The handoff commit changes documentation only.
+No merge or publication.
 
 **Presentation refinement, host verified:** the owner requested outlined/filled Bookmark controls
 with a stable label, plus compact name/path rows with Open and Bookmark on the right.
@@ -58,7 +65,7 @@ Native previews cover EN/PL and both themes. UI fixture lifecycle/shared-SDK fai
 successful API-29 isolation are recorded in [the PR handoff](PR_B42_SAVED_PLACES.md).
 The revised UI is not yet verified on the phone.
 
-**Current APK:** `dist/protracktor-release-1.0.0-1118-84fa8a8-20261007-222557.apk`,
+**Previous presentation APK:** `dist/protracktor-release-1.0.0-1118-84fa8a8-20261007-222557.apk`,
 **1.0.0 (1118)**, clean source `84fa8a8`, built in 98 s; 11,740,154 bytes.
 SHA-256: `5f9e373fbe4e282eee41ba9b0d99262fee49e37fb227905683f0a88ce3fd968f`.
 Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs; v2 test signature matches 1116.

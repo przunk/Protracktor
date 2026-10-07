@@ -50,7 +50,16 @@ Full gate passed in **190 s: 731 tests**, zero failures/errors/skips, lint witho
 `scripts/test-protracktor.sh --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process`.
 The test task executed, rather than returning an up-to-date/cached result. Two native-render tests
 produced eight previews; EN-light and PL-dark lists were inspected. Phone Undo, timeout/swipe,
-visual layout and playback continuity remain unverified. Updated release artifact follows.
+visual layout and playback continuity remain unverified.
+
+Follow-up APK: `dist/protracktor-release-1.0.0-1120-3c7ae8e-20261007-224320.apk`,
+**1.0.0 (1120)**, clean source `3c7ae8e`, built in 118 s; 11,742,546 bytes.
+SHA-256: `1c587ca3013d7c29e8105e127c2627db05427c291f91fafed052c0bff24d2383`.
+Minified/non-debuggable release, minSdk 29/targetSdk 36, three ABIs. APK Signature Scheme v2
+verification passed with the same test certificate as 1118 (SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`).
+Logs and previews: `dist/b42-undo-verification/`. The following handoff commit changes docs only.
+No merge, push, tag, AAB or publication.
 
 The owner requested a stable Bookmark label (PL: Zakładka) with an outlined/filled icon instead
 of separate Save for later / Remove actions. The same control removes a saved entry from the list.
