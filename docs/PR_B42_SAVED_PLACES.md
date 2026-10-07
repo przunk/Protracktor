@@ -48,7 +48,14 @@ Final full gate passed in **211 s: 724 tests**, zero failures/errors/skips, lint
 137 icon paths, 8 server checks and store metadata. Command:
 `scripts/test-protracktor.sh --no-daemon --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process`.
 Changed test sources forced test execution; the test task was neither up-to-date nor from cache.
-Phone behaviour remains unverified; updated release artifact follows.
+Phone behaviour remains unverified.
+
+Updated APK: `dist/protracktor-release-1.0.0-1118-84fa8a8-20261007-222557.apk`, **1.0.0 (1118)**,
+built from clean `84fa8a8` in 98 s with the same release command below; 11,740,154 bytes.
+SHA-256: `5f9e373fbe4e282eee41ba9b0d99262fee49e37fb227905683f0a88ce3fd968f`.
+Minified/non-debuggable, minSdk 29/targetSdk 36, arm64-v8a/armeabi-v7a/x86_64;
+APK Signature Scheme v2 verified with the same test certificate as 1116.
+Logs/previews: `dist/b42-bookmark-verification/`. The following handoff commit changes docs only.
 
 ## Verification
 
@@ -75,7 +82,7 @@ header's saved state. That failed run was stopped. The storage fixture now start
 test tables; the UI fixture supplies an explicit viewport and flushes snapshot notifications,
 following the existing host UI fixtures. These changes affect tests only, not app behaviour.
 
-## Combined release candidate
+## Initial combined release candidate (before bookmark presentation refinement)
 
 `dist/protracktor-release-1.0.0-1116-3f8df94-20261007-214351.apk` — **1.0.0 (1116)**,
 built from clean `3f8df94` in 118 s using `scripts/build-release.sh --no-daemon --max-workers=2

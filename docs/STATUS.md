@@ -45,8 +45,14 @@ errors, all companion checks passed (137 icon paths); 211 s. Tests executed, not
 Four updated UI tests failed against the old presentation; all eight interaction tests now pass.
 Native previews cover EN/PL and both themes. UI fixture lifecycle/shared-SDK failures and the
 successful API-29 isolation are recorded in [the PR handoff](PR_B42_SAVED_PLACES.md).
-The revised UI is not yet verified on the phone; the new APK handoff follows. The APK below is
-the preceding presentation candidate.
+The revised UI is not yet verified on the phone.
+
+**Current APK:** `dist/protracktor-release-1.0.0-1118-84fa8a8-20261007-222557.apk`,
+**1.0.0 (1118)**, clean source `84fa8a8`, built in 98 s; 11,740,154 bytes.
+SHA-256: `5f9e373fbe4e282eee41ba9b0d99262fee49e37fb227905683f0a88ce3fd968f`.
+Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs; v2 test signature matches 1116.
+Evidence: `dist/b42-bookmark-verification/`. No merge or publication. The 1116 artifact below is
+the preceding presentation candidate, retained for traceability.
 
 The owner approved `feature/saved-places` from B43's `54a933a` to test both features in one APK.
 Schema **23 is reserved for B42**, above B43's 22. The B43 branch stays unmerged and unchanged
