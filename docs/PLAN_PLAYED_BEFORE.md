@@ -1,6 +1,6 @@
 # B43 — Played before
 
-Status: selected as an experiment; implementation authorised, pending the remaining rule decisions.
+Status: experiment in progress on `feature/played-before`; rules approved, 2026-10-07.
 Recorded: 2026-10-07. Original wishlist entry: 2026-10-05.
 
 ## User feedback and purpose
@@ -49,8 +49,8 @@ schema cleanup is a separate, tested migration. Merge and publication still requ
   heard queue, speculative preparation and navigation remain unchanged.
 - Existing persistent History entries seed the status on the first run of the new version.
 - Clearing History also clears the listened status; it must not survive in a separate hidden store.
-- The requested marking concerns tracks outside the playlist; the exact interpretation below
-  still needs confirmation before implementing its visibility rule.
+- Hide the mark in playlist views only; show it in Browse/search and Random regardless of
+  whether the track also belongs to a saved playlist.
 
 ## What the current code establishes
 
@@ -63,7 +63,7 @@ schema cleanup is a separate, tested migration. Merge and publication still requ
   from History itself. Preserve that behaviour.
 - `HistoryStore.clear` deletes the History rows. `RandomHistory` is a separate navigation queue,
   not the persistent evidence source for this feature.
-- The current schema is 21. Do not reserve the next number in this planning change.
+- Baseline schema is 21; version **22 is reserved for B43** on `feature/played-before` (2026-10-07).
 
 Existing rows have no evidence of their listening duration. Accept them as legacy listened
 entries because the owner requested seeding from History; do not claim that they met five seconds.
@@ -92,18 +92,15 @@ a write queued before Clear must not restore a cleared status afterwards. Clear 
 in-memory indicators and pending bootstrap/read results. Never seed again merely because the
 qualified set is empty. Keep playlists, favourites, bookmarks and the Random queue intact.
 
-## Decisions to settle before implementation
+## Rules confirmed by the owner — 2026-10-07
 
-1. **Outside the playlist:** recommended meaning is hidden in playlist views, visible in Browse,
-   search and Random regardless of playlist membership. Alternative: hide it for any track saved
-   in any playlist. The owner has not yet chosen between these meanings.
-2. **Short tracks:** recommended strict rule is five seconds; a track ending earlier remains
-   unmarked. Alternative: a natural end before five seconds qualifies it. Do not assume that the
-   earlier assistant proposal for short tracks was accepted.
-3. **Accumulation and identity:** recommend cumulative active time within one playback occurrence
+1. **Outside the playlist:** hidden in playlist views, visible in Browse, search and Random
+   regardless of playlist membership.
+2. **Short tracks:** five seconds is required; an earlier natural end does not qualify.
+3. **Accumulation and identity:** cumulative active time within one playback occurrence
    (pause/resume keeps it; moving to a different track resets it), a file-level mark using existing
-   track identity, no per-subsong marks and no cross-source hash deduplication. Confirm these defaults.
-4. **Clear during playback:** recommend cancelling the current occurrence's eligibility until a
+   track identity, no per-subsong marks and no cross-source hash deduplication.
+4. **Clear during playback:** cancel the current occurrence's eligibility until a
    new playback begins, so the clear action is not immediately undone by the still-playing track.
 5. **Visual treatment:** recommend a small neutral history/check glyph in the existing row metadata
    area, with a localised accessibility description and an explanation in track details. It is a
@@ -138,7 +135,7 @@ draws previously heard tracks normally. Short-track and playlist scenarios follo
 
 Android only in this task; web parity, listened-only filters, automatic Random exclusions, manual
 ratings and favourites changes are not included. The owner has selected this task as an experiment;
-settle the remaining explicit rule choices before coding. Use its own `feature/played-before` branch from
+the remaining rule choices were confirmed before coding. Use its own `feature/played-before` branch from
 current develop, independently of B42. Keep a feedback → analysis → implementation → PR/handoff →
 user test record, with separate commits for verified stages. Push/publication remain the owner's
 actions; merge requires explicit approval. Update this plan, WISHLIST and STATUS truthfully.

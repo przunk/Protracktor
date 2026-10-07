@@ -6,6 +6,13 @@ Historical dated checks below describe their own builds; they are not current te
 
 ## User discovery feedback — B43 selected as an experiment, 2026-10-07
 
+B43 implementation started on `feature/played-before` from `00abd8f` after the owner confirmed
+the remaining rules. Schema **22 is reserved for B43**. Playlist hiding is view-based, the threshold
+is strictly five active seconds, qualification is per file/play occurrence, and Clear cancels the
+current occurrence's eligibility. Code and phone behaviour are not yet verified. The baseline
+helper's destructive downgrade is a known risk: never reinstall a schema-21 APK after the trial;
+abandonment requires a forward-compatible build preserving all user data.
+
 At the owner's request, expanded existing wishlist B43 ([Played before](PLAN_PLAYED_BEFORE.md))
 and B42 ([Saved places](PLAN_SAVED_PLACES.md)) into separate implementation plans. The owner
 identified both as user feedback being addressed. The record attributes them as relayed user
@@ -15,8 +22,8 @@ analysis → implementation → PR/handoff → user test process. No application
 implementation branch, build or new test run was made; content and relative links were checked.
 The owner subsequently selected B43 for implementation as an experiment: it may be retained,
 revised or abandoned if ordinary use shows it is not useful. The remaining rule choices in its
-plan are awaiting confirmation before coding. B42 remains unselected. No schema version has
-been reserved and no implementation or trial result is claimed yet. Technical correctness is
+plan were confirmed before coding. B42 remains unselected. Schema 22 is reserved above;
+no implementation or trial result is claimed yet. Technical correctness is
 required independently of usefulness; abandoning the trial must not delete data or require a
 destructive schema downgrade. The plan records the feedback and final-decision evidence required.
 
