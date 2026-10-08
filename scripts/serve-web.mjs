@@ -17,6 +17,7 @@ import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { buildServiceWorker } from './stage-web-pwa.mjs';
 
 // **From this file's own location, not from the caller's working directory.** `run.sh` happens to
 // `cd` first and so does `serve-web.sh`, so `path.resolve('web')` worked -- as long as nobody ever
@@ -69,6 +70,7 @@ const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json', '.png': 'image/png',
   // The list of formats the page indexes (`web/src/formats.tsv`), read by the page at run time.
   '.tsv': 'text/tab-separated-values; charset=utf-8',
 };
@@ -238,6 +240,17 @@ http.createServer((request, response) => {
   }
 
   // --- the page -----------------------------------------------------------------------------
+  if (url.pathname === '/sw.js') {
+    try {
+      const worker = buildServiceWorker(root).source;
+      response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' })
+        .end(worker);
+    } catch (error) {
+      console.error('Cannot prepare offline startup:', error.message);
+      response.writeHead(503, { 'content-type': 'text/javascript; charset=utf-8' }).end();
+    }
+    return;
+  }
   if (url.pathname === '/') {
     response.writeHead(302, { location: '/src/' }).end();
     return;

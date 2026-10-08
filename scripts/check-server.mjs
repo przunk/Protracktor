@@ -15,6 +15,8 @@
 
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'node:fs';
+import os from 'node:os';
 import { fileURLToPath } from 'url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -27,8 +29,11 @@ const check = (ok, what) => {
   if (!ok) failures.push(what);
 };
 
-const server = spawn('node', [path.join(root, 'scripts', 'serve-web.mjs'), String(port)], {
-  cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
+// Keep tests on loopback and leave the owner's server.json untouched.
+const configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'protracktor-server-check-'));
+fs.writeFileSync(path.join(configDir, 'server.json'), JSON.stringify({ bind: '127.0.0.1', host: '127.0.0.1' }));
+const server = spawn(process.execPath, [path.join(root, 'scripts', 'serve-web.mjs'), String(port)], {
+  cwd: configDir, stdio: ['ignore', 'pipe', 'pipe'],
 });
 // The log matters as much as the answers: a 404 nobody can see is how C29 stayed a mystery for a
 // day on a machine in another room.
@@ -80,6 +85,19 @@ try {
         && (await list.text()).includes('extension\tmod\topenmpt'),
     'the format list is served, as text, with the phone\'s names in it');
 
+  const manifest = await fetch(`${base}/src/manifest.webmanifest`);
+  check(manifest.ok && manifest.headers.get('content-type') === 'application/manifest+json'
+        && (await manifest.json()).display === 'standalone', 'the PWA manifest is served as a manifest');
+  const icon = await fetch(`${base}/src/icons/icon-192.png`);
+  check(icon.ok && icon.headers.get('content-type') === 'image/png', 'the launcher icon is served as PNG');
+  const worker = await fetch(`${base}/sw.js`);
+  const hasWebBuild = ['engine.mjs', 'engine.wasm', 'legal', 'notices']
+    .every((file) => fs.existsSync(path.join(root, 'web/vendor', file)));
+  check(worker.status === (hasWebBuild ? 200 : 503)
+        && worker.headers.get('content-type').startsWith('text/javascript')
+        && !(await worker.text()).includes('__PWA_REVISION__'),
+    hasWebBuild ? 'the offline worker has a built asset revision' : 'without a web build the worker reports unavailable');
+
   // A missing asset must say "missing", not "wrong type" -- the browser's MIME sentence is what
   // sent the diagnosis into the wrong server.
   const gone = await fetch(`${base}/src/nothing-here.js`);
@@ -101,6 +119,7 @@ try {
   check(log.includes('404 /src/nothing-here.js'), 'every miss is written to the log');
 } finally {
   server.kill();
+  fs.rmSync(configDir, { recursive: true, force: true });
 }
 
 console.log(failures.length ? `\n❌ ${failures.length} failed` : '\n✅ server checks passed');

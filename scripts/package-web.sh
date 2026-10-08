@@ -17,6 +17,7 @@ cd "$(dirname "$0")/.."
 # built, and an archive must not go out naming components it does not carry, or without notices it
 # owes (docs/PLAN_WEB_PARITY.md W4).
 node scripts/stage-web-legal.mjs
+node scripts/stage-web-pwa.mjs
 
 OUT="dist/protracktor-web-$(date +%Y%m%d-%H%M%S).tar.gz"
 mkdir -p dist
@@ -29,6 +30,7 @@ mkdir -p "$STAGE/protracktor-web/scripts"
 # size the first time it happened, which is exactly how it was noticed.
 tar -cf - --exclude='*.tar.gz' --exclude='node_modules' web | tar -xf - -C "$STAGE/protracktor-web/"
 cp scripts/serve-web.mjs "$STAGE/protracktor-web/scripts/"
+cp scripts/stage-web-pwa.mjs scripts/web-service-worker.js "$STAGE/protracktor-web/scripts/"
 cp docs/WEB_SERVER.md "$STAGE/protracktor-web/README.md"
 
 # A `.mjs` is a module, not a program: running it needs `node` in front, and without this it fails

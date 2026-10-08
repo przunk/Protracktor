@@ -45,6 +45,7 @@ fi
 
 # --- 3. notices and policy ---------------------------------------------------------------------------
 node scripts/stage-web-legal.mjs
+node scripts/stage-web-pwa.mjs
 
 # --- 4. the site ---------------------------------------------------------------------------------------
 SITE="$(mktemp -d)"
@@ -55,6 +56,7 @@ trap cleanup EXIT
 mkdir -p "$SITE/src" "$SITE/lib" "$SITE/vendor"
 cp -r web/src/. "$SITE/src/"
 cp -r web/lib/. "$SITE/lib/"
+cp web/sw.js "$SITE/"
 cp web/vendor/engine.mjs web/vendor/engine.wasm "$SITE/vendor/"
 cp -r web/vendor/notices web/vendor/legal "$SITE/vendor/"
 cp LICENSE "$SITE/"
@@ -68,6 +70,10 @@ cat > "$SITE/index.html" <<HTML
 <html lang="en">
 <meta charset="utf-8">
 <title>Protracktor</title>
+<link rel="manifest" href="src/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="src/icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="src/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#180523">
 <meta http-equiv="refresh" content="0; url=src/">
 <link rel="canonical" href="src/">
 <p><a href="src/">Protracktor — the web player</a></p>
