@@ -54,6 +54,34 @@ Data safety answers beyond naming GitHub as its host.
 The script refuses uncommitted changes and an engine older than its code, because the page's
 **Source code** link names the commit it was built from.
 
+## Installing the web player (PWA)
+
+The player declares a web app manifest, standalone display mode, 192/512 px launcher icons,
+a maskable icon, an Apple Touch Icon and a tab favicon. The icons use the Android launcher's
+geometry; regenerate only the web assets with:
+
+```
+java -Djava.awt.headless=true scripts/GenerateLauncherIcons.java --web-only
+```
+
+Install through the browser's installation menu, or Add to Home Screen on iOS. Installation
+and offline startup require HTTPS, except on localhost. A plain HTTP LAN address does not qualify.
+The manifest and worker paths work both at `/` and below GitHub Pages' `/Protracktor/` prefix.
+
+After the first successful service-worker installation, the interface, decoder engine and bundled
+notices can start offline. Saved playlists and downloaded catalogue indexes remain in IndexedDB.
+Remote music and catalogue downloads still need a connection; pairing needs its running server.
+
+Every shipped application file contributes to the worker's content hash. Updates install all
+files before becoming eligible to activate, and wait until all player tabs/windows are closed
+so an update cannot replace a playing tab's engine. Reopen the player to use the new version.
+Only this installation's old application caches are removed; music and other apps are unaffected.
+
+`package-web.sh` and `publish-web-pages.sh` generate `web/sw.js`; the local server generates it
+from the current files when requested. For manual static hosting, run
+`node scripts/stage-web-pwa.mjs` after staging the engine and legal files, and copy `sw.js` alongside
+`src/`, `lib/` and `vendor/`. `node scripts/check-pwa.mjs` checks the manifest paths and worker policy.
+
 ## server.json
 
 ```json

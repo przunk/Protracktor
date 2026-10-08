@@ -37,6 +37,10 @@
 <!-- No pinch to zoom: a player laid out as an app, not a document to magnify. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Protracktor</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<meta name="theme-color" content="#180523">
 <style>
   :root {
     color-scheme: dark;
@@ -1235,6 +1239,7 @@
 
 </div>
 <script src="../lib/qrcode.js"></script>
+<script type="module" src="./pwa.js"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
