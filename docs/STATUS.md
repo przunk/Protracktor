@@ -5,6 +5,27 @@ songdb, the downloads grouped. versionCode is the commit count, schema version 1
 
 ## What works
 
+### Web PWA — 2026-10-08, awaiting the owner's device check
+
+Prepared on `fix/web-pwa`, not merged or published. The web player now declares its manifest,
+standalone display mode, Android-derived launcher and maskable icons, an Apple Touch Icon and a
+favicon. The system bar follows the selected light/dark theme. A service worker caches the player,
+WASM engine and bundled notices for offline startup; remote music and pairing still need a network.
+Content hashes version the cache, and updates wait for all player windows to close.
+
+Verified with the page, server, icon and PWA policy checks. Chrome reported no manifest or
+installability errors at both the root URL and a simulated `/Protracktor/` GitHub Pages deployment.
+With its network disabled, both deployments reloaded the player, compiled the cached 3,221,869-byte
+engine and loaded the AudioWorklet. The maskable icon is opaque and its entire mark fits inside
+the safe circle. Installation and appearance on physical Android/iOS devices remain unverified.
+
+The checkout lacks native dependency sources, so `package-web.sh` cannot restage their licences
+here. Packaging passed in an isolated copy using the exact notices from `origin/gh-pages`, whose
+engine and component-table SHA-256 hashes match this checkout. No native sources were fabricated
+and no public deployment was changed. Usage and icon regeneration are in `docs/WEB_SERVER.md`.
+
+### Existing application status
+
 A usable player, as far as anything can be called that without a device saying so.
 
 - **Formats**: tracker modules through libopenmpt (MOD, XM, S3M, IT and dozens more), Atari ST
