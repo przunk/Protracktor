@@ -4,7 +4,10 @@ Branch: `fix/learned-track-titles`, stacked on `feature/saved-places` (`cb79b1b`
 On 2026-10-11 the owner requested that C100 belong to B43 itself, while C101 remain separate.
 The reordered stack is B43+C100 (`3cde2ec`) → B42 (`cb79b1b`) → C101 (`4b26bdb`).
 The former C100 branch is retired; original tips remain under `refs/archive/20261011/`.
-Status: host verified; release APK ready, phone trial pending. No merge, push or publication.
+Status: host verified; owner phone acceptance and local merge into `develop`, 2026-10-11.
+The owner accepted the combined trial overall; individual checklist cases were not reported.
+No push or publication. Historical handoff notes follow;
+see [current status](STATUS.md#owner-acceptance-and-merge--2026-10-11).
 
 ## Feedback → analysis → agreed design
 

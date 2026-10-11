@@ -16,7 +16,7 @@ Requested by a tester and relayed by the owner on 2026-10-06: add Android Auto s
 The car-facing browsing and playback scope, requirements and implementation remain to be
 discussed. This entry records the request; it does not approve implementation.
 
-## B43. A track's listened status — selected for an experiment, 2026-10-07
+## B43. A track's listened status — accepted and merged, 2026-10-11
 
 Raised by the owner on 2026-10-05: consider a persistent indication that a track has been
 listened to, so it is easier to distinguish explored music from tracks still to try.
@@ -33,17 +33,17 @@ playlist-view-only, qualification is file-level within one occurrence,
 and clearing cancels that occurrence's eligibility. On 2026-10-07 the owner selected implementation as a trial of
 the user request, explicitly allowing rejection if it proves unhelpful. Technical correctness
 and user-perceived usefulness are separate acceptance criteria. Implementation is host-verified on
-`feature/played-before` (schema 22); no phone/usefulness result is claimed. A retain/revise/abandon
-decision follows actual phone feedback. Ending the
-trial must preserve user data, including on phones upgraded to its schema.
+`feature/played-before` (schema 22), subsequently combined with B42 (schema 23).
+On 2026-10-11 the owner confirmed the combined trial works and approved merging: retain the feature.
+This is overall acceptance, not a claim that every checklist case was reported individually.
 
 Follow-up user feedback relayed on 2026-10-11 (C100) revises the original strict threshold:
 five active seconds **or natural completion**, so short tracks can qualify. The owner reported
-acceptable use so far on 2026-10-08 but explicitly withheld acceptance. B42/B43 remain unmerged;
+acceptable use so far on 2026-10-08 but explicitly withheld acceptance at that time;
 the correction belongs to `feature/played-before`, as requested by the owner on 2026-10-11,
-and does not imply acceptance of either experiment.
+the later combined acceptance covers B43/C100, B42 and C101. All are now on local `develop`.
 
-## B42. Saved places / Save for later — selected, 2026-10-07
+## B42. Saved places / Save for later — accepted and merged, 2026-10-11
 
 Raised by the owner on 2026-10-05: bookmark an artist's folder and provide a list of saved
 artists/folders to return to later, without adding every track to a playlist. This is one idea,
@@ -60,8 +60,9 @@ wishlist, backlog or open questions when this entry was added.
 [Task plan](PLAN_SAVED_PLACES.md): user flow, route identity, persistence, unavailable locations,
 implementation stages and test criteria. Selected on 2026-10-07 for implementation on
 `feature/saved-places`, explicitly based on the unmerged B43 candidate for a combined APK trial.
-Schema 23 is reserved; the two features remain separately reviewable and neither is approved for merge.
-Implementation and full host verification are complete; the combined phone trial remains pending.
+Schema 23 implements the bookmarks; the two features remain separately reviewable.
+Implementation and full host verification are complete. On 2026-10-11 the owner accepted the
+combined phone trial and approved merging; B42 is now on local `develop` with B43/C100 and C101.
 See [the local PR/handoff](PR_B42_SAVED_PLACES.md) for evidence and the trial checklist.
 
 ## B41. A "Music sources" screen crediting every archive -- **noted 2026-10-01, the owner: "ok"; BUILT and merged 2026-10-02; checked on the phone by the owner**

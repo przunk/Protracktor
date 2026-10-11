@@ -1,7 +1,10 @@
 # B43 — Played before
 
-Status: host-verified experimental candidate on `feature/played-before`; phone trial pending, 2026-10-07.
+Status: retained after owner phone acceptance; merged into `develop` with C100, 2026-10-11.
 Recorded: 2026-10-07. Original wishlist entry: 2026-10-05.
+
+The owner accepted the combined B43/B42/C100/C101 trial and authorised merging on 2026-10-11.
+The original experimental criteria below remain the decision history, not a pending merge gate.
 
 ## User feedback and purpose
 

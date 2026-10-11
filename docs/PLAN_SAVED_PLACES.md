@@ -1,7 +1,10 @@
 # B42 — Save for later / Saved places
 
-Status: implemented and host verified on `feature/saved-places`; combined phone trial pending, 2026-10-07.
+Status: owner phone acceptance and merge into `develop`, 2026-10-11.
 Recorded: 2026-10-07. Original wishlist entry: 2026-10-05.
+
+The owner accepted the combined B43/B42/C100/C101 trial and authorised merging on 2026-10-11.
+The implementation and trial records below preserve the original plan and evidence.
 
 ## User feedback and purpose
 

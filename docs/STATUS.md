@@ -1,8 +1,23 @@
 # Status
 
-Updated: 2026-10-11 — version 1.0.0, schema version 23 on the stacked trial branches. versionCode is the commit count.
+Updated: 2026-10-11 — version 1.0.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Owner acceptance and merge — 2026-10-11
+
+The owner reported that the combined changes work and authorised merging. B43 with C100,
+B42 and C101 were integrated into local `develop` in that order by fast-forward, ending at
+`77dea5b` before this documentation update. This retains both features and accepts the fixes.
+The confirmation is an overall phone-test result, not an itemised claim that every checklist
+case, device or language was tested. Earlier pending-trial notes below are historical.
+
+Verification: the merged tracked tree outside `docs/` is identical to `cbb6f3e`, the source of
+the supplied 1123 APK that passed 749 tests and lint. No application edits, additional test run
+or APK build were needed for the fast-forwards. The owner explicitly requested no APK build.
+VersionName, schema and `master` are unchanged; no push, tag, AAB or publication.
+The local `origin/develop` reference still has two commits absent here (`44ff9ff`, `ad42749`,
+Web/PWA PR #3); no fetch or remote integration was performed in this merge.
 
 **Current combined trial APK (C100 + C101 + B42/B43):**
 `dist/protracktor-release-1.0.0-1123-cbb6f3e-20261011-174025.apk`, **1.0.0 (1123)**,
@@ -10,8 +25,8 @@ clean source `cbb6f3e`, built in 195 s; 11,745,002 bytes. SHA-256:
 `fd138fe8185f710985de8b0a325352f69db945ad0a37ad2f21d9be890c473cb2`.
 Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs. APK v2 signature verified with the
 same test certificate as 1120; schema 23 unchanged. Full gate: 749 tests and lint passed.
-Phone behaviour remains unverified; no merge, push, tag, AAB or publication. The handoff commit
-changes documentation only. [Evidence and test checklist](PR_C101_LEARNED_TRACK_TITLES.md).
+Owner phone acceptance and local merge are recorded above; no push, tag, AAB or publication.
+The handoff commit changes documentation only. [Evidence and test checklist](PR_C101_LEARNED_TRACK_TITLES.md).
 
 **Branch organisation, owner decision 2026-10-11:** C100 is part of B43 on
 `feature/played-before` (`3cde2ec`). `feature/saved-places` (`cb79b1b`) is rebased on it;
@@ -23,16 +38,17 @@ Git comparison confirms the combined source tree outside `docs/` is identical to
 Only commit order and documentation changed; no new test run or APK build was performed for
 this reorganisation. The existing 1123 APK remains the combined trial candidate. Standalone B43
 with C100 was not separately rebuilt/tested and must not replace an installed schema-23 trial.
-`develop` and `master` are unchanged; acceptance and merge approval remain pending.
+At reorganisation time `develop` and `master` were unchanged; acceptance was still pending.
+The later owner acceptance and local merge are recorded above.
 
 ## User trial feedback — 2026-10-11
 
 On 2026-10-08 the owner reported satisfactory use so far, explicitly withholding acceptance.
-B42/B43 remain experiments, without merge approval. The following reports were relayed as user
+B42/B43 were still experiments without merge approval at that point. The following reports were relayed as user
 feedback on 2026-10-11; the exact installed build and example file were not supplied (the latest
 handed-over candidate was 1120). No reporter identity or closed-test membership is inferred.
 
-### C100. Tracks shorter than five seconds never receive the listened marker — host verified, phone pending
+### ~~C100. Tracks shorter than five seconds never receive the listened marker~~ — accepted and merged, 2026-10-11
 
 Reproduction: play a previously unqualified three-second track through its end, then inspect its
 Browse/Random marker. Observed: no mark; five seconds of playback does mark a longer track.
@@ -44,9 +60,10 @@ B42 is stacked above B43. C100 changes no schema. On the original combined
 B42/B43 trial at `0f70540`, the forced full gate passed in 270 s: **741 tests**, zero failures/errors/skips,
 lint without errors and all companion checks. The old rule failed four new tests; an isolated
 seek-guard mutation failed its intended test. [Evidence and phone checklist](PR_C100_SHORT_TRACK_LISTENED.md).
-Phone behaviour is unverified. The combined 1123 release above includes the separately authorised C101.
+The owner subsequently accepted the combined trial and authorised the merge (see above).
+The combined 1123 release above includes the separately authorised C101.
 
-### C101. Random/Browse retain filenames while History shows decoded titles — host verified, phone pending
+### ~~C101. Random/Browse retain filenames while History shows decoded titles~~ — accepted and merged, 2026-10-11
 
 The user reports inconsistent names and asks whether improving cached entries would disturb
 ordering. `adoptTitleFrom` returns a decoded title to History and updates playlist entries only;
@@ -61,11 +78,13 @@ with C100 inherited from `feature/played-before`, without schema changes.
 One batched History read supplies markers and titles; only rendered copies change, never catalogue
 sort fields or the Random record. Two UI tests failed before wiring and passed afterwards.
 The forced full gate passed in **309 s: 749 tests**, zero failures/errors/skips, lint without
-errors and all companion checks. Combined release 1123 is ready; phone behaviour is unverified.
+errors and all companion checks. The owner subsequently accepted the combined trial and authorised the merge.
 See [the handoff](PR_C101_LEARNED_TRACK_TITLES.md) and
 [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
-## B42 Saved places — implemented, host verified, awaiting combined phone trial, 2026-10-07
+## B42 Saved places — accepted and merged, 2026-10-11
+
+The dated implementation and handoff records below precede the acceptance recorded above.
 
 **Follow-up feedback, 2026-10-07 — host verified, phone trial pending:** the owner requested snackbar Undo after
 bookmark removal in Saved places and reported unequal controls. A host layout test reproduced

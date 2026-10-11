@@ -1,8 +1,10 @@
 # B43 — Played before (experimental local PR handoff)
 
 Branch: `feature/played-before`, from `develop` at `00abd8f`.
-Status: host-verified candidate with release APK; phone trial pending; no GitHub PR opened,
-push or merge performed.
+Status: owner phone acceptance and local merge into `develop`, 2026-10-11, including C100.
+The owner accepted the combined B43/B42/C100/C101 trial overall; no itemised checklist result
+is inferred. No GitHub PR opened, push or publication. Historical handoff notes follow;
+see [current status](STATUS.md#owner-acceptance-and-merge--2026-10-11).
 
 ## Feedback → analysis → implementation
 

@@ -3,9 +3,11 @@
 Branch: `feature/played-before` (B43), at the owner's request on 2026-10-11.
 C100 corrects that feature, so it belongs with it; C101 remains a separate branch.
 Originally implemented as `0f70540` above the combined B42/B43 trial, then moved below B42.
-The former `fix/short-track-listened` branch is superseded. No merge, push or publication.
+The former `fix/short-track-listened` branch is superseded. No push or publication.
 B43 alone uses schema 22; the combined trial uses 23. C100 changes neither schema.
-Status: host verified on the original combined stack; phone trial pending.
+Status: host verified; owner phone acceptance and local merge with B43 into `develop`, 2026-10-11.
+The owner accepted the combined trial overall; individual checklist cases were not reported.
+Historical verification notes follow; see [current status](STATUS.md#owner-acceptance-and-merge--2026-10-11).
 
 ## Feedback → analysis → correction
 

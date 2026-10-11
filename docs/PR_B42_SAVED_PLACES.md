@@ -1,8 +1,10 @@
 # B42 — Saved places (local PR handoff)
 
-Branch: `feature/saved-places`, explicitly stacked on `feature/played-before` at `54a933a`.
-Status: implemented, host verified and release APK prepared; awaiting phone trial.
-No GitHub PR, push, merge or publication.
+Branch: `feature/saved-places`, originally stacked on B43 at `54a933a`, then rebased on B43+C100.
+Status: owner phone acceptance and local merge into `develop`, 2026-10-11.
+The owner accepted the combined B43/B42/C100/C101 trial overall; no itemised checklist result
+is inferred. No GitHub PR, push or publication. Historical handoff notes follow;
+see [current status](STATUS.md#owner-acceptance-and-merge--2026-10-11).
 
 ## Feedback → analysis → implementation
 
