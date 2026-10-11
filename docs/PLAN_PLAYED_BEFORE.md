@@ -42,7 +42,8 @@ schema cleanup is a separate, tested migration. Merge and publication still requ
 
 ## Confirmed requirements
 
-- Five seconds of actual playback is enough to mark a track as listened to. No 30-second threshold.
+- Five seconds of actual playback or natural completion is enough to mark a track as listened to.
+  The completion alternative was requested through user feedback on 2026-10-11 (C100).
 - The indicator must be genuinely discreet. A small non-interactive icon or another subtle
   treatment is possible; do not add a prominent badge or extra button to every row.
 - Do not skip, suppress, rank down or filter previously played tracks in Random. Its selection,
@@ -96,7 +97,9 @@ qualified set is empty. Keep playlists, favourites, bookmarks and the Random que
 
 1. **Outside the playlist:** hidden in playlist views, visible in Browse, search and Random
    regardless of playlist membership.
-2. **Short tracks:** five seconds is required; an earlier natural end does not qualify.
+2. **Short tracks:** the original five-second-only rule was superseded by user feedback on
+   2026-10-11: a naturally completed short track also qualifies. A skip, failed start, empty audio
+   or seek to the end is not evidence of completion listening.
 3. **Accumulation and identity:** cumulative active time within one playback occurrence
    (pause/resume keeps it; moving to a different track resets it), a file-level mark using existing
    track identity, no per-subsong marks and no cross-source hash deduplication.

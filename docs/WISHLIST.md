@@ -29,13 +29,19 @@ an explicit rule without losing the existing History behaviour.
 
 [Task plan](PLAN_PLAYED_BEFORE.md): requirements, current-code evidence, migration/clear semantics,
 implementation stages and test criteria. The owner confirmed the remaining rules: hiding is
-playlist-view-only, the threshold is strict, qualification is file-level within one occurrence,
+playlist-view-only, qualification is file-level within one occurrence,
 and clearing cancels that occurrence's eligibility. On 2026-10-07 the owner selected implementation as a trial of
 the user request, explicitly allowing rejection if it proves unhelpful. Technical correctness
 and user-perceived usefulness are separate acceptance criteria. Implementation is host-verified on
 `feature/played-before` (schema 22); no phone/usefulness result is claimed. A retain/revise/abandon
 decision follows actual phone feedback. Ending the
 trial must preserve user data, including on phones upgraded to its schema.
+
+Follow-up user feedback relayed on 2026-10-11 (C100) revises the original strict threshold:
+five active seconds **or natural completion**, so short tracks can qualify. The owner reported
+acceptable use so far on 2026-10-08 but explicitly withheld acceptance. B42/B43 remain unmerged;
+the correction belongs to `feature/played-before`, as requested by the owner on 2026-10-11,
+and does not imply acceptance of either experiment.
 
 ## B42. Saved places / Save for later — noted 2026-10-05; planned for selection, 2026-10-07
 

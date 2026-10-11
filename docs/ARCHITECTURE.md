@@ -580,14 +580,20 @@ in the same statement, and it lives in `SchemaSql` where a test can reach it.
 
 On `feature/played-before`, schema 22 adds `play_history.listened`. The one-time migration marks
 legacy rows as qualified; their duration cannot be reconstructed. New plays retain the existing
-History-recording timing and only qualify after five active seconds. The existing upsert preserves
+History-recording timing and qualify after five active seconds or a natural completion (C100,
+user feedback of 2026-10-11). The existing upsert preserves
 qualification; qualification itself changes neither recency nor count. Playback from History still
 does not reorder the list. A repeated file does not acquire an extra History count merely because
 the experimental timer restarts.
 
 `ListeningSession` measures advancing decoder position bounded by monotonic elapsed time, with
 explicit boundaries for pause, seek, subsong changes, new playback and clearing. It never uses an
-absolute seek position as evidence of listening. `HistoryWrites` serializes record, qualify and
+absolute seek position as evidence of listening. Completion requires positive audio progress and
+an occurrence without seeking; engine completion or the known tune duration qualifies, but the
+unknown-length fallback timeout does not. The end is sampled before any automatic subsong/queue
+advance or repeat restart. Clear still invalidates the occurrence, and qualification remains
+one-shot. A seek keeps earned active time but disables the completion shortcut until a new
+occurrence. `HistoryWrites` serializes record, qualify and
 clear commands; generation tokens reject old queued work, and a running old write finishes before
 the queued clear removes it. A failed clear is reported rather than presented as success.
 

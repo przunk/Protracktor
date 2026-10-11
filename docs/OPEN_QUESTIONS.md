@@ -5,6 +5,23 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ---
 
+## Q12 — Learned titles in Random and Browse
+
+**Presentation approved by the owner, 2026-10-11 (C101).** History uses a decoded title;
+Random and online Browse often retain a filename. The owner asks about improving cached rows
+and the effect on ordering. Download/cache presence alone does not establish the embedded title.
+
+Options: retain catalogue labels everywhere outside History; show learned titles without changing
+order; or replace catalogue sort titles and reorder as metadata arrives. Recommend the second:
+prefer a nonblank title learned during normal decoding, keep filename/path available, preserve
+source catalogue order and Random chronology. Do not open every cached decoder just to label a
+list. Blank metadata falls back to the source name. Persistence and invalidation across restarts,
+cache eviction and History clearing need an explicit design before implementation; borrowing
+History blindly would couple naming to Clear History. The owner approved the second option as a
+separate correction, with learned titles obtained during playback and no eager cache scan.
+
+---
+
 ## Q1 — Navigation model (R7)
 
 **Decided 2026-08-31.** The choice was delegated with one requirement fixed: a player bar

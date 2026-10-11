@@ -714,7 +714,9 @@ class PlaybackController private constructor(private val context: Context) {
                 val snapshot = _state.value
                 val known = snapshot.durationSeconds.takeIf { it > 0.0 }
                     ?: snapshot.fallbackLengthSeconds.toDouble()
-                if (known > 0.0 && position >= known) handleTrackEnded()
+                if (known > 0.0 && position >= known) {
+                    handleTrackEnded(confirmedEnd = snapshot.durationSeconds > 0.0)
+                }
             }
         }
     }
@@ -2524,7 +2526,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun seekTo(seconds: Double) {
         val open = track ?: return
         sampleListening()
-        listening.baseline(open.positionSeconds(), playing = false)
+        listening.seeking(open.positionSeconds())
         val generation = ++seekGeneration
         _state.update { it.copy(positionSeconds = seconds, seekingTo = seconds, seekSlow = false) }
         scope.launch {
@@ -2743,7 +2745,9 @@ class PlaybackController private constructor(private val context: Context) {
 
     // --- internals ----------------------------------------------------------------------------
 
-    private fun handleTrackEnded() {
+    private fun handleTrackEnded(confirmedEnd: Boolean = true) {
+        // The unknown-length timeout is not evidence that a short tune was heard through.
+        sampleListening(completed = confirmedEnd)
         // A file with more tunes in it runs on into the next one, but only in "play all". Off, a
         // 256-subsong file behaves like any other track and the playlist keeps moving, which is
         // why off is the default. The rule itself, including what repeat-one means here, is in
@@ -3252,10 +3256,14 @@ class PlaybackController private constructor(private val context: Context) {
         stopPlayback()
     }
 
-    private fun sampleListening() {
+    private fun sampleListening(completed: Boolean = false) {
         val open = track ?: return
         val now = _state.value
-        listening.sample(open.positionSeconds(), now.playing && now.seekingTo == null && !open.isFinished())
+        listening.sample(
+            open.positionSeconds(),
+            now.playing && now.seekingTo == null && !open.isFinished(),
+            completed = completed && now.playing && now.seekingTo == null,
+        )
             ?.let(historyWrites::qualify)
     }
 

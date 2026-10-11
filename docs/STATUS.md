@@ -1,8 +1,40 @@
 # Status
 
-Updated: 2026-10-07 — version 1.0.0, schema version 22 on the B43 branch. versionCode is the commit count.
+Updated: 2026-10-11 — version 1.0.0, schema version 22 on the B43 branch. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## User trial feedback — 2026-10-11
+
+On 2026-10-08 the owner reported satisfactory use so far, explicitly withholding acceptance.
+B42/B43 remain experiments, without merge approval. The following reports were relayed as user
+feedback on 2026-10-11; the exact installed build and example file were not supplied (the latest
+handed-over candidate was 1120). No reporter identity or closed-test membership is inferred.
+
+### C100. Tracks shorter than five seconds never receive the listened marker — host verified, phone pending
+
+Reproduction: play a previously unqualified three-second track through its end, then inspect its
+Browse/Random marker. Observed: no mark; five seconds of playback does mark a longer track.
+Requested: five active seconds **or natural completion**. This revises B43's original strict
+threshold; it is not a regression from an earlier completion rule. `ListeningSession.sample`
+previously checked accumulated time without a completion input. At the owner's request on
+2026-10-11, C100 belongs directly to `feature/played-before`; C101 remains a separate correction.
+B42 is stacked above B43, not included in this branch. No schema change. On the original combined
+B42/B43 trial at `0f70540`, the forced full gate passed in 270 s: **741 tests**, zero failures/errors/skips,
+lint without errors and all companion checks. The old rule failed four new tests; an isolated
+seek-guard mutation failed its intended test. [Evidence and phone checklist](PR_C100_SHORT_TRACK_LISTENED.md).
+Phone behaviour is unverified. A combined release handoff follows the separately authorised C101.
+
+### C101. Random/Browse retain filenames while History shows decoded titles — separately authorised
+
+The user reports inconsistent names and asks whether improving cached entries would disturb
+ordering. `adoptTitleFrom` returns a decoded title to History and updates playlist entries only;
+Random's record and Browse catalogue rows retain their source labels. `CatalogueStore.tracks`
+orders by catalogue title, so overwriting that stored field would change later Browse ordering.
+Recommended: a display-only learned title, filename/path still available, unchanged catalogue sort
+key and Random order. Downloading into cache alone does not extract decoder metadata. The owner
+approved this presentation as a separate correction on 2026-10-11. No naming behaviour is changed
+in C100; see [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
 ## User discovery feedback — B43 selected as an experiment, 2026-10-07
 

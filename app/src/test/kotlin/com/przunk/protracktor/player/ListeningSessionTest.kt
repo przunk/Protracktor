@@ -20,6 +20,96 @@ class ListeningSessionTest {
         assertNull(session.sample(9.0, true))
     }
 
+    @Test fun `three second natural completion qualifies exactly once`() {
+        session.begin("short", 7, 0.0, true)
+        time = 3000
+        assertEquals(ListeningSession.Qualified("short", 7), session.sample(3.0, false, completed = true))
+        assertNull(session.sample(3.0, false, completed = true))
+    }
+
+    @Test fun `completion between polls still qualifies a very short track`() {
+        session.begin("short", 0, 0.0, true)
+        time = 200
+        assertEquals("short", session.sample(0.08, false, completed = true)?.trackId)
+    }
+
+    @Test fun `end handler qualifies after the final stopped poll without needing another tick`() {
+        session.begin("short", 0, 0.0, true)
+        time = 3000
+        assertNull(session.sample(3.0, false))
+        assertEquals("short", session.sample(3.0, false, completed = true)?.trackId)
+    }
+
+    @Test fun `known duration completion qualifies even when the decoder still plays`() {
+        session.begin("short", 0, 0.0, true)
+        time = 3000
+        assertNull(session.sample(3.0, true))
+        assertEquals("short", session.sample(3.0, true, completed = true)?.trackId)
+    }
+
+    @Test fun `short playback interrupted by pause or skip does not qualify`() {
+        session.begin("short", 0, 0.0, true)
+        time = 3000
+        assertNull(session.sample(3.0, false))
+        session.begin("next", 0, 0.0, true)
+        time += 100
+        assertNull(session.sample(0.1, true))
+    }
+
+    @Test fun `seeking to the end cannot qualify but five real seconds still can`() {
+        session.begin("seek", 0, 0.0, true)
+        time = 1000
+        session.sample(1.0, true)
+        session.seeking(1.0)
+        time += 1000
+        session.baseline(99.0, true)
+        time += 1000
+        assertNull(session.sample(100.0, false, completed = true))
+        session.baseline(100.0, true)
+        time += 3000
+        assertEquals("seek", session.sample(103.0, true)?.trackId)
+    }
+
+    @Test fun `restart restores eligibility after a sought occurrence`() {
+        session.begin("short", 0, 0.0, true)
+        session.seeking(0.0)
+        session.begin("short", 0, 0.0, true)
+        time = 3000
+        assertEquals("short", session.sample(3.0, false, completed = true)?.trackId)
+    }
+
+    @Test fun `pause resume preserves eligibility for a short natural completion`() {
+        session.begin("short", 0, 0.0, true)
+        time = 1000
+        session.sample(1.0, false)
+        time = 60000
+        session.baseline(1.0, true)
+        time += 2000
+        assertEquals("short", session.sample(3.0, false, completed = true)?.trackId)
+    }
+
+    @Test fun `failed start or zero audio completion never qualifies`() {
+        session.begin("failed", 0, 0.0, false)
+        time = 3000
+        assertNull(session.sample(3.0, false, completed = true))
+        session.begin("empty", 0, 0.0, true)
+        time += 1000
+        assertNull(session.sample(0.0, false, completed = true))
+    }
+
+    @Test fun `clear cancels short completion until a new occurrence`() {
+        session.begin("short", 0, 0.0, true)
+        time = 1000
+        session.sample(1.0, true)
+        session.forget()
+        session.baseline(1.0, true)
+        time += 2000
+        assertNull(session.sample(3.0, false, completed = true))
+        session.begin("short", 1, 0.0, true)
+        time += 3000
+        assertEquals(ListeningSession.Qualified("short", 1), session.sample(3.0, false, completed = true))
+    }
+
     @Test fun `paused time and a seek jump earn nothing`() {
         session.begin("a", 0, 0.0, true)
         time = 2000
