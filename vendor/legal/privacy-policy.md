@@ -1,6 +1,6 @@
 # Protracktor privacy policy
 
-Effective date: 2026-09-23
+Effective date: 2026-10-01
 
 This is the publication source for Protracktor's privacy policy. Before release it must be hosted as
 an active, publicly accessible, non-geofenced HTML page. The public page and an in-app legal link
@@ -52,7 +52,8 @@ connect over HTTPS to:
 - `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
   module;
-- `hvsc.c64.org` to download the SID song-length database;
+- `deepsid.chordian.net` to download the SID song-length database of the High Voltage SID
+  Collection, from DeepSID's copy of it;
 - `raw.githubusercontent.com` to download song metadata and song lengths published by the
   audacious-uade-tools project, Modland's favourites list, and a song database used by the Amiga
   decoder;
@@ -69,9 +70,11 @@ Local playback and previously downloaded content remain usable without making th
 
 ### Sharing
 
-When the user chooses **Share file** or **Share link**, Protracktor sends the selected file or link
-to the application chosen in Android's system share sheet. This transfer happens only after that
-explicit action. The receiving application or service applies its own privacy policy. Temporary
+When the user chooses **Share the file**, **Share as audio**, **Share a link** or **Share with
+Protracktor**, Protracktor sends the selected file, an audio file it makes from the selected tune on
+the device, or a link, to the application chosen in Android's system share sheet. A *Share with
+Protracktor* link points at the public web player and carries the tune's archive address and title.
+This transfer happens only after that explicit action. The receiving application or service applies its own privacy policy. Temporary
 share copies are removed after their retention window when Protracktor next performs cleanup; the
 receiving application may keep its own copy.
 
@@ -165,7 +168,8 @@ może łączyć się przez HTTPS z:
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
 - `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;
-- `hvsc.c64.org`, aby pobrać bazę długości utworów SID;
+- `deepsid.chordian.net`, aby pobrać bazę długości utworów SID z High Voltage SID Collection,
+  z kopii tej kolekcji w serwisie DeepSID;
 - `raw.githubusercontent.com`, aby pobrać metadane i długości utworów publikowane przez projekt
   audacious-uade-tools, listę ulubionych Modlandu oraz bazę utworów używaną przez dekoder Amigi;
 - `svn.code.sf.net`, aby pobrać procedury odtwarzające Atari ST publikowane przez projekt sc68;
@@ -181,9 +185,11 @@ Lokalne odtwarzanie i wcześniej pobrane materiały działają bez wykonywania t
 
 ### Udostępnianie
 
-Po wybraniu **Udostępnij plik** lub **Udostępnij link** Protracktor przekazuje wybrany plik albo
-odnośnik aplikacji wskazanej w systemowym arkuszu udostępniania Androida. Transfer następuje tylko
-po takim działaniu użytkownika. Aplikacja lub usługa odbierająca stosuje własną politykę
+Po wybraniu **Udostępnij plik**, **Udostępnij jako audio**, **Udostępnij link** lub **Udostępnij przez
+Protracktor** Protracktor przekazuje wybrany plik, plik audio utworzony na urządzeniu z wybranego
+utworu albo odnośnik aplikacji wskazanej w systemowym arkuszu udostępniania Androida. Odnośnik
+*Udostępnij przez Protracktor* prowadzi do publicznego odtwarzacza w przeglądarce i zawiera adres
+utworu w archiwum oraz jego tytuł. Transfer następuje tylko po takim działaniu użytkownika. Aplikacja lub usługa odbierająca stosuje własną politykę
 prywatności. Tymczasowe kopie są usuwane po okresie retencji podczas kolejnego sprzątania przez
 Protracktor; odbiorca może zachować własną kopię.
 
