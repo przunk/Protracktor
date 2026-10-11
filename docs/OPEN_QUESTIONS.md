@@ -15,10 +15,12 @@ Options: retain catalogue labels everywhere outside History; show learned titles
 order; or replace catalogue sort titles and reorder as metadata arrives. Recommend the second:
 prefer a nonblank title learned during normal decoding, keep filename/path available, preserve
 source catalogue order and Random chronology. Do not open every cached decoder just to label a
-list. Blank metadata falls back to the source name. Persistence and invalidation across restarts,
-cache eviction and History clearing need an explicit design before implementation; borrowing
-History blindly would couple naming to Clear History. The owner approved the second option as a
+list. Blank metadata falls back to the source name. The owner approved the second option as a
 separate correction, with learned titles obtained during playback and no eager cache scan.
+
+The owner also explicitly approved History as the persistent source: titles survive restart and
+file-cache eviction, but Clear History removes this overlay until playback records titles again.
+No separate metadata table, migration, decoder cache scan or catalogue re-sort is needed.
 
 ---
 

@@ -209,6 +209,8 @@ internal fun PlaylistBody(
     loadingCurrent: Boolean = false,
     /** Null opts out of the status column; Random passes a set even when no tracks qualify. */
     listenedIds: Set<String>? = null,
+    /** Random keeps the source filename visible when its headline gains a decoded title. */
+    showFileName: Boolean = false,
     contentPadding: PaddingValues,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -275,6 +277,7 @@ internal fun PlaylistBody(
             TrackRow(
                 index = index,
                 track = track,
+                showFileName = showFileName,
                 playedBefore = listenedIds?.contains(track.id),
                 playing = index == currentIndex,
                 loading = loadingCurrent && index == currentIndex,
@@ -493,6 +496,7 @@ private fun TrackRow(
      * answers nothing is worse than one that is not there (`docs/PLAN_RANDOM.md`).
      */
     dragHandleModifier: Modifier?,
+    showFileName: Boolean,
 ) {
     val haptics = rememberHaptics()
     var menuOpen by remember { mutableStateOf(false) }
@@ -508,7 +512,8 @@ private fun TrackRow(
     } else {
         ""
     }
-    val subtitle = listOf(track.displayAuthor, label, tunes)
+    val fileName = track.fileNameOrTitle.takeIf { showFileName && it != track.title }.orEmpty()
+    val subtitle = listOf(track.displayAuthor, label, tunes, fileName)
         .filter { it.isNotBlank() }
         .joinToString(" · ")
 

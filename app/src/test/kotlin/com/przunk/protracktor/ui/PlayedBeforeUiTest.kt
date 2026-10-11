@@ -45,6 +45,7 @@ class PlayedBeforeUiTest {
     private val track = TrackRef("song", "A long title that must remain readable", "Modland / Artist", fileName = "song.mod")
     private val heard = mutableStateOf(setOf("song"))
     private val cached = mutableStateOf(setOf("song"))
+    private val titles = mutableStateOf(emptyMap<String, String>())
 
     @Before fun start() { activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible() }
     @After fun stop() {
@@ -58,7 +59,7 @@ class PlayedBeforeUiTest {
         activity.get().setContent {
             MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
                 val state = PlayerUiState(queue = PlayQueue(listOf(track)), listenedIds = heard.value,
-                    randomPicks = listOf(track), randomIndex = 0)
+                    randomPicks = listOf(track), randomIndex = 0, learnedTitles = titles.value)
                 when (screen) {
                     "playlist" -> PlaylistScreen(
                         state = state, listState = rememberLazyListState(),
@@ -75,7 +76,8 @@ class PlayedBeforeUiTest {
                     )
                     else -> BrowseScreen(
                         browse = BrowseState(domain = BrowseDomain.HISTORY, tracks = listOf(track),
-                            historyTotal = 1, listenedHere = heard.value, cachedHere = cached.value),
+                            historyTotal = 1, listenedHere = heard.value, cachedHere = cached.value,
+                            learnedTitles = titles.value),
                         playlistName = "Saved playlist", contentPadding = PaddingValues(),
                         onOpenDomain = {}, onPickFolder = {}, onPickFiles = {}, onOpenFolder = {},
                         onForgetFolder = {}, onScanFolder = {}, onIndexCatalogue = {},
@@ -95,6 +97,26 @@ class PlayedBeforeUiTest {
         show("playlist")
         compose.onNodeWithText(track.title).assertExists()
         compose.onNodeWithContentDescription("Played before", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test fun `random learns a title without moving the row and keeps the filename visible`() {
+        show("random")
+        val before = compose.onNodeWithText(track.title).fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle { titles.value = mapOf("song" to "Decoded title") }
+        assertEquals(before.top, compose.onNodeWithText("Decoded title").fetchSemanticsNode().boundsInRoot.top, 0.5f)
+        compose.onNodeWithText("song.mod", substring = true).assertExists()
+        compose.runOnIdle { titles.value = emptyMap() }
+        compose.onNodeWithText(track.title).assertExists()
+    }
+
+    @Test fun `browse learns a title and shows its original filename in the source path`() {
+        show("browse")
+        compose.runOnIdle { titles.value = mapOf("song" to "Decoded title") }
+        compose.onNodeWithText("Decoded title").assertExists()
+        compose.onNodeWithText("Modland / Artist/song.mod").assertExists()
+        compose.runOnIdle { titles.value = emptyMap() }
+        compose.onNodeWithText(track.title).assertExists()
+        compose.onNodeWithText(track.subtitle).assertExists()
     }
 
     @Test fun `random shows the mark even for a track that is also in the playlist`() {

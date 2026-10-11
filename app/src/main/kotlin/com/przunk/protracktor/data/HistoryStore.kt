@@ -4,6 +4,7 @@
 package com.przunk.protracktor.data
 
 import android.content.Context
+import com.przunk.protracktor.player.HistoryPresentation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -103,15 +104,23 @@ class HistoryStore(context: Context) {
         )
     }
 
-    suspend fun listenedAmong(ids: Set<String>): Set<String> = withContext(Dispatchers.IO) {
-        buildSet {
+    suspend fun listenedAmong(ids: Set<String>): Set<String> =
+        presentationAmong(ids).filterValues { it.listened }.keys
+
+    suspend fun presentationAmong(ids: Set<String>): Map<String, HistoryPresentation> = withContext(Dispatchers.IO) {
+        buildMap {
             // Stay below SQLite's bind limit even for a large Browse folder or Random record.
             for (batch in ids.chunked(500)) {
                 val slots = batch.joinToString(",") { "?" }
                 helper.readableDatabase.rawQuery(
-                    "SELECT track_id FROM play_history WHERE listened = 1 AND track_id IN ($slots)",
+                    "SELECT track_id, title, file_name, listened FROM play_history WHERE track_id IN ($slots)",
                     batch.toTypedArray(),
-                ).use { rows -> while (rows.moveToNext()) add(rows.getString(0)) }
+                ).use { rows ->
+                    while (rows.moveToNext()) {
+                        val title = rows.getString(1).trim().takeUnless { it == rows.getString(2) }.orEmpty()
+                        put(rows.getString(0), HistoryPresentation(title, rows.getInt(3) != 0))
+                    }
+                }
             }
         }
     }

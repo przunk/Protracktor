@@ -205,6 +205,8 @@ data class BrowseState(
     val aheadFetching: Set<String> = emptySet(),
     /** Rows of the open folder already on the phone: a mark each, whoever fetched them (A55, D5). */
     val cachedHere: Set<String> = emptySet(),
+    /** UI projection from History, not a change to the catalogue rows or their sort key. */
+    val learnedTitles: Map<String, String> = emptyMap(),
     /** Qualified History entries among Browse rows and the Random record, never playlist decoration. */
     val listenedHere: Set<String> = emptySet(),
 ) {

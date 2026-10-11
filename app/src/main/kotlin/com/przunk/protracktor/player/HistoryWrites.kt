@@ -33,7 +33,10 @@ internal class HistoryWrites(
         }
     }
 
-    fun record(track: TrackRef, ticket: Long) = enqueue(ticket) { record(track) }
+    fun record(track: TrackRef, ticket: Long) = enqueue(ticket) {
+        record(track)
+        changes.value = Revision(changes.value.number + 1, changes.value.clearing)
+    }
 
     fun qualify(result: ListeningSession.Qualified) = enqueue(result.historyGeneration) {
         qualify(result.trackId)

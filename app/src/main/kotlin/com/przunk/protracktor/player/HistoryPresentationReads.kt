@@ -14,21 +14,21 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-/** Reads only the shown lists, not all History; stale/cancelled reads never restore cleared marks. */
-internal class PlayedStatusReads(
+/** Reads only shown IDs; stale reads cannot restore cleared marks or learned titles. */
+internal class HistoryPresentationReads(
     scope: CoroutineScope,
     ids: Flow<Set<String>>,
     revision: StateFlow<HistoryWrites.Revision>,
-    query: suspend (Set<String>) -> Set<String>,
-    show: (Set<String>) -> Unit,
+    query: suspend (Set<String>) -> Map<String, HistoryPresentation>,
+    show: (Map<String, HistoryPresentation>) -> Unit,
     failed: (Throwable) -> Unit,
 ) {
     init {
         scope.launch {
-            var shown = emptySet<String>()
+            var shown = emptyMap<String, HistoryPresentation>()
             combine(ids.distinctUntilChanged(), revision) { wanted, version -> wanted to version }
                 .collectLatest { (wanted, version) ->
-                    shown = if (version.clearing) emptySet() else shown.intersect(wanted)
+                    shown = if (version.clearing) emptyMap() else shown.filterKeys { it in wanted }
                     show(shown)
                     if (version.clearing || wanted.isEmpty()) return@collectLatest
                     try {

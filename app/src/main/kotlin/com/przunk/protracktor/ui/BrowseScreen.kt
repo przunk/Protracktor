@@ -1350,9 +1350,11 @@ private fun Selectable(
                         modifier = Modifier.clickable { onOpenSubfolder(sub.path) },
                     )
                 }
-                itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, track ->
+                itemsIndexed(browse.tracks, key = { _, track -> track.id }) { index, source ->
+                    val track = com.przunk.protracktor.player.LearnedTitles.display(source, browse.learnedTitles)
                     BrowseTrackRow(
                         track = track,
+                        showFileName = browse.learnedTitles[track.id]?.isNotBlank() == true,
                         index = index,
                         ticked = track.id in selected,
                         selecting = selecting,
@@ -1479,6 +1481,7 @@ private val ROW_HEIGHT = 72.dp
 @Composable
 private fun BrowseTrackRow(
     track: TrackRef,
+    showFileName: Boolean,
     index: Int,
     ticked: Boolean,
     selecting: Boolean,
@@ -1506,7 +1509,8 @@ private fun BrowseTrackRow(
 
     ListItem(
         headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = track.subtitle.takeIf { it.isNotBlank() }?.let { where ->
+        supportingContent = (if (showFileName) com.przunk.protracktor.player.LearnedTitles.sourceLine(track)
+            else track.subtitle).takeIf { it.isNotBlank() }?.let { where ->
             // The full source rather than just the author: in a search result the question is
             // "which one is this", and two tunes with one name are told apart by where they live.
             { Text(where, maxLines = 1, overflow = TextOverflow.Ellipsis) }

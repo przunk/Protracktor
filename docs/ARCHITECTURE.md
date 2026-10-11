@@ -597,11 +597,20 @@ occurrence. `HistoryWrites` serializes record, qualify and
 clear commands; generation tokens reject old queued work, and a running old write finishes before
 the queued clear removes it. A failed clear is reported rather than presented as success.
 
-`PlayedStatusReads` queries only IDs in the current Browse list and Random record, in batches off
+`HistoryPresentationReads` queries only IDs in the current Browse list and Random record, in batches off
 the main thread. Qualification/clear revisions refresh the results; cancelled or stale reads cannot
 restore cleared marks. Status is held separately from saved Browse snapshots and projected into
 the UI, so returning to an old navigation snapshot cannot restore an obsolete mark. The playlist
 view never opts into row decoration. Random drawing, queue rules and prefetch are unchanged.
+
+C101 (2026-10-11) extends that same read with titles already learned during playback and stored
+in History. Record completion now invalidates the presentation too, before listened qualification.
+Random/Browse render copied references with a nonblank learned title and original filename; their
+source lists, catalogue sort keys, IDs and indices stay unchanged. Browse adds the filename to
+its displayed source line only, never to `TrackRef.subtitle`: that field also supplies the fallback
+author. Random includes the original filename in its secondary label. The owner explicitly chose
+History's lifetime: restart/cache eviction retain names; Clear History removes the overlay.
+No new table, cache decoding, schema migration or History recency change is involved.
 
 The tiny history glyph is informational, with a localised accessibility description and explanation
 in track details. Following the owner's second visual trial request (2026-10-07), it occupies a

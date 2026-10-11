@@ -12,6 +12,18 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryWritesTest {
+    @Test fun `record invalidates presentation after the write without waiting for qualification`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val writes = HistoryWrites(backgroundScope, record = { gate.await() },
+            qualify = {}, erase = {}, failed = { throw AssertionError(it) })
+        writes.record(TrackRef("a", "Title"), writes.generation)
+        runCurrent()
+        assertEquals(0L, writes.revision.value.number)
+        gate.complete(Unit)
+        runCurrent()
+        assertEquals(HistoryWrites.Revision(1), writes.revision.value)
+    }
+
     @Test fun `clear waits for active write rejects queued old work and allows new plays`() = runTest {
         val release = CompletableDeferred<Unit>()
         val rows = mutableSetOf<String>()
@@ -42,6 +54,6 @@ class HistoryWritesTest {
         writes.qualify(ListeningSession.Qualified("a", 0))
         runCurrent()
         assertEquals(listOf("record:a", "qualify:a"), events)
-        assertEquals(1L, writes.revision.value.number)
+        assertEquals(2L, writes.revision.value.number)
     }
 }

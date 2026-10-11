@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.BrowseState
+import com.przunk.protracktor.player.LearnedTitles
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.Platforms
 import com.przunk.protracktor.player.RandomScope
@@ -83,8 +85,12 @@ fun RandomScreen(
             return@Column
         }
 
+        val shownPicks = remember(state.randomPicks, state.learnedTitles) {
+            state.randomPicks.map { LearnedTitles.display(it, state.learnedTitles) }
+        }
         PlaylistBody(
-            tracks = state.randomPicks,
+            tracks = shownPicks,
+            showFileName = true,
             listenedIds = state.listenedIds,
             listState = listState,
             currentIndex = state.randomIndex.takeIf { it >= 0 },

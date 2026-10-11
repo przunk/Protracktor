@@ -8,6 +8,7 @@ import com.przunk.protracktor.data.SavedPlaylist
 data class PlayerUiState(
     /** Read model for Browse/Random only; not part of saved Browse navigation snapshots. */
     val listenedIds: Set<String> = emptySet(),
+    val learnedTitles: Map<String, String> = emptyMap(),
     val queue: PlayQueue = PlayQueue(tracks = emptyList()),
     val playing: Boolean = false,
     val metadata: Map<String, String> = emptyMap(),

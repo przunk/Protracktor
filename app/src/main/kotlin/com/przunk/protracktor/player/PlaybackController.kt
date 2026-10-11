@@ -583,16 +583,21 @@ class PlaybackController private constructor(private val context: Context) {
         // why this is the cheapest moment to do it.
         scope.launch(Dispatchers.IO) { runCatching { remoteFiles.enforceBudget() } }
 
-        PlayedStatusReads(
+        HistoryPresentationReads(
             scope = scope,
             ids = combine(
                 _browse.map { it.tracks }.distinctUntilChanged().map { it.mapTo(mutableSetOf()) { row -> row.id } },
                 _state.map { it.randomPicks }.distinctUntilChanged().map { it.mapTo(mutableSetOf()) { row -> row.id } },
             ) { browseIds, randomIds -> browseIds + randomIds },
             revision = historyWrites.revision,
-            query = history::listenedAmong,
-            show = { ids -> _state.update { it.copy(listenedIds = ids) } },
-            failed = { android.util.Log.w("Protracktor", "Played status read failed", it) },
+            query = history::presentationAmong,
+            show = { rows ->
+                _state.update { it.copy(
+                    listenedIds = rows.filterValues { row -> row.listened }.keys,
+                    learnedTitles = rows.mapValues { row -> row.value.title }.filterValues { title -> title.isNotBlank() },
+                ) }
+            },
+            failed = { android.util.Log.w("Protracktor", "History presentation read failed", it) },
         )
 
         // **An opened Modland folder fetches its tracks ahead** (A55). One place decides, from the

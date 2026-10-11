@@ -25,7 +25,7 @@ lint without errors and all companion checks. The old rule failed four new tests
 seek-guard mutation failed its intended test. [Evidence and phone checklist](PR_C100_SHORT_TRACK_LISTENED.md).
 Phone behaviour is unverified. A combined release handoff follows the separately authorised C101.
 
-### C101. Random/Browse retain filenames while History shows decoded titles — separately authorised
+### C101. Random/Browse retain filenames while History shows decoded titles — host verified, phone pending
 
 The user reports inconsistent names and asks whether improving cached entries would disturb
 ordering. `adoptTitleFrom` returns a decoded title to History and updates playlist entries only;
@@ -33,8 +33,15 @@ Random's record and Browse catalogue rows retain their source labels. `Catalogue
 orders by catalogue title, so overwriting that stored field would change later Browse ordering.
 Recommended: a display-only learned title, filename/path still available, unchanged catalogue sort
 key and Random order. Downloading into cache alone does not extract decoder metadata. The owner
-approved this presentation as a separate correction on 2026-10-11. No naming behaviour is changed
-in C100; see [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
+approved this presentation as a separate correction on 2026-10-11, and explicitly approved using
+History as the source: restart and file-cache eviction retain names, Clear History removes the
+overlay. Implementation is on `fix/learned-track-titles`, from C100 `0f70540`, without schema changes.
+One batched History read supplies markers and titles; only rendered copies change, never catalogue
+sort fields or the Random record. Two UI tests failed before wiring and passed afterwards.
+The forced full gate passed in **309 s: 749 tests**, zero failures/errors/skips, lint without
+errors and all companion checks. Combined release handoff is pending; phone behaviour is unverified.
+See [the handoff](PR_C101_LEARNED_TRACK_TITLES.md) and
+[Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
 ## B42 Saved places — implemented, host verified, awaiting combined phone trial, 2026-10-07
 

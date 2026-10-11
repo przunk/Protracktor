@@ -102,8 +102,8 @@ fun ProtracktorApp(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val savedPlaces by viewModel.savedPlacesState.collectAsStateWithLifecycle()
     val storedBrowse by viewModel.browse.collectAsStateWithLifecycle()
-    val browse = remember(storedBrowse, state.listenedIds) {
-        storedBrowse.copy(listenedHere = state.listenedIds)
+    val browse = remember(storedBrowse, state.listenedIds, state.learnedTitles) {
+        storedBrowse.copy(listenedHere = state.listenedIds, learnedTitles = state.learnedTitles)
     }
     var showNowPlaying by remember { mutableStateOf(false) }
 

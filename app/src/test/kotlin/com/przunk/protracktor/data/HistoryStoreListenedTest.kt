@@ -4,6 +4,7 @@
 package com.przunk.protracktor.data
 
 import android.app.Application
+import com.przunk.protracktor.player.HistoryPresentation
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -47,5 +48,25 @@ class HistoryStoreListenedTest {
         store.qualify(id)
         assertEquals(setOf(id), store.listenedAmong((1..1200).map { "missing$it" }.toSet() + id))
         assertEquals(emptySet<String>(), store.listenedAmong(emptySet()))
+        assertEquals(mapOf(id to HistoryPresentation("Track", true)),
+            store.presentationAmong((1..1200).map { "missing$it" }.toSet() + id))
+        assertEquals(emptyMap<String, HistoryPresentation>(), store.presentationAmong(emptySet()))
+    }
+
+    @Test fun `learned titles persist before qualification but clear with History`() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val store = HistoryStore(context)
+        store.clear()
+        store.record("a", "Decoded", "Source", "a.mod", "", 0)
+        store.record("fallback", "fallback.mod", "Source", "fallback.mod", "", 0)
+        store.record("blank", "  ", "Source", "blank.mod", "", 0)
+        val before = store.page(0, 10)
+        val reopened = HistoryStore(context)
+        assertEquals(mapOf("a" to HistoryPresentation("Decoded", false),
+            "fallback" to HistoryPresentation("", false), "blank" to HistoryPresentation("", false)),
+            reopened.presentationAmong(setOf("a", "fallback", "blank", "absent")))
+        assertEquals(before, reopened.page(0, 10))
+        store.clear()
+        assertTrue(reopened.presentationAmong(setOf("a", "fallback", "blank")).isEmpty())
     }
 }
