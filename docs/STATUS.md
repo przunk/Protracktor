@@ -4,6 +4,21 @@ Updated: 2026-10-11 — version 1.0.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Next release description and PWA feedback — 2026-10-11
+
+After confirming PWA installation and normal operation, the owner proposed an Android release
+and requested that its description include all addressed user feedback. Prepared
+[the full changes since 1.0.0](RELEASE_NOTES_NEXT.md) and replaced the PL/EN Play release-note
+drafts with feedback-led summaries within the repository's 500-character limit. Unimplemented
+Android Auto/F-Droid ideas and deferred refactoring are explicitly excluded from delivered work.
+Version 1.1.0 is recommended, not yet selected or written to the build. No release script, test
+suite, APK/AAB build, tag, master change or push was performed for this documentation update.
+
+The earlier web deployment was checked separately: `gh-pages` at `3b7a9ee` publishes source
+`d5dbe4a`; GitHub Actions reported success, both branches matched their remote references, and
+ten sampled public files returned HTTP 200 and matched the published tree. The owner's later
+PWA report confirms installation and normal use, not a separate offline or iOS test.
+
 ## Owner acceptance and merge — 2026-10-11
 
 The owner reported that the combined changes work and authorised merging. B43 with C100,
@@ -941,10 +956,11 @@ behaviour were preserved; correcting the notice requires the owner's separate ap
 
 ## What works
 
-### Web PWA — prepared 2026-10-08, merged 2026-10-11; device check pending
+### Web PWA — published; owner confirmed installation and normal operation, 2026-10-11
 
 Prepared on `fix/web-pwa`, merged through GitHub PR #3 and integrated locally on 2026-10-11.
-Publication is not inferred from the merge. The web player now declares its manifest,
+Deployment and the subsequent owner report are recorded at the top; the original evidence below
+predates that confirmation. The web player now declares its manifest,
 standalone display mode, Android-derived launcher and maskable icons, an Apple Touch Icon and a
 favicon. The system bar follows the selected light/dark theme. A service worker caches the player,
 WASM engine and bundled notices for offline startup; remote music and pairing still need a network.

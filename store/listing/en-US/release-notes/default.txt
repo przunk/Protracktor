@@ -1,5 +1,9 @@
-Protracktor 1.0, the first public release.
+From user feedback:
 
-New: Settings → Music sources names the archives and collections the music comes from, with a link to each, and thanks those who allowed their use.
+- Played-before marks after 5 seconds or a natural end, discreetly below row status icons.
+- Bookmark author/game folders; undo removal from Saved places.
+- Random keeps heard history after filter changes; filters refresh correctly.
+- Browse/Web disabled behind the return-choice overlay.
+- Learned titles in Browse/Random without reordering.
 
-SID song lengths now come from DeepSID's copy of the High Voltage SID Collection; the lengths themselves are unchanged.
+Also: archive request identification; web PWA installation/offline startup, iOS audio-session and playback-control layout improvements.
