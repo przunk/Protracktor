@@ -16,8 +16,19 @@ Verification: the merged tracked tree outside `docs/` is identical to `cbb6f3e`,
 the supplied 1123 APK that passed 749 tests and lint. No application edits, additional test run
 or APK build were needed for the fast-forwards. The owner explicitly requested no APK build.
 VersionName, schema and `master` are unchanged; no push, tag, AAB or publication.
-The local `origin/develop` reference still has two commits absent here (`44ff9ff`, `ad42749`,
-Web/PWA PR #3); no fetch or remote integration was performed in this merge.
+At that point two remote commits were still absent (`44ff9ff`, `ad42749`, Web/PWA PR #3).
+They were subsequently integrated at the owner's request, as recorded below.
+
+## GitHub PR #3 integrated — 2026-10-11
+
+Fetched `origin` and merged `origin/develop` at `ad42749` into local `develop`, preserving
+the accepted B43/C100, B42 and C101 stack. PR #3 adds Web/PWA installation and offline startup
+(`44ff9ff`); the merge had no conflicts. Android application sources are unchanged.
+Verified on the merged tree: PWA policy/manifest tests, page checks, all 137 icon paths,
+11 loopback server checks, the web database upgrade check, and shell syntax for the changed
+packaging, publication and test scripts. No Android test/lint rerun, APK build, web packaging,
+browser/device installation test, push or deployment was performed for this integration.
+The earlier PWA contributor evidence is retained below and is not a new test run by this agent.
 
 **Current combined trial APK (C100 + C101 + B42/B43):**
 `dist/protracktor-release-1.0.0-1123-cbb6f3e-20261011-174025.apk`, **1.0.0 (1123)**,
@@ -929,6 +940,29 @@ evidence with fake data ports, **not** a phone check. The copied cancellation bo
 behaviour were preserved; correcting the notice requires the owner's separate approval.
 
 ## What works
+
+### Web PWA — prepared 2026-10-08, merged 2026-10-11; device check pending
+
+Prepared on `fix/web-pwa`, merged through GitHub PR #3 and integrated locally on 2026-10-11.
+Publication is not inferred from the merge. The web player now declares its manifest,
+standalone display mode, Android-derived launcher and maskable icons, an Apple Touch Icon and a
+favicon. The system bar follows the selected light/dark theme. A service worker caches the player,
+WASM engine and bundled notices for offline startup; remote music and pairing still need a network.
+Content hashes version the cache, and updates wait for all player windows to close.
+
+Contributor verification recorded on 2026-10-08: page, server, icon and PWA policy checks passed.
+Chrome reported no manifest or
+installability errors at both the root URL and a simulated `/Protracktor/` GitHub Pages deployment.
+With its network disabled, both deployments reloaded the player, compiled the cached 3,221,869-byte
+engine and loaded the AudioWorklet. The maskable icon is opaque and its entire mark fits inside
+the safe circle. Installation and appearance on physical Android/iOS devices remain unverified.
+
+The checkout lacks native dependency sources, so `package-web.sh` cannot restage their licences
+here. Packaging passed in an isolated copy using the exact notices from `origin/gh-pages`, whose
+engine and component-table SHA-256 hashes match this checkout. No native sources were fabricated
+and no public deployment was changed. Usage and icon regeneration are in `docs/WEB_SERVER.md`.
+
+### Existing application status
 
 A usable player, as far as anything can be called that without a device saying so.
 

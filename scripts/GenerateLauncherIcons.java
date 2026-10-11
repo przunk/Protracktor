@@ -3,7 +3,7 @@
  *
  * Run from the repository root with:
  *
- *     java -Djava.awt.headless=true scripts/GenerateLauncherIcons.java [repository-root]
+ *     java -Djava.awt.headless=true scripts/GenerateLauncherIcons.java [repository-root] [--web-only]
  *
  * The adaptive icon keeps the mark as a vector. Pre-Android-8 launchers receive antialiased PNGs
  * at their native densities, including a genuinely round variant with transparent corners.
@@ -54,10 +54,12 @@ public final class GenerateLauncherIcons {
     public static void main(String[] args) throws IOException {
         // The workshop has no display server; BufferedImage rendering is intentionally headless.
         System.setProperty("java.awt.headless", "true");
-        if (args.length > 1) {
-            throw new IllegalArgumentException("Usage: java scripts/GenerateLauncherIcons.java [repository-root]");
+        boolean webOnly = args.length > 0 && args[args.length - 1].equals("--web-only");
+        int pathArgs = args.length - (webOnly ? 1 : 0);
+        if (pathArgs > 1) {
+            throw new IllegalArgumentException("Usage: java scripts/GenerateLauncherIcons.java [repository-root] [--web-only]");
         }
-        Path root = (args.length == 1 ? Path.of(args[0]) : Path.of(""))
+        Path root = (pathArgs == 1 ? Path.of(args[0]) : Path.of(""))
                 .toAbsolutePath()
                 .normalize();
         Path resources = root.resolve("app/src/main/res");
@@ -66,6 +68,16 @@ public final class GenerateLauncherIcons {
         }
 
         Logo logo = createLogo();
+        Path webIcons = root.resolve("web/src/icons");
+        Files.createDirectories(webIcons);
+        writePng(webIcons.resolve("icon-192.png"), 192, false, logo);
+        writePng(webIcons.resolve("icon-512.png"), 512, false, logo);
+        // The entire mark fits inside radius 0.4 of the canvas: safe for every maskable crop.
+        writePng(webIcons.resolve("icon-maskable-512.png"), 512, false, logo);
+        writePng(webIcons.resolve("apple-touch-icon.png"), 180, false, logo);
+        writePng(webIcons.resolve("favicon-32.png"), 32, false, logo);
+        System.out.println("Generated web icons from the Android launcher geometry");
+        if (webOnly) return;
         writeVectorResources(resources, logo);
 
         Map<String, Integer> densities = new LinkedHashMap<>();
@@ -193,7 +205,9 @@ public final class GenerateLauncherIcons {
                 int pixel = image.getRGB(x, y);
                 int rgb = pixel & 0x00FFFFFF;
                 if ((pixel >>> 24) != 0
-                        && (rgb == foregroundRgb || rgb == darkCellRgb || rgb == lightCellRgb)) {
+                        && (rgb == foregroundRgb || rgb == darkCellRgb || rgb == lightCellRgb
+                            // A favicon's narrow rails can consist entirely of antialiased pixels.
+                            || (size < 48 && rgb != (BACKGROUND.getRGB() & 0x00FFFFFF)))) {
                     markPixels++;
                 }
             }
