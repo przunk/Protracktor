@@ -4,6 +4,27 @@ Updated: 2026-10-11 — version 1.0.0, schema version 23 on the stacked trial br
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+**Current combined trial APK (C100 + C101 + B42/B43):**
+`dist/protracktor-release-1.0.0-1123-cbb6f3e-20261011-174025.apk`, **1.0.0 (1123)**,
+clean source `cbb6f3e`, built in 195 s; 11,745,002 bytes. SHA-256:
+`fd138fe8185f710985de8b0a325352f69db945ad0a37ad2f21d9be890c473cb2`.
+Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs. APK v2 signature verified with the
+same test certificate as 1120; schema 23 unchanged. Full gate: 749 tests and lint passed.
+Phone behaviour remains unverified; no merge, push, tag, AAB or publication. The handoff commit
+changes documentation only. [Evidence and test checklist](PR_C101_LEARNED_TRACK_TITLES.md).
+
+**Branch organisation, owner decision 2026-10-11:** C100 is part of B43 on
+`feature/played-before` (`3cde2ec`). `feature/saved-places` (`cb79b1b`) is rebased on it;
+`fix/learned-track-titles` remains separate above B42 (C101 code: `4b26bdb`). The former
+`fix/short-track-listened` branch is retired. Original tips are retained under
+`refs/archive/20261011/` for traceability of the APKs and verification runs.
+Git comparison confirms the combined source tree outside `docs/` is identical to the tested
+`cbb6f3e` source, and the B42+C100 tree matches the original `0f70540` outside `docs/`.
+Only commit order and documentation changed; no new test run or APK build was performed for
+this reorganisation. The existing 1123 APK remains the combined trial candidate. Standalone B43
+with C100 was not separately rebuilt/tested and must not replace an installed schema-23 trial.
+`develop` and `master` are unchanged; acceptance and merge approval remain pending.
+
 ## User trial feedback — 2026-10-11
 
 On 2026-10-08 the owner reported satisfactory use so far, explicitly withholding acceptance.
@@ -23,7 +44,7 @@ B42 is stacked above B43. C100 changes no schema. On the original combined
 B42/B43 trial at `0f70540`, the forced full gate passed in 270 s: **741 tests**, zero failures/errors/skips,
 lint without errors and all companion checks. The old rule failed four new tests; an isolated
 seek-guard mutation failed its intended test. [Evidence and phone checklist](PR_C100_SHORT_TRACK_LISTENED.md).
-Phone behaviour is unverified. A combined release handoff follows the separately authorised C101.
+Phone behaviour is unverified. The combined 1123 release above includes the separately authorised C101.
 
 ### C101. Random/Browse retain filenames while History shows decoded titles — host verified, phone pending
 
@@ -35,11 +56,12 @@ Recommended: a display-only learned title, filename/path still available, unchan
 key and Random order. Downloading into cache alone does not extract decoder metadata. The owner
 approved this presentation as a separate correction on 2026-10-11, and explicitly approved using
 History as the source: restart and file-cache eviction retain names, Clear History removes the
-overlay. Implementation is on `fix/learned-track-titles`, from C100 `0f70540`, without schema changes.
+overlay. Implementation is on `fix/learned-track-titles`, now above `feature/saved-places`
+with C100 inherited from `feature/played-before`, without schema changes.
 One batched History read supplies markers and titles; only rendered copies change, never catalogue
 sort fields or the Random record. Two UI tests failed before wiring and passed afterwards.
 The forced full gate passed in **309 s: 749 tests**, zero failures/errors/skips, lint without
-errors and all companion checks. Combined release handoff is pending; phone behaviour is unverified.
+errors and all companion checks. Combined release 1123 is ready; phone behaviour is unverified.
 See [the handoff](PR_C101_LEARNED_TRACK_TITLES.md) and
 [Q12](OPEN_QUESTIONS.md#q12--learned-titles-in-random-and-browse).
 
@@ -56,7 +78,7 @@ Two deliberate undo mutations broke four tests; the code was then restored. Two 
 previews; EN-light and PL-dark list layouts were inspected. Previous checks/APKs below do not
 verify this follow-up. Phone behaviour remains unverified.
 
-**Current APK:** `dist/protracktor-release-1.0.0-1120-3c7ae8e-20261007-224320.apk`,
+**Previous bookmark trial APK:** `dist/protracktor-release-1.0.0-1120-3c7ae8e-20261007-224320.apk`,
 **1.0.0 (1120)**, clean source `3c7ae8e`, built in 118 s; 11,742,546 bytes.
 SHA-256: `1c587ca3013d7c29e8105e127c2627db05427c291f91fafed052c0bff24d2383`.
 Minified/non-debuggable, minSdk 29/targetSdk 36, three ABIs; verified v2 test signature matches

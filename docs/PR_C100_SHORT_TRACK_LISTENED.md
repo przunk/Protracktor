@@ -45,12 +45,15 @@ eligibility guard in an isolated copy fails the intended seek regression (one of
 Production sources were not mutated during the full run. This is domain evidence, not a phone
 test. The original combined stack's forced full gate passes in **270 s: 741 tests, zero failures/errors/skips**, lint without
 errors, 581 page checks, 49 existing-WASM checks (not rebuilt), 8 SAP checks, web database upgrade,
-137 icon paths, 8 server checks and store metadata validation. All 31 unit-test tasks executed.
+137 icon paths, 8 server checks and store metadata validation. The unit-test invocation executed
+all 31 Gradle tasks; its test result was not cached.
 Command: `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
 -Pkotlin.compiler.execution.strategy=in-process`; existing JDK, project-specific temporary build
 and Gradle cache paths as in earlier trial handoffs. Logs/reproduction command:
-`dist/c100-verification/`. The owner approved C101 separately during verification; a combined
-release APK will follow that correction. No C100-only APK or phone result is claimed.
+`dist/c100-verification/`. The owner approved C101 separately during verification; the combined
+release **1.0.0 (1123)** from `cbb6f3e` is recorded in
+[the C101 handoff](PR_C101_LEARNED_TRACK_TITLES.md). Its full gate passes 749 tests and lint.
+No C100-only APK or phone result is claimed.
 
 ## Phone checklist — unverified
 

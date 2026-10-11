@@ -1,7 +1,10 @@
 # C101 — Learned titles without changing list order
 
-Branch: `fix/learned-track-titles`, stacked on C100 `0f70540`.
-Status: host verified; release handoff and phone trial pending. No merge, push or publication.
+Branch: `fix/learned-track-titles`, stacked on `feature/saved-places` (`cb79b1b`).
+On 2026-10-11 the owner requested that C100 belong to B43 itself, while C101 remain separate.
+The reordered stack is B43+C100 (`3cde2ec`) → B42 (`cb79b1b`) → C101 (`4b26bdb`).
+The former C100 branch is retired; original tips remain under `refs/archive/20261011/`.
+Status: host verified; release APK ready, phone trial pending. No merge, push or publication.
 
 ## Feedback → analysis → agreed design
 
@@ -34,11 +37,33 @@ preserved. The source filename remains visible without changing the reference's 
 
 The forced full gate passed in **309 s: 749 tests**, zero failures/errors/skips; lint without errors;
 581 page checks, 49 existing-WASM checks (not rebuilt), 8 SAP checks, web database upgrade,
-137 icon paths, 8 server checks and store metadata validation. All 31 unit-test build tasks executed.
+137 icon paths, 8 server checks and store metadata validation. The unit-test invocation executed
+all 31 Gradle tasks; its test result was not cached.
 Command: `scripts/test-protracktor.sh --really --no-daemon --max-workers=2
 -Pkotlin.compiler.execution.strategy=in-process`, with the same JDK and project-specific temporary
-build/cache paths as C100. A combined C100+C101 release APK is pending. Phone behaviour is unverified.
+build/cache paths as C100. Phone behaviour is unverified.
 B42/B43 remain experiments without acceptance or merge approval. Evidence: `dist/c101-verification/`.
+
+After reordering, Git comparison confirms all tracked files outside `docs/` are byte-identical
+to `cbb6f3e`, the tested APK source. No new tests or APK build were run for the history-only
+reorganisation. The existing artifact below retains its original source SHA and remains valid
+for the combined trial. The separate B43+C100 branch was not independently rebuilt/tested.
+
+### Combined release artifact — 2026-10-11
+
+- APK: [`protracktor-release-1.0.0-1123-cbb6f3e-20261011-174025.apk`](../dist/protracktor-release-1.0.0-1123-cbb6f3e-20261011-174025.apk).
+- Version **1.0.0 (1123)**, schema 23 unchanged, clean source `cbb6f3e`; includes C100 and the
+  existing B42/B43 trials. Built in 195 s; 11,745,002 bytes.
+- SHA-256: `fd138fe8185f710985de8b0a325352f69db945ad0a37ad2f21d9be890c473cb2`.
+- Minified/non-debuggable release; minSdk 29/targetSdk 36; arm64-v8a, armeabi-v7a and x86_64.
+- APK Signature Scheme v2 verified; test certificate SHA-256
+  `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, matching 1120.
+- Command: `scripts/build-release.sh --no-daemon --max-workers=2
+  -Pkotlin.compiler.execution.strategy=in-process`, existing JDK, temporary project Gradle cache,
+  existing project build output at `/home/andrzej/.protracktor/build` to reuse native outputs.
+  Release log is retained with the test evidence. The subsequent handoff commit changes docs only.
+
+Install as an update without clearing data. No merge, push, tag, AAB or publication was performed.
 
 ## Phone checklist
 
