@@ -10,6 +10,21 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B48. Add the playing track from the notification — user feedback recorded 2026-10-13; to discuss
+
+An app user requested a heart action in the player notification to add the playing track directly
+to a playlist, relayed by the owner after testing on 2026-10-13. The owner asked how the action
+should behave when the track is already present. The destination playlist is not yet selected.
+
+Provisional recommendation: an outlined heart adds a missing track; a filled heart indicates
+membership in the destination playlist. A repeat press must not add a duplicate or remove the
+track unexpectedly; explain that it is already present. A destructive favourite toggle is an
+alternative for discussion, not the selected behaviour. Define the action's label and feedback
+when the app is in the background, playlist switching, persistence and track identity before coding.
+See [Q16](OPEN_QUESTIONS.md#q16--notification-heart-destination-and-existing-membership).
+This is a feature request, not a defect or an implementation authorization. The owner wants to
+discuss existing B6 stereo/mono/headphone processing first.
+
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
 
 The owner requested control from Bluetooth devices, including Next, Previous, Play/Pause and Stop.

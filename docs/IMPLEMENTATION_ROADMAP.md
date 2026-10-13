@@ -14,6 +14,7 @@ device acceptance before merging. Documentation checks do not establish device b
 
 | ID | Remaining work | State |
 | --- | --- | --- |
+| B48 | Heart action in the player notification to add the playing track to a playlist | Real user request after testing, relayed 2026-10-13. Destination and existing-membership behaviour are open (Q16); add-only is a provisional recommendation. Discuss B6 first; no implementation scheduled. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Owner request, 2026-10-13. MediaSession callbacks already exist; verify receiver-button behaviour and address demonstrated gaps. |
 | B46 | Recent queries offered when entering the search field | Real user request; discuss three entries versus a longer scrollable history, retention and reuse. Q15. |
 | B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
@@ -113,8 +114,8 @@ do not plan SAP, SID, AHX/HVL, ZXTune or UADE integration again merely from an o
 
 - **Q6:** restoration policy for formats requiring re-rendering from the beginning.
 - **Q9:** whether to isolate decoders/engine in a separate Android process.
-- **Q13–Q15:** queue/navigation, stereo/headphone controls and recent-search retention; covered
-  by B45, B6 and B46 rather than separate implementation duplicates.
+- **Q13–Q16:** queue/navigation, stereo/headphone controls, recent-search retention and notification
+  heart semantics; covered by B45, B6, B46 and B48 rather than separate implementation duplicates.
 - **F-Droid:** maintainer suggestion retained for discussion; no distribution prepared.
 - **Google Play:** additional real closed testing required before another production-access
   application. Owner-controlled upload/publication is separate from a prepared 1.1.0 artifact.

@@ -4,6 +4,15 @@ Updated: 2026-10-13 — version 1.1.1, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Notification heart request — recorded 2026-10-13; discussion pending
+
+The owner relayed post-test user feedback requesting direct playlist addition from the player
+notification. Recorded as B48, with destination and existing-membership semantics in Q16 and the
+[feedback index](TESTING.md#feedback-record). Add-only with membership indication is an agent
+recommendation, not an owner decision. B6 stereo/mono/headphone discussion comes first.
+Documentation only: no code change, implementation schedule, test/lint run, APK or release.
+Reporter/build/device details and Play closed-test participation were not supplied or inferred.
+
 ## Bluetooth output recovery — C102, owner-accepted and merged, 2026-10-13
 
 Work originated on `fix/bluetooth-output-recovery`, stacked on C103 at `b134b3e`.

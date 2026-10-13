@@ -5,6 +5,29 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ---
 
+## Q16 — Notification heart: destination and existing membership
+
+**Open, real user feedback relayed by the owner, 2026-10-13; wishlist B48.** Add the playing track
+to a playlist directly from the player notification. The owner left existing-membership behaviour
+for discussion and wants to discuss B6 audio mixing first. No implementation is selected.
+
+- Add-only: outlined heart adds; filled heart confirms membership. A repeat press gives an
+  already-present explanation, without duplication or deletion. Provisional recommendation:
+  notification interaction should not unexpectedly remove saved music.
+- Toggle membership: filled heart removes. Familiar for a dedicated favourites collection, but
+  potentially destructive for a playlist; destination, feedback and recovery need agreement.
+
+Settle whether the destination is the selected saved playlist, a dedicated favourites playlist
+or a user-configured target. Browse/Random's playback queue is not automatically that destination.
+Define membership using the existing file-identity rules rather than title text; decide subsong
+semantics explicitly. Existing add-to-playlist code ignores duplicates, but notification handling
+must also bind the intended track and playlist safely when either changes during the action.
+Also settle durable saving versus unsaved playlist edits, available action labels, background/lock
+screen feedback, failure handling and the no-current-track case. No new favourites data model,
+notification layout or persistence policy is approved by this proposal.
+
+---
+
 ## Q15 — Recent searches: presentation and retention
 
 **Open, real user feedback relayed by the owner, 2026-10-13; wishlist B46.** Focusing the search
