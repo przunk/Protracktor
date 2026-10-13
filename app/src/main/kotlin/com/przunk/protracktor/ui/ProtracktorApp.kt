@@ -102,6 +102,7 @@ fun ProtracktorApp(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val savedPlaces by viewModel.savedPlacesState.collectAsStateWithLifecycle()
     val storedBrowse by viewModel.browse.collectAsStateWithLifecycle()
+    val recentQueries by viewModel.recentSearches.collectAsStateWithLifecycle()
     val browse = remember(storedBrowse, state.listenedIds, state.learnedTitles) {
         storedBrowse.copy(listenedHere = state.listenedIds, learnedTitles = state.learnedTitles)
     }
@@ -472,6 +473,8 @@ fun ProtracktorApp(
                         onTogglePlatform = viewModel::toggleSearchPlatform,
                         onToggleCatalogue = viewModel::toggleSearchCatalogue,
                         onSearch = viewModel::runSearch,
+                        recentQueries = recentQueries,
+                        onSearchSuggestion = viewModel::searchFor,
                         // Playing from Browse never adds anything and never touches the playlist: whatever
                         // is on screen becomes the queue for as long as you are looking at it.
                         onClearHistory = viewModel::clearHistory,

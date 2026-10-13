@@ -114,6 +114,18 @@ omits extras. Loading/unrestored/missing destinations and stale or overlapping p
 pending legacy commands are disabled and pending custom commands withheld. A text Toast plus the
 app notice provides completion/failure feedback. Host evidence does not establish lock-screen UI.
 
+**B46 recent searches, 2026-10-13, on the approved stacked task branch:** `RecentSearches` owns
+trimming, case-insensitive deduplication, 20-entry retention and prefix filtering before the
+three-suggestion limit. `RecentSearchHistory` publishes an immutable StateFlow after writing its
+ordered JSON preferences. This state is separate from playback History and Browse snapshots;
+malformed stored values are ignored without an automatic rewrite. No database migration is needed.
+
+`BrowseWorkflow.runSearch` records explicit submissions at the common entry point. `searchFor`
+updates the query and submits once in the existing scope. `SearchQueryField` filters locally while
+typing, displays labelled suggestion actions while focused and dismisses them on submission.
+Search button, IME and suggestion clicks share the existing workflow; typing does not issue searches.
+Keyboard/layout behaviour on a phone remains unverified by host Compose tests.
+
 Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
 a separately launched sibling, not a prerequisite for the overview. Random filters do not use
 those cached Browse counters as answers: `rememberRandomFilterState`, composed outside the sheet,

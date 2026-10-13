@@ -10,26 +10,30 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B48. Add the playing track from the notification — user feedback; implementation selected 2026-10-13
+## B48. Add the playing track from the notification — implemented on task branch; phone acceptance pending
 
 An app user requested a heart action in the player notification to add the playing track directly
 to a playlist, relayed by the owner after testing on 2026-10-13. The owner asked how the action
-should behave when the track is already present. The destination playlist is not yet selected.
+should behave when the track is already present. The destination was initially open; the owner
+selected the active playlist in the decision below on 2026-10-13.
 
-Provisional recommendation: an outlined heart adds a missing track; a filled heart indicates
+Initial recommendation: an outlined heart adds a missing track; a filled heart indicates
 membership in the destination playlist. A repeat press must not add a duplicate or remove the
 track unexpectedly; explain that it is already present. A destructive favourite toggle is an
-alternative for discussion, not the selected behaviour. Define the action's label and feedback
-when the app is in the background, playlist switching, persistence and track identity before coding.
+alternative that was not selected. The contract below resolves destination, background feedback,
+playlist switching, persistence and track identity.
 See [Q16](OPEN_QUESTIONS.md#q16--notification-heart-destination-and-existing-membership).
 **Owner decision, 2026-10-13:** implement add-only to the currently selected playlist. Save that
 playlist's entire working contents immediately, including earlier unsaved edits: the action is
 expected to work while the app is hidden or the screen is locked. A filled heart does not remove
 anything. Use existing file identity; bind the displayed track/playlist safely against stale actions
 and report rejection or saving failure. B6 has been accepted; B48 can proceed on its own branch.
-**Implementation checkpoint:** on `feature/notification-playlist-heart`; 63 focused host checks
-passed and guard/payload/completion mutations failed 7. Full joint gate/APK and phone acceptance
-remain pending on the approved stacked B46 branch. [Plan](PLAN_NOTIFICATION_HEART.md).
+**Implementation checkpoint:** on `feature/notification-playlist-heart`; 67 focused host checks
+passed after the saved-app-language correction. Initial guard/payload/completion mutations failed
+7/63; app-selection regressions failed 2/14 before correction and feedback bypass failed 2/16.
+The final joint gate passed 829 tests with lint
+0 errors/72 warnings on the approved stacked B46 branch. APK and phone acceptance remain pending.
+[Plan](PLAN_NOTIFICATION_HEART.md).
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
 
@@ -52,18 +56,23 @@ concerns the WWW player, where the owner reports that headset buttons do not wor
 MediaSession handlers are not device evidence. Record the defect as C104 and defer web investigation
 and implementation; no new Android transport implementation is selected.
 
-## B46. Recent searches from the search field — user feedback recorded 2026-10-13; to discuss
+## B46. Recent searches from the search field — implemented on task branch; phone acceptance pending
 
 Real app-user request, relayed by the owner on 2026-10-13: tapping/focusing the search field
 should offer previously submitted searches for reuse. Suggested presentation: show the three
 most recent entries, either as the entire list or as a scrollable preview of a longer history.
-The list size, persistence, clearing, duplicate handling and whether an entry includes its
-search scope remain undecided. See [Q15](OPEN_QUESTIONS.md#q15--recent-searches-presentation-and-retention).
+List size, persistence, clearing, duplicate handling and scope were initially open; the Android
+contract selected below resolves the implementation scope.
+See [Q15](OPEN_QUESTIONS.md#q15--recent-searches-presentation-and-retention).
 **Owner decision, 2026-10-13:** implement on Android. Persist the 20 latest unique submitted queries,
 show the latest three when the field is empty, and while typing show at most three recent queries
 matching the prefix (`startsWith`, ignoring case). Selecting a suggestion immediately submits it
 in the current search scope. Keep queries separate from playback History. No web history or
 new clearing control is selected. Remaining implementation/phone checks stay on its task branch.
+**Implementation checkpoint, 2026-10-13:** implemented on `feature/recent-search-suggestions`,
+stacked on B48 with owner approval. 42 focused host tests passed; deliberate mutations failed
+11/42 and sources were restored. The final combined full gate passed 829 tests with lint 0 errors/72
+warnings; APK and phone acceptance remain pending.
 This is search-query history, separate from playback History and B43's listened markers.
 
 ## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss

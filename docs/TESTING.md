@@ -145,14 +145,14 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
-| 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implementation selected: add-only to selected playlist and save all its working edits immediately; not implemented at the requirements checkpoint |
+| 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implemented on task branch: add-only, immediately save all selected-playlist edits; combined host gate passed, phone acceptance pending |
 | 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, merged with owner approval at `f4c9bf1`; no individual playlist phone results supplied |
 | 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; four routing states owner-confirmed after trial handoff; owner-accepted and merged at `69c42a2`; exact build/device/error trace unknown |
 | 2026-10-13 | Owner request and follow-up observation | Android headset buttons appear to work; WWW buttons do not control playback | B47/C104; WWW investigation deferred; exact device/browser/build/buttons and mechanism not supplied |
 | 2026-10-13 | Owner request | Reconsider AMP (Amiga Music Preservation) as an archive candidate | Existing `BACKLOG.md` A7; `PLAN_CATALOGUES.md`; access exploration TODO |
 | 2026-10-13 | Real app-user feedback, relayed and discussed with the reporter by owner | Keep music playing when returning from search/author browsing to the playlist; explicit active queue proposed | `WISHLIST.md` B45; `OPEN_QUESTIONS.md` Q13; future behaviour change |
 | 2026-10-13 | Real app-user feedback, relayed by owner | Mix separated stereo channels so music is audible in both ears; possible headphone-processing mode raised | B6/Q14; three-mode Android trial accepted and merged at `f4d304c`; individual remaining device results not supplied |
-| 2026-10-13 | Real app-user feedback, relayed by owner | Offer recent queries when focusing search | B46/Q15; selected: retain 20 queries, show up to three latest prefix matches, selecting submits in current scope; not implemented at the requirements checkpoint |
+| 2026-10-13 | Real app-user feedback, relayed by owner | Offer recent queries when focusing search | B46/Q15; implemented on approved stacked branch: 20 queries, up to three prefix matches, immediate submission in current scope; combined host gate passed, phone acceptance pending |
 | 2026-10-06 | App user, relayed by owner | Random list/history and selection become inconsistent after selecting an earlier track, changing scope and pressing Next | `STATUS.md` C97 |
 | 2026-10-06 | Different app user, relayed by owner | Browse opens while the playlist is covered by the Random return-choice overlay | `STATUS.md` C98 |
 | 2026-10-06 | Owner testing | Random filters open with a slight lag; unavailable chips become active after about a second in an uncertain sequence | `STATUS.md` C99 |
@@ -168,9 +168,29 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
+## B46 recent searches — combined APK and phone retest pending
+
+Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
+[Contract and host evidence](PLAN_RECENT_SEARCHES.md). Real phone results are **not checked**.
+
+1. Submit several distinct queries, then focus an empty search field: expect the latest three.
+   Type a prefix, including different letter case: expect at most three matching queries from
+   the full retained history, including older ones outside the initial three. A substring that
+   is not a prefix must not match; typing must not start a search.
+2. Select a suggestion: it must fill the field and immediately search exactly once in the current
+   scope, without restoring an earlier scope. Suggestions/keyboard should dismiss; tap the field
+   again to reopen them. Search button and keyboard Search must still submit normally.
+3. Reuse a query with different casing/outer whitespace: retain one entry at the front. Submit
+   more than 20 queries and restart normally: only the latest 20 remain. Blank searches keep
+   their existing scope behaviour but must not add an empty suggestion. Playback History and
+   its Clear History action must not change query history.
+4. Check English/Polish, accented and long queries, larger system font, keyboard insets and
+   result-list space. Report installed build/device/Android and the actual scenario outcome.
+5. Run B48 below and the previously accepted stereo/Bluetooth scenarios on the same APK.
+
 ## B48 notification heart — combined APK and phone retest pending
 
-The task branch is `feature/notification-playlist-heart`; B46 will start from it with owner
+The task branch is `feature/notification-playlist-heart`; B46 starts from it with owner
 approval. [Contract and host evidence](PLAN_NOTIFICATION_HEART.md). Use disposable playlists
 and exported backups: pressing a heart intentionally saves ALL current edits, not only this track.
 

@@ -39,8 +39,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.ui.semantics.contentDescription
@@ -57,7 +55,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,11 +66,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -125,6 +118,8 @@ fun BrowseScreen(
     onToggleCatalogue: (String) -> Unit,
     onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
+    recentQueries: List<String>,
+    onSearchSuggestion: (String) -> Unit,
     onClearHistory: () -> Unit,
     onHistoryPage: (Int) -> Unit = {},
     playingId: String?,
@@ -304,6 +299,8 @@ fun BrowseScreen(
                 onToggleCatalogue = onToggleCatalogue,
                 onTogglePlatform = onTogglePlatform,
                 onSearch = onSearch,
+                recentQueries = recentQueries,
+                onSearchSuggestion = onSearchSuggestion,
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -980,49 +977,17 @@ private fun SearchDomain(
     onToggleCatalogue: (String) -> Unit,
     onTogglePlatform: (String) -> Unit,
     onSearch: () -> Unit,
+    recentQueries: List<String>,
+    onSearchSuggestion: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
-    // **The keyboard is up before it is asked for.** Search is the one screen nobody arrives at
-    // to look around: they came to type, and anything between arriving and typing is in the way.
-    // The field is at the top, where the keyboard does not cover it.
-    //
-    // `LaunchedEffect(Unit)` and not a token: this composable exists only while the domain is
-    // Search, so entering composition *is* entering Search. Walking back out of a folder into
-    // results does not re-enter it, so the keyboard does not spring up over a list somebody is
-    // reading.
-    val field = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(Unit) {
-        field.requestFocus()
-        keyboard?.show()
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
-        OutlinedTextField(
-            value = browse.query,
-            onValueChange = onQueryChange,
-            singleLine = true,
-            // One line, always. "Online: ASMA (Atari 8-bit), The Mod Archive" wrapped and made the
-            // field taller, so adding a third catalogue -- which shortens the text to
-            // "Modland, ASMA (Atari 8-bit) +1" -- made the whole screen jump back up. The label is
-            // a statement of scope, not a place to read catalogue names in full; the chips
-            // underneath show which are lit.
-            label = {
-                Text(scopeLabel(browse), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            trailingIcon = {
-                IconButton(onClick = onSearch) {
-                    Icon(PlayerIcons.Search, stringResource(R.string.domain_search_title))
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .focusRequester(field),
+        SearchQueryField(
+            query = browse.query, scopeLabel = scopeLabel(browse), recentQueries = recentQueries,
+            onQueryChanged = onQueryChange, onSearch = onSearch,
+            onSuggestionChosen = onSearchSuggestion,
         )
 
         SearchScopePanel(

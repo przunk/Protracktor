@@ -26,6 +26,30 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowseWorkflowTest {
+    @Test fun `typing does not submit but choosing a suggestion immediately searches the current scope once`() = runBlocking {
+        val f = Fixture(this)
+        f.localSearch()
+        f.workflow.setQuery("prefix")
+        assertTrue(f.submitted.isEmpty())
+        assertTrue(f.events.isEmpty())
+        f.workflow.searchFor("Suggestion")
+        assertEquals(listOf("Suggestion"), f.submitted)
+        drain()
+        assertEquals("Suggestion", f.browse.value.query)
+        assertEquals(SearchScope.Local, f.browse.value.searchScope)
+        assertEquals(1, f.events.count { it.startsWith("local:Suggestion:") })
+        assertFalse(f.events.any { it.startsWith("local:prefix:") })
+    }
+
+    @Test fun `ordinary explicit search records its captured query once`() = runBlocking {
+        val f = Fixture(this)
+        f.localSearch()
+        f.workflow.runSearch()
+        assertEquals(listOf("typed"), f.submitted)
+        drain()
+        assertEquals(listOf("typed"), f.submitted)
+    }
+
     private suspend fun CoroutineScope.drain() {
         while (coroutineContext.job.children.any()) coroutineContext.job.children.toList().joinAll()
     }
@@ -46,13 +70,14 @@ class BrowseWorkflowTest {
         val events = mutableListOf<String>()
         val threads = mutableListOf<Thread>()
         val liveResults = mutableListOf<ModArchive.Outcome>()
+        val submitted = mutableListOf<String>()
         var onAction: (String) -> Unit = {}
         var onRead: suspend (String) -> Unit = {}
         var onLive: (ModArchive.Outcome) -> Unit = {}
         var renderLevel: (BrowseState, String) -> BrowseState = { state, _ -> state.copy(query = "level result") }
         var rows: (String) -> List<TrackRef> = { listOf(TrackRef("result:$it", "Result", fileName = "result.mod")) }
         var live: ModArchive.Outcome = ModArchive.Outcome.Found(emptyList())
-        val workflow = BrowseWorkflow(scope, browse, LibrarySearch(this), this) {
+        val workflow = BrowseWorkflow(scope, browse, LibrarySearch(this), this, onSubmitted = { submitted += it }) {
             events += "notice"
             liveResults += it
             onLive(it)

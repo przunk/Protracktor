@@ -14,9 +14,9 @@ device acceptance before merging. Documentation checks do not establish device b
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B48 | Heart action in the player notification to add the playing track to a playlist | Selected 2026-10-13: add-only to the selected playlist; save all its current contents immediately, including unsaved edits. Own task branch, phone acceptance required. Q16. |
+| B48 | Heart action in the player notification to add the playing track to a playlist | Implemented on `feature/notification-playlist-heart`: add-only; immediately save all selected-playlist edits; use the saved app language. Final combined 829-test gate/lint passed; APK and phone acceptance pending. Q16. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
-| B46 | Recent queries offered when entering the search field | Selected 2026-10-13: remember 20 unique queries; show up to three latest case-insensitive prefix matches; selecting submits in the current scope. Android task branch. Q15. |
+| B46 | Recent queries offered when entering the search field | Implemented on the approved stacked `feature/recent-search-suggestions`: 20 queries, at most three prefix matches, immediate submission in the current scope. Final combined 829-test gate/lint passed; APK and phone acceptance pending. Q15. |
 | B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -158,9 +158,10 @@ Steps 1–3 are merged, not remaining implementation work. The owner deferred th
 Bluetooth recovery was included. The device error trace and additional phone scenarios remain
 unconfirmed; merging does not establish store release/publication or long-term behaviour.
 
-**Next selection, 2026-10-13:** implement B48 and B46 on separate stacked task branches; the owner
-approved the second branch starting from the first so one APK can test both. Merge only after
-owner acceptance. WWW media buttons/B47/C104, UADE/C96 and queue/B45 are explicitly deferred.
+**Implementation checkpoint, 2026-10-13:** B48 and B46 are implemented on separate stacked task
+branches with owner approval. Their combined forced host gate/lint passed; one release APK and
+phone acceptance remain pending. Merge only after owner acceptance. WWW media buttons/B47/C104,
+UADE/C96 and queue/B45 are explicitly deferred.
 
 ## Verification of the original inventory update
 

@@ -16,6 +16,7 @@ internal class BrowseWorkflow(
     private val browse: MutableStateFlow<BrowseState>,
     private val search: LibrarySearch,
     private val actions: Actions,
+    private val onSubmitted: (String) -> Unit = {},
     private val onLiveResult: (ModArchive.Outcome) -> Unit,
 ) {
     interface Actions {
@@ -116,6 +117,11 @@ internal class BrowseWorkflow(
 
     fun setQuery(query: String) = browse.update { it.copy(query = query) }
 
+    fun searchFor(query: String) {
+        setQuery(query)
+        runSearch()
+    }
+
     /** Ticks one catalogue inside an online scope. Only meaningful while that is the scope. */
     fun toggleSearchCatalogue(id: String) = browse.update {
         val scope = it.searchScope as? SearchScope.Online ?: return@update it
@@ -160,6 +166,7 @@ internal class BrowseWorkflow(
      */
     fun runSearch() {
         val current = browse.value
+        onSubmitted(current.query)
         val request = LibrarySearch.Request(
             current.query, current.searchScope, current.catalogues.filter { it.indexed }.map { it.id }.toSet(),
         )

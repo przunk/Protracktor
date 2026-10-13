@@ -48,8 +48,8 @@ The new checks also switch back to English; no service restart is needed to reso
 The original transport/channel labels are outside this feature's changes.
 
 **Checked:** all 67 focused checks passed after correction: 10 domain, 16 SDK 29/33 adapter/locale
-and 41 session checks, zero failures/errors/skips. The full combined gate and final APK must be
-rerun on the rebased B46 branch. The earlier 1.3.0/1154 APK from `9583569` lacks this correction
+and 41 session checks, zero failures/errors/skips. The full combined gate passed again on rebased B46;
+the final APK follows. The earlier 1.3.0/1154 APK from `9583569` lacks this correction
 and is not the final trial artifact. Actual service delivery and phone language behaviour remain
 **not checked**. Only local unpublished feature history is updated; develop/master are unchanged.
 
@@ -66,3 +66,17 @@ the final focused rerun again passed 63 with zero failures/errors/skips.
 No actual PlaybackService lifecycle, real MediaController/SystemUI delivery, lock-screen layout or
 phone persistence result is established by those host checks. Full gate and combined APK follow on
 B46's explicitly approved stacked branch. Evidence: ignored `dist/notification-search-verification/`.
+
+## Combined host verification — 2026-10-13
+
+The approved stacked B46 branch passed the final forced gate in 331 s: 829 unit
+tests in 111 suites, no failures/errors/skips, lint 0 errors/72 warnings, plus the existing web,
+native audio, resources and loopback checks. It used temporary per-class worker isolation after
+two interrupted shared-worker Compose timeout attempts; no JDK/repository settings or exclusions
+changed. [Full evidence and limits](PLAN_RECENT_SEARCHES.md). This does not establish service or
+notification behaviour on a phone; the combined clean-source release APK and owner acceptance
+remain pending. No merge or push.
+
+Bypassing only feedback's app-language wrapper subsequently failed 2/16 adapter checks (SDK 29/33).
+The production source was restored and SHA-256 compared; all 16 passed again. Final full-gate
+sources are unchanged, and these checks still do not run the actual service/SystemUI lifecycle.
