@@ -4,7 +4,7 @@ Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C105 latest playlist activation — implementation on task branch, 2026-10-14
+## C105 latest playlist activation — full gate passed; APK follows, 2026-10-14
 
 `fix/latest-playlist-activation` starts from develop `ad18da6`; develop remains 1.3.0/schema 23.
 The trial declares 1.3.1, without changing versionCode calculation or schema. Request generations
@@ -20,7 +20,13 @@ match their recorded SHA-256 sums. The first implementation run had one historic
 expectation failure out of 65 checks; that ownership expectation was updated without weakening
 the row-write assertions. Restored focused checks passed: 66 tests in three suites, zero
 failures/errors/skips (48 session, 10 heart, eight SDK presentation), 101 s Gradle run.
-Full tests, lint and release APK still follow.
+**Checked full gate:** forced run completed in 358 s: 859 unit tests in 115 suites, zero
+failures/errors/skips. Lint passed with zero errors/72 warnings (unchanged). PL/EN resource/store
+checks, 581 page checks, 49 WASM engine checks, eight SAP checks,
+browser database upgrade, 30 native audio checks, 140 icon paths, PWA and 11 loopback server
+checks passed. Existing JDK and temporary per-class isolation (one worker/1 GiB heap), no exclusions
+or repository build-setting changes. Evidence: ignored `dist/c105-full-gate*`.
+The minified release APK follows; no phone result is inferred from host checks.
 Phone behaviour is **not checked**; no merge/push or master/tag/store change.
 [Analysis and phone checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 

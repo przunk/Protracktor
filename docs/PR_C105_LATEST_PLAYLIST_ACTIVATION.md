@@ -64,6 +64,17 @@ SHA-256 compared. Mutation log/XML: ignored `dist/c105-ownership-mutation*`; 95 
 48 session, 10 heart and eight SDK 29/33 presentation checks. Gradle completed in 101 s;
 log/XML retained in ignored `dist/c105-focused-restored*`. Full tests/lint and APK remain pending.
 
+## Full verification checkpoint
+
+The forced project gate passed on restored implementation `6c89157` in 358 s: **859 unit tests
+in 115 suites**, zero failures/errors/skips. Lint passed with zero errors/72 warnings (unchanged);
+its XML is retained.
+All PL/EN resource/store metadata checks, 581 page checks, 49 WASM engine checks, eight SAP checks,
+browser database upgrade, 30 native audio checks, 140 icon paths, PWA and 11 real loopback server
+checks passed. Existing JDK, temporary per-class worker isolation, one worker/1 GiB heap; no test
+exclusions, new Java or repository build-setting changes. Logs/XML: ignored `dist/c105-full-gate*`.
+The APK is still pending at this checkpoint; phone behaviour is not checked.
+
 ## Phone checklist
 
 Use disposable playlists or exported backups; do not uninstall or clear application data.
