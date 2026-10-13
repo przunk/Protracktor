@@ -55,7 +55,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C105 | Overlapping playlist activations can publish an older selection while the persistence target remains newer | Implemented on `fix/latest-playlist-activation`, unmerged. Six regressions fail before correction; five mutation checks fail; restored 859-test full gate/lint passed. Release APK follows; phone acceptance pending. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md). |
+| C105 | Overlapping playlist activations can publish an older selection while the persistence target remains newer | Implemented on `fix/latest-playlist-activation`, unmerged. Six regressions fail before correction; five mutation checks fail; restored 859-test full gate/lint passed. Release 1.3.1 (1170), source `07300b1`, ready; phone acceptance pending. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md). |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |

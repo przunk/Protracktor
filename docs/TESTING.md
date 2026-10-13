@@ -173,8 +173,10 @@ The date above is the recording date, not an independently established occurrenc
 ## B48 and B46 — overall owner acceptance, 2026-10-14
 
 C105 subsequently received a separately selected activation fix on `fix/latest-playlist-activation`.
-Its code-review source must not be presented as independent user feedback. Release handoff follows
-its full gate; use the [C105 checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist) for
+Its code-review source must not be presented as independent user feedback. Full gate passed 859
+tests with lint 0 errors/72 warnings. Offered APK: **1.3.1 (1170)**, clean source `07300b1`,
+`dist/protracktor-release-1.3.1-1170-07300b1-20261014-005316.apk`; device results still pending.
+Use the [C105 checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist) for
 rapid A/B/C switching, final-playlist Save/Discard/restart and notification-heart destination checks.
 No C105 phone result or merge is established by the earlier B48/B46 acceptance below.
 

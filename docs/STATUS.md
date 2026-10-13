@@ -4,7 +4,7 @@ Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C105 latest playlist activation — full gate passed; APK follows, 2026-10-14
+## C105 latest playlist activation — release APK ready; phone acceptance pending, 2026-10-14
 
 `fix/latest-playlist-activation` starts from develop `ad18da6`; develop remains 1.3.0/schema 23.
 The trial declares 1.3.1, without changing versionCode calculation or schema. Request generations
@@ -26,11 +26,18 @@ checks, 581 page checks, 49 WASM engine checks, eight SAP checks,
 browser database upgrade, 30 native audio checks, 140 icon paths, PWA and 11 loopback server
 checks passed. Existing JDK and temporary per-class isolation (one worker/1 GiB heap), no exclusions
 or repository build-setting changes. Evidence: ignored `dist/c105-full-gate*`.
-The minified release APK follows; no phone result is inferred from host checks.
+**Checked artifact:** clean source `07300b1`, **1.3.1 (1170)**, built in 66 s:
+`dist/protracktor-release-1.3.1-1170-07300b1-20261014-005316.apk`, 11,802,642 bytes.
+SHA-256: `f7257c3125cdd6903762072ce1c6889b580da4bf6e9c7d1f94500b8625ef0aab`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and three existing ABIs checked.
+APK v2 signature verified independently; expected test certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Build/artifact evidence: ignored `dist/c105-release*` and `dist/c105-apk-*`.
+Application/native/script sources match the full-gate source `6c89157`; later handoff is docs-only.
 Phone behaviour is **not checked**; no merge/push or master/tag/store change.
 [Analysis and phone checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 
-## Session code review — 2026-10-14
+## Earlier session code review — pre-fix checkpoint, 2026-10-14
 
 [Review and evidence](review-2026-10-14.md) covers the 2026-10-13/14 session, including C103, C102,
 B6, B48 and B46. One additional pre-existing playlist activation defect is recorded as C105 below;

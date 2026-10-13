@@ -75,6 +75,19 @@ checks passed. Existing JDK, temporary per-class worker isolation, one worker/1 
 exclusions, new Java or repository build-setting changes. Logs/XML: ignored `dist/c105-full-gate*`.
 The APK is still pending at this checkpoint; phone behaviour is not checked.
 
+## Release APK handoff
+
+Clean source `07300b1`, **1.3.1 (1170)**, built in 66 s:
+`dist/protracktor-release-1.3.1-1170-07300b1-20261014-005316.apk`, 11,802,642 bytes.
+SHA-256: `f7257c3125cdd6903762072ce1c6889b580da4bf6e9c7d1f94500b8625ef0aab`.
+R8 ran; manifest is non-debuggable, minSdk 29/targetSdk 36, all three existing ABIs present.
+Independent apksigner verification confirms v2 and the expected test-certificate fingerprint
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Logs: ignored `dist/c105-release*` / `dist/c105-apk-*`. App/native/scripts sources match the passed
+full-gate commit `6c89157`; subsequent documentation does not need another APK. Schema remains 23.
+This is a test-key-signed minified sideload release, not an AAB or Play release. Owner device
+acceptance is pending; no merge, push, master/tag/store operation.
+
 ## Phone checklist
 
 Use disposable playlists or exported backups; do not uninstall or clear application data.
