@@ -24,7 +24,10 @@ Each activation publishes independently without a latest-request guard. C103 pre
 queue from being written into the other playlist, but subsequent snapshots can be refused until
 activation restores agreement. Normal Save has no rejection feedback on this path; notification
 Save reports failure. No wrong-playlist write, data loss, phone frequency or phone reproduction is
-claimed. **Open:** no fix selected or implemented. [Detailed finding R1](review-2026-10-14.md).
+claimed. **Owner selected correction, 2026-10-14:** implementation on
+`fix/latest-playlist-activation`, based on develop `ad18da6`. Before correction, all six new
+controlled-store regressions fail by assertion (47 session checks, six failures, zero errors/skips).
+No application fix or phone result at this checkpoint. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 
 ## B48 and B46 — owner accepted and merged, 2026-10-14
 

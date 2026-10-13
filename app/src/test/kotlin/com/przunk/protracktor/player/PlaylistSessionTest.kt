@@ -25,6 +25,165 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaylistSessionTest {
+    private fun activationFixture(scope: CoroutineScope) = Fixture(scope).apply {
+        lists[3] = SavedPlaylist(3, "Three")
+        rows[1] = listOf(track("one"))
+        rows[2] = listOf(track("two"))
+        rows[3] = listOf(track("three"))
+    }
+
+    @Test(timeout = 5_000)
+    fun `latest activation wins when an older track read finishes last`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val latest = CompletableDeferred<Unit>()
+        f.before = { if (it == "tracks:2") { entered.complete(Unit); gate.await() } }
+        f.onResolve = { if (f.player.value.activePlaylistId == 3L) latest.complete(Unit) }
+        f.session.switchToPlaylist(2)
+        entered.await()
+        f.session.switchToPlaylist(3)
+        latest.await()
+        gate.complete(Unit)
+        drain()
+        assertEquals(3L, f.player.value.activePlaylistId)
+        assertEquals(3L, f.session.playlistId)
+        assertEquals(listOf(track("three")), f.player.value.queue.tracks)
+        assertEquals(1, f.events.count { it == "resolve" })
+        assertEquals(3L, f.savedStates.last().activePlaylistId)
+        val edit = listOf(track("third-edit"))
+        f.player.value = f.player.value.copy(queue = PlayQueue(edit), dirty = true)
+        f.session.savePlaylist()
+        drain()
+        assertEquals(listOf(3L to edit), f.writes)
+        assertFalse(f.player.value.dirty)
+        assertEquals(listOf(track("two")), f.rows[2])
+    }
+
+    @Test(timeout = 5_000)
+    fun `latest activation wins when an older playlist-list read finishes last`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val latest = CompletableDeferred<Unit>()
+        var holdFirstList = true
+        f.before = { if (it == "lists" && holdFirstList) {
+            holdFirstList = false
+            entered.complete(Unit)
+            gate.await()
+        } }
+        f.onResolve = { if (f.player.value.activePlaylistId == 3L) latest.complete(Unit) }
+        f.session.switchToPlaylist(2)
+        entered.await()
+        f.session.switchToPlaylist(3)
+        latest.await()
+        gate.complete(Unit)
+        drain()
+        assertEquals(3L, f.player.value.activePlaylistId)
+        assertEquals(3L, f.session.playlistId)
+        assertEquals(listOf(track("three")), f.player.value.queue.tracks)
+        assertEquals(1, f.events.count { it == "resolve" })
+        assertEquals(3L, f.savedStates.last().activePlaylistId)
+    }
+
+    @Test(timeout = 5_000)
+    fun `superseded settings save cannot stop playback or begin its activation`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        var holdFirstSave = true
+        f.before = { if (it.startsWith("save:") && holdFirstSave) {
+            holdFirstSave = false
+            entered.complete(Unit)
+            gate.await()
+        } }
+        f.session.switchToPlaylist(2)
+        entered.await()
+        f.session.switchToPlaylist(3)
+        yield()
+        assertEquals(1, f.events.count { it.startsWith("save:") })
+        gate.complete(Unit)
+        drain()
+        assertFalse(f.events.contains("tracks:2"))
+        assertEquals(1, f.events.count { it == "stop" })
+        assertEquals(1, f.events.count { it == "resolve" })
+        assertEquals(3L, f.player.value.activePlaylistId)
+        assertEquals(3L, f.session.playlistId)
+        assertEquals(3L, f.savedStates.last().activePlaylistId)
+    }
+
+    @Test(timeout = 5_000)
+    fun `published playlist and persistence target remain aligned while activation loads`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        f.before = { if (it == "tracks:2") { entered.complete(Unit); gate.await() } }
+        f.session.switchToPlaylist(2)
+        entered.await()
+        assertEquals(1L, f.player.value.activePlaylistId)
+        assertEquals(1L, f.session.playlistId)
+        gate.complete(Unit)
+        drain()
+        assertEquals(2L, f.player.value.activePlaylistId)
+        assertEquals(2L, f.session.playlistId)
+    }
+
+    @Test(timeout = 5_000)
+    fun `failed activation retains an aligned source and allows its next explicit save`() = runBlocking {
+        val failures = mutableListOf<Throwable>()
+        val owner = CoroutineScope(coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, e -> failures += e })
+        try {
+            val f = activationFixture(owner)
+            owner.restore(f)
+            val failure = IllegalStateException("destination read failed")
+            f.before = { if (it == "tracks:2") throw failure }
+            f.session.switchToPlaylist(2)
+            owner.drain()
+            assertSame(failure, failures.single())
+            assertEquals(1L, f.player.value.activePlaylistId)
+            assertEquals(1L, f.session.playlistId)
+            val edit = listOf(track("source-edit"))
+            f.player.value = f.player.value.copy(queue = PlayQueue(edit), dirty = true)
+            f.session.savePlaylist()
+            owner.drain()
+            assertEquals(listOf(1L to edit), f.writes)
+            assertFalse(f.player.value.dirty)
+        } finally { owner.cancel() }
+    }
+
+    @Test(timeout = 5_000)
+    fun `superseded activation failures do not affect the latest selected playlist`() = runBlocking {
+        val failures = mutableListOf<Throwable>()
+        val owner = CoroutineScope(coroutineContext + SupervisorJob() + CoroutineExceptionHandler { _, e -> failures += e })
+        try {
+            val f = activationFixture(owner)
+            owner.restore(f)
+            val entered = CompletableDeferred<Unit>()
+            val gate = CompletableDeferred<Unit>()
+            val latest = CompletableDeferred<Unit>()
+            f.before = { if (it == "tracks:2") {
+                entered.complete(Unit)
+                gate.await()
+                error("superseded read failed")
+            } }
+            f.onResolve = { if (f.player.value.activePlaylistId == 3L) latest.complete(Unit) }
+            f.session.switchToPlaylist(2)
+            entered.await()
+            f.session.switchToPlaylist(3)
+            latest.await()
+            gate.complete(Unit)
+            owner.drain()
+            assertTrue(failures.isEmpty())
+            assertEquals(3L, f.player.value.activePlaylistId)
+            assertEquals(3L, f.session.playlistId)
+            assertEquals(listOf(track("three")), f.player.value.queue.tracks)
+        } finally { owner.cancel() }
+    }
+
     @Test fun `notification save completion follows persistence and captures earlier edits`() = runBlocking {
         val f = Fixture(this)
         restore(f)
