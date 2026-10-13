@@ -1434,7 +1434,7 @@ the report date and source category** (user/tester, owner testing or code review
 feedback remains traceable through a fix and retest. A user report is not an independently
 reproduced defect or evidence of a fix. The feedback index is in [Testing](TESTING.md#feedback-record).
 
-### C102. Connecting Bluetooth during playback reportedly needs Stop then Play for sound — current occurrence unconfirmed
+### C102. Bluetooth connection interrupts sound and stalls the in-app progress — owner-confirmed on headphones, 2026-10-13
 
 **Report recorded:** 2026-10-13. **Source:** owner observation; the owner is unsure whether
 the problem still occurs. The occurrence date, installed build, phone/Android version,
@@ -1452,6 +1452,14 @@ record the missing device/build details, selected output, playback state and pre
 action. Inspect route-change/audio-stream handling only after establishing that it still occurs;
 no stream, focus or decoder cause is diagnosed by this report. No fix, reproduction or device
 acceptance claimed. Bluetooth transport-button verification is separately tracked as B47.
+
+**Owner retest, 2026-10-13:** reproduced while connecting headphones during playback. Sound stops;
+the notification's position keeps advancing while the in-app playback bar is stuck. Moving the
+seek bar does not restore sound. Pause then Play restores normal operation. This is a current
+device observation, superseding the uncertainty about occurrence above; the installed build,
+phone/Android version and headphone model are still unspecified, and no cause is established.
+The owner also recalls possibly needing to select another track in the car, but that variant
+is not confirmed by the headphone test. No agent device reproduction or fix has been performed.
 
 ### C97. ~~Random history and selection become inconsistent after changing scope from an earlier track~~ — FIXED, owner-accepted and merged 2026-10-06
 
