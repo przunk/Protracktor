@@ -7,7 +7,7 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ## Q16 — Notification heart: destination and existing membership
 
-**Open, real user feedback relayed by the owner, 2026-10-13; wishlist B48.** Add the playing track
+**Selected trial accepted and merged on 2026-10-14; real user feedback, wishlist B48.** Add the playing track
 to a playlist directly from the player notification. The owner left existing-membership behaviour
 for discussion. After accepting B6, the owner selected B48 implementation on 2026-10-13.
 
@@ -28,15 +28,19 @@ Browse/Random's playback queue is not automatically that destination.
 Define membership using the existing file-identity rules rather than title text; decide subsong
 semantics explicitly. Existing add-to-playlist code ignores duplicates, but notification handling
 must also bind the intended track and playlist safely when either changes during the action.
-Labelled actions must represent membership and unavailable/pending states without promising a
+Action accessibility labels must represent membership and unavailable/pending states without promising a
 completed save before persistence succeeds. Background/lock-screen layout and behaviour require
 phone testing; no-current-track and stale actions must not modify another track or playlist.
+
+The owner accepted the implemented contract and overall presentation; visible heart captions were
+explicitly excluded. Individual device checklist outcomes were not separately supplied. Toggle
+membership remains an unselected alternative, not unfinished work. [Closeout](STATUS.md).
 
 ---
 
 ## Q15 — Recent searches: presentation and retention
 
-**Open, real user feedback relayed by the owner, 2026-10-13; wishlist B46.** Focusing the search
+**Selected trial accepted and merged on 2026-10-14; real user feedback, wishlist B46.** Focusing the search
 field should offer recent searches. The owner selected implementation and resolved the main
 interaction on 2026-10-13.
 

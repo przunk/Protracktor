@@ -1,10 +1,23 @@
 # Status
 
-Updated: 2026-10-14 — version 1.2.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Stable B48 save control and shared Now Playing presentation — APK ready, phone retest pending, 2026-10-14
+## B48 and B46 — owner accepted and merged, 2026-10-14
+
+The owner reported no objections and authorized both merges. B48 was merged first at `61886e7`,
+then B46 at `7111c47`. The resulting tracked tree matches the accepted stacked branch `4c0a28b`;
+app/web/scripts/Gradle sources match the offered clean-source APK `ea04525` below. No new APK or
+test/lint run was needed for tree-identical integration and documentation closeout. The recorded
+852-test gate applies to those unchanged sources, not a newly executed merged-head run.
+
+This is overall owner acceptance, not a claim that every checklist was reported individually.
+Device/Android and exact installed build were not separately supplied. Master, tags, schema and
+store state are unchanged; nothing was pushed. Earlier pending/unmerged entries below are dated
+checkpoints, superseded by this acceptance. [Remaining checks](TESTING.md).
+
+## Stable B48 save control and shared Now Playing presentation — pre-acceptance evidence, 2026-10-14
 
 The owner reported that the 1.3.0 (1158) trial removes the heart during saving and moves Next/seek
 geometry under a second tap. The owner approved retaining the heart, a bold title, the dock's

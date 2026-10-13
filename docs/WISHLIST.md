@@ -10,7 +10,11 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B48. Add the playing track from the notification — implemented on task branch; phone acceptance pending
+## B48. Add the playing track from the notification — owner accepted and merged, 2026-10-14
+
+Merged into develop at `61886e7`, followed by the accepted combined B46 trial at `7111c47`.
+The owner gave overall acceptance; individual checklist/device/build details were not separately
+reported. The dated pending checkpoints below are historical. [Closeout](STATUS.md).
 
 An app user requested a heart action in the player notification to add the playing track directly
 to a playlist, relayed by the owner after testing on 2026-10-13. The owner asked how the action
@@ -70,7 +74,11 @@ concerns the WWW player, where the owner reports that headset buttons do not wor
 MediaSession handlers are not device evidence. Record the defect as C104 and defer web investigation
 and implementation; no new Android transport implementation is selected.
 
-## B46. Recent searches from the search field — implemented on task branch; phone acceptance pending
+## B46. Recent searches from the search field — owner accepted and merged, 2026-10-14
+
+Merged into develop at `7111c47`, after B48 `61886e7`. The owner gave overall acceptance, without
+separately reporting every history/restart scenario. Dated pending checkpoints below are historical.
+The accepted sources passed the 852-test gate; no new APK was built for merging. [Closeout](STATUS.md).
 
 Real app-user request, relayed by the owner on 2026-10-13: tapping/focusing the search field
 should offer previously submitted searches for reuse. Suggested presentation: show the three

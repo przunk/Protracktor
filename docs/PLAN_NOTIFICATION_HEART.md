@@ -1,5 +1,14 @@
 # B48 — notification playlist heart
 
+## Current closeout — 2026-10-14
+
+The owner reported no objections and authorized merging. B48 entered develop at `61886e7`,
+followed by stacked B46 at `7111c47`. The merged tree matches `4c0a28b`; application sources match
+the offered `ea04525` APK. The 852-test gate and lint recorded below apply to those same sources;
+they were not rerun for tree-identical merges or documentation. Overall acceptance does not supply
+individual phone checklist results or device/Android/installed-build details. No new APK, push,
+master/tag/AAB or store changes. Pending entries below are historical checkpoints.
+
 Selected 2026-10-13 from real app-user feedback relayed by the owner. Branch
 `feature/notification-playlist-heart`, based on develop `debb00d`. B46 will use a second branch
 starting here, explicitly approved by the owner so a single APK can test both. No merge before

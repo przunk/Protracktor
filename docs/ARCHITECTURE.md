@@ -97,7 +97,7 @@ tail. Shared audio uses the separate rendering path and is intentionally unchang
 This is narrowing/downmixing, not crossfeed or Dolby processing. The owner accepted the trial;
 individual remaining device checks and long-term behaviour are not established by that acceptance.
 
-**B48 notification heart, 2026-10-13, on `feature/notification-playlist-heart`:** `PlaylistHeart`
+**B48 notification heart, merged into develop on 2026-10-14 at `61886e7`:** `PlaylistHeart`
 derives membership from the selected playlist with existing file identity, independently of the
 playing Browse/Random queue. `PlaylistHeartSave` atomically accepts a track/playlist-bound request,
 appends at most once and explicitly commits all working edits through `PlaylistSession.savePlaylist`.
@@ -126,7 +126,7 @@ the shared display summary, unchanged artwork/duration and stable transport iden
 lifecycle and callbacks remain in `PlaybackService`. The small notification P uses the single
 logo geometry, without adaptive-icon padding/background or decorative cells; tint is system-owned.
 
-**B46 recent searches, 2026-10-13, on the approved stacked task branch:** `RecentSearches` owns
+**B46 recent searches, merged into develop on 2026-10-14 at `7111c47`:** `RecentSearches` owns
 trimming, case-insensitive deduplication, 20-entry retention and prefix filtering before the
 three-suggestion limit. `RecentSearchHistory` publishes an immutable StateFlow after writing its
 ordered JSON preferences. This state is separate from playback History and Browse snapshots;

@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-13. Owner-requested inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-14. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 Completed tasks are excluded. Historical notes are reconciled where later records establish
 completion; uncertain coverage remains explicitly marked for checking.
@@ -12,11 +12,14 @@ device acceptance before merging. Documentation checks do not establish device b
 
 ## 1. Wishlist: features and ideas
 
+B48 notification heart and B46 recent searches were accepted by the owner and merged in order
+on 2026-10-14 (`61886e7`, `7111c47`), so they are no longer open inventory entries. Individual
+device checklist outcomes were not separately supplied; [remaining checks](TESTING.md) are retained.
+Dated implementation checkpoints below describe the earlier, unaccepted builds.
+
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B48 | Heart action in the player notification to add the playing track to a playlist | Implemented on `feature/notification-playlist-heart`: add-only; immediately save all selected-playlist edits. Follow-up keeps the heart present during saves, shares the dock subtitle, uses a bold title and flat P. 88 focused checks and restored 852-test gate/lint passed; 1.3.0 (1162) APK ready, phone retest pending. Q16. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
-| B46 | Recent queries offered when entering the search field | Implemented on the approved stacked `feature/recent-search-suggestions`: 20 queries, at most three prefix matches, immediate submission in current scope. Owner reports corrected search field acceptable; unchanged in B48's current trial. Remaining individual history/restart checks and merge acceptance pending. Q15. |
 | B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |

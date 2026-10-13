@@ -170,7 +170,16 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## Stable B48 notification — release APK offered for retest, 2026-10-14
+## B48 and B46 — overall owner acceptance, 2026-10-14
+
+After the latest trial handoff, the owner reported no objections and authorized both merges.
+B48 entered develop at `61886e7`, then B46 at `7111c47`. This supersedes earlier pending tracking
+entries, not their historical defect reports. Device/Android, exact installed build and individual
+checklist outcomes were not separately supplied. The lists below remain available for further
+checks; no agent-run SystemUI/phone tests are claimed. Sources match the offered APK and recorded
+852-test gate. Merging did not rebuild the APK or rerun those tests; no push/store action occurred.
+
+## Stable B48 notification — pre-acceptance APK handoff, 2026-10-14
 
 The owner's save-state report and approved presentation are recorded above. The 1.3.0 (1158)
 APK below is superseded by this follow-up. Install the replacement without uninstalling or clearing
@@ -206,7 +215,7 @@ and is also superseded. The owner subsequently reported layout/style defects; ne
 corrected trial. Record the replacement's installed build/device/Android and observed results
 before approving either branch. No merge or Play-track activity is implied.
 
-## B46 recent searches — corrected release APK ready; phone retest pending
+## B46 recent searches — owner accepted and merged; remaining device checks
 
 Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
 [Contract and host evidence](PLAN_RECENT_SEARCHES.md). The owner's original presentation feedback
@@ -230,7 +239,7 @@ and restart checks still need their own reported outcomes; source code is unchan
    result-list space. Report installed build/device/Android and the actual scenario outcome.
 5. Run B48 below and the previously accepted stereo/Bluetooth scenarios on the same APK.
 
-## B48 notification heart — corrected release APK ready; phone retest pending
+## B48 notification heart — owner accepted and merged; remaining device checks
 
 The task branch is `feature/notification-playlist-heart`; B46 starts from it with owner
 approval. [Contract and host evidence](PLAN_NOTIFICATION_HEART.md). Use disposable playlists
@@ -260,9 +269,9 @@ and exported backups: pressing a heart intentionally saves ALL current edits, no
    launcher's black background or decorative cells; system tint/font/clipping can vary by device.
    Heart labels are accessibility/controller metadata, not new visible text beside the icon.
 
-Only the owner's original presentation defects are established by this handoff's feedback.
-Correction acceptance and individual saving/search checklist results are not yet supplied;
-sideload testing does not prove Play-track activity.
+The original defects and subsequent overall correction acceptance are established by owner
+feedback. Individual saving/search checklist results were not separately supplied; overall
+acceptance and sideload testing do not prove Play-track activity.
 
 ## B6 stereo mix — owner accepted; remaining device checks
 

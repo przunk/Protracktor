@@ -1,5 +1,14 @@
 # B46 — recent search suggestions
 
+## Current closeout — 2026-10-14
+
+The owner accepted the combined trial and authorized merging. B48 entered develop first at
+`61886e7`; B46 followed at `7111c47`. The merged tree matches accepted branch `4c0a28b`, and app
+sources match the offered `ea04525` APK. The recorded 852-test gate/lint applies to unchanged
+sources; it was not rerun for integration. No new APK or push, and master/tags/store are unchanged.
+Acceptance is overall: individual search/restart/device/build outcomes were not separately supplied.
+Pending/unmerged entries below record earlier checkpoints, not current merge blockers.
+
 Selected 2026-10-13 from real app-user feedback relayed by the owner. Branch
 `feature/recent-search-suggestions`, starting from corrected B48 `d8dfb89` with explicit owner
 approval for stacking. The earlier local unpublished base `ceeaa57` was amended before handoff.
