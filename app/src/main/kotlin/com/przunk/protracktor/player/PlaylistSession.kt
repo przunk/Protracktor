@@ -6,6 +6,7 @@ package com.przunk.protracktor.player
 import com.przunk.protracktor.data.SavedPlayerState
 import com.przunk.protracktor.data.SavedPlaylist
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -166,11 +167,26 @@ internal class PlaylistSession(
     }
 
     /** Commits the edited list. The diskette button. */
-    fun savePlaylist() {
-        val request = captureWrite() ?: return
+    fun savePlaylist(onComplete: ((Boolean) -> Unit)? = null) {
+        val request = captureWrite()
+        if (request == null) {
+            onComplete?.invoke(false)
+            return
+        }
         cancelPendingTrackWrite(request.snapshot.playlistId)
         scope.launch {
-            writeTracks(request, markSaved = true)
+            if (onComplete == null) {
+                writeTracks(request, markSaved = true)
+            } else {
+                val written = try {
+                    writeTracks(request, markSaved = true)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    false
+                }
+                onComplete(written)
+            }
         }
     }
 

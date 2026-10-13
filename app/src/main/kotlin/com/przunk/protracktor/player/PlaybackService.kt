@@ -16,6 +16,7 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Build
 import android.os.IBinder
+import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import com.przunk.protracktor.MainActivity
@@ -109,6 +110,11 @@ class PlaybackService : Service() {
             override fun onSkipToNext() = controller.next()
             override fun onSkipToPrevious() = controller.previous()
             override fun onSeekTo(pos: Long) = controller.seekTo(pos / 1000.0)
+            override fun onCustomAction(action: String, extras: Bundle?) {
+                if (PlaylistHeartActions.isHeartAction(action)) {
+                    controller.savePlayingToPlaylist(PlaylistHeartActions.decode(action))
+                }
+            }
             override fun onStop() {
                 controller.pause()
                 stopForegroundAndSelf()
@@ -160,6 +166,8 @@ class PlaybackService : Service() {
         session.setPlaybackState(
             PlaybackState.Builder()
                 .setActions(actions)
+                .apply { PlaylistHeartActions.customAction(this@PlaybackService, PlaylistHeart.of(state))
+                    ?.let { addCustomAction(it) } }
                 .setState(
                     if (state.playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
                     (state.positionSeconds * 1000).toLong(),
@@ -176,6 +184,7 @@ class PlaybackService : Service() {
         // them, two tracks with the same title and subtitle would keep the first one's cover.
         fileName = state.current?.fileName.orEmpty(),
         id = state.current?.id.orEmpty(),
+        heart = PlaylistHeart.of(state),
         playing = state.playing,
         // Playing is false while a track is being fetched and opened, which is a gap of seconds on
         // a slow network -- and a gap this service must not read as "nothing is going on".
@@ -187,6 +196,8 @@ class PlaybackService : Service() {
             ACTION_PLAY_PAUSE -> controller.togglePlayPause()
             ACTION_NEXT -> controller.next()
             ACTION_PREVIOUS -> controller.previous()
+            PlaylistHeartActions.ACTION -> controller.savePlayingToPlaylist(
+                PlaylistHeartActions.decode(intent.dataString))
             ACTION_STOP -> {
                 controller.pause()
                 stopForegroundAndSelf()
@@ -214,6 +225,7 @@ class PlaybackService : Service() {
         val subtitle: String?,
         val fileName: String,
         val id: String,
+        val heart: PlaylistHeart?,
         val playing: Boolean,
         val loading: Boolean,
     )
@@ -331,6 +343,8 @@ class PlaybackService : Service() {
                     command(ACTION_NEXT),
                 ).build()
             )
+            .apply { PlaylistHeartActions.notificationAction(this@PlaybackService, content.heart)
+                ?.let { addAction(it) } }
             .addAction(
                 Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),

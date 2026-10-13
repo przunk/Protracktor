@@ -97,6 +97,23 @@ tail. Shared audio uses the separate rendering path and is intentionally unchang
 This is narrowing/downmixing, not crossfeed or Dolby processing. The owner accepted the trial;
 individual remaining device checks and long-term behaviour are not established by that acceptance.
 
+**B48 notification heart, 2026-10-13, on `feature/notification-playlist-heart`:** `PlaylistHeart`
+derives membership from the selected playlist with existing file identity, independently of the
+playing Browse/Random queue. `PlaylistHeartSave` atomically accepts a track/playlist-bound request,
+appends at most once and explicitly commits all working edits through `PlaylistSession.savePlaylist`.
+Its completion hook confirms the serialized write or reports failure without dropping the working
+addition. C103 snapshots/invalidation/dirty-completion guards remain authoritative. Playback is
+not restarted, and normal additions do not acquire this full-save exception. New notification
+labels and feedback resolve `AppLocale.wrap` on invocation: raw service/application contexts do
+not inherit the activity's saved-language wrapper.
+
+`PlaylistHeartActions` supplies both notification and session custom actions with PL/EN labels and
+outline/filled icons. Identity is encoded in the command URI itself, including PendingIntent data:
+old buttons cannot be retargeted by updated extras, and custom actions remain bound when a client
+omits extras. Loading/unrestored/missing destinations and stale or overlapping presses are rejected;
+pending legacy commands are disabled and pending custom commands withheld. A text Toast plus the
+app notice provides completion/failure feedback. Host evidence does not establish lock-screen UI.
+
 Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
 a separately launched sibling, not a prerequisite for the overview. Random filters do not use
 those cached Browse counters as answers: `rememberRandomFilterState`, composed outside the sheet,

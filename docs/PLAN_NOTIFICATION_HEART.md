@@ -37,3 +37,32 @@ The full forced test/lint gate and clean-source minified release APK follow on t
 branch. Owner checks the expanded notification/lock screen while playing and paused, playlist
 membership, restart durability, prior edit saving and unchanged playback. Installed build/device
 and scenario outcomes must be recorded only when supplied. No phone result is established yet.
+
+## App-language correction — 2026-10-13
+
+Final inspection found that service/application contexts do not receive MainActivity's language
+wrapper. Testing only a Polish resource configuration had missed the actual saved app selection.
+A regression using `AppLocale.select` failed on both SDK 29 and 33 before the correction (2/14).
+New labels and background feedback now resolve resources through `AppLocale.wrap` on invocation.
+The new checks also switch back to English; no service restart is needed to resolve new text.
+The original transport/channel labels are outside this feature's changes.
+
+**Checked:** all 67 focused checks passed after correction: 10 domain, 16 SDK 29/33 adapter/locale
+and 41 session checks, zero failures/errors/skips. The full combined gate and final APK must be
+rerun on the rebased B46 branch. The earlier 1.3.0/1154 APK from `9583569` lacks this correction
+and is not the final trial artifact. Actual service delivery and phone language behaviour remain
+**not checked**. Only local unpublished feature history is updated; develop/master are unchanged.
+
+## Host implementation checkpoint — 2026-10-13
+
+Implemented the pure acceptance/save workflow, session write completion, two platform actions,
+immutable URI payload binding and PL/EN feedback. Focused host checks passed 63 tests: 10 domain
+checks, 12 Android action checks (six each on SDK 29/33), and 41 real PlaylistSession checks.
+The latter include workflow-to-session persistence and earlier working edits. Removing stale/busy
+acceptance, URI PendingIntent identity and truthful persistence completion failed 7/63 checks
+(2 domain, 4 Android and 1 session). All three sources were restored and SHA-256 compared;
+the final focused rerun again passed 63 with zero failures/errors/skips.
+
+No actual PlaybackService lifecycle, real MediaController/SystemUI delivery, lock-screen layout or
+phone persistence result is established by those host checks. Full gate and combined APK follow on
+B46's explicitly approved stacked branch. Evidence: ignored `dist/notification-search-verification/`.

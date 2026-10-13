@@ -235,6 +235,14 @@
 
 
     <string name="notification_stop">Stop</string>
+    <string name="notification_playlist_add">Add to %1$s</string>
+    <string name="notification_playlist_member">On %1$s</string>
+    <string name="notification_playlist_saving">Saving %1$s…</string>
+    <string name="notification_playlist_added_saved">Added to %1$s. Playlist saved, including earlier edits.</string>
+    <string name="notification_playlist_already_saved">Already on %1$s. Playlist saved, including earlier edits.</string>
+    <string name="notification_playlist_stale">The track or playlist changed. Use its current heart button.</string>
+    <string name="notification_playlist_failed">Could not save %1$s. Your working edits are kept; please retry.</string>
+    <string name="notification_playlist_saving_notice">A playlist save is still in progress.</string>
     <string name="notification_channel_playback">Playback</string>
 
     <string name="a11y_seek">Seek within the track</string>

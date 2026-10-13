@@ -27,6 +27,9 @@ playlist's entire working contents immediately, including earlier unsaved edits:
 expected to work while the app is hidden or the screen is locked. A filled heart does not remove
 anything. Use existing file identity; bind the displayed track/playlist safely against stale actions
 and report rejection or saving failure. B6 has been accepted; B48 can proceed on its own branch.
+**Implementation checkpoint:** on `feature/notification-playlist-heart`; 63 focused host checks
+passed and guard/payload/completion mutations failed 7. Full joint gate/APK and phone acceptance
+remain pending on the approved stacked B46 branch. [Plan](PLAN_NOTIFICATION_HEART.md).
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
 

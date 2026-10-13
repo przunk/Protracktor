@@ -4,6 +4,28 @@ Updated: 2026-10-13 — version 1.2.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Notification heart — B48, implemented on task branch; combined gate pending, 2026-10-13
+
+`feature/notification-playlist-heart`, based on develop `debb00d`. The owner selected add-only to
+the active playlist and immediate saving of all working edits, including previous unsaved changes.
+Outline/filled membership controls are built for notification actions and session custom actions.
+URI payloads bind the displayed track and playlist; stale/missing/loading targets and overlapping
+requests are rejected. Save uses C103's serialized snapshots and confirms completion; a failed
+save retains the working addition/dirty state and gives feedback. Normal additions, playback,
+schema and WWW are unchanged. [Contract and evidence](PLAN_NOTIFICATION_HEART.md).
+
+**Language closeout:** the saved in-app locale was missing from raw service/application resources.
+Actual app-selection regression checks failed on SDK 29/33 before correction (2/14). New heart
+labels and feedback now use `AppLocale.wrap`; all 67 focused checks passed afterward (10 domain,
+16 action/locale, 41 session). Existing transport/channel labels are unchanged. Rebase B46 and
+rerun the combined gate/APK; the earlier `9583569` APK is superseded, not the final trial.
+
+**Checked:** 63 focused host tests passed (10 domain, 12 SDK 29/33 action checks, 41 session checks).
+Deliberate guard/payload/completion mutations failed 7/63; all three sources were restored and
+SHA-256 compared, then 63 passed again. Real service/SystemUI/lock-screen/phone behaviour is
+**not checked**. Full tests/lint and one combined APK will follow on the approved stacked B46
+branch. No merge, push, new APK or store release at this checkpoint.
+
 ## Stereo mix trial — B6, owner-accepted and merged, 2026-10-13
 
 Owner selected three Android Settings modes: Original, Narrow and Mono. Work originated on
