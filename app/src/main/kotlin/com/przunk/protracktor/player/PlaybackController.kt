@@ -2353,12 +2353,8 @@ class PlaybackController private constructor(private val context: Context) {
         resolveMetadataInBackground()
 
         if (added > 0 && !hadPendingEdit) {
-            // Written from the state rather than from `found`, so it stores exactly the list the
-            // screen is showing -- including whatever the de-duplication above decided.
-            scope.launch {
-                store.replaceTracks(playlistSession.playlistId, _state.value.queue.tracks)
-                playlistSession.refreshPlaylists()
-            }
+            // Bind the accepted additions to this playlist before another activation can begin.
+            playlistSession.writeTracks()
         }
 
         // Adding appends to the end, so without this nothing visibly happens -- which matters more

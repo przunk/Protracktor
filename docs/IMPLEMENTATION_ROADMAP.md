@@ -57,8 +57,8 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
 | A45 | Author jump from a playlist does not identify the author as the Random jump does | Open finding; align the heading without introducing Random-only session behaviour. |
-| Session-write risk | A delayed write can pair the newly selected playlist ID with the previous queue | Controlled host interleaving reproduced; retained during extraction. Destination contents could be replaced. |
-| Session-write risk | Save completion can mark a newer, unsaved edit clean | Controlled host interleaving reproduced; not repaired by the refactor. |
+| C103 — snapshot ownership | A delayed write can pair the newly selected playlist ID with the previous queue | Owner-selected fix implemented on `fix/playlist-write-safety`; 768 tests and lint passed. Phone check and merge pending; APK deferred until Bluetooth fix. |
+| C103 — Save completion | Save completion can mark a newer, unsaved edit clean | Same separate fix; completion compares playlist identity and saved contents. Not yet accepted on a phone or merged. |
 | Browse/navigation risk | An older catalogue, folder or search read can publish after newer navigation | Retained ordering risk; host-controlled sequences, not a phone-frequency measurement. |
 | Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Retained during extraction; separate fix required. |
 | Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Host sequence reproduced; stale bytes can subsequently enter the in-memory map. |
@@ -139,18 +139,20 @@ No literal TODO/FIXME/XXX markers were found during the 2026-10-13 inventory sea
 `app/src`, `native/engine`, `native/backends`, `scripts` and `web/src`. This does not cover vendor
 sources and is not a full code review or a claim that the implementation has no outstanding work.
 
-## Suggested next session — recommendation, not selected work
+## Selected safety work and suggested next session — 2026-10-13
 
-1. Protect playlist writes against the two recorded snapshot/save-completion races. They carry
-   a data-loss risk and can be addressed in a bounded task with failing regression tests.
-2. Verify Bluetooth switching and transport on the current installed release. If C102 still
-   reproduces, record its mechanism and fix it on its own branch with a release-APK retest.
+1. The owner selected playlist-write safety (C103). Implementation is on its own branch with
+   failing-before/passing-after regressions; full verification and phone acceptance are tracked
+   in [Status](STATUS.md). No merge yet.
+2. C102 is now owner-confirmed on headphones. Diagnose Bluetooth route handling, then implement
+   a separately selected fix and hand over a release APK for retesting, also including C103.
 3. For a subsequent user-facing feature, discuss/select B6 stereo narrowing/mono mixing before
    undertaking the larger queue-ownership change. Headphone processing remains optional.
 
-The owner requested documentation and recommendations, not implementation of this sequence.
+Only step 1 has been selected for implementation so far. The owner deferred its APK until the
+Bluetooth fix; the observation does not diagnose an audio-stream/focus/decoder cause.
 
-## Verification of this update
+## Verification of the original inventory update
 
 Documentation-only: checked consistent IDs, local file links, source/state wording and Git diff
 whitespace. No application code changed, no tests/lint or APK build run, no new phone result,

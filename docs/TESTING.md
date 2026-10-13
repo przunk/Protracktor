@@ -145,6 +145,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
+| 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, not an independent user report; phone retest pending |
 | 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; exact build/device and cause unknown; car variant unconfirmed |
 | 2026-10-13 | Owner request | Verify Bluetooth Next, Previous, Play/Pause and Stop; existing MediaSession callbacks do not establish receiver-button behaviour | `WISHLIST.md` B47; verification/improvement TODO |
 | 2026-10-13 | Owner request | Reconsider AMP (Amiga Music Preservation) as an archive candidate | Existing `BACKLOG.md` A7; `PLAN_CATALOGUES.md`; access exploration TODO |
@@ -164,6 +165,31 @@ not completed fixes or retests. Stereo mixing renews B6 rather than creating a d
 The first two 2026-10-06 defects were explicitly attributed to different users; the third came
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
+
+## C103 playlist-write safety — phone retest pending
+
+Branch: `fix/playlist-write-safety`. The owner requested the release APK only together with the
+later Bluetooth fix. No installed candidate or phone result is established by the host tests.
+Use exported backups and disposable playlists; do not clear storage or uninstall to test this.
+
+1. Create A and B with visibly different tracks. Play a track in A whose metadata is still arriving,
+   then switch to B promptly (confirm discarding edits if asked). Switch back, restart the app and
+   verify each playlist retains its own contents. Repeat while adding tracks automatically.
+2. Edit A, press Save and immediately make another edit. The newer edit must still require Save;
+   after saving again and restarting, both accepted edits must be present. During another Save,
+   change only playback position/repeat: these transport changes must not leave the playlist dirty.
+3. Try two consecutive saves with an edit between them, then switch playlists. Verify the newest
+   saved contents after restart; a completion from A must not hide an unsaved edit in B.
+4. Let metadata arrive after an edit, then use Revert. Check the stored contents remain restored,
+   including after waiting and restarting. Delete a disposable playlist while metadata is arriving;
+   verify another playlist is intact. Finally reset the only disposable playlist: it must stay empty
+   after waiting/restart, without old entries reappearing. Back up real lists before this last case.
+5. Check ordinary add/remove/reorder/Undo, Save/Revert, playlist counts, switch/create/rename/delete
+   and restore without autoplay. Existing editing and playback controls should remain unchanged.
+
+The races are forced deterministically with suspended stores on the host; manual timing may never
+hit the same interleavings. A successful ordinary phone run is useful acceptance evidence, not
+proof that every suspended interleaving or global store writer has been exercised.
 Installation channel and Play closed-test participation were not supplied for these reports;
 neither may be inferred from their existence. The offered sideload APK is not evidence of a Play
 closed-track installation or activity.

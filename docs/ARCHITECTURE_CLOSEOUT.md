@@ -71,6 +71,14 @@ expectations hidden in the refactor. Export important playlists before testing; 
 lists to deliberately reproduce the write race. Do not uninstall or clear app data to force an
 update to install.
 
+**Follow-up, 2026-10-13:** the owner selected the two playlist-write risks for C103, implemented
+separately on `fix/playlist-write-safety`. Snapshot ownership, Save completion and Revert/Delete
+lifecycle guards now have passing focused regressions and mutation evidence. Full gate passed
+768 unit tests and lint (0 errors, 68 warnings); phone verification and merge remain pending in
+[Status](STATUS.md) and the
+[C103 handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md). The other risks above remain open; this follow-up
+does not rewrite what the refactor itself preserved.
+
 ## Technical verification and candidate
 
 Technical closeout completed on 2026-10-05; phone acceptance is still pending. Scope/review record:
