@@ -2022,6 +2022,12 @@ foreground scan.
 
 ## A7. More online catalogues — planned in `docs/PLAN_CATALOGUES.md`
 
+**Renewed owner TODO, 2026-10-13: AMP (Amiga Music Preservation) archive integration?**
+Retain it under A7, without a duplicate wishlist number. The first task is to establish an
+approved index/download route; the earlier investigation found no sanctioned machine-readable
+access. The request does not authorize crawling or scraping. See the dated follow-up in
+[the catalogue plan](PLAN_CATALOGUES.md) and the [roadmap](IMPLEMENTATION_ROADMAP.md).
+
 **`docs/WISHLIST.md` B10 is this item.** It was raised as a wish a day before this was agreed and
 nobody struck it; the duplicate was spotted on 2026-09-02. This is the live one.
 

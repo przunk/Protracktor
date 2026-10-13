@@ -4,6 +4,20 @@ Updated: 2026-10-13 — version 1.1.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Implementation roadmap and Bluetooth report — recorded 2026-10-13
+
+The owner requested a saved inventory of unfinished, deferred and undecided work:
+[Implementation roadmap](IMPLEMENTATION_ROADMAP.md). It includes existing backlog/review risks
+without treating historical completed tasks as new work. AMP is a renewed A7 exploration TODO,
+not a second catalogue item; an approved access route remains the prerequisite. B47 records
+verification of Bluetooth transport callbacks that already exist, rather than claiming absent
+support. C102 records a possibly historical Bluetooth output-switching defect whose current
+reproduction and cause are unknown. These requests were supplied by the owner; no separate
+tester identity or Play-test participation is inferred.
+
+Documentation only: content/IDs, local links and diff whitespace are checked. No implementation,
+application test/lint run, APK build or new device result is established by this record.
+
 ## New real user requests — recorded 2026-10-13; discussion pending
 
 The owner relayed three genuine user requests: continuous playback when returning from search
@@ -1419,6 +1433,25 @@ personal names or conversation quotations. **From 2026-10-06, at the owner's req
 the report date and source category** (user/tester, owner testing or code review), so real user
 feedback remains traceable through a fix and retest. A user report is not an independently
 reproduced defect or evidence of a fix. The feedback index is in [Testing](TESTING.md#feedback-record).
+
+### C102. Connecting Bluetooth during playback reportedly needs Stop then Play for sound — current occurrence unconfirmed
+
+**Report recorded:** 2026-10-13. **Source:** owner observation; the owner is unsure whether
+the problem still occurs. The occurrence date, installed build, phone/Android version,
+Bluetooth receiver and route-selection details were not supplied.
+
+**Reported sequence:** music is playing on the phone; a Bluetooth audio device is connected;
+sound does not reach that device until playback is stopped and started again.
+**Expected:** when Android selects that device as the media output, the ongoing playback should
+continue there without a manual Stop/Play cycle. **Observed:** restarting playback restores sound,
+according to the report. Playback/UI state during the interruption and whether the phone itself
+continues producing sound are unknown.
+
+**Status: not checked on a current build.** Confirm the sequence with a current release and
+record the missing device/build details, selected output, playback state and precise restart
+action. Inspect route-change/audio-stream handling only after establishing that it still occurs;
+no stream, focus or decoder cause is diagnosed by this report. No fix, reproduction or device
+acceptance claimed. Bluetooth transport-button verification is separately tracked as B47.
 
 ### C97. ~~Random history and selection become inconsistent after changing scope from an earlier track~~ — FIXED, owner-accepted and merged 2026-10-06
 

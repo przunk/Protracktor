@@ -145,6 +145,9 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
+| 2026-10-13 | Owner observation; current occurrence uncertain | Connecting a Bluetooth output during playback reportedly requires Stop then Play before sound reaches it | `STATUS.md` C102; current build/device reproduction pending |
+| 2026-10-13 | Owner request | Verify Bluetooth Next, Previous, Play/Pause and Stop; existing MediaSession callbacks do not establish receiver-button behaviour | `WISHLIST.md` B47; verification/improvement TODO |
+| 2026-10-13 | Owner request | Reconsider AMP (Amiga Music Preservation) as an archive candidate | Existing `BACKLOG.md` A7; `PLAN_CATALOGUES.md`; access exploration TODO |
 | 2026-10-13 | Real app-user feedback, relayed and discussed with the reporter by owner | Keep music playing when returning from search/author browsing to the playlist; explicit active queue proposed | `WISHLIST.md` B45; `OPEN_QUESTIONS.md` Q13; future behaviour change |
 | 2026-10-13 | Real app-user feedback, relayed by owner | Mix separated stereo channels so music is audible in both ears; possible headphone-processing mode raised | Existing `WISHLIST.md` B6; `OPEN_QUESTIONS.md` Q14; no diagnosed output defect |
 | 2026-10-13 | Real app-user feedback, relayed by owner | Offer recent queries when focusing search; three entries or a scrollable preview remain to be discussed | `WISHLIST.md` B46; `OPEN_QUESTIONS.md` Q15; feature request |

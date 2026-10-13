@@ -10,6 +10,21 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
+
+The owner requested control from Bluetooth devices, including Next, Previous, Play/Pause and Stop.
+The Android `PlaybackService` already registers these transport callbacks with `MediaSession`;
+the 2026-09-01 implementation record also names Bluetooth/headphone controls. This is therefore
+a request to verify practical device support and address demonstrated gaps, not evidence that
+all Bluetooth transport is missing or permission to replace the session architecture.
+
+Check a current release with actual receiver/headset buttons in playlist, Browse and Random,
+including background/screen-off use and reconnection. Record the installed build, phone/Android
+version, Bluetooth device, supported buttons and outcomes. Stop/resume expectations must be
+made explicit if a device differs from the current callback behaviour. No device test or new
+implementation is claimed here. This is separate from B44 Android Auto and from the reported
+audio-route transition problem in `STATUS.md` C102.
+
 ## B46. Recent searches from the search field — user feedback recorded 2026-10-13; to discuss
 
 Real app-user request, relayed by the owner on 2026-10-13: tapping/focusing the search field

@@ -75,6 +75,13 @@ The reference collection of `.sap`. Natural pair with ASAP.
 
 ### AMP (amp.dascene.net) — investigated 2026-09-04, and the answer is no
 
+**Follow-up, 2026-10-13:** the owner renewed AMP (Amiga Music Preservation) as an exploration
+TODO under A7. The earlier access finding below remains historical evidence, not a newly
+checked statement about today's site. Before implementation, establish an approved way to
+obtain an index and download tracks; otherwise keep the integration deferred. No new website
+measurement, maintainer contact, permission or crawling/scraping authorization is supplied
+by this request. [Implementation roadmap](IMPLEMENTATION_ROADMAP.md).
+
 `GOAL.md` round 6 item 2 said: if AMP publishes nothing machine-readable, stop and write that down
 rather than scraping a website into a fragile parser. It publishes nothing machine-readable, and
 there is a second reason that matters more.
