@@ -145,8 +145,8 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
-| 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, not an independent user report; phone retest pending |
-| 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; basic speaker → Bluetooth playback and disconnect Pause subsequently owner-confirmed after trial handoff; other phone checks/merge pending; exact build/device/error trace unknown |
+| 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, merged with owner approval at `f4c9bf1`; no individual playlist phone results supplied |
+| 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; four routing states owner-confirmed after trial handoff; owner-accepted and merged at `69c42a2`; exact build/device/error trace unknown |
 | 2026-10-13 | Owner request | Verify Bluetooth Next, Previous, Play/Pause and Stop; existing MediaSession callbacks do not establish receiver-button behaviour | `WISHLIST.md` B47; verification/improvement TODO |
 | 2026-10-13 | Owner request | Reconsider AMP (Amiga Music Preservation) as an archive candidate | Existing `BACKLOG.md` A7; `PLAN_CATALOGUES.md`; access exploration TODO |
 | 2026-10-13 | Real app-user feedback, relayed and discussed with the reporter by owner | Keep music playing when returning from search/author browsing to the playlist; explicit active queue proposed | `WISHLIST.md` B45; `OPEN_QUESTIONS.md` Q13; future behaviour change |
@@ -168,12 +168,21 @@ The date above is the recording date, not an independently established occurrenc
 
 ## C102 Bluetooth output recovery — combined trial
 
-Branch: `fix/bluetooth-output-recovery`, stacked on C103. Release APK details are recorded in the
-[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md). Device behaviour is **partially checked**:
-on 2026-10-13 the owner confirmed speaker → Bluetooth playback works and disconnection correctly
-pauses. This confirms the basic sound handoff and disconnect Pause, not the other checks below
-(including the remaining parts of items 1 and 3). Installed build/device details were not
-separately supplied after the trial handoff. No app-data reset/uninstall is needed or authorised.
+Origin branch: `fix/bluetooth-output-recovery`, stacked on C103; merged with owner approval at
+`69c42a2` on 2026-10-13. Release APK details are in the
+[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md). The owner confirmed these phone scenarios:
+
+| Starting state | Bluetooth transition | Reported result |
+| --- | --- | --- |
+| Paused | Connect | Remains silent |
+| Paused | Disconnect | Remains silent |
+| Playing on speaker | Connect | Playback continues through headphones |
+| Playing on headphones | Disconnect | Playback pauses |
+
+The owner accepted these results and authorized the combined merge. These checks do not establish
+the remaining scenarios below, including Pause racing with connection rather than already being
+paused. Installed build/device details were not separately supplied after the trial handoff.
+No app-data reset/uninstall is needed or authorised.
 
 1. Record installed version/build, phone/Android version, receiver and track/format. Start a
    reasonably long track on the phone speaker; connect headphones and confirm Android selected
@@ -194,7 +203,7 @@ separately supplied after the trial handoff. No app-data reset/uninstall is need
    Playing. Explicit Play is the retry. Any repeatable failure needs a log and device/build details.
 7. If available, repeat the original scenario in the car safely while parked. The earlier car
    observation is not confirmed by a headphone result. Include the [C103 checklist](#c103-playlist-write-safety--phone-retest-pending)
-   using disposable playlists before approving either branch.
+   using disposable playlists for further regression checks.
 
 For diagnostic evidence capture a short logcat around the transition; native tag `protracktor`
 logs the output interruption/open/start failure, Kotlin tag `Protracktor` logs successful recovery.
@@ -204,6 +213,7 @@ both progress bars, seek and manual controls recover, rather than only whether a
 ## C103 playlist-write safety — phone retest pending
 
 Branch: `fix/playlist-write-safety`, included in the stacked `fix/bluetooth-output-recovery` trial.
+Merged with owner approval at `f4c9bf1` on 2026-10-13; no individual playlist phone results supplied.
 The owner requested the release APK only together with the Bluetooth fix. The combined artifact
 is tracked in C102's handoff; no phone result is established by the host tests.
 Use exported backups and disposable playlists; do not clear storage or uninstall to test this.

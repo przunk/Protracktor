@@ -1,13 +1,14 @@
 # Status
 
-Updated: 2026-10-13 — version 1.1.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-13 — version 1.1.1, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Bluetooth output recovery — C102, implementation on branch, 2026-10-13
+## Bluetooth output recovery — C102, owner-accepted and merged, 2026-10-13
 
-Owner-authorized work on `fix/bluetooth-output-recovery`, stacked on the unmerged C103 playlist
-safety branch at `b134b3e`. The trial version is 1.1.1; develop remains 1.1.0/schema 23.
+Work originated on `fix/bluetooth-output-recovery`, stacked on C103 at `b134b3e`.
+Following owner approval, C103 merged first at `f4c9bf1`, then C102 at `69c42a2`.
+Develop now declares 1.1.1/schema 23; master, tags and store publication are unchanged.
 The original headphone report is real owner testing; the agent has not reproduced Bluetooth
 on a phone. No installed-build/device details or logcat confirmation of ErrorDisconnected exist.
 
@@ -39,15 +40,19 @@ matching trial APK 1123. The recovery JNI export exists in all three packaged en
 and the minified DEX retains its native method name. These are artifact checks, not device execution.
 The APK script selects only test signing and names the artifact with variant/version/commit SHA
 and dirty marker where needed. The copy/name helper was exercised on an actual existing APK in a
-disposable clean/dirty Git fixture. No upload-key access, AAB, tag, push, merge or store release.
-**Partially checked on phone — owner follow-up, 2026-10-13:** speaker → Bluetooth playback works;
-disconnecting Bluetooth correctly pauses playback. This follows the combined trial APK handoff;
-the installed build and device details were not separately supplied.
+disposable clean/dirty Git fixture. That build stage did not access an upload key, build an AAB,
+create a tag, push, merge or release to the store.
+**Checked on phone — owner follow-up, 2026-10-13:** connecting or disconnecting Bluetooth while
+paused leaves playback silent; connecting during playback transfers sound to headphones without
+manual restart; disconnecting during playback pauses. The owner accepted these results and
+authorized merging the combined work. Installed build/device details were not separately supplied.
 **Not checked:** car receiver, route timing, position/subsong continuity, progress-bar agreement,
-seek, Pause during connection, focus/EOF/error cases and long-term acceptance. C103 phone checks
-and merge approval remain pending. [Analysis and handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+seek, a Pause racing with connection, focus/EOF/error cases and long-term behaviour. No individual
+C103 phone-check results were supplied. The merge tree exactly matched the approved branch;
+application sources still match tested APK source `d1d8964`. Tests/lint and APK were not rerun for
+the merges and documentation-only closeout. [Analysis and handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
 
-## Playlist-write safety — C103, implementation on branch, 2026-10-13
+## Playlist-write safety — C103, merged with owner approval, 2026-10-13
 
 Owner-selected work on `fix/playlist-write-safety`, based on `develop` at `01e5bc1`.
 The two session-write races recorded during the refactor are addressed without changing the
@@ -68,7 +73,8 @@ upgrade, 137 icon paths, PWA checks and 11 loopback server checks. Duration: 310
 Logs/XML and lint report: ignored `dist/playlist-write-safety/`.
 **Not checked:** real phone/SQLite timing or long-term behaviour.
 No standalone APK was built: C103 is included in the minified combined trial recorded above.
-The Bluetooth follow-up does not confirm playlist behaviour; neither branch is merged.
+Merged at `f4c9bf1` with the owner's approval of the combined work. The Bluetooth checklist results
+do not independently confirm playlist behaviour; no per-scenario C103 phone result was supplied.
 [Analysis and handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
 
 ## Implementation roadmap and Bluetooth report — recorded 2026-10-13
@@ -824,8 +830,9 @@ write's playlist identity and track snapshot consistent across activation. The p
 and the fix remain open; passing characterisation tests do not mean these risks were removed.
 
 **Follow-up, 2026-10-13:** the owner selected these two races for a separate behaviour fix, C103.
-The implementation and regression results are recorded above on `fix/playlist-write-safety`;
-phone verification and merge remain pending. This does not change the historical extraction result.
+The implementation and regression results are recorded above; C103 subsequently merged with
+owner approval at `f4c9bf1`. Individual playlist phone results were not supplied. This does not
+change the historical extraction result.
 
 ### State-contract extraction — 2026-10-03
 
@@ -1505,7 +1512,7 @@ the report date and source category** (user/tester, owner testing or code review
 feedback remains traceable through a fix and retest. A user report is not an independently
 reproduced defect or evidence of a fix. The feedback index is in [Testing](TESTING.md#feedback-record).
 
-### C103. Playlist writes can overwrite another playlist or hide newer edits — branch implementation, 2026-10-13
+### C103. ~~Playlist writes can overwrite another playlist or hide newer edits~~ — FIXED and merged with owner approval, 2026-10-13
 
 **Source:** code review and controlled-store tests during the architecture extraction, 2026-10-04;
 owner selected the safety fix on 2026-10-13. This is not an independent app-user report.
@@ -1528,12 +1535,12 @@ before destination publication; last-playlist reset retires requests captured du
 Explicit Save and automatic additions supersede older pending metadata for that same playlist.
 This does not claim global serialization of every `LibraryStore` caller.
 
-**State:** implemented on `fix/playlist-write-safety`, not merged or owner-accepted. Focused host
-checks and the passed full gate are recorded above. Device behaviour remains **not checked**.
-APK deferred by owner until the Bluetooth fix; the subsequently authorized combined candidate
-is tracked in C102. [Handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
+**State:** merged at `f4c9bf1` following owner approval of the combined C103/C102 work. Focused host
+checks and the passed full gate are recorded above. Individual playlist device scenarios remain
+**not checked**; the supplied phone results concern Bluetooth. The combined candidate is tracked
+in C102. [Handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
 
-### C102. Bluetooth connection interrupts sound and stalls the in-app progress — owner-confirmed on headphones, 2026-10-13
+### C102. ~~Bluetooth connection interrupts sound and stalls the in-app progress~~ — FIXED, owner-accepted and merged, 2026-10-13
 
 **Report recorded:** 2026-10-13. **Source:** owner observation; the owner is unsure whether
 the problem still occurs. The occurrence date, installed build, phone/Android version,
@@ -1572,11 +1579,11 @@ This explains the reported symptom sequence but is **not** a confirmed device er
 and a typed JNI result. It preserves the decoder and does not restart finished or paused tracks.
 Unrecoverable errors pause and show `notice_audio_device_failed`. Host evidence and remaining
 checks are recorded at the top and in the [C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
-**Owner follow-up, 2026-10-13:** speaker → Bluetooth playback works and disconnecting Bluetooth
-correctly pauses. These two basic routing scenarios are phone-confirmed after the combined trial
-handoff; installed build/device details and other checklist results were not separately supplied.
-Remaining device checks and merge approval are pending. B47 receiver-button verification remains
-a separate task.
+**Owner acceptance, 2026-10-13:** Bluetooth connection and disconnection while paused both leave
+playback silent. Connecting during playback transfers sound to headphones; disconnecting pauses.
+The owner authorized merging the combined work; C103 merged at `f4c9bf1`, then C102 at `69c42a2`.
+Installed build/device details and other checklist results were not separately supplied.
+B47 receiver-button verification remains a separate task.
 
 ### C97. ~~Random history and selection become inconsistent after changing scope from an earlier track~~ — FIXED, owner-accepted and merged 2026-10-06
 

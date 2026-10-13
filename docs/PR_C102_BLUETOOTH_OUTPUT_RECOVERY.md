@@ -2,7 +2,8 @@
 
 Date: 2026-10-13. Branch: `fix/bluetooth-output-recovery`, based on C103 at `b134b3e`.
 The owner approved a separate Bluetooth fix and a combined APK containing playlist-write safety.
-Local PR/handoff draft only: no GitHub PR, push or merge.
+Local handoff record; merged to develop at `69c42a2` with owner approval on 2026-10-13.
+No GitHub PR or push performed.
 
 ## Report → analysis
 
@@ -80,12 +81,14 @@ installing tools or changing Java. These checks do not establish runtime routing
 
 ## PR → owner phone retest
 
-**Partially checked on phone, 2026-10-13:** following the combined trial handoff, the owner
-confirmed speaker → Bluetooth playback works and Bluetooth disconnection correctly pauses.
-The installed build/device details were not separately supplied. Position/subsong continuity,
-progress bars, seeking, Pause during connection, focus/EOF/error cases and car playback have no
-individual retest result yet; C103 playlist checks also remain pending.
+**Owner-accepted phone scenarios, 2026-10-13:** connecting and disconnecting Bluetooth while
+paused both remain silent. Connecting during playback continues through headphones; disconnecting
+during playback pauses. The owner authorized merging the combined work. Installed build/device
+details were not separately supplied. Position/subsong continuity, progress bars, seeking, a Pause
+racing with connection, focus/EOF/error cases and car playback have no individual result yet;
+neither do the C103 playlist scenarios.
 
-No merge approval, tag, AAB or publication is claimed. Remaining scenarios are in the
-[checklist](TESTING.md#c102-bluetooth-output-recovery--combined-trial).
-The current working tree includes C103; it does not put either fix on develop.
+C103 merged first at `f4c9bf1`, followed by C102 at `69c42a2`. The merged tree exactly matched
+the approved branch and application sources match trial source `d1d8964`; no additional tests/lint
+or APK build ran for this merge/documentation closeout. No master/tag change, push, AAB or publication.
+Remaining checks are in the [checklist](TESTING.md#c102-bluetooth-output-recovery--combined-trial).

@@ -1,7 +1,8 @@
 # C103 — playlist-write safety
 
 Date: 2026-10-13. Branch: `fix/playlist-write-safety`; base: `develop` at `01e5bc1`.
-Local PR/handoff draft only: no GitHub PR, push or merge performed.
+Local handoff record; merged to develop at `f4c9bf1` with owner approval on 2026-10-13.
+No GitHub PR or push performed.
 
 ## Report and analysis
 
@@ -57,8 +58,8 @@ Changed documentation was checked for whitespace and 41 local file-link targets;
 ## Handoff and limits
 
 Checked host assertions and the full gate do not establish real SQLite timing or phone behaviour.
-No minified APK, device reproduction, long-term acceptance or release/publication is claimed.
-The owner deferred the APK until the Bluetooth fix; leave the branch unmerged meanwhile.
+The initial handoff had no minified APK; the combined artifact below subsequently included C103.
+No individual playlist phone scenario, long-term behaviour or release/publication is established.
 The [phone checklist](TESTING.md#c103-playlist-write-safety--phone-retest-pending) uses disposable
 playlists and backups, not clearing application data. C102 Bluetooth symptoms were recorded
 separately; they are not diagnosed or fixed by this change.
@@ -66,4 +67,9 @@ separately; they are not diagnosed or fixed by this change.
 **Handoff follow-up, 2026-10-13:** the owner authorized C102 on a separate stacked branch, and
 the combined release trial **1.1.1 (1138)** now includes this C103 implementation. Its source is
 clean `d1d8964`; artifact/signature/JNI checks and the joint 772-test gate are recorded in the
-[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md). Neither branch is merged or phone-accepted.
+[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+
+**Merge follow-up, 2026-10-13:** after confirming four Bluetooth routing scenarios, the owner
+approved merging the combined work. C103 merged first at `f4c9bf1`, then C102 at `69c42a2`.
+This approval does not establish individual playlist checklist results: none were supplied.
+No application code changed during merge; no new APK, test/lint run, push or release occurred.

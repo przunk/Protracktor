@@ -56,7 +56,7 @@ this extraction: the former changes before an asynchronous track read, the latte
 The extraction preserved pending-write and Save-completion races; their historical controlled-store
 reproductions are retained in `STATUS.md`.
 
-**C103 follow-up, 2026-10-13, on `fix/playlist-write-safety`:** a track-write request captures a
+**C103 follow-up, 2026-10-13, merged at `f4c9bf1`:** a track-write request captures a
 detached track list and its published playlist ID together, rejecting pre-restore or mismatched
 activation state. Metadata, explicit Save and automatic-add replacements share a session-owned
 mutex. Save completion compares identity and persisted contents, not unrelated transport state.
@@ -64,9 +64,10 @@ Revert and Delete retire obsolete request revisions; deleted targets reject subs
 and Revert cannot publish its read into another playlist. Reset/read publication and invalidation
 remain inside the write lock so old contents cannot be resurrected afterwards. Debounce timings,
 controller scope and stores remain unchanged. This is a separately approved behaviour fix, not
-an extraction guarantee or a global lock over every store caller; phone checks and merge are pending.
+an extraction guarantee or a global lock over every store caller. Owner-approved merge does not
+establish individual playlist phone checks; no such results were supplied.
 
-**C102 output recovery, 2026-10-13, on `fix/bluetooth-output-recovery`:** each Oboe stream holds
+**C102 output recovery, 2026-10-13, merged at `69c42a2`:** each Oboe stream holds
 its own shared `OutputError` callback, which atomically records an error and delegates stop/close
 to the existing control thread. It carries no Player pointer; an old stream's delayed callback
 cannot access a deleted Player or invalidate its replacement. The existing 200 ms Kotlin poll
@@ -75,7 +76,8 @@ rewinding/reopening the backend or restarting its background measurement. Other 
 reopens become a paused UI with a notice; EOF still follows the existing end-of-track policy.
 The data callback keeps its existing non-blocking decoder lock. No Bluetooth receiver broadcast,
 new polling job, decoder copy or recovery thread was added. Host fake-device tests exercise the
-actual Player/JNI implementation; real Oboe/decoder/device behaviour remains a phone check.
+actual Player/JNI implementation. The owner confirmed connection/disconnection while paused,
+sound handoff during playback and Pause on disconnection; remaining device checks are in `TESTING.md`.
 
 Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.
