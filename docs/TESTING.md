@@ -145,6 +145,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
+| 2026-10-13 | Owner testing and presentation decision | During a heart save, Next and seek geometry move into its space; a second tap can skip a track. Keep the heart present; share the dock subtitle, bold title and use a flat P. Search field reported acceptable. | B48 follow-up in `STATUS.md` / `PLAN_NOTIFICATION_HEART.md`; restored 852-test gate/lint passed, APK and phone retest pending; no inferred full B46 acceptance |
 | 2026-10-13 | Owner testing after combined B48+B46 APK handoff | Heart moves into a missing Previous slot; integrated search magnifier was changed to a labelled button; suggestions should be plain text autocomplete rather than an icon-button section | B48/B46 follow-up in `STATUS.md` and their plans; corrected 835-test gate/lint passed, replacement 1.3.0 (1158) APK ready, phone acceptance pending |
 | 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implemented on task branch: add-only, immediately save all selected-playlist edits; combined host gate passed, phone acceptance pending |
 | 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, merged with owner approval at `f4c9bf1`; no individual playlist phone results supplied |
@@ -169,16 +170,26 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## Corrected combined B48+B46 APK — offered for phone retest, 2026-10-13
+## Stable B48 notification — gate passed, replacement APK pending, 2026-10-14
 
-Install without uninstalling or clearing app data:
+The owner's save-state report and approved presentation are recorded above. The 1.3.0 (1158)
+APK below is superseded by this follow-up. A replacement on the same stacked branches follows
+full verification. The restored forced gate passed 852 tests/115 suites, lint 0 errors/72 warnings.
+The integrated search field is unchanged and was reported as acceptable;
+this is not evidence for every search/history checklist result. Device/Android and exact installed
+build were not separately supplied. Corrected SystemUI geometry and final appearance remain unverified.
+
+## Earlier placement/search correction APK — superseded after saving feedback, 2026-10-13
+
+The earlier offered artifact was:
 `dist/protracktor-release-1.3.0-1158-f289863-20261013-232128.apk`, **1.3.0 (1158)**,
 clean source `f289863`. The corrected forced gate passes 835 tests/112 suites, lint 0 errors/72
 warnings. [Version/hash/test-signature checks](STATUS.md) establish the artifact, not installation,
 keyboard behaviour or SystemUI layout. First check the integrated magnifier and text-only dropdown,
-then heart placement with Previous absent/present and Next absent; use both detailed lists below.
+then heart placement with Previous absent/present and Next absent; these were the earlier checks.
 The owner-reported original defects are recorded above. Corrected phone acceptance is still
-pending, and no merge, push or Play-track outcome is implied.
+pending; the owner's later save-state report above is its observed defect. No merge, push or
+Play-track outcome is implied.
 
 ## Earlier combined B48+B46 APK — superseded after owner feedback, 2026-10-13
 
@@ -194,7 +205,8 @@ before approving either branch. No merge or Play-track activity is implied.
 
 Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
 [Contract and host evidence](PLAN_RECENT_SEARCHES.md). The owner's original presentation feedback
-is recorded above; corrected real phone behaviour is **not checked**.
+is recorded above, followed by acceptance of the field's appearance. Individual search-history
+and restart checks still need their own reported outcomes; source code is unchanged in this trial.
 
 1. Submit several distinct queries, then focus an empty search field: expect the latest three.
    Type a prefix, including different letter case: expect at most three matching queries from
@@ -225,6 +237,8 @@ and exported backups: pressing a heart intentionally saves ALL current edits, no
    when Next is unavailable. No unavailable skip command should become active. Press it once:
    expect feedback, a filled heart and unchanged sound/position/subsong. Return to the playlist
    and restart normally: the track must remain saved without pressing Save in the app.
+   During saving the heart must never disappear or move Next/seek geometry. Tap twice rapidly
+   at its position: no skip, deletion or duplicate; pending presses may report that saving continues.
 2. Press the filled heart: no deletion or duplicate, and feedback that the playlist is saved.
    Repeat with a track already playing from the playlist and with earlier unsaved edits in a
    disposable playlist: those edits must also become saved, as expressly selected by the owner.
@@ -235,6 +249,11 @@ and exported backups: pressing a heart intentionally saves ALL current edits, no
 5. Observe pending/failure feedback if encountered; failures must not discard the working list.
    Report device/Android/build and whether the heart appears in expanded notification, quick
    settings and lock screen. Host construction does not guarantee manufacturer placement.
+6. Compare with the dock: title is prominent/bold, subtitle has the same author/platform/year
+   information and fallbacks. Check missing year/author, long titles, PL/EN, large font and paused
+   playback. The app adds no notification marquee. The upper small icon is a flat P without the
+   launcher's black background or decorative cells; system tint/font/clipping can vary by device.
+   Heart labels are accessibility/controller metadata, not new visible text beside the icon.
 
 Only the owner's original presentation defects are established by this handoff's feedback.
 Correction acceptance and individual saving/search checklist results are not yet supplied;

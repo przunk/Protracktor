@@ -1,10 +1,39 @@
 # Status
 
-Updated: 2026-10-13 — version 1.2.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-14 — version 1.2.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B48+B46 owner trial feedback — corrected APK ready, phone retest pending, 2026-10-13
+## Stable B48 save control and shared Now Playing presentation — gate passed, APK pending, 2026-10-14
+
+The owner reported that the 1.3.0 (1158) trial removes the heart during saving and moves Next/seek
+geometry under a second tap. The owner approved retaining the heart, a bold title, the dock's
+shared subtitle policy and a flat P glyph. The search field was reported as acceptable; search
+code remains unchanged, without inferring acceptance of every B46 persistence scenario.
+
+B48 `6b4efca` is integrated into the approved stacked B46 branch without rewriting history.
+`PlaylistHeartSave` remains the overlap guard; action identity/position is retained throughout
+saving. `NowPlayingText` serves both UI and native presentation; original artist metadata, audio,
+service lifecycle and artwork palette remain unchanged. System title/subtitle/ARTIST display
+fallbacks use the shared summary, with a bold title span and a white-on-transparent small P.
+[Contract and evidence](PLAN_NOTIFICATION_HEART.md). No dependency/schema/toolchain change.
+
+**Checked:** 88 focused host checks passed in seven suites, zero failures/errors/skips. The new
+pending regression failed 2/16 before correction. Shared-year mutation failed 6/17, including the
+actual dock and both SDK projections; pending-action/wrong-icon mutations failed 6/24. Sources
+were restored and SHA-256 compared. Targeted icon generation is repeatable; a headless disposable
+full-generation fixture matched all 26 current assets. Live SystemUI geometry, double taps and
+final text/icon appearance are **not checked** until owner phone retest.
+
+**Checked combined gate:** forced run completed in 364 s: 852 unit tests in 115 suites, zero
+failures/errors/skips; lint 0 errors/72 warnings (unchanged). All existing PL/EN, store metadata,
+581 page, 49 WASM engine, 8 SAP, browser database upgrade, 30 native audio, 140 icon-path, PWA and
+11 loopback server checks passed. Same temporary per-class worker isolation, one worker/1 GiB
+heap and existing JDK, without exclusions or repository build-setting changes. Evidence:
+ignored `dist/notification-search-verification/full-gate-stable-heart*`.
+A replacement minified APK follows. Develop/master, tags and store are unchanged.
+
+## Earlier B48+B46 placement/search correction APK — superseded by save-state feedback, 2026-10-13
 
 The owner reported three presentation problems after the combined APK handoff: the notification
 heart fills the missing Previous slot and moves when Previous becomes available; the integrated

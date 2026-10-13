@@ -123,3 +123,13 @@ were checked; the removed heading resource is absent. [Artifact size/hash/certif
 and [corrected phone scenarios](TESTING.md). The earlier `1452309` trial is superseded following
 the owner's presentation feedback. Handoff documentation does not change the gate/APK sources.
 Both features remain on their separate stacked branches, unmerged, with phone acceptance pending.
+
+## Unchanged search in the stable-heart follow-up — 2026-10-14
+
+The owner reported the corrected search field as acceptable on 2026-10-13, then approved B48's
+stable-save action/shared subtitle/flat-P follow-up. B48 `6b4efca` is integrated into this trial
+branch without changing search field, preferences, rules or workflow sources. This is not full
+acceptance of every retention/restart checklist result. The new forced combined gate passed in
+364 s: 852 tests/115 suites, zero failures/errors/skips, lint 0 errors/72 warnings plus all existing
+web/native/resource/store/loopback checks. Evidence: `full-gate-stable-heart*` in the ignored
+verification directory. A replacement minified APK follows; both branches remain unmerged.

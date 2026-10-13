@@ -161,3 +161,10 @@ sources byte-for-byte, including the new P. The initial non-headless fixture att
 before producing assets; its zero-output comparison is not counted as verification.
 Evidence is in ignored `dist/notification-{shared-text,stable-heart-icon}-mutation*` and the
 focused results. Full combined tests/lint and a replacement release APK still follow on B46.
+
+**Restored combined gate checked, 2026-10-14:** 852 unit tests in 115 suites, zero
+failures/errors/skips; lint 0 errors/72 warnings, all existing web/native/resource/store/loopback
+checks passed. Forced run took 364 s with the same temporary worker isolation and existing JDK,
+without exclusions or repository settings changed. Evidence:
+`dist/notification-search-verification/full-gate-stable-heart*`. B46/search sources are unchanged
+from the owner-tested field build. A replacement minified APK and corrected phone retest follow.
