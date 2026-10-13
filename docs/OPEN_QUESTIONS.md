@@ -51,13 +51,14 @@ must not silently acquire search-history semantics. Android/web scope remains un
 wants channels audible in both ears. The cause has not been diagnosed; no track/output example
 was provided. Dolby Headphones was also raised as a possible direction to explore.
 
-The owner chose Original / Narrow / Mono in Settings, not a width slider. The branch trial keeps
+The owner chose Original / Narrow / Mono in Settings, not a width slider. The accepted trial keeps
 Original as the default and uses 50% width for Narrow as agent assumptions for listening tests.
 The global preference applies live to Android playback across backends, including MP3, and is
-restored before a new track starts. See [trial contract](PLAN_STEREO_MIX.md); no phone acceptance
-or merge is implied by choosing the trial.
+restored before a new track starts. See [trial contract](PLAN_STEREO_MIX.md). Following positive
+feedback the owner authorized merging; completed at `f4d304c` on 2026-10-13. Individual device
+checklist results and installed build/device details were not separately supplied.
 
-Still open: whether the modes are useful, whether Narrow's strength/default should change, and
+Still open: longer-term usefulness, whether Narrow's strength/default should change, and
 whether a later phase should cover web, per-format/output preferences or headphone crossfeed.
 Audio exports remain unchanged. Crossfeed/virtualisation is not interchangeable with channel
 averaging; a Dolby-branded mode has no selected technology or confirmed feasibility. No new

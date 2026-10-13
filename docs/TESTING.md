@@ -167,11 +167,14 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## B6 stereo mix — owner listening trial pending
+## B6 stereo mix — owner accepted; remaining device checks
 
 Branch: `feature/stereo-mix-modes`. The [trial plan](PLAN_STEREO_MIX.md) records implementation and
 artifact evidence. Install the minified release APK without uninstalling or clearing data.
 Offered build: **1.2.0 (1146)**, source `ad6e3cd`; this does not establish the installed build.
+Positive feedback after handoff and explicit owner merge approval were received on 2026-10-13;
+merged at `f4d304c`. Device/headphone details, preferred mode and individual scenario outcomes
+were not separately reported. The checklist below remains available for further verification.
 
 1. Record build/device/Android/headphones and a representative separated stereo track. Open
    **Settings → Playback → Stereo mix**. Original is initially selected unless a trial choice was
@@ -192,7 +195,8 @@ Offered build: **1.2.0 (1146)**, source `ad6e3cd`; this does not establish the i
 
 Report whether Narrow/Mono are useful and whether the 50% Narrow strength is comfortable. This
 is a reversible user-feedback trial, not a promise to keep it or add crossfeed/Dolby. All phone
-scenarios remain **not checked** until reported by the owner; do not infer Play-test participation.
+scenarios remain **not checked individually** until reported by the owner; do not infer
+Play-test participation from general acceptance or the merge.
 
 ## C102 Bluetooth output recovery — combined trial
 

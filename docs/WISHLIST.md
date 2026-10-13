@@ -1270,7 +1270,7 @@ already is.
 
 ## B6. Fold hard-panned channels together
 
-**Renewed real user feedback recorded 2026-10-13; owner-selected Android trial on a branch.**
+**Renewed real user feedback recorded 2026-10-13; Android trial accepted and merged at `f4d304c`.**
 
 Strongly separated tracker channels can be uncomfortable on headphones. The original entry
 suggested stereo narrowing/mono mixing in the common render callback, beside gain. A phone-speaker
@@ -1291,8 +1291,10 @@ See [Q14](OPEN_QUESTIONS.md#q14--stereo-mixing-and-headphone-mode).
 The choice is global and remembered, applied live and before new playback through common output
 processing, including MP3. Narrow strength and the unchanged default are agent trial assumptions.
 Crossfeed/Dolby, web and exported/shared audio processing are outside this trial. The owner can
-revise or reject the feature after listening; it must not merge before approval.
-[Trial plan and evidence](PLAN_STEREO_MIX.md). Phone usefulness and behaviour are not checked yet.
+revise the trial after longer-term use. Positive feedback after the APK handoff was followed by
+explicit merge approval on 2026-10-13; the three modes are now on develop.
+[Trial plan and evidence](PLAN_STEREO_MIX.md). Installed build/device details and individual
+remaining phone-check results were not separately supplied; general acceptance does not replace them.
 
 ## B7. Full metadata for any supported file
 

@@ -35,7 +35,7 @@ device acceptance before merging. Documentation checks do not establish device b
 | B17 | Avoid unnecessary downloads after an accidental online-row tap | Decide between delay, cancellation and accepting current behaviour. |
 | B19 — export | Export a playlist together with its music files | Discuss scope, size, import/storage and distribution terms. |
 | B5 | Accounts and synchronised favourites/history between Android and web | The web player already exists; account/synchronisation scope remains an idea. |
-| B6 | Stereo narrowing, mono mixing and possibly headphone crossfeed | Owner selected an Android Settings trial: Original / Narrow / Mono on `feature/stereo-mix-modes`; [plan](PLAN_STEREO_MIX.md). Original default and 50% Narrow are trial assumptions. Phone acceptance/merge pending; crossfeed and web remain outside the trial. Q14. |
+| B6 | Stereo narrowing, mono mixing and possibly headphone crossfeed | Original / Narrow / Mono accepted and merged at `f4d304c`, 2026-10-13; [plan](PLAN_STEREO_MIX.md). Original default and 50% Narrow retained. Individual remaining device checks and longer-term usefulness are open; crossfeed and web remain outside the trial. Q14. |
 | B7 | Full metadata for any supported file, including one not currently playing | Still open in the wishlist; establish the gap beyond existing Information/Now Playing before selecting work. |
 | B9 | Optional scope or per-channel visualiser | Idea. |
 | B11 | Per-format playback settings: interpolation, separation, SID model and filters | Idea; establish missing controls beyond existing backend capabilities. |
@@ -147,12 +147,13 @@ sources and is not a full code review or a claim that the implementation has no 
 2. ~~Implement output-only Bluetooth recovery (C102) and prepare the combined release trial.~~
    Trial 1.1.1 (1138) delivered; four routing states owner-confirmed, accepted and merged at `69c42a2`
    on 2026-10-13. Joint gate: 772 unit tests, 18 native checks, lint 0 errors/68 warnings.
-3. The owner selected B6's three-mode Android Settings trial next, on `feature/stereo-mix-modes`.
+3. ~~Implement B6's three-mode Android Settings trial on `feature/stereo-mix-modes`.~~
    Host gate passed: 782 unit tests, 30 native checks, lint 0 errors/69 warnings. Release APK
-   1.2.0 (1146), source `ad6e3cd`, is prepared; await listening feedback before merging.
+   1.2.0 (1146), source `ad6e3cd`, was offered. Positive owner feedback and merge approval followed;
+   merged at `f4d304c` on 2026-10-13. Individual remaining device checks are not separately reported.
    Headphone crossfeed and the larger queue-ownership change remain unselected.
 
-Steps 1 and 2 are merged, not remaining implementation work. The owner deferred the first APK until
+Steps 1–3 are merged, not remaining implementation work. The owner deferred the first APK until
 Bluetooth recovery was included. The device error trace and additional phone scenarios remain
 unconfirmed; merging does not establish store release/publication or long-term behaviour.
 

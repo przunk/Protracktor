@@ -77,6 +77,18 @@ fingerprint in Status). The new JNI export exists in all three libraries and its
 retained in minified DEX. No upload key, AAB, tag, push, merge or store release was used.
 
 These checks establish the artifact, not phone behaviour or sound quality. Install as an update
-without clearing app data and follow [the listening checklist](TESTING.md#b6-stereo-mix--owner-listening-trial-pending).
-All phone outcomes remain not checked; await owner feedback before merging. The final handoff
-documentation update does not change APK sources and does not rerun application tests/builds.
+without clearing app data and follow [the listening checklist](TESTING.md#b6-stereo-mix--owner-accepted-remaining-device-checks).
+At handoff all phone outcomes were not checked; merging required owner approval. The handoff
+documentation update did not change APK sources or rerun application tests/builds.
+
+## Owner acceptance and merge — 2026-10-13
+
+Following positive feedback after the APK handoff, the owner authorized merging. Branch
+`feature/stereo-mix-modes` merged into develop at `f4d304c` without conflicts; its tree matched the
+approved branch exactly. Develop declares 1.2.0/schema 23; app sources remain identical to
+`ad6e3cd`. Installed build/device/headphones and individual checklist results were not separately
+supplied, so remaining device checks are not established by the general acceptance.
+
+Closeout checked merge ancestry/tree identity, documentation consistency, links and diff whitespace.
+No full test/lint rerun or new APK was needed for the unchanged application sources and
+documentation-only closeout. No push, master/tag change, AAB or store publication.

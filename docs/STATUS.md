@@ -1,14 +1,15 @@
 # Status
 
-Updated: 2026-10-13 — version 1.1.1, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-13 — version 1.2.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Stereo mix trial — B6, implemented on branch; listening pending, 2026-10-13
+## Stereo mix trial — B6, owner-accepted and merged, 2026-10-13
 
-Owner selected three Android Settings modes: Original, Narrow and Mono. Work is isolated on
-`feature/stereo-mix-modes`; [trial contract](PLAN_STEREO_MIX.md) records the boundaries and assumptions.
-The trial declares version 1.2.0; develop remains 1.1.1/schema 23. Original is the unchanged default,
+Owner selected three Android Settings modes: Original, Narrow and Mono. Work originated on
+`feature/stereo-mix-modes` and merged into develop at `f4d304c` after owner approval;
+[trial contract](PLAN_STEREO_MIX.md) records the boundaries and assumptions.
+Develop now declares version 1.2.0/schema 23. Original is the unchanged default,
 Narrow uses 50% width and Mono averages both channels. Existing preferences retain the global choice.
 The shared Android output applies it before ducking, including MP3. Live transitions ramp over
 up to approximately 10 ms without resetting the decoder; a newly opened track receives the latest mode
@@ -40,9 +41,14 @@ matching the previous accepted Bluetooth trial. The width setter's JNI export ex
 packaged libraries and its native name survives in minified DEX. These are artifact checks, not
 execution on Android. The subsequent handoff changes documentation only, not the APK sources.
 
-Phone behaviour/usefulness remains **not checked**; the owner can reject or adjust the trial after
-listening. [Phone checklist](TESTING.md#b6-stereo-mix--owner-listening-trial-pending).
-No merge, push, store release or schema change.
+**Owner acceptance, 2026-10-13:** positive feedback followed the APK handoff and the owner explicitly
+authorized merging. Installed build, device/headphones, preferred mode and individual checklist
+results were not separately supplied; this is not evidence that every phone scenario passed.
+Remaining device scenarios are **not checked** individually; see the
+[phone checklist](TESTING.md#b6-stereo-mix--owner-accepted-remaining-device-checks).
+The merge tree exactly matched the approved branch; application sources still match APK source
+`ad6e3cd`. Tests/lint and APK were not rerun for the merge or documentation-only closeout.
+Master, tags and store publication are unchanged; no push, new APK or schema change.
 
 ## Notification heart request — recorded 2026-10-13; discussion pending
 
