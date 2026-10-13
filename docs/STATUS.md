@@ -4,7 +4,29 @@ Updated: 2026-10-13 — version 1.2.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B48+B46 combined release APK ready; phone acceptance pending — 2026-10-13
+## B48+B46 owner trial feedback — corrected host gate passed, APK pending, 2026-10-13
+
+The owner reported three presentation problems after the combined APK handoff: the notification
+heart fills the missing Previous slot and moves when Previous becomes available; the integrated
+search magnifier became a labelled button; and suggestions look like icon buttons under a heading
+instead of ordinary text autocomplete. Device/Android and installed build were not separately
+supplied. These are real owner observations, not fabricated third-party feedback or agent phone tests.
+
+B48 `029c943` reserves both transport slots through the production MediaSession factory without
+enabling unavailable skip commands. It remains on `feature/notification-playlist-heart`; the
+approved stacked B46 branch integrates that correction without rewriting either branch's history.
+71 focused host checks passed; removing reservations fails all four new factory checks. The host
+records `setExtras`, not actual controller/SystemUI rendering. B46 restores the integrated magnifier
+and plain text anchored suggestions. Storage/search semantics, schema and WWW are unchanged.
+The corrected search path passes 44 focused host checks; four of six UI checks failed before the
+presentation change. The forced combined gate passed in 346 s: 835 unit tests in 112 suites,
+zero failures/errors/skips, lint 0 errors/72 warnings, plus all existing web/native/resource/store
+and loopback checks listed below. It used the same temporary per-class worker isolation and JDK,
+without exclusions or repository build-setting changes. Evidence is in ignored
+`dist/notification-search-verification/full-gate-presentation*`. A replacement minified APK is
+pending. Nothing has been merged into develop/master or pushed. Phone acceptance remains pending.
+
+## Earlier B48+B46 combined APK — superseded by presentation feedback, 2026-10-13
 
 After the first combined gate/APK, code inspection found new heart labels/feedback missing the
 saved in-app locale. Corrected B48 `d8dfb89` now passes 67 focused checks; B46 was rebased onto it.

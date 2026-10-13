@@ -46,6 +46,11 @@ matching suggestions. Clicking an entry immediately searches it in the current s
 not restored from history; playback Clear History retains its existing meaning. No separate
 clearing UI or WWW query history has been selected.
 
+**Presentation clarification after owner testing, 2026-10-13:** restore the original integrated
+magnifier and show plain text suggestions in an anchored editable dropdown, without icons or a
+Recent searches heading. This specialised input is an explicit exception to the general
+labelled-action convention. Storage, matching, limits and immediate submission are unchanged.
+
 - Show only the three most recent submitted queries: compact, but older queries are unavailable.
 - Show three visible rows in a scrollable list: more history, with a limit still to be chosen.
 - Show three entries with a labelled action opening the full history: another view and interaction.

@@ -3,13 +3,16 @@
 
 package com.przunk.protracktor.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.przunk.protracktor.R
 import com.przunk.protracktor.player.RecentSearches
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SearchQueryField(
     query: String,
@@ -43,10 +47,12 @@ internal fun SearchQueryField(
 ) {
     val field = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
+    var allowExpanded by remember { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = LocalFocusManager.current
     val suggestions = remember(recentQueries, query) { RecentSearches.suggestions(recentQueries, query) }
     fun submit(action: () -> Unit) {
+        allowExpanded = false
         keyboard?.hide()
         focus.clearFocus()
         action()
@@ -56,27 +62,38 @@ internal fun SearchQueryField(
         field.requestFocus()
         keyboard?.show()
     }
-    Column(Modifier.fillMaxWidth()) {
+    val expanded = focused && allowExpanded && suggestions.isNotEmpty()
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { allowExpanded = it },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
         OutlinedTextField(
-            value = query, onValueChange = onQueryChanged, singleLine = true,
+            value = query,
+            onValueChange = { allowExpanded = true; onQueryChanged(it) },
+            singleLine = true,
             label = { Text(scopeLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { submit(onSearch) }),
-            trailingIcon = { LabelledAction(PlayerIcons.Search, stringResource(R.string.domain_search_title),
-                onClick = { submit(onSearch) }, slim = true) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                .focusRequester(field).onFocusChanged { focused = it.isFocused },
+            trailingIcon = {
+                IconButton(onClick = { submit(onSearch) }) {
+                    Icon(PlayerIcons.Search, stringResource(R.string.domain_search_title))
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryEditable)
+                .focusRequester(field).onFocusChanged {
+                    focused = it.isFocused
+                    if (focused) allowExpanded = true
+                },
         )
-        if (focused && suggestions.isNotEmpty()) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.search_recent_queries), style = MaterialTheme.typography.bodySmall)
-                suggestions.forEach { suggestion -> key(suggestion) {
-                    LabelledAction(PlayerIcons.History, suggestion,
-                        onClick = { submit { onSuggestionChosen(suggestion) } },
-                        modifier = Modifier.fillMaxWidth(), slim = true)
-                } }
-            }
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { allowExpanded = false }) {
+            suggestions.forEach { suggestion -> key(suggestion) {
+                DropdownMenuItem(
+                    text = { Text(suggestion, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    onClick = { submit { onSuggestionChosen(suggestion) } },
+                )
+            } }
         }
     }
 }

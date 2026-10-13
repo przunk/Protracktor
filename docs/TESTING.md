@@ -145,6 +145,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
+| 2026-10-13 | Owner testing after combined B48+B46 APK handoff | Heart moves into a missing Previous slot; integrated search magnifier was changed to a labelled button; suggestions should be plain text autocomplete rather than an icon-button section | B48/B46 follow-up in `STATUS.md` and their plans; corrected 835-test gate/lint passed, replacement APK and phone acceptance pending |
 | 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implemented on task branch: add-only, immediately save all selected-playlist edits; combined host gate passed, phone acceptance pending |
 | 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, merged with owner approval at `f4c9bf1`; no individual playlist phone results supplied |
 | 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; four routing states owner-confirmed after trial handoff; owner-accepted and merged at `69c42a2`; exact build/device/error trace unknown |
@@ -168,19 +169,21 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## Combined B48+B46 APK — offered for phone testing, 2026-10-13
+## Earlier combined B48+B46 APK — superseded after owner feedback, 2026-10-13
 
-Install the minified release APK without uninstalling or clearing app data:
+The earlier offered minified release was:
 `dist/protracktor-release-1.3.0-1154-1452309-20261013-224501.apk`, **1.3.0 (1154)**,
 clean source `1452309`. [Artifact checks](STATUS.md) confirm its version/test signature, not actual
 installation or phone behaviour. The earlier `9583569` APK lacks the in-app-language correction
-and is superseded. Check both scenarios below; record the installed build/device/Android and
-observed results before approving either branch. No merge or Play-track activity is implied.
+and is also superseded. The owner subsequently reported layout/style defects; neither APK is the
+corrected trial. Record the replacement's installed build/device/Android and observed results
+before approving either branch. No merge or Play-track activity is implied.
 
-## B46 recent searches — release APK ready; phone retest pending
+## B46 recent searches — presentation corrected; replacement APK pending
 
 Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
-[Contract and host evidence](PLAN_RECENT_SEARCHES.md). Real phone results are **not checked**.
+[Contract and host evidence](PLAN_RECENT_SEARCHES.md). The owner's original presentation feedback
+is recorded above; corrected real phone behaviour is **not checked**.
 
 1. Submit several distinct queries, then focus an empty search field: expect the latest three.
    Type a prefix, including different letter case: expect at most three matching queries from
@@ -188,7 +191,9 @@ Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
    is not a prefix must not match; typing must not start a search.
 2. Select a suggestion: it must fill the field and immediately search exactly once in the current
    scope, without restoring an earlier scope. Suggestions/keyboard should dismiss; tap the field
-   again to reopen them. Search button and keyboard Search must still submit normally.
+   again to reopen them. The original integrated magnifier and keyboard Search must still submit
+   normally. Expect an attached dropdown with plain text rows, no icons or Recent searches heading;
+   opening it must not push the scope controls or results downward.
 3. Reuse a query with different casing/outer whitespace: retain one entry at the front. Submit
    more than 20 queries and restart normally: only the latest 20 remain. Blank searches keep
    their existing scope behaviour but must not add an empty suggestion. Playback History and
@@ -197,14 +202,16 @@ Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
    result-list space. Report installed build/device/Android and the actual scenario outcome.
 5. Run B48 below and the previously accepted stereo/Bluetooth scenarios on the same APK.
 
-## B48 notification heart — release APK ready; phone retest pending
+## B48 notification heart — placement configuration corrected; replacement APK pending
 
 The task branch is `feature/notification-playlist-heart`; B46 starts from it with owner
 approval. [Contract and host evidence](PLAN_NOTIFICATION_HEART.md). Use disposable playlists
 and exported backups: pressing a heart intentionally saves ALL current edits, not only this track.
 
 1. Play a Browse/Random track absent from the selected playlist. Expand the notification and
-   check its outlined heart and target label, including on the locked screen. Press it once:
+   check its outlined heart and target label, including on the locked screen. The heart must stay
+   immediately after Next whether Previous is available or absent; also check the end of a queue
+   when Next is unavailable. No unavailable skip command should become active. Press it once:
    expect feedback, a filled heart and unchanged sound/position/subsong. Return to the playlist
    and restart normally: the track must remain saved without pressing Save in the app.
 2. Press the filled heart: no deletion or duplicate, and feedback that the playlist is saved.
@@ -218,7 +225,9 @@ and exported backups: pressing a heart intentionally saves ALL current edits, no
    Report device/Android/build and whether the heart appears in expanded notification, quick
    settings and lock screen. Host construction does not guarantee manufacturer placement.
 
-No individual phone result is established yet; sideload testing does not prove Play-track activity.
+Only the owner's original presentation defects are established by this handoff's feedback.
+Correction acceptance and individual saving/search checklist results are not yet supplied;
+sideload testing does not prove Play-track activity.
 
 ## B6 stereo mix — owner accepted; remaining device checks
 

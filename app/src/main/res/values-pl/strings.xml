@@ -118,7 +118,6 @@
     <string name="domain_random_title">Losowo</string>
     <string name="domain_random_body">Zagraj coś z zaindeksowanych katalogów. Przytrzymaj, żeby wybrać platformę.</string>
     <string name="domain_search_title">Szukaj</string>
-    <string name="search_recent_queries">Ostatnie wyszukiwania</string>
     <string name="domain_search_body">W bibliotece i w katalogach</string>
 
     <string name="browse_indexing_short">indeksowanie…</string>

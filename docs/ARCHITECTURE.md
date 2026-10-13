@@ -112,7 +112,10 @@ outline/filled icons. Identity is encoded in the command URI itself, including P
 old buttons cannot be retargeted by updated extras, and custom actions remain bound when a client
 omits extras. Loading/unrestored/missing destinations and stale or overlapping presses are rejected;
 pending legacy commands are disabled and pending custom commands withheld. A text Toast plus the
-app notice provides completion/failure feedback. Host evidence does not establish lock-screen UI.
+app notice provides completion/failure feedback. `PlaybackMediaSession.create` reserves both
+transport slots via session extras so Android 13+ cannot move the heart into a missing Previous
+or Next slot. Availability still derives from the existing playback state. Host call-recording
+evidence does not establish actual controller delivery or lock-screen UI.
 
 **B46 recent searches, 2026-10-13, on the approved stacked task branch:** `RecentSearches` owns
 trimming, case-insensitive deduplication, 20-entry retention and prefix filtering before the
@@ -122,7 +125,10 @@ malformed stored values are ignored without an automatic rewrite. No database mi
 
 `BrowseWorkflow.runSearch` records explicit submissions at the common entry point. `searchFor`
 updates the query and submits once in the existing scope. `SearchQueryField` filters locally while
-typing, displays labelled suggestion actions while focused and dismisses them on submission.
+typing, displays an editable anchored dropdown with plain text suggestions while focused and
+dismisses it on submission. Owner trial feedback selected the original integrated magnifier and
+text-only autocomplete as exceptions to the generic labelled-action convention; no extra heading
+or inline button section changes the results layout. The editable anchor preserves typing focus.
 Search button, IME and suggestion clicks share the existing workflow; typing does not issue searches.
 Keyboard/layout behaviour on a phone remains unverified by host Compose tests.
 

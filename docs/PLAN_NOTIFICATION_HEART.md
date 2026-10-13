@@ -109,3 +109,9 @@ replacement APK follow on B46.
 29/33). Removing the reservations from the same factory failed all four new checks. Sources
 were restored and SHA-256 compared. These checks prove the session configuration call, not
 SystemUI rendering or controller delivery on Android. The full combined gate remains pending.
+
+**Corrected combined verification:** the stacked B46 branch passed the forced gate in 346 s:
+835 unit tests in 112 suites, zero failures/errors/skips; lint 0 errors/72 warnings, plus all
+existing web/native/resource/store/loopback checks. The production reservation source is restored
+and is included in that gate. [Details](PLAN_RECENT_SEARCHES.md). A replacement minified APK and
+owner phone retest still follow; no develop merge, push or store release.

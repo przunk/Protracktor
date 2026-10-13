@@ -11,8 +11,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextReplacement
@@ -116,7 +118,7 @@ class RecentSearchUiTest {
         assertEquals("delta two", browse.value.query)
         assertEquals(SearchScope.Local, browse.value.searchScope)
         assertEquals("delta two", persisted.first())
-        compose.onNodeWithText("Recent searches").assertDoesNotExist()
+        compose.onNode(isPopup()).assertDoesNotExist()
     }
 
     @Test fun `IME Search records and submits once while blank Search remains a valid scope query`() {
@@ -136,9 +138,9 @@ class RecentSearchUiTest {
     @Test fun `refocusing after a submitted suggestion restores suggestions without another search`() {
         show(listOf("one", "two", "three", "four"))
         compose.onNodeWithText("two").performClick()
-        compose.onNodeWithText("Recent searches").assertDoesNotExist()
+        compose.onNode(isPopup()).assertDoesNotExist()
         compose.onNode(hasSetTextAction()).performClick().performTextReplacement("")
-        compose.onNodeWithText("Recent searches").assertIsDisplayed()
+        compose.onNode(isPopup()).assertIsDisplayed()
         compose.onNodeWithText("two").assertIsDisplayed()
         compose.onNodeWithText("one").assertIsDisplayed()
         compose.onNodeWithText("three").assertIsDisplayed()
@@ -148,12 +150,33 @@ class RecentSearchUiTest {
 
     @Test
     @Config(qualifiers = "pl-w360dp-h800dp-xhdpi")
-    fun `polish recent search labels keep the query and immediate submission`() {
+    fun `polish text suggestions keep the query and immediate submission`() {
         show(listOf("Żółw", "żaba"))
-        compose.onNodeWithText("Ostatnie wyszukiwania").assertIsDisplayed()
+        compose.onNode(isPopup()).assertIsDisplayed()
+        compose.onNodeWithText("Ostatnie wyszukiwania").assertDoesNotExist()
         compose.onNodeWithText("Żółw").performClick()
         compose.waitForIdle()
         assertEquals(listOf("Żółw"), requests)
         assertEquals("Żółw", browse.value.query)
+    }
+
+    @Test fun `suggestions use an anchored popup without a heading or a visible Search label`() {
+        show(listOf("one", "two", "three"))
+        compose.onNode(isPopup()).assertIsDisplayed()
+        compose.onNodeWithText("Recent searches").assertDoesNotExist()
+        compose.onNodeWithText("Search").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Search").assertIsDisplayed()
+        compose.onNode(hasSetTextAction()).assertIsDisplayed()
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test fun `integrated magnifier submits once and dismisses the dropdown`() {
+        show(listOf("typed", "older"))
+        compose.onNode(hasSetTextAction()).performTextReplacement("typed")
+        compose.onNodeWithContentDescription("Search").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("typed"), requests)
+        assertEquals("typed", persisted.first())
+        compose.onNode(isPopup()).assertDoesNotExist()
     }
 }

@@ -33,7 +33,10 @@ passed after the saved-app-language correction. Initial guard/payload/completion
 7/63; app-selection regressions failed 2/14 before correction and feedback bypass failed 2/16.
 The final joint gate passed 829 tests with lint
 0 errors/72 warnings on the approved stacked B46 branch. Combined minified release 1.3.0 (1154),
-source `1452309`, is ready; phone acceptance remains pending. No merge or store release.
+source `1452309`, was offered. Owner trial feedback now requires a stable heart position after
+Next; B48 `029c943` reserves both transport slots (71 focused checks, four reservation regressions
+fail when removed). The corrected combined gate passed 835 tests in 112 suites, lint 0 errors/72
+warnings. Replacement APK and phone retest are pending. No merge or store release.
 [Plan](PLAN_NOTIFICATION_HEART.md).
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
@@ -73,8 +76,11 @@ new clearing control is selected. Remaining implementation/phone checks stay on 
 **Implementation checkpoint, 2026-10-13:** implemented on `feature/recent-search-suggestions`,
 stacked on B48 with owner approval. 42 focused host tests passed; deliberate mutations failed
 11/42 and sources were restored. The final combined full gate passed 829 tests with lint 0 errors/72
-warnings; combined minified release 1.3.0 (1154), source `1452309`, is ready. Phone acceptance
-remains pending; no merge or store release.
+warnings; combined minified release 1.3.0 (1154), source `1452309`, was offered. Owner trial feedback
+selected the original integrated magnifier and plain text dropdown without suggestion icons/heading.
+The general labelled-action rule does not apply to this specialised input. The corrected combined
+gate passed 835 tests in 112 suites, lint 0 errors/72 warnings; replacement APK and phone retest
+are pending. No merge or store release.
 This is search-query history, separate from playback History and B43's listened markers.
 
 ## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss

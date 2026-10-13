@@ -15,7 +15,9 @@ One combined minified release APK will test both; no develop merge before accept
 - Clicking a suggestion fills and immediately submits it in the CURRENT search scope. Do not
   restore previous archive/platform scopes, trigger a query on typing, or submit twice.
 - After explicit submission hide suggestions/keyboard; tapping the field makes suggestions
-  available again. Use labelled, accessible actions and PL/EN explanatory text.
+  available again. Preserve the original integrated magnifier, with its localised accessibility
+  label. Suggestions are plain text rows in an anchored dropdown, without icons or a heading.
+  The owner explicitly selected this search-field exception to the general labelled-action rule.
 - Persist separately from playback History/B43, outside Browse navigation snapshots. Clearing
   playback History does not clear query history. No separate clear-history UI was selected.
 - No database migration, dependency, WWW search-history or media-button change. B47/C104, C96
@@ -82,3 +84,31 @@ checked. [Artifact size/hash/certificate and limits](STATUS.md); [phone checklis
 The earlier `9583569` APK is superseded. The two features remain on separate stacked branches;
 develop/master, schema and publication are unchanged. Handoff documentation does not alter the
 APK's app/native sources. No installed build or device outcome is inferred from producing it.
+
+## Owner-reported presentation correction — 2026-10-13
+
+The owner reported that the trial changed the integrated magnifier into a labelled Search
+button and presented recent queries as icon buttons under a heading. This is real owner trial
+feedback, not an independent tester or an agent reproduction on a device. The initial implementation
+over-applied the general labelled-action convention to a specialised text-field interaction.
+
+Restore the existing field appearance and use Material's editable anchored autocomplete dropdown:
+plain text suggestions, no heading/icons, no extra section pushing scope controls/results down.
+Keep the IME focus while typing. Explicit submission still hides suggestions/keyboard; refocusing
+and editing reopen matching suggestions. Retention, prefix/case matching, current-scope submission,
+persistence and the three-entry limit are unchanged. Revised host and phone checks follow.
+
+**Checked:** the revised real Browse/Compose suite failed 4/6 checks with the old inline buttons
+and labelled search action. After restoring the integrated icon and editable popup, all 44 focused
+checks passed (8 rules, 4 preferences, 26 workflow, 6 UI), zero failures/errors/skips. This includes
+actual magnifier/IME/suggestion clicks, popup dismissal, refocus, both languages and immediate
+submission in the current scope. Evidence: ignored `dist/recent-search-popup-{before,after}*`.
+No dependency or toolchain was upgraded. A full combined forced gate and release build follow;
+real keyboard, touch layout and notification placement remain phone checks.
+
+**Corrected combined gate checked:** forced rerun completed in 346 s: 835 unit tests in 112 suites,
+zero failures/errors/skips; lint 0 errors/72 warnings (unchanged count). All existing PL/EN,
+store, web, native audio, icon, PWA and loopback checks also passed. The same temporary per-class
+worker isolation/1 GiB heap and existing JDK were used, without exclusions or repository settings
+changed. Evidence: ignored `dist/notification-search-verification/full-gate-presentation*`.
+Replacement release APK and phone acceptance are still pending; develop/master are unchanged.
