@@ -52,14 +52,15 @@ internal object PlaylistHeartActions {
         }, heart?.playlistName.orEmpty())
 
     fun customAction(context: Context, heart: PlaylistHeart?): PlaybackState.CustomAction? {
-        if (heart == null || heart.saving) return null
+        if (heart == null) return null
         // Some controllers drop extras; identity in the action still binds the press.
         return PlaybackState.CustomAction.Builder(encode(heart.request), label(context, heart), icon(heart)).build()
     }
 
     fun notificationAction(context: Context, heart: PlaylistHeart?): Notification.Action? {
         if (heart == null) return null
-        val command = if (heart.saving) null else PendingIntent.getService(
+        // Keep the target stable while saving; the workflow rejects overlapping writes.
+        val command = PendingIntent.getService(
             context, ACTION.hashCode(),
             Intent(context, PlaybackService::class.java).setAction(ACTION)
                 .setData(Uri.parse(encode(heart.request))),

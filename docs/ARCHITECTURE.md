@@ -111,8 +111,17 @@ not inherit the activity's saved-language wrapper.
 outline/filled icons. Identity is encoded in the command URI itself, including PendingIntent data:
 old buttons cannot be retargeted by updated extras, and custom actions remain bound when a client
 omits extras. Loading/unrestored/missing destinations and stale or overlapping presses are rejected;
-pending legacy commands are disabled and pending custom commands withheld. A text Toast plus the
-app notice provides completion/failure feedback. Host evidence does not establish lock-screen UI.
+pending commands remain present with stable URI identity. `PlaylistHeartSave` rejects overlapping
+writes; removing the action would move neighbouring controls under a second tap. Action labels
+provide accessibility metadata, not new visible captions. A text Toast plus the app notice provides
+completion/failure feedback. Host evidence does not establish lock-screen UI.
+
+`NowPlayingText` owns the dock/notification author-platform-year subtitle rule. The dock supplies
+localised status strings; `PlaybackPresentation` resolves them through the selected app locale.
+That factory builds the actual notification and session metadata/state, with bold title spans,
+the shared display summary, unchanged artwork/duration and stable transport identity. Service
+lifecycle and callbacks remain in `PlaybackService`. The small notification P uses the single
+logo geometry, without adaptive-icon padding/background or decorative cells; tint is system-owned.
 
 Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
 a separately launched sibling, not a prerequisite for the overview. Random filters do not use
