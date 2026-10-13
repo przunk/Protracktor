@@ -4,6 +4,26 @@ Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C105 latest playlist activation — implementation on task branch, 2026-10-14
+
+`fix/latest-playlist-activation` starts from develop `ad18da6`; develop remains 1.3.0/schema 23.
+The trial declares 1.3.1, without changing versionCode calculation or schema. Request generations
+guard suspended settings/track/list completions and their follow-up effects. Destination data is
+read before non-suspending publication, which keeps persistence ownership aligned with visible
+rows. New track-write captures remain gated while loading, preserving C103; previously captured
+writes keep their owners. Settings writes are serialized separately.
+
+**Checked negative evidence:** all six new regression checks fail before correction (47 session
+checks, six assertion failures). Controlled removal of latest-request/published-write protections
+fails five checks out of 48, including the added immediate-destination-save check. Restored sources
+match their recorded SHA-256 sums. The first implementation run had one historical early-ID
+expectation failure out of 65 checks; that ownership expectation was updated without weakening
+the row-write assertions. Restored focused checks passed: 66 tests in three suites, zero
+failures/errors/skips (48 session, 10 heart, eight SDK presentation), 101 s Gradle run.
+Full tests, lint and release APK still follow.
+Phone behaviour is **not checked**; no merge/push or master/tag/store change.
+[Analysis and phone checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+
 ## Session code review — 2026-10-14
 
 [Review and evidence](review-2026-10-14.md) covers the 2026-10-13/14 session, including C103, C102,
@@ -27,7 +47,8 @@ Save reports failure. No wrong-playlist write, data loss, phone frequency or pho
 claimed. **Owner selected correction, 2026-10-14:** implementation on
 `fix/latest-playlist-activation`, based on develop `ad18da6`. Before correction, all six new
 controlled-store regressions fail by assertion (47 session checks, six failures, zero errors/skips).
-No application fix or phone result at this checkpoint. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+This is the pre-fix checkpoint; the current branch implementation is recorded above. No phone
+result or merge is claimed. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 
 ## B48 and B46 — owner accepted and merged, 2026-10-14
 

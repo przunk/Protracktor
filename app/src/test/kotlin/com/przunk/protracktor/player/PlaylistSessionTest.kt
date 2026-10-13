@@ -33,6 +33,24 @@ class PlaylistSessionTest {
     }
 
     @Test(timeout = 5_000)
+    fun `publication makes destination writes available before metadata follow-up`() = runBlocking {
+        val f = activationFixture(this)
+        restore(f)
+        val edit = listOf(track("destination-edit"))
+        f.onResolve = {
+            assertEquals(2L, f.player.value.activePlaylistId)
+            assertEquals(2L, f.session.playlistId)
+            f.player.value = f.player.value.copy(queue = PlayQueue(edit), dirty = true)
+            f.session.savePlaylist()
+        }
+        f.session.switchToPlaylist(2)
+        drain()
+        assertEquals(listOf(2L to edit), f.writes)
+        assertFalse(f.player.value.dirty)
+        assertEquals(listOf(track("one")), f.rows[1])
+    }
+
+    @Test(timeout = 5_000)
     fun `latest activation wins when an older track read finishes last`() = runBlocking {
         val f = activationFixture(this)
         restore(f)
@@ -441,7 +459,7 @@ class PlaylistSessionTest {
         f.session.switchToPlaylist(2)
         entered.await()
         written.await()
-        assertEquals(2L, f.session.playlistId)
+        assertEquals(1L, f.session.playlistId)
         assertEquals(1L, f.player.value.activePlaylistId)
         assertEquals(old, f.player.value.queue.tracks)
         assertEquals(listOf(1L to old), f.writes)
@@ -924,7 +942,7 @@ class PlaylistSessionTest {
     }
 
     @Test(timeout = 5_000)
-    fun `switch saves settings before stop exposes the ID before the read and abandons only playlist edits`() = runBlocking {
+    fun `switch saves settings before stop publishes the ID with its queue and abandons only playlist edits`() = runBlocking {
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
         val old = track("old")
@@ -940,7 +958,7 @@ class PlaylistSessionTest {
         f.before = { if (it == "tracks:2") { entered.complete(Unit); gate.await() } }
         f.session.switchToPlaylist(2)
         entered.await()
-        assertEquals(2L, f.session.playlistId)
+        assertEquals(1L, f.session.playlistId)
         assertEquals(1L, f.player.value.activePlaylistId)
         f.player.value = f.player.value.copy(scanning = true)
         val before = f.player.value
@@ -1016,7 +1034,7 @@ class PlaylistSessionTest {
 
     @Test(timeout = 5_000)
     fun `suspended list publications retry their read if another state update wins the atomic update`() = runBlocking {
-        for (action in listOf("reload", "switch", "empty")) {
+        for (action in listOf("reload", "empty")) {
             val f = Fixture(this)
             val entered = CompletableDeferred<Unit>()
             val gate = CompletableDeferred<Unit>()
@@ -1029,7 +1047,6 @@ class PlaylistSessionTest {
             launch {
                 when (action) {
                     "reload" -> f.state.reloadPlaylists(read)
-                    "switch" -> f.state.switchPlaylist(2, listOf(track("b")), read)
                     else -> f.state.emptyPlaylist(read)
                 }
             }

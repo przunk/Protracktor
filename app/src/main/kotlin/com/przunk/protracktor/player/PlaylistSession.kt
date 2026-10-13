@@ -46,7 +46,7 @@ internal class PlaylistSession(
         suspend fun deletePlaylist(id: Long)
     }
 
-    /** Persistence target, updated before the destination queue is published during a switch. */
+    /** Published persistence target; a switch changes it only when destination data is ready. */
     var playlistId: Long = 0L
         private set
 
@@ -55,11 +55,15 @@ internal class PlaylistSession(
     private var trackWriteJob: Job? = null
     private var trackWriteTarget: Long? = null
     private val trackWrites = Mutex()
+    private val settingsWrites = Mutex()
+    private var activationGeneration = 0L
+    private var activating = false
     private data class TrackWrite(val snapshot: PlaylistSessionState.WriteSnapshot, val revision: Long)
     private val writeRevisions = mutableMapOf<Long, Long>()
     private val deletedPlaylists = mutableSetOf<Long>()
 
     private fun captureWrite(): TrackWrite? {
+        if (activating) return null
         val snapshot = state.writeSnapshot(playlistId) ?: return null
         if (snapshot.playlistId in deletedPlaylists) return null
         return TrackWrite(snapshot, writeRevisions[snapshot.playlistId] ?: 0L)
@@ -161,8 +165,9 @@ internal class PlaylistSession(
      * Shuffle, repeat and where playback got to are the app's own business and are saved as they
      * change. The track list belongs to the user's editing session and waits for [savePlaylist].
      */
-    private suspend fun saveNow() {
-        val saved = state.savedState(playlistId) ?: return
+    private suspend fun saveNow(allowed: () -> Boolean = { true }) = settingsWrites.withLock {
+        if (!allowed()) return@withLock
+        val saved = state.savedState(playlistId) ?: return@withLock
         store.savePlayerState(saved)
     }
 
@@ -263,14 +268,34 @@ internal class PlaylistSession(
      * Stops playback so transport and the replacement queue refer to the same playlist.
      */
     fun switchToPlaylist(id: Long) {
+        val generation = ++activationGeneration
+        activating = true
+        fun current() = generation == activationGeneration
         scope.launch {
-            saveNow()
-            stopPlayback()
-            playlistId = id
-            val tracks = store.tracksIn(id)
-            state.switchPlaylist(id, tracks, store::playlists)
-            scheduleSave()
-            resolveMetadataInBackground()
+            try {
+                saveNow(::current)
+                if (!current()) return@launch
+                stopPlayback()
+                if (!current()) return@launch
+                val tracks = store.tracksIn(id)
+                if (!current()) return@launch
+                val playlists = store.playlists()
+                if (!current()) return@launch
+                // No suspension between assigning ownership and publishing its queue.
+                playlistId = id
+                activating = false
+                state.switchPlaylist(id, tracks, playlists)
+                if (!current()) return@launch
+                scheduleSave()
+                resolveMetadataInBackground()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                // Superseded failures belong to the abandoned request, not the new selection.
+                if (current()) throw failure
+            } finally {
+                if (current()) activating = false
+            }
         }
     }
 }
