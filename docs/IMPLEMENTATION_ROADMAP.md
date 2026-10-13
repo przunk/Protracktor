@@ -14,9 +14,9 @@ device acceptance before merging. Documentation checks do not establish device b
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B48 | Heart action in the player notification to add the playing track to a playlist | Real user request after testing, relayed 2026-10-13. Destination and existing-membership behaviour are open (Q16); add-only is a provisional recommendation. Discuss B6 first; no implementation scheduled. |
-| B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Owner request, 2026-10-13. MediaSession callbacks already exist; verify receiver-button behaviour and address demonstrated gaps. |
-| B46 | Recent queries offered when entering the search field | Real user request; discuss three entries versus a longer scrollable history, retention and reuse. Q15. |
+| B48 | Heart action in the player notification to add the playing track to a playlist | Selected 2026-10-13: add-only to the selected playlist; save all its current contents immediately, including unsaved edits. Own task branch, phone acceptance required. Q16. |
+| B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
+| B46 | Recent queries offered when entering the search field | Selected 2026-10-13: remember 20 unique queries; show up to three latest case-insensitive prefix matches; selecting submits in the current scope. Android task branch. Q15. |
 | B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -53,6 +53,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
+| C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
@@ -156,6 +157,10 @@ sources and is not a full code review or a claim that the implementation has no 
 Steps 1–3 are merged, not remaining implementation work. The owner deferred the first APK until
 Bluetooth recovery was included. The device error trace and additional phone scenarios remain
 unconfirmed; merging does not establish store release/publication or long-term behaviour.
+
+**Next selection, 2026-10-13:** implement B48 and B46 on separate stacked task branches; the owner
+approved the second branch starting from the first so one APK can test both. Merge only after
+owner acceptance. WWW media buttons/B47/C104, UADE/C96 and queue/B45 are explicitly deferred.
 
 ## Verification of the original inventory update
 

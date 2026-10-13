@@ -10,7 +10,7 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B48. Add the playing track from the notification — user feedback recorded 2026-10-13; to discuss
+## B48. Add the playing track from the notification — user feedback; implementation selected 2026-10-13
 
 An app user requested a heart action in the player notification to add the playing track directly
 to a playlist, relayed by the owner after testing on 2026-10-13. The owner asked how the action
@@ -22,8 +22,11 @@ track unexpectedly; explain that it is already present. A destructive favourite 
 alternative for discussion, not the selected behaviour. Define the action's label and feedback
 when the app is in the background, playlist switching, persistence and track identity before coding.
 See [Q16](OPEN_QUESTIONS.md#q16--notification-heart-destination-and-existing-membership).
-This is a feature request, not a defect or an implementation authorization. The owner wants to
-discuss existing B6 stereo/mono/headphone processing first.
+**Owner decision, 2026-10-13:** implement add-only to the currently selected playlist. Save that
+playlist's entire working contents immediately, including earlier unsaved edits: the action is
+expected to work while the app is hidden or the screen is locked. A filled heart does not remove
+anything. Use existing file identity; bind the displayed track/playlist safely against stale actions
+and report rejection or saving failure. B6 has been accepted; B48 can proceed on its own branch.
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
 
@@ -40,6 +43,12 @@ made explicit if a device differs from the current callback behaviour. No device
 implementation is claimed here. This is separate from B44 Android Auto and from the reported
 audio-route transition problem in `STATUS.md` C102.
 
+**Owner clarification, 2026-10-13:** headset buttons appear to work in current Android testing;
+exact build/headset/buttons and background scenarios were not supplied. The outstanding request
+concerns the WWW player, where the owner reports that headset buttons do not work. Existing web
+MediaSession handlers are not device evidence. Record the defect as C104 and defer web investigation
+and implementation; no new Android transport implementation is selected.
+
 ## B46. Recent searches from the search field — user feedback recorded 2026-10-13; to discuss
 
 Real app-user request, relayed by the owner on 2026-10-13: tapping/focusing the search field
@@ -47,7 +56,11 @@ should offer previously submitted searches for reuse. Suggested presentation: sh
 most recent entries, either as the entire list or as a scrollable preview of a longer history.
 The list size, persistence, clearing, duplicate handling and whether an entry includes its
 search scope remain undecided. See [Q15](OPEN_QUESTIONS.md#q15--recent-searches-presentation-and-retention).
-Recorded for discussion and future implementation; no implementation is selected or scheduled.
+**Owner decision, 2026-10-13:** implement on Android. Persist the 20 latest unique submitted queries,
+show the latest three when the field is empty, and while typing show at most three recent queries
+matching the prefix (`startsWith`, ignoring case). Selecting a suggestion immediately submits it
+in the current search scope. Keep queries separate from playback History. No web history or
+new clearing control is selected. Remaining implementation/phone checks stay on its task branch.
 This is search-query history, separate from playback History and B43's listened markers.
 
 ## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss
@@ -64,6 +77,7 @@ establishing a regression. The meaning of context changes, Next/Previous, shuffl
 playlist edits and restoring sessions must be discussed before implementation. See
 [Q13](OPEN_QUESTIONS.md#q13--playback-queue-and-navigation).
 The desired continuity and queue direction are recorded; implementation is explicitly deferred.
+The owner reaffirmed on 2026-10-13 that queue behaviour needs a separate discussion before work.
 This concerns playback ownership, not the deferred swipe gesture in B25.
 
 **Related renewed user request:** stereo/headphone mixing is tracked in existing

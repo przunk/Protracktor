@@ -50,13 +50,31 @@ The merge tree exactly matched the approved branch; application sources still ma
 `ad6e3cd`. Tests/lint and APK were not rerun for the merge or documentation-only closeout.
 Master, tags and store publication are unchanged; no push, new APK or schema change.
 
-## Notification heart request — recorded 2026-10-13; discussion pending
+## Selected next work and deferred WWW headset report — 2026-10-13
+
+B48 notification hearts and B46 recent searches are selected for implementation. The owner approved
+two stacked task branches and one combined release APK for testing, with no merge before acceptance.
+B48 saves the selected playlist immediately, including existing unsaved edits; B46 remembers 20
+queries and shows at most three prefix matches, submitting a selected query in the current scope.
+No implementation, tests or new APK are established by this requirements checkpoint.
+C96 UADE teardown is deferred beyond today; B45 queue ownership needs a separate discussion.
+
+### C104 — WWW headset/media buttons do not control playback; owner report, deferred
+
+The owner reports Android headset buttons appear to work, but buttons do not work for the WWW
+player. Exact browser/device/headset, installed/site build, affected buttons and reproduction steps
+were not supplied. This is a real owner observation, not an agent reproduction or a diagnosis.
+Web already registers play/pause/next/previous handlers in `web/src/app.js`; their presence does
+not prove browser/device delivery. Cause and fix remain unverified. Track the deferred work with
+B47, separately from Android routing C102 and Android Auto B44. No code change or device retest.
+
+## Notification heart request — recorded 2026-10-13; implementation selected
 
 The owner relayed post-test user feedback requesting direct playlist addition from the player
 notification. Recorded as B48, with destination and existing-membership semantics in Q16 and the
-[feedback index](TESTING.md#feedback-record). Add-only with membership indication is an agent
-recommendation, not an owner decision. B6 stereo/mono/headphone discussion comes first.
-Documentation only: no code change, implementation schedule, test/lint run, APK or release.
+[feedback index](TESTING.md#feedback-record). The owner selected add-only membership indication and
+immediate saving of the selected playlist's entire working contents after B6 was accepted.
+Requirements recorded only at this checkpoint: no code change, test/lint run, APK or release.
 Reporter/build/device details and Play closed-test participation were not supplied or inferred.
 
 ## Bluetooth output recovery — C102, owner-accepted and merged, 2026-10-13

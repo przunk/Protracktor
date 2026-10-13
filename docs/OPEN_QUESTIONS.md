@@ -9,39 +9,50 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 **Open, real user feedback relayed by the owner, 2026-10-13; wishlist B48.** Add the playing track
 to a playlist directly from the player notification. The owner left existing-membership behaviour
-for discussion and wants to discuss B6 audio mixing first. No implementation is selected.
+for discussion. After accepting B6, the owner selected B48 implementation on 2026-10-13.
+
+**Selected:** add-only to the currently selected playlist, immediately saving its entire working
+contents, including existing unsaved edits. A filled heart confirms membership without removal.
+The owner deliberately accepted saving those edits because notification use may happen on a locked
+screen. Track/playlist binding, duplicate detection and failure feedback must remain safe; use
+existing file-identity semantics rather than a new favourites model.
 
 - Add-only: outlined heart adds; filled heart confirms membership. A repeat press gives an
-  already-present explanation, without duplication or deletion. Provisional recommendation:
+  already-present explanation, without duplication or deletion. Selected direction:
   notification interaction should not unexpectedly remove saved music.
 - Toggle membership: filled heart removes. Familiar for a dedicated favourites collection, but
   potentially destructive for a playlist; destination, feedback and recovery need agreement.
 
-Settle whether the destination is the selected saved playlist, a dedicated favourites playlist
-or a user-configured target. Browse/Random's playback queue is not automatically that destination.
+The destination is the selected playlist, not a new dedicated favourites playlist.
+Browse/Random's playback queue is not automatically that destination.
 Define membership using the existing file-identity rules rather than title text; decide subsong
 semantics explicitly. Existing add-to-playlist code ignores duplicates, but notification handling
 must also bind the intended track and playlist safely when either changes during the action.
-Also settle durable saving versus unsaved playlist edits, available action labels, background/lock
-screen feedback, failure handling and the no-current-track case. No new favourites data model,
-notification layout or persistence policy is approved by this proposal.
+Labelled actions must represent membership and unavailable/pending states without promising a
+completed save before persistence succeeds. Background/lock-screen layout and behaviour require
+phone testing; no-current-track and stale actions must not modify another track or playlist.
 
 ---
 
 ## Q15 — Recent searches: presentation and retention
 
 **Open, real user feedback relayed by the owner, 2026-10-13; wishlist B46.** Focusing the search
-field should offer recent searches. The owner explicitly left the list shape for discussion.
+field should offer recent searches. The owner selected implementation and resolved the main
+interaction on 2026-10-13.
+
+**Selected:** Android remembers 20 unique submitted queries, newest first. Empty field shows three
+latest entries; typed text narrows the history by case-insensitive `startsWith`, with at most three
+matching suggestions. Clicking an entry immediately searches it in the current scope. Scope is
+not restored from history; playback Clear History retains its existing meaning. No separate
+clearing UI or WWW query history has been selected.
 
 - Show only the three most recent submitted queries: compact, but older queries are unavailable.
 - Show three visible rows in a scrollable list: more history, with a limit still to be chosen.
 - Show three entries with a labelled action opening the full history: another view and interaction.
 
-Provisional recommendation for discussion: begin with three directly selectable entries;
-extend only if users need older queries. This is not an owner decision. Also settle whether
-selection submits immediately or only fills the field, whether scopes are recalled, when queries
-are recorded, persistence across restarts, deduplication and clearing. Playback Clear History
-must not silently acquire search-history semantics. Android/web scope remains undecided.
+The alternatives above are retained as earlier discussion, not current implementation choices.
+Longer history, scrollable/full-history views and a separate clearing control remain future options,
+not additions to this selected scope.
 
 ---
 

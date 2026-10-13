@@ -145,14 +145,14 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
-| 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | `WISHLIST.md` B48; `OPEN_QUESTIONS.md` Q16; destination and existing-membership behaviour to discuss, not implemented |
+| 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implementation selected: add-only to selected playlist and save all its working edits immediately; not implemented at the requirements checkpoint |
 | 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, merged with owner approval at `f4c9bf1`; no individual playlist phone results supplied |
 | 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; four routing states owner-confirmed after trial handoff; owner-accepted and merged at `69c42a2`; exact build/device/error trace unknown |
-| 2026-10-13 | Owner request | Verify Bluetooth Next, Previous, Play/Pause and Stop; existing MediaSession callbacks do not establish receiver-button behaviour | `WISHLIST.md` B47; verification/improvement TODO |
+| 2026-10-13 | Owner request and follow-up observation | Android headset buttons appear to work; WWW buttons do not control playback | B47/C104; WWW investigation deferred; exact device/browser/build/buttons and mechanism not supplied |
 | 2026-10-13 | Owner request | Reconsider AMP (Amiga Music Preservation) as an archive candidate | Existing `BACKLOG.md` A7; `PLAN_CATALOGUES.md`; access exploration TODO |
 | 2026-10-13 | Real app-user feedback, relayed and discussed with the reporter by owner | Keep music playing when returning from search/author browsing to the playlist; explicit active queue proposed | `WISHLIST.md` B45; `OPEN_QUESTIONS.md` Q13; future behaviour change |
-| 2026-10-13 | Real app-user feedback, relayed by owner | Mix separated stereo channels so music is audible in both ears; possible headphone-processing mode raised | Existing `WISHLIST.md` B6; `OPEN_QUESTIONS.md` Q14; three-mode Android Settings trial selected on a branch; no diagnosed decoder/output fault or phone acceptance |
-| 2026-10-13 | Real app-user feedback, relayed by owner | Offer recent queries when focusing search; three entries or a scrollable preview remain to be discussed | `WISHLIST.md` B46; `OPEN_QUESTIONS.md` Q15; feature request |
+| 2026-10-13 | Real app-user feedback, relayed by owner | Mix separated stereo channels so music is audible in both ears; possible headphone-processing mode raised | B6/Q14; three-mode Android trial accepted and merged at `f4d304c`; individual remaining device results not supplied |
+| 2026-10-13 | Real app-user feedback, relayed by owner | Offer recent queries when focusing search | B46/Q15; selected: retain 20 queries, show up to three latest prefix matches, selecting submits in current scope; not implemented at the requirements checkpoint |
 | 2026-10-06 | App user, relayed by owner | Random list/history and selection become inconsistent after selecting an earlier track, changing scope and pressing Next | `STATUS.md` C97 |
 | 2026-10-06 | Different app user, relayed by owner | Browse opens while the playlist is covered by the Random return-choice overlay | `STATUS.md` C98 |
 | 2026-10-06 | Owner testing | Random filters open with a slight lag; unavailable chips become active after about a second in an uncertain sequence | `STATUS.md` C99 |
@@ -160,8 +160,9 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 The 2026-10-13 requests are genuine user feedback according to the owner. Their exact reporter
 identities, builds, devices, occurrence dates and installation channels were not supplied;
-the record does not infer how many distinct reporters supplied them. They are pending discussion,
-not completed fixes or retests. Stereo mixing renews B6 rather than creating a duplicate.
+the record does not infer how many distinct reporters supplied them. Each tracking entry distinguishes
+selection, implementation and acceptance; a request alone is not a completed fix or retest.
+Stereo mixing renews B6 rather than creating a duplicate.
 
 The first two 2026-10-06 defects were explicitly attributed to different users; the third came
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
