@@ -113,5 +113,7 @@ SystemUI rendering or controller delivery on Android. The full combined gate rem
 **Corrected combined verification:** the stacked B46 branch passed the forced gate in 346 s:
 835 unit tests in 112 suites, zero failures/errors/skips; lint 0 errors/72 warnings, plus all
 existing web/native/resource/store/loopback checks. The production reservation source is restored
-and is included in that gate. [Details](PLAN_RECENT_SEARCHES.md). A replacement minified APK and
-owner phone retest still follow; no develop merge, push or store release.
+and is included in that gate. [Details](PLAN_RECENT_SEARCHES.md). The replacement minified release
+**1.3.0 (1158)** from clean source `f289863` is ready; [artifact checks](STATUS.md) and
+[corrected phone retest](TESTING.md). Earlier `1452309` trial is superseded. Slot placement on
+SystemUI remains unverified until the owner checks it; no develop merge, push or store release.

@@ -111,4 +111,15 @@ zero failures/errors/skips; lint 0 errors/72 warnings (unchanged count). All exi
 store, web, native audio, icon, PWA and loopback checks also passed. The same temporary per-class
 worker isolation/1 GiB heap and existing JDK were used, without exclusions or repository settings
 changed. Evidence: ignored `dist/notification-search-verification/full-gate-presentation*`.
-Replacement release APK and phone acceptance are still pending; develop/master are unchanged.
+The replacement release APK is recorded below; phone acceptance is still pending and
+develop/master are unchanged.
+
+## Corrected combined trial handoff — 2026-10-13
+
+Minified release **1.3.0 (1158)**, clean source `f289863`, built in 56 s:
+`dist/protracktor-release-1.3.0-1158-f289863-20261013-232128.apk`.
+Manifest/version/ABIs, APK v2 test signature and retained reservation/heart/magnifier resources
+were checked; the removed heading resource is absent. [Artifact size/hash/certificate](STATUS.md)
+and [corrected phone scenarios](TESTING.md). The earlier `1452309` trial is superseded following
+the owner's presentation feedback. Handoff documentation does not change the gate/APK sources.
+Both features remain on their separate stacked branches, unmerged, with phone acceptance pending.

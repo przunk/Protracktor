@@ -145,7 +145,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
-| 2026-10-13 | Owner testing after combined B48+B46 APK handoff | Heart moves into a missing Previous slot; integrated search magnifier was changed to a labelled button; suggestions should be plain text autocomplete rather than an icon-button section | B48/B46 follow-up in `STATUS.md` and their plans; corrected 835-test gate/lint passed, replacement APK and phone acceptance pending |
+| 2026-10-13 | Owner testing after combined B48+B46 APK handoff | Heart moves into a missing Previous slot; integrated search magnifier was changed to a labelled button; suggestions should be plain text autocomplete rather than an icon-button section | B48/B46 follow-up in `STATUS.md` and their plans; corrected 835-test gate/lint passed, replacement 1.3.0 (1158) APK ready, phone acceptance pending |
 | 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implemented on task branch: add-only, immediately save all selected-playlist edits; combined host gate passed, phone acceptance pending |
 | 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, merged with owner approval at `f4c9bf1`; no individual playlist phone results supplied |
 | 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; four routing states owner-confirmed after trial handoff; owner-accepted and merged at `69c42a2`; exact build/device/error trace unknown |
@@ -169,6 +169,17 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
+## Corrected combined B48+B46 APK — offered for phone retest, 2026-10-13
+
+Install without uninstalling or clearing app data:
+`dist/protracktor-release-1.3.0-1158-f289863-20261013-232128.apk`, **1.3.0 (1158)**,
+clean source `f289863`. The corrected forced gate passes 835 tests/112 suites, lint 0 errors/72
+warnings. [Version/hash/test-signature checks](STATUS.md) establish the artifact, not installation,
+keyboard behaviour or SystemUI layout. First check the integrated magnifier and text-only dropdown,
+then heart placement with Previous absent/present and Next absent; use both detailed lists below.
+The owner-reported original defects are recorded above. Corrected phone acceptance is still
+pending, and no merge, push or Play-track outcome is implied.
+
 ## Earlier combined B48+B46 APK — superseded after owner feedback, 2026-10-13
 
 The earlier offered minified release was:
@@ -179,7 +190,7 @@ and is also superseded. The owner subsequently reported layout/style defects; ne
 corrected trial. Record the replacement's installed build/device/Android and observed results
 before approving either branch. No merge or Play-track activity is implied.
 
-## B46 recent searches — presentation corrected; replacement APK pending
+## B46 recent searches — corrected release APK ready; phone retest pending
 
 Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
 [Contract and host evidence](PLAN_RECENT_SEARCHES.md). The owner's original presentation feedback
@@ -202,7 +213,7 @@ is recorded above; corrected real phone behaviour is **not checked**.
    result-list space. Report installed build/device/Android and the actual scenario outcome.
 5. Run B48 below and the previously accepted stereo/Bluetooth scenarios on the same APK.
 
-## B48 notification heart — placement configuration corrected; replacement APK pending
+## B48 notification heart — corrected release APK ready; phone retest pending
 
 The task branch is `feature/notification-playlist-heart`; B46 starts from it with owner
 approval. [Contract and host evidence](PLAN_NOTIFICATION_HEART.md). Use disposable playlists

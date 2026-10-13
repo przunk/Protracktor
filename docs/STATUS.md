@@ -4,7 +4,7 @@ Updated: 2026-10-13 — version 1.2.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B48+B46 owner trial feedback — corrected host gate passed, APK pending, 2026-10-13
+## B48+B46 owner trial feedback — corrected APK ready, phone retest pending, 2026-10-13
 
 The owner reported three presentation problems after the combined APK handoff: the notification
 heart fills the missing Previous slot and moves when Previous becomes available; the integrated
@@ -24,7 +24,18 @@ zero failures/errors/skips, lint 0 errors/72 warnings, plus all existing web/nat
 and loopback checks listed below. It used the same temporary per-class worker isolation and JDK,
 without exclusions or repository build-setting changes. Evidence is in ignored
 `dist/notification-search-verification/full-gate-presentation*`. A replacement minified APK is
-pending. Nothing has been merged into develop/master or pushed. Phone acceptance remains pending.
+ready below. Nothing has been merged into develop/master or pushed. Phone acceptance remains pending.
+
+**Checked replacement artifact:** **1.3.0 (1158)**, clean source `f289863`, built in 56 s:
+`dist/protracktor-release-1.3.0-1158-f289863-20261013-232128.apk`, 11,800,374 bytes. SHA-256:
+`e15e147fdac8a31f54c6b61ebdef24a1522780ec3401c20e1ced0115e3aa041b`.
+R8 executed; manifest is non-debuggable, minSdk 29/targetSdk 36, three existing ABIs. APK v2
+signature verified; test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, matching earlier trials.
+Both reservation wire keys survive in DEX; heart/magnifier resources remain and the removed
+suggestion-heading resource is absent. These are artifact/host checks, not SystemUI or keyboard
+execution on a phone. [Corrected phone checklist](TESTING.md). Subsequent handoff is documentation
+only; no rebuild is needed for it. Earlier APKs below are superseded. No AAB/store release.
 
 ## Earlier B48+B46 combined APK — superseded by presentation feedback, 2026-10-13
 

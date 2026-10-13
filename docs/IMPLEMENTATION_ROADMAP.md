@@ -14,9 +14,9 @@ device acceptance before merging. Documentation checks do not establish device b
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B48 | Heart action in the player notification to add the playing track to a playlist | Implemented on `feature/notification-playlist-heart`: add-only; immediately save all selected-playlist edits; use the saved app language. Owner placement feedback: reserve transport slots so the heart stays after Next. Corrected 835-test gate/lint passed; replacement APK and phone acceptance pending. Q16. |
+| B48 | Heart action in the player notification to add the playing track to a playlist | Implemented on `feature/notification-playlist-heart`: add-only; immediately save all selected-playlist edits; use the saved app language. Owner placement feedback: reserve transport slots so the heart stays after Next. Corrected 835-test gate/lint passed; replacement 1.3.0 (1158) APK ready, phone acceptance pending. Q16. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
-| B46 | Recent queries offered when entering the search field | Implemented on the approved stacked `feature/recent-search-suggestions`: 20 queries, at most three prefix matches, immediate submission in the current scope. Owner presentation feedback: integrated magnifier and plain text anchored dropdown, no icons/heading. Corrected 835-test gate/lint passed; replacement APK and phone acceptance pending. Q15. |
+| B46 | Recent queries offered when entering the search field | Implemented on the approved stacked `feature/recent-search-suggestions`: 20 queries, at most three prefix matches, immediate submission in the current scope. Owner presentation feedback: integrated magnifier and plain text anchored dropdown, no icons/heading. Corrected 835-test gate/lint passed; replacement 1.3.0 (1158) APK ready, phone acceptance pending. Q15. |
 | B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
@@ -162,7 +162,8 @@ unconfirmed; merging does not establish store release/publication or long-term b
 branches with owner approval. Their combined forced host gate/lint passed; one minified release
 APK 1.3.0 (1154), source `1452309`, was offered. Owner feedback requires notification slot and
 search-field presentation corrections. Corrected gate passed 835 tests/112 suites, lint 0 errors/72
-warnings; replacement APK and phone acceptance remain pending.
+warnings; replacement **1.3.0 (1158)** APK, clean source `f289863`, is ready. Phone acceptance
+remains pending.
 Merge only afterward.
 WWW media buttons/B47/C104,
 UADE/C96 and queue/B45 are explicitly deferred.

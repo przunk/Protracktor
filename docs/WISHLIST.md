@@ -36,7 +36,8 @@ The final joint gate passed 829 tests with lint
 source `1452309`, was offered. Owner trial feedback now requires a stable heart position after
 Next; B48 `029c943` reserves both transport slots (71 focused checks, four reservation regressions
 fail when removed). The corrected combined gate passed 835 tests in 112 suites, lint 0 errors/72
-warnings. Replacement APK and phone retest are pending. No merge or store release.
+warnings. Replacement APK **1.3.0 (1158)**, clean source `f289863`, is ready; phone retest is
+pending. No merge or store release.
 [Plan](PLAN_NOTIFICATION_HEART.md).
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
@@ -79,8 +80,8 @@ stacked on B48 with owner approval. 42 focused host tests passed; deliberate mut
 warnings; combined minified release 1.3.0 (1154), source `1452309`, was offered. Owner trial feedback
 selected the original integrated magnifier and plain text dropdown without suggestion icons/heading.
 The general labelled-action rule does not apply to this specialised input. The corrected combined
-gate passed 835 tests in 112 suites, lint 0 errors/72 warnings; replacement APK and phone retest
-are pending. No merge or store release.
+gate passed 835 tests in 112 suites, lint 0 errors/72 warnings; replacement APK **1.3.0 (1158)**,
+clean source `f289863`, is ready. Phone retest is pending. No merge or store release.
 This is search-query history, separate from playback History and B43's listened markers.
 
 ## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss
