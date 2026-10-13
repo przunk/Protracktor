@@ -110,6 +110,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun toggleAllSubsongs() = controller.toggleAllSubsongs()
     fun setFallbackLength(seconds: Int) = controller.setFallbackLength(seconds)
     fun setCacheAhead(mode: CacheAhead) = controller.setCacheAhead(mode)
+    fun setStereoMix(mode: StereoMix) = controller.setStereoMix(mode)
     fun setShareAudioMinutes(minutes: Int) = controller.setShareAudioMinutes(minutes)
     fun setWebPlayer(base: String) = controller.setWebPlayer(base)
 

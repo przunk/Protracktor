@@ -205,6 +205,12 @@
     <string name="settings_dynamic_colour">Systemowa paleta kolorów</string>
     <string name="settings_dynamic_colour_detail">Bierz kolory z tapety.</string>
     <string name="settings_playback">Odtwarzanie</string>
+    <string name="settings_stereo_mix">Miks stereo</string>
+    <string name="settings_stereo_mix_detail" formatted="false">Oryginał zachowuje stereo utworu. Zwężone zbliża kanały (50% szerokości). Mono odtwarza ten sam miks kanałów w obu uszach. Działa od razu podczas odtwarzania, nie zmienia udostępnianego audio.</string>
+    <string name="settings_stereo_mix_original">Oryginał</string>
+    <string name="settings_stereo_mix_narrow">Zwężone</string>
+    <string name="settings_stereo_mix_mono">Mono</string>
+    <string name="settings_stereo_mix_selected">Wybrane: %1$s</string>
     <string name="settings_play_all_subsongs">Graj wszystkie utwory w pliku</string>
     <string name="settings_play_all_subsongs_detail">Niektóre pliki mieszczą kilkadziesiąt utworów. Wyłączone — gra tylko pierwszy, a playlista idzie dalej.</string>
     <string name="settings_language">Język</string>

@@ -47,21 +47,22 @@ must not silently acquire search-history semantics. Android/web scope remains un
 
 ## Q14 — Stereo mixing and headphone mode
 
-**Open, real user feedback relayed by the owner, 2026-10-13; existing wishlist B6.** A listener
+**Android three-mode trial selected by the owner, 2026-10-13; existing wishlist B6.** A listener
 wants channels audible in both ears. The cause has not been diagnosed; no track/output example
 was provided. Dolby Headphones was also raised as a possible direction to explore.
 
-Options for discussion: leave original stereo untouched; offer adjustable stereo narrowing;
-offer mono downmix; or add a separate headphone crossfeed/virtualisation option. These are
-different treatments and must not be presented as interchangeable. Start by collecting a
-representative track/output example and evaluating narrowing/mono before choosing a more
-complex headphone mode. This recommendation does not select a default or authorize coding.
+The owner chose Original / Narrow / Mono in Settings, not a width slider. The branch trial keeps
+Original as the default and uses 50% width for Narrow as agent assumptions for listening tests.
+The global preference applies live to Android playback across backends, including MP3, and is
+restored before a new track starts. See [trial contract](PLAN_STEREO_MIX.md); no phone acceptance
+or merge is implied by choosing the trial.
 
-Decide where the control belongs, its strength/range, persistence, global versus per-format
-behaviour, application across decoders and the web companion, and tests for level changes,
-clipping and stereo/mono compatibility. A Dolby-branded mode has no selected technology or
-confirmed feasibility; investigate that separately if retained. No dependency or named mode
-is committed by this proposal.
+Still open: whether the modes are useful, whether Narrow's strength/default should change, and
+whether a later phase should cover web, per-format/output preferences or headphone crossfeed.
+Audio exports remain unchanged. Crossfeed/virtualisation is not interchangeable with channel
+averaging; a Dolby-branded mode has no selected technology or confirmed feasibility. No new
+dependency or branded mode is authorized. Listening tests must include mono, separated stereo,
+opposite-phase material, level changes and transitions; Mono can cancel opposite-phase content.
 
 ---
 

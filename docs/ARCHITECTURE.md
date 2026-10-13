@@ -82,6 +82,20 @@ sound handoff during playback and Pause on disconnection; remaining device check
 Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.
 
+**B6 stereo mix trial, 2026-10-13, on `feature/stereo-mix-modes`:** `StereoMix` maps stable preference
+names to native widths 100 / 50 / 0. Existing preferences restore the global choice into player
+state; Settings forwards changes to the controller, which publishes/persists them and updates the
+current track. A newly opened track receives the latest choice before its first start, including
+when the choice changed while opening was suspended. Playlist storage/schema are unchanged.
+
+`StereoMixer` is Android-independent PCM processing used by the common Oboe callback after the
+backend renders and before ducking gain. Original bypasses without rewriting samples; Narrow and
+Mono use convex channel averages, not level boosting. The control thread only stores an atomic
+target; callback-owned width ramps live changes over up to approximately 10 ms without allocations or
+new locks. Recovery replaces output, not the mixer/decoder; EOF still zero-fills the unrendered
+tail. Shared audio uses the separate rendering path and is intentionally unchanged, as is web.
+This is narrowing/downmixing, not crossfeed or Dolby processing; listening acceptance is pending.
+
 Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
 a separately launched sibling, not a prerequisite for the overview. Random filters do not use
 those cached Browse counters as answers: `rememberRandomFilterState`, composed outside the sheet,

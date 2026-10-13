@@ -11,6 +11,7 @@
 #include <cmath>
 #include <algorithm>
 #include "engine.h"
+#include "stereo_mix.h"
 #include "log.h"
 
 #include <jni.h>
@@ -182,6 +183,8 @@ public:
             },
             0);
 
+        stereoMixer_.process(out, rendered, stereoWidth_.load(std::memory_order_relaxed), stream->getSampleRate());
+
         // Ducking is applied here rather than by stopping the stream. A notification arriving should
         // lower the music for a moment, not end it -- and the only place a gain can be applied
         // without a gap is the buffer on its way out.
@@ -262,6 +265,10 @@ public:
 
     /** 1.0 is untouched. Used for ducking under a transient interruption. */
     void setGain(float gain) { gain_.store(gain, std::memory_order_relaxed); }
+
+    void setStereoWidth(int percent) {
+        stereoWidth_.store(percent == 0 || percent == 50 ? percent : 100, std::memory_order_relaxed);
+    }
 
     /**
      * Asks for a new position. Applied by the audio callback on its next pass, or immediately when
@@ -466,6 +473,8 @@ private:
     std::shared_ptr<OutputError> outputError_;
     std::atomic<bool> finished_{false};
     std::atomic<float> gain_{1.0f};
+    std::atomic<int> stereoWidth_{100};
+    protracktor::StereoMixer stereoMixer_;
 
     /**
      * Held by whoever is touching the decoder. **The audio callback only ever tries.**
@@ -774,6 +783,11 @@ Java_com_przunk_protracktor_engine_NativeEngine_nativeKnownLengths(JNIEnv *env, 
 JNIEXPORT void JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeSetGain(JNIEnv *, jclass, jlong handle, jfloat gain) {
     guardedVoid("setGain", [&] { asPlayer(handle)->setGain(gain); });
+}
+
+JNIEXPORT void JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeSetStereoWidth(JNIEnv *, jclass, jlong handle, jint percent) {
+    guardedVoid("setStereoWidth", [&] { asPlayer(handle)->setStereoWidth(percent); });
 }
 
 JNIEXPORT jstring JNICALL

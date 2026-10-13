@@ -4,6 +4,46 @@ Updated: 2026-10-13 — version 1.1.1, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Stereo mix trial — B6, implemented on branch; listening pending, 2026-10-13
+
+Owner selected three Android Settings modes: Original, Narrow and Mono. Work is isolated on
+`feature/stereo-mix-modes`; [trial contract](PLAN_STEREO_MIX.md) records the boundaries and assumptions.
+The trial declares version 1.2.0; develop remains 1.1.1/schema 23. Original is the unchanged default,
+Narrow uses 50% width and Mono averages both channels. Existing preferences retain the global choice.
+The shared Android output applies it before ducking, including MP3. Live transitions ramp over
+up to approximately 10 ms without resetting the decoder; a newly opened track receives the latest mode
+before starting. Paused playback stays paused. Web and exported/shared audio are unchanged.
+
+**Checked:** the production Player/JNI harness passes 30 checks, also with ASan/UBSan outside the
+sandbox. Its earlier regression checkpoint failed 8/29 before PCM processing. Bypassing processing
+failed 9/30 checks; removing the ramp failed 2/30. Ten focused Kotlin/Android-host/Compose checks
+cover stable mode mapping, preferences and real Settings clicks in PL/EN. Disconnecting Settings
+failed 2/3 UI tests; mutating persistence/width mapping failed 4/7 focused checks. All mutated sources
+were restored and checksums compared. These are host checks, not phone execution.
+
+**Checked:** forced full gate completed in 205 s: 782 unit tests across 106 suites, zero
+failures/errors/skips; lint 0 errors and 69 warnings. Also passed: PL/EN strings, store metadata,
+581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks. An earlier full run passed all
+782 unit tests but lint rejected a literal percent in the new translated description; both
+resources now explicitly disable formatting. The first rerun was interrupted after the host test
+worker reported OutOfMemoryError. The successful rerun used a temporary init script limiting that
+worker to 1 GiB, with the existing JDK and no app/build configuration or test exclusions changed.
+
+**Checked:** minified release APK built from clean source `ad6e3cd` in 106 s:
+`dist/protracktor-release-1.2.0-1146-ad6e3cd-20261013-213208.apk`, **1.2.0 (1146)**,
+11,760,006 bytes. SHA-256:
+`dbbdc1ed91f11c53d69cc4b988f57fb670b1544c1ede7a52c58094474e613487`.
+R8 executed; the APK is non-debuggable, minSdk 29/targetSdk 36, three ABIs. APK v2 signature
+verified; test certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`,
+matching the previous accepted Bluetooth trial. The width setter's JNI export exists in all three
+packaged libraries and its native name survives in minified DEX. These are artifact checks, not
+execution on Android. The subsequent handoff changes documentation only, not the APK sources.
+
+Phone behaviour/usefulness remains **not checked**; the owner can reject or adjust the trial after
+listening. [Phone checklist](TESTING.md#b6-stereo-mix--owner-listening-trial-pending).
+No merge, push, store release or schema change.
+
 ## Notification heart request — recorded 2026-10-13; discussion pending
 
 The owner relayed post-test user feedback requesting direct playlist addition from the player
