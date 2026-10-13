@@ -58,6 +58,12 @@
     <string name="settings_dynamic_colour">System colour palette</string>
     <string name="settings_dynamic_colour_detail">Take colours from your wallpaper.</string>
     <string name="settings_playback">Playback</string>
+    <string name="settings_stereo_mix">Stereo mix</string>
+    <string name="settings_stereo_mix_detail" formatted="false">Original keeps the source stereo. Narrow brings the channels closer (50% width). Mono plays the same channel mix in both ears. Applies immediately to playback, not shared audio.</string>
+    <string name="settings_stereo_mix_original">Original</string>
+    <string name="settings_stereo_mix_narrow">Narrow</string>
+    <string name="settings_stereo_mix_mono">Mono</string>
+    <string name="settings_stereo_mix_selected">Current: %1$s</string>
     <string name="settings_play_all_subsongs">Play every tune in a file</string>
     <string name="settings_play_all_subsongs_detail">Some files hold dozens of tunes. Off, only the first plays and the playlist moves on.</string>
     <string name="settings_language">Language</string>

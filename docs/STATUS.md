@@ -4,14 +4,35 @@ Updated: 2026-10-13 — version 1.1.1, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Stereo mix trial — B6, regression checkpoint on branch, 2026-10-13
+## Stereo mix trial — B6, implemented on branch; listening pending, 2026-10-13
 
 Owner selected three Android Settings modes: Original, Narrow and Mono. Work is isolated on
 `feature/stereo-mix-modes`; [trial contract](PLAN_STEREO_MIX.md) records the boundaries and assumptions.
-The native requested-width boundary exists, but processing is not implemented yet. The production
-Player/JNI harness executed 29 checks, 8 failed; this establishes the asymmetric-PCM requirements
-before changing rendering. Full application tests/lint, APK and phone behaviour are not checked at
-this stage. No merge, push, release or schema change.
+The trial declares version 1.2.0; develop remains 1.1.1/schema 23. Original is the unchanged default,
+Narrow uses 50% width and Mono averages both channels. Existing preferences retain the global choice.
+The shared Android output applies it before ducking, including MP3. Live transitions ramp over
+approximately 10 ms without resetting the decoder; a newly opened track receives the latest mode
+before starting. Paused playback stays paused. Web and exported/shared audio are unchanged.
+
+**Checked:** the production Player/JNI harness passes 30 checks, also with ASan/UBSan outside the
+sandbox. Its earlier regression checkpoint failed 8/29 before PCM processing. Bypassing processing
+failed 9/30 checks; removing the ramp failed 2/30. Ten focused Kotlin/Android-host/Compose checks
+cover stable mode mapping, preferences and real Settings clicks in PL/EN. Disconnecting Settings
+failed 2/3 UI tests; mutating persistence/width mapping failed 4/7 focused checks. All mutated sources
+were restored and checksums compared. These are host checks, not phone execution.
+
+**Checked:** forced full gate completed in 205 s: 782 unit tests across 106 suites, zero
+failures/errors/skips; lint 0 errors and 69 warnings. Also passed: PL/EN strings, store metadata,
+581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks. An earlier full run passed all
+782 unit tests but lint rejected a literal percent in the new translated description; both
+resources now explicitly disable formatting. The first rerun was interrupted after the host test
+worker reported OutOfMemoryError. The successful rerun used a temporary init script limiting that
+worker to 1 GiB, with the existing JDK and no app/build configuration or test exclusions changed.
+
+Clean-source release APK is being prepared. Phone behaviour/usefulness remains
+**not checked**; the owner can reject or adjust the trial after listening. No merge, push, store
+release or schema change.
 
 ## Notification heart request — recorded 2026-10-13; discussion pending
 

@@ -14,7 +14,7 @@ Source: real listener feedback about strongly separated channels, relayed by the
 - Apply the latest choice before a new track starts and to existing playback without resetting
   position, subsong, focus or output. Paused playback remains paused.
 - Process the common Android output after decoding, including MP3, without modifying individual
-  backend stereo settings. Smooth live width changes over at most 10 ms; no callback allocation,
+  backend stereo settings. Smooth live width changes over approximately 10 ms; no callback allocation,
   JNI calls or new locks. Preserve the existing ducking gain, EOF and Bluetooth recovery policies.
 - No amplitude normalization/boost: channel averages are convex combinations. Opposite-phase
   content can cancel in Mono; do not claim Mono preserves every stereo detail or repairs a decoder.
@@ -36,10 +36,33 @@ remain discussion-only. No dependency, database migration or store release is ne
    and paused, checks next/subsong/restart/persistence and Bluetooth routing. The trial can be
    revised or rejected after listening. Stop unmerged until owner approval.
 
-## Regression checkpoint
+## Regression checkpoint — `e38e94d`
 
-Checked: the native control boundary stores the requested width, but rendering has not yet
+At this checkpoint the native control boundary stored the requested width, but rendering had not
 been changed. The production Player/JNI host harness executed 29 checks; 8 failed on Narrow/Mono,
 live changes, paused resume, EOF and recovery expectations. The existing 18 recovery checks remain
 green. Evidence: ignored `dist/stereo-mix-verification/native-red.log`. No phone acceptance,
 full test/lint result or APK is established at this checkpoint.
+
+## Implementation verification
+
+Implemented shared output processing and Settings/persistence wiring. Focused checks executed:
+3 mode/width tests, 4 real Android preference tests and 3 Compose tests against the actual Settings
+screen (including English/Polish clicks and selected-state feedback): 10 passed. The expanded native
+Player/JNI harness passes 30 checks, including another device-rate/mid-transition check.
+
+Native bypass mutation failed 9/30 checks; removing the transition ramp failed 2/30. Disconnecting
+the real Settings callback failed 2/3 UI tests. Mutating the preference write and Kotlin width
+mapping failed 4/7 focused tests (3 preference checks and 1 mode check). Mutated native/UI/preference
+sources were restored and SHA-256 compared. ASan/UBSan passed all 30 checks outside sandbox;
+the sandbox attempt could not finish LeakSanitizer under ptrace.
+
+Forced full gate completed in 205 s: 782 unit tests in 106 suites with zero failures/errors/skips;
+lint 0 errors and 69 warnings. Strings, store metadata, 581 page checks, 49 WASM engine checks,
+8 SAP checks, browser database upgrade, 30 native audio checks, 140 icon paths, PWA and 11 loopback
+server checks also passed. Earlier lint rejected literal percent formatting in the description;
+both resources now set `formatted="false"`. A subsequent host test worker ran out of memory and
+that run was interrupted. The successful full rerun used a local temporary Gradle init script
+setting the test worker heap to 1 GiB; the existing JDK, app/build configuration and full test
+selection stayed unchanged. Evidence is retained under ignored `dist/stereo-mix-verification/`.
+Release artifact is being prepared; phone behaviour/usefulness and merge remain unconfirmed.

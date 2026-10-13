@@ -40,6 +40,15 @@ private fun icon(name: String, pathData: String, hollow: Boolean = false): Image
     }.build()
 
 object PlayerIcons {
+    val StereoOriginal: ImageVector by lazy {
+        icon("StereoOriginal", "M3 5H8V19H3Z M16 5H21V19H16Z")
+    }
+    val StereoNarrow: ImageVector by lazy {
+        icon("StereoNarrow", "M6 5H11V19H6Z M13 5H18V19H13Z")
+    }
+    val StereoMono: ImageVector by lazy {
+        icon("StereoMono", "M8 5H16V19H8Z")
+    }
     val Play: ImageVector by lazy {
         icon("Play", "M8 5v14l11-7z")
     }

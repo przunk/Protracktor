@@ -11,6 +11,7 @@
 #include <cmath>
 #include <algorithm>
 #include "engine.h"
+#include "stereo_mix.h"
 #include "log.h"
 
 #include <jni.h>
@@ -181,6 +182,8 @@ public:
                                         static_cast<std::size_t>(numFrames), out);
             },
             0);
+
+        stereoMixer_.process(out, rendered, stereoWidth_.load(std::memory_order_relaxed), stream->getSampleRate());
 
         // Ducking is applied here rather than by stopping the stream. A notification arriving should
         // lower the music for a moment, not end it -- and the only place a gain can be applied
@@ -471,6 +474,7 @@ private:
     std::atomic<bool> finished_{false};
     std::atomic<float> gain_{1.0f};
     std::atomic<int> stereoWidth_{100};
+    protracktor::StereoMixer stereoMixer_;
 
     /**
      * Held by whoever is touching the decoder. **The audio callback only ever tries.**

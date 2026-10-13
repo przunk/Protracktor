@@ -149,6 +149,7 @@ class PlaybackController private constructor(private val context: Context) {
     }.asCoroutineDispatcher()
 
     private val _state = MutableStateFlow(PlayerUiState(
+        stereoMix = Appearance.stereoMix(context),
         cacheAhead = Appearance.cacheAhead(context),
         shareAudioMinutes = Appearance.shareAudioMinutes(context),
     ))
@@ -2671,6 +2672,13 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(cacheAhead = mode) }
     }
 
+    fun setStereoMix(mode: StereoMix) {
+        if (_state.value.stereoMix == mode) return
+        Appearance.selectStereoMix(context, mode)
+        _state.update { it.copy(stereoMix = mode) }
+        track?.setStereoMix(mode)
+    }
+
     fun setShareAudioMinutes(minutes: Int) {
         val wanted = AudioExport.limitFromStored(minutes)
         if (!Appearance.selectShareAudioMinutes(context, wanted)) return
@@ -3030,6 +3038,8 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             track = opened
+            // Read after asynchronous opening so a Settings change during loading wins.
+            opened.setStereoMix(_state.value.stereoMix)
             // **Described before it starts.** `describe()` reads the decoder's own metadata, and
             // libopenmpt says an object must be touched from one thread at a time -- asking it
             // after the audio callback has begun is the same race the position poll had. Before

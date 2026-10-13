@@ -4,6 +4,7 @@
 package com.przunk.protracktor.engine
 
 import com.przunk.protracktor.player.SupportedFormats
+import com.przunk.protracktor.player.StereoMix
 
 /**
  * The Kotlin side of the native player.
@@ -198,6 +199,9 @@ object NativeEngine {
          */
         fun setGain(gain: Float) = nativeSetGain(handle(), gain)
 
+        /** Applies playback width without changing the decoder or opening another output. */
+        fun setStereoMix(mode: StereoMix) = nativeSetStereoWidth(handle(), mode.widthPercent)
+
         fun stop() = nativeStop(handle())
 
         fun positionSeconds(): Double = nativePositionSeconds(handle())
@@ -276,6 +280,7 @@ object NativeEngine {
     )
     @JvmStatic private external fun nativeBackendsFingerprint(): String
     @JvmStatic private external fun nativeSetGain(handle: Long, gain: Float)
+    @JvmStatic private external fun nativeSetStereoWidth(handle: Long, percent: Int)
     @JvmStatic private external fun nativeDescribe(handle: Long): String
     @JvmStatic private external fun nativePositionSeconds(handle: Long): Double
     @JvmStatic private external fun nativeDurationSeconds(handle: Long): Double

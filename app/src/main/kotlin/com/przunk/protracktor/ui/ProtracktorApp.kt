@@ -398,6 +398,8 @@ fun ProtracktorApp(
                     LaunchedEffect(Unit) { viewModel.refreshCatalogues() }
                     SettingsScreen(
                         playAllSubsongs = state.playAllSubsongs,
+                        stereoMix = state.stereoMix,
+                        onStereoMixSelected = viewModel::setStereoMix,
                         selectedLanguage = selectedLanguage,
                         cacheBytes = browse.storageBytes.first,
                         archiveBytes = browse.archiveBytes,

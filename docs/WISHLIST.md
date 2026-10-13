@@ -1270,12 +1270,11 @@ already is.
 
 ## B6. Fold hard-panned channels together
 
-**Renewed real user feedback recorded 2026-10-13; to discuss.**
+**Renewed real user feedback recorded 2026-10-13; owner-selected Android trial on a branch.**
 
-Amiga modules pan channels hard left and right by convention, and on some phones one "speaker" is the screen vibrator: half the music is
-effectively inaudible. Wanted is a mix control — full stereo, narrowed, or mono — applied in the
-render callback where the gain already is. Note that libopenmpt has a stereo-separation setting of
-its own, so part of this may be a backend option rather than a mix of ours.
+Strongly separated tracker channels can be uncomfortable on headphones. The original entry
+suggested stereo narrowing/mono mixing in the common render callback, beside gain. A phone-speaker
+explanation previously suggested here was not established by a supplied device/track example.
 
 Real app-user feedback, relayed by the owner on 2026-10-13: music perceived in one ear should
 be mixed so it can be heard in both. This renews the existing B6 request. No example track,
@@ -1287,7 +1286,13 @@ a direction to explore. This is an optional idea, not an approved named mode or 
 implementation. Discuss stereo narrowing, mono downmix and headphone crossfeed separately,
 including the default, strength control, supported playback paths and actual listening tests.
 See [Q14](OPEN_QUESTIONS.md#q14--stereo-mixing-and-headphone-mode).
-No audio processing change is implemented or scheduled by this record.
+**Owner selection, 2026-10-13:** test three modes in Android Settings, not a slider. Work is on
+`feature/stereo-mix-modes`: Original (default), Narrow (50% width for this trial) and Mono.
+The choice is global and remembered, applied live and before new playback through common output
+processing, including MP3. Narrow strength and the unchanged default are agent trial assumptions.
+Crossfeed/Dolby, web and exported/shared audio processing are outside this trial. The owner can
+revise or reject the feature after listening; it must not merge before approval.
+[Trial plan and evidence](PLAN_STEREO_MIX.md). Phone usefulness and behaviour are not checked yet.
 
 ## B7. Full metadata for any supported file
 

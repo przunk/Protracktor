@@ -33,6 +33,7 @@ data class PlayerUiState(
      * otherwise take over a listening session the first time one turned up.
      */
     val playAllSubsongs: Boolean = false,
+    val stereoMix: StereoMix = StereoMix.ORIGINAL,
     /**
      * How long to play a tune whose length nothing knows, in seconds (`docs/STATUS.md` C56).
      *

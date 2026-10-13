@@ -151,7 +151,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 | 2026-10-13 | Owner request | Verify Bluetooth Next, Previous, Play/Pause and Stop; existing MediaSession callbacks do not establish receiver-button behaviour | `WISHLIST.md` B47; verification/improvement TODO |
 | 2026-10-13 | Owner request | Reconsider AMP (Amiga Music Preservation) as an archive candidate | Existing `BACKLOG.md` A7; `PLAN_CATALOGUES.md`; access exploration TODO |
 | 2026-10-13 | Real app-user feedback, relayed and discussed with the reporter by owner | Keep music playing when returning from search/author browsing to the playlist; explicit active queue proposed | `WISHLIST.md` B45; `OPEN_QUESTIONS.md` Q13; future behaviour change |
-| 2026-10-13 | Real app-user feedback, relayed by owner | Mix separated stereo channels so music is audible in both ears; possible headphone-processing mode raised | Existing `WISHLIST.md` B6; `OPEN_QUESTIONS.md` Q14; no diagnosed output defect |
+| 2026-10-13 | Real app-user feedback, relayed by owner | Mix separated stereo channels so music is audible in both ears; possible headphone-processing mode raised | Existing `WISHLIST.md` B6; `OPEN_QUESTIONS.md` Q14; three-mode Android Settings trial selected on a branch; no diagnosed decoder/output fault or phone acceptance |
 | 2026-10-13 | Real app-user feedback, relayed by owner | Offer recent queries when focusing search; three entries or a scrollable preview remain to be discussed | `WISHLIST.md` B46; `OPEN_QUESTIONS.md` Q15; feature request |
 | 2026-10-06 | App user, relayed by owner | Random list/history and selection become inconsistent after selecting an earlier track, changing scope and pressing Next | `STATUS.md` C97 |
 | 2026-10-06 | Different app user, relayed by owner | Browse opens while the playlist is covered by the Random return-choice overlay | `STATUS.md` C98 |
@@ -166,6 +166,32 @@ not completed fixes or retests. Stereo mixing renews B6 rather than creating a d
 The first two 2026-10-06 defects were explicitly attributed to different users; the third came
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
+
+## B6 stereo mix — owner listening trial pending
+
+Branch: `feature/stereo-mix-modes`. The [trial plan](PLAN_STEREO_MIX.md) records implementation and
+artifact evidence. Install the minified release APK without uninstalling or clearing data.
+
+1. Record build/device/Android/headphones and a representative separated stereo track. Open
+   **Settings → Playback → Stereo mix**. Original is initially selected unless a trial choice was
+   already saved. PL labels: **Ustawienia → Odtwarzanie → Miks stereo**, **Oryginał / Zwężone / Mono**.
+2. While playing, compare Original, Narrow and Mono. Narrow should retain stereo but reduce its
+   separation; Mono should produce the same mix in both ears. Look for clicks, volume jumps,
+   interruptions, position resets or changed subsongs. Already-mono content should not change.
+   Listen to multiple formats, including MP3 if available; the shared processing is after decoding.
+3. Pause, change the mode and verify it stays silent; Play should use that mode. Check Next,
+   Previous, subsong changes and choosing a mode while another track is still loading.
+4. Leave/reopen Settings, switch playlists, then restart the app normally: the choice should
+   remain global, without autoplay or lost playlist edits. Check English and Polish labels,
+   selected border/text and readability at your font size. No app-data reset is needed.
+5. Repeat the accepted Bluetooth connection/disconnection scenarios in Narrow and Mono. The
+   preference should survive routing and disconnection must still pause. Shared/exported audio
+   and the web player intentionally remain unchanged. Opposite-phase stereo can cancel in Mono;
+   report any objectionable sound with the exact track/mode rather than assuming a decoder fault.
+
+Report whether Narrow/Mono are useful and whether the 50% Narrow strength is comfortable. This
+is a reversible user-feedback trial, not a promise to keep it or add crossfeed/Dolby. All phone
+scenarios remain **not checked** until reported by the owner; do not infer Play-test participation.
 
 ## C102 Bluetooth output recovery — combined trial
 

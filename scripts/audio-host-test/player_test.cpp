@@ -294,16 +294,19 @@ int main() {
         f.decoder->right = 0.0f;
         f.player.start();
         f.stream()->render();
+        float previousLeft = 1.0f;
         for (int width : {50, 0, 100}) {
             f.player.setStereoWidth(width);
             const auto samples = f.stream()->render(480);
             const float expectedLeft = 0.5f + width / 200.0f;
+            require(std::abs(samples[0] - previousLeft) < 0.003f, "first changed sample made an abrupt step");
             require(std::abs(samples[samples.size() - 2] - expectedLeft) < 0.00001f,
                     "new mode did not settle within 10ms");
             for (std::size_t i = 2; i < samples.size(); i += 2) {
                 require(std::abs(samples[i] - samples[i - 2]) < 0.003f, "mode change made an abrupt step");
                 require(samples[i] >= 0.0f && samples[i] <= 1.0f, "mix increased peak");
             }
+            previousLeft = expectedLeft;
         }
         require(oboe::TestDevice::streams.size() == 1 && f.decoder->rewinds == 0 && f.decoder->started == 1,
                 "mode change restarted playback");
@@ -353,6 +356,23 @@ int main() {
             f.player.start();
             const auto samples = f.stream()->render();
             require(samples[0] == -0.5f && samples[1] == 0.75f, "unknown mode did not preserve source");
+        }
+    });
+    check("mix transitions use the granted sample rate and also smooth a second target before settling", [] {
+        for (int rate : {32000, 44100, 96000}) {
+            Fixture f;
+            oboe::TestDevice::rate = rate;
+            f.decoder->right = 0.0f;
+            f.player.start();
+            f.stream()->render();
+            f.player.setStereoWidth(0);
+            const auto first = f.stream()->render(rate / 200); // half the transition time
+            require(first[first.size() - 2] > 0.5f && first[first.size() - 2] < 1.0f,
+                    "transition jumped instead of using the device rate");
+            f.player.setStereoWidth(100);
+            const auto back = f.stream()->render(rate / 100 + 1);
+            require(std::abs(back[0] - first[first.size() - 2]) < 0.003f, "mid-ramp retarget jumped");
+            require(back[back.size() - 2] == 1.0f && back.back() == 0.0f, "Original did not settle exactly");
         }
     });
     std::cout << total << " audio-host checks, " << failed << " failed\n";

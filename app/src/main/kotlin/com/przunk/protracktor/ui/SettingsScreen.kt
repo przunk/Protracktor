@@ -44,6 +44,7 @@ import com.przunk.protracktor.player.CacheAhead
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.player.FallbackLength
+import com.przunk.protracktor.player.StereoMix
 
 /**
  * The things you set once and stop thinking about.
@@ -56,13 +57,13 @@ import com.przunk.protracktor.player.FallbackLength
  * **One scrolling screen with sections, not a tree.** With this little in it a tree would be
  * ceremony, and every extra tap is a tap between somebody and the thing they came to change.
  *
- * **Nothing here is invented.** Every switch is a setting the app already had somewhere less
- * findable, and the storage section is lifted whole from Browse, where it lived as a stated
- * placeholder waiting for this screen (`docs/ARCHITECTURE.md` §19).
+ * Playback choices are global; the storage section retains Browse's existing operations.
  */
 @Composable
 fun SettingsScreen(
     playAllSubsongs: Boolean,
+    stereoMix: StereoMix,
+    onStereoMixSelected: (StereoMix) -> Unit,
     selectedLanguage: AppLanguage,
     cacheBytes: Long,
     archiveBytes: Map<String, Long>,
@@ -139,6 +140,8 @@ fun SettingsScreen(
 
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item { Section(R.string.settings_playback) }
+
+        item { StereoMixSetting(selected = stereoMix, onSelect = onStereoMixSelected) }
 
         // Global already, and until now reachable only from inside Now Playing on a file that
         // happens to have more than one tune -- so a setting that governs every file could only be

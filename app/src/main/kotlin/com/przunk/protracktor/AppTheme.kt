@@ -36,6 +36,7 @@ object Appearance {
     private const val PAIRED = "paired_endpoint"
     private const val CACHE_AHEAD = "cache_ahead"
     private const val SHARE_AUDIO_MINUTES = "share_audio_minutes"
+    private const val STEREO_MIX = "stereo_mix"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -161,6 +162,15 @@ object Appearance {
     fun selectShareAudioMinutes(context: Context, minutes: Int): Boolean {
         if (shareAudioMinutes(context) == minutes) return false
         prefs(context).edit().putInt(SHARE_AUDIO_MINUTES, minutes).apply()
+        return true
+    }
+
+    fun stereoMix(context: Context): com.przunk.protracktor.player.StereoMix =
+        com.przunk.protracktor.player.StereoMix.fromStored(prefs(context).getString(STEREO_MIX, null))
+
+    fun selectStereoMix(context: Context, mode: com.przunk.protracktor.player.StereoMix): Boolean {
+        if (stereoMix(context) == mode) return false
+        prefs(context).edit().putString(STEREO_MIX, mode.stored).apply()
         return true
     }
 }
