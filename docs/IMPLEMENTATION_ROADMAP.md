@@ -148,7 +148,8 @@ sources and is not a full code review or a claim that the implementation has no 
    Trial 1.1.1 (1138) delivered; four routing states owner-confirmed, accepted and merged at `69c42a2`
    on 2026-10-13. Joint gate: 772 unit tests, 18 native checks, lint 0 errors/68 warnings.
 3. The owner selected B6's three-mode Android Settings trial next, on `feature/stereo-mix-modes`.
-   Finish host verification, provide a release APK and await listening feedback before merging.
+   Host gate passed: 782 unit tests, 30 native checks, lint 0 errors/69 warnings. Release APK
+   1.2.0 (1146), source `ad6e3cd`, is prepared; await listening feedback before merging.
    Headphone crossfeed and the larger queue-ownership change remain unselected.
 
 Steps 1 and 2 are merged, not remaining implementation work. The owner deferred the first APK until

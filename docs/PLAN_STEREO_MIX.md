@@ -14,7 +14,7 @@ Source: real listener feedback about strongly separated channels, relayed by the
 - Apply the latest choice before a new track starts and to existing playback without resetting
   position, subsong, focus or output. Paused playback remains paused.
 - Process the common Android output after decoding, including MP3, without modifying individual
-  backend stereo settings. Smooth live width changes over approximately 10 ms; no callback allocation,
+  backend stereo settings. Smooth live width changes over up to approximately 10 ms; no callback allocation,
   JNI calls or new locks. Preserve the existing ducking gain, EOF and Bluetooth recovery policies.
 - No amplitude normalization/boost: channel averages are convex combinations. Opposite-phase
   content can cancel in Mono; do not claim Mono preserves every stereo detail or repairs a decoder.
@@ -65,4 +65,18 @@ both resources now set `formatted="false"`. A subsequent host test worker ran ou
 that run was interrupted. The successful full rerun used a local temporary Gradle init script
 setting the test worker heap to 1 GiB; the existing JDK, app/build configuration and full test
 selection stayed unchanged. Evidence is retained under ignored `dist/stereo-mix-verification/`.
-Release artifact is being prepared; phone behaviour/usefulness and merge remain unconfirmed.
+
+## Release APK handoff — 2026-10-13
+
+Clean source `ad6e3cd`, version 1.2.0 (1146), built in 106 s through `scripts/build-release.sh`:
+`dist/protracktor-release-1.2.0-1146-ad6e3cd-20261013-213208.apk` (11,760,006 bytes).
+SHA-256: `dbbdc1ed91f11c53d69cc4b988f57fb670b1544c1ede7a52c58094474e613487`.
+R8 ran; the APK is non-debuggable, minSdk 29/targetSdk 36 with arm64-v8a, armeabi-v7a and x86_64.
+APK v2 signature verified; the test certificate matches the accepted Bluetooth trial (full
+fingerprint in Status). The new JNI export exists in all three libraries and its native name is
+retained in minified DEX. No upload key, AAB, tag, push, merge or store release was used.
+
+These checks establish the artifact, not phone behaviour or sound quality. Install as an update
+without clearing app data and follow [the listening checklist](TESTING.md#b6-stereo-mix--owner-listening-trial-pending).
+All phone outcomes remain not checked; await owner feedback before merging. The final handoff
+documentation update does not change APK sources and does not rerun application tests/builds.

@@ -171,6 +171,7 @@ The date above is the recording date, not an independently established occurrenc
 
 Branch: `feature/stereo-mix-modes`. The [trial plan](PLAN_STEREO_MIX.md) records implementation and
 artifact evidence. Install the minified release APK without uninstalling or clearing data.
+Offered build: **1.2.0 (1146)**, source `ad6e3cd`; this does not establish the installed build.
 
 1. Record build/device/Android/headphones and a representative separated stereo track. Open
    **Settings → Playback → Stereo mix**. Original is initially selected unless a trial choice was

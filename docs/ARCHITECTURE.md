@@ -91,7 +91,7 @@ when the choice changed while opening was suspended. Playlist storage/schema are
 `StereoMixer` is Android-independent PCM processing used by the common Oboe callback after the
 backend renders and before ducking gain. Original bypasses without rewriting samples; Narrow and
 Mono use convex channel averages, not level boosting. The control thread only stores an atomic
-target; callback-owned width ramps live changes over approximately 10 ms without allocations or
+target; callback-owned width ramps live changes over up to approximately 10 ms without allocations or
 new locks. Recovery replaces output, not the mixer/decoder; EOF still zero-fills the unrendered
 tail. Shared audio uses the separate rendering path and is intentionally unchanged, as is web.
 This is narrowing/downmixing, not crossfeed or Dolby processing; listening acceptance is pending.
