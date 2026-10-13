@@ -51,13 +51,13 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C102 | Connecting Bluetooth stops sound and stalls the app's progress while notification progress continues | Owner-confirmed on headphones. Output-only recovery on `fix/bluetooth-output-recovery`, stacked on C103; 772 unit tests, 18 native checks and lint passed. Combined release trial 1.1.1 (1138) built; phone acceptance and merge pending. |
+| C102 | Connecting Bluetooth stops sound and stalls the app's progress while notification progress continues | Output-only recovery on `fix/bluetooth-output-recovery`, stacked on C103; 772 unit tests, 18 native checks and lint passed. Combined release trial 1.1.1 (1138) built. Owner confirmed speaker → Bluetooth playback and disconnect Pause on 2026-10-13; other phone checks and merge pending. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
 | A45 | Author jump from a playlist does not identify the author as the Random jump does | Open finding; align the heading without introducing Random-only session behaviour. |
-| C103 — snapshot ownership | A delayed write can pair the newly selected playlist ID with the previous queue | Owner-selected fix implemented on `fix/playlist-write-safety`; 768 tests and lint passed. Phone check and merge pending; APK deferred until Bluetooth fix. |
+| C103 — snapshot ownership | A delayed write can pair the newly selected playlist ID with the previous queue | Owner-selected fix implemented on `fix/playlist-write-safety`; 768 tests and lint passed. Included in combined Bluetooth trial APK 1.1.1 (1138); playlist phone check and merge pending. |
 | C103 — Save completion | Save completion can mark a newer, unsaved edit clean | Same separate fix; completion compares playlist identity and saved contents. Not yet accepted on a phone or merged. |
 | Browse/navigation risk | An older catalogue, folder or search read can publish after newer navigation | Retained ordering risk; host-controlled sequences, not a phone-frequency measurement. |
 | Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Retained during extraction; separate fix required. |
@@ -125,8 +125,9 @@ do not plan SAP, SID, AHX/HVL, ZXTune or UADE integration again merely from an o
 - **C92/C93:** complete physical-iPhone checks of corrected web layout/zoom behaviour.
 - **iOS web audio:** verify background and screen-lock playback on actual devices.
 - **PWA:** verify offline operation separately; installation and normal use were owner-confirmed.
-- **B47 / C102:** verify Bluetooth buttons and a speaker-to-Bluetooth route transition on a current
-  build; record build, device/Android version, receiver and actual outcomes.
+- **B47 / C102:** verify Bluetooth buttons and remaining routing scenarios; basic speaker → Bluetooth
+  playback and disconnect Pause were owner-confirmed on 2026-10-13. Build/device/receiver details
+  and the remaining checklist outcomes are still missing.
 - **UnExoticA:** server User-Agent whitelisting remains unconfirmed. Playback and catalogue caching
   have been owner-confirmed; older pending-test notes are not current blockers.
 - **C86:** historical Pages deployment interruption was worked around; root cause unknown.

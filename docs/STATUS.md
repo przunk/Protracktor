@@ -40,8 +40,12 @@ and the minified DEX retains its native method name. These are artifact checks, 
 The APK script selects only test signing and names the artifact with variant/version/commit SHA
 and dirty marker where needed. The copy/name helper was exercised on an actual existing APK in a
 disposable clean/dirty Git fixture. No upload-key access, AAB, tag, push, merge or store release.
-**Not checked:** Bluetooth/phone behaviour, car receiver, route timing, real-decoder continuity
-on route change and long-term acceptance. [Analysis and handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+**Partially checked on phone — owner follow-up, 2026-10-13:** speaker → Bluetooth playback works;
+disconnecting Bluetooth correctly pauses playback. This follows the combined trial APK handoff;
+the installed build and device details were not separately supplied.
+**Not checked:** car receiver, route timing, position/subsong continuity, progress-bar agreement,
+seek, Pause during connection, focus/EOF/error cases and long-term acceptance. C103 phone checks
+and merge approval remain pending. [Analysis and handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
 
 ## Playlist-write safety — C103, implementation on branch, 2026-10-13
 
@@ -62,9 +66,10 @@ failures/errors/skips; lint completed with 0 errors and 68 warnings. Also passed
 store metadata, 581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database
 upgrade, 137 icon paths, PWA checks and 11 loopback server checks. Duration: 310 s.
 Logs/XML and lint report: ignored `dist/playlist-write-safety/`.
-**Not checked:** real phone/SQLite timing, minified APK or long-term behaviour.
-The owner requested an APK only together with the later Bluetooth
-fix; no APK is built, and the branch is not merged. [Analysis and handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
+**Not checked:** real phone/SQLite timing or long-term behaviour.
+No standalone APK was built: C103 is included in the minified combined trial recorded above.
+The Bluetooth follow-up does not confirm playlist behaviour; neither branch is merged.
+[Analysis and handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
 
 ## Implementation roadmap and Bluetooth report — recorded 2026-10-13
 
@@ -1567,7 +1572,11 @@ This explains the reported symptom sequence but is **not** a confirmed device er
 and a typed JNI result. It preserves the decoder and does not restart finished or paused tracks.
 Unrecoverable errors pause and show `notice_audio_device_failed`. Host evidence and remaining
 checks are recorded at the top and in the [C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
-No device acceptance or merge yet. B47 receiver-button verification remains a separate task.
+**Owner follow-up, 2026-10-13:** speaker → Bluetooth playback works and disconnecting Bluetooth
+correctly pauses. These two basic routing scenarios are phone-confirmed after the combined trial
+handoff; installed build/device details and other checklist results were not separately supplied.
+Remaining device checks and merge approval are pending. B47 receiver-button verification remains
+a separate task.
 
 ### C97. ~~Random history and selection become inconsistent after changing scope from an earlier track~~ — FIXED, owner-accepted and merged 2026-10-06
 

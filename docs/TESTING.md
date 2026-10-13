@@ -146,7 +146,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
 | 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, not an independent user report; phone retest pending |
-| 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; branch implementation/host evidence; exact build/device/error trace unknown; phone fix acceptance pending |
+| 2026-10-13 | Owner observation, reproduced on headphones | Bluetooth connection stops sound; notification position advances while the app's bar stalls; seeking fails and Pause/Play restores playback | `STATUS.md` C102; basic speaker → Bluetooth playback and disconnect Pause subsequently owner-confirmed after trial handoff; other phone checks/merge pending; exact build/device/error trace unknown |
 | 2026-10-13 | Owner request | Verify Bluetooth Next, Previous, Play/Pause and Stop; existing MediaSession callbacks do not establish receiver-button behaviour | `WISHLIST.md` B47; verification/improvement TODO |
 | 2026-10-13 | Owner request | Reconsider AMP (Amiga Music Preservation) as an archive candidate | Existing `BACKLOG.md` A7; `PLAN_CATALOGUES.md`; access exploration TODO |
 | 2026-10-13 | Real app-user feedback, relayed and discussed with the reporter by owner | Keep music playing when returning from search/author browsing to the playlist; explicit active queue proposed | `WISHLIST.md` B45; `OPEN_QUESTIONS.md` Q13; future behaviour change |
@@ -169,8 +169,11 @@ The date above is the recording date, not an independently established occurrenc
 ## C102 Bluetooth output recovery — combined trial
 
 Branch: `fix/bluetooth-output-recovery`, stacked on C103. Release APK details are recorded in the
-[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md) once built. Device behaviour is **not checked**
-until the owner reports each scenario. No app-data reset/uninstall is needed or authorised.
+[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md). Device behaviour is **partially checked**:
+on 2026-10-13 the owner confirmed speaker → Bluetooth playback works and disconnection correctly
+pauses. This confirms the basic sound handoff and disconnect Pause, not the other checks below
+(including the remaining parts of items 1 and 3). Installed build/device details were not
+separately supplied after the trial handoff. No app-data reset/uninstall is needed or authorised.
 
 1. Record installed version/build, phone/Android version, receiver and track/format. Start a
    reasonably long track on the phone speaker; connect headphones and confirm Android selected

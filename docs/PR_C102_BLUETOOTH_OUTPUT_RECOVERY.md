@@ -80,6 +80,12 @@ installing tools or changing Java. These checks do not establish runtime routing
 
 ## PR → owner phone retest
 
-No phone fix acceptance, merge, tag, AAB or publication is claimed. Retest headphones first,
-then car audio if available. [Checklist](TESTING.md#c102-bluetooth-output-recovery--combined-trial).
+**Partially checked on phone, 2026-10-13:** following the combined trial handoff, the owner
+confirmed speaker → Bluetooth playback works and Bluetooth disconnection correctly pauses.
+The installed build/device details were not separately supplied. Position/subsong continuity,
+progress bars, seeking, Pause during connection, focus/EOF/error cases and car playback have no
+individual retest result yet; C103 playlist checks also remain pending.
+
+No merge approval, tag, AAB or publication is claimed. Remaining scenarios are in the
+[checklist](TESTING.md#c102-bluetooth-output-recovery--combined-trial).
 The current working tree includes C103; it does not put either fix on develop.
