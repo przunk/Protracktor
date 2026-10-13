@@ -84,7 +84,8 @@ android {
             // Read from ~/.gradle/gradle.properties, never from this repository. A key committed
             // beside the code has to be treated as public from the day it is written.
             // Same property names as the workshop's other projects, so one keystore serves them all.
-            val storePath = providers.gradleProperty("PRZUNK_UPLOAD_STORE_FILE").orNull
+            val testApk = providers.gradleProperty("protracktorTestApk").orNull == "true"
+            val storePath = if (testApk) null else providers.gradleProperty("PRZUNK_UPLOAD_STORE_FILE").orNull
             if (storePath != null) {
                 storeFile = rootProject.file(storePath)
                 storePassword = providers.gradleProperty("PRZUNK_UPLOAD_STORE_PASSWORD").orNull

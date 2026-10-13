@@ -140,13 +140,16 @@ builds running at once cannot overwrite each other's.
 ### Artifacts
 
 ```
-dist/protracktor-debug-<versionName>-<versionCode>-<YYYYmmdd-HHMMSS>.apk
-dist/protracktor-<versionName>-<versionCode>-<YYYYmmdd-HHMMSS>.apk
+dist/protracktor-debug-<versionName>-<versionCode>-<shortSHA>[-dirty]-<YYYYmmdd-HHMMSS>.apk
+dist/protracktor-release-<versionName>-<versionCode>-<shortSHA>[-dirty]-<YYYYmmdd-HHMMSS>.apk
 ```
 
 Same scheme as the workshop's other projects. The `versionCode` and the timestamp are both there
 because two builds of one `versionName` are otherwise indistinguishable once they leave `dist/` —
 which is exactly the moment it matters which one is on the phone.
+The SHA identifies sources when parallel branches have equal commit counts; `dirty` marks a
+build whose source changes were not committed. Ignored build outputs do not make the tree dirty.
+This filename scheme is emitted by the project scripts from 2026-10-13.
 
 **Look in `dist/`, not in `app/build/outputs`.** The build directory is `~/.protracktor/build`, so
 the path every Android tutorial gives you is wrong here.
@@ -157,6 +160,13 @@ afternoon.
 
 ### Signing
 
+**Device-test APKs, from 2026-10-13:** `build-release.sh` passes `-PprotracktorTestApk=true`, so
+Gradle does not select upload signing properties for that build. The APK remains the release
+variant with R8/resource shrinking, signed using the existing local debug/test certificate.
+It is installable but not for Play publication. This implements the workspace's separation of
+agent-built test APKs from owner-signed AABs; it does not change the AAB signing workflow below.
+
+The following credentials configure the **owner's store build**, not that test-APK script.
 Release signing credentials never live in this repository. Put them in `~/.gradle/gradle.properties`:
 
 ```properties
@@ -171,7 +181,7 @@ that Protracktor shares their keystore** rather than getting its own. A separate
 because a GPL-3 app may end up on F-Droid; sharing won because one key across the workshop is one
 thing to keep safe instead of five.
 
-Without them the release build still succeeds, signed with the local **debug** key. That keeps
+Direct Gradle release builds without them still succeed, signed with the local **debug** key. That keeps
 sideloading alive on a machine with no release key — an unsigned APK cannot be installed at all —
 but such an APK must never be published. `build-release.sh` prints the certificate's subject rather
 than assuming, because the Gradle config can look right and still have fallen back, and the mistake
@@ -371,8 +381,23 @@ surfaces at hand-over rather than at a release.
 Debug stays the right build **while iterating** — it is two to three times faster — and **when a
 crash needs a readable stack trace**. Diagnose on debug, judge on release.
 
-Without `PRZUNK_UPLOAD_*` configured the release APK is signed with the local debug key: sideloadable
-and not publishable. `build-release.sh` says which key signed it, every time.
+The script explicitly chooses the local debug/test certificate even if upload signing is
+configured: sideloadable and not publishable. `build-release.sh` reports the actual certificate,
+source SHA and artifact path. Direct Gradle store builds retain their upload-key configuration.
+
+### Checking Android audio-host lifetime without a phone
+
+```bash
+./scripts/check-audio-host.sh
+./scripts/check-audio-host.sh --sanitize
+```
+
+Compiles the actual `player_oboe.cpp`/JNI implementation against a controlled fake Oboe device and
+decoder. No actual decoder cache, Android service or sound output is used. Requires the host C++
+compiler and the existing pinned JDK's JNI headers; no extra toolchain/dependency is installed.
+The normal check is part of `test-protracktor.sh`; ASan/UBSan is an additional lifetime check.
+LeakSanitizer cannot finish under a ptrace-based sandbox, so run the sanitizer variant outside it
+when permitted. These checks do not reproduce Bluetooth on a phone or replace the release-APK test.
 
 ## Telling a green suite from a green suite that ran
 

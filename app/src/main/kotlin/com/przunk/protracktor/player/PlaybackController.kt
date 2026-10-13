@@ -29,6 +29,7 @@ import com.przunk.protracktor.data.SongDbMetadata
 import com.przunk.protracktor.data.TrackMetadataStore
 import com.przunk.protracktor.engine.NativeData
 import com.przunk.protracktor.engine.NativeEngine
+import com.przunk.protracktor.engine.OutputRecovery
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.Modland
@@ -699,6 +700,20 @@ class PlaybackController private constructor(private val context: Context) {
                 // braces**, not because it fixed anything. The real cause was in the gesture, not
                 // in the player: see `PlayerDock.TransportButton`.
                 if (openJob?.isActive == true) continue
+
+                when (open.recoverOutput()) {
+                    OutputRecovery.UNCHANGED -> Unit
+                    OutputRecovery.RECOVERED -> {
+                        android.util.Log.i("Protracktor", "Recovered audio output without replacing the track")
+                        val note = open.sampleRateNote()
+                        if (note.isNotEmpty()) say(Message(note))
+                    }
+                    OutputRecovery.FAILED -> {
+                        pause()
+                        say(Message(context.getString(R.string.notice_audio_device_failed)))
+                        continue
+                    }
+                }
 
                 sampleListening()
 

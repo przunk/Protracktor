@@ -66,6 +66,17 @@ remain inside the write lock so old contents cannot be resurrected afterwards. D
 controller scope and stores remain unchanged. This is a separately approved behaviour fix, not
 an extraction guarantee or a global lock over every store caller; phone checks and merge are pending.
 
+**C102 output recovery, 2026-10-13, on `fix/bluetooth-output-recovery`:** each Oboe stream holds
+its own shared `OutputError` callback, which atomically records an error and delegates stop/close
+to the existing control thread. It carries no Player pointer; an old stream's delayed callback
+cannot access a deleted Player or invalidate its replacement. The existing 200 ms Kotlin poll
+requests native recovery only while playback is wanted. Disconnection reopens output without
+rewinding/reopening the backend or restarting its background measurement. Other errors and failed
+reopens become a paused UI with a notice; EOF still follows the existing end-of-track policy.
+The data callback keeps its existing non-blocking decoder lock. No Bluetooth receiver broadcast,
+new polling job, decoder copy or recovery thread was added. Host fake-device tests exercise the
+actual Player/JNI implementation; real Oboe/decoder/device behaviour remains a phone check.
+
 Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.
 

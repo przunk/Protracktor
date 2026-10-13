@@ -172,6 +172,14 @@ if [ -d web/node_modules/fake-indexeddb ]; then
     echo "🗄  $upgrade_output"
 fi
 
+# The Android Player itself with a fake device; the WASM checks above do not exercise Oboe output.
+if ! audio_output=$("$SCRIPT_DIR/check-audio-host.sh" 2>&1); then
+    echo "❌ Native audio-host checks failed:"
+    echo "$audio_output" | sed 's/^/   /'
+    exit 1
+fi
+echo "$audio_output" | tail -1
+
 # The icons, both players' sets, walked rather than looked at. A path whose shape depends on where
 # the pen sits after `z` draws correctly here and wrongly on somebody else's phone
 # (`docs/STATUS.md` C66), which is not a thing an eye or a screenshot will catch.

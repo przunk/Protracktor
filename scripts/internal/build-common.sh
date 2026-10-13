@@ -56,7 +56,7 @@ publish_artifact() {
     # Read out of the artifact rather than out of the source. The versionCode is derived from the
     # commit count now, so there is no number in build.gradle.kts to scrape -- and asking the APK
     # what it is cannot disagree with what it is.
-    local version_name version_code stamp infix artifact aapt
+    local version_name version_code stamp revision dirty_suffix artifact aapt
     aapt="$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -n 1)"
     if [ -x "$aapt" ]; then
         local badging
@@ -67,11 +67,14 @@ publish_artifact() {
     version_name="${version_name:-unknown}"
     version_code="${version_code:-0}"
     stamp="$(date +%Y%m%d-%H%M%S)"
-    infix=""
-    [ "$kind" = "debug" ] && infix="debug-"
+    revision="$(git -C "$PROTRACKTOR_DIR" rev-parse --short HEAD)"
+    dirty_suffix=""
+    if [ -n "$(git -C "$PROTRACKTOR_DIR" status --porcelain --untracked-files=normal)" ]; then
+        dirty_suffix="-dirty"
+    fi
 
     mkdir -p "$PROTRACKTOR_DIR/dist"
-    artifact="$PROTRACKTOR_DIR/dist/protracktor-${infix}${version_name:-unknown}-${version_code:-0}-$stamp.apk"
+    artifact="$PROTRACKTOR_DIR/dist/protracktor-${kind}-${version_name}-${version_code}-${revision}${dirty_suffix}-${stamp}.apk"
     cp "$build_apk" "$artifact"
     printf '%s\n' "$artifact"
 }
