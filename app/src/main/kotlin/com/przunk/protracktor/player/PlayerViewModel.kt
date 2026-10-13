@@ -25,6 +25,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     val state: StateFlow<PlayerUiState> get() = controller.state
     val browse: StateFlow<BrowseState> get() = controller.browse
+    val recentSearches: StateFlow<List<String>> get() = controller.recentSearches
 
     /** One-shot "scroll the playlist here" events. */
     val reveal: SharedFlow<Int> get() = controller.reveal
@@ -180,6 +181,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun toggleSearchPlatform(id: String) = controller.toggleSearchPlatform(id)
     fun toggleSearchCatalogue(id: String) = controller.toggleSearchCatalogue(id)
     fun runSearch() = controller.runSearch()
+    fun searchFor(query: String) = controller.searchFor(query)
     fun addToPlaylist(tracks: List<TrackRef>) = controller.addToPlaylist(tracks)
     fun addToPlaylist(targetPlaylistId: Long, tracks: List<TrackRef>) =
         controller.addToPlaylist(targetPlaylistId, tracks)

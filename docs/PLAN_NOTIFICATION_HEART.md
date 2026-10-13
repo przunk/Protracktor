@@ -48,8 +48,8 @@ The new checks also switch back to English; no service restart is needed to reso
 The original transport/channel labels are outside this feature's changes.
 
 **Checked:** all 67 focused checks passed after correction: 10 domain, 16 SDK 29/33 adapter/locale
-and 41 session checks, zero failures/errors/skips. The full combined gate and final APK must be
-rerun on the rebased B46 branch. The earlier 1.3.0/1154 APK from `9583569` lacks this correction
+and 41 session checks, zero failures/errors/skips. The full combined gate passed again on rebased B46;
+the final APK is recorded below. The earlier 1.3.0/1154 APK from `9583569` lacks this correction
 and is not the final trial artifact. Actual service delivery and phone language behaviour remain
 **not checked**. Only local unpublished feature history is updated; develop/master are unchanged.
 
@@ -64,8 +64,29 @@ acceptance, URI PendingIntent identity and truthful persistence completion faile
 the final focused rerun again passed 63 with zero failures/errors/skips.
 
 No actual PlaybackService lifecycle, real MediaController/SystemUI delivery, lock-screen layout or
-phone persistence result is established by those host checks. Full gate and combined APK follow on
+phone persistence result is established by those host checks. Full gate and combined APK were prepared on
 B46's explicitly approved stacked branch. Evidence: ignored `dist/notification-search-verification/`.
+
+## Combined host verification — 2026-10-13
+
+The approved stacked B46 branch passed the final forced gate in 331 s: 829 unit
+tests in 111 suites, no failures/errors/skips, lint 0 errors/72 warnings, plus the existing web,
+native audio, resources and loopback checks. It used temporary per-class worker isolation after
+two interrupted shared-worker Compose timeout attempts; no JDK/repository settings or exclusions
+changed. [Full evidence and limits](PLAN_RECENT_SEARCHES.md). This does not establish service or
+notification behaviour on a phone. The combined clean-source release APK is ready; owner acceptance
+remains pending. No merge or push.
+
+Bypassing only feedback's app-language wrapper subsequently failed 2/16 adapter checks (SDK 29/33).
+The production source was restored and SHA-256 compared; all 16 passed again. Final full-gate
+sources are unchanged, and these checks still do not run the actual service/SystemUI lifecycle.
+
+**Combined trial APK:** **1.3.0 (1154)** from clean source `1452309`, built in 35 s:
+`dist/protracktor-release-1.3.0-1154-1452309-20261013-224501.apk`.
+Non-debuggable, R8-minified, APK v2 test signature verified, matching the accepted stereo trial;
+new heart/search resources survive shrinking. [Artifact checks](STATUS.md) and
+[phone scenarios](TESTING.md) distinguish host construction from actual SystemUI/service use.
+Develop/master, schema and store publication are unchanged; the subsequent handoff is docs-only.
 
 ## Owner-reported placement correction — 2026-10-13
 
@@ -88,6 +109,14 @@ replacement APK follow on B46.
 29/33). Removing the reservations from the same factory failed all four new checks. Sources
 were restored and SHA-256 compared. These checks prove the session configuration call, not
 SystemUI rendering or controller delivery on Android. The full combined gate remains pending.
+
+**Corrected combined verification:** the stacked B46 branch passed the forced gate in 346 s:
+835 unit tests in 112 suites, zero failures/errors/skips; lint 0 errors/72 warnings, plus all
+existing web/native/resource/store/loopback checks. The production reservation source is restored
+and is included in that gate. [Details](PLAN_RECENT_SEARCHES.md). The replacement minified release
+**1.3.0 (1158)** from clean source `f289863` is ready; [artifact checks](STATUS.md) and
+[corrected phone retest](TESTING.md). Earlier `1452309` trial is superseded. Slot placement on
+SystemUI remains unverified until the owner checks it; no develop merge, push or store release.
 
 ## Owner-approved stable heart and shared presentation — 2026-10-13
 
@@ -132,3 +161,17 @@ sources byte-for-byte, including the new P. The initial non-headless fixture att
 before producing assets; its zero-output comparison is not counted as verification.
 Evidence is in ignored `dist/notification-{shared-text,stable-heart-icon}-mutation*` and the
 focused results. Full combined tests/lint and a replacement release APK still follow on B46.
+
+**Restored combined gate checked, 2026-10-14:** 852 unit tests in 115 suites, zero
+failures/errors/skips; lint 0 errors/72 warnings, all existing web/native/resource/store/loopback
+checks passed. Forced run took 364 s with the same temporary worker isolation and existing JDK,
+without exclusions or repository settings changed. Evidence:
+`dist/notification-search-verification/full-gate-stable-heart*`. B46/search sources are unchanged
+from the owner-tested field build. A replacement minified APK and corrected phone retest follow.
+
+**Stable-heart release handoff, 2026-10-14:** minified **1.3.0 (1162)**, clean source `ea04525`,
+built in 51 s: `dist/protracktor-release-1.3.0-1162-ea04525-20261014-001502.apk`.
+Manifest/version/ABIs, APK v2 test signature and retained flat-P/heart/Saving resources checked.
+[Size/hash/certificate and limits](STATUS.md); [rapid double-tap and text/icon phone checks](TESTING.md).
+Earlier `f289863` APK is superseded. The handoff changes documentation only, not app/native sources.
+No develop/master merge, push, tag, AAB or store publication. Corrected phone acceptance is pending.

@@ -10,26 +10,44 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B48. Add the playing track from the notification — user feedback; implementation selected 2026-10-13
+## B48. Add the playing track from the notification — implemented on task branch; phone acceptance pending
 
 An app user requested a heart action in the player notification to add the playing track directly
 to a playlist, relayed by the owner after testing on 2026-10-13. The owner asked how the action
-should behave when the track is already present. The destination playlist is not yet selected.
+should behave when the track is already present. The destination was initially open; the owner
+selected the active playlist in the decision below on 2026-10-13.
 
-Provisional recommendation: an outlined heart adds a missing track; a filled heart indicates
+Initial recommendation: an outlined heart adds a missing track; a filled heart indicates
 membership in the destination playlist. A repeat press must not add a duplicate or remove the
 track unexpectedly; explain that it is already present. A destructive favourite toggle is an
-alternative for discussion, not the selected behaviour. Define the action's label and feedback
-when the app is in the background, playlist switching, persistence and track identity before coding.
+alternative that was not selected. The contract below resolves destination, background feedback,
+playlist switching, persistence and track identity.
 See [Q16](OPEN_QUESTIONS.md#q16--notification-heart-destination-and-existing-membership).
 **Owner decision, 2026-10-13:** implement add-only to the currently selected playlist. Save that
 playlist's entire working contents immediately, including earlier unsaved edits: the action is
 expected to work while the app is hidden or the screen is locked. A filled heart does not remove
 anything. Use existing file identity; bind the displayed track/playlist safely against stale actions
 and report rejection or saving failure. B6 has been accepted; B48 can proceed on its own branch.
-**Implementation checkpoint:** on `feature/notification-playlist-heart`; 63 focused host checks
-passed and guard/payload/completion mutations failed 7. Full joint gate/APK and phone acceptance
-remain pending on the approved stacked B46 branch. [Plan](PLAN_NOTIFICATION_HEART.md).
+**Implementation checkpoint:** on `feature/notification-playlist-heart`; 67 focused host checks
+passed after the saved-app-language correction. Initial guard/payload/completion mutations failed
+7/63; app-selection regressions failed 2/14 before correction and feedback bypass failed 2/16.
+The final joint gate passed 829 tests with lint
+0 errors/72 warnings on the approved stacked B46 branch. Combined minified release 1.3.0 (1154),
+source `1452309`, was offered. Owner trial feedback now requires a stable heart position after
+Next; B48 `029c943` reserves both transport slots (71 focused checks, four reservation regressions
+fail when removed). The corrected combined gate passed 835 tests in 112 suites, lint 0 errors/72
+warnings. Replacement APK **1.3.0 (1158)**, clean source `f289863`, is ready; phone retest is
+pending. No merge or store release.
+[Plan](PLAN_NOTIFICATION_HEART.md).
+
+**Owner-approved follow-up, recorded 2026-10-13 and implemented 2026-10-14:** the saving heart
+must stay present to prevent a second tap reaching a shifted Next button. Share the dock's
+author/platform/year policy with native notification/session text, use a bold title and a flat P
+small icon. B48 `6b4efca` is integrated into B46's trial branch. 88 focused checks passed; negative
+proofs fail as recorded in the plan. Restored combined gate passed 852 tests/115 suites, lint
+0 errors/72 warnings; replacement **1.3.0 (1162)** APK, clean source `ea04525`, is ready.
+Corrected phone acceptance is pending; no merge or store release.
+The search field's appearance was reported acceptable; its implementation remains unchanged.
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
 
@@ -52,18 +70,27 @@ concerns the WWW player, where the owner reports that headset buttons do not wor
 MediaSession handlers are not device evidence. Record the defect as C104 and defer web investigation
 and implementation; no new Android transport implementation is selected.
 
-## B46. Recent searches from the search field — user feedback recorded 2026-10-13; to discuss
+## B46. Recent searches from the search field — implemented on task branch; phone acceptance pending
 
 Real app-user request, relayed by the owner on 2026-10-13: tapping/focusing the search field
 should offer previously submitted searches for reuse. Suggested presentation: show the three
 most recent entries, either as the entire list or as a scrollable preview of a longer history.
-The list size, persistence, clearing, duplicate handling and whether an entry includes its
-search scope remain undecided. See [Q15](OPEN_QUESTIONS.md#q15--recent-searches-presentation-and-retention).
+List size, persistence, clearing, duplicate handling and scope were initially open; the Android
+contract selected below resolves the implementation scope.
+See [Q15](OPEN_QUESTIONS.md#q15--recent-searches-presentation-and-retention).
 **Owner decision, 2026-10-13:** implement on Android. Persist the 20 latest unique submitted queries,
 show the latest three when the field is empty, and while typing show at most three recent queries
 matching the prefix (`startsWith`, ignoring case). Selecting a suggestion immediately submits it
 in the current search scope. Keep queries separate from playback History. No web history or
 new clearing control is selected. Remaining implementation/phone checks stay on its task branch.
+**Implementation checkpoint, 2026-10-13:** implemented on `feature/recent-search-suggestions`,
+stacked on B48 with owner approval. 42 focused host tests passed; deliberate mutations failed
+11/42 and sources were restored. The final combined full gate passed 829 tests with lint 0 errors/72
+warnings; combined minified release 1.3.0 (1154), source `1452309`, was offered. Owner trial feedback
+selected the original integrated magnifier and plain text dropdown without suggestion icons/heading.
+The general labelled-action rule does not apply to this specialised input. The corrected combined
+gate passed 835 tests in 112 suites, lint 0 errors/72 warnings; replacement APK **1.3.0 (1158)**,
+clean source `f289863`, is ready. Phone retest is pending. No merge or store release.
 This is search-query history, separate from playback History and B43's listened markers.
 
 ## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss

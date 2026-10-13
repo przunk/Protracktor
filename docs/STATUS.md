@@ -1,10 +1,130 @@
 # Status
 
-Updated: 2026-10-13 — version 1.2.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-14 — version 1.2.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Notification heart — B48, implemented on task branch; combined gate pending, 2026-10-13
+## Stable B48 save control and shared Now Playing presentation — APK ready, phone retest pending, 2026-10-14
+
+The owner reported that the 1.3.0 (1158) trial removes the heart during saving and moves Next/seek
+geometry under a second tap. The owner approved retaining the heart, a bold title, the dock's
+shared subtitle policy and a flat P glyph. The search field was reported as acceptable; search
+code remains unchanged, without inferring acceptance of every B46 persistence scenario.
+
+B48 `6b4efca` is integrated into the approved stacked B46 branch without rewriting history.
+`PlaylistHeartSave` remains the overlap guard; action identity/position is retained throughout
+saving. `NowPlayingText` serves both UI and native presentation; original artist metadata, audio,
+service lifecycle and artwork palette remain unchanged. The title has a bold span; session display
+subtitle and ARTIST display fallback carry the shared summary. The small P is white on transparent.
+[Contract and evidence](PLAN_NOTIFICATION_HEART.md). No dependency/schema/toolchain change.
+
+**Checked:** 88 focused host checks passed in seven suites, zero failures/errors/skips. The new
+pending regression failed 2/16 before correction. Shared-year mutation failed 6/17, including the
+actual dock and both SDK projections; pending-action/wrong-icon mutations failed 6/24. Sources
+were restored and SHA-256 compared. Targeted icon generation is repeatable; a headless disposable
+full-generation fixture matched all 26 current assets. Live SystemUI geometry, double taps and
+final text/icon appearance are **not checked** until owner phone retest.
+
+**Checked combined gate:** forced run completed in 364 s: 852 unit tests in 115 suites, zero
+failures/errors/skips; lint 0 errors/72 warnings (unchanged). All existing PL/EN, store metadata,
+581 page, 49 WASM engine, 8 SAP, browser database upgrade, 30 native audio, 140 icon-path, PWA and
+11 loopback server checks passed. Same temporary per-class worker isolation, one worker/1 GiB
+heap and existing JDK, without exclusions or repository build-setting changes. Evidence:
+ignored `dist/notification-search-verification/full-gate-stable-heart*`.
+The replacement minified APK is ready below. Develop/master, tags and store are unchanged.
+
+**Checked artifact:** **1.3.0 (1162)**, clean source `ea04525`, built in 51 s:
+`dist/protracktor-release-1.3.0-1162-ea04525-20261014-001502.apk`, 11,801,606 bytes. SHA-256:
+`3b169b620fd9a7df385d78130e0e5376818fbd0f59757ef26407cee3fefab054`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and all three ABIs verified. APK v2
+test certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`
+matches previous trials. The flat P, both hearts and Saving label survive resource shrinking;
+the removed search heading remains absent. These are host/artifact checks, not live SystemUI
+execution. [Phone retest](TESTING.md). Subsequent handoff is documentation-only; app/native/search
+sources are unchanged. Earlier APKs are superseded; no merge, push, AAB or store release.
+
+## Earlier B48+B46 placement/search correction APK — superseded by save-state feedback, 2026-10-13
+
+The owner reported three presentation problems after the combined APK handoff: the notification
+heart fills the missing Previous slot and moves when Previous becomes available; the integrated
+search magnifier became a labelled button; and suggestions look like icon buttons under a heading
+instead of ordinary text autocomplete. Device/Android and installed build were not separately
+supplied. These are real owner observations, not fabricated third-party feedback or agent phone tests.
+
+B48 `029c943` reserves both transport slots through the production MediaSession factory without
+enabling unavailable skip commands. It remains on `feature/notification-playlist-heart`; the
+approved stacked B46 branch integrates that correction without rewriting either branch's history.
+71 focused host checks passed; removing reservations fails all four new factory checks. The host
+records `setExtras`, not actual controller/SystemUI rendering. B46 restores the integrated magnifier
+and plain text anchored suggestions. Storage/search semantics, schema and WWW are unchanged.
+The corrected search path passes 44 focused host checks; four of six UI checks failed before the
+presentation change. The forced combined gate passed in 346 s: 835 unit tests in 112 suites,
+zero failures/errors/skips, lint 0 errors/72 warnings, plus all existing web/native/resource/store
+and loopback checks listed below. It used the same temporary per-class worker isolation and JDK,
+without exclusions or repository build-setting changes. Evidence is in ignored
+`dist/notification-search-verification/full-gate-presentation*`. A replacement minified APK is
+ready below. Nothing has been merged into develop/master or pushed. Phone acceptance remains pending.
+
+**Checked replacement artifact:** **1.3.0 (1158)**, clean source `f289863`, built in 56 s:
+`dist/protracktor-release-1.3.0-1158-f289863-20261013-232128.apk`, 11,800,374 bytes. SHA-256:
+`e15e147fdac8a31f54c6b61ebdef24a1522780ec3401c20e1ced0115e3aa041b`.
+R8 executed; manifest is non-debuggable, minSdk 29/targetSdk 36, three existing ABIs. APK v2
+signature verified; test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, matching earlier trials.
+Both reservation wire keys survive in DEX; heart/magnifier resources remain and the removed
+suggestion-heading resource is absent. These are artifact/host checks, not SystemUI or keyboard
+execution on a phone. [Corrected phone checklist](TESTING.md). Subsequent handoff is documentation
+only; no rebuild is needed for it. Earlier APKs below are superseded. No AAB/store release.
+
+## Earlier B48+B46 combined APK — superseded by presentation feedback, 2026-10-13
+
+After the first combined gate/APK, code inspection found new heart labels/feedback missing the
+saved in-app locale. Corrected B48 `d8dfb89` now passes 67 focused checks; B46 was rebased onto it.
+The `9583569` APK and earlier 825-test gate predate that correction and are not final trial
+evidence. The fresh forced combined gate/lint passed; the final clean-source APK is recorded below.
+No phone result,
+merge, push or change to develop/master.
+
+**Checked:** the final forced combined gate passed in 331 s: 829 unit tests in 111 suites, zero
+failures/errors/skips; lint 0 errors and 72 warnings (three new KTX style suggestions). PL/EN strings,
+store metadata, 581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database
+upgrade, 30 native audio checks, 140 icon paths, PWA and 11 loopback server checks also passed.
+Two earlier shared-worker attempts were stopped after Compose idle timeouts (Settings, then
+Search teardown); Settings passed separately without source changes. The successful gate used
+temporary per-class worker isolation and a 1 GiB heap on the existing JDK, without exclusions or
+repository build-setting changes. The timeout mechanism is not established. Evidence is in ignored
+`dist/notification-search-verification/`; [details](PLAN_RECENT_SEARCHES.md).
+Both features remain unmerged. A clean-source combined release APK is ready; phone behaviour is
+**not checked**. Master, tags, schema and store publication are unchanged.
+
+**Checked artifact:** minified release APK built in 35 s from clean source `1452309`:
+`dist/protracktor-release-1.3.0-1154-1452309-20261013-224501.apk`, **1.3.0 (1154)**,
+11,775,822 bytes. SHA-256:
+`2325fc69f406c1f59cfe12f4e6483a3b35bff887ffa0dd9bf5ed920b6bf01469`.
+R8 executed; the APK is non-debuggable, minSdk 29/targetSdk 36, with all three existing ABIs.
+APK v2 signature verified; test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, matching the accepted
+stereo/Bluetooth trial. Both heart drawables and all new labelled-action/search resources survive
+resource shrinking. Artifact checks are not Android execution; this is sideload testing, not an
+AAB or store release. The handoff commit changes documentation only. App/native sources match
+the final full-gate source tree; no rebuild was needed for documentation/commit-message corrections.
+
+## Recent searches — B46, stacked implementation; phone acceptance pending, 2026-10-13
+
+`feature/recent-search-suggestions` starts from corrected B48 `d8dfb89` with explicit owner
+approval for stacking; its earlier local unpublished base `ceeaa57` was amended before handoff.
+It declares 1.3.0 for the combined B48+B46 trial; develop remains 1.2.0, schema 23 unchanged.
+Android keeps 20 unique submitted queries separately from playback History, offers up to three
+case-insensitive prefix matches and immediately submits a selected query in the current scope.
+Typing only filters suggestions. [Contract and evidence](PLAN_RECENT_SEARCHES.md).
+
+**Checked:** 42 focused host tests passed (8 pure, 4 preference, 26 workflow, 4 real Browse/Compose).
+Deliberate matching/submission/recording/persistence mutations failed 11/42; all four sources were
+restored and SHA-256 compared. The final restored full gate/lint passed as recorded above;
+the combined release APK is recorded above. Real phone UI and both feature checklists are **not checked**.
+No merge or push.
+
+## Notification heart — B48, implemented on task branch; phone acceptance pending, 2026-10-13
 
 `feature/notification-playlist-heart`, based on develop `debb00d`. The owner selected add-only to
 the active playlist and immediate saving of all working edits, including previous unsaved changes.
@@ -17,14 +137,16 @@ schema and WWW are unchanged. [Contract and evidence](PLAN_NOTIFICATION_HEART.md
 **Language closeout:** the saved in-app locale was missing from raw service/application resources.
 Actual app-selection regression checks failed on SDK 29/33 before correction (2/14). New heart
 labels and feedback now use `AppLocale.wrap`; all 67 focused checks passed afterward (10 domain,
-16 action/locale, 41 session). Existing transport/channel labels are unchanged. Rebase B46 and
-rerun the combined gate/APK; the earlier `9583569` APK is superseded, not the final trial.
+16 action/locale, 41 session). Bypassing feedback localisation failed 2/16 adapter checks;
+the source was restored, SHA-256 compared and 16 passed again. Existing transport/channel labels
+are unchanged. The combined gate passed after rebasing B46; the earlier `9583569` APK is superseded.
 
 **Checked:** 63 focused host tests passed (10 domain, 12 SDK 29/33 action checks, 41 session checks).
 Deliberate guard/payload/completion mutations failed 7/63; all three sources were restored and
 SHA-256 compared, then 63 passed again. Real service/SystemUI/lock-screen/phone behaviour is
-**not checked**. Full tests/lint and one combined APK will follow on the approved stacked B46
-branch. No merge, push, new APK or store release at this checkpoint.
+**not checked**. Full tests/lint passed on the approved stacked B46 branch as recorded above;
+the combined APK is recorded above. No merge, push or store release. The initial 63-test checkpoint
+preceded the four added locale checks; the current focused total is 67.
 
 ## Stereo mix trial — B6, owner-accepted and merged, 2026-10-13
 

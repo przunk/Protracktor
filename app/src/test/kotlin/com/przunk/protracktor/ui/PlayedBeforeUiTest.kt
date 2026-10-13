@@ -84,6 +84,7 @@ class PlayedBeforeUiTest {
                         onDownloadSongMetadata = {}, onDownloadReplayRoutines = {}, onOpenCatalogue = {},
                         onOpenGroup = {}, onRandom = {}, onChooseRandomScope = {}, onQueryChange = {},
                         onScope = {}, onToggleCatalogue = {}, onTogglePlatform = {}, onSearch = {},
+                        recentQueries = emptyList(), onSearchSuggestion = {},
                         onClearHistory = {}, playingId = null, loadingId = null,
                         onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
                         onSendToWeb = {}, onPlay = {}, onAdd = {},

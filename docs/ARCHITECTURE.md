@@ -114,7 +114,10 @@ omits extras. Loading/unrestored/missing destinations and stale or overlapping p
 pending commands remain present with stable URI identity. `PlaylistHeartSave` rejects overlapping
 writes; removing the action would move neighbouring controls under a second tap. Action labels
 provide accessibility metadata, not new visible captions. A text Toast plus the app notice provides
-completion/failure feedback. Host evidence does not establish lock-screen UI.
+completion/failure feedback. `PlaybackMediaSession.create` reserves both
+transport slots via session extras so Android 13+ cannot move the heart into a missing Previous
+or Next slot. Availability still derives from the existing playback state. Host call-recording
+evidence does not establish actual controller delivery or lock-screen UI.
 
 `NowPlayingText` owns the dock/notification author-platform-year subtitle rule. The dock supplies
 localised status strings; `PlaybackPresentation` resolves them through the selected app locale.
@@ -122,6 +125,21 @@ That factory builds the actual notification and session metadata/state, with bol
 the shared display summary, unchanged artwork/duration and stable transport identity. Service
 lifecycle and callbacks remain in `PlaybackService`. The small notification P uses the single
 logo geometry, without adaptive-icon padding/background or decorative cells; tint is system-owned.
+
+**B46 recent searches, 2026-10-13, on the approved stacked task branch:** `RecentSearches` owns
+trimming, case-insensitive deduplication, 20-entry retention and prefix filtering before the
+three-suggestion limit. `RecentSearchHistory` publishes an immutable StateFlow after writing its
+ordered JSON preferences. This state is separate from playback History and Browse snapshots;
+malformed stored values are ignored without an automatic rewrite. No database migration is needed.
+
+`BrowseWorkflow.runSearch` records explicit submissions at the common entry point. `searchFor`
+updates the query and submits once in the existing scope. `SearchQueryField` filters locally while
+typing, displays an editable anchored dropdown with plain text suggestions while focused and
+dismisses it on submission. Owner trial feedback selected the original integrated magnifier and
+text-only autocomplete as exceptions to the generic labelled-action convention; no extra heading
+or inline button section changes the results layout. The editable anchor preserves typing focus.
+Search button, IME and suggestion clicks share the existing workflow; typing does not issue searches.
+Keyboard/layout behaviour on a phone remains unverified by host Compose tests.
 
 Catalogue overview publishes held-data flags before running expensive counts. Platform counting is
 a separately launched sibling, not a prerequisite for the overview. Random filters do not use

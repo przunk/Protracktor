@@ -444,10 +444,14 @@ class PlaybackController private constructor(private val context: Context) {
             catalogues.countMatches(query, ids, platforms)
     })
 
+    private val recentSearchHistory = RecentSearchHistory(com.przunk.protracktor.data.RecentSearchPreferences(context))
+    val recentSearches get() = recentSearchHistory.queries
+
     private val browseWorkflow = BrowseWorkflow(
         scope = scope,
         browse = _browse,
         search = librarySearch,
+        onSubmitted = recentSearchHistory::record,
         actions = object : BrowseWorkflow.Actions {
             override fun refreshFolders() = localFolders.refreshFolders()
             override fun refreshCatalogues() = catalogueBrowser.refreshCatalogues()
@@ -2191,6 +2195,7 @@ class PlaybackController private constructor(private val context: Context) {
     fun toggleSearchPlatform(id: String) = browseWorkflow.toggleSearchPlatform(id)
 
     fun runSearch() = browseWorkflow.runSearch()
+    fun searchFor(query: String) = browseWorkflow.searchFor(query)
 
     fun setSearchScope(scope: SearchScope) = browseWorkflow.setSearchScope(scope)
 
