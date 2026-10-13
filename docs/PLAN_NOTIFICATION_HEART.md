@@ -49,7 +49,7 @@ The original transport/channel labels are outside this feature's changes.
 
 **Checked:** all 67 focused checks passed after correction: 10 domain, 16 SDK 29/33 adapter/locale
 and 41 session checks, zero failures/errors/skips. The full combined gate passed again on rebased B46;
-the final APK follows. The earlier 1.3.0/1154 APK from `9583569` lacks this correction
+the final APK is recorded below. The earlier 1.3.0/1154 APK from `9583569` lacks this correction
 and is not the final trial artifact. Actual service delivery and phone language behaviour remain
 **not checked**. Only local unpublished feature history is updated; develop/master are unchanged.
 
@@ -64,7 +64,7 @@ acceptance, URI PendingIntent identity and truthful persistence completion faile
 the final focused rerun again passed 63 with zero failures/errors/skips.
 
 No actual PlaybackService lifecycle, real MediaController/SystemUI delivery, lock-screen layout or
-phone persistence result is established by those host checks. Full gate and combined APK follow on
+phone persistence result is established by those host checks. Full gate and combined APK were prepared on
 B46's explicitly approved stacked branch. Evidence: ignored `dist/notification-search-verification/`.
 
 ## Combined host verification — 2026-10-13
@@ -74,9 +74,16 @@ tests in 111 suites, no failures/errors/skips, lint 0 errors/72 warnings, plus t
 native audio, resources and loopback checks. It used temporary per-class worker isolation after
 two interrupted shared-worker Compose timeout attempts; no JDK/repository settings or exclusions
 changed. [Full evidence and limits](PLAN_RECENT_SEARCHES.md). This does not establish service or
-notification behaviour on a phone; the combined clean-source release APK and owner acceptance
-remain pending. No merge or push.
+notification behaviour on a phone. The combined clean-source release APK is ready; owner acceptance
+remains pending. No merge or push.
 
 Bypassing only feedback's app-language wrapper subsequently failed 2/16 adapter checks (SDK 29/33).
 The production source was restored and SHA-256 compared; all 16 passed again. Final full-gate
 sources are unchanged, and these checks still do not run the actual service/SystemUI lifecycle.
+
+**Combined trial APK:** **1.3.0 (1154)** from clean source `1452309`, built in 35 s:
+`dist/protracktor-release-1.3.0-1154-1452309-20261013-224501.apk`.
+Non-debuggable, R8-minified, APK v2 test signature verified, matching the accepted stereo trial;
+new heart/search resources survive shrinking. [Artifact checks](STATUS.md) and
+[phone scenarios](TESTING.md) distinguish host construction from actual SystemUI/service use.
+Develop/master, schema and store publication are unchanged; the subsequent handoff is docs-only.

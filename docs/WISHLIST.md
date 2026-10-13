@@ -32,7 +32,8 @@ and report rejection or saving failure. B6 has been accepted; B48 can proceed on
 passed after the saved-app-language correction. Initial guard/payload/completion mutations failed
 7/63; app-selection regressions failed 2/14 before correction and feedback bypass failed 2/16.
 The final joint gate passed 829 tests with lint
-0 errors/72 warnings on the approved stacked B46 branch. APK and phone acceptance remain pending.
+0 errors/72 warnings on the approved stacked B46 branch. Combined minified release 1.3.0 (1154),
+source `1452309`, is ready; phone acceptance remains pending. No merge or store release.
 [Plan](PLAN_NOTIFICATION_HEART.md).
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
@@ -72,7 +73,8 @@ new clearing control is selected. Remaining implementation/phone checks stay on 
 **Implementation checkpoint, 2026-10-13:** implemented on `feature/recent-search-suggestions`,
 stacked on B48 with owner approval. 42 focused host tests passed; deliberate mutations failed
 11/42 and sources were restored. The final combined full gate passed 829 tests with lint 0 errors/72
-warnings; APK and phone acceptance remain pending.
+warnings; combined minified release 1.3.0 (1154), source `1452309`, is ready. Phone acceptance
+remains pending; no merge or store release.
 This is search-query history, separate from playback History and B43's listened markers.
 
 ## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss

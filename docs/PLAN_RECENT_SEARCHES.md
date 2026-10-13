@@ -46,7 +46,7 @@ implemented on this branch. Version 1.3.0 identifies the combined feature trial;
 4 actual Browse/Compose tests. Deliberately changing prefix matching/limit, recorded query,
 suggestion submission and preference persistence failed 11/42 tests. All four sources were
 restored and SHA-256 compared. Evidence is in ignored `dist/notification-search-verification/`.
-The final restored full gate/lint passed as recorded below; the combined release APK is pending.
+The final restored full gate/lint passed as recorded below; the combined release APK is ready.
 Real phone keyboard, focus/layout, restart and notification behaviour remain **not checked**.
 
 Two full-suite attempts reached Compose idle timeouts: existing Settings tests in the first,
@@ -71,4 +71,14 @@ required a fresh combined gate and APK. The corrected first branch passed 67 foc
 failures/errors/skips, lint 0 errors/72 warnings and all the same web/native/resource/loopback checks.
 Afterward, deliberately bypassing feedback localisation failed 2/16 adapter tests; the source was
 restored and SHA-256 compared, then 16 passed again. The full-gate source is unchanged by this proof.
-The final clean-source APK follows; no merge or push, and both phone checklists remain unverified.
+The final clean-source APK is ready; no merge or push, and both phone checklists remain unverified.
+
+## Combined trial handoff — 2026-10-13
+
+Offered minified release: **1.3.0 (1154)**, clean source `1452309`, built in 35 s:
+`dist/protracktor-release-1.3.0-1154-1452309-20261013-224501.apk`.
+Version, non-debuggable manifest, three ABIs, retained new resources and APK v2 test signature were
+checked. [Artifact size/hash/certificate and limits](STATUS.md); [phone checklists](TESTING.md).
+The earlier `9583569` APK is superseded. The two features remain on separate stacked branches;
+develop/master, schema and publication are unchanged. Handoff documentation does not alter the
+APK's app/native sources. No installed build or device outcome is inferred from producing it.

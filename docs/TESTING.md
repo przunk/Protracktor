@@ -168,7 +168,16 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## B46 recent searches — combined APK and phone retest pending
+## Combined B48+B46 APK — offered for phone testing, 2026-10-13
+
+Install the minified release APK without uninstalling or clearing app data:
+`dist/protracktor-release-1.3.0-1154-1452309-20261013-224501.apk`, **1.3.0 (1154)**,
+clean source `1452309`. [Artifact checks](STATUS.md) confirm its version/test signature, not actual
+installation or phone behaviour. The earlier `9583569` APK lacks the in-app-language correction
+and is superseded. Check both scenarios below; record the installed build/device/Android and
+observed results before approving either branch. No merge or Play-track activity is implied.
+
+## B46 recent searches — release APK ready; phone retest pending
 
 Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
 [Contract and host evidence](PLAN_RECENT_SEARCHES.md). Real phone results are **not checked**.
@@ -188,7 +197,7 @@ Branch: `feature/recent-search-suggestions`, stacked on B48 with owner approval.
    result-list space. Report installed build/device/Android and the actual scenario outcome.
 5. Run B48 below and the previously accepted stereo/Bluetooth scenarios on the same APK.
 
-## B48 notification heart — combined APK and phone retest pending
+## B48 notification heart — release APK ready; phone retest pending
 
 The task branch is `feature/notification-playlist-heart`; B46 starts from it with owner
 approval. [Contract and host evidence](PLAN_NOTIFICATION_HEART.md). Use disposable playlists

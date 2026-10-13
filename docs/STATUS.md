@@ -4,12 +4,13 @@ Updated: 2026-10-13 — version 1.2.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Final B48+B46 gate passed; combined APK and phone acceptance pending — 2026-10-13
+## B48+B46 combined release APK ready; phone acceptance pending — 2026-10-13
 
 After the first combined gate/APK, code inspection found new heart labels/feedback missing the
 saved in-app locale. Corrected B48 `d8dfb89` now passes 67 focused checks; B46 was rebased onto it.
 The `9583569` APK and earlier 825-test gate predate that correction and are not final trial
-evidence. The fresh forced combined gate/lint passed; a clean-source APK follows. No phone result,
+evidence. The fresh forced combined gate/lint passed; the final clean-source APK is recorded below.
+No phone result,
 merge, push or change to develop/master.
 
 **Checked:** the final forced combined gate passed in 331 s: 829 unit tests in 111 suites, zero
@@ -21,8 +22,20 @@ Search teardown); Settings passed separately without source changes. The success
 temporary per-class worker isolation and a 1 GiB heap on the existing JDK, without exclusions or
 repository build-setting changes. The timeout mechanism is not established. Evidence is in ignored
 `dist/notification-search-verification/`; [details](PLAN_RECENT_SEARCHES.md).
-Both features remain unmerged. A clean-source combined release APK follows; phone behaviour is
+Both features remain unmerged. A clean-source combined release APK is ready; phone behaviour is
 **not checked**. Master, tags, schema and store publication are unchanged.
+
+**Checked artifact:** minified release APK built in 35 s from clean source `1452309`:
+`dist/protracktor-release-1.3.0-1154-1452309-20261013-224501.apk`, **1.3.0 (1154)**,
+11,775,822 bytes. SHA-256:
+`2325fc69f406c1f59cfe12f4e6483a3b35bff887ffa0dd9bf5ed920b6bf01469`.
+R8 executed; the APK is non-debuggable, minSdk 29/targetSdk 36, with all three existing ABIs.
+APK v2 signature verified; test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`, matching the accepted
+stereo/Bluetooth trial. Both heart drawables and all new labelled-action/search resources survive
+resource shrinking. Artifact checks are not Android execution; this is sideload testing, not an
+AAB or store release. The handoff commit changes documentation only. App/native sources match
+the final full-gate source tree; no rebuild was needed for documentation/commit-message corrections.
 
 ## Recent searches — B46, stacked implementation; phone acceptance pending, 2026-10-13
 
@@ -36,7 +49,7 @@ Typing only filters suggestions. [Contract and evidence](PLAN_RECENT_SEARCHES.md
 **Checked:** 42 focused host tests passed (8 pure, 4 preference, 26 workflow, 4 real Browse/Compose).
 Deliberate matching/submission/recording/persistence mutations failed 11/42; all four sources were
 restored and SHA-256 compared. The final restored full gate/lint passed as recorded above;
-combined release APK pending. Real phone UI and both feature checklists are **not checked**.
+the combined release APK is recorded above. Real phone UI and both feature checklists are **not checked**.
 No merge or push.
 
 ## Notification heart — B48, implemented on task branch; phone acceptance pending, 2026-10-13
@@ -60,7 +73,8 @@ are unchanged. The combined gate passed after rebasing B46; the earlier `9583569
 Deliberate guard/payload/completion mutations failed 7/63; all three sources were restored and
 SHA-256 compared, then 63 passed again. Real service/SystemUI/lock-screen/phone behaviour is
 **not checked**. Full tests/lint passed on the approved stacked B46 branch as recorded above;
-one combined APK follows. No merge, push, new APK or store release at this checkpoint.
+the combined APK is recorded above. No merge, push or store release. The initial 63-test checkpoint
+preceded the four added locale checks; the current focused total is 67.
 
 ## Stereo mix trial — B6, owner-accepted and merged, 2026-10-13
 
