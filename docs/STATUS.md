@@ -4,6 +4,28 @@ Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Session code review — 2026-10-14
+
+[Review and evidence](review-2026-10-14.md) covers the 2026-10-13/14 session, including C103, C102,
+B6, B48 and B46. One additional pre-existing playlist activation defect is recorded as C105 below;
+the known stale-search/navigation race also remains. Performance, external ARTIST metadata,
+concurrent native-test coverage and fail-open APK verification are observations, not invented
+device regressions. No fixes or new APK were made. Sources still match the accepted trial.
+
+### C105 — overlapping playlist switches can disagree with the persistence target
+
+**Recorded:** 2026-10-14. **Source:** code review and controlled host diagnostic, not user feedback.
+Suspend activation 2's track read, finish activation 3, then finish 2. Actual result: persistence
+target 3, visible playlist 2 with its rows. A temporary correctness test executed once and failed
+its latest-selection assertion; source/XML/log retained in ignored `dist/daily-review-20261014/`.
+The switch method is unchanged from baseline `79244e0`, so this is not a new C103/B48 regression.
+
+Each activation publishes independently without a latest-request guard. C103 prevents the mismatched
+queue from being written into the other playlist, but subsequent snapshots can be refused until
+activation restores agreement. Normal Save has no rejection feedback on this path; notification
+Save reports failure. No wrong-playlist write, data loss, phone frequency or phone reproduction is
+claimed. **Open:** no fix selected or implemented. [Detailed finding R1](review-2026-10-14.md).
+
 ## B48 and B46 — owner accepted and merged, 2026-10-14
 
 The owner reported no objections and authorized both merges. B48 was merged first at `61886e7`,
