@@ -218,7 +218,8 @@ class PlaylistSessionTest {
         assertEquals(listOf(track("new")), f.rows[2])
         assertEquals(listOf(resolved), f.player.value.queue.tracks)
         assertEquals(listOf("save:1", "stop", "tracks:2", "lists", "resolve", "save:2", "replace:1", "lists"), f.events)
-        assertEquals(1, f.player.value.playlists.first { it.id == 2L }.trackCount)
+        assertEquals(1, f.player.value.playlists.first { it.id == 1L }.trackCount)
+        assertEquals(0, f.player.value.playlists.first { it.id == 2L }.trackCount)
     }
 
     @Test(timeout = 5_000)
@@ -429,6 +430,7 @@ class PlaylistSessionTest {
         entered.await()
         f.session.savePlaylist()
         f.session.scheduleTrackWrite()
+        f.session.writeTracks()
         yield()
         gate.complete(Unit)
         drain()
@@ -441,9 +443,171 @@ class PlaylistSessionTest {
         val f = Fixture(this)
         f.session.savePlaylist()
         f.session.scheduleTrackWrite()
+        f.session.writeTracks()
         drain()
         assertTrue(f.events.isEmpty())
         assertTrue(f.writes.isEmpty())
+    }
+
+    @Test(timeout = 5_000)
+    fun `automatic additions capture their owner and contents without marking newer edits saved`() = runBlocking {
+        val f = Fixture(this)
+        restore(f)
+        val added = listOf(track("added"))
+        f.player.value = f.player.value.copy(queue = PlayQueue(added))
+        f.session.writeTracks()
+        f.player.value = f.player.value.copy(queue = PlayQueue(listOf(track("later-edit"))), dirty = true)
+        drain()
+        assertEquals(listOf(1L to added), f.writes)
+        assertTrue(f.player.value.dirty)
+        assertEquals(1, f.player.value.playlists.first { it.id == 1L }.trackCount)
+    }
+
+    @Test(timeout = 5_000)
+    fun `discard cancels a pending snapshot so abandoned edits cannot reappear on disk`() = runBlocking {
+        val stored = listOf(track("stored"))
+        val f = Fixture(this).apply { rows[1] = stored }
+        restore(f)
+        f.player.value = f.player.value.copy(queue = PlayQueue(listOf(track("abandoned"))), dirty = true)
+        f.session.scheduleTrackWrite()
+        yield()
+        f.session.discardChanges()
+        drain()
+        assertTrue(f.writes.isEmpty())
+        assertEquals(stored, f.rows[1])
+        assertEquals(stored, f.player.value.queue.tracks)
+        assertFalse(f.player.value.dirty)
+    }
+
+    @Test(timeout = 5_000)
+    fun `resetting the last playlist cancels its pending snapshot instead of restoring deleted contents`() = runBlocking {
+        val f = Fixture(this).apply { lists.remove(2); rows[1] = listOf(track("removed")) }
+        restore(f)
+        f.session.scheduleTrackWrite()
+        yield()
+        f.session.deletePlaylist(1)
+        drain()
+        assertEquals(listOf(1L to emptyList<TrackRef>()), f.writes)
+        assertTrue(f.rows[1].orEmpty().isEmpty())
+        assertTrue(f.player.value.queue.tracks.isEmpty())
+    }
+
+    @Test(timeout = 5_000)
+    fun `deleting the active playlist cancels its pending snapshot and preserves the destination`() = runBlocking {
+        val next = listOf(track("next"))
+        val f = Fixture(this).apply { rows[1] = listOf(track("removed")); rows[2] = next }
+        restore(f)
+        f.session.scheduleTrackWrite()
+        yield()
+        f.session.deletePlaylist(1)
+        drain()
+        assertTrue(f.writes.isEmpty())
+        assertFalse(f.rows.containsKey(1))
+        assertEquals(next, f.rows[2])
+        assertEquals(next, f.player.value.queue.tracks)
+    }
+
+    @Test(timeout = 5_000)
+    fun `an in flight save must finish before a last playlist reset so it cannot restore old contents`() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val f = Fixture(this).apply { lists.remove(2); rows[1] = listOf(track("removed")) }
+        restore(f)
+        var writesStarted = 0
+        f.before = {
+            if (it == "replace:1" && ++writesStarted == 1) { entered.complete(Unit); gate.await() }
+        }
+        f.session.savePlaylist()
+        entered.await()
+        f.session.deletePlaylist(1)
+        yield()
+        assertEquals(1, writesStarted)
+        gate.complete(Unit)
+        drain()
+        assertEquals(listOf(1L to listOf(track("removed")), 1L to emptyList<TrackRef>()), f.writes)
+        assertTrue(f.rows[1].orEmpty().isEmpty())
+    }
+
+    @Test(timeout = 5_000)
+    fun `metadata arriving during reset cannot restore the old queue afterwards`() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val f = Fixture(this).apply { lists.remove(2); rows[1] = listOf(track("removed")) }
+        restore(f)
+        f.before = { if (it.startsWith("rename:1:")) { entered.complete(Unit); gate.await() } }
+        f.session.deletePlaylist(1)
+        entered.await()
+        f.session.scheduleTrackWrite()
+        gate.complete(Unit)
+        drain()
+        assertEquals(listOf(1L to emptyList<TrackRef>()), f.writes)
+        assertTrue(f.rows[1].orEmpty().isEmpty())
+        assertTrue(f.player.value.queue.tracks.isEmpty())
+    }
+
+    @Test(timeout = 5_000)
+    fun `writes requested during discard cannot restore abandoned contents after its read`() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val stored = listOf(track("stored"))
+        val f = Fixture(this).apply { rows[1] = stored }
+        restore(f)
+        f.player.value = f.player.value.copy(queue = PlayQueue(listOf(track("abandoned"))), dirty = true)
+        f.before = { if (it == "tracks:1") { entered.complete(Unit); gate.await() } }
+        f.session.discardChanges()
+        entered.await()
+        f.session.writeTracks()
+        f.session.savePlaylist()
+        yield()
+        gate.complete(Unit)
+        drain()
+        assertTrue(f.writes.isEmpty())
+        assertEquals(stored, f.rows[1])
+        assertEquals(stored, f.player.value.queue.tracks)
+        assertFalse(f.player.value.dirty)
+    }
+
+    @Test(timeout = 5_000)
+    fun `requests after deletion but before destination publication cannot recreate membership rows`() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val next = listOf(track("next"))
+        val f = Fixture(this).apply { rows[1] = listOf(track("removed")); rows[2] = next }
+        restore(f)
+        f.before = { if (it == "lists" && !f.lists.containsKey(1)) { entered.complete(Unit); gate.await() } }
+        f.session.deletePlaylist(1)
+        entered.await()
+        f.session.writeTracks()
+        f.session.savePlaylist()
+        f.session.scheduleTrackWrite()
+        yield()
+        gate.complete(Unit)
+        drain()
+        assertTrue(f.writes.isEmpty())
+        assertFalse(f.rows.containsKey(1))
+        assertEquals(next, f.rows[2])
+    }
+
+    @Test(timeout = 5_000)
+    fun `a suspended discard cannot replace the newly activated playlist queue`() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val switched = CompletableDeferred<Unit>()
+        val next = listOf(track("next"))
+        val f = Fixture(this).apply { rows[1] = listOf(track("old")); rows[2] = next }
+        restore(f)
+        f.before = { if (it == "tracks:1") { entered.complete(Unit); gate.await() } }
+        f.onResolve = { switched.complete(Unit) }
+        f.session.discardChanges()
+        entered.await()
+        f.session.switchToPlaylist(2)
+        switched.await()
+        f.player.value = f.player.value.copy(dirty = true)
+        gate.complete(Unit)
+        drain()
+        assertEquals(next, f.player.value.queue.tracks)
+        assertTrue(f.player.value.dirty)
+        assertTrue(f.notices.isEmpty())
     }
 
     @Test(timeout = 5_000)

@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Owns playlist-session persistence and its jobs, not the decoder or the working queue. */
 internal class PlaylistSession(
@@ -50,6 +52,17 @@ internal class PlaylistSession(
     /** Debounces writes. Every transport press changes state; the disk does not need each one. */
     private var saveJob: Job? = null
     private var trackWriteJob: Job? = null
+    private var trackWriteTarget: Long? = null
+    private val trackWrites = Mutex()
+    private data class TrackWrite(val snapshot: PlaylistSessionState.WriteSnapshot, val revision: Long)
+    private val writeRevisions = mutableMapOf<Long, Long>()
+    private val deletedPlaylists = mutableSetOf<Long>()
+
+    private fun captureWrite(): TrackWrite? {
+        val snapshot = state.writeSnapshot(playlistId) ?: return null
+        if (snapshot.playlistId in deletedPlaylists) return null
+        return TrackWrite(snapshot, writeRevisions[snapshot.playlistId] ?: 0L)
+    }
 
     fun restore() {
         scope.launch {
@@ -71,14 +84,47 @@ internal class PlaylistSession(
 
     /**
      * Debounces full playlist rewrites while metadata arrives; UI updates remain immediate.
-     * The target and queue are read after the delay; their switch-time race is recorded in STATUS.md.
+     * Capture ownership and contents together before navigation can change either of them.
      */
     fun scheduleTrackWrite() {
+        val request = captureWrite() ?: return
         trackWriteJob?.cancel()
+        trackWriteTarget = request.snapshot.playlistId
         trackWriteJob = scope.launch {
             delay(TRACK_WRITE_DEBOUNCE_MS)
-            store.replaceTracks(playlistId, state.tracks)
-            refreshPlaylists()
+            if (writeTracks(request)) refreshPlaylists()
+        }
+    }
+
+    private fun cancelPendingTrackWrite(id: Long) {
+        if (trackWriteTarget == id) trackWriteJob?.cancel()
+    }
+
+    private fun invalidateTrackWrites(id: Long) {
+        writeRevisions[id] = (writeRevisions[id] ?: 0L) + 1L
+        cancelPendingTrackWrite(id)
+    }
+
+    private fun isCurrent(request: TrackWrite): Boolean =
+        request.snapshot.playlistId !in deletedPlaylists &&
+            request.revision == (writeRevisions[request.snapshot.playlistId] ?: 0L)
+
+    private suspend fun writeTracks(request: TrackWrite, markSaved: Boolean = false): Boolean =
+        // A newer explicit save must not finish first and then be overwritten by an older one.
+        trackWrites.withLock {
+            if (!isCurrent(request)) return@withLock false
+            val snapshot = request.snapshot
+            store.replaceTracks(snapshot.playlistId, snapshot.tracks)
+            if (markSaved && isCurrent(request)) state.markSaved(snapshot)
+            true
+        }
+
+    /** Automatic additions persist immediately without changing the user's editing state. */
+    fun writeTracks() {
+        val request = captureWrite() ?: return
+        cancelPendingTrackWrite(request.snapshot.playlistId)
+        scope.launch {
+            if (writeTracks(request)) refreshPlaylists()
         }
     }
 
@@ -121,18 +167,25 @@ internal class PlaylistSession(
 
     /** Commits the edited list. The diskette button. */
     fun savePlaylist() {
+        val request = captureWrite() ?: return
+        cancelPendingTrackWrite(request.snapshot.playlistId)
         scope.launch {
-            val tracks = state.tracks
-            store.replaceTracks(playlistId, tracks)
-            state.markSaved()
+            writeTracks(request, markSaved = true)
         }
     }
 
     /** Throws the edits away and goes back to what is on disk. */
     fun discardChanges() {
+        val request = captureWrite() ?: return
+        val id = request.snapshot.playlistId
+        invalidateTrackWrites(id)
         scope.launch {
-            val stored = store.tracksIn(playlistId)
-            state.discard(stored)
+            trackWrites.withLock {
+                val stored = store.tracksIn(id)
+                state.discard(id, stored)
+                // Also retire requests captured while the old queue was visible during the read.
+                invalidateTrackWrites(id)
+            }
         }
     }
 
@@ -167,15 +220,22 @@ internal class PlaylistSession(
      * confirmation did not already ask about.
      */
     fun deletePlaylist(id: Long) {
+        invalidateTrackWrites(id)
         scope.launch {
             if (store.playlists().size <= 1) {
-                store.replaceTracks(id, emptyList())
-                store.renamePlaylist(id, defaultPlaylistName())
-                stopPlayback()
-                state.emptyPlaylist(store::playlists)
+                trackWrites.withLock {
+                    store.replaceTracks(id, emptyList())
+                    store.renamePlaylist(id, defaultPlaylistName())
+                    stopPlayback()
+                    state.emptyPlaylist(store::playlists)
+                    invalidateTrackWrites(id)
+                }
                 return@launch
             }
-            store.deletePlaylist(id)
+            trackWrites.withLock {
+                store.deletePlaylist(id)
+                deletedPlaylists += id
+            }
             val remaining = store.playlists()
             state.showPlaylists(remaining)
             if (id == playlistId) switchToPlaylist(remaining.first().id)

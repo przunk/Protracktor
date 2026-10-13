@@ -53,9 +53,18 @@ on the caller thread. These are preservation constraints, not proposed changes.
 
 The session persistence ID and the published active-playlist ID are deliberately not collapsed in
 this extraction: the former changes before an asynchronous track read, the latter on publication.
-Preserving that ordering exposes an existing pending-write race, and Save completion can also clear
-the dirty flag of a newer edit. `STATUS.md` records the controlled-store reproductions and the need
-for separately approved behaviour fixes; the architecture extraction does not declare them safe.
+The extraction preserved pending-write and Save-completion races; their historical controlled-store
+reproductions are retained in `STATUS.md`.
+
+**C103 follow-up, 2026-10-13, on `fix/playlist-write-safety`:** a track-write request captures a
+detached track list and its published playlist ID together, rejecting pre-restore or mismatched
+activation state. Metadata, explicit Save and automatic-add replacements share a session-owned
+mutex. Save completion compares identity and persisted contents, not unrelated transport state.
+Revert and Delete retire obsolete request revisions; deleted targets reject subsequent captures,
+and Revert cannot publish its read into another playlist. Reset/read publication and invalidation
+remain inside the write lock so old contents cannot be resurrected afterwards. Debounce timings,
+controller scope and stores remain unchanged. This is a separately approved behaviour fix, not
+an extraction guarantee or a global lock over every store caller; phone checks and merge are pending.
 
 Verification and remaining gaps are recorded in `STATUS.md` under Architecture stabilization.
 Long-term phone/browser acceptance and permission to merge or release remain the owner's.

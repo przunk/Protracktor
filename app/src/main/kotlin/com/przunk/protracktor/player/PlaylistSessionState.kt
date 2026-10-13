@@ -18,6 +18,15 @@ internal class PlaylistSessionState(
 
     val tracks: List<TrackRef> get() = player.value.queue.tracks
 
+    data class WriteSnapshot(val playlistId: Long, val tracks: List<TrackRef>)
+
+    /** The queue belongs to the published playlist, not an activation awaiting its storage read. */
+    fun writeSnapshot(expectedPlaylistId: Long): WriteSnapshot? {
+        val current = player.value
+        if (!current.restored || current.activePlaylistId != expectedPlaylistId) return null
+        return WriteSnapshot(current.activePlaylistId, current.queue.tracks.toList())
+    }
+
     fun restore(
         saved: SavedPlayerState?,
         playlists: List<SavedPlaylist>,
@@ -74,15 +83,20 @@ internal class PlaylistSessionState(
         player.update { it.copy(playlists = read()) }
     }
 
-    fun markSaved() {
-        // Saved silently. The Save button disappearing is the confirmation, and it is on
-        // screen already.
-        player.update { it.copy(dirty = false) }
+    fun markSaved(saved: WriteSnapshot) {
+        // Transport changes are not playlist edits; only identity and persisted contents matter.
+        player.update {
+            if (it.activePlaylistId == saved.playlistId && it.queue.tracks == saved.tracks) {
+                it.copy(dirty = false)
+            } else it
+        }
     }
 
-    fun discard(stored: List<TrackRef>) {
+    fun discard(playlistId: Long, stored: List<TrackRef>) {
         player.update {
-            it.copy(queue = it.queue.withTracks(stored), dirty = false, message = message(Notice.CHANGES_DISCARDED))
+            if (it.activePlaylistId == playlistId) {
+                it.copy(queue = it.queue.withTracks(stored), dirty = false, message = message(Notice.CHANGES_DISCARDED))
+            } else it
         }
     }
 

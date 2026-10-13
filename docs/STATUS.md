@@ -4,6 +4,29 @@ Updated: 2026-10-13 — version 1.1.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Playlist-write safety — C103, implementation on branch, 2026-10-13
+
+Owner-selected work on `fix/playlist-write-safety`, based on `develop` at `01e5bc1`.
+The two session-write races recorded during the refactor are addressed without changing the
+schema, version, settings debounce, decoder ownership or playlist activation order.
+Writes capture the playlist and detached track list together; session replacements are serialized.
+Save clears dirty state only when the same playlist still contains the saved tracks. Revert and
+Delete invalidate obsolete requests, including requests captured while those operations suspend.
+Automatic additions use the same session writer instead of reading the target/queue later.
+
+**Checked:** the unchanged implementation failed 11 of 29 regression-checkpoint tests; three
+additional lifecycle tests failed before their guards. The completed session suite passed all
+38 tests. Deliberately disabling snapshot/serialization/completion/lifecycle guards failed 13
+of those 38 tests; both production sources were restored and their SHA-256 values compared.
+**Checked:** forced full gate (`scripts/test-protracktor.sh --really`), 768 unit tests with zero
+failures/errors/skips; lint completed with 0 errors and 68 warnings. Also passed: PL/EN strings,
+store metadata, 581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database
+upgrade, 137 icon paths, PWA checks and 11 loopback server checks. Duration: 310 s.
+Logs/XML and lint report: ignored `dist/playlist-write-safety/`.
+**Not checked:** real phone/SQLite timing, minified APK or long-term behaviour.
+The owner requested an APK only together with the later Bluetooth
+fix; no APK is built, and the branch is not merged. [Analysis and handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
+
 ## Implementation roadmap and Bluetooth report — recorded 2026-10-13
 
 The owner requested a saved inventory of unfinished, deferred and undecided work:
@@ -11,8 +34,8 @@ The owner requested a saved inventory of unfinished, deferred and undecided work
 without treating historical completed tasks as new work. AMP is a renewed A7 exploration TODO,
 not a second catalogue item; an approved access route remains the prerequisite. B47 records
 verification of Bluetooth transport callbacks that already exist, rather than claiming absent
-support. C102 records a possibly historical Bluetooth output-switching defect whose current
-reproduction and cause are unknown. These requests were supplied by the owner; no separate
+support. C102 was subsequently confirmed by the owner on headphones; the installed build/device
+and cause remain unknown. These requests were supplied by the owner; no separate
 tester identity or Play-test participation is inferred.
 
 Documentation only: content/IDs, local links and diff whitespace are checked. No implementation,
@@ -756,6 +779,10 @@ Separate owner-approved work should guard save completion against newer edits an
 write's playlist identity and track snapshot consistent across activation. The phone reproduction
 and the fix remain open; passing characterisation tests do not mean these risks were removed.
 
+**Follow-up, 2026-10-13:** the owner selected these two races for a separate behaviour fix, C103.
+The implementation and regression results are recorded above on `fix/playlist-write-safety`;
+phone verification and merge remain pending. This does not change the historical extraction result.
+
 ### State-contract extraction — 2026-10-03
 
 Preparation commit: `e48ccd8`. `Message`, `PlayerUiState`, `BrowseState` (with `BrowseDomain` and
@@ -1433,6 +1460,33 @@ personal names or conversation quotations. **From 2026-10-06, at the owner's req
 the report date and source category** (user/tester, owner testing or code review), so real user
 feedback remains traceable through a fix and retest. A user report is not an independently
 reproduced defect or evidence of a fix. The feedback index is in [Testing](TESTING.md#feedback-record).
+
+### C103. Playlist writes can overwrite another playlist or hide newer edits — branch implementation, 2026-10-13
+
+**Source:** code review and controlled-store tests during the architecture extraction, 2026-10-04;
+owner selected the safety fix on 2026-10-13. This is not an independent app-user report.
+No frequency measurement or reproduction on Android SQLite/phone is claimed.
+
+**Mechanism:** activation changes the persistence ID before destination tracks load. A debounced
+write that reads ID and queue later can replace the destination with the source's tracks.
+Save also used to clear the current dirty flag unconditionally after its suspended write, even
+if a newer edit or another playlist had appeared. Capturing only the ID is insufficient: contents
+must come from the same published state, and completion must still refer to that state.
+
+**Controlled reproduction:** suspend the destination track read, let the source's pending metadata
+write fire, then inspect the replacement target and rows. Separately suspend Save, edit again,
+finish the write and inspect dirty state versus persisted contents. The safety assertions failed
+against unchanged production in regression commit `016321a`.
+
+**Implementation:** immutable request snapshots, shared session-write mutex, guarded Save/Revert
+completion and per-playlist invalidation on Revert/Delete. Deleted targets reject new requests
+before destination publication; last-playlist reset retires requests captured during its rename/read.
+Explicit Save and automatic additions supersede older pending metadata for that same playlist.
+This does not claim global serialization of every `LibraryStore` caller.
+
+**State:** implemented on `fix/playlist-write-safety`, not merged or owner-accepted. Focused host
+checks and the passed full gate are recorded above. Device behaviour remains **not checked**.
+APK deferred by owner until the Bluetooth fix. [Handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
 
 ### C102. Bluetooth connection interrupts sound and stalls the in-app progress — owner-confirmed on headphones, 2026-10-13
 
