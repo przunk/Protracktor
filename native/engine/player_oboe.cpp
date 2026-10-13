@@ -60,6 +60,21 @@ void guardedVoid(const char *what, Work &&work) {
     guarded<int>(what, [&] { work(); return 0; }, 0);
 }
 
+/** Shared by one stream only; a late error never calls a deleted Player or affects a new stream. */
+class OutputError : public oboe::AudioStreamErrorCallback {
+public:
+    bool onError(oboe::AudioStream *, oboe::Result error) override {
+        error_.store(error, std::memory_order_release);
+        // The control thread owns stop/close, including recovery. Suppress Oboe's parallel close.
+        return true;
+    }
+
+    oboe::Result result() const { return error_.load(std::memory_order_acquire); }
+
+private:
+    std::atomic<oboe::Result> error_{oboe::Result::OK};
+};
+
 class Player : public oboe::AudioStreamDataCallback {
 public:
     /**
@@ -131,7 +146,7 @@ public:
      * Not `stream_ != nullptr`: the stream outlives the last callback. Oboe is told to stop from
      * inside the callback when a tune ends, and the object stays until somebody closes it.
      */
-    bool running() const { return stream_ != nullptr && !isFinished(); }
+    bool running() const { return stream_ != nullptr && !isFinished() && outputError() == oboe::Result::OK; }
 
     /**
      * **The decoder is locked, and the audio thread never waits for it.**
@@ -285,10 +300,43 @@ public:
     }
 
     bool start() {
-        if (stream_) return true;
+        if (stream_) {
+            if (outputError() == oboe::Result::OK) return true;
+            stop();
+            return openOutput();
+        }
         finished_.store(false, std::memory_order_release);
         // Before the stream exists, so the backend is not yet shared with the audio thread.
         guardedVoid("startedPlaying", [&] { backend_->startedPlaying(); });
+
+        return openOutput();
+    }
+
+    /** Control thread only: 0 unchanged, 1 recovered, -1 failed. Never rewind/reopen the decoder. */
+    int recoverOutput() {
+        if (!stream_ || isFinished()) return 0;
+        const oboe::Result error = outputError();
+        if (error == oboe::Result::OK) return 0;
+        LOGE("Audio output interrupted: %s", oboe::convertToText(error));
+        stop();
+        // Only an output-route disconnection is recoverable automatically. Other errors surface
+        // to the UI, and a failed reopen pauses instead of endlessly retrying in the background.
+        if (error != oboe::Result::ErrorDisconnected) return -1;
+        return openOutput() ? 1 : -1;
+    }
+
+private:
+    oboe::Result outputError() const {
+        const auto error = outputError_ ? outputError_->result() : oboe::Result::OK;
+        if (error != oboe::Result::OK || !stream_) return error;
+        // AAudio can publish Disconnected before Oboe's separate error thread reaches onError.
+        const auto state = stream_->getState();
+        return state == oboe::StreamState::Disconnected || state == oboe::StreamState::Closed
+                   ? oboe::Result::ErrorDisconnected : oboe::Result::OK;
+    }
+
+    bool openOutput() {
+        outputError_ = std::make_shared<OutputError>();
 
         oboe::AudioStreamBuilder builder;
         builder.setDirection(oboe::Direction::Output)
@@ -298,7 +346,8 @@ public:
             ->setChannelCount(oboe::ChannelCount::Stereo)
             ->setUsage(oboe::Usage::Media)
             ->setContentType(oboe::ContentType::Music)
-            ->setDataCallback(this);
+            ->setDataCallback(this)
+            ->setErrorCallback(outputError_);
 
         // Backends that synthesise at a fixed rate say so, and Oboe resamples if the device runs at
         // something else. Asking a 68000 emulator to run at 48000 because the phone prefers it would
@@ -313,6 +362,7 @@ public:
         if (result != oboe::Result::OK) {
             LOGE("openStream failed: %s", oboe::convertToText(result));
             stream_.reset();
+            outputError_.reset();
             return false;
         }
         // If Oboe does not resample, `getSampleRate()` is the device's rate, the callback hands
@@ -338,11 +388,13 @@ public:
             LOGE("requestStart failed: %s", oboe::convertToText(r));
             stream_->close();
             stream_.reset();
+            outputError_.reset();
             return false;
         }
         return true;
     }
 
+public:
     /** Passed straight on; see `Backend::knownLengths`. Called before `start`. */
     void knownLengths(const std::vector<double> &lengths) {
         const std::lock_guard<std::mutex> held(decoderGuard_);
@@ -351,10 +403,14 @@ public:
     }
 
     void stop() {
-        if (!stream_) return;
+        if (!stream_) {
+            outputError_.reset();
+            return;
+        }
         stream_->stop();  // blocks until any in-flight callback has returned
         stream_->close();
         stream_.reset();
+        outputError_.reset();
     }
 
     ~Player() override { stop(); }
@@ -407,6 +463,7 @@ private:
     mutable std::mutex describeGuard_;
     std::string describe_;
     std::shared_ptr<oboe::AudioStream> stream_;
+    std::shared_ptr<OutputError> outputError_;
     std::atomic<bool> finished_{false};
     std::atomic<float> gain_{1.0f};
 
@@ -611,6 +668,11 @@ JNIEXPORT jboolean JNICALL
 Java_com_przunk_protracktor_engine_NativeEngine_nativeStart(JNIEnv *, jclass, jlong handle) {
     return guarded<jboolean>("start", [&] { return asPlayer(handle)->start() ? JNI_TRUE : JNI_FALSE; },
                              JNI_FALSE);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_przunk_protracktor_engine_NativeEngine_nativeRecoverOutput(JNIEnv *, jclass, jlong handle) {
+    return guarded<jint>("recoverOutput", [&] { return asPlayer(handle)->recoverOutput(); }, -1);
 }
 
 JNIEXPORT void JNICALL

@@ -4,6 +4,38 @@ Updated: 2026-10-13 — version 1.1.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Bluetooth output recovery — C102, implementation on branch, 2026-10-13
+
+Owner-authorized work on `fix/bluetooth-output-recovery`, stacked on the unmerged C103 playlist
+safety branch at `b134b3e`. The trial version is 1.1.1; develop remains 1.1.0/schema 23.
+The original headphone report is real owner testing; the agent has not reproduced Bluetooth
+on a phone. No installed-build/device details or logcat confirmation of ErrorDisconnected exist.
+
+The native Player detects output disconnection and reopens only the output, preserving its
+decoder, position, subsong and gain. A stream-owned shared error callback publishes an atomic
+result without referring to Player or closing/reopening from the error thread. The existing
+200 ms control poll owns recovery; Pause/track destruction cannot be overridden by a late callback.
+Other output errors or a failed reopen pause playback with the existing localized error notice,
+instead of silently displaying Playing or treating the failure as a track ending.
+
+**Checked:** four host checks against unchanged production executed and three failed (`72af15e`).
+The completed production Player/JNI, compiled with a fake Oboe device and decoder, passes 18 host
+checks, also with ASan/UBSan. Controlled native mutations failed 11/18 checks; the mutated JNI-result
+mapping failed all four Kotlin tests. Both mutated sources were restored and checksums compared.
+The sandbox sanitizer attempt could not complete LeakSanitizer under ptrace; the outside-sandbox
+run completed successfully. No decoder cache or hardware service is used by these tests.
+
+**Checked:** forced full gate, 772 unit tests across 103 suites (zero failures/errors/skips),
+18 native audio-host checks; lint completed with 0 errors and 68 warnings. PL/EN strings, store
+metadata, 581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database upgrade,
+137 icon paths, PWA and 11 loopback server checks also passed. Gate duration: 270 s.
+**Pending:** minified release APK containing both C102 and C103.
+The APK script selects only test signing and names the artifact with variant/version/commit SHA
+and dirty marker where needed. The copy/name helper was exercised on an actual existing APK in a
+disposable clean/dirty Git fixture. No upload-key access, AAB, tag, push, merge or store release.
+**Not checked:** Bluetooth/phone behaviour, car receiver, route timing, real-decoder continuity
+on route change and long-term acceptance. [Analysis and handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+
 ## Playlist-write safety — C103, implementation on branch, 2026-10-13
 
 Owner-selected work on `fix/playlist-write-safety`, based on `develop` at `01e5bc1`.
@@ -1486,7 +1518,8 @@ This does not claim global serialization of every `LibraryStore` caller.
 
 **State:** implemented on `fix/playlist-write-safety`, not merged or owner-accepted. Focused host
 checks and the passed full gate are recorded above. Device behaviour remains **not checked**.
-APK deferred by owner until the Bluetooth fix. [Handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
+APK deferred by owner until the Bluetooth fix; the subsequently authorized combined candidate
+is tracked in C102. [Handoff](PR_C103_PLAYLIST_WRITE_SAFETY.md).
 
 ### C102. Bluetooth connection interrupts sound and stalls the in-app progress — owner-confirmed on headphones, 2026-10-13
 
@@ -1514,6 +1547,20 @@ device observation, superseding the uncertainty about occurrence above; the inst
 phone/Android version and headphone model are still unspecified, and no cause is established.
 The owner also recalls possibly needing to select another track in the car, but that variant
 is not confirmed by the headphone test. No agent device reproduction or fix has been performed.
+
+**Implementation follow-up, 2026-10-13:** owner approved a separate fix and a combined release
+APK with C103. Source inspection confirms the Player registered only a data callback, retained a
+stream pointer after disconnection and treated that pointer as a healthy output. Oboe 1.10.0's
+default AAudio error callback stops/closes the underlying stream, but does not reopen it or clear
+the Player's pointer. Decoder position is published by data callbacks; app state stays Playing,
+and MediaSession continues advertising speed 1. Seeking does not recreate output; Pause/Play does.
+This explains the reported symptom sequence but is **not** a confirmed device error trace.
+
+`fix/bluetooth-output-recovery` adds per-stream error state, control-thread output-only recovery,
+and a typed JNI result. It preserves the decoder and does not restart finished or paused tracks.
+Unrecoverable errors pause and show `notice_audio_device_failed`. Host evidence and remaining
+checks are recorded at the top and in the [C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md).
+No device acceptance or merge yet. B47 receiver-button verification remains a separate task.
 
 ### C97. ~~Random history and selection become inconsistent after changing scope from an earlier track~~ — FIXED, owner-accepted and merged 2026-10-06
 

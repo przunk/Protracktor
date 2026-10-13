@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
 #
-# Builds a signed release APK and reports which key actually signed it.
-#
-# Signing credentials never live in this repository. Put them in ~/.gradle/gradle.properties:
-#
-#   PRZUNK_UPLOAD_STORE_FILE=/absolute/path/to/protracktor-release.jks
-#   PRZUNK_UPLOAD_STORE_PASSWORD=…
-#   PRZUNK_UPLOAD_KEY_ALIAS=…
-#   PRZUNK_UPLOAD_KEY_PASSWORD=…
-#
-# Without them the build still succeeds, signed with the local debug key. That keeps sideloading
-# alive on a machine with no release key -- an unsigned APK cannot be installed at all -- but such
-# an APK must never be published. Which key was used is printed rather than assumed.
+# Builds a minified release APK for device testing, signed with the local debug certificate.
+# The upload key belongs to the owner's AAB workflow; this script never selects it.
 #
 # Usage:  ./scripts/build-release.sh [extra gradle args…]
 set -euo pipefail
@@ -33,7 +23,7 @@ write_local_properties
 started_at=$(date +%s)
 echo "🔨 Protracktor — release APK…"
 
-if ! ./gradlew :app:assembleRelease --console=plain "$@" > "$LOG_FILE" 2>&1; then
+if ! ./gradlew :app:assembleRelease --console=plain "$@" -PprotracktorTestApk=true > "$LOG_FILE" 2>&1; then
     report_failure "$LOG_FILE"
 fi
 
@@ -51,7 +41,7 @@ if [ -n "$APKSIGNER" ]; then
     elif echo "$signer_line" | grep -qi 'CN=Android Debug'; then
         echo "   ⚠️  DEBUG KEY — sideloadable, NOT publishable."
         echo "       $signer_line"
-        echo "       Set PRZUNK_UPLOAD_* in ~/.gradle/gradle.properties to sign with the upload key."
+        echo "       Test certificate only; the release variant remains minified."
     else
         echo "   ✅ Release key."
         echo "       $signer_line"
@@ -62,4 +52,5 @@ fi
 
 echo
 echo "✅ OK in $(($(date +%s) - started_at))s"
+echo "Source: $(git rev-parse --short HEAD)$(if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then printf ' (dirty)'; fi)"
 echo "📦 $artifact ($(du -h "$artifact" | cut -f1))"

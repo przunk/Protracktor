@@ -51,7 +51,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C102 | Connecting Bluetooth stops sound and stalls the app's progress while notification progress continues | Owner reproduced on headphones, 2026-10-13. Seeking does not help; Pause/Play restores playback. Car variant, exact build/device and cause remain unconfirmed; no fix. |
+| C102 | Connecting Bluetooth stops sound and stalls the app's progress while notification progress continues | Owner-confirmed on headphones. Output-only recovery implemented on `fix/bluetooth-output-recovery`, stacked on C103; 772 unit tests, 18 native checks and lint passed. Combined APK pending; phone acceptance and merge pending. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
@@ -144,13 +144,13 @@ sources and is not a full code review or a claim that the implementation has no 
 1. The owner selected playlist-write safety (C103). Implementation is on its own branch with
    failing-before/passing-after regressions; full verification and phone acceptance are tracked
    in [Status](STATUS.md). No merge yet.
-2. C102 is now owner-confirmed on headphones. Diagnose Bluetooth route handling, then implement
-   a separately selected fix and hand over a release APK for retesting, also including C103.
+2. The owner subsequently selected C102. Output-only recovery is implemented on its own branch
+   above C103; prepare the combined release APK and follow the phone checklist before merging.
 3. For a subsequent user-facing feature, discuss/select B6 stereo narrowing/mono mixing before
    undertaking the larger queue-ownership change. Headphone processing remains optional.
 
-Only step 1 has been selected for implementation so far. The owner deferred its APK until the
-Bluetooth fix; the observation does not diagnose an audio-stream/focus/decoder cause.
+Steps 1 and 2 are now owner-selected. The owner deferred the first APK until Bluetooth recovery
+was included. The code-level disconnection mechanism still needs confirmation against the phone.
 
 ## Verification of the original inventory update
 

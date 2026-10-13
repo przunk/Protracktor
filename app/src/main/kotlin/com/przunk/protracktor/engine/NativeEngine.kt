@@ -157,6 +157,9 @@ object NativeEngine {
 
         fun start(): Boolean = nativeStart(handle())
 
+        /** Control thread only; recover a disconnected output without reopening the track. */
+        fun recoverOutput(): OutputRecovery = OutputRecovery.fromNative(nativeRecoverOutput(handle()))
+
         /**
          * Each subsong's length where a database knows it, zero-based, zero where it does not.
          * Before [start]. Only UADE listens: it works out only what is missing (A52).
@@ -257,6 +260,7 @@ object NativeEngine {
     @JvmStatic private external fun nativeRenderRate(handle: Long): Int
     @JvmStatic private external fun nativeRender(handle: Long, sampleRate: Int, out: ShortArray): Int
     @JvmStatic private external fun nativeStart(handle: Long): Boolean
+    @JvmStatic private external fun nativeRecoverOutput(handle: Long): Int
     @JvmStatic private external fun nativeKnownLengths(handle: Long, lengths: DoubleArray)
     @JvmStatic private external fun nativeStop(handle: Long)
     @JvmStatic private external fun nativeIsFinished(handle: Long): Boolean
