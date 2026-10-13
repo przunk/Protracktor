@@ -29,7 +29,14 @@ run completed successfully. No decoder cache or hardware service is used by thes
 18 native audio-host checks; lint completed with 0 errors and 68 warnings. PL/EN strings, store
 metadata, 581 page checks, 49 existing WASM engine checks, 8 SAP checks, browser database upgrade,
 137 icon paths, PWA and 11 loopback server checks also passed. Gate duration: 270 s.
-**Pending:** minified release APK containing both C102 and C103.
+**Checked:** combined release APK built from clean source `d1d8964` in 661 s:
+`dist/protracktor-release-1.1.1-1138-d1d8964-20261013-203532.apk`, **1.1.1 (1138)**,
+11,751,338 bytes. SHA-256:
+`4077ab501bb11726eb70da1bd3dc688236891b2c946ff0340c4049827bfc7988`.
+R8 executed; the APK is non-debuggable, minSdk 29/targetSdk 36, three ABIs. APK v2 signature
+verified; test certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`,
+matching trial APK 1123. The recovery JNI export exists in all three packaged engine libraries,
+and the minified DEX retains its native method name. These are artifact checks, not device execution.
 The APK script selects only test signing and names the artifact with variant/version/commit SHA
 and dirty marker where needed. The copy/name helper was exercised on an actual existing APK in a
 disposable clean/dirty Git fixture. No upload-key access, AAB, tag, push, merge or store release.

@@ -62,3 +62,8 @@ The owner deferred the APK until the Bluetooth fix; leave the branch unmerged me
 The [phone checklist](TESTING.md#c103-playlist-write-safety--phone-retest-pending) uses disposable
 playlists and backups, not clearing application data. C102 Bluetooth symptoms were recorded
 separately; they are not diagnosed or fixed by this change.
+
+**Handoff follow-up, 2026-10-13:** the owner authorized C102 on a separate stacked branch, and
+the combined release trial **1.1.1 (1138)** now includes this C103 implementation. Its source is
+clean `d1d8964`; artifact/signature/JNI checks and the joint 772-test gate are recorded in the
+[C102 handoff](PR_C102_BLUETOOTH_OUTPUT_RECOVERY.md). Neither branch is merged or phone-accepted.

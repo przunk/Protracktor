@@ -61,8 +61,22 @@ zero failures/errors/skips; all 18 audio-host checks passed. Lint completed with
 68 warnings**. Also passed: strings/store limits, 581 page checks, 49 existing WASM engine checks,
 8 SAP checks, browser database upgrade, 137 icon paths, PWA and 11 loopback server checks.
 Gate duration: 270 s. Shell syntax and artifact-copy/name paths were checked.
-Minified APK pending; real Android/Oboe compilation and signing will be established by that build.
+Minified APK completed from clean source `d1d8964`; actual Android/Oboe compilation succeeded
+for all three ABIs. No device execution is implied by compilation or export checks.
 Evidence is retained in ignored `dist/bluetooth-output-recovery/`.
+
+## Combined trial artifact
+
+`dist/protracktor-release-1.1.1-1138-d1d8964-20261013-203532.apk` — **1.1.1 (1138)**,
+11,751,338 bytes, built in 661 s from clean `d1d8964`, including C103.
+SHA-256: `4077ab501bb11726eb70da1bd3dc688236891b2c946ff0340c4049827bfc7988`.
+
+R8 executed and its mapping exists; the APK is non-debuggable, minSdk 29/targetSdk 36, with
+armeabi-v7a/arm64-v8a/x86_64 libraries. APK v2 signature verified; the test certificate matches
+trial 1123 (SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`).
+The recovery JNI export was checked in each packaged engine library and its native method name
+in minified DEX. The host lacked `unzip`; extraction used the existing JDK's `jar`, without
+installing tools or changing Java. These checks do not establish runtime routing on a phone.
 
 ## PR → owner phone retest
 

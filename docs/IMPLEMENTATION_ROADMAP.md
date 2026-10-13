@@ -51,7 +51,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C102 | Connecting Bluetooth stops sound and stalls the app's progress while notification progress continues | Owner-confirmed on headphones. Output-only recovery implemented on `fix/bluetooth-output-recovery`, stacked on C103; 772 unit tests, 18 native checks and lint passed. Combined APK pending; phone acceptance and merge pending. |
+| C102 | Connecting Bluetooth stops sound and stalls the app's progress while notification progress continues | Owner-confirmed on headphones. Output-only recovery on `fix/bluetooth-output-recovery`, stacked on C103; 772 unit tests, 18 native checks and lint passed. Combined release trial 1.1.1 (1138) built; phone acceptance and merge pending. |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
