@@ -10,6 +10,36 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B46. Recent searches from the search field — user feedback recorded 2026-10-13; to discuss
+
+Real app-user request, relayed by the owner on 2026-10-13: tapping/focusing the search field
+should offer previously submitted searches for reuse. Suggested presentation: show the three
+most recent entries, either as the entire list or as a scrollable preview of a longer history.
+The list size, persistence, clearing, duplicate handling and whether an entry includes its
+search scope remain undecided. See [Q15](OPEN_QUESTIONS.md#q15--recent-searches-presentation-and-retention).
+Recorded for discussion and future implementation; no implementation is selected or scheduled.
+This is search-query history, separate from playback History and B43's listened markers.
+
+## B45. Active playback queue independent of the visible playlist — user feedback recorded 2026-10-13; to discuss
+
+Real app-user request, relayed by the owner on 2026-10-13: returning to the playlist after
+playing a search result or browsing an author should keep the music playing. After discussing
+the request with the reporter, the owner identified an explicit current playback queue as
+the proposed approach, with its source changing according to the playback context.
+
+Treat the visible playlist and the active playback queue as distinct concepts. The existing
+[A61 navigation contract](BACKLOG.md) intentionally ends a session
+when the Playlist action is chosen; this request proposes changing that contract, rather than
+establishing a regression. The meaning of context changes, Next/Previous, shuffle/repeat,
+playlist edits and restoring sessions must be discussed before implementation. See
+[Q13](OPEN_QUESTIONS.md#q13--playback-queue-and-navigation).
+The desired continuity and queue direction are recorded; implementation is explicitly deferred.
+This concerns playback ownership, not the deferred swipe gesture in B25.
+
+**Related renewed user request:** stereo/headphone mixing is tracked in existing
+[B6](#b6-fold-hard-panned-channels-together)
+below, without creating a duplicate wishlist item.
+
 ## B44. Android Auto support — noted 2026-10-06; not scheduled
 
 Requested by a tester and relayed by the owner on 2026-10-06: add Android Auto support.
@@ -1210,10 +1240,24 @@ already is.
 
 ## B6. Fold hard-panned channels together
 
+**Renewed real user feedback recorded 2026-10-13; to discuss.**
+
 Amiga modules pan channels hard left and right by convention, and on some phones one "speaker" is the screen vibrator: half the music is
 effectively inaudible. Wanted is a mix control — full stereo, narrowed, or mono — applied in the
 render callback where the gain already is. Note that libopenmpt has a stereo-separation setting of
 its own, so part of this may be a backend option rather than a mix of ours.
+
+Real app-user feedback, relayed by the owner on 2026-10-13: music perceived in one ear should
+be mixed so it can be heard in both. This renews the existing B6 request. No example track,
+decoder, device, headphones or installed build was supplied, so a decoder/output fault or
+the cause of that channel separation has not been established.
+
+The owner also raised a possible headphone-processing mode, mentioning Dolby Headphones as
+a direction to explore. This is an optional idea, not an approved named mode or a selected
+implementation. Discuss stereo narrowing, mono downmix and headphone crossfeed separately,
+including the default, strength control, supported playback paths and actual listening tests.
+See [Q14](OPEN_QUESTIONS.md#q14--stereo-mixing-and-headphone-mode).
+No audio processing change is implemented or scheduled by this record.
 
 ## B7. Full metadata for any supported file
 

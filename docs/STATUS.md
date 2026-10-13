@@ -1,8 +1,24 @@
 # Status
 
-Updated: 2026-10-11 — version 1.0.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-13 — version 1.1.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## New real user requests — recorded 2026-10-13; discussion pending
+
+The owner relayed three genuine user requests: continuous playback when returning from search
+or author browsing to the playlist, stereo mixing for listening in both ears (with a possible
+headphone mode), and recent queries offered from the search field. Queue continuity is B45,
+recent searches B46, and stereo mixing extends existing B6. The active-queue approach was
+discussed with the first reporter; its transition rules and implementation are deferred.
+These propose new behaviour; no navigation regression or audio-output fault is diagnosed here.
+
+The wishlist preserves each request and its source/date; Q13–Q15 preserve unresolved choices.
+The [feedback index](TESTING.md#feedback-record) links them for future analysis, implementation
+and user retesting. No reporter identity or Play closed-test participation is inferred. This
+documentation-only update does not implement, test or schedule these features, or amend the
+1.1.0 release notes. The build already declares 1.1.0 and its AAB evidence exists separately
+in `store/play-console/releases.md`; this record does not establish upload/publication status.
 
 ## Next release description and PWA feedback — 2026-10-11
 

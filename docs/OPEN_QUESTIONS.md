@@ -5,6 +5,67 @@ choice belongs to the owner. Nothing here gets implemented by guessing.
 
 ---
 
+## Q15 — Recent searches: presentation and retention
+
+**Open, real user feedback relayed by the owner, 2026-10-13; wishlist B46.** Focusing the search
+field should offer recent searches. The owner explicitly left the list shape for discussion.
+
+- Show only the three most recent submitted queries: compact, but older queries are unavailable.
+- Show three visible rows in a scrollable list: more history, with a limit still to be chosen.
+- Show three entries with a labelled action opening the full history: another view and interaction.
+
+Provisional recommendation for discussion: begin with three directly selectable entries;
+extend only if users need older queries. This is not an owner decision. Also settle whether
+selection submits immediately or only fills the field, whether scopes are recalled, when queries
+are recorded, persistence across restarts, deduplication and clearing. Playback Clear History
+must not silently acquire search-history semantics. Android/web scope remains undecided.
+
+---
+
+## Q14 — Stereo mixing and headphone mode
+
+**Open, real user feedback relayed by the owner, 2026-10-13; existing wishlist B6.** A listener
+wants channels audible in both ears. The cause has not been diagnosed; no track/output example
+was provided. Dolby Headphones was also raised as a possible direction to explore.
+
+Options for discussion: leave original stereo untouched; offer adjustable stereo narrowing;
+offer mono downmix; or add a separate headphone crossfeed/virtualisation option. These are
+different treatments and must not be presented as interchangeable. Start by collecting a
+representative track/output example and evaluating narrowing/mono before choosing a more
+complex headphone mode. This recommendation does not select a default or authorize coding.
+
+Decide where the control belongs, its strength/range, persistence, global versus per-format
+behaviour, application across decoders and the web companion, and tests for level changes,
+clipping and stereo/mono compatibility. A Dolby-branded mode has no selected technology or
+confirmed feasibility; investigate that separately if retained. No dependency or named mode
+is committed by this proposal.
+
+---
+
+## Q13 — Playback queue and navigation
+
+**Open, real user feedback relayed by the owner, 2026-10-13; wishlist B45.** After discussing
+the report with its author, the owner proposed an explicit active queue whose source follows
+the playback context, so returning from search/author browsing to the playlist preserves music.
+This revises A61's deliberate session-ending Playlist action. Implementation is for the future.
+
+The desired continuity is recorded; the transition rules are not yet selected:
+
+- Change the active queue only when a track/source is explicitly played; navigation alone keeps
+  the current queue. Provisional recommendation, because viewing another list need not replace
+  the source driving Next/Previous.
+- Switch the queue when the user enters a new context; define whether this takes effect during
+  the current track or at the next track and how it interacts with the continuity requirement.
+
+Discuss how the queue is identified/shown, how the user intentionally returns playback to a
+playlist, and what happens with Random, search, author folders, History and external links.
+Settle Next/Previous, shuffle/repeat ownership, whether a queue snapshots its source or follows
+live edits/search results, end-of-queue behaviour and process/session restoration. Saved playlist
+contents must not be overwritten merely to represent another active source. No transition rule,
+UI design, migration or implementation is selected by this record.
+
+---
+
 ## Q12 — Learned titles in Random and Browse
 
 **Presentation approved by the owner, 2026-10-11 (C101).** History uses a decoded title;

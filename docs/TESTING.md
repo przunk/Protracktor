@@ -145,13 +145,21 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
+| 2026-10-13 | Real app-user feedback, relayed and discussed with the reporter by owner | Keep music playing when returning from search/author browsing to the playlist; explicit active queue proposed | `WISHLIST.md` B45; `OPEN_QUESTIONS.md` Q13; future behaviour change |
+| 2026-10-13 | Real app-user feedback, relayed by owner | Mix separated stereo channels so music is audible in both ears; possible headphone-processing mode raised | Existing `WISHLIST.md` B6; `OPEN_QUESTIONS.md` Q14; no diagnosed output defect |
+| 2026-10-13 | Real app-user feedback, relayed by owner | Offer recent queries when focusing search; three entries or a scrollable preview remain to be discussed | `WISHLIST.md` B46; `OPEN_QUESTIONS.md` Q15; feature request |
 | 2026-10-06 | App user, relayed by owner | Random list/history and selection become inconsistent after selecting an earlier track, changing scope and pressing Next | `STATUS.md` C97 |
 | 2026-10-06 | Different app user, relayed by owner | Browse opens while the playlist is covered by the Random return-choice overlay | `STATUS.md` C98 |
 | 2026-10-06 | Owner testing | Random filters open with a slight lag; unavailable chips become active after about a second in an uncertain sequence | `STATUS.md` C99 |
 | 2026-10-06 | Tester, relayed by owner | Android Auto support requested | `WISHLIST.md` B44; feature request, not a defect |
 
-The first two defects were explicitly attributed to different users; the third came from the
-owner's own tests. Do not reclassify the owner's observation as an independent tester report.
+The 2026-10-13 requests are genuine user feedback according to the owner. Their exact reporter
+identities, builds, devices, occurrence dates and installation channels were not supplied;
+the record does not infer how many distinct reporters supplied them. They are pending discussion,
+not completed fixes or retests. Stereo mixing renews B6 rather than creating a duplicate.
+
+The first two 2026-10-06 defects were explicitly attributed to different users; the third came
+from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 Installation channel and Play closed-test participation were not supplied for these reports;
 neither may be inferred from their existence. The offered sideload APK is not evidence of a Play
