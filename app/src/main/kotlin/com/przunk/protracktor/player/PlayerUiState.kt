@@ -133,6 +133,8 @@ data class PlayerUiState(
      * without saving therefore loses the edits, which the UI has to say out loud.
      */
     val dirty: Boolean = false,
+    /** An explicit notification save is pending; membership is not a persistence confirmation. */
+    val notificationPlaylistSaving: Boolean = false,
     /** Shown to the user and cleared when acknowledged. Silence after a press is a defect. */
     val message: Message? = null,
 ) {

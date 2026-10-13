@@ -805,6 +805,29 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun savePlaylist() = playlistSession.savePlaylist()
 
+    private val notificationPlaylistSave = PlaylistHeartSave(
+        player = _state,
+        save = { done -> playlistSession.savePlaylist { written ->
+            done(written)
+            if (written) scope.launch {
+                try { playlistSession.refreshPlaylists() }
+                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (failure: Exception) {
+                    android.util.Log.w("Protracktor", "Saved notification playlist; count refresh failed", failure)
+                }
+            }
+        } },
+        resolveMetadata = ::resolveMetadataInBackground,
+        notice = { outcome, heart ->
+            val text = PlaylistHeartActions.feedback(context, outcome, heart)
+            // Toast supplies background feedback; the notice remains available when returning.
+            say(Message(text))
+            android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
+        },
+    )
+
+    internal fun savePlayingToPlaylist(request: PlaylistHeart.Request?) = notificationPlaylistSave.add(request)
+
     fun discardChanges() = playlistSession.discardChanges()
 
     fun createPlaylist(name: String) = playlistSession.createPlaylist(name)

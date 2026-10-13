@@ -154,6 +154,14 @@
 
 
     <string name="notification_stop">Zatrzymaj</string>
+    <string name="notification_playlist_add">Dodaj do %1$s</string>
+    <string name="notification_playlist_member">Na liście %1$s</string>
+    <string name="notification_playlist_saving">Zapisywanie %1$s…</string>
+    <string name="notification_playlist_added_saved">Dodano do %1$s. Playlista zapisana razem z wcześniejszymi zmianami.</string>
+    <string name="notification_playlist_already_saved">Utwór już jest na liście %1$s. Playlista zapisana razem z wcześniejszymi zmianami.</string>
+    <string name="notification_playlist_stale">Utwór lub playlista się zmieniły. Użyj aktualnego przycisku serduszka.</string>
+    <string name="notification_playlist_failed">Nie udało się zapisać %1$s. Bieżące zmiany są zachowane; spróbuj ponownie.</string>
+    <string name="notification_playlist_saving_notice">Zapisywanie playlisty nadal trwa.</string>
     <string name="notification_channel_playback">Odtwarzanie</string>
 
     <string name="a11y_seek">Przewiń w utworze</string>

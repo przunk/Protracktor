@@ -168,6 +168,29 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
+## B48 notification heart — combined APK and phone retest pending
+
+The task branch is `feature/notification-playlist-heart`; B46 will start from it with owner
+approval. [Contract and host evidence](PLAN_NOTIFICATION_HEART.md). Use disposable playlists
+and exported backups: pressing a heart intentionally saves ALL current edits, not only this track.
+
+1. Play a Browse/Random track absent from the selected playlist. Expand the notification and
+   check its outlined heart and target label, including on the locked screen. Press it once:
+   expect feedback, a filled heart and unchanged sound/position/subsong. Return to the playlist
+   and restart normally: the track must remain saved without pressing Save in the app.
+2. Press the filled heart: no deletion or duplicate, and feedback that the playlist is saved.
+   Repeat with a track already playing from the playlist and with earlier unsaved edits in a
+   disposable playlist: those edits must also become saved, as expressly selected by the owner.
+3. Repeat paused and in English/Polish. Saving must not start playback or change Browse/Random
+   context. Next/Previous and Stop must remain available as before; check stereo mode retention.
+4. Change tracks or playlists around a notification press. An older button must not save a
+   different track or another playlist. During startup/loading there must be no misleading action.
+5. Observe pending/failure feedback if encountered; failures must not discard the working list.
+   Report device/Android/build and whether the heart appears in expanded notification, quick
+   settings and lock screen. Host construction does not guarantee manufacturer placement.
+
+No individual phone result is established yet; sideload testing does not prove Play-track activity.
+
 ## B6 stereo mix — owner accepted; remaining device checks
 
 Branch: `feature/stereo-mix-modes`. The [trial plan](PLAN_STEREO_MIX.md) records implementation and

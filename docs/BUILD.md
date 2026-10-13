@@ -417,6 +417,20 @@ to have been served from the cache in one second.
 **`--really`** forces execution (`--rerun-tasks`). Worth it before claiming a suite is green on code
 nobody has actually run it against.
 
+## Flat notification icon
+
+The notification glyph shares `GenerateLauncherIcons.java`'s P geometry with the launcher, but
+has its own 24 dp viewport, white silhouette and transparent background. Regenerate only that
+resource from the project root using the existing JDK:
+
+```sh
+source scripts/use-tooling.sh
+java -Djava.awt.headless=true scripts/GenerateLauncherIcons.java --notification-only
+```
+
+The normal full icon-generation mode also emits it. The targeted mode does not rewrite launcher,
+web or store assets. Android supplies the small-icon tint; no fixed multi-colour appearance is promised.
+
 ## What the test script checks, beyond the tests
 
 `./scripts/test-protracktor.sh` runs the unit tests and then two things the Kotlin compiler and

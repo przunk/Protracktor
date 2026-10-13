@@ -25,6 +25,48 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaylistSessionTest {
+    @Test fun `notification save completion follows persistence and captures earlier edits`() = runBlocking {
+        val f = Fixture(this)
+        restore(f)
+        val oldEdit = track("old-edit")
+        val played = track("played")
+        f.player.value = f.player.value.copy(queue = PlayQueue(listOf(oldEdit)), transient = played, dirty = true)
+        val completed = mutableListOf<PlaylistHeartSave.Outcome>()
+        val saver = PlaylistHeartSave(f.player,
+            save = { done -> f.session.savePlaylist(done) }, resolveMetadata = {},
+            notice = { result, _ -> completed += result })
+        saver.add(PlaylistHeart.of(f.player.value)!!.request)
+        assertTrue(completed.isEmpty())
+        drain()
+        assertEquals(listOf(PlaylistHeartSave.Outcome.ADDED_AND_SAVED), completed)
+        assertEquals(listOf(oldEdit, played), f.rows[1])
+        assertFalse(f.player.value.dirty)
+    }
+
+    @Test fun `notification save failure reports false and keeps unsaved contents`() = runBlocking {
+        val f = Fixture(this)
+        restore(f)
+        val edit = track("edit")
+        f.player.value = f.player.value.copy(queue = PlayQueue(listOf(edit)), dirty = true)
+        f.before = { if (it == "replace:1") error("storage refused") }
+        val completed = mutableListOf<Boolean>()
+        f.session.savePlaylist { completed += it }
+        drain()
+        assertEquals(listOf(false), completed)
+        assertTrue(f.player.value.dirty)
+        assertEquals(listOf(edit), f.player.value.queue.tracks)
+        assertTrue(f.writes.isEmpty())
+    }
+
+    @Test fun `notification save rejects an unrestored target with completion feedback`() = runBlocking {
+        val f = Fixture(this)
+        val completed = mutableListOf<Boolean>()
+        f.session.savePlaylist { completed += it }
+        drain()
+        assertEquals(listOf(false), completed)
+        assertTrue(f.writes.isEmpty())
+    }
+
     private fun track(id: String) = TrackRef(id, id)
 
     private suspend fun CoroutineScope.drain() {
