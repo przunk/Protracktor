@@ -117,3 +117,47 @@ and is included in that gate. [Details](PLAN_RECENT_SEARCHES.md). The replacemen
 **1.3.0 (1158)** from clean source `f289863` is ready; [artifact checks](STATUS.md) and
 [corrected phone retest](TESTING.md). Earlier `1452309` trial is superseded. Slot placement on
 SystemUI remains unverified until the owner checks it; no develop merge, push or store release.
+
+## Owner-approved stable heart and shared presentation — 2026-10-13
+
+After the 1.3.0 (1158) trial, the owner reported that saving briefly removes the heart, shifts
+Next into its position and changes seek-bar geometry. A quick second tap can then skip a track.
+The integrated search field was explicitly reported as acceptable; its implementation stays intact.
+Exact device/Android/installed build were not separately supplied. This is real owner feedback.
+
+Analysis found the pending-save branch returns no session custom action and disables the legacy
+PendingIntent. The earlier transport reservations do not retain a removed custom action. The owner
+approved keeping the same heart command/position throughout saving, with overlap rejection in
+`PlaylistHeartSave`. Action names are accessibility/controller metadata, not new visible captions;
+the existing notice/Toast is independent completion feedback. Before the correction, the revised
+adapter regression failed on SDK 29 and 33 (2/16). Phone geometry remains a retest, not host proof.
+
+The owner also selected a prominent bold title and the same author/platform/year subtitle as the
+dock, truncated by the native notification rather than scrolling. `NowPlayingText` extracts the
+existing dock policy for both consumers, including localised loading/idle statuses and existing
+author/platform/format/year fallbacks. Unknown fields do not produce empty separators.
+`PlaybackPresentation` is the actual service's notification/metadata/playback-state factory, so host
+tests exercise production configuration without starting native decoding. Both session display
+subtitle and ARTIST display fallback use the summary; original application artist metadata is
+unchanged. Service lifecycle, payload identity, duration, artwork palette and transport rules stay
+the same. The native template remains responsible for final typography, clipping and layout.
+
+A dedicated 24 dp white-on-transparent P vector replaces the unrelated Play small icon. It uses
+the existing logo geometry, generated with `--notification-only`, without changing launcher/web/store
+assets. System tinting controls its eventual colour; no multi-colour guarantee or black background.
+No schema, dependency, toolchain, WWW or search change. Combined gate/APK and phone retest follow.
+
+**Checked, 2026-10-14:** 88 focused checks passed in seven suites, zero failures/errors/skips:
+the previous 71 plus 7 shared-text rules, 8 production-presentation checks on SDK 29/33 and
+2 real dock/Compose checks. The targeted generator was executed twice and its output SHA-256
+matched. Launcher/web/store assets did not change. Negative proofs and combined verification follow.
+
+**Negative proofs checked, 2026-10-14:** removing the year from the shared rule failed 6/17
+checks, including the actual dock and both SDK notification projections. Reintroducing pending
+action removal and the unrelated Play small icon failed 6/24 adapter/presentation checks.
+All three production sources were restored and SHA-256 compared. The full generator also ran
+headlessly on an ignored disposable project fixture: all 26 generated assets matched current
+sources byte-for-byte, including the new P. The initial non-headless fixture attempt failed
+before producing assets; its zero-output comparison is not counted as verification.
+Evidence is in ignored `dist/notification-{shared-text,stable-heart-icon}-mutation*` and the
+focused results. Full combined tests/lint and a replacement release APK still follow on B46.

@@ -6,21 +6,21 @@ package com.przunk.protracktor.player
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.graphics.drawable.Icon
-import android.media.MediaMetadata
 import android.media.session.MediaSession
-import android.media.session.PlaybackState
 import android.os.Build
 import android.os.IBinder
 import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ServiceCompat
-import com.przunk.protracktor.MainActivity
 import com.przunk.protracktor.R
+import com.przunk.protracktor.player.PlaybackPresentation.ACTION_NEXT
+import com.przunk.protracktor.player.PlaybackPresentation.ACTION_PREVIOUS
+import com.przunk.protracktor.player.PlaybackPresentation.ACTION_PLAY_PAUSE
+import com.przunk.protracktor.player.PlaybackPresentation.ACTION_STOP
+import com.przunk.protracktor.player.PlaybackPresentation.Content
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -125,71 +125,11 @@ class PlaybackService : Service() {
     }
 
     private fun publishSession(state: PlayerUiState) {
-        val track = state.current
-        session.setMetadata(
-            MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, track?.title.orEmpty())
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, state.metadata["artist"].orEmpty())
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, track?.subtitle.orEmpty())
-                .putLong(MediaMetadata.METADATA_KEY_DURATION, (state.durationSeconds * 1000).toLong())
-                // The generated cover, for the lock screen and Android Auto. Cached by
-                // `TrackArtworkBitmaps`, which matters here: this method runs five times a second.
-                .apply {
-                    track?.let {
-                        putBitmap(
-                            MediaMetadata.METADATA_KEY_ALBUM_ART,
-                            TrackArtworkBitmaps.forTrack(it.fileName, it.title, it.id),
-                        )
-                    }
-                }
-                .build()
-        )
-
-        var actions = PlaybackState.ACTION_PLAY or
-            PlaybackState.ACTION_PAUSE or
-            PlaybackState.ACTION_PLAY_PAUSE or
-            PlaybackState.ACTION_STOP
-        // `canGoNext`, not `queue.hasNext`. The queue is the playlist, and next does not always
-        // walk the playlist: in Random it walks the picks, and in a search it walks the results.
-        // Asking the queue hides the notification's skip buttons in exactly the modes where the
-        // dock is showing them -- Random and search.
-        //
-        // Since Android 13 the system builds these buttons from the session's PlaybackState rather
-        // than from the notification's own actions, so this line is what decides whether they
-        // exist. The `Notification.Action`s below were always added and were never the problem.
-        if (state.canGoNext) actions = actions or PlaybackState.ACTION_SKIP_TO_NEXT
-        if (state.canGoPrevious) actions = actions or PlaybackState.ACTION_SKIP_TO_PREVIOUS
-        // Advertised only when the backend can honour it. sc68 emulates a 68000 and cannot seek;
-        // a lock screen offering a scrubber that does nothing is the same lie as an app that does.
-        if (state.seekable) actions = actions or PlaybackState.ACTION_SEEK_TO
-
-        session.setPlaybackState(
-            PlaybackState.Builder()
-                .setActions(actions)
-                .apply { PlaylistHeartActions.customAction(this@PlaybackService, PlaylistHeart.of(state))
-                    ?.let { addCustomAction(it) } }
-                .setState(
-                    if (state.playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
-                    (state.positionSeconds * 1000).toLong(),
-                    if (state.playing) 1f else 0f,
-                )
-                .build()
-        )
+        session.setMetadata(PlaybackPresentation.metadata(this, state))
+        session.setPlaybackState(PlaybackPresentation.playbackState(this, state))
     }
 
-    private fun contentOf(state: PlayerUiState) = NotificationContent(
-        title = state.current?.title,
-        subtitle = state.current?.subtitle,
-        // Part of the key `distinctUntilChanged` compares, because they decide the picture. Without
-        // them, two tracks with the same title and subtitle would keep the first one's cover.
-        fileName = state.current?.fileName.orEmpty(),
-        id = state.current?.id.orEmpty(),
-        heart = PlaylistHeart.of(state),
-        playing = state.playing,
-        // Playing is false while a track is being fetched and opened, which is a gap of seconds on
-        // a slow network -- and a gap this service must not read as "nothing is going on".
-        loading = state.loadingTrack,
-    )
+    private fun contentOf(state: PlayerUiState) = PlaybackPresentation.contentOf(this, state)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -220,17 +160,7 @@ class PlaybackService : Service() {
         super.onDestroy()
     }
 
-    private data class NotificationContent(
-        val title: String?,
-        val subtitle: String?,
-        val fileName: String,
-        val id: String,
-        val heart: PlaylistHeart?,
-        val playing: Boolean,
-        val loading: Boolean,
-    )
-
-    private fun showNotification(content: NotificationContent) {
+    private fun showNotification(content: Content) {
         val notification = buildNotification(content)
         if (!started) {
             // **Android may refuse, and refusing must not end the app** (`docs/STATUS.md` C72).
@@ -275,92 +205,8 @@ class PlaybackService : Service() {
         stopSelf()
     }
 
-    private fun buildNotification(content: NotificationContent): Notification {
-        val open = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
-
-        // The platform builder rather than NotificationCompat, because MediaStyle has to be handed
-        // the platform session token and minSdk 29 means there is nothing to be compatible with.
-        // MediaStyle is what turns a notification with buttons into transport the lock screen and
-        // Android Auto understand.
-        return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle(content.title ?: getString(R.string.dock_idle_title))
-            .setContentText(content.subtitle.orEmpty())
-            // The two lines that answer B21, and they only work together. Since Android 12 the
-            // media notification takes its colour from the artwork, so `setColorized` alone does
-            // nothing -- which is why the bar was grey while the controls were fine.
-            //
-            // Whether the platform honours the colour at all is the device's business: several
-            // manufacturers ignore it, and Android only applies it to a foreground service's own
-            // notification -- which this is, including while paused, because the service stays in
-            // the foreground until playback is actually over. The design does not depend on it: the
-            // square is
-            // coloured either way, so an uncoloured bar still gets a cover that says what is
-            // playing -- which was the other half of the complaint.
-            .setLargeIcon(
-                content.title?.let {
-                    TrackArtworkBitmaps.forTrack(content.fileName, it, content.id)
-                }
-            )
-            .setColorized(true)
-            .setContentIntent(open)
-            .setOngoing(content.playing)
-            .setShowWhen(false)
-            .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setCategory(Notification.CATEGORY_TRANSPORT)
-            .setStyle(
-                Notification.MediaStyle()
-                    .setMediaSession(session.sessionToken)
-                    // Which buttons survive the collapsed notification: previous, play/pause, next.
-                    .setShowActionsInCompactView(0, 1, 2)
-            )
-            .addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_previous),
-                    getString(R.string.a11y_previous),
-                    command(ACTION_PREVIOUS),
-                ).build()
-            )
-            .addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(
-                        this,
-                        if (content.playing) android.R.drawable.ic_media_pause
-                        else android.R.drawable.ic_media_play,
-                    ),
-                    getString(if (content.playing) R.string.a11y_pause else R.string.a11y_play),
-                    command(ACTION_PLAY_PAUSE),
-                ).build()
-            )
-            .addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_next),
-                    getString(R.string.a11y_next),
-                    command(ACTION_NEXT),
-                ).build()
-            )
-            .apply { PlaylistHeartActions.notificationAction(this@PlaybackService, content.heart)
-                ?.let { addAction(it) } }
-            .addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.notification_stop),
-                    command(ACTION_STOP),
-                ).build()
-            )
-            .build()
-    }
-
-    private fun command(action: String): PendingIntent = PendingIntent.getService(
-        this,
-        action.hashCode(),
-        Intent(this, PlaybackService::class.java).setAction(action),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
+    private fun buildNotification(content: Content): Notification =
+        PlaybackPresentation.notification(this, CHANNEL_ID, session.sessionToken, content)
 
     private fun createChannel() {
         val channel = NotificationChannel(
@@ -375,10 +221,5 @@ class PlaybackService : Service() {
     private companion object {
         const val CHANNEL_ID = "playback"
         const val NOTIFICATION_ID = 1
-
-        const val ACTION_PLAY_PAUSE = "com.przunk.protracktor.PLAY_PAUSE"
-        const val ACTION_NEXT = "com.przunk.protracktor.NEXT"
-        const val ACTION_PREVIOUS = "com.przunk.protracktor.PREVIOUS"
-        const val ACTION_STOP = "com.przunk.protracktor.STOP"
     }
 }

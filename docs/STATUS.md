@@ -4145,3 +4145,26 @@ A6 as well, because it is both a defect and a piece of work.
 **Merged without any of it having been run on a device.** `AGENTS.md` says to wait for that test
 before merging to `develop`; the exception is an unattended `/goal` run, which rounds 5 and 6 both
 were. Both are therefore in `develop` unreviewed by anyone but their author.
+
+## B48 follow-up — stable save action and shared Now Playing text, 2026-10-14
+
+Owner trial feedback recorded on 2026-10-13 identified a disappearing heart during saving:
+Next and seek-bar geometry shift, and a quick second tap can skip a track. The integrated search
+field was reported as acceptable; B46 is not changed by this correction. No exact installed build
+or device was separately supplied. The owner approved keeping the heart visible throughout saving,
+one shared dock/notification subtitle rule, a bold title and a flat Protracktor P small icon.
+
+Implemented on `feature/notification-playlist-heart`. Both command surfaces retain identity while
+`PlaylistHeartSave` rejects overlapping writes. `NowPlayingText` is used by the dock and production
+`PlaybackPresentation` factory; missing fields are omitted. The latter provides the native title,
+subtitle, stable controls and white-on-transparent P without changing service lifecycle/decoding.
+Action names are accessibility metadata, not new visible captions. Search, schema, dependencies,
+toolchain and actual launcher/web/store assets are unchanged. [Contract](PLAN_NOTIFICATION_HEART.md).
+
+**Checked:** 88 focused host checks in seven suites, zero failures/errors/skips. The pending-action
+regression failed 2/16 before correction; removing the shared year failed 6/17; reintroducing action
+removal/wrong small icon failed 6/24. Mutated sources were restored and SHA-256 compared. Targeted
+generation is repeatable; a headless full-generation fixture matched all 26 current assets.
+These are host/configuration checks, not SystemUI/touch/typography checks. Full combined gate/lint
+and a replacement minified release APK follow on the approved stacked B46 branch. No develop/master
+merge, push, store release or phone acceptance is implied.

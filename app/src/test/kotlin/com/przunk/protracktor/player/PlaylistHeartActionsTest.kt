@@ -63,11 +63,17 @@ class PlaylistHeartActionsTest {
         assertEquals(member.request, PlaylistHeartActions.decode(custom.action))
     }
 
-    @Test fun `pending save disables the legacy command and removes the custom command`() {
+    @Test fun `pending save keeps both heart commands and their identity in place`() {
         val pending = heart().copy(saving = true)
-        assertNull(PlaylistHeartActions.customAction(context, pending))
+        val custom = PlaylistHeartActions.customAction(context, pending)!!
+        assertEquals(PlaylistHeartActions.encode(pending.request), custom.action)
+        assertEquals(R.drawable.ic_playlist_heart_outline, custom.icon)
+        assertEquals("Saving My list…", custom.name.toString())
         val action = PlaylistHeartActions.notificationAction(context, pending)!!
-        assertNull(action.actionIntent)
+        assertNotNull(action.actionIntent)
+        assertEquals(PlaylistHeartActions.notificationAction(context, heart())!!.actionIntent, action.actionIntent)
+        assertEquals(pending.request,
+            PlaylistHeartActions.decode(shadowOf(action.actionIntent).savedIntent.dataString))
         assertEquals("Saving My list…", action.title.toString())
         assertNull(PlaylistHeartActions.notificationAction(context, null))
         assertNull(PlaylistHeartActions.customAction(context, null))
