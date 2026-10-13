@@ -4,6 +4,15 @@ Updated: 2026-10-13 — version 1.1.1, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Stereo mix trial — B6, regression checkpoint on branch, 2026-10-13
+
+Owner selected three Android Settings modes: Original, Narrow and Mono. Work is isolated on
+`feature/stereo-mix-modes`; [trial contract](PLAN_STEREO_MIX.md) records the boundaries and assumptions.
+The native requested-width boundary exists, but processing is not implemented yet. The production
+Player/JNI harness executed 29 checks, 8 failed; this establishes the asymmetric-PCM requirements
+before changing rendering. Full application tests/lint, APK and phone behaviour are not checked at
+this stage. No merge, push, release or schema change.
+
 ## Notification heart request — recorded 2026-10-13; discussion pending
 
 The owner relayed post-test user feedback requesting direct playlist addition from the player
