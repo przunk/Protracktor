@@ -87,3 +87,25 @@ Non-debuggable, R8-minified, APK v2 test signature verified, matching the accept
 new heart/search resources survive shrinking. [Artifact checks](STATUS.md) and
 [phone scenarios](TESTING.md) distinguish host construction from actual SystemUI/service use.
 Develop/master, schema and store publication are unchanged; the subsequent handoff is docs-only.
+
+## Owner-reported placement correction — 2026-10-13
+
+After the combined trial handoff, the owner reported that the heart occupies the left-hand
+Previous position when Previous is unavailable, then moves right when Previous becomes available.
+The intended position is always after Next. Device/Android version and installed build were not
+separately supplied; this is real owner feedback, not an agent reproduction on a phone.
+
+Android 13+ fills unreserved transport slots with custom actions. The initial implementation
+omitted both session slot reservations. Reserve Previous and Next through the production
+MediaSession factory, without advertising unavailable skip commands or changing playback.
+The documented wire keys work with the framework session and need no AndroidX media dependency.
+Host SDK 29/33 checks record the production factory's actual `MediaSession.setExtras` call.
+Robolectric does not deliver framework session extras/state to its controller, so the initial
+controller-based checks were invalid host evidence and were replaced, not reported as a reproduced
+phone failure. SystemUI's final layout remains a phone check. Full combined verification and a
+replacement APK follow on B46.
+
+**Checked:** 71 focused host checks passed (the previous 67 plus four factory checks on SDK
+29/33). Removing the reservations from the same factory failed all four new checks. Sources
+were restored and SHA-256 compared. These checks prove the session configuration call, not
+SystemUI rendering or controller delivery on Android. The full combined gate remains pending.

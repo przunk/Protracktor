@@ -103,7 +103,7 @@ class PlaybackService : Service() {
         // an apply block the name `controller` silently stops meaning ours and starts meaning the
         // session's MediaController -- which compiles far enough to be confusing and would have been
         // very hard to see. Plain assignment keeps the name meaning what it says.
-        val created = MediaSession(this, "Protracktor")
+        val created = PlaybackMediaSession.create(this)
         created.setCallback(object : MediaSession.Callback() {
             override fun onPlay() = controller.togglePlayPauseTo(play = true)
             override fun onPause() = controller.pause()
