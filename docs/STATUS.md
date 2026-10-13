@@ -4,7 +4,7 @@ Updated: 2026-10-14 — version 1.2.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Stable B48 save control and shared Now Playing presentation — gate passed, APK pending, 2026-10-14
+## Stable B48 save control and shared Now Playing presentation — APK ready, phone retest pending, 2026-10-14
 
 The owner reported that the 1.3.0 (1158) trial removes the heart during saving and moves Next/seek
 geometry under a second tap. The owner approved retaining the heart, a bold title, the dock's
@@ -14,8 +14,8 @@ code remains unchanged, without inferring acceptance of every B46 persistence sc
 B48 `6b4efca` is integrated into the approved stacked B46 branch without rewriting history.
 `PlaylistHeartSave` remains the overlap guard; action identity/position is retained throughout
 saving. `NowPlayingText` serves both UI and native presentation; original artist metadata, audio,
-service lifecycle and artwork palette remain unchanged. System title/subtitle/ARTIST display
-fallbacks use the shared summary, with a bold title span and a white-on-transparent small P.
+service lifecycle and artwork palette remain unchanged. The title has a bold span; session display
+subtitle and ARTIST display fallback carry the shared summary. The small P is white on transparent.
 [Contract and evidence](PLAN_NOTIFICATION_HEART.md). No dependency/schema/toolchain change.
 
 **Checked:** 88 focused host checks passed in seven suites, zero failures/errors/skips. The new
@@ -31,7 +31,17 @@ failures/errors/skips; lint 0 errors/72 warnings (unchanged). All existing PL/EN
 11 loopback server checks passed. Same temporary per-class worker isolation, one worker/1 GiB
 heap and existing JDK, without exclusions or repository build-setting changes. Evidence:
 ignored `dist/notification-search-verification/full-gate-stable-heart*`.
-A replacement minified APK follows. Develop/master, tags and store are unchanged.
+The replacement minified APK is ready below. Develop/master, tags and store are unchanged.
+
+**Checked artifact:** **1.3.0 (1162)**, clean source `ea04525`, built in 51 s:
+`dist/protracktor-release-1.3.0-1162-ea04525-20261014-001502.apk`, 11,801,606 bytes. SHA-256:
+`3b169b620fd9a7df385d78130e0e5376818fbd0f59757ef26407cee3fefab054`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and all three ABIs verified. APK v2
+test certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`
+matches previous trials. The flat P, both hearts and Saving label survive resource shrinking;
+the removed search heading remains absent. These are host/artifact checks, not live SystemUI
+execution. [Phone retest](TESTING.md). Subsequent handoff is documentation-only; app/native/search
+sources are unchanged. Earlier APKs are superseded; no merge, push, AAB or store release.
 
 ## Earlier B48+B46 placement/search correction APK — superseded by save-state feedback, 2026-10-13
 

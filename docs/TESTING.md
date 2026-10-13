@@ -145,7 +145,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
-| 2026-10-13 | Owner testing and presentation decision | During a heart save, Next and seek geometry move into its space; a second tap can skip a track. Keep the heart present; share the dock subtitle, bold title and use a flat P. Search field reported acceptable. | B48 follow-up in `STATUS.md` / `PLAN_NOTIFICATION_HEART.md`; restored 852-test gate/lint passed, APK and phone retest pending; no inferred full B46 acceptance |
+| 2026-10-13 | Owner testing and presentation decision | During a heart save, Next and seek geometry move into its space; a second tap can skip a track. Keep the heart present; share the dock subtitle, bold title and use a flat P. Search field reported acceptable. | B48 follow-up in `STATUS.md` / `PLAN_NOTIFICATION_HEART.md`; restored 852-test gate/lint passed, 1.3.0 (1162) APK ready, phone retest pending; no inferred full B46 acceptance |
 | 2026-10-13 | Owner testing after combined B48+B46 APK handoff | Heart moves into a missing Previous slot; integrated search magnifier was changed to a labelled button; suggestions should be plain text autocomplete rather than an icon-button section | B48/B46 follow-up in `STATUS.md` and their plans; corrected 835-test gate/lint passed, replacement 1.3.0 (1158) APK ready, phone acceptance pending |
 | 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implemented on task branch: add-only, immediately save all selected-playlist edits; combined host gate passed, phone acceptance pending |
 | 2026-10-13 | Code-review finding from 2026-10-04; safety fix selected by owner | Delayed playlist writes can overwrite another playlist; Save can hide newer edits | `STATUS.md` C103; controlled host evidence, merged with owner approval at `f4c9bf1`; no individual playlist phone results supplied |
@@ -170,14 +170,19 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## Stable B48 notification — gate passed, replacement APK pending, 2026-10-14
+## Stable B48 notification — release APK offered for retest, 2026-10-14
 
 The owner's save-state report and approved presentation are recorded above. The 1.3.0 (1158)
-APK below is superseded by this follow-up. A replacement on the same stacked branches follows
-full verification. The restored forced gate passed 852 tests/115 suites, lint 0 errors/72 warnings.
+APK below is superseded by this follow-up. Install the replacement without uninstalling or clearing
+data: `dist/protracktor-release-1.3.0-1162-ea04525-20261014-001502.apk`, **1.3.0 (1162)**,
+clean source `ea04525`. The restored forced gate passed 852 tests/115 suites, lint 0 errors/72 warnings.
 The integrated search field is unchanged and was reported as acceptable;
 this is not evidence for every search/history checklist result. Device/Android and exact installed
 build were not separately supplied. Corrected SystemUI geometry and final appearance remain unverified.
+First retest a rapid double tap on the heart: it must stay after Next, without shifting controls or
+seek geometry and without skipping a track. Then compare the bold title/shared subtitle with the
+dock and check the flat P. Use the detailed B48 list below. [Artifact checks](STATUS.md) establish
+version/signature/resources, not phone execution or Play-track activity. No merge is authorised.
 
 ## Earlier placement/search correction APK — superseded after saving feedback, 2026-10-13
 

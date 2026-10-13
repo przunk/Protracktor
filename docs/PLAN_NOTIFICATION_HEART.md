@@ -168,3 +168,10 @@ checks passed. Forced run took 364 s with the same temporary worker isolation an
 without exclusions or repository settings changed. Evidence:
 `dist/notification-search-verification/full-gate-stable-heart*`. B46/search sources are unchanged
 from the owner-tested field build. A replacement minified APK and corrected phone retest follow.
+
+**Stable-heart release handoff, 2026-10-14:** minified **1.3.0 (1162)**, clean source `ea04525`,
+built in 51 s: `dist/protracktor-release-1.3.0-1162-ea04525-20261014-001502.apk`.
+Manifest/version/ABIs, APK v2 test signature and retained flat-P/heart/Saving resources checked.
+[Size/hash/certificate and limits](STATUS.md); [rapid double-tap and text/icon phone checks](TESTING.md).
+Earlier `f289863` APK is superseded. The handoff changes documentation only, not app/native sources.
+No develop/master merge, push, tag, AAB or store publication. Corrected phone acceptance is pending.

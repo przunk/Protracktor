@@ -133,3 +133,9 @@ acceptance of every retention/restart checklist result. The new forced combined 
 364 s: 852 tests/115 suites, zero failures/errors/skips, lint 0 errors/72 warnings plus all existing
 web/native/resource/store/loopback checks. Evidence: `full-gate-stable-heart*` in the ignored
 verification directory. A replacement minified APK follows; both branches remain unmerged.
+
+The replacement is **1.3.0 (1162)** from clean source `ea04525`, built in 51 s:
+`dist/protracktor-release-1.3.0-1162-ea04525-20261014-001502.apk`.
+[Artifact checks](STATUS.md) and [phone retest](TESTING.md). The prior `f289863` APK is superseded
+for the saving-state issue, not a new search change. Handoff is documentation-only; no merge/push
+or full feature acceptance is implied.

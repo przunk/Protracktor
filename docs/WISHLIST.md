@@ -45,7 +45,8 @@ must stay present to prevent a second tap reaching a shifted Next button. Share 
 author/platform/year policy with native notification/session text, use a bold title and a flat P
 small icon. B48 `6b4efca` is integrated into B46's trial branch. 88 focused checks passed; negative
 proofs fail as recorded in the plan. Restored combined gate passed 852 tests/115 suites, lint
-0 errors/72 warnings; a replacement APK and corrected phone acceptance are pending.
+0 errors/72 warnings; replacement **1.3.0 (1162)** APK, clean source `ea04525`, is ready.
+Corrected phone acceptance is pending; no merge or store release.
 The search field's appearance was reported acceptable; its implementation remains unchanged.
 
 ## B47. Bluetooth playback controls — owner request recorded 2026-10-13; verification TODO
