@@ -27,7 +27,7 @@ plan. See [Architecture closeout](ARCHITECTURE_CLOSEOUT.md) for the boundary ass
 | Playlist-session persistence | Existing stores own database access; `PlaylistSession` owns the persistence ID and both save jobs in the controller's scope; the working queue remains in the existing player flow | **Extracted:** restore, debounced settings/track writes, Save/Discard and create/rename/delete/switch. `PlaylistSessionState` applies narrow transitions to the same flows, including suspended list reads inside atomic retries; controller retains native stop and metadata callbacks. Queue editing remains separate |
 | Playlist file transfer | `PlaylistTransfer` uses the controller's scope and an immutable export selection; controller owns the active queue, playlist list and share/message flows | **Extracted:** M3U import/export and matching order through existing stores and `PlaylistFile`; `AndroidPlaylistFiles` binds document reads, shared copies and intents, and `AndroidPlaylistText` maps typed notices. Imports do not activate or edit the current playlist |
 | Catalogue browsing/search | Controller owns the Browse flow; `CatalogueBrowser` runs catalogue/format/author reads and overview/count queries in the same scope; UI retains sheet/scroll/selection state | **Extracted:** `CatalogueBrowseState` applies narrow transitions to the existing flow; `AndroidCatalogueStorage` reads existing cache/replay/database files and pairing preferences. `CatalogueTracks` maps rows for browsing, search and Random. `LibrarySearch` retains the four-source query, called by `BrowseWorkflow` |
-| Browse interactions | `BrowseWorkflow` applies domain/Back/query/filter/result transitions to the existing Browse flow and scope; reads remain with their existing services | **Extracted:** a narrow actions port dispatches catalogue, local-folder and History reads; `BrowseNavigation` remains the pure rule owner. Controller retains playback digressions and Android notice rendering; no new job or state store |
+| Browse interactions | `BrowseWorkflow` applies domain/Back/query/filter/result transitions to the existing Browse flow and scope; reads remain with their existing services | **Extracted:** a narrow actions port dispatches catalogue, local-folder and History reads; `BrowseNavigation` remains the pure rule owner. Controller retains playback digressions and Android notice rendering. Pending C106 adds ownership of the submitted search job, not a new scope/state store |
 | Local-folder browsing | `LocalFolderBrowser` reads existing grants/indexes and publishes into the controller's Browse flow using the same scope; controller retains the scan job and `BrowseWorkflow` routes domain/Back actions | **Extracted:** `AndroidFolderAccess` reuses SAF permission/label/path handling; `LocalTree` remains the tree rule owner. Scan snapshots and Back share the browser's tree/level rendering; no scan starts merely because a folder is opened |
 | Track bytes and companion files | `RemoteFiles` retains its cache and shared fetch jobs; content streams are opened/closed per read; controller retains scan/archive dispatchers | **Extracted:** `TrackFiles` routes the existing sources; `AndroidTrackFileAccess` binds resolver, shared cache and LHA operations. Playback/share/prefetch use the same reader; scanning calls its synchronous document adapter on the existing scan lane |
 | Reference-data downloads | `LibraryDownloads` owns the selected-run job in the controller's existing scope; controller owns Browse progress/counts through a narrow UI port | **Extracted:** catalogue, SID/songdb and favourite workflows, with `StoreDownloadSources` reusing existing stores/cache and `AndroidDownloadText` formatting typed notices at the original points |
@@ -183,11 +183,25 @@ non-empty index result. Scan snapshots preserve the current tree level and the c
 selection guard. Ordinary opening retains its pre-existing completion-order race (`STATUS.md`).
 
 Browse domain entry publishes before invoking its refresh actions. Back invokes parent reads before
-publishing its captured snapshot; a reentrant publication can therefore still be overwritten. Search
-captures its request before launching, then publishes loading, live notices and results at their
-original points. Changing scope clears stale-result fields; filter toggles do not. The workflow
-adds neither cancellation nor a late-result guard. These preserved timing risks are recorded in
-`STATUS.md`; changing them would be separate behaviour work.
+publishing its captured snapshot; a reentrant parent-read publication can therefore still be
+overwritten. Catalogue and local-folder completion-order risks remain separate from search.
+
+**C106 search correction, 2026-10-15, unmerged `fix/search-request-ownership`:** `BrowseWorkflow`
+owns one submitted request, its generation and cancellable job in the existing controller scope.
+Input/domain matching alone cannot distinguish leaving and returning to the same search, so every
+retirement advances the generation before cancelling. Results, live notices, failures and loading
+cleanup require the current owner and matching inputs. An obsolete non-cancellable read therefore
+cannot overwrite newer rows or clear another request's loading. The lazy job is assigned before
+starting because `Main.immediate` may finish or reenter inline. These fields follow the existing
+Main-scope interaction confinement; this is not a second state store or a new worker scope.
+
+Query edits, filter changes, domain/Back navigation and controller snapshot restoration retire
+pending searches. Explicit History/Playlist and author jumps use the same retirement entry point.
+Typing/filter edits do not submit a new search. Completed results retain the existing navigation
+contract: changing scope clears stale-result fields; catalogue/platform toggles do not. Current
+exceptions end owned loading and require an error callback, localized by the controller; cancellation
+and obsolete failures do not report errors. `LibrarySearch` still owns matching, ordering, caps and
+source aggregation without changes. [Contract and evidence](PR_C106_SEARCH_REQUEST_OWNERSHIP.md).
 
 ### Original refactoring inventory — remaining extractions deferred on 2026-10-05
 

@@ -384,6 +384,7 @@
     <string name="notice_random_nothing_for_platform">Nothing indexed for that platform.</string>
     <string name="notice_random_no_favourites">None of the favourites are in your Modland index.</string>
     <string name="notice_modarchive_unreachable">The Mod Archive could not be reached.</string>
+    <string name="notice_search_failed">Could not complete the search. Please try again.</string>
     <string name="notice_modarchive_unreadable">The Mod Archive answered, but not with a page we can read.</string>
     <string name="notice_added_track">Added \"%1$s\" to the playlist.</string>
     <string name="notice_track_already_here">\"%1$s\" is already in this playlist.</string>

@@ -55,6 +55,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
+| C106 | An obsolete search can replace newer results/Browse views, deliver late notices or leave loading stuck | Implemented on `fix/search-request-ownership`, stacked from pending C105 with owner approval. Code-review finding, not independent tester feedback. Host verification and combined release handoff recorded in [analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md); phone acceptance pending. |
 | C105 | Overlapping playlist activations can publish an older selection while the persistence target remains newer | Implemented on `fix/latest-playlist-activation`, unmerged. Six regressions fail before correction; five mutation checks fail; restored 859-test full gate/lint passed. Release 1.3.1 (1170), source `07300b1`, ready; phone acceptance pending. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md). |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
@@ -62,7 +63,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
 | A45 | Author jump from a playlist does not identify the author as the Random jump does | Open finding; align the heading without introducing Random-only session behaviour. |
-| Browse/navigation risk | An older catalogue, folder or search read can publish after newer navigation | Retained ordering risk; search characterization rerun on 2026-10-14, not a new B46 regression or phone-frequency measurement. [Review R2](review-2026-10-14.md). |
+| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | These ordering risks remain; the search portion is handled separately by pending C106 above. Not a new B46 regression or phone-frequency measurement. [Review R2](review-2026-10-14.md). |
 | Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Retained during extraction; separate fix required. |
 | Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Host sequence reproduced; stale bytes can subsequently enter the in-memory map. |
 | Download cancellation notice | Stopped notice is suppressed because cancellation is checked inside NonCancellable cleanup | Production workflow exercised with controlled host ports; phone behaviour not independently checked. |

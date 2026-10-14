@@ -452,6 +452,11 @@ class PlaybackController private constructor(private val context: Context) {
         browse = _browse,
         search = librarySearch,
         onSubmitted = recentSearchHistory::record,
+        onSearchFailed = { failure ->
+            android.util.Log.w("Protracktor", "Search failed", failure)
+            val text = com.przunk.protracktor.AppLocale.wrap(context).getString(R.string.notice_search_failed)
+            _state.update { it.copy(message = Message(text)) }
+        },
         actions = object : BrowseWorkflow.Actions {
             override fun refreshFolders() = localFolders.refreshFolders()
             override fun refreshCatalogues() = catalogueBrowser.refreshCatalogues()
@@ -1532,6 +1537,7 @@ class PlaybackController private constructor(private val context: Context) {
 
             val summary = catalogues.summaries().firstOrNull { it.id == from.id } ?: return@launch
             // Read before Browse moves: the search this jump leaves, if it leaves one.
+            browseWorkflow.cancelSearch()
             val search = BrowseNavigation.searchToReturnTo(_browse.value)
             _browse.update {
                 it.copy(
@@ -1601,6 +1607,7 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     fun openHistory() {
+        browseWorkflow.cancelSearch()
         // Opened at the newest: a visit starts where the question usually is, "what was that".
         _browse.update { it.copy(domain = BrowseDomain.HISTORY, loading = true, tracks = emptyList(), historyPage = 0) }
         historyReads.open()
@@ -2088,12 +2095,14 @@ class PlaybackController private constructor(private val context: Context) {
     fun returnToSession(): Boolean {
         val playingFrom = sessionBrowse ?: return false
         if (!_state.value.searchMode) return false
+        browseWorkflow.cancelSearch()
         _browse.value = BrowseNavigation.returningTo(playingFrom)
         return true
     }
 
     fun resumeSearch() {
         val waiting = waitingSearch ?: return
+        browseWorkflow.cancelSearch()
         waitingSearch = null
         _browse.value = BrowseNavigation.returningTo(waiting.browse)
         val results = waiting.results
@@ -2164,6 +2173,7 @@ class PlaybackController private constructor(private val context: Context) {
      * having written to it.
      */
     fun returnToPlaylist() {
+        browseWorkflow.cancelSearch()
         if (!_state.value.awayFromPlaylist) return
         stopPlayback()
         randomHistory.clear()

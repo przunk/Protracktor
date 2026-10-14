@@ -170,6 +170,16 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
+## C106 search ownership — code-review correction, phone checks pending, 2026-10-15
+
+The owner selected this repair after the C105 handoff. It is a code-review finding, not another
+independent user report. `fix/search-request-ownership` is deliberately stacked from C105
+`ad9ec54`; the previous C105 branch and 1.3.1 (1170) APK remain unchanged. A combined trial also
+contains C105, whose acceptance is still pending. Host regressions demonstrate overlapping-search,
+navigation, loading and failure ownership; they do not demonstrate phone frequency or screen behaviour.
+See [C106 evidence and phone checklist](PR_C106_SEARCH_REQUEST_OWNERSHIP.md) and the
+[C105 playlist checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist).
+
 ## B48 and B46 — overall owner acceptance, 2026-10-14
 
 C105 subsequently received a separately selected activation fix on `fix/latest-playlist-activation`.

@@ -6,6 +6,9 @@ package com.przunk.protracktor.player
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.net.ModArchive
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -17,8 +20,42 @@ internal class BrowseWorkflow(
     private val search: LibrarySearch,
     private val actions: Actions,
     private val onSubmitted: (String) -> Unit = {},
+    private val onSearchFailed: (Throwable) -> Unit,
     private val onLiveResult: (ModArchive.Outcome) -> Unit,
 ) {
+    private class SearchOwner(
+        val generation: Long,
+        val request: LibrarySearch.Request,
+        val domain: BrowseDomain,
+        var loadingPublished: Boolean = false,
+    ) {
+        fun matches(state: BrowseState) = state.domain == domain &&
+            state.query == request.query && state.searchScope == request.scope
+    }
+
+    private var searchGeneration = 0L
+    private var searchOwner: SearchOwner? = null
+    private var searchJob: Job? = null
+
+    private fun owns(owner: SearchOwner, state: BrowseState) =
+        owner.generation == searchGeneration && searchOwner === owner && owner.matches(state)
+
+    /** Retire ownership before cancellation: a read may ignore cancellation or finish inline. */
+    private fun retireSearch(): Long {
+        val generation = ++searchGeneration
+        val previous = searchOwner
+        val job = searchJob
+        searchOwner = null
+        searchJob = null
+        if (previous?.loadingPublished == true) browse.update {
+            if (generation == searchGeneration && previous.matches(it)) it.copy(loading = false) else it
+        }
+        job?.cancel()
+        return generation
+    }
+
+    fun cancelSearch() { retireSearch() }
+
     interface Actions {
         fun refreshFolders()
         fun refreshCatalogues()
@@ -32,6 +69,7 @@ internal class BrowseWorkflow(
     }
 
     fun openDomain(domain: BrowseDomain) {
+        cancelSearch()
         browse.update { BrowseNavigation.enteringDomain(it, domain) }
         when (domain) {
             BrowseDomain.LOCAL -> actions.refreshFolders()
@@ -65,6 +103,7 @@ internal class BrowseWorkflow(
 
     /** One step back up the browse hierarchy. Returns false when already at the top. */
     fun browseBack(): Boolean {
+        cancelSearch()
         val current = browse.value
 
         if (current.returnToSavedPlaces) {
@@ -115,7 +154,11 @@ internal class BrowseWorkflow(
         return true
     }
 
-    fun setQuery(query: String) = browse.update { it.copy(query = query) }
+    fun setQuery(query: String) {
+        if (query == browse.value.query) return
+        cancelSearch()
+        browse.update { it.copy(query = query) }
+    }
 
     fun searchFor(query: String) {
         setQuery(query)
@@ -123,17 +166,25 @@ internal class BrowseWorkflow(
     }
 
     /** Ticks one catalogue inside an online scope. Only meaningful while that is the scope. */
-    fun toggleSearchCatalogue(id: String) = browse.update {
-        val scope = it.searchScope as? SearchScope.Online ?: return@update it
-        val ids = if (id in scope.catalogueIds) scope.catalogueIds - id else scope.catalogueIds + id
-        it.copy(searchScope = SearchScope.Online(ids))
+    fun toggleSearchCatalogue(id: String) {
+        if (browse.value.searchScope !is SearchScope.Online) return
+        cancelSearch()
+        browse.update {
+            val scope = it.searchScope as? SearchScope.Online ?: return@update it
+            val ids = if (id in scope.catalogueIds) scope.catalogueIds - id else scope.catalogueIds + id
+            it.copy(searchScope = SearchScope.Online(ids))
+        }
     }
 
     /** Ticks one platform. Same shape, and the same rule: empty means all of them. */
-    fun toggleSearchPlatform(id: String) = browse.update {
-        val scope = it.searchScope as? SearchScope.ByPlatform ?: return@update it
-        val ids = if (id in scope.platformIds) scope.platformIds - id else scope.platformIds + id
-        it.copy(searchScope = SearchScope.ByPlatform(ids))
+    fun toggleSearchPlatform(id: String) {
+        if (browse.value.searchScope !is SearchScope.ByPlatform) return
+        cancelSearch()
+        browse.update {
+            val scope = it.searchScope as? SearchScope.ByPlatform ?: return@update it
+            val ids = if (id in scope.platformIds) scope.platformIds - id else scope.platformIds + id
+            it.copy(searchScope = SearchScope.ByPlatform(ids))
+        }
     }
 
     /**
@@ -166,23 +217,50 @@ internal class BrowseWorkflow(
      */
     fun runSearch() {
         val current = browse.value
+        val generation = retireSearch()
+        if (generation != searchGeneration) return
         onSubmitted(current.query)
         val request = LibrarySearch.Request(
             current.query, current.searchScope, current.catalogues.filter { it.indexed }.map { it.id }.toSet(),
         )
-        scope.launch {
-            browse.update { it.copy(loading = true, tracks = emptyList()) }
-            val result = search.run(request, onLiveResult)
-            browse.update {
-                it.copy(
-                    tracks = result.tracks,
-                    searchMatches = result.matches,
-                    searched = true,
-                    liveSearchNeededQuery = result.liveSearchNeededQuery,
-                    loading = false,
-                )
+        val owner = SearchOwner(generation, request, current.domain)
+        if (generation != searchGeneration || !owner.matches(browse.value)) return
+        searchOwner = owner
+        // Assign before starting: Main.immediate may complete or reenter during start().
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                if (!owns(owner, browse.value)) return@launch
+                owner.loadingPublished = true
+                browse.update {
+                    if (owns(owner, it)) it.copy(loading = true, tracks = emptyList(), searched = false,
+                        searchMatches = 0, liveSearchNeededQuery = false) else it
+                }
+                if (!owns(owner, browse.value)) return@launch
+                val result = search.run(request) { if (owns(owner, browse.value)) onLiveResult(it) }
+                browse.update {
+                    if (owns(owner, it)) it.copy(tracks = result.tracks, searchMatches = result.matches,
+                        searched = true, liveSearchNeededQuery = result.liveSearchNeededQuery, loading = false)
+                    else it
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                if (owns(owner, browse.value)) {
+                    browse.update { if (owns(owner, it)) it.copy(loading = false) else it }
+                    if (owns(owner, browse.value)) onSearchFailed(failure)
+                }
+            } finally {
+                if (generation == searchGeneration) {
+                    browse.update { if (owns(owner, it)) it.copy(loading = false) else it }
+                    if (generation == searchGeneration) {
+                        searchOwner = null
+                        searchJob = null
+                    }
+                }
             }
         }
+        searchJob = job
+        job.start()
     }
 
     /**
@@ -193,6 +271,7 @@ internal class BrowseWorkflow(
      * three of them.
      */
     fun setSearchScope(scope: SearchScope) {
+        cancelSearch()
         browse.update { it.copy(searchScope = scope).withoutStaleResults() }
     }
 }

@@ -29,6 +29,75 @@ import org.junit.Test
 
 class BrowseWorkflowTest {
     @Test(timeout = 5_000)
+    fun `resubmitting identical inputs owns a distinct request from its predecessor`() = runBlocking {
+        val f = Fixture(this)
+        f.localSearch()
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val newerDone = CompletableDeferred<Unit>()
+        var first = true
+        f.onRead = { if (it.startsWith("local:typed:") && first) {
+            first = false
+            entered.complete(Unit)
+            withContext(NonCancellable) { gate.await() }
+        } }
+        f.onLive = { newerDone.complete(Unit) }
+        f.workflow.runSearch()
+        entered.await()
+        val newer = listOf(TrackRef("newer", "Newer"))
+        f.rows = { newer }
+        f.workflow.runSearch()
+        newerDone.await()
+        f.rows = { listOf(f.track) }
+        gate.complete(Unit)
+        drain()
+        assertEquals(newer, f.browse.value.tracks)
+        assertEquals(listOf("typed", "typed"), f.submitted)
+        assertEquals(1, f.liveResults.size)
+    }
+
+    @Test(timeout = 5_000)
+    fun `unchanged words and inapplicable filter toggles do not cancel a current search`() = runBlocking {
+        val f = Fixture(this)
+        f.localSearch()
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        f.onRead = { if (it.startsWith("local:typed:")) { entered.complete(Unit); gate.await() } }
+        f.workflow.runSearch()
+        entered.await()
+        f.workflow.setQuery("typed")
+        f.workflow.toggleSearchCatalogue("ignored")
+        f.workflow.toggleSearchPlatform("ignored")
+        gate.complete(Unit)
+        drain()
+        assertEquals(f.rows("typed"), f.browse.value.tracks)
+        assertEquals(1, f.liveResults.size)
+        assertTrue(f.searchFailures.isEmpty())
+    }
+
+    @Test(timeout = 5_000)
+    fun `explicit retirement protects a restored identical search snapshot`() = runBlocking {
+        val f = Fixture(this)
+        f.browse.update { it.copy(domain = BrowseDomain.SEARCH, searchScope = SearchScope.Local) }
+        val snapshot = f.browse.value
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        f.onRead = { if (it.startsWith("local:typed:")) {
+            entered.complete(Unit)
+            withContext(NonCancellable) { gate.await() }
+        } }
+        f.workflow.runSearch()
+        entered.await()
+        f.workflow.cancelSearch()
+        f.browse.value = BrowseNavigation.returningTo(snapshot)
+        val expected = f.browse.value
+        gate.complete(Unit)
+        drain()
+        assertSame(expected, f.browse.value)
+        assertTrue(f.liveResults.isEmpty())
+    }
+
+    @Test(timeout = 5_000)
     fun `a query changed before launch cannot start an obsolete lookup`() = runBlocking {
         val f = Fixture(this)
         f.localSearch()
@@ -232,7 +301,8 @@ class BrowseWorkflowTest {
         var renderLevel: (BrowseState, String) -> BrowseState = { state, _ -> state.copy(query = "level result") }
         var rows: (String) -> List<TrackRef> = { listOf(TrackRef("result:$it", "Result", fileName = "result.mod")) }
         var live: ModArchive.Outcome = ModArchive.Outcome.Found(emptyList())
-        val workflow = BrowseWorkflow(scope, browse, LibrarySearch(this), this, onSubmitted = { submitted += it }) {
+        val workflow = BrowseWorkflow(scope, browse, LibrarySearch(this), this,
+            onSubmitted = { submitted += it }, onSearchFailed = { searchFailures += it }) {
             events += "notice"
             liveResults += it
             onLive(it)

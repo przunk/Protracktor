@@ -4,18 +4,28 @@ Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C106 search request ownership — confirmed before correction, 2026-10-15
+## C106 search request ownership — implementation, verification in progress, 2026-10-15
 
 **Source:** the 2026-10-14 code review R2, not independent user feedback or a new B46 regression.
 The owner selected repair on `fix/search-request-ownership`, explicitly stacked from C105
 `ad9ec54` while its existing APK is being tested. C105 is unchanged and remains unmerged.
-Current search completion unconditionally publishes into newer Browse contexts and can deliver
-obsolete live-source notices or leave loading stuck after cancellation/failure.
+The inherited defect lets an older search publish into newer Browse contexts, deliver obsolete
+live-source notices or leave loading stuck after cancellation/failure. The trial declares 1.3.2,
+without changing schema or versionCode calculation. Request generation, owner and input/domain
+guards now control rows, live notices, failures and loading cleanup. Navigation and input edits
+retire ownership before cancellation; typing/filter changes still require explicit submission.
 
 **Checked before correction:** 36 workflow checks executed, 14 assertion failures, zero errors/skips
 (ten added and four adjusted characterizations). Non-cancellable controlled reads demonstrate why
 cancelling a job alone is insufficient. The cold run completed in 176 s; bootstrap/cache failure
-before that run is not counted as test evidence. No production fix, new APK or phone result yet.
+before that run is not counted as test evidence. Initial focused checks passed 101 tests in four
+suites (36 workflow, 11 search, six autocomplete UI, 48 C105 session), zero failures/errors/skips.
+Three more workflow checks cover identical-input resubmission, no-op edits and snapshot restoration.
+Bypassing ownership and the no-op-query guard fails 12/39 checks; restored sources match saved
+SHA-256 sums. Restored focused run passed **104 tests in four suites**, zero failures/errors/skips
+(39 workflow, 11 search, six autocomplete UI, 48 C105 session), in 117 s. Full gate and replacement
+APK are still pending at this checkpoint.
+Phone behaviour is **not checked**; nothing merged or pushed.
 [Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
 separate; this is not a general Browse rewrite.
 
