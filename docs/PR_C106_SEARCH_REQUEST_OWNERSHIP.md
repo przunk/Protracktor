@@ -84,6 +84,21 @@ no exclusions, new Java or repository build-setting changes. Fresh XML and logs 
 ignored `dist/c106-full-gate*`. The release APK is pending at this checkpoint; phone behaviour
 remains unverified. C105 branch/APK and develop/master remain unchanged.
 
+## Release APK handoff
+
+Clean source `a4b0a6f`, **1.3.2 (1174)**, built in 808 s including native rebuilds for the three
+existing ABIs: `dist/protracktor-release-1.3.2-1174-a4b0a6f-20261015-011618.apk`, 11,806,903 bytes.
+SHA-256: `e6b5636038528bdea3572b676d25951f21a6996c6aa867a74bf504afbd2f2dfd`.
+R8 ran; the manifest is non-debuggable, minSdk 29/targetSdk 36, with arm64-v8a, armeabi-v7a and
+x86_64. Independent apksigner verification passed with v2 and the expected unchanged test-certificate
+SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Log/manifest/signature evidence: ignored `dist/c106-release*` and `dist/c106-apk-*`.
+
+Application/native/scripts match full-gate `cd387d7`; subsequent handoff documentation does not
+require rebuilding. The previous C105 branch/APK, develop/master and schema 23 remain unchanged.
+This is a minified, test-key-signed sideload APK, not an AAB/Play release. Device acceptance of both
+C105 and C106 remains pending; this combined build does not establish a new phone test result.
+
 ## Phone checklist
 
 Phone behaviour is **not checked** until the owner reports these results. Install the combined

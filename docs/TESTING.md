@@ -177,6 +177,8 @@ independent user report. `fix/search-request-ownership` is deliberately stacked 
 `ad9ec54`; the previous C105 branch and 1.3.1 (1170) APK remain unchanged. A combined trial also
 contains C105, whose acceptance is still pending. Host regressions demonstrate overlapping-search,
 navigation, loading and failure ownership; they do not demonstrate phone frequency or screen behaviour.
+The forced gate passed 872 tests with lint 0 errors/72 warnings. Offered combined APK: **1.3.2 (1174)**,
+clean source `a4b0a6f`; phone checks below remain pending, not inferred from compilation or host tests.
 See [C106 evidence and phone checklist](PR_C106_SEARCH_REQUEST_OWNERSHIP.md) and the
 [C105 playlist checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md#phone-checklist).
 

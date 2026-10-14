@@ -4,7 +4,7 @@ Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C106 search request ownership — full gate passed; APK pending, 2026-10-15
+## C106 search request ownership — release APK ready; phone acceptance pending, 2026-10-15
 
 **Source:** the 2026-10-14 code review R2, not independent user feedback or a new B46 regression.
 The owner selected repair on `fix/search-request-ownership`, explicitly stacked from C105
@@ -29,7 +29,16 @@ zero failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN res
 581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
 audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK and temporary
 per-class isolation (one worker/1 GiB heap); no exclusions or repository build-setting changes.
-Evidence: ignored `dist/c106-full-gate*`. Replacement release APK remains pending at this checkpoint.
+Evidence: ignored `dist/c106-full-gate*`.
+**Checked artifact:** clean source `a4b0a6f`, **1.3.2 (1174)**, built in 808 s after rebuilding the
+three native ABIs: `dist/protracktor-release-1.3.2-1174-a4b0a6f-20261015-011618.apk`,
+11,806,903 bytes. SHA-256:
+`e6b5636038528bdea3572b676d25951f21a6996c6aa867a74bf504afbd2f2dfd`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and all three existing ABIs checked.
+Independent APK v2 verification confirms the unchanged test certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Build/artifact evidence: ignored `dist/c106-release*` and `dist/c106-apk-*`. Application/native/script
+sources match the full-gate commit `cd387d7`; later handoff changes documentation only.
 Phone behaviour is **not checked**; nothing merged or pushed.
 [Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
 separate; this is not a general Browse rewrite.
