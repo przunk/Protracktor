@@ -71,7 +71,18 @@ The production sources were restored and matched their saved SHA-256 sums. Evide
 11 `LibrarySearch`, six actual Compose autocomplete checks and 48 C105 playlist-session checks.
 The Gradle run took 117 s, using the installed JDK and temporary per-class isolation. Log/XML:
 ignored `dist/c106-focused-restored.log` and `dist/c106-focused-restored-results/`.
-This is a host test result, not phone UI/navigation acceptance. Full gate/lint and release APK follow.
+This is a host test result, not phone UI/navigation acceptance.
+
+## Full verification checkpoint
+
+The forced project gate on restored implementation `cd387d7` passed in **446 s**: **872 unit tests
+in 115 suites**, zero failures/errors/skips. Lint XML contains zero errors/72 warnings (unchanged).
+PL/EN resource/store metadata checks, 581 page checks, 49 WASM engine checks, eight SAP checks,
+browser database upgrade, 30 native audio checks, 140 icon paths, PWA and 11 loopback server
+checks all passed. Existing JDK, temporary per-class worker isolation, one worker/1 GiB heap;
+no exclusions, new Java or repository build-setting changes. Fresh XML and logs are retained in
+ignored `dist/c106-full-gate*`. The release APK is pending at this checkpoint; phone behaviour
+remains unverified. C105 branch/APK and develop/master remain unchanged.
 
 ## Phone checklist
 

@@ -4,7 +4,7 @@ Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C106 search request ownership — implementation, verification in progress, 2026-10-15
+## C106 search request ownership — full gate passed; APK pending, 2026-10-15
 
 **Source:** the 2026-10-14 code review R2, not independent user feedback or a new B46 regression.
 The owner selected repair on `fix/search-request-ownership`, explicitly stacked from C105
@@ -23,8 +23,13 @@ suites (36 workflow, 11 search, six autocomplete UI, 48 C105 session), zero fail
 Three more workflow checks cover identical-input resubmission, no-op edits and snapshot restoration.
 Bypassing ownership and the no-op-query guard fails 12/39 checks; restored sources match saved
 SHA-256 sums. Restored focused run passed **104 tests in four suites**, zero failures/errors/skips
-(39 workflow, 11 search, six autocomplete UI, 48 C105 session), in 117 s. Full gate and replacement
-APK are still pending at this checkpoint.
+(39 workflow, 11 search, six autocomplete UI, 48 C105 session), in 117 s.
+**Checked full gate:** forced run on `cd387d7` passed in 446 s: **872 unit tests in 115 suites**,
+zero failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN resource/store checks,
+581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK and temporary
+per-class isolation (one worker/1 GiB heap); no exclusions or repository build-setting changes.
+Evidence: ignored `dist/c106-full-gate*`. Replacement release APK remains pending at this checkpoint.
 Phone behaviour is **not checked**; nothing merged or pushed.
 [Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
 separate; this is not a general Browse rewrite.
