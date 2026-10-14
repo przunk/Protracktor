@@ -1,8 +1,23 @@
 # Status
 
-Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## C106 search request ownership — confirmed before correction, 2026-10-15
+
+**Source:** the 2026-10-14 code review R2, not independent user feedback or a new B46 regression.
+The owner selected repair on `fix/search-request-ownership`, explicitly stacked from C105
+`ad9ec54` while its existing APK is being tested. C105 is unchanged and remains unmerged.
+Current search completion unconditionally publishes into newer Browse contexts and can deliver
+obsolete live-source notices or leave loading stuck after cancellation/failure.
+
+**Checked before correction:** 36 workflow checks executed, 14 assertion failures, zero errors/skips
+(ten added and four adjusted characterizations). Non-cancellable controlled reads demonstrate why
+cancelling a job alone is insufficient. The cold run completed in 176 s; bootstrap/cache failure
+before that run is not counted as test evidence. No production fix, new APK or phone result yet.
+[Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
+separate; this is not a general Browse rewrite.
 
 ## C105 latest playlist activation — release APK ready; phone acceptance pending, 2026-10-14
 
