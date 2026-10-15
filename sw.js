@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Template rendered by stage-web-pwa.mjs with a content hash and the shipped asset list.
 
-const REVISION = "af2c9c62bda42ae66e536145461c452e5720baec16c8a2eb08cf2242dac60de1";
+const REVISION = "fad48c3c8602bf45e52cc396cb7f8fe7aff52b2cf065693469db494a08d02093";
 const FILES = ["lib/qrcode.js","src/app.js","src/audio-export.js","src/catalogue.js","src/formats.tsv","src/i18n-pl.js","src/i18n.js","src/icons/apple-touch-icon.png","src/icons/favicon-32.png","src/icons/icon-192.png","src/icons/icon-512.png","src/icons/icon-maskable-512.png","src/index.html","src/m4a.js","src/manifest.webmanifest","src/processor.js","src/pwa.js","src/rules.js","src/songdb.js","src/songlengths.js","src/store.js","vendor/engine.mjs","vendor/engine.wasm","vendor/legal/build.json","vendor/legal/privacy-policy.md","vendor/notices/asap/COPYING","vendor/notices/components.tsv","vendor/notices/emscripten/emscripten-LICENSE.txt","vendor/notices/emscripten/libcxx-LICENSE.txt","vendor/notices/emscripten/musl-COPYRIGHT.txt","vendor/notices/fmt/LICENSE.rst","vendor/notices/gme/license.txt","vendor/notices/hively/LICENSE","vendor/notices/lhasa/AUTHORS","vendor/notices/lhasa/COPYING.md","vendor/notices/libopenmpt/LICENSE","vendor/notices/minimp3/LICENSE","vendor/notices/protracktor/LICENSE","vendor/notices/qrcode/qrcode-MIT.txt","vendor/notices/sc68/AUTHORS","vendor/notices/sc68/COPYING","vendor/notices/sidplayfp/AUTHORS.md","vendor/notices/sidplayfp/COPYING","vendor/notices/sources.tsv","vendor/notices/zlib/zlib-LICENSE.txt","vendor/notices/zxtune/LICENSE.md"];
 const BASE = self.registration.scope;
 // Cache Storage is shared by the origin. Another app or a second Protracktor installation
