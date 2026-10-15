@@ -40,19 +40,40 @@ class Supervisor(unittest.TestCase):
                     os.killpg(process.pid, signal.SIGKILL)
                     process.communicate(timeout=2)
 
-    def test_success_streams_unicode_to_console_and_log(self):
+    def test_success_keeps_child_output_in_log_not_console(self):
         process = self.start("print('fixture: Żółw ✓')")
         output = self.finish(process)
         self.assertEqual(0, process.returncode, output)
-        self.assertIn("fixture: Żółw ✓", output)
+        self.assertNotIn("fixture: Żółw ✓", output)
+        self.assertIn("fixture: Żółw ✓", self.log.read_text())
         self.assertIn("finished with exit 0", output)
-        self.assertEqual(output, self.log.read_text())
+
+    def test_successful_verbose_command_has_short_console_and_complete_log(self):
+        process = self.start("for i in range(2000): print(f'case {i} PASSED')")
+        output = self.finish(process)
+        self.assertEqual(0, process.returncode, output)
+        self.assertNotIn("PASSED", output)
+        self.assertLess(len(output.splitlines()), 8)
+        log = self.log.read_text()
+        self.assertEqual(2000, log.count("PASSED"))
+        self.assertIn("case 0 PASSED", log)
+        self.assertIn("case 1999 PASSED", log)
 
     def test_failure_retains_exit_status_and_diagnostics(self):
         process = self.start("import sys; print('fixture failure'); sys.exit(7)")
         output = self.finish(process)
         self.assertEqual(7, process.returncode, output)
+        self.assertIn("fixture failure", output)
         self.assertIn("fixture failure", self.log.read_text())
+
+    def test_failure_shows_bounded_diagnostics_with_full_details_only_in_log(self):
+        process = self.start("import sys; [print(f'diagnostic {i}') for i in range(2000)]; sys.exit(7)")
+        output = self.finish(process)
+        self.assertEqual(7, process.returncode, output)
+        self.assertIn("diagnostic 1999", output)
+        self.assertNotIn("diagnostic 0\n", output)
+        self.assertLessEqual(len(output.splitlines()), 45)
+        self.assertEqual(2000, self.log.read_text().count("diagnostic "))
 
     def test_silent_command_reports_elapsed_time(self):
         process = self.start("import time; time.sleep(.6)")

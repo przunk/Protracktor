@@ -5,12 +5,29 @@ versionCode is the commit count; the next selected release is 1.2.0, not prepare
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Concise check output — checked, awaiting merge approval, 2026-10-15
+
+After an owner-run successful `--check` (910 tests, 556 s), the owner requested short terminal
+output again. `fix/concise-check-output` changes presentation only: stage start/result and
+30-second elapsed notices remain visible; successful child output stays in complete stage logs.
+Failure/timeout prints a bounded tail (40 lines from the last 8 KiB), with the complete log path.
+No application/build configuration, test isolation, force policy, deadline or cleanup changes.
+**Checked before correction:** all three console-noise regressions fail on the original helper.
+**Checked focused:** all fourteen runner/entry-point checks pass, including 2,000-line success
+and failure fixtures, retained Unicode/full logs, timeout, late Ctrl+C and process cleanup.
+All eleven disposable release scenarios, Bash syntax and whitespace checks also pass. A direct
+preview shows two console notices and retains 2,000 child lines in the complete log. Application,
+build configuration, native/web and release-script sources match develop `e750591`. No new
+application test/lint run or APK is claimed for this output-only tooling change; the earlier
+910-test gates remain historical evidence, not a new execution. No release, merge or push.
+[Report](PR_RELEASE_TEST_RUNNER.md).
+
 ## Release test runner — owner approved and merged, 2026-10-15
 
 The owner paused release preparation after two Settings Compose idle failures during the ordinary
 `release.sh 1.2.0 --check` path. At report time the scripts had no test deadline or live Gradle
 progress; the earlier successful 910-test gate used temporary worker isolation absent from that path.
-`fix/release-test-runner` now tracks class isolation, live test output, 30-second elapsed messages,
+The original `fix/release-test-runner` merge introduced class isolation, live test output, elapsed messages,
 per-stage deadlines (unit default 20 minutes), scoped process cleanup and preserved failure codes.
 Release validation forces test execution; typo options and false/empty JUnit success are refused.
 Generated Kotlin session files are ignored without deletion. No application/engine/UI changes.

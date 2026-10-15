@@ -219,9 +219,10 @@ the bundle's SHA-256 matching the one recorded.
 
 ### Bounded release validation — 2026-10-15
 
-`release.sh` and `--check` use the same gate. The web build, unit tests, auxiliary checks and lint
-stream output into both the terminal and stage logs, with an elapsed-time message every 30 seconds
-even when the child is silent. Logs are under `/tmp/protracktor-<checkout-name>-<stage>.log`;
+`release.sh` and `--check` use the same gate. The terminal shows stage start/result and an elapsed-time
+message every 30 seconds; successful test names, Gradle tasks and auxiliary details stay in full
+stage logs. A failure/timeout also shows at most 40 lines from the last 8 KiB of its log, not the
+entire run. Logs are under `/tmp/protracktor-<checkout-name>-<stage>.log`;
 the main ones end in `web-build`, `test` and `lint`. The stage prints its complete path at start/end.
 Each stage is bounded, not the entire release or interactive signing:
 
@@ -233,8 +234,8 @@ Each stage is bounded, not the entire release or interactive signing:
 | `PROTRACKTOR_CHECK_TIMEOUT_SECONDS` | 1200 | Each auxiliary check separately |
 
 Use positive seconds, e.g. `PROTRACKTOR_UNIT_TEST_TIMEOUT_SECONDS=1800 ./scripts/release.sh 1.2.0 --check`.
-The normal Test configuration isolates classes (one worker at a time, 1 GiB heap) and prints test
-start/results. This contains observed shared-worker Compose idle failures; their underlying cause
+The normal Test configuration isolates classes (one worker at a time, 1 GiB heap) and records test
+start/results in the full log. This contains observed shared-worker Compose idle failures; their underlying cause
 has not been established. A failed test stops further scheduling. Release validation forces actual
 unit execution with `--really`; zero results, failures/errors/skips, timeout or cancellation refuse
 success. Do not substitute cached/focused checks for a completed release gate.
@@ -246,7 +247,7 @@ There is no `gradlew --stop` affecting shared daemons. Gradle uses `--no-daemon`
 single-use daemon) and in-process Kotlin compilation. Generated `.kotlin/` sessions are ignored,
 not deleted or committed, so normal compilation does not dirty a release checkout.
 
-`python3 scripts/check-test-runner.py` verifies deadline/streaming/signals/scoped process cleanup.
+`python3 scripts/check-test-runner.py` verifies deadlines/concise output/log retention/signals/scoped cleanup.
 `bash scripts/check-release.sh` verifies Git-flow transitions with real working scripts, fixed
 fixture versions, stub builds and a throwaway signer; neither touches release refs or owner keys
 in this checkout. Both are part of the full gate. Failure, timeout and Ctrl+C must stop before the

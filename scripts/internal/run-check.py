@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stream and bound one non-interactive check, owning only its process descendants (Linux/WSL)."""
+"""Bound a check with concise status, full file logs and scoped process cleanup (Linux/WSL)."""
 
 import argparse
 import ctypes
@@ -75,16 +75,20 @@ def main():
     started = time.monotonic()
     args.log.parent.mkdir(parents=True, exist_ok=True)
     with args.log.open("wb", buffering=0) as log:
-        def emit(data):
-            log.write(data)
+        def display(data):
             try:
                 sys.stdout.buffer.write(data)
                 sys.stdout.buffer.flush()
             except BrokenPipeError:
                 on_signal(signal.SIGPIPE, None)
 
+        def emit(data, *, visible=False):
+            log.write(data)
+            if visible:
+                display(data)
+
         def notice(message):
-            emit(f"[{args.label}] {message}\n".encode())
+            emit(f"[{args.label}] {message}\n".encode(), visible=True)
 
         notice(f"started; timeout {args.timeout:g}s; full log: {args.log}")
         try:
@@ -166,6 +170,15 @@ def main():
         # Completion of that command must not turn an interrupted gate into a success.
         if interrupted and status not in (124, 125):
             status = 128 + interrupted
+        if status:
+            # Keep the terminal useful without replaying thousands of successful cases on error.
+            # Read a bounded tail; the original bytes remain in the complete stage log.
+            with args.log.open("rb") as saved:
+                saved.seek(0, os.SEEK_END)
+                saved.seek(max(0, saved.tell() - 8192))
+                excerpt = saved.read().decode("utf-8", errors="replace").splitlines()[-40:]
+            notice("last log lines (up to 40 lines / 8 KiB):")
+            display(("\n".join(excerpt) + "\n").encode("utf-8"))
         notice(f"finished with exit {status}; elapsed {time.monotonic() - started:.1f}s; full log: {args.log}")
         return 128 + interrupted if interrupted and status not in (124, 125) else status
 

@@ -134,3 +134,33 @@ changes documentation only. No app artifact or real release was built, and nothi
 Master `da4569b`, every tag and every remote-tracking ref stayed unchanged; `v1.2.0` is absent.
 The earlier pending-approval checkpoint is superseded for integration only, not for diagnosing
 the still-open Compose idle issue or claiming device tests.
+
+## Follow-up: concise console output — checked, awaiting merge approval, 2026-10-15
+
+The owner completed an ordinary `--check` with 910 passing tests in 556 seconds, then requested
+the previous concise terminal style. Streaming every successful test and auxiliary-check detail
+was excessive. Scope is console presentation only: retain stage names, 30-second elapsed messages,
+exit results and full file logs; show a bounded diagnostic excerpt only on failure/timeout.
+Do not change class isolation, forced execution, deadlines, process cleanup or release transitions.
+This is not a speed optimization and does not justify skipping the full release gate.
+
+**Checked before correction:** three real-supervisor regressions fail: successful child output
+leaks to the console, 2,000 passed cases flood it, and failure diagnostics are unbounded. The
+existing log-retention and status/process tests remain the safety contract.
+
+The helper now logs all child bytes without echoing successful command output. Status/heartbeat
+notices remain visible. Nonzero completion displays at most forty lines read from the final 8 KiB
+of the file, without duplicating the excerpt in the complete log. Process ownership, deadlines,
+cancellation, test/build settings and release transitions are unchanged.
+
+**Checked:** all **14** real-supervisor/entry-point checks pass in 7.7 s, including complete Unicode
+logs, 2,000 successful lines hidden from the terminal, bounded failure diagnostics, deadline/Ctrl+C,
+late cancellation and isolated cleanup. All **11** disposable release scenarios also pass. A direct
+preview produces two console notices while retaining all 2,000 child lines (2,002 total log lines).
+Bash syntax and whitespace checks pass. Application/build/native/web and `release.sh` sources
+match develop `e750591`; only the helper, regression tests, a shell header and documentation change.
+
+Evidence: ignored `dist/concise-runner-before.log`, `concise-runner-focused.log`,
+`concise-runner-release-flow.log` and `concise-runner-preview.log`. No new 910-test/lint run is
+claimed for this output-only tool change; the owner's 556-second run above is separate evidence.
+No app artifact, release, merge or push. Branch `fix/concise-check-output` awaits owner approval.

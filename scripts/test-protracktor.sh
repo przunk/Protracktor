@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Runs the full gate with live output, per-stage deadlines and retained logs.
+# Runs the full gate with concise progress, per-stage deadlines and complete file logs.
 #
 # Pass --really to force the tests to execute rather than be served from the cache. Worth it before
 # claiming a suite is green on code nobody has run it against.
