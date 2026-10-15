@@ -85,3 +85,21 @@ pairs; unchanged total count; three negative verifier checks; remote publication
 **Not performed:** new APK/AAB build, phone tests, push, tag/master move or store publication.
 The history correction changes version metadata, not app behaviour or schema. This does not turn
 prior host-only unsupported-schema UI checks into phone evidence.
+
+## Full-gate checkpoint before reference promotion
+
+Forced full run on clean candidate source `912122c` passed in **485 s**: **910 tests in 121 suites**,
+zero failures/errors/skips. The unit task actually executed. Lint XML: zero errors/72 warnings,
+unchanged from the accepted original source. PL/EN resources/store metadata, 581 page checks,
+49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native audio checks,
+140 icon paths, PWA and 11 local server checks passed. Existing JDK and temporary per-class
+isolation (one worker, 1 GiB heap), no exclusions or repository build-setting changes.
+Evidence: ignored `dist/version-cleanup/full-gate*` and `tested-source.txt`.
+
+Recovery was actually tested: import the bundle into a separate ignored bare repository, run
+`git fsck --full`, verify original develop `16bd60d`, total 1193 and unchanged annotated v1.1.0.
+Bundle SHA-256: `f489fc2333405536479f27ab91b8ff4dbf26b43489f6bb5d1e4e907d7afdadfc`.
+All four saved APK/AAB checksums still match. The final direct GitHub ref read is byte-identical
+to the preflight snapshot. Checked 81 local documentation file links, no missing files; not a
+complete anchor/external-link audit. Guarded local reference promotion is the remaining step.
+No APK/AAB, release-script execution, phone test, push or publication was performed.

@@ -14,7 +14,14 @@ normalizes only `app/build.gradle.kts`'s versionName to 1.1.0. All 63 tree/metad
 pairs pass verification; 55 hashes change, eight remain identical. The graph retains 1193 commits.
 Three negative checks reject an unremoved trial version, unrelated README edit and reordered merge
 parents. Current application source differs only in versionName; schema, signing and runtime code
-are unchanged. Full application tests/lint are pending. No new APK or release is prepared here.
+are unchanged.
+**Checked full gate:** clean candidate `912122c`, forced run in 485 s: **910 tests/121 suites**,
+zero failures/errors/skips; lint zero errors/72 warnings (unchanged). PL/EN resources/store,
+581 page checks, 49 engine checks, eight SAP checks, browser upgrade, 30 native audio checks,
+140 icon paths, PWA and 11 local server checks passed. No exclusions or toolchain changes.
+Backup recovery/import/fsck also passed with original count/tag/develop; all saved artifact hashes
+match, and a second direct GitHub read confirms the unchanged publication boundary.
+Evidence: ignored `dist/version-cleanup/`. No new APK or release is prepared here.
 The original graph is retained in an archive ref and a verified Git bundle. Master, tags, remote
 refs and other worktrees are untouched; affected completed task branches await guarded promotion.
 [Procedure and commit map](VERSION_HISTORY_REWRITE.md).
