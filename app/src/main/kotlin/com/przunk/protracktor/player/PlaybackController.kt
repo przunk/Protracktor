@@ -51,6 +51,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -1608,9 +1609,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun openHistory() {
         browseWorkflow.cancelSearch()
-        // Opened at the newest: a visit starts where the question usually is, "what was that".
-        _browse.update { it.copy(domain = BrowseDomain.HISTORY, loading = true, tracks = emptyList(), historyPage = 0) }
-        historyReads.open()
+        historyBrowser.open()
     }
 
     /**
@@ -1623,21 +1622,23 @@ class PlaybackController private constructor(private val context: Context) {
      * no reason history should be the one list you cannot add from -- the page on screen, since
      * that is the list the rows, a tap and next and previous are about.
      */
-    private val historyReads = HistoryReads(
+    private val historyBrowser = HistoryBrowser(
         scope = scope,
-        count = { history.count() },
-        page = { offset, limit -> historyRows(offset, limit) },
+        browse = _browse,
+        read = ::historyRows,
         clear = { history.clear() },
-        show = { shown ->
-            _browse.update {
-                if (it.domain != BrowseDomain.HISTORY) return@update it
-                it.copy(historyTotal = shown.total, historyPage = shown.page, tracks = shown.rows, loading = false)
-            }
+        onFailure = {
+            android.util.Log.w("Protracktor", "History read failed", it)
+            val text = com.przunk.protracktor.AppLocale.wrap(context).getString(R.string.notice_history_read_failed)
+            _state.update { state -> state.copy(message = Message(text)) }
         },
     )
 
-    private suspend fun historyRows(offset: Int, limit: Int): List<TrackRef> =
-        history.page(offset, limit).map { entry ->
+    private suspend fun historyRows(query: String, page: Int): HistoryPage<TrackRef> {
+        // New filters must not read old rows while the ordered writer is still clearing them.
+        historyWrites.revision.first { !it.clearing }
+        val found = history.read(query, page)
+        return HistoryPage(found.total, found.page, found.rows.map { entry ->
             TrackRef(
                 id = entry.trackId,
                 title = entry.title,
@@ -1655,15 +1656,13 @@ class PlaybackController private constructor(private val context: Context) {
                 fileName = entry.fileName,
                 author = entry.author,
             )
-        }
+        })
+    }
 
     /** Shows page [page] of History, a hundred tunes, the newest first (the owner, 2026-09-26). */
-    fun showHistoryPage(page: Int) {
-        val now = _browse.value
-        if (now.domain != BrowseDomain.HISTORY) return
-        _browse.update { it.copy(historyPage = HistoryPages.clamp(page, now.historyTotal)) }
-        historyReads.turn(page, now.historyTotal)
-    }
+    fun showHistoryPage(page: Int) = historyBrowser.showPage(page)
+
+    fun setHistoryQuery(query: String) = historyBrowser.setQuery(query)
 
     /**
      * "yesterday, 21:14", in the user's language and clock format.
@@ -1687,7 +1686,7 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(listenedIds = emptySet()) }
         // Queue Clear synchronously, before another play can enqueue its new History row.
         val cleared = historyWrites.clear()
-        historyReads.clearAll(
+        historyBrowser.clearAll(
             clearAction = {
                 cleared.await()
                 _state.update { it.copy(message = Message(context.getString(R.string.notice_history_cleared))) }

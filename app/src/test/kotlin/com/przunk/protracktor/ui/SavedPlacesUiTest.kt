@@ -80,7 +80,7 @@ class SavedPlacesUiTest {
                     onOpenCatalogue = {}, onOpenGroup = {}, onRandom = {}, onChooseRandomScope = {},
                     onQueryChange = {}, onScope = {}, onToggleCatalogue = {}, onTogglePlatform = {}, onSearch = {},
                     recentQueries = emptyList(), onSearchSuggestion = {},
-                    onClearHistory = {}, playingId = null, loadingId = null, onShowNeighbours = {}, onShareFile = {},
+                    onClearHistory = {}, onHistoryQueryChange = {}, playingId = null, loadingId = null, onShowNeighbours = {}, onShareFile = {},
                     onShareAudio = {}, onShareLink = {}, onSendToWeb = {}, onPlay = { calls += "play" }, onAdd = { calls += "playlist" },
                 )
             }

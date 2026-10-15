@@ -35,6 +35,8 @@ object BrowseNavigation {
         historyTotal = 0,
         historyPage = 0,
         historyVisit = if (domain == BrowseDomain.HISTORY) current.historyVisit + 1 else current.historyVisit,
+        historyQuery = if (domain == BrowseDomain.HISTORY) "" else current.historyQuery,
+        historyReadFailed = false,
         folderUnscanned = false,
         folderStale = false,
         // A jump is a place you were put, not one you walked to. Choosing a domain by hand ends it.

@@ -41,10 +41,14 @@ class HistoryReadsTest {
 
     private fun reads(fake: Fake, scope: kotlinx.coroutines.CoroutineScope) = HistoryReads(
         scope = scope,
-        count = { fake.total },
-        page = fake::page,
+        read = { _, wanted ->
+            val shown = HistoryPages.clamp(wanted, fake.total)
+            HistoryPage(fake.total, shown, fake.page(HistoryPages.offset(shown, fake.total), HistoryPages.SIZE))
+        },
         clear = { fake.total = 0 },
+        isCurrent = { true },
         show = { fake.shown += it },
+        failed = { _, error -> throw error },
     )
 
     @Test

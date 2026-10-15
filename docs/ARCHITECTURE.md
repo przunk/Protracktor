@@ -682,6 +682,22 @@ track as arrival, not a change that can immediately scroll the fresh list. This 
 state, not persisted history or a schema change.
 [Report and verification](PR_C107_HISTORY_ENTRY_SCROLL.md).
 
+**B49 live History search, pending `feature/history-live-search`, 2026-10-15:** `HistoryBrowser`
+owns only the Browse flow's input/loading/result transitions. `HistoryReads` debounces edits by
+200 ms and gates read/error publication by latest ticket, normalized phrase and visit/domain.
+Its lazy job is assigned before starting, preserving ownership under immediate completion.
+The production read waits for the ordered History writer to finish any clear before reading.
+
+Blank input keeps the indexed SQL count/page path. Nonblank input streams the existing ordered
+cursor on IO, uses literal Unicode-aware case-insensitive matching over stored title/author/filename
+and counts matches while retaining only the requested page and last-page fallback. Cancellation is
+checked per cursor row. Schema remains 23; no migration, wildcard meaning or accent-removal rule.
+`HistoryDomain` keeps the input outside the query-keyed result subtree, preserving keyboard focus
+while replacing rows. A query change resets scroll/follow state; paging within that query retains
+positions. Errors have localized feedback and a labelled retry, not a false no-match result.
+Only an explicit track tap captures a result-page queue; filtering does not alter the existing
+playback queue, History recency/count policy or recent-query storage. [Contract](PLAN_HISTORY_SEARCH.md).
+
 **One trap worth keeping written down.** The natural way to write "insert or bump the count" is
 `INSERT ... ON CONFLICT ... DO UPDATE`. That is SQLite 3.24, and **API 29 ships 3.22** while
 `minSdk` is 29 — so the natural way crashes on the oldest device supported. Nothing in this project

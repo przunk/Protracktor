@@ -184,6 +184,10 @@
     <string name="domain_history_body">Odtworzone utwory, od najnowszych</string>
     <string name="history_empty">Nic jeszcze nie zagrało. Wszystko, co odtworzysz — z playlisty, z losowania czy z wyszukiwania — trafi tutaj.</string>
     <string name="action_clear_history">Wyczyść historię</string>
+    <string name="history_search_label">Szukaj w historii</string>
+    <string name="history_no_matches">Brak wpisów historii pasujących do frazy.</string>
+    <string name="notice_history_read_failed">Nie udało się wczytać historii. Spróbuj ponownie.</string>
+    <string name="history_retry">Spróbuj ponownie</string>
     <string name="history_newer">Nowsze</string>
     <string name="history_older">Starsze</string>
     <string name="history_page_range">%1$,d–%2$,d z %3$,d</string>

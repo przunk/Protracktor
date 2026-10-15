@@ -121,6 +121,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearHistory() = controller.clearHistory()
     fun showHistoryPage(page: Int) = controller.showHistoryPage(page)
+    fun setHistoryQuery(query: String) = controller.setHistoryQuery(query)
 
     fun scanFolder(folder: GrantedFolder) = controller.scanFolder(folder)
     fun stopScan() = controller.stopScan()

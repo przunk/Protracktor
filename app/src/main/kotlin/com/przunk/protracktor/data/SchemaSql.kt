@@ -634,9 +634,11 @@ object SchemaSql {
      * only grows. Served by `idx_play_history_recent` in order, so a page costs the same whether
      * History holds five hundred tunes or fifty thousand.
      */
-    const val PLAY_HISTORY_PAGE: String =
+    const val PLAY_HISTORY_ROWS: String =
         "SELECT track_id, title, subtitle, file_name, author, size, played_at, play_count " +
-            "FROM play_history ORDER BY played_at DESC LIMIT ? OFFSET ?"
+            "FROM play_history ORDER BY played_at DESC"
+
+    const val PLAY_HISTORY_PAGE: String = "$PLAY_HISTORY_ROWS LIMIT ? OFFSET ?"
 
     /** The playable tunes on each platform, for the platform chips; read from `idx_catalogue_platform`. */
     const val PLATFORM_COUNTS: String =

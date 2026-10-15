@@ -160,6 +160,8 @@ data class BrowseState(
     val historyPage: Int = 0,
     /** A new explicit visit resets History scroll without resetting on page/data updates. */
     val historyVisit: Long = 0,
+    val historyQuery: String = "",
+    val historyReadFailed: Boolean = false,
 
     // Search
     val query: String = "",
