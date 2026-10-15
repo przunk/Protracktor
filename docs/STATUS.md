@@ -1,12 +1,11 @@
 # Status
 
-Updated: 2026-10-15 — release baseline 1.1.0 on the history-cleanup candidate, schema version 23.
-Develop still has the original history until validation and guarded reference promotion finish.
+Updated: 2026-10-15 — release baseline 1.1.0, schema version 23 on develop.
 versionCode is the commit count; the next selected release is 1.2.0, not prepared/published here.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Release-version history reconciliation — candidate validation, 2026-10-15
+## Release-version history reconciliation — completed, 2026-10-15
 
 The owner approved correcting unpublished test-version bumps and the project AGENTS version rule.
 Scope: 63 commits after immutable `v1.1.0`, original develop `16bd60d`. Candidate `eca4c8d`
@@ -22,8 +21,12 @@ zero failures/errors/skips; lint zero errors/72 warnings (unchanged). PL/EN reso
 Backup recovery/import/fsck also passed with original count/tag/develop; all saved artifact hashes
 match, and a second direct GitHub read confirms the unchanged publication boundary.
 Evidence: ignored `dist/version-cleanup/`. No new APK or release is prepared here.
-The original graph is retained in an archive ref and a verified Git bundle. Master, tags, remote
-refs and other worktrees are untouched; affected completed task branches await guarded promotion.
+The original graph is retained in an archive ref and a verified Git bundle. Guarded ref promotion
+succeeded at `f0ca1a9`: nine local refs moved, one affected identity ref remained unchanged.
+Develop and completed scoped task branches now use the rewritten graph. Master, tags, remote refs
+and other worktrees are untouched. The rewrite itself retained 1193 commits; the three ordinary
+audit/documentation commits bring the final count to 1196. Application/build source still matches
+tested `912122c`; later commits are documentation-only. No new APK/AAB, push or release.
 [Procedure and commit map](VERSION_HISTORY_REWRITE.md).
 
 All dated APK, test and integration records below retain their original numbers and SHA values.

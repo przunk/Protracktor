@@ -29,9 +29,9 @@ All **63 pairs** pass independent old/new tree/path/blob, commit-message/identit
 parent checks. Both the descendant count and total commit count are checked. Deliberate verifier
 negative checks reject an unremoved trial version, an unrelated README edit and reversed merge
 parents. Negative fixtures create only unreferenced Git objects, not source/worktree edits.
-The candidate's complete source-tree difference from original develop is solely
+Before audit/documentation commits, the reconstructed tip's complete tree difference from original develop is solely
 `versionName = "1.4.1"` to `versionName = "1.1.0"`.
-Full application tests/lint remain pending at this checkpoint.
+Full application test/lint outcomes are recorded below.
 
 The first read-only Node child-process preflight reported an EPERM handoff error in the sandbox;
 the completed audit/rewrite uses Python subprocesses instead. No JDK, SDK or shared tooling changed.
@@ -49,8 +49,8 @@ JSON mapping, remote snapshots and checksums are in ignored `dist/version-cleanu
 Preflight directly read GitHub heads/tags: remote develop was `d5dbe4a`, master `2aaeeeb`,
 latest remote version tag `v1.0.0`; no scoped commit is public there. No tag, remote-tracking ref,
 master or other checked-out worktree branch is part of the rewrite.
-Promotion will compare expected old ref IDs and update affected completed local branches in a
-single guarded Git ref transaction, only after candidate validation. No force push is needed.
+Promotion compared all expected old ref IDs and updated completed local branches in a single
+guarded Git ref transaction after candidate validation. No force push is needed.
 
 Existing 1.3.3, 1.4.0 and 1.4.1 APKs and the 1.1.0 AAB retain their exact filenames, versions and
 SHA-256 hashes. Dated build/test/acceptance records and commit messages keep their original SHAs
@@ -61,8 +61,9 @@ it is a provenance bridge, not a claim that old artifacts were built from new co
 
 ## Completed local branch mapping
 
-These references remain unchanged until candidate verification and guarded promotion finish.
-An identity mapping is intentional when a branch ends before the first corrected version bump.
+These references were checked in the guarded promotion: nine moved and one remained identical.
+The table records equivalent rewritten commits; develop additionally includes ordinary audit/
+documentation commits. An identity mapping is intentional before the first corrected version bump.
 
 | Local branch | Original tip | Rewritten equivalent |
 | --- | --- | --- |
@@ -81,7 +82,7 @@ An identity mapping is intentional when a branch ends before the first corrected
 
 **Checked:** backup bundle verification; original artifact SHA-256 checks; 63 graph/tree/metadata
 pairs; unchanged total count; three negative verifier checks; remote publication boundary.
-**Pending:** full forced application test/lint gate, documentation review and guarded promotion.
+**Checked subsequently:** full forced test/lint gate, backup recovery, documentation and guarded promotion.
 **Not performed:** new APK/AAB build, phone tests, push, tag/master move or store publication.
 The history correction changes version metadata, not app behaviour or schema. This does not turn
 prior host-only unsupported-schema UI checks into phone evidence.
@@ -101,5 +102,22 @@ Recovery was actually tested: import the bundle into a separate ignored bare rep
 Bundle SHA-256: `f489fc2333405536479f27ab91b8ff4dbf26b43489f6bb5d1e4e907d7afdadfc`.
 All four saved APK/AAB checksums still match. The final direct GitHub ref read is byte-identical
 to the preflight snapshot. Checked 81 local documentation file links, no missing files; not a
-complete anchor/external-link audit. Guarded local reference promotion is the remaining step.
+complete anchor/external-link audit. At this checkpoint, guarded reference promotion remained.
 No APK/AAB, release-script execution, phone test, push or publication was performed.
+
+## Completed local promotion
+
+After the passing gate, two ordinary audit/documentation commits produced candidate `f0ca1a9`
+(1195 commits). The guarded transaction compared every original reference, checked clean state,
+protected checked-out worktrees, required unchanged application/build source since tested
+`912122c`, rechecked artifact hashes and matched a fresh GitHub snapshot. It atomically moved
+develop and eight completed task refs; the pre-bump playlist-safety ref remained identical.
+Master, every tag, remote-tracking ref, unrelated head and the archive ref were verified unchanged.
+Evidence: ignored `dist/version-cleanup/promotion.json`, `promote.py` and remote/ref snapshots.
+
+The final closeout is the third ordinary audit/documentation commit, bringing develop to **1196**.
+This is not a reduction or manual reassignment of versionCode: object rewriting retained 1193,
+then normal commits increased it. App/native/scripts/web/build contents still match the tested
+candidate. The approved cleanup is complete; no new phone check or APK/AAB was made, and no
+release tag/master move, push, Play upload or publication was performed. Next release remains
+1.2.0 through the owner's existing release procedure, with release notes still to prepare.

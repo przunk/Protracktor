@@ -114,8 +114,8 @@ the readable one. Diagnose on debug, judge on release.
   artifact name where applicable. Historical built APK versions and hashes remain evidence;
   never relabel them after a history rewrite.
 
-Owner decision, 2026-10-15: this replaces the previous handoff-bump rule. The prepared release
-baseline is 1.1.0; the next selected feature release is 1.2.0. Only the release procedure creates
+Owner decision, 2026-10-15: this replaces the previous handoff-bump rule. The cleanup restored
+baseline 1.1.0 and selected 1.2.0 as the next feature release. Only the release procedure creates
 its release-version commit and tag. A prepared tag/AAB does not establish GitHub push or Play
 publication; those states are recorded separately.
 

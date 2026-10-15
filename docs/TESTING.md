@@ -172,13 +172,17 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## Version-history reconciliation — candidate checks, 2026-10-15
+## Version-history reconciliation — validated and promoted, 2026-10-15
 
 The owner approved normalizing unpublished test-version bumps back to release baseline 1.1.0.
 63 old/new commit pairs pass tree, metadata and ordered-parent checks; commit count stays 1193.
 Three deliberate verifier mutations are rejected. The forced candidate full gate on `912122c`
 passed 910 tests/121 suites, zero failures/errors/skips, in 485 s; lint zero errors/72 warnings.
 All auxiliary checks passed too. Backup import/fsck and saved artifact checksums passed.
+Guarded promotion succeeded at `f0ca1a9`: nine local refs changed, one remained identical;
+master/tags/remote refs and other worktrees were preserved. Later closeout is documentation-only,
+with application/build source matching tested `912122c`. The rewrite retained 1193 commits; three
+ordinary audit/documentation commits bring the final count to 1196. No release procedure was run.
 This is not a new phone test or a new APK. Dated records below retain the actual original
 artifact versions and SHA values; see the [rewrite map and provenance](VERSION_HISTORY_REWRITE.md).
 
