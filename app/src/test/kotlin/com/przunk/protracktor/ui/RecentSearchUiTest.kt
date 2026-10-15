@@ -78,7 +78,8 @@ class RecentSearchUiTest {
             override fun localLevel(state: BrowseState, at: String) = state
         }
         val workflow = BrowseWorkflow(activity.get().lifecycleScope, browse, LibrarySearch(source), actions,
-            onSubmitted = history::record, onLiveResult = {})
+            onSubmitted = history::record,
+            onSearchFailed = { throw AssertionError("Unexpected search failure", it) }, onLiveResult = {})
         activity.get().setContent {
             val current by browse.collectAsState()
             val recent by history.queries.collectAsState()

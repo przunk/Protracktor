@@ -395,6 +395,7 @@
     <string name="notice_random_nothing_for_platform">Nic nie zaindeksowano dla tej platformy.</string>
     <string name="notice_random_no_favourites">Żadnego z ulubionych nie ma w twoim indeksie Modland.</string>
     <string name="notice_modarchive_unreachable">Nie udało się połączyć z The Mod Archive.</string>
+    <string name="notice_search_failed">Nie udało się ukończyć wyszukiwania. Spróbuj ponownie.</string>
     <string name="notice_modarchive_unreadable">The Mod Archive odpowiedziało, ale stroną, której nie umiemy odczytać.</string>
     <string name="notice_added_track">Dodano „%1$s” do playlisty.</string>
     <string name="notice_track_already_here">„%1$s” jest już na tej playliście.</string>

@@ -1,8 +1,80 @@
 # Status
 
-Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## C107 History entry scroll — release APK ready; phone acceptance pending, 2026-10-15
+
+The owner observed History opening below the top and requested that every new entry start at
+the top. Exact installed build/device were not separately supplied. History resets the data page
+to zero but reuses the Browse session's cached `history/0` list position; the scroll code predates
+C106. Scope: reset per new visit, retain page positions within that visit and leave other domains
+unchanged. The owner explicitly selected the existing `fix/search-request-ownership` branch.
+**Checked before correction:** all three real Browse Compose regressions execute and fail by
+assertion at the missing top row after reopening, zero errors/skips, 229 s cold Gradle run.
+Paging assertions before the new visit pass. The cache-only correction then passed 67 focused
+checks, but a fourth UI check exposed a simultaneous playing-key change overriding the new visit
+(one of four failed). The final correction keys the History subtree by an in-memory visit counter,
+resetting its scroll cache and treating the playing row as arrival rather than a track change.
+Other Browse domains retain their cache; page/row/loading updates within the visit do not reset it.
+**Checked final focused run:** 68 tests in six suites, zero failures/errors/skips, 119 s.
+The trial declares 1.3.3; schema/versionCode policy are unchanged.
+**Checked full gate:** forced run on `ccf85a0` passed in 464 s: **876 tests in 116 suites**, zero
+failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN resource/store checks,
+581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK, temporary
+per-class isolation (one worker/1 GiB heap), no exclusions or repository build-setting changes.
+Evidence: ignored `dist/c107-full-gate*`.
+**Checked artifact:** clean source `ffdbd87`, **1.3.3 (1178)**, built in 262 s:
+`dist/protracktor-release-1.3.3-1178-ffdbd87-20261015-191612.apk`, 11,807,383 bytes.
+SHA-256: `0ce11599c8378f5444958d80159dac146a4056eb0fd34f447a90281917207612`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and the three existing ABIs checked.
+Independent APK v2 verification confirms the unchanged test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Build/artifact evidence: ignored `dist/c107-release*` / `dist/c107-apk-*`. App/native/scripts match
+the full-gate source `ccf85a0`; later handoff is docs-only. This combined trial includes C105/C106
+and supersedes 1.3.2 for current testing without deleting or altering previous APKs/branches.
+No phone retest, merge or push is claimed. [Analysis](PR_C107_HISTORY_ENTRY_SCROLL.md).
+
+## C106 search request ownership — release APK ready; phone acceptance pending, 2026-10-15
+
+**Source:** the 2026-10-14 code review R2, not independent user feedback or a new B46 regression.
+The owner selected repair on `fix/search-request-ownership`, explicitly stacked from C105
+`ad9ec54` while its existing APK is being tested. C105 is unchanged and remains unmerged.
+The inherited defect lets an older search publish into newer Browse contexts, deliver obsolete
+live-source notices or leave loading stuck after cancellation/failure. The trial declares 1.3.2,
+without changing schema or versionCode calculation. Request generation, owner and input/domain
+guards now control rows, live notices, failures and loading cleanup. Navigation and input edits
+retire ownership before cancellation; typing/filter changes still require explicit submission.
+
+**Checked before correction:** 36 workflow checks executed, 14 assertion failures, zero errors/skips
+(ten added and four adjusted characterizations). Non-cancellable controlled reads demonstrate why
+cancelling a job alone is insufficient. The cold run completed in 176 s; bootstrap/cache failure
+before that run is not counted as test evidence. Initial focused checks passed 101 tests in four
+suites (36 workflow, 11 search, six autocomplete UI, 48 C105 session), zero failures/errors/skips.
+Three more workflow checks cover identical-input resubmission, no-op edits and snapshot restoration.
+Bypassing ownership and the no-op-query guard fails 12/39 checks; restored sources match saved
+SHA-256 sums. Restored focused run passed **104 tests in four suites**, zero failures/errors/skips
+(39 workflow, 11 search, six autocomplete UI, 48 C105 session), in 117 s.
+**Checked full gate:** forced run on `cd387d7` passed in 446 s: **872 unit tests in 115 suites**,
+zero failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN resource/store checks,
+581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK and temporary
+per-class isolation (one worker/1 GiB heap); no exclusions or repository build-setting changes.
+Evidence: ignored `dist/c106-full-gate*`.
+**Checked artifact:** clean source `a4b0a6f`, **1.3.2 (1174)**, built in 808 s after rebuilding the
+three native ABIs: `dist/protracktor-release-1.3.2-1174-a4b0a6f-20261015-011618.apk`,
+11,806,903 bytes. SHA-256:
+`e6b5636038528bdea3572b676d25951f21a6996c6aa867a74bf504afbd2f2dfd`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and all three existing ABIs checked.
+Independent APK v2 verification confirms the unchanged test certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Build/artifact evidence: ignored `dist/c106-release*` and `dist/c106-apk-*`. Application/native/script
+sources match the full-gate commit `cd387d7`; later handoff changes documentation only.
+Phone behaviour is **not checked**; nothing merged or pushed.
+[Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
+separate; this is not a general Browse rewrite.
 
 ## C105 latest playlist activation — release APK ready; phone acceptance pending, 2026-10-14
 
