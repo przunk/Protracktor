@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-14. Owner-requested inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-15. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 Completed tasks are excluded. Historical notes are reconciled where later records establish
 completion; uncertain coverage remains explicitly marked for checking.
@@ -19,6 +19,7 @@ Dated implementation checkpoints below describe the earlier, unaccepted builds.
 
 | ID | Remaining work | State |
 | --- | --- | --- |
+| B49 | Search in History | Owner request, 2026-10-15. Matching fields, scope, UI and paging behaviour remain to discuss; no implementation selected. Separate from B46 recent-query suggestions. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
@@ -55,21 +56,22 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C107 | Reopening History can reuse its old scroll offset instead of starting at the top | Owner observation/decision, 2026-10-15. Implemented explicitly on the pending C106 branch. Four History UI checks pass; full gate 876 tests/116 suites, lint 0 errors/72 warnings. Release 1.3.3 (1178), source `ffdbd87`, ready; phone acceptance pending. [Analysis](PR_C107_HISTORY_ENTRY_SCROLL.md). |
-| C106 | An obsolete search can replace newer results/Browse views, deliver late notices or leave loading stuck | Implemented on `fix/search-request-ownership`, stacked from pending C105 with owner approval. Code-review finding, not independent tester feedback. Full gate: 872 tests/115 suites, lint 0 errors/72 warnings. Combined release 1.3.2 (1174), source `a4b0a6f`, ready; phone acceptance pending. [Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). |
-| C105 | Overlapping playlist activations can publish an older selection while the persistence target remains newer | Implemented on `fix/latest-playlist-activation`, unmerged. Six regressions fail before correction; five mutation checks fail; restored 859-test full gate/lint passed. Release 1.3.1 (1170), source `07300b1`, ready; phone acceptance pending. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md). |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
 | A45 | Author jump from a playlist does not identify the author as the Random jump does | Open finding; align the heading without introducing Random-only session behaviour. |
-| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | These ordering risks remain; the search portion is handled separately by pending C106 above. Not a new B46 regression or phone-frequency measurement. [Review R2](review-2026-10-14.md). |
+| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | These risks remain; search ownership was fixed by C106 at `d74d339`, 2026-10-15. Not a new B46 regression or phone-frequency measurement. [Review R2](review-2026-10-14.md). |
 | Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Retained during extraction; separate fix required. |
 | Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Host sequence reproduced; stale bytes can subsequently enter the in-memory map. |
 | Download cancellation notice | Stopped notice is suppressed because cancellation is checked inside NonCancellable cleanup | Production workflow exercised with controlled host ports; phone behaviour not independently checked. |
 | Review round 5 R7 | Concurrent fetches for one URL share a temporary `.part` filename | Low-priority retained cache risk; [review record](review.md). |
 | Review round 5 R8 | Cache eviction can remove another fetch's newly written file | Low-priority retained risk of a redundant download; [review record](review.md). |
+
+Completed C105/C106/C107 left the open inventory after owner acceptance on 2026-10-15: C105 merged
+at `557acbb`, then C106/C107 at `d74d339`. Their defect history and verification remain in
+[Status](STATUS.md) and their PR records; other catalogue/folder navigation risks remain open.
 
 These are not all independently reported user defects. Preserve each record's source category;
 host race demonstrations do not establish how often the sequence occurs on a phone.

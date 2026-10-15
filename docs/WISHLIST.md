@@ -10,6 +10,13 @@ been overtaken by work already done, it says so.
 
 ---
 
+## B49. Search in History — to discuss
+
+Requested by the owner on 2026-10-15: search previously played tracks from the History view.
+This is playback History search, not B46's recent search-query suggestions. No separate existing
+request was found. Matching fields, search scope, presentation and interaction with paging remain
+to be discussed. Backlog only; no implementation selected.
+
 ## B48. Add the playing track from the notification — owner accepted and merged, 2026-10-14
 
 Merged into develop at `61886e7`, followed by the accepted combined B46 trial at `7111c47`.

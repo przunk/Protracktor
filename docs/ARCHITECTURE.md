@@ -27,7 +27,7 @@ plan. See [Architecture closeout](ARCHITECTURE_CLOSEOUT.md) for the boundary ass
 | Playlist-session persistence | Existing stores own database access; `PlaylistSession` owns the persistence ID and both save jobs in the controller's scope; the working queue remains in the existing player flow | **Extracted:** restore, debounced settings/track writes, Save/Discard and create/rename/delete/switch. `PlaylistSessionState` applies narrow transitions to the same flows, including suspended list reads inside atomic retries; controller retains native stop and metadata callbacks. Queue editing remains separate |
 | Playlist file transfer | `PlaylistTransfer` uses the controller's scope and an immutable export selection; controller owns the active queue, playlist list and share/message flows | **Extracted:** M3U import/export and matching order through existing stores and `PlaylistFile`; `AndroidPlaylistFiles` binds document reads, shared copies and intents, and `AndroidPlaylistText` maps typed notices. Imports do not activate or edit the current playlist |
 | Catalogue browsing/search | Controller owns the Browse flow; `CatalogueBrowser` runs catalogue/format/author reads and overview/count queries in the same scope; UI retains sheet/scroll/selection state | **Extracted:** `CatalogueBrowseState` applies narrow transitions to the existing flow; `AndroidCatalogueStorage` reads existing cache/replay/database files and pairing preferences. `CatalogueTracks` maps rows for browsing, search and Random. `LibrarySearch` retains the four-source query, called by `BrowseWorkflow` |
-| Browse interactions | `BrowseWorkflow` applies domain/Back/query/filter/result transitions to the existing Browse flow and scope; reads remain with their existing services | **Extracted:** a narrow actions port dispatches catalogue, local-folder and History reads; `BrowseNavigation` remains the pure rule owner. Controller retains playback digressions and Android notice rendering. Pending C106 adds ownership of the submitted search job, not a new scope/state store |
+| Browse interactions | `BrowseWorkflow` applies domain/Back/query/filter/result transitions to the existing Browse flow and scope; reads remain with their existing services | **Extracted:** a narrow actions port dispatches catalogue, local-folder and History reads; `BrowseNavigation` remains the pure rule owner. Controller retains playback digressions and Android notice rendering. C106 owns the submitted search job, not a new scope/state store |
 | Local-folder browsing | `LocalFolderBrowser` reads existing grants/indexes and publishes into the controller's Browse flow using the same scope; controller retains the scan job and `BrowseWorkflow` routes domain/Back actions | **Extracted:** `AndroidFolderAccess` reuses SAF permission/label/path handling; `LocalTree` remains the tree rule owner. Scan snapshots and Back share the browser's tree/level rendering; no scan starts merely because a folder is opened |
 | Track bytes and companion files | `RemoteFiles` retains its cache and shared fetch jobs; content streams are opened/closed per read; controller retains scan/archive dispatchers | **Extracted:** `TrackFiles` routes the existing sources; `AndroidTrackFileAccess` binds resolver, shared cache and LHA operations. Playback/share/prefetch use the same reader; scanning calls its synchronous document adapter on the existing scan lane |
 | Reference-data downloads | `LibraryDownloads` owns the selected-run job in the controller's existing scope; controller owns Browse progress/counts through a narrow UI port | **Extracted:** catalogue, SID/songdb and favourite workflows, with `StoreDownloadSources` reusing existing stores/cache and `AndroidDownloadText` formatting typed notices at the original points |
@@ -67,7 +67,7 @@ controller scope and stores remain unchanged. This is a separately approved beha
 an extraction guarantee or a global lock over every store caller. Owner-approved merge does not
 establish individual playlist phone checks; no such results were supplied.
 
-**C105 activation correction, 2026-10-14, unmerged `fix/latest-playlist-activation`:** the latest
+**C105 activation correction, owner accepted and merged at `557acbb`, 2026-10-15:** the latest
 request generation owns playlist publication and follow-up effects. The destination track/list
 reads happen before a non-suspending state update; persistence identity and queue are published
 together. Newly requested track writes remain gated during activation, while already captured
@@ -186,7 +186,7 @@ Browse domain entry publishes before invoking its refresh actions. Back invokes 
 publishing its captured snapshot; a reentrant parent-read publication can therefore still be
 overwritten. Catalogue and local-folder completion-order risks remain separate from search.
 
-**C106 search correction, 2026-10-15, unmerged `fix/search-request-ownership`:** `BrowseWorkflow`
+**C106 search correction, owner accepted and merged at `d74d339`, 2026-10-15:** `BrowseWorkflow`
 owns one submitted request, its generation and cancellable job in the existing controller scope.
 Input/domain matching alone cannot distinguish leaving and returning to the same search, so every
 retirement advances the generation before cancelling. Results, live notices, failures and loading
@@ -672,7 +672,7 @@ question were "audit this app":
 It is a browse domain rather than a screen of its own, which means playing from it and adding from
 it are the same code as everywhere else, and cost nothing.
 
-**C107 History entry scroll, 2026-10-15, pending on `fix/search-request-ownership`:** explicit
+**C107 History entry scroll, owner accepted and merged at `d74d339`, 2026-10-15:** explicit
 domain entry advances the in-memory `BrowseState.historyVisit`. The visit keys the `HistoryDomain`
 subtree, which owns its scroll cache rather than using the enclosing Browse session's cache. Each
 entry starts page zero at the top; page changes and row/loading updates retain positions within

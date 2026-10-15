@@ -1,10 +1,25 @@
 # Status
 
-Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-15 — version 1.3.3, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C107 History entry scroll — release APK ready; phone acceptance pending, 2026-10-15
+## C105–C107 — owner accepted and merged, 2026-10-15
+
+The owner gave overall acceptance and authorized merging after the combined 1.3.3 trial handoff.
+C105 was merged first at `557acbb`, then C106/C107 at `d74d339`. The resulting tracked tree matches
+the accepted branch `96a7298`; app/native/scripts also match the offered clean-source APK
+`ffdbd87` and full-gate implementation `ccf85a0`. This was checked with Git tree/source comparison,
+not a new test/lint run. The recorded gate remains 876 tests/116 suites, lint 0 errors/72 warnings.
+No new APK was needed for tree-identical integration and this documentation-only closeout.
+
+Device/Android, exact installed build and individual checklist outcomes were not separately
+supplied. This is overall owner acceptance, not agent-run phone testing or confirmation of every
+scenario. Dated pending checkpoints below are historical and superseded by this acceptance.
+Master, tags, schema and store state are unchanged; nothing was pushed. B49 History search is
+recorded in [Wishlist](WISHLIST.md#b49-search-in-history--to-discuss), for discussion only.
+
+## ~~C107 History entry scroll~~ — pre-acceptance handoff, 2026-10-15
 
 The owner observed History opening below the top and requested that every new entry start at
 the top. Exact installed build/device were not separately supplied. History resets the data page
@@ -37,7 +52,7 @@ the full-gate source `ccf85a0`; later handoff is docs-only. This combined trial 
 and supersedes 1.3.2 for current testing without deleting or altering previous APKs/branches.
 No phone retest, merge or push is claimed. [Analysis](PR_C107_HISTORY_ENTRY_SCROLL.md).
 
-## C106 search request ownership — release APK ready; phone acceptance pending, 2026-10-15
+## ~~C106 search request ownership~~ — pre-acceptance handoff, 2026-10-15
 
 **Source:** the 2026-10-14 code review R2, not independent user feedback or a new B46 regression.
 The owner selected repair on `fix/search-request-ownership`, explicitly stacked from C105
@@ -76,7 +91,7 @@ Phone behaviour is **not checked**; nothing merged or pushed.
 [Analysis](PR_C106_SEARCH_REQUEST_OWNERSHIP.md). Other catalogue/folder navigation races remain
 separate; this is not a general Browse rewrite.
 
-## C105 latest playlist activation — release APK ready; phone acceptance pending, 2026-10-14
+## ~~C105 latest playlist activation~~ — pre-acceptance handoff, 2026-10-14
 
 `fix/latest-playlist-activation` starts from develop `ad18da6`; develop remains 1.3.0/schema 23.
 The trial declares 1.3.1, without changing versionCode calculation or schema. Request generations

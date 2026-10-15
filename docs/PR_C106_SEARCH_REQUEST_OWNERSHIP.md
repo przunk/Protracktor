@@ -1,5 +1,14 @@
 # C106 — search request ownership
 
+## Closeout — owner accepted and merged, 2026-10-15
+
+The owner accepted the combined 1.3.3 trial and authorized merging. C105 entered develop first
+at `557acbb`, then this branch, including C107, at `d74d339`. The merged tree matches accepted
+branch `96a7298` and application sources match offered APK `ffdbd87` / the recorded 876-test gate.
+No new test/lint run or APK was needed. Device/Android, installed build and individual checklist
+outcomes were not separately supplied; earlier pending checkpoints below are historical.
+No push, master/tag or store change. [Acceptance record](STATUS.md).
+
 ## Report and scope
 
 Code-review finding R2, recorded on 2026-10-14, selected by the owner on 2026-10-15 after the C105

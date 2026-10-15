@@ -1,5 +1,14 @@
 # C105 — latest playlist activation wins
 
+## Closeout — owner accepted and merged, 2026-10-15
+
+Overall owner acceptance after the combined 1.3.3 handoff authorized merge at `557acbb`, followed
+by C106/C107 at `d74d339`. The final merged tree matches accepted branch `96a7298`; application
+sources match the offered `ffdbd87` APK and recorded 876-test gate. No new test/lint run or APK
+was needed for tree-identical integration. Exact installed build/device and individual checklist
+outcomes were not separately supplied. Earlier pending checkpoints below are historical.
+No push, master/tag or store change. [Acceptance record](STATUS.md).
+
 ## Report and analysis
 
 Code-review finding recorded on 2026-10-14, not an app-user report. The owner selected its repair

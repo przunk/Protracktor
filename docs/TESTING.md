@@ -171,7 +171,21 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## C107 History entry scroll — phone checks pending, 2026-10-15
+## C105–C107 — overall owner acceptance, 2026-10-15
+
+After the combined 1.3.3 trial handoff the owner accepted the changes and authorized merging.
+C105 entered develop at `557acbb`, then C106/C107 at `d74d339`. The merged tree matches accepted
+branch `96a7298`; app/native/scripts match offered APK `ffdbd87` and the recorded 876-test full
+gate (lint 0 errors/72 warnings). These are retained source-matching results, not a new merged-head
+test run. No rebuild was needed for unchanged application sources.
+
+Device/Android, exact installed build and individual checklist outcomes were not separately
+supplied; no agent-run phone tests are claimed. Earlier pending entries below are historical,
+superseded by overall acceptance, and their scenario lists remain available for further checks.
+Nothing was pushed and master/tags/store are unchanged. B49 History search is only a new wishlist
+request, not an implemented feature or another independently identified tester report.
+
+## C107 History entry scroll — pre-acceptance checklist, 2026-10-15
 
 Owner feedback, not an independently identified tester. Exact installed build/device were not
 separately supplied. Test a new History entry after scrolling, via Browse root/another domain and
@@ -184,7 +198,7 @@ release: **1.3.3 (1178)**, clean source `ffdbd87`,
 `dist/protracktor-release-1.3.3-1178-ffdbd87-20261015-191612.apk`. Install without clearing data;
 phone behaviour remains unverified. Earlier 1.3.2 metadata below is its historical handoff.
 
-## C106 search ownership — code-review correction, phone checks pending, 2026-10-15
+## C106 search ownership — pre-acceptance checklist, 2026-10-15
 
 The owner selected this repair after the C105 handoff. It is a code-review finding, not another
 independent user report. `fix/search-request-ownership` is deliberately stacked from C105

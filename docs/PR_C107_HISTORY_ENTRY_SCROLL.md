@@ -1,5 +1,15 @@
 # C107 — start each History visit at the top
 
+## Closeout — owner accepted and merged, 2026-10-15
+
+The owner gave overall acceptance after the combined 1.3.3 trial handoff and authorized merging.
+C105 entered develop at `557acbb`; C106/C107 followed at `d74d339`. The merged tree matches
+accepted branch `96a7298`; application sources match offered APK `ffdbd87` and the recorded
+876-test gate. No new test/lint run or APK was needed for tree-identical integration. Device/Android,
+exact installed build and individual checklist outcomes were not separately supplied.
+Earlier pending checkpoints below are historical. B49 History search is recorded separately as
+a wishlist request, not implemented. No push, master/tag or store change. [Acceptance](STATUS.md).
+
 ## Report and decision — 2026-10-15
 
 The owner observed History opening below the top and selected a reset on every new entry.
