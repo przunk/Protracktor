@@ -12,6 +12,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,47 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CatalogueBrowserTest {
+    @Test(timeout = 5_000)
+    fun `obsolete catalogue reads cannot replace a later visit even to the same catalogue`() = runBlocking {
+        for (destination in listOf("first", "second")) {
+            val f = Fixture(this)
+            val entered = CompletableDeferred<Unit>()
+            val gate = CompletableDeferred<Unit>()
+            var first = true
+            f.before = { if (it == "formats:first" && first) {
+                first = false
+                entered.complete(Unit)
+                withContext(NonCancellable) { gate.await() }
+            } }
+            f.browser.openCatalogue(catalogue("first"))
+            entered.await()
+            f.browser.openCatalogue(catalogue(destination))
+            yield()
+            val expected = f.browse.value.copy(groups = listOf(CatalogueGroup("latest", 1)), loading = true)
+            f.browse.value = expected
+            gate.complete(Unit)
+            drain()
+            assertEquals(expected, f.browse.value)
+        }
+    }
+
+    @Test(timeout = 5_000)
+    fun `leaving and revisiting a catalogue retires its old reader`() = runBlocking {
+        val f = Fixture(this)
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        f.before = { if (it.startsWith("formats:")) { entered.complete(Unit); gate.await() } }
+        f.browser.openCatalogue(catalogue())
+        entered.await()
+        f.browse.value = BrowseNavigation.enteringDomain(f.browse.value, BrowseDomain.LOCAL)
+        f.browse.value = BrowseNavigation.enteringDomain(f.browse.value, BrowseDomain.ONLINE)
+            .copy(openCatalogue = catalogue(), groups = listOf(CatalogueGroup("restored", 1)))
+        val expected = f.browse.value
+        gate.complete(Unit)
+        drain()
+        assertEquals(expected, f.browse.value)
+    }
+
     private fun catalogue(id: String = "modland") = CatalogueSummary(id, id, 7, 1L)
     private fun track(id: String) = TrackRef(id, id)
     private suspend fun CoroutineScope.drain() {
@@ -239,10 +282,10 @@ class CatalogueBrowserTest {
         val before = f.browse.value
         val summary = catalogue()
         f.browser.openCatalogue(summary)
-        assertEquals(before, f.browse.value)
         entered.await()
         assertEquals(before.copy(openCatalogue = summary, openFormat = null, openAuthor = null,
-            arrivedByJump = false, tracks = emptyList(), loading = true), f.browse.value)
+            arrivedByJump = false, tracks = emptyList(), loading = true,
+            navigationVisit = before.navigationVisit + 1), f.browse.value)
         val during = f.browse.value.copy(query = "during")
         f.browse.value = during
         gate.complete(Unit)
@@ -252,7 +295,7 @@ class CatalogueBrowserTest {
     }
 
     @Test
-    fun `format opening needs a catalogue and captures its identity before launching`() = runBlocking {
+    fun `format opening captures its catalogue but cannot publish into a changed route`() = runBlocking {
         val f = Fixture(this)
         f.browser.openFormat("ignored")
         drain()
@@ -266,14 +309,14 @@ class CatalogueBrowserTest {
         assertEquals("Protracker", f.browse.value.openFormat)
         assertEquals(null, f.browse.value.openAuthor)
         assertFalse(f.browse.value.arrivedByJump)
-        assertFalse(f.browse.value.loading)
+        assertTrue(f.browse.value.loading)
         assertTrue(f.browse.value.tracks.isEmpty())
-        assertEquals(f.groups, f.browse.value.groups)
+        assertTrue(f.browse.value.groups.isEmpty())
         assertEquals("later", f.browse.value.query)
     }
 
     @Test
-    fun `author opening requires both levels and captures them once before launching`() = runBlocking {
+    fun `author opening captures both levels but cannot publish into a changed route`() = runBlocking {
         val f = Fixture(this)
         f.browser.openAuthor("ignored")
         f.browse.value = f.browse.value.copy(openCatalogue = catalogue())
@@ -288,14 +331,14 @@ class CatalogueBrowserTest {
         assertEquals("Artist", f.browse.value.openAuthor)
         assertEquals("changed", f.browse.value.openFormat)
         assertEquals("changed", f.browse.value.openCatalogue?.id)
-        assertEquals(f.rows.map(CatalogueTracks::referenceOf), f.browse.value.tracks)
-        assertFalse(f.browse.value.loading)
+        assertTrue(f.browse.value.tracks.isEmpty())
+        assertTrue(f.browse.value.loading)
         assertFalse(f.browse.value.arrivedByJump)
         assertEquals("later", f.browse.value.query)
     }
 
     @Test(timeout = 5_000)
-    fun `overlapping catalogue reads keep the existing completion order without cancelling earlier jobs`() = runBlocking {
+    fun `overlapping catalogue reads preserve the newer publication and loading state`() = runBlocking {
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
         val f = Fixture(this).apply {
@@ -311,8 +354,8 @@ class CatalogueBrowserTest {
         gate.complete(Unit)
         drain()
         assertEquals("second", f.browse.value.openCatalogue?.id)
-        assertEquals(f.groups, f.browse.value.groups)
-        assertFalse(f.browse.value.loading)
+        assertEquals(listOf(CatalogueGroup("newer", 1)), f.browse.value.groups)
+        assertTrue(f.browse.value.loading)
         assertEquals(listOf("formats:first", "formats:second"), f.events)
     }
 

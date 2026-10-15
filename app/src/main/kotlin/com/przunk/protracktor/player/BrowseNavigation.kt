@@ -26,6 +26,8 @@ object BrowseNavigation {
      */
     fun enteringDomain(current: BrowseState, domain: BrowseDomain): BrowseState = current.copy(
         domain = domain,
+        navigationVisit = current.navigationVisit + 1,
+        loading = false,
         openCatalogue = null,
         openFormat = null,
         openAuthor = null,
@@ -64,5 +66,7 @@ object BrowseNavigation {
         current.takeIf { it.domain == BrowseDomain.SEARCH && !it.arrivedByJump }
 
     /** The search a digression came from, as it is shown again: no longer a jump, and not loading. */
-    fun returningTo(search: BrowseState): BrowseState = search.copy(arrivedByJump = false, loading = false)
+    fun returningTo(search: BrowseState, current: BrowseState = search): BrowseState = search.copy(
+        arrivedByJump = false, loading = false, navigationVisit = current.navigationVisit + 1,
+    )
 }

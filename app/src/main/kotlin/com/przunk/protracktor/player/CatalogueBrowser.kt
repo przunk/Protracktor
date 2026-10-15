@@ -142,28 +142,28 @@ internal class CatalogueBrowser(
     }
 
     fun openCatalogue(summary: CatalogueSummary) {
+        val owner = state.openingCatalogue(summary)
         scope.launch {
-            state.openingCatalogue(summary)
             val formats = indexes.formats(summary.id)
-            state.showGroups(formats)
+            state.showGroups(owner, formats)
         }
     }
 
     fun openFormat(format: String) {
         val catalogueId = state.catalogueId ?: return
+        val owner = state.openingFormat(format)
         scope.launch {
-            state.openingFormat(format)
             val authors = indexes.authors(catalogueId, format)
-            state.showGroups(authors)
+            state.showGroups(owner, authors)
         }
     }
 
     fun openAuthor(author: String) {
         val (catalogueId, format) = state.authorLocation() ?: return
+        val owner = state.openingAuthor(author)
         scope.launch {
-            state.openingAuthor(author)
             val found = indexes.tracks(catalogueId, format, author).map(CatalogueTracks::referenceOf)
-            state.showTracks(found)
+            state.showTracks(owner, found)
         }
     }
 

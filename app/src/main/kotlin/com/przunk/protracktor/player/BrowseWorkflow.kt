@@ -37,6 +37,9 @@ internal class BrowseWorkflow(
     private var searchOwner: SearchOwner? = null
     private var searchJob: Job? = null
 
+    /** Input changes/resubmissions retire intents even when the same words and scope return. */
+    val searchRevision: Long get() = searchGeneration
+
     private fun owns(owner: SearchOwner, state: BrowseState) =
         owner.generation == searchGeneration && searchOwner === owner && owner.matches(state)
 
