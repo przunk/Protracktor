@@ -117,3 +117,14 @@ file links without missing targets; this is not a complete external-link or anch
 Evidence: ignored `dist/b49-release*` / `dist/b49-apk-*`. Phone behaviour/timing and acceptance
 remain **not checked**. No merge/push/master/tag/store change or AAB build. After acceptance,
 integration and the owner's Play release procedure are separate steps; discuss C108 separately.
+
+## Owner acceptance and integration — 2026-10-15
+
+After the trial handoff the owner reported satisfactory operation and authorized merging.
+Merge `ef8cd39` on develop has the same tracked tree as accepted branch `1820c9b`; application/
+build sources match clean APK source `e4f5ccc` and full-gate implementation `27bd9fa`.
+Checked by Git source/tree comparison, not a new test/lint run. No APK rebuild was needed.
+Device/Android, exact installed build and individual checklist outcomes were not separately
+provided. Record overall owner acceptance, not individual scenario confirmation or agent-run
+phone timing/behaviour. Earlier pending checkpoints are historical and superseded by this result.
+Master/tags/store remain unchanged; nothing was pushed or published. C108 is a separate task.

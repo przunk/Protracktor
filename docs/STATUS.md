@@ -1,10 +1,21 @@
 # Status
 
-Updated: 2026-10-15 — version 1.3.3, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-15 — version 1.4.0, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B49 live History search — release APK ready; phone acceptance pending, 2026-10-15
+## B49 live History search — owner accepted and merged, 2026-10-15
+
+The owner reported satisfactory operation after the 1.4.0 trial handoff and authorized merging.
+Merged at `ef8cd39`; its tracked tree matches accepted branch `1820c9b`, and application/build
+sources match offered APK `e4f5ccc` and full-gate implementation `27bd9fa`. Verified by Git tree
+comparison, not a new test/lint run. No rebuild was needed for unchanged application sources.
+Device/Android, exact installed build and individual checklist outcomes were not separately
+supplied. This is overall owner acceptance, not agent-run phone testing or measured phone latency.
+Earlier pending checkpoints below are superseded by this acceptance. Master/tags/store are
+unchanged; nothing was pushed or published. C108 remains a separate task.
+
+### Pre-acceptance verification record
 
 Owner selected `feature/history-live-search` from develop `5954c86`: live literal substring
 filtering across all History by title/author/filename, case-insensitive, with 200 ms debounce,
@@ -56,7 +67,7 @@ Device/Android, exact installed build and individual checklist outcomes were not
 supplied. This is overall owner acceptance, not agent-run phone testing or confirmation of every
 scenario. Dated pending checkpoints below are historical and superseded by this acceptance.
 Master, tags, schema and store state are unchanged; nothing was pushed. B49 History search is
-tracked separately in [Wishlist](WISHLIST.md#b49-search-in-history--implementation-selected-2026-10-15).
+tracked separately in [Wishlist](WISHLIST.md#b49-search-in-history--owner-accepted-and-merged-2026-10-15).
 
 ## ~~C107 History entry scroll~~ — pre-acceptance handoff, 2026-10-15
 

@@ -172,7 +172,14 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## B49 live History search — phone checks pending, 2026-10-15
+## B49 live History search — overall owner acceptance, 2026-10-15
+
+After the trial handoff the owner reported satisfactory operation and authorized merging at
+`ef8cd39`. The merged tree matches accepted branch `1820c9b`; application/build sources match the
+APK and full gate below. Source comparison was run, not a new full gate or APK build. Device,
+Android, exact installed build and individual checklist outcomes were not separately supplied.
+This is overall owner acceptance; retain the following scenarios for future regression checks,
+without treating them as individually confirmed or agent-run phone tests.
 
 Trial: **1.4.0 (1185)**, clean source `e4f5ccc`,
 `dist/protracktor-release-1.4.0-1185-e4f5ccc-20261015-201306.apk`.
@@ -186,7 +193,7 @@ loading, PL/EN, retry after read failure and leave/reentry. Filtering must not i
 replace the playing queue. Selecting a result still captures the displayed page as before.
 Clear History while a filter is pending: all entries must disappear without late rows returning.
 [Contract, host evidence and full checklist](PLAN_HISTORY_SEARCH.md). Host UI/native SQLite checks
-are not phone timing or behaviour evidence; owner acceptance remains pending.
+are not phone timing or behaviour evidence; overall owner acceptance is recorded above.
 
 ## C105–C107 — overall owner acceptance, 2026-10-15
 
