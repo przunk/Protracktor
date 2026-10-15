@@ -6,6 +6,7 @@ package com.przunk.protracktor.player
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -16,6 +17,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import com.przunk.protracktor.R
+import com.przunk.protracktor.AppLocale
+import com.przunk.protracktor.MainActivity
+import com.przunk.protracktor.data.DatabaseAccess
+import com.przunk.protracktor.data.DatabaseAccessState
+import com.przunk.protracktor.ui.problemText
 import com.przunk.protracktor.player.PlaybackPresentation.ACTION_NEXT
 import com.przunk.protracktor.player.PlaybackPresentation.ACTION_PREVIOUS
 import com.przunk.protracktor.player.PlaybackPresentation.ACTION_PLAY_PAUSE
@@ -62,6 +68,23 @@ class PlaybackService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Version-only probe: do not run a migration or construct playback behind a blocked UI.
+        val access = DatabaseAccess.check(this)
+        if (access != DatabaseAccessState.Ready) {
+            createChannel()
+            val local = AppLocale.wrap(this)
+            val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID,
+                Notification.Builder(this, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_notification_protracktor)
+                    .setContentTitle(local.getString(R.string.database_unavailable_title))
+                    .setContentText(access.problemText(local))
+                    .setStyle(Notification.BigTextStyle().bigText(access.problemText(local)))
+                    .setContentIntent(open).setAutoCancel(true).build())
+            stopSelf()
+            return
+        }
         controller = PlaybackController.get(this)
         createChannel()
         createSession()
@@ -132,6 +155,10 @@ class PlaybackService : Service() {
     private fun contentOf(state: PlayerUiState) = PlaybackPresentation.contentOf(this, state)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!::controller.isInitialized) {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             ACTION_PLAY_PAUSE -> controller.togglePlayPause()
             ACTION_NEXT -> controller.next()
@@ -154,8 +181,10 @@ class PlaybackService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        session.isActive = false
-        session.release()
+        if (::session.isInitialized) {
+            session.isActive = false
+            session.release()
+        }
         scope.cancel()
         super.onDestroy()
     }

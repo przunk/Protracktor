@@ -445,9 +445,18 @@ shaped so the move to Room stays mechanical if KSP catches up:
 - **`SchemaSqlTest` checks that a fresh install and a fully migrated database end up identical.**
   Updating `CREATE` after adding a migration is the step everyone forgets, and the symptom — a
   schema that differs between an upgraded phone and a new one — surfaces far from its cause.
-- **Going down recreates rather than refusing to open**, per AGENTS.md §10. Installing an older
-  build over a newer one happens whenever anyone tests from a file, and the default behaviour leaves
-  an app that cannot start at all until its data is cleared by hand.
+- **Unsupported downgrades refuse without deleting data** (C108, 2026-10-15, on
+  `fix/preserve-newer-database`). The previous recreation policy contradicted the current workspace
+  rules and discarded user data. `onDowngrade` now throws before destructive SQL. A read-only
+  `DatabaseAccess` version probe runs before the activity composes its player/ViewModel and before
+  a cold playback service constructs playback. The activity checks on IO and shows PL/EN loading
+  or a refusal with Retry/Close. External-open intents remain pending behind the gate. The service
+  probes only the version (no migration), posts the same explanation linked to the activity and
+  stops without transport/session initialization. Stale scan Stop does not instantiate playback.
+  Preflight neither creates/migrates a file nor invokes Android's destructive default corruption
+  handler. Fresh/current/older schemas retain the existing helper create/upgrade path and progress
+  reporting. No schema bump, destructive reset UI or new dependency. Older installed binaries are
+  not changed: do not install an old destructive build over newer-schema data.
 
 ### What is stored
 

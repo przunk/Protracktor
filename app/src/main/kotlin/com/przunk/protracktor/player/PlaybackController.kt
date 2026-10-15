@@ -70,6 +70,9 @@ class PlaybackController private constructor(private val context: Context) {
     companion object {
         @Volatile private var instance: PlaybackController? = null
 
+        /** A stale scan notification must not start playback or open a database. */
+        internal fun stopExistingScan() { instance?.stopScan() }
+
         fun get(context: Context): PlaybackController =
             instance ?: synchronized(this) {
                 instance ?: PlaybackController(context.applicationContext).also { instance = it }

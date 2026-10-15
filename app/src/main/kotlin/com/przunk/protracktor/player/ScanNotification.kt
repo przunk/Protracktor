@@ -76,6 +76,7 @@ object ScanNotification {
 /** The notification's Stop: the same as the one beside the bar. */
 class ScanStopReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        PlaybackController.get(context).stopScan()
+        PlaybackController.stopExistingScan()
+        ScanNotification.clear(context)
     }
 }
