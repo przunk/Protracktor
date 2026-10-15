@@ -4,7 +4,7 @@ Updated: 2026-10-15 — version 1.3.3, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B49 live History search — focused checks passed; full gate pending, 2026-10-15
+## B49 live History search — full gate passed; APK pending, 2026-10-15
 
 Owner selected `feature/history-live-search` from develop `5954c86`: live literal substring
 filtering across all History by title/author/filename, case-insensitive, with 200 ms debounce,
@@ -18,7 +18,12 @@ early exits to `when` fixes class loading without JDK/dependency changes. Retry 
 Generation/field-callback mutation fails two of nine checks; restored files match SHA-256 sums.
 Final restored focused gate: **35 tests in six suites**, zero failures/errors/skips, 109 s, including
 actual EN/PL History UI and ordinary Search. Host/native SQLite read 10,000 rows/5,000 matches in
-168 ms in the initial storage run; phone latency is **not checked**. Full gate, APK and phone
+168 ms in the initial storage run; phone latency is **not checked**.
+**Checked full gate:** forced run on `27bd9fa` passed in 457 s: **897 tests in 119 suites**, zero
+failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN resource/store checks,
+581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK and temporary
+per-class test isolation; no exclusions or repository build-setting changes. APK and phone
 acceptance remain pending. Evidence: ignored `dist/b49-*`.
 [Plan](PLAN_HISTORY_SEARCH.md). Play release is a later owner-driven step, not started here.
 

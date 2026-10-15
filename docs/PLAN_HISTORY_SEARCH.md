@@ -89,3 +89,14 @@ paging, two real-store and six ordinary Search UI checks. Sources match the save
 checksums. Evidence: ignored `dist/b49-focused-restored*`. Full gate/lint and release APK follow.
 Navigation guards late publication; an IO scan already running at domain exit may finish before
 closing its cursor. Superseding the phrase cancels it cooperatively per row.
+
+## Full-gate checkpoint
+
+Forced full run on implementation commit `27bd9fa` passed in 457 s: **897 tests in 119 suites**,
+zero failures/errors/skips; the unit task actually executed, not cache/up-to-date. Lint XML contains
+zero errors and 72 warnings, unchanged from the accepted base. PL/EN resources/store metadata,
+581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native audio
+checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK; temporary per-class
+test isolation (one worker, 1 GiB heap), no exclusions or repository build-setting changes.
+Evidence: ignored `dist/b49-full-gate*`, including copied JUnit/lint XML and Gradle logs.
+Clean-source release APK and owner phone acceptance remain pending. No merge or Play step.

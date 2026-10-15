@@ -194,8 +194,9 @@ test run. No rebuild was needed for unchanged application sources.
 Device/Android, exact installed build and individual checklist outcomes were not separately
 supplied; no agent-run phone tests are claimed. Earlier pending entries below are historical,
 superseded by overall acceptance, and their scenario lists remain available for further checks.
-Nothing was pushed and master/tags/store are unchanged. B49 History search is only a new wishlist
-request, not an implemented feature or another independently identified tester report.
+Nothing was pushed and master/tags/store are unchanged. At that closeout B49 History search was
+only a wishlist request; its subsequent implementation and pending phone checks are recorded above.
+It is not another independently identified tester report.
 
 ## C107 History entry scroll — pre-acceptance checklist, 2026-10-15
 
