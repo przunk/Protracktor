@@ -2184,6 +2184,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun returnToPlaylist() {
         browseWorkflow.cancelSearch()
+        BrowseReadOwner.begin(_browse) { it.copy(loading = false) }
         if (!_state.value.awayFromPlaylist) return
         stopPlayback()
         randomHistory.clear()

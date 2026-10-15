@@ -48,7 +48,13 @@ synchronously to invalidate queued work; that assertion has been corrected. The 
 also includes four direct ownership checks and is pending. Cancellation/failure reporting policy
 is not redesigned by this stage. Full tests/lint and device acceptance remain pending.
 
-### 2. Back publication — pending
+### 2. Back publication — implemented; focused verification pending
+
+Back now atomically publishes its parent transition before invoking the parent reader. It modifies
+current state instead of publishing a captured complete snapshot afterwards. Each successful
+transition advances the navigation visit; immediate/reentrant results and unrelated fields survive.
+The controlled synchronous-parent regression failed on the old code. Existing search-scope, jump,
+saved-place and local hierarchy contracts remain covered by the workflow suite.
 
 ### 3. Read-ahead ownership — pending
 

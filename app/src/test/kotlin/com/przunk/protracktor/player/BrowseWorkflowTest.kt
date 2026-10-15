@@ -28,6 +28,34 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowseWorkflowTest {
+    @Test fun `author intent revision changes for restored words and identical resubmissions`() = runBlocking {
+        val f = Fixture(this)
+        f.localSearch()
+        val initial = f.workflow.searchRevision
+        f.workflow.setQuery("different")
+        f.workflow.setQuery("typed")
+        assertTrue(f.workflow.searchRevision > initial)
+        val restored = f.workflow.searchRevision
+        f.workflow.setQuery("typed")
+        assertEquals(restored, f.workflow.searchRevision)
+        f.workflow.runSearch()
+        val submitted = f.workflow.searchRevision
+        f.workflow.runSearch()
+        assertTrue(f.workflow.searchRevision > submitted)
+        drain()
+    }
+
+    @Test
+    fun `Back preserves a parent result published synchronously by its reader`() = runBlocking {
+        val f = Fixture(this)
+        f.onAction = { f.browse.update { it.copy(groups = listOf(CatalogueGroup("parent", 2)),
+            query = "updated", loading = false) } }
+        assertTrue(f.workflow.browseBack())
+        assertNull(f.browse.value.openAuthor)
+        assertEquals(listOf(CatalogueGroup("parent", 2)), f.browse.value.groups)
+        assertEquals("updated", f.browse.value.query)
+    }
+
     @Test(timeout = 5_000)
     fun `resubmitting identical inputs owns a distinct request from its predecessor`() = runBlocking {
         val f = Fixture(this)
@@ -414,7 +442,7 @@ class BrowseWorkflowTest {
         val before = f.browse.value.copy(arrivedByJump = true, domain = BrowseDomain.SEARCH, searchScope = SearchScope.Local)
         f.browse.value = before
         assertFalse(f.workflow.browseBack())
-        assertEquals(before.copy(arrivedByJump = false), f.browse.value)
+        assertEquals(before.copy(arrivedByJump = false, navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertTrue(f.events.isEmpty())
     }
 
@@ -425,20 +453,22 @@ class BrowseWorkflowTest {
         f.browse.value = before
         assertTrue(f.workflow.browseBack())
         assertEquals(before.copy(searchScope = SearchScope.Everywhere, tracks = emptyList(),
-            searchMatches = 0, searched = false, liveSearchNeededQuery = false), f.browse.value)
+            searchMatches = 0, searched = false, liveSearchNeededQuery = false,
+            navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertTrue(f.events.isEmpty())
     }
 
     @Test
-    fun `Back from an author requests its format before publishing the parent snapshot`() = runBlocking {
+    fun `Back from an author publishes the parent before requesting its format`() = runBlocking {
         for (format in listOf("Protracker", null)) {
             val f = Fixture(this)
             val before = f.browse.value.copy(openFormat = format)
             f.browse.value = before
-            f.onAction = { assertEquals(before, f.browse.value) }
+            val expected = before.copy(openAuthor = null, tracks = emptyList(), navigationVisit = before.navigationVisit + 1)
+            f.onAction = { assertEquals(expected, f.browse.value) }
             assertTrue(f.workflow.browseBack())
             assertEquals(listOf("format:${format.orEmpty()}"), f.events)
-            assertEquals(before.copy(openAuthor = null, tracks = emptyList()), f.browse.value)
+            assertEquals(expected, f.browse.value)
         }
     }
 
@@ -448,10 +478,11 @@ class BrowseWorkflowTest {
             val f = Fixture(this)
             val before = f.browse.value.copy(openAuthor = null, openCatalogue = f.catalogue.takeIf { hasCatalogue })
             f.browse.value = before
-            f.onAction = { assertSame(before, f.browse.value) }
+            val expected = before.copy(openFormat = null, tracks = emptyList(), navigationVisit = before.navigationVisit + 1)
+            f.onAction = { assertEquals(expected, f.browse.value) }
             assertTrue(f.workflow.browseBack())
             assertEquals(if (hasCatalogue) listOf("catalogue:indexed") else emptyList<String>(), f.events)
-            assertEquals(before.copy(openFormat = null, tracks = emptyList()), f.browse.value)
+            assertEquals(expected, f.browse.value)
         }
     }
 
@@ -461,7 +492,7 @@ class BrowseWorkflowTest {
         val before = f.browse.value.copy(openAuthor = null, openFormat = null)
         f.browse.value = before
         assertTrue(f.workflow.browseBack())
-        assertEquals(before.copy(openCatalogue = null, groups = emptyList()), f.browse.value)
+        assertEquals(before.copy(openCatalogue = null, groups = emptyList(), navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertTrue(f.events.isEmpty())
     }
 
@@ -473,10 +504,11 @@ class BrowseWorkflowTest {
         val rendered = before.copy(folderAt = "Music", query = "renderer result")
         f.renderLevel = { state, at -> assertSame(before, state); assertEquals("Music", at); rendered }
         assertTrue(f.workflow.browseBack())
-        assertSame(rendered, f.browse.value)
+        assertEquals(rendered.copy(navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertEquals(listOf("level:Music"), f.events)
         assertTrue(f.workflow.browseBack())
-        assertEquals(rendered.copy(openFolder = null, tracks = emptyList(), folderAll = emptyList(), subfolders = emptyList()), f.browse.value)
+        assertEquals(rendered.copy(openFolder = null, tracks = emptyList(), folderAll = emptyList(), subfolders = emptyList(),
+            navigationVisit = before.navigationVisit + 2), f.browse.value)
         assertEquals(listOf("level:Music"), f.events)
     }
 
@@ -489,9 +521,9 @@ class BrowseWorkflowTest {
             f.browse.value = before
             assertEquals(domain != BrowseDomain.ROOT, f.workflow.browseBack())
             val expected = when (domain) {
-                BrowseDomain.ROOT -> before
-                BrowseDomain.SEARCH -> before.copy(domain = BrowseDomain.ROOT)
-                else -> before.copy(domain = BrowseDomain.ROOT, tracks = emptyList())
+                BrowseDomain.ROOT -> before.copy(navigationVisit = before.navigationVisit + 1)
+                BrowseDomain.SEARCH -> before.copy(domain = BrowseDomain.ROOT, navigationVisit = before.navigationVisit + 1)
+                else -> before.copy(domain = BrowseDomain.ROOT, tracks = emptyList(), navigationVisit = before.navigationVisit + 1)
             }
             assertEquals(expected, f.browse.value)
             assertTrue(f.events.isEmpty())
@@ -499,23 +531,25 @@ class BrowseWorkflowTest {
     }
 
     @Test
-    fun `a reentrant parent read is still overwritten by Back's captured snapshot`() = runBlocking {
+    fun `a reentrant parent read survives Back publication`() = runBlocking {
         val f = Fixture(this)
         val before = f.browse.value
         f.onAction = { f.browse.update { it.copy(query = "callback", loading = true) } }
         assertTrue(f.workflow.browseBack())
-        assertEquals(before.copy(openAuthor = null, tracks = emptyList()), f.browse.value)
+        assertEquals(before.copy(openAuthor = null, tracks = emptyList(), query = "callback", loading = true,
+            navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertEquals(listOf("format:Protracker"), f.events)
     }
 
     @Test
-    fun `a failed parent read does not publish Back's captured snapshot`() = runBlocking {
+    fun `a failed parent read leaves the parent transition and concurrent fields intact`() = runBlocking {
         val f = Fixture(this)
         val before = f.browse.value
         val failure = IllegalStateException("parent")
         f.onAction = { f.browse.update { it.copy(query = "callback") }; throw failure }
         assertSame(failure, runCatching { f.workflow.browseBack() }.exceptionOrNull())
-        assertEquals(before.copy(query = "callback"), f.browse.value)
+        assertEquals(before.copy(openAuthor = null, tracks = emptyList(), query = "callback",
+            navigationVisit = before.navigationVisit + 1), f.browse.value)
     }
 
     @Test

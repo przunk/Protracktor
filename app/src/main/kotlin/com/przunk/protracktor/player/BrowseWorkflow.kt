@@ -119,7 +119,7 @@ internal class BrowseWorkflow(
         // actually were -- the playlist -- rather than making you climb out of a hierarchy you
         // never climbed into, one press per level.
         if (current.arrivedByJump) {
-            browse.update { it.copy(arrivedByJump = false) }
+            BrowseReadOwner.begin(browse) { it.copy(arrivedByJump = false, loading = false) }
             return false
         }
 
@@ -134,26 +134,36 @@ internal class BrowseWorkflow(
         // out of and wrong for a search you may be coming straight back to. See `docs/WISHLIST.md`
         // B23: back always meaning "leave" is only safe because leaving costs nothing.
         if (current.domain == BrowseDomain.SEARCH && current.searchScope != SearchScope.Everywhere) {
-            browse.update { it.copy(searchScope = SearchScope.Everywhere).withoutStaleResults() }
+            BrowseReadOwner.begin(browse) { it.copy(searchScope = SearchScope.Everywhere).withoutStaleResults() }
             return true
         }
 
-        val next = when {
-            current.openAuthor != null -> current.copy(openAuthor = null, tracks = emptyList())
-                .also { actions.openFormat(current.openFormat.orEmpty()) }
-            current.openFormat != null -> current.copy(openFormat = null, tracks = emptyList())
-                .also { current.openCatalogue?.let(actions::openCatalogue) }
-            current.openCatalogue != null -> current.copy(openCatalogue = null, groups = emptyList())
+        val parentRead: (() -> Unit)? = when {
+            current.openAuthor != null -> { { actions.openFormat(current.openFormat.orEmpty()) } }
+            current.openFormat != null -> current.openCatalogue?.let { { actions.openCatalogue(it) } }
+            else -> null
+        }
+        val move: (BrowseState) -> BrowseState = when {
+            current.openAuthor != null -> { state -> state.copy(openAuthor = null, tracks = emptyList()) }
+            current.openFormat != null -> { state -> state.copy(openFormat = null, tracks = emptyList()) }
+            current.openCatalogue != null -> { state -> state.copy(openCatalogue = null, groups = emptyList(), loading = false) }
             // Up the folder's own tree first, a level at a time, and out of it only from its top.
             current.openFolder != null && LocalTree.parent(current.folderAt, current.folderRoot) != null ->
-                actions.localLevel(current, LocalTree.parent(current.folderAt, current.folderRoot)!!)
-            current.openFolder != null -> current.copy(openFolder = null, tracks = emptyList(), folderAll = emptyList(), subfolders = emptyList())
+                { state -> actions.localLevel(state, LocalTree.parent(current.folderAt, current.folderRoot)!!) }
+            current.openFolder != null -> { state -> state.copy(openFolder = null, tracks = emptyList(),
+                folderAll = emptyList(), subfolders = emptyList(), loading = false) }
             // Search keeps its results and its query; every other domain drops them.
-            current.domain == BrowseDomain.SEARCH -> current.copy(domain = BrowseDomain.ROOT)
-            current.domain != BrowseDomain.ROOT -> current.copy(domain = BrowseDomain.ROOT, tracks = emptyList())
-            else -> return false
+            current.domain == BrowseDomain.SEARCH -> { state -> state.copy(domain = BrowseDomain.ROOT, loading = false) }
+            current.domain != BrowseDomain.ROOT -> { state -> state.copy(domain = BrowseDomain.ROOT,
+                tracks = emptyList(), loading = false) }
+            else -> {
+                BrowseReadOwner.begin(browse) { it.copy(loading = false) }
+                return false
+            }
         }
-        browse.update { next }
+        // An immediate parent read may finish inside this callback; never publish a child snapshot after it.
+        val owner = BrowseReadOwner.begin(browse, move)
+        if (owner.matches(browse.value)) parentRead?.invoke()
         return true
     }
 
