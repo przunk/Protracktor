@@ -344,15 +344,26 @@ for the whole project and blocked an upload; it is 199 as of 2026-09-03.
 Outside a git checkout it falls back to 1. That is wrong and harmless: nothing built that way is
 going to a store.
 
-**`versionName` is typed by hand and means something.**
+**`versionName` is selected for a release and set by `scripts/release.sh`.**
 
 | | when |
 | --- | --- |
-| **patch** — 0.3.**1** | a batch of fixes handed over |
-| **minor** — 0.**4**.0 | a round of work that added capability |
+| **patch** — 0.3.**1** | a released batch of fixes |
+| **minor** — 0.**4**.0 | a released round of new capabilities |
 | **major** — **1**.0.0 | reserved for "publishable" |
 
-Bumped at **hand-over**, which is when the number gets used, not at merge.
+Owner decision, **2026-10-15**: bump **only during the release procedure**, not at a test APK
+handoff, feature/fix commit or merge. This supersedes the previous handoff-bump wording. Between
+releases the literal remains the latest prepared release's version. Test APKs are identified by
+their Git-derived versionCode and source SHA, plus timestamp/dirty marker in the filename.
+
+The prepared baseline is **1.1.0** and the next selected feature release is **1.2.0**. The
+release script checks the version, creates its version commit/tag and builds the AAB from that
+point; do not manually raise the literal in advance. Do not use an extra release-number bump
+merely to satisfy the script after incorrectly bumping test builds. The approved unpublished
+history correction is recorded in [Version history reconciliation](VERSION_HISTORY_REWRITE.md).
+Existing APK/AAB versions, filenames and SHA-256 hashes are historical evidence, not strings to
+rewrite. A local tag/prepared AAB is separate from a GitHub push or Play upload/publication.
 
 **Bumping the minor on every merge was considered and rejected.** There were about twenty merges on
 2026-09-03 alone, several of them documentation. It would have reached 0.22.0 in a day and told
@@ -361,7 +372,7 @@ behind it was right, though: something *should* move on every merge. That someth
 versionCode, and now it does.
 
 **Artifact names are read out of the artifact**, with `aapt2 dump badging`, rather than scraped from
-`build.gradle.kts`. There is no number in the source to scrape any more, and asking the APK what it
+`build.gradle.kts`. There is no literal versionCode in the source to scrape, and asking the APK what it
 is cannot disagree with what it is. A bundle cannot be asked, so `build-bundle.sh` recomputes the
 commit count the same way Gradle does — the two expressions have to agree, and the script says so.
 

@@ -1,8 +1,27 @@
 # Status
 
-Updated: 2026-10-15 — version 1.4.1, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-15 — release baseline 1.1.0 on the history-cleanup candidate, schema version 23.
+Develop still has the original history until validation and guarded reference promotion finish.
+versionCode is the commit count; the next selected release is 1.2.0, not prepared/published here.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Release-version history reconciliation — candidate validation, 2026-10-15
+
+The owner approved correcting unpublished test-version bumps and the project AGENTS version rule.
+Scope: 63 commits after immutable `v1.1.0`, original develop `16bd60d`. Candidate `eca4c8d`
+normalizes only `app/build.gradle.kts`'s versionName to 1.1.0. All 63 tree/metadata/ordered-parent
+pairs pass verification; 55 hashes change, eight remain identical. The graph retains 1193 commits.
+Three negative checks reject an unremoved trial version, unrelated README edit and reordered merge
+parents. Current application source differs only in versionName; schema, signing and runtime code
+are unchanged. Full application tests/lint are pending. No new APK or release is prepared here.
+The original graph is retained in an archive ref and a verified Git bundle. Master, tags, remote
+refs and other worktrees are untouched; affected completed task branches await guarded promotion.
+[Procedure and commit map](VERSION_HISTORY_REWRITE.md).
+
+All dated APK, test and integration records below retain their original numbers and SHA values.
+They describe the original built/tested history, preserved in the archive. Do not interpret those
+old hashes as the rewritten branch tips or rename an APK to match rewritten source. Use the map.
 
 ## B49 live History search — owner accepted and merged, 2026-10-15
 

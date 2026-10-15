@@ -106,8 +106,18 @@ the readable one. Diagnose on debug, judge on release.
 `docs/BUILD.md` has the scheme. The short of it:
 
 - **`versionCode` is the commit count** and nobody touches it. It moves on every merge by itself.
-- **`versionName` is typed and means something** — patch for a batch of fixes, minor for a round of
-  work that added capability, major reserved for "publishable". Bump it at hand-over, not at merge.
+- **`versionName` changes only in the release procedure**, using `scripts/release.sh` with the
+  owner-selected release version. Keep the latest prepared release's name during feature/fix work
+  and test APK handoffs. Do not advance it for a branch, merge or test build. Patch/minor/major
+  describe releases, not individual development iterations.
+- **Test APK identity is versionCode + source SHA**, with timestamp and `dirty` marker in the
+  artifact name where applicable. Historical built APK versions and hashes remain evidence;
+  never relabel them after a history rewrite.
+
+Owner decision, 2026-10-15: this replaces the previous handoff-bump rule. The prepared release
+baseline is 1.1.0; the next selected feature release is 1.2.0. Only the release procedure creates
+its release-version commit and tag. A prepared tag/AAB does not establish GitHub push or Play
+publication; those states are recorded separately.
 
 The owner asked for a minor bump per merge. It was talked through and rejected for a reason worth
 keeping: twenty merges in a day would put it at 0.22.0 by evening and say nothing a timestamp does

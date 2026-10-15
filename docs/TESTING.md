@@ -172,6 +172,14 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
+## Version-history reconciliation — candidate checks, 2026-10-15
+
+The owner approved normalizing unpublished test-version bumps back to release baseline 1.1.0.
+63 old/new commit pairs pass tree, metadata and ordered-parent checks; commit count stays 1193.
+Three deliberate verifier mutations are rejected. Full application tests/lint follow on the
+candidate; this is not a new phone test or a new APK. Dated records below retain the actual original
+artifact versions and SHA values; see the [rewrite map and provenance](VERSION_HISTORY_REWRITE.md).
+
 ## C108 database compatibility guard — integration approved, 2026-10-15
 
 After the trial handoff the owner authorized integration; merged at `8f3ef56`. Its tracked tree

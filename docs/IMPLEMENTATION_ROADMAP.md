@@ -2,6 +2,9 @@
 
 Updated: 2026-10-15. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
+The owner-approved unpublished version-history correction restores release baseline 1.1.0;
+the next selected release is 1.2.0. Historical IDs/SHAs below refer to the archived original graph,
+not newly built artifacts. [Commit map and validation](VERSION_HISTORY_REWRITE.md).
 Completed tasks are excluded. Historical notes are reconciled where later records establish
 completion; uncertain coverage remains explicitly marked for checking.
 
