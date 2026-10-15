@@ -1,9 +1,7 @@
-From user feedback:
-
-- Played-before marks after 5 seconds or a natural end, discreetly below row status icons.
-- Bookmark author/game folders; undo removal from Saved places.
-- Random keeps heard history after filter changes; filters refresh correctly.
-- Browse/Web disabled behind the return-choice overlay.
-- Learned titles in Browse/Random without reordering.
-
-Also: archive request identification; web PWA installation/offline startup, iOS audio-session and playback-control layout improvements.
+New features and fixes, including user feedback:
+- Settings: Original, Narrow and Mono stereo mix.
+- A notification heart adds the track to the selected playlist and saves it immediately.
+- Up to 3 recent search suggestions matching what you start typing.
+- Live History search; each visit starts at the top.
+- Fixes for audio when connecting Bluetooth, playlist saving and switching, and search.
+- Preserve data instead of resetting a database with a newer schema.
