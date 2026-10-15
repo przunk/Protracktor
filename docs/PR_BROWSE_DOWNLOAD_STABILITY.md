@@ -42,10 +42,11 @@ to finish this edge-case correction; it is not a verification pass. The final fo
 again from the corrected committed candidate.
 Independent catalogue/storage counts remain independent of navigation.
 
-Checked partially: the first focused run executed 43 tests, with 42 passing and one old assertion
+Checked: the final navigation-focused run passed all 47 tests in 116.2 s
+(`/tmp/protracktor-Protracktor-browse-final.log`). The first focused run executed 43 tests, with 42 passing and one old assertion
 expecting folder selection to remain deferred until after scan start. Selection now registers
-synchronously to invalidate queued work; that assertion has been corrected. The full focused rerun
-also includes four direct ownership checks and is pending. Cancellation/failure reporting policy
+synchronously to invalidate queued work; that assertion has been corrected. The final focused rerun
+also includes four direct ownership checks. Cancellation/failure reporting policy
 is not redesigned by this stage. Full tests/lint and device acceptance remain pending.
 
 ### 2. Back publication — implemented; focused verification pending
@@ -56,7 +57,14 @@ transition advances the navigation visit; immediate/reentrant results and unrela
 The controlled synchronous-parent regression failed on the old code. Existing search-scope, jump,
 saved-place and local hierarchy contracts remain covered by the workflow suite.
 
-### 3. Read-ahead ownership — pending
+### 3. Read-ahead ownership — implemented; focused verification pending
+
+Retire the previous generation before checking for missing bytes. Cancel after retiring ownership,
+reject obsolete/cancelled completions and assign a lazy job before starting it. Empty and fully
+held selections now cancel previous work. Clear retires the generation too; an immediate
+cancellation callback cannot overwrite a preparation started reentrantly. Existing parallelism,
+consume-once semantics and four/eight-megabyte limits remain unchanged. Duplicate candidates are
+read once per request. The old implementation fails the controlled empty-selection regression.
 
 ### 4. Disk-cache transactions — pending
 
