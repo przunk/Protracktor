@@ -6,7 +6,9 @@ package com.przunk.protracktor.player
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -25,39 +27,39 @@ import kotlinx.coroutines.launch
  */
 internal class HistoryReads<T>(
     private val scope: CoroutineScope,
-    private val count: suspend () -> Int,
-    private val page: suspend (offset: Int, limit: Int) -> List<T>,
+    private val read: suspend (String, Int) -> HistoryPage<T>,
     private val clear: suspend () -> Unit,
+    private val isCurrent: (HistoryRequest) -> Boolean,
     private val show: (Shown<T>) -> Unit,
+    private val failed: (HistoryRequest, Throwable) -> Unit,
 ) {
-    /** What History should show: how many tunes it holds, which page, and that page's tunes. */
-    data class Shown<T>(val total: Int, val page: Int, val rows: List<T>)
+    data class Shown<T>(val total: Int, val page: Int, val rows: List<T>, val request: HistoryRequest = HistoryRequest())
 
     private val newest = AtomicLong(0)
     private var running: Job? = null
 
-    /** History opened: its count, and its newest page. */
-    fun open() = request { ticket ->
-        val total = count()
-        val rows = page(HistoryPages.offset(0, total), HistoryPages.SIZE)
-        if (newest.get() == ticket) show(Shown(total, 0, rows))
+    fun open(request: HistoryRequest = HistoryRequest()) = load(request, 0, false)
+    fun filter(request: HistoryRequest) = load(request, 0, true)
+    fun turn(wanted: Int, total: Int, request: HistoryRequest = HistoryRequest()) =
+        load(request, HistoryPages.clamp(wanted, total), false)
+
+    private fun owns(ticket: Long, request: HistoryRequest) = newest.get() == ticket && isCurrent(request)
+
+    private fun load(request: HistoryRequest, page: Int, debounce: Boolean) = launchRequest(request) { ticket ->
+        if (debounce) delay(200)
+        if (!owns(ticket, request)) return@launchRequest
+        val result = read(request.query, page)
+        if (owns(ticket, request)) show(Shown(result.total, result.page, result.rows, request))
     }
 
-    /** Page [wanted] of the [total] already counted. */
-    fun turn(wanted: Int, total: Int) = request { ticket ->
-        val shown = HistoryPages.clamp(wanted, total)
-        val rows = page(HistoryPages.offset(shown, total), HistoryPages.SIZE)
-        if (newest.get() == ticket) show(Shown(total, shown, rows))
-    }
-
-    /** Everything forgotten, and nothing already on its way allowed to bring any of it back. */
     fun clearAll(
+        request: HistoryRequest = HistoryRequest(),
         clearAction: suspend () -> Unit = clear,
         onFailure: (Throwable) -> Unit = { throw it },
-    ) = request { ticket ->
+    ) = launchRequest(request, checkAtStart = false) { ticket ->
         try {
             clearAction()
-            if (newest.get() == ticket) show(Shown(0, 0, emptyList()))
+            if (owns(ticket, request)) show(Shown(0, 0, emptyList(), request))
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
@@ -65,9 +67,32 @@ internal class HistoryReads<T>(
         }
     }
 
-    private fun request(read: suspend (Long) -> Unit): Job {
+    private fun launchRequest(request: HistoryRequest, checkAtStart: Boolean = true, work: suspend (Long) -> Unit): Job {
         val ticket = newest.incrementAndGet()
         running?.cancel()
-        return scope.launch { read(ticket) }.also { running = it }
+        // Assign before Main.immediate can complete or reenter.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                if (!checkAtStart || owns(ticket, request)) work(ticket)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                if (owns(ticket, request)) failed(request, error)
+            } finally {
+                if (newest.get() == ticket) running = null
+            }
+        }
+        running = job
+        job.start()
+        return job
+    }
+}
+
+internal data class HistoryRequest(val query: String = "", val visit: Long = 0) {
+    fun matches(state: BrowseState) = state.domain == BrowseDomain.HISTORY &&
+        state.historyQuery.trim() == query && state.historyVisit == visit
+
+    companion object {
+        fun of(state: BrowseState) = HistoryRequest(state.historyQuery.trim(), state.historyVisit)
     }
 }

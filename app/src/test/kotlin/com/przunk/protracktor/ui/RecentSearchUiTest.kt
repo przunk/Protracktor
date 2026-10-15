@@ -92,7 +92,7 @@ class RecentSearchUiTest {
                     onQueryChange = workflow::setQuery, onScope = workflow::setSearchScope,
                     onToggleCatalogue = {}, onTogglePlatform = {}, onSearch = workflow::runSearch,
                     recentQueries = recent, onSearchSuggestion = workflow::searchFor,
-                    onClearHistory = {}, playingId = null, loadingId = null,
+                    onClearHistory = {}, onHistoryQueryChange = {}, playingId = null, loadingId = null,
                     onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
                     onSendToWeb = {}, onPlay = {}, onAdd = {})
             }

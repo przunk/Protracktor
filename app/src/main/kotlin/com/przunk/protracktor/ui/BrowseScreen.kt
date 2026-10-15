@@ -123,6 +123,7 @@ fun BrowseScreen(
     onSearchSuggestion: (String) -> Unit,
     onClearHistory: () -> Unit,
     onHistoryPage: (Int) -> Unit = {},
+    onHistoryQueryChange: (String) -> Unit,
     playingId: String?,
     loadingId: String?,
     /**
@@ -280,6 +281,7 @@ fun BrowseScreen(
                     onSendToWeb = onSendToWeb,
                     onClearHistory = onClearHistory,
                     onHistoryPage = onHistoryPage,
+                    onHistoryQueryChange = onHistoryQueryChange,
                     onPlay = onPlay,
                     onAdd = onAdd,
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
@@ -1073,75 +1075,80 @@ private fun HistoryDomain(
     onSendToWeb: (List<TrackRef>) -> Unit,
     onClearHistory: () -> Unit,
     onHistoryPage: (Int) -> Unit,
+    onHistoryQueryChange: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
-    // The visit-keyed subtree also resets the playing-row observer, so arrival is not a change.
-    val scroll = rememberBrowseScroll()
-    if (browse.loading) {
-        Loading()
-        return
-    }
-    if (browse.historyTotal == 0) {
-        Text(
-            text = stringResource(R.string.history_empty),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(24.dp),
-        )
-        return
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
+        HistoryQueryField(browse.historyQuery, onHistoryQueryChange)
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            TextButton(onClick = onClearHistory) {
+            TextButton(onClick = onClearHistory,
+                enabled = browse.historyTotal > 0 || browse.historyQuery.isNotBlank()) {
                 IconLabel(PlayerIcons.Remove, stringResource(R.string.action_clear_history))
             }
         }
-        // **A hundred at a time, and the way on outside the list** (the owner, 2026-09-26): here,
-        // above it, so the next page is one press from wherever the list is scrolled. Only when
-        // there is more than one page.
-        val total = browse.historyTotal
-        if (HistoryPages.count(total) > 1) {
-            val page = browse.historyPage
-            val range = HistoryPages.range(page, total)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = { onHistoryPage(page - 1) }, enabled = page > 0) {
-                    IconLabel(PlayerIcons.ChevronLeft, stringResource(R.string.history_newer))
+        // Query changes reset results/follow state without replacing the focused text field.
+        key(browse.historyQuery) {
+            val scroll = rememberBrowseScroll()
+            when {
+                browse.loading -> Loading()
+                browse.historyReadFailed -> Column(Modifier.padding(24.dp)) {
+                    Text(stringResource(R.string.notice_history_read_failed), color = MaterialTheme.colorScheme.error)
+                    LabelledAction(PlayerIcons.Refresh, stringResource(R.string.history_retry),
+                        { onHistoryQueryChange(browse.historyQuery) }, slim = true)
                 }
-                Text(
-                    text = stringResource(R.string.history_page_range, range.first, range.last, total),
+                browse.historyTotal == 0 -> Text(
+                    text = stringResource(if (browse.historyQuery.isBlank()) R.string.history_empty else R.string.history_no_matches),
                     style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(24.dp),
                 )
-                TextButton(onClick = { onHistoryPage(page + 1) }, enabled = page < HistoryPages.count(total) - 1) {
-                    IconLabel(PlayerIcons.ChevronRight, stringResource(R.string.history_older), iconAfter = true)
+                else -> {
+                    // Paging stays above the list, reachable after scrolling.
+                    val total = browse.historyTotal
+                    if (HistoryPages.count(total) > 1) {
+                        val page = browse.historyPage
+                        val range = HistoryPages.range(page, total)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TextButton(onClick = { onHistoryPage(page - 1) }, enabled = page > 0) {
+                                IconLabel(PlayerIcons.ChevronLeft, stringResource(R.string.history_newer))
+                            }
+                            Text(
+                                text = stringResource(R.string.history_page_range, range.first, range.last, total),
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { onHistoryPage(page + 1) }, enabled = page < HistoryPages.count(total) - 1) {
+                                IconLabel(PlayerIcons.ChevronRight, stringResource(R.string.history_older), iconAfter = true)
+                            }
+                        }
+                    }
+                    Selectable(
+                        browse = browse,
+                        scroll = scroll,
+                        playlistName = playlistName,
+                        playingId = playingId,
+                        loadingId = loadingId,
+                        onPlay = onPlay,
+                        onAdd = onAdd,
+                        onAddToOtherPlaylist = onAddToOtherPlaylist,
+                        onShowNeighbours = onShowNeighbours,
+                        onShareFile = onShareFile,
+                        onShareAudio = onShareAudio,
+                        onShareLink = onShareLink,
+                        onSendToWeb = onSendToWeb,
+                    )
                 }
             }
         }
-        Selectable(
-            browse = browse,
-            scroll = scroll,
-            playlistName = playlistName,
-            playingId = playingId,
-            loadingId = loadingId,
-            onPlay = onPlay,
-            onAdd = onAdd,
-            onAddToOtherPlaylist = onAddToOtherPlaylist,
-            onShowNeighbours = onShowNeighbours,
-            onShareFile = onShareFile,
-            onShareAudio = onShareAudio,
-            onShareLink = onShareLink,
-            onSendToWeb = onSendToWeb,
-        )
     }
 }
 

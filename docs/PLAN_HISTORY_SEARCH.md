@@ -61,3 +61,31 @@ two new test expressions (26 s, no test result); both were corrected before the 
 Bypassing matching, page offset and clamping failed all six new checks (99 s). Production source
 was restored and matched its saved SHA-256 sum. Evidence: ignored `dist/b49-storage-*`.
 The storage feature is not wired to UI yet; final restored/full gates and phone checks remain pending.
+
+## Integration checkpoints
+
+`HistoryBrowser` shares the production Browse transitions with the Compose tests. `HistoryReads`
+captures phrase/visit ownership, cancels/debounces obsolete work and guards uncooperative late
+reads/errors. Production reads wait for the History writer's clear barrier. Input and result scopes
+are separate: query changes reset result scroll/follow state without disposing the focused field.
+Current read failures clear loading, explain the failure and permit a labelled same-phrase retry.
+No playback queue, History recording policy, general Search or WWW change is intended.
+
+First integration run executed 34 checks: 18 data/coordinator checks passed; 16 UI checks could not
+load `BrowseScreenKt` (`ClassFormatError`, illegal `<anonymous>` method), rather than demonstrating
+screen behaviour. Replacing early exits inside the keyed Compose block with `when` branches
+removed the class-load failure with the same JDK/dependencies. The retry passed all 34 checks in
+six suites, zero failures/errors/skips, 123 s. A Polish UI check was then added.
+
+Temporarily bypassing request generation and disconnecting the real text field's change callback
+failed two of nine selected checks: identical-input stale completion and the actual Browse field
+gesture path. Seven checks passed; zero errors/skips, 114 s. Both production files were restored
+and matched saved SHA-256 sums. Evidence: ignored `dist/b49-browser-*`. Final restored/full gates
+and the release APK remain pending at this checkpoint; no phone result is inferred.
+
+**Restored focused gate:** 35 checks passed in six suites, zero failures/errors/skips, 109 s:
+eight History browser, four existing read-ordering, 11 actual History UI (EN/PL), four matching/
+paging, two real-store and six ordinary Search UI checks. Sources match the saved restoration
+checksums. Evidence: ignored `dist/b49-focused-restored*`. Full gate/lint and release APK follow.
+Navigation guards late publication; an IO scan already running at domain exit may finish before
+closing its cursor. Superseding the phrase cancels it cooperatively per row.

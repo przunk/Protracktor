@@ -4,12 +4,22 @@ Updated: 2026-10-15 — version 1.3.3, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B49 live History search — implementation selected, 2026-10-15
+## B49 live History search — focused checks passed; full gate pending, 2026-10-15
 
 Owner selected `feature/history-live-search` from develop `5954c86`: live literal substring
 filtering across all History by title/author/filename, case-insensitive, with 200 ms debounce,
-paging/counts and unchanged playback. Schema stays 23; a bounded cursor scan avoids incomplete
-Unicode matching without an upgrade. Implementation/verification and phone checks are pending.
+paging/counts and unchanged playback. Trial version 1.4.0; schema stays 23. A bounded cursor scan
+supports Unicode case matching without an upgrade. Input stays mounted while a query-keyed result
+subtree resets scroll/follow; page switches preserve positions. No-match, empty and failed reads
+have distinct feedback, with labelled retry. Playback/History recording/general Search are unchanged.
+**Checked:** storage/schema/qualification gate 44 tests; storage mutation fails all six new checks.
+Initial integration had 16 UI class-load failures out of 34 (`ClassFormatError`); changing keyed
+early exits to `when` fixes class loading without JDK/dependency changes. Retry passed 34 checks.
+Generation/field-callback mutation fails two of nine checks; restored files match SHA-256 sums.
+Final restored focused gate: **35 tests in six suites**, zero failures/errors/skips, 109 s, including
+actual EN/PL History UI and ordinary Search. Host/native SQLite read 10,000 rows/5,000 matches in
+168 ms in the initial storage run; phone latency is **not checked**. Full gate, APK and phone
+acceptance remain pending. Evidence: ignored `dist/b49-*`.
 [Plan](PLAN_HISTORY_SEARCH.md). Play release is a later owner-driven step, not started here.
 
 ### C108 — destructive database downgrade policy (separate code finding)

@@ -145,6 +145,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
+| 2026-10-15 | Owner feature request and decision | Filter the History list live while typing, across all entries, without replacing the active queue | B49 on `feature/history-live-search`; host evidence and pending phone checklist in `PLAN_HISTORY_SEARCH.md`; not an independently identified tester report |
 | 2026-10-15 | Owner observation and decision | History appears below the top on entry; every new visit should start at the top | C107; three actual Browse UI checks fail before correction; existing C106 branch selected explicitly, phone retest pending |
 | 2026-10-13 | Owner testing and presentation decision | During a heart save, Next and seek geometry move into its space; a second tap can skip a track. Keep the heart present; share the dock subtitle, bold title and use a flat P. Search field reported acceptable. | B48 follow-up in `STATUS.md` / `PLAN_NOTIFICATION_HEART.md`; restored 852-test gate/lint passed, 1.3.0 (1162) APK ready, phone retest pending; no inferred full B46 acceptance |
 | 2026-10-13 | Owner testing after combined B48+B46 APK handoff | Heart moves into a missing Previous slot; integrated search magnifier was changed to a labelled button; suggestions should be plain text autocomplete rather than an icon-button section | B48/B46 follow-up in `STATUS.md` and their plans; corrected 835-test gate/lint passed, replacement 1.3.0 (1158) APK ready, phone acceptance pending |
@@ -170,6 +171,17 @@ Stereo mixing renews B6 rather than creating a duplicate.
 The first two 2026-10-06 defects were explicitly attributed to different users; the third came
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
+
+## B49 live History search — phone checks pending, 2026-10-15
+
+Test title/author/filename phrases including mixed case, non-ASCII case, literal `%`/`_`, and an
+entry beyond the first hundred. Results/counts cover the whole History in newest-first order.
+Check fast edits, paging, clearing input, no matches versus empty History, keyboard focus during
+loading, PL/EN, retry after read failure and leave/reentry. Filtering must not interrupt audio or
+replace the playing queue. Selecting a result still captures the displayed page as before.
+Clear History while a filter is pending: all entries must disappear without late rows returning.
+[Contract, host evidence and full checklist](PLAN_HISTORY_SEARCH.md). Host UI/native SQLite checks
+are not phone timing or behaviour evidence; owner acceptance remains pending.
 
 ## C105–C107 — overall owner acceptance, 2026-10-15
 
