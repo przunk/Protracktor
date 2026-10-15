@@ -134,3 +134,17 @@ changes documentation only. No app artifact or real release was built, and nothi
 Master `da4569b`, every tag and every remote-tracking ref stayed unchanged; `v1.2.0` is absent.
 The earlier pending-approval checkpoint is superseded for integration only, not for diagnosing
 the still-open Compose idle issue or claiming device tests.
+
+## Follow-up: concise console output — 2026-10-15, in progress
+
+The owner completed an ordinary `--check` with 910 passing tests in 556 seconds, then requested
+the previous concise terminal style. Streaming every successful test and auxiliary-check detail
+was excessive. Scope is console presentation only: retain stage names, 30-second elapsed messages,
+exit results and full file logs; show a bounded diagnostic excerpt only on failure/timeout.
+Do not change class isolation, forced execution, deadlines, process cleanup or release transitions.
+This is not a speed optimization and does not justify skipping the full release gate.
+
+**Checked before correction:** three real-supervisor regressions fail: successful child output
+leaks to the console, 2,000 passed cases flood it, and failure diagnostics are unbounded. The
+existing log-retention and status/process tests remain the safety contract. Work is on
+`fix/concise-check-output`, not merged; implementation and verification remain pending.
