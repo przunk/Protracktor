@@ -4,7 +4,7 @@ Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C107 History entry scroll — regression checks prepared, 2026-10-15
+## C107 History entry scroll — focused checks passed; full gate pending, 2026-10-15
 
 The owner observed History opening below the top and requested that every new entry start at
 the top. Exact installed build/device were not separately supplied. History resets the data page
@@ -13,7 +13,14 @@ C106. Scope: reset per new visit, retain page positions within that visit and le
 unchanged. The owner explicitly selected the existing `fix/search-request-ownership` branch.
 **Checked before correction:** all three real Browse Compose regressions execute and fail by
 assertion at the missing top row after reopening, zero errors/skips, 229 s cold Gradle run.
-Paging assertions before the new visit pass. The fix and replacement APK are pending here.
+Paging assertions before the new visit pass. The cache-only correction then passed 67 focused
+checks, but a fourth UI check exposed a simultaneous playing-key change overriding the new visit
+(one of four failed). The final correction keys the History subtree by an in-memory visit counter,
+resetting its scroll cache and treating the playing row as arrival rather than a track change.
+Other Browse domains retain their cache; page/row/loading updates within the visit do not reset it.
+**Checked final focused run:** 68 tests in six suites, zero failures/errors/skips, 119 s.
+The trial declares 1.3.3; schema/versionCode policy are unchanged. Full gate and replacement APK
+remain pending here. Evidence: ignored `dist/c107-*`.
 No phone retest, merge or push is claimed. [Analysis](PR_C107_HISTORY_ENTRY_SCROLL.md).
 
 ## C106 search request ownership — release APK ready; phone acceptance pending, 2026-10-15

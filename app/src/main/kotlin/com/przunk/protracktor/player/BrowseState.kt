@@ -158,6 +158,8 @@ data class BrowseState(
     // What has been played: how much of it, and which hundred is on screen (`HistoryPages`)
     val historyTotal: Int = 0,
     val historyPage: Int = 0,
+    /** A new explicit visit resets History scroll without resetting on page/data updates. */
+    val historyVisit: Long = 0,
 
     // Search
     val query: String = "",

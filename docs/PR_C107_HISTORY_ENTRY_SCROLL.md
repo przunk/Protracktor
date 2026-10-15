@@ -29,6 +29,24 @@ survive within the current visit. Zero errors/skips; the cold Gradle run took 22
 ignored `dist/c107-regression-before.log` and `.xml`. Implementation, full gate and replacement
 release are pending at this checkpoint. No phone reproduction or successful phone retest is claimed.
 
+## Implementation
+
+`BrowseNavigation.enteringDomain` advances the in-memory `historyVisit` only for History.
+The visit keys the entire `HistoryDomain` subtree, which remembers its own `BrowseScroll` before
+any loading/empty returns. Explicit reentry creates a fresh cache even if loading completes in the same UI turn;
+page/row updates keep the current one. Leaving/recreating the view also starts at the top.
+Catalogue/folder/Search caches stay in the enclosing Browse session. No changes to data reads,
+playback, dependencies or schema; the trial declares 1.3.3 with the usual Git-based versionCode.
+The initial cache-only correction passed 67 focused checks in six suites, zero failures/errors/skips,
+in 144 s. A fourth UI regression then exposed a concurrent playing-key change overriding the fresh
+list: one of four checks failed by assertion, zero errors/skips, 97 s. Therefore the visit must
+also reset the playing-row observer; arrival is not a track change. Evidence: ignored
+`dist/c107-first-focused-results/`, `dist/c107-focused-after.log`, `dist/c107-entry-follow-before*`.
+**Checked final focused run:** 68 checks in six suites passed, zero failures/errors/skips, 119 s:
+four actual History UI checks, Browse navigation/scroll/workflow, History reads and recent-search
+UI. Evidence: ignored `dist/c107-focused-final.log` and `dist/c107-focused-final-results/`.
+Full gate/lint and release artifact remain pending at this checkpoint; phone behaviour is not checked.
+
 ## Phone checklist
 
 1. Open History, scroll down, return to Browse root and open History again. The newest row should

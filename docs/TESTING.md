@@ -145,6 +145,7 @@ Detailed defect records live in `STATUS.md`; this is an index, not a second set 
 
 | Recorded | Source | Report | Tracking |
 | --- | --- | --- | --- |
+| 2026-10-15 | Owner observation and decision | History appears below the top on entry; every new visit should start at the top | C107; three actual Browse UI checks fail before correction; existing C106 branch selected explicitly, phone retest pending |
 | 2026-10-13 | Owner testing and presentation decision | During a heart save, Next and seek geometry move into its space; a second tap can skip a track. Keep the heart present; share the dock subtitle, bold title and use a flat P. Search field reported acceptable. | B48 follow-up in `STATUS.md` / `PLAN_NOTIFICATION_HEART.md`; restored 852-test gate/lint passed, 1.3.0 (1162) APK ready, phone retest pending; no inferred full B46 acceptance |
 | 2026-10-13 | Owner testing after combined B48+B46 APK handoff | Heart moves into a missing Previous slot; integrated search magnifier was changed to a labelled button; suggestions should be plain text autocomplete rather than an icon-button section | B48/B46 follow-up in `STATUS.md` and their plans; corrected 835-test gate/lint passed, replacement 1.3.0 (1158) APK ready, phone acceptance pending |
 | 2026-10-13 | App-user request after testing, relayed by owner | Add a heart action to the player notification for saving the playing track to a playlist | B48/Q16; implemented on task branch: add-only, immediately save all selected-playlist edits; combined host gate passed, phone acceptance pending |
@@ -169,6 +170,15 @@ Stereo mixing renews B6 rather than creating a duplicate.
 The first two 2026-10-06 defects were explicitly attributed to different users; the third came
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
+
+## C107 History entry scroll — phone checks pending, 2026-10-15
+
+Owner feedback, not an independently identified tester. Exact installed build/device were not
+separately supplied. Test a new History entry after scrolling, via Browse root/another domain and
+after closing Browse. Each visit should start at the newest row with zero offset. Page changes
+within one visit should retain their positions; the next visit resets all History page positions.
+[Evidence and complete checklist](PR_C107_HISTORY_ENTRY_SCROLL.md). The trial includes pending
+C105 and C106; no acceptance of any branch is inferred from the new host tests.
 
 ## C106 search ownership — code-review correction, phone checks pending, 2026-10-15
 

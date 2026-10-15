@@ -21,9 +21,8 @@ object BrowseNavigation {
      * then rendered the deepest level still set with an emptied list underneath it -- a folder
      * view with nothing in it, or nothing at all.
      *
-     * Note what this does **not** do: it says nothing about scroll position. Browse remembers that
-     * per level for the life of a session (`docs/BACKLOG.md` A20), and the two rules are opposites
-     * that must both hold -- descend and return keeps your place, leaving and re-entering does not.
+     * Scroll positions remain UI-owned: returning to a catalogue level retains its place (A20).
+     * An explicit History entry starts a new scroll visit; paging does not (C107).
      */
     fun enteringDomain(current: BrowseState, domain: BrowseDomain): BrowseState = current.copy(
         domain = domain,
@@ -35,6 +34,7 @@ object BrowseNavigation {
         tracks = emptyList(),
         historyTotal = 0,
         historyPage = 0,
+        historyVisit = if (domain == BrowseDomain.HISTORY) current.historyVisit + 1 else current.historyVisit,
         folderUnscanned = false,
         folderStale = false,
         // A jump is a place you were put, not one you walked to. Choosing a domain by hand ends it.

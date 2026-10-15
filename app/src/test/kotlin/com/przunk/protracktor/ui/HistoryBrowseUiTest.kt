@@ -40,6 +40,7 @@ class HistoryBrowseUiTest {
     private lateinit var activity: ActivityController<ComponentActivity>
     private lateinit var workflow: BrowseWorkflow
     private val browse = MutableStateFlow(BrowseState())
+    private val playing = MutableStateFlow<String?>("history-0")
 
     @Before fun start() {
         activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
@@ -84,6 +85,7 @@ class HistoryBrowseUiTest {
             onSearchFailed = { throw AssertionError("Unexpected search failure", it) }, onLiveResult = {})
         activity.get().setContent {
             val current by browse.collectAsState()
+            val playingId by playing.collectAsState()
             MaterialTheme {
                 BrowseScreen(browse = current, playlistName = "Selected", contentPadding = PaddingValues(),
                     onOpenDomain = workflow::openDomain, onPickFolder = {}, onPickFiles = {},
@@ -95,7 +97,7 @@ class HistoryBrowseUiTest {
                     recentQueries = emptyList(), onSearchSuggestion = workflow::searchFor,
                     onClearHistory = {}, onHistoryPage = { page ->
                         browse.update { it.copy(historyPage = page, tracks = rows(page)) }
-                    }, playingId = "history-0", loadingId = null,
+                    }, playingId = playingId, loadingId = null,
                     onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
                     onSendToWeb = {}, onPlay = {}, onAdd = {})
             }
@@ -122,6 +124,16 @@ class HistoryBrowseUiTest {
         show()
         scrollTo(50)
         compose.runOnIdle { workflow.openDomain(BrowseDomain.HISTORY) }
+        compose.onNodeWithText("History track 0").assertIsDisplayed()
+    }
+
+    @Test fun `a simultaneous playing change cannot override a new visit starting at the top`() {
+        show()
+        scrollTo(50)
+        compose.runOnIdle {
+            playing.value = "history-80"
+            workflow.openDomain(BrowseDomain.HISTORY)
+        }
         compose.onNodeWithText("History track 0").assertIsDisplayed()
     }
 

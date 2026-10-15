@@ -672,6 +672,16 @@ question were "audit this app":
 It is a browse domain rather than a screen of its own, which means playing from it and adding from
 it are the same code as everywhere else, and cost nothing.
 
+**C107 History entry scroll, 2026-10-15, pending on `fix/search-request-ownership`:** explicit
+domain entry advances the in-memory `BrowseState.historyVisit`. The visit keys the `HistoryDomain`
+subtree, which owns its scroll cache rather than using the enclosing Browse session's cache. Each
+entry starts page zero at the top; page changes and row/loading updates retain positions within
+the visit. No intermediate loading frame is required. Other domains keep their existing per-level
+restoration. Keying only the cache is insufficient: the playing-row observer must treat the current
+track as arrival, not a change that can immediately scroll the fresh list. This is UI navigation
+state, not persisted history or a schema change.
+[Report and verification](PR_C107_HISTORY_ENTRY_SCROLL.md).
+
 **One trap worth keeping written down.** The natural way to write "insert or bump the count" is
 `INSERT ... ON CONFLICT ... DO UPDATE`. That is SQLite 3.24, and **API 29 ships 3.22** while
 `minSdk` is 29 — so the natural way crashes on the oldest device supported. Nothing in this project

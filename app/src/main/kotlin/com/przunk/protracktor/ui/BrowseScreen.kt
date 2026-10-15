@@ -60,6 +60,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -266,23 +267,24 @@ fun BrowseScreen(
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
                 )
             }
-            BrowseDomain.HISTORY -> HistoryDomain(
-                browse = browse,
-                scroll = scroll,
-                playlistName = playlistName,
-                playingId = playingId,
-                loadingId = loadingId,
-                onShowNeighbours = onShowNeighbours,
-                onShareFile = onShareFile,
-                onShareAudio = onShareAudio,
-                onShareLink = onShareLink,
-                onSendToWeb = onSendToWeb,
-                onClearHistory = onClearHistory,
-                onHistoryPage = onHistoryPage,
-                onPlay = onPlay,
-                onAdd = onAdd,
-                onAddToOtherPlaylist = onAddToOtherPlaylist,
-            )
+            BrowseDomain.HISTORY -> key(browse.historyVisit) {
+                HistoryDomain(
+                    browse = browse,
+                    playlistName = playlistName,
+                    playingId = playingId,
+                    loadingId = loadingId,
+                    onShowNeighbours = onShowNeighbours,
+                    onShareFile = onShareFile,
+                    onShareAudio = onShareAudio,
+                    onShareLink = onShareLink,
+                    onSendToWeb = onSendToWeb,
+                    onClearHistory = onClearHistory,
+                    onHistoryPage = onHistoryPage,
+                    onPlay = onPlay,
+                    onAdd = onAdd,
+                    onAddToOtherPlaylist = onAddToOtherPlaylist,
+                )
+            }
             BrowseDomain.SEARCH -> SearchDomain(
                 browse = browse,
                 scroll = scroll,
@@ -1061,7 +1063,6 @@ private fun Loading() {
 @Composable
 private fun HistoryDomain(
     browse: BrowseState,
-    scroll: BrowseScroll,
     playlistName: String?,
     playingId: String?,
     loadingId: String?,
@@ -1076,6 +1077,8 @@ private fun HistoryDomain(
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
 ) {
+    // The visit-keyed subtree also resets the playing-row observer, so arrival is not a change.
+    val scroll = rememberBrowseScroll()
     if (browse.loading) {
         Loading()
         return
