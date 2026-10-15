@@ -57,7 +57,7 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C108 | Database downgrade drops/recreates user tables | Pre-existing code finding, not user feedback or a B49 regression. Owner selected protection on `fix/preserve-newer-database`, 2026-10-15, after B49 merge. Real-helper reproduction fails both checks before correction; implementation/final verification in progress. Schema stays 23. [Analysis](PR_C108_PRESERVE_NEWER_DATABASE.md). |
+| C108 | Database downgrade drops/recreates user tables | Protection implemented on `fix/preserve-newer-database`, 2026-10-15, after B49 merge. Pre-existing code finding, not user feedback. Before-correction checks fail; corrected full gate 910 tests, lint 0 errors/72 warnings. APK/phone acceptance/merge pending. Schema stays 23. [Analysis](PR_C108_PRESERVE_NEWER_DATABASE.md). |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |

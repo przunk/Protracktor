@@ -72,7 +72,13 @@ Trial version 1.4.1; the restored full gate follows.
 First forced full run on `9e61064`: 910 tests/121 suites, one failure, zero errors/skips,
 298 s for Gradle. The numeric-resource convention test rejected ungrouped schema-number
 placeholders; corrected both EN/PL strings. All 909 other checks, including restored C108, passed.
-Lint/auxiliary checks were not reached. Full retry/APK/phone acceptance remain pending. Schema stays
+Lint/auxiliary checks were not reached on that first attempt.
+**Checked restored full gate:** corrected source `a7bd098`, 463 s, **910 tests/121 suites**,
+zero failures/errors/skips; lint zero errors/72 warnings (unchanged). PL/EN resources/store,
+581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Same JDK and temporary
+per-class isolation, no exclusions or repository build-setting changes. Evidence: ignored
+`dist/c108-full-gate*`. APK/phone acceptance remain pending. Schema stays
 23; no reset or migration. [Analysis and verification](PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 ## C105–C107 — owner accepted and merged, 2026-10-15

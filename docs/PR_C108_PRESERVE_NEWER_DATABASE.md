@@ -87,3 +87,14 @@ EN/PL compatibility message. All other 909 tests passed, including the restored 
 The script stopped before lint and auxiliary checks; those were not run in this attempt.
 Both placeholders now use the existing grouped-number convention. Evidence: ignored
 `dist/c108-full-first-*`. A complete fresh gate is required after the resource correction.
+
+## Restored full gate
+
+Forced run on corrected source `a7bd098` passed in **463 s**: **910 tests in 121 suites**,
+zero failures/errors/skips, with the unit task actually executed. Lint XML: zero errors and
+72 warnings, unchanged from the accepted base. PL/EN resources/store metadata, 581 page checks,
+49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native audio checks,
+140 icon paths, PWA and 11 loopback server checks passed. Existing JDK and temporary per-class
+isolation (one worker, 1 GiB heap), no exclusions or repository build-setting changes.
+Restoration SHA-256 checks still pass. Evidence: ignored `dist/c108-full-gate*`.
+Release APK and phone acceptance remain pending; no merge/push/Play step.
