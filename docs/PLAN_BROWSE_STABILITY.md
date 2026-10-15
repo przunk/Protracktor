@@ -41,5 +41,8 @@ Use one task branch from develop; do not merge, push, move release tags or advan
 - Stage 4: old disk algorithm extracted and exercised before correction; serial reproduction:
   three tests, two expected failures (obsolete eviction and staging-file cleanup), 94.4 s.
 - All four corrections implemented; combined serial focused run: 65 passed in 110.1 s.
-- Full tests/lint, release APK, phone acceptance and merge remain pending.
+- Final clean candidate `f32e6cc`: forced full gate passed in 468 s, 929 tests / 124 suites,
+  zero failures/errors/skips; lint zero errors / 72 existing warnings. All companion checks passed.
+- Minified test-signed release APK 1.2.0 (1214) built and verified; exact identity is in the report.
+- Technical handoff complete. Phone acceptance and merge remain pending; nothing pushed/released.
 - [Mechanisms, intermediate failures and evidence](PR_BROWSE_DOWNLOAD_STABILITY.md).

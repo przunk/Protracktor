@@ -58,7 +58,8 @@ its implementation and verification are tracked in `STATUS.md` and `PLAN_UNEXOTI
 
 **Follow-up, 2026-10-16:** the owner selected catalogue/folder ownership, Back publication and
 read-ahead retirement for a separate bounded stability pass. They are implemented on
-`fix/browse-download-stability`; combined verification and phone acceptance are pending, not merged.
+`fix/browse-download-stability`; the full 929-test/lint gate passed and APK 1.2.0 (1214) is ready.
+Phone acceptance is pending, not merged.
 The retained list below records the original extraction boundary, not a claim that the later
 trial is absent. [Plan and implementation evidence](PR_BROWSE_DOWNLOAD_STABILITY.md).
 

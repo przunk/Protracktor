@@ -48,7 +48,7 @@ Checked: the final navigation-focused run passed all 47 tests in 116.2 s
 expecting folder selection to remain deferred until after scan start. Selection now registers
 synchronously to invalidate queued work; that assertion has been corrected. The final focused rerun
 also includes four direct ownership checks. Cancellation/failure reporting policy
-is not redesigned by this stage. Full tests/lint and device acceptance remain pending.
+is not redesigned by this stage. Final full-gate evidence is below; device acceptance is pending.
 
 ### 2. Back publication — focused checks passed
 
@@ -105,5 +105,35 @@ completed executions; the final forced gate must establish the complete candidat
 
 ## Final handoff
 
-Full tests/lint, minified release APK and device checklist pending. Nothing merged or pushed.
-Phone behaviour is unchecked; the owner must accept the offered build before integration.
+**Checked, 2026-10-16:** clean source `f32e6cc75571e5bcd2dcddb8cededb8f92974832`;
+`scripts/test-protracktor.sh --really` completed successfully in **468 s**. Unit execution took
+299.1 s: **929 tests / 124 suites, zero failures, errors or skips**, counted from fresh JUnit XML.
+All 31 unit-build tasks executed; no cached test result is presented as a fresh run. Lint completed
+in 83.8 s: **zero errors / 72 warnings**, unchanged from the release baseline, verified in XML.
+The initial terminal progress counter matched only 928 PASSED lines; XML and the gate's final
+summary establish the actual 929-test total.
+
+Other successful checks: PL/EN strings and store metadata, 14 test-runner fixtures, 11 disposable
+release-flow scenarios, 581 web-page checks, 49 engine checks, eight SAP checks, web database
+upgrade, 30 native audio checks, 140 icon paths, PWA and 11 local server checks. New local Markdown
+links and `git diff --check` pass. Scripts, build configuration, schemas, native and web sources
+are unchanged by this branch.
+
+**APK:** `dist/protracktor-release-1.2.0-1214-f32e6cc-20261016-003937.apk`.
+Built from the same clean source after the gate using `scripts/build-release.sh --no-daemon
+-Pkotlin.compiler.execution.strategy=in-process`, supervised to a 1200-second deadline.
+Build completed in 113.5 s, with R8 and resource shrinking; **11,830,407 bytes**.
+Artifact metadata: `com.przunk.protracktor`, **1.2.0 (1214)**; arm64-v8a, armeabi-v7a and x86_64.
+SHA-256: `ed73de347cd0d43cb82e01368e4991828c45ba3ceecf0833c369ac465b4a0106`.
+
+`apksigner verify --verbose --print-certs` succeeds with APK Signature Scheme v2 and one test
+signer (`CN=Android Debug`), SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+This is a minified release variant, not a debug variant or a publishable store bundle. Do not
+uninstall/clear data to work around a signer mismatch with a Play-installed build.
+
+Evidence logs are preserved in ignored `dist/browse-stability/`. The phone checklist is in
+[TESTING](TESTING.md#browsedownload-stability-trial--2026-10-16). **Phone behaviour remains unchecked**;
+host gates do not establish visual behaviour, real audio output or timing on a device.
+No merge, push, release tag/master movement, version-name bump, migration or publication.
+The subsequent handoff commit changes documentation only; it does not relabel or rebuild this APK.

@@ -10,13 +10,20 @@ Historical dated checks below describe their own builds; they are not current te
 ## Browse/download stability — branch implementation, 2026-10-16
 
 Owner-selected bounded correctness pass on `fix/browse-download-stability`, from develop `59ba578`.
-Not merged. Four stages cover navigation visit ownership, Back publication order, read-ahead
+Technical handoff complete, not merged. Four stages cover navigation visit ownership, Back publication order, read-ahead
 retirement and disk-cache transactions. These are retained review findings, not new phone reports.
 The initial five correctness regressions failed before the fixes; 47 navigation-focused checks
 passed. A clean serial cache reproduction executes three checks with two expected assertion
 failures on the old extracted algorithm. Combined serial focused checks: **65 passed** (110.1 s).
-Full tests/lint and APK are pending. The earlier overlapping diagnostic runs had result-file errors and are not successful
-verification evidence. Phone behaviour remains **unchecked**.
+**Final clean source `f32e6cc`:** forced full gate passed in **468 s**, **929 tests / 124 suites**,
+zero failures/errors/skips; lint **zero errors / 72 existing warnings**. All project companion
+checks passed. Minified, test-signed release APK **1.2.0 (1214)**:
+`dist/protracktor-release-1.2.0-1214-f32e6cc-20261016-003937.apk`, 11,830,407 bytes;
+APK signature, package/version and three ABIs verified. SHA-256 and public test-certificate identity
+are in the report. The earlier overlapping diagnostics had result-file errors and are not counted
+as successful verification; two interrupted preliminary full runs are also excluded.
+Phone behaviour remains **unchecked**. Subsequent handoff documentation does not change the APK's
+fixed versionCode/source. No merge, push, master/tag movement, new store release or migration.
 [Plan](PLAN_BROWSE_STABILITY.md), [analysis and verification](PR_BROWSE_DOWNLOAD_STABILITY.md).
 
 ## Release 1.2.0 — AAB prepared 2026-10-15, verified 2026-10-16

@@ -3,8 +3,8 @@
 *Started 2026-09-15, because a build was handed over with a fix in it that no check in this
 repository can reach.*
 
-The suite covers what a machine can decide: 237 unit tests, 390 page checks, 15 engine checks, 8
-server checks, and every one of them runs in a second on a desktop. **None of them has a phone.**
+The suite covers what a machine can decide: unit/UI-host tests, web checks and native checks.
+Current counts and durations are recorded in [Status](STATUS.md). **None of them has a phone.**
 Four kinds of fault live entirely outside their reach, and each one has already shipped at least
 once:
 
@@ -20,7 +20,8 @@ is written down so it is the same list every time rather than whatever anybody r
 
 ## Browse/download stability trial — 2026-10-16
 
-Branch `fix/browse-download-stability`; APK identity and host results are recorded in
+Branch `fix/browse-download-stability`; APK **1.2.0 (1214)**, source `f32e6cc`.
+Exact identity and successful 929-test/lint host results are recorded in
 [the handoff](PR_BROWSE_DOWNLOAD_STABILITY.md). **All scenarios below are unchecked on a phone.**
 Use existing disposable/saved test playlists; do not uninstall or clear app data.
 
