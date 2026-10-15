@@ -115,11 +115,11 @@ internal class PlaylistSessionState(
         }
     }
 
-    suspend fun switchPlaylist(id: Long, tracks: List<TrackRef>, read: suspend () -> List<SavedPlaylist>) {
+    fun switchPlaylist(id: Long, tracks: List<TrackRef>, playlists: List<SavedPlaylist>) {
         player.update {
             it.copy(
                 queue = PlayQueue(tracks = tracks, shuffle = it.queue.shuffle, repeat = it.queue.repeat),
-                playlists = read(),
+                playlists = playlists,
                 activePlaylistId = id,
                 playing = false,
                 dirty = false,

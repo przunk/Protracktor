@@ -67,6 +67,14 @@ controller scope and stores remain unchanged. This is a separately approved beha
 an extraction guarantee or a global lock over every store caller. Owner-approved merge does not
 establish individual playlist phone checks; no such results were supplied.
 
+**C105 activation correction, 2026-10-14, unmerged `fix/latest-playlist-activation`:** the latest
+request generation owns playlist publication and follow-up effects. The destination track/list
+reads happen before a non-suspending state update; persistence identity and queue are published
+together. Newly requested track writes remain gated during activation, while already captured
+C103 snapshots keep their owners. Settings writes are serialized separately and sampled inside
+their lock. Superseded failures do not affect the current request; cancellation and current
+failure propagation remain explicit. [Contract and verification](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+
 **C102 output recovery, 2026-10-13, merged at `69c42a2`:** each Oboe stream holds
 its own shared `OutputError` callback, which atomically records an error and delegates stop/close
 to the existing control thread. It carries no Player pointer; an old stream's delayed callback

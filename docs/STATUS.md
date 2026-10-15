@@ -4,7 +4,40 @@ Updated: 2026-10-14 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Session code review — 2026-10-14
+## C105 latest playlist activation — release APK ready; phone acceptance pending, 2026-10-14
+
+`fix/latest-playlist-activation` starts from develop `ad18da6`; develop remains 1.3.0/schema 23.
+The trial declares 1.3.1, without changing versionCode calculation or schema. Request generations
+guard suspended settings/track/list completions and their follow-up effects. Destination data is
+read before non-suspending publication, which keeps persistence ownership aligned with visible
+rows. New track-write captures remain gated while loading, preserving C103; previously captured
+writes keep their owners. Settings writes are serialized separately.
+
+**Checked negative evidence:** all six new regression checks fail before correction (47 session
+checks, six assertion failures). Controlled removal of latest-request/published-write protections
+fails five checks out of 48, including the added immediate-destination-save check. Restored sources
+match their recorded SHA-256 sums. The first implementation run had one historical early-ID
+expectation failure out of 65 checks; that ownership expectation was updated without weakening
+the row-write assertions. Restored focused checks passed: 66 tests in three suites, zero
+failures/errors/skips (48 session, 10 heart, eight SDK presentation), 101 s Gradle run.
+**Checked full gate:** forced run completed in 358 s: 859 unit tests in 115 suites, zero
+failures/errors/skips. Lint passed with zero errors/72 warnings (unchanged). PL/EN resource/store
+checks, 581 page checks, 49 WASM engine checks, eight SAP checks,
+browser database upgrade, 30 native audio checks, 140 icon paths, PWA and 11 loopback server
+checks passed. Existing JDK and temporary per-class isolation (one worker/1 GiB heap), no exclusions
+or repository build-setting changes. Evidence: ignored `dist/c105-full-gate*`.
+**Checked artifact:** clean source `07300b1`, **1.3.1 (1170)**, built in 66 s:
+`dist/protracktor-release-1.3.1-1170-07300b1-20261014-005316.apk`, 11,802,642 bytes.
+SHA-256: `f7257c3125cdd6903762072ce1c6889b580da4bf6e9c7d1f94500b8625ef0aab`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and three existing ABIs checked.
+APK v2 signature verified independently; expected test certificate SHA-256:
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Build/artifact evidence: ignored `dist/c105-release*` and `dist/c105-apk-*`.
+Application/native/script sources match the full-gate source `6c89157`; later handoff is docs-only.
+Phone behaviour is **not checked**; no merge/push or master/tag/store change.
+[Analysis and phone checklist](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
+
+## Earlier session code review — pre-fix checkpoint, 2026-10-14
 
 [Review and evidence](review-2026-10-14.md) covers the 2026-10-13/14 session, including C103, C102,
 B6, B48 and B46. One additional pre-existing playlist activation defect is recorded as C105 below;
@@ -24,7 +57,11 @@ Each activation publishes independently without a latest-request guard. C103 pre
 queue from being written into the other playlist, but subsequent snapshots can be refused until
 activation restores agreement. Normal Save has no rejection feedback on this path; notification
 Save reports failure. No wrong-playlist write, data loss, phone frequency or phone reproduction is
-claimed. **Open:** no fix selected or implemented. [Detailed finding R1](review-2026-10-14.md).
+claimed. **Owner selected correction, 2026-10-14:** implementation on
+`fix/latest-playlist-activation`, based on develop `ad18da6`. Before correction, all six new
+controlled-store regressions fail by assertion (47 session checks, six failures, zero errors/skips).
+This is the pre-fix checkpoint; the current branch implementation is recorded above. No phone
+result or merge is claimed. [Analysis](PR_C105_LATEST_PLAYLIST_ACTIVATION.md).
 
 ## B48 and B46 — owner accepted and merged, 2026-10-14
 
