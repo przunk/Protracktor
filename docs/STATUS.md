@@ -1,9 +1,35 @@
 # Status
 
-Updated: 2026-10-15 — release baseline 1.1.0, schema version 23 on develop.
-versionCode is the commit count; the next selected release is 1.2.0, not prepared/published here.
+Updated: 2026-10-16 — prepared release 1.2.0 (1207), schema version 23 on develop.
+The signed AAB is prepared; upload to Play, publication and Git push are not confirmed.
+versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Release 1.2.0 — AAB prepared 2026-10-15, verified 2026-10-16
+
+The owner completed `release.sh 1.2.0`. Master and annotated `v1.2.0` point to release commit
+`794d8f9` (1207 commits); develop includes the script-generated evidence commit `53c0424`.
+Prepared artifact: `dist/protracktor-1.2.0-1207.aab`, **22,033,917 bytes**. Its SHA-256 matches
+the owner's release output and the immutable [release ledger](../store/play-console/releases.md).
+The bundle's embedded source revision also matches the full tagged commit; the public upload
+certificate fingerprint matches the ledger and 1.1.0. No private key/keystore was read.
+
+**Checked:** artifact size/hash, embedded revision, tag/branch relationship, public signer and
+JAR signature verification. `jarsigner` reports verification with warnings; details and scope
+are recorded in [the full 1.2.0 notes](RELEASE_NOTES_1.2.0.md). The existing owner-run release logs
+show executed unit tests (320.5 s) and successful lint (98.1 s); XML confirms **910 tests**,
+zero failures/errors/skips, and lint zero errors/**72 warnings**. Runner/release-flow logs confirm
+fourteen checks and eleven disposable Git scenarios. These are inspected release-run results,
+not tests rerun by the agent or device testing of this AAB.
+
+This release includes stereo mix modes, the notification playlist heart, recent-search suggestions,
+live History search, Bluetooth output recovery, playlist/search ordering safeguards, History entry
+scroll correction and newer-database preservation. The full notes distinguish user feedback from
+code-review findings and retain open device/Compose limitations. PL/EN Play notes are at the tag.
+**Unconfirmed:** upload/acceptance in Play Console, publication, Git push and a phone trial of this
+exact store artifact. The preparation evidence does not establish any of those states. No rebuild,
+tag movement, additional release, upload or push was performed for this documentation closeout.
 
 ## Concise check output — owner approved and merged, 2026-10-15
 

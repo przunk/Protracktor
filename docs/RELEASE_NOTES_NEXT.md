@@ -1,5 +1,8 @@
 # Next release — changes since 1.0.0
 
+Historical **1.1.0 draft**, retained as the original planning record below. The current prepared
+release is **1.2.0**; see [its full notes and publication state](RELEASE_NOTES_1.2.0.md).
+
 Prepared 2026-10-11 at the owner's request to include all implemented user feedback in the
 release description. Scope: `v1.0.0..d5dbe4a`; later release-preparation documentation does not
 change the application. Recommended version: **1.1.0**, because this adds user-facing features;
