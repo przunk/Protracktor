@@ -4,6 +4,21 @@ Updated: 2026-10-15 — version 1.3.3, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## B49 live History search — implementation selected, 2026-10-15
+
+Owner selected `feature/history-live-search` from develop `5954c86`: live literal substring
+filtering across all History by title/author/filename, case-insensitive, with 200 ms debounce,
+paging/counts and unchanged playback. Schema stays 23; a bounded cursor scan avoids incomplete
+Unicode matching without an upgrade. Implementation/verification and phone checks are pending.
+[Plan](PLAN_HISTORY_SEARCH.md). Play release is a later owner-driven step, not started here.
+
+### C108 — destructive database downgrade policy (separate code finding)
+
+Recorded 2026-10-15 from `ProtracktorDatabase.onDowngrade`: it drops/recreates user tables.
+This contradicts the workspace's data-preserving downgrade policy. No phone reproduction, affected
+device count or current data loss is claimed. B49 changes no schema and does not alter or trigger
+this path; correction requires a separate scope decision. Not independent user feedback.
+
 ## C105–C107 — owner accepted and merged, 2026-10-15
 
 The owner gave overall acceptance and authorized merging after the combined 1.3.3 trial handoff.
@@ -17,7 +32,7 @@ Device/Android, exact installed build and individual checklist outcomes were not
 supplied. This is overall owner acceptance, not agent-run phone testing or confirmation of every
 scenario. Dated pending checkpoints below are historical and superseded by this acceptance.
 Master, tags, schema and store state are unchanged; nothing was pushed. B49 History search is
-recorded in [Wishlist](WISHLIST.md#b49-search-in-history--to-discuss), for discussion only.
+tracked separately in [Wishlist](WISHLIST.md#b49-search-in-history--implementation-selected-2026-10-15).
 
 ## ~~C107 History entry scroll~~ — pre-acceptance handoff, 2026-10-15
 

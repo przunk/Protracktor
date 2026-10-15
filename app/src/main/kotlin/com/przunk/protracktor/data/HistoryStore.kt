@@ -5,7 +5,12 @@ package com.przunk.protracktor.data
 
 import android.content.Context
 import com.przunk.protracktor.player.HistoryPresentation
+import com.przunk.protracktor.player.HistoryFilter
+import com.przunk.protracktor.player.HistoryPage
+import com.przunk.protracktor.player.HistoryPages
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /** A tune that was played, and when it last was. */
@@ -88,6 +93,33 @@ class HistoryStore(context: Context) {
     suspend fun count(): Int = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(SchemaSql.PLAY_HISTORY_COUNT, null).use { row ->
             if (row.moveToFirst()) row.getInt(0) else 0
+        }
+    }
+
+    /** Nonblank phrases scan one cursor snapshot, retaining at most two hundred matched rows. */
+    internal suspend fun read(query: String, wanted: Int): HistoryPage<PlayedTrack> = withContext(Dispatchers.IO) {
+        val phrase = query.trim()
+        if (phrase.isEmpty()) {
+            val total = count()
+            val shown = HistoryPages.clamp(wanted, total)
+            return@withContext HistoryPage(total, shown, page(HistoryPages.offset(shown, total), HistoryPages.SIZE))
+        }
+        val readContext = currentCoroutineContext()
+        helper.readableDatabase.rawQuery(SchemaSql.PLAY_HISTORY_ROWS, null).use { cursor ->
+            val matches = sequence {
+                while (cursor.moveToNext()) {
+                    readContext.ensureActive()
+                    val title = cursor.getString(1)
+                    val fileName = cursor.getString(3)
+                    val author = cursor.getString(4)
+                    if (HistoryFilter.matches(phrase, title, author, fileName)) yield(PlayedTrack(
+                        trackId = cursor.getString(0), title = title, subtitle = cursor.getString(2),
+                        fileName = fileName, author = author, sizeBytes = cursor.getLong(5),
+                        playedAt = cursor.getLong(6), playCount = cursor.getInt(7),
+                    ))
+                }
+            }
+            HistoryFilter.page(matches, wanted)
         }
     }
 

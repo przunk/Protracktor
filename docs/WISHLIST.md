@@ -10,12 +10,15 @@ been overtaken by work already done, it says so.
 
 ---
 
-## B49. Search in History — to discuss
+## B49. Search in History — implementation selected, 2026-10-15
 
 Requested by the owner on 2026-10-15: search previously played tracks from the History view.
 This is playback History search, not B46's recent search-query suggestions. No separate existing
-request was found. Matching fields, search scope, presentation and interaction with paging remain
-to be discussed. Backlog only; no implementation selected.
+request was found. The owner selected live literal phrase filtering over title/author/filename,
+case-insensitive, across all History, with 200 ms debounce and paged newest-first results.
+Clearing the input restores full History; filtering must not change the active playback queue.
+Implementation on `feature/history-live-search`; no merge or Play release yet.
+[Contract and verification](PLAN_HISTORY_SEARCH.md).
 
 ## B48. Add the playing track from the notification — owner accepted and merged, 2026-10-14
 
