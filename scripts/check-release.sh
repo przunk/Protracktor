@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# release.sh, run for real in throwaway clones of this repository -- ordinary releases, hotfixes,
+# release.sh, run for real in small disposable repositories -- ordinary releases, hotfixes,
 # a failed bundle, the refusals -- with the builds stubbed and a throwaway key, and the branches,
 # tags and files checked after each. Nothing here touches this checkout, the keystore or a remote.
 #
@@ -11,17 +11,37 @@
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BRANCH="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
 S="$(mktemp -d)"
 trap 'rm -rf "$S"' EXIT
 source "$ROOT/scripts/use-tooling.sh" >/dev/null
 "$JAVA_HOME/bin/keytool" -genkeypair -keystore "$S/fake.jks" -storepass fakefake -keypass fakefake \
     -alias f -dname CN=Fake -keyalg RSA -validity 2 >/dev/null 2>&1
 
-# This branch's release.sh, as develop; master as it is here. Everything that builds is stubbed.
+# The real working release/metadata/runner scripts, with builds stubbed. There is no reason to
+# clone the app/native history for every Git-flow case; the fixture needs only these inputs.
 fresh() {
-  cd "$S" && rm -rf "$S/rt" && git clone -q "$ROOT" "$S/rt" && cd "$S/rt"
-  git checkout -q -B develop "origin/$BRANCH"; git branch -q -f master origin/master
+  cd "$S" && rm -rf "$S/rt" && mkdir "$S/rt" && cd "$S/rt"
+  git init -q -b master
+  git config user.name "Release fixture"
+  git config user.email "release-fixture@example.invalid"
+  mkdir -p scripts/internal app docs store/play-console
+  cp "$ROOT/scripts/release.sh" "$ROOT/scripts/check-store-metadata.sh" scripts/
+  cp "$ROOT/scripts/internal/run-check.py" scripts/internal/run-check.py
+  cp "$ROOT/app/build.gradle.kts" app/
+  cp "$ROOT/docs/STATUS.md" "$ROOT/docs/WISHLIST.md" docs/
+  cp "$ROOT/store/play-console/releases.md" store/play-console/
+  cp -R "$ROOT/store/listing" store/
+  printf 'dist/\nlocal.properties\n' > .gitignore
+  cat > scripts/use-tooling.sh <<STUB
+export JAVA_HOME="$JAVA_HOME"
+export PROTRACKTOR_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+export PROTRACKTOR_LOG_PREFIX="$S/fixture"
+export PROTRACKTOR_BUILD_DIR_ROOT="$S/build"
+export ANDROID_HOME="$S/sdk"
+STUB
+  # A fixed fixture baseline is independent of the next real release version.
+  sed -i 's/versionName = "[^"]*"/versionName = "0.11.0"/' app/build.gradle.kts
+  git add -A; git commit -q -m "fixture baseline"; git checkout -q -b develop
   printf '#!/usr/bin/env bash\nexit 0\n' > scripts/build-web-engine.sh
   printf '#!/usr/bin/env bash\necho "   (stub suite)"\n' > scripts/test-protracktor.sh
   cat > scripts/build-bundle.sh <<STUB
@@ -35,7 +55,7 @@ echo "\$(git rev-parse --short HEAD) \$(git rev-parse --abbrev-ref HEAD)" > $S/b
 python3 -c "import zipfile; z=zipfile.ZipFile('\$out','w'); z.writestr('x.txt','x'); z.close()"
 "\$JAVA_HOME/bin/jarsigner" -keystore $S/fake.jks -storepass fakefake "\$out" f >/dev/null
 STUB
-  chmod +x scripts/*.sh; git add -A scripts; git commit -q -m stubs
+  chmod +x scripts/*.sh; git add -A scripts; git add app/build.gradle.kts; git commit -q -m stubs
 }
 ok() { echo "  ✓ $*"; }; bad() { echo "  ✗ $*"; FAILED=1; }
 FAILED=0
@@ -99,5 +119,82 @@ echo | ./scripts/release.sh 0.12.0 --check > $S/rt-E.log 2>&1; rc=$?
 echo "F. not on develop or a hotfix"; fresh
 git checkout -q -b feature/x; echo | ./scripts/release.sh 0.12.0 --check > $S/rt-F.log 2>&1; rc=$?
 [ $rc != 0 ] && grep -q "releases are made from develop" $S/rt-F.log && ok "refused" || bad "not refused"
+
+unchanged() {
+  [ "$before" = "$(git for-each-ref --format='%(refname) %(objectname)' | md5sum)" ] &&
+    [ -z "$(git status --porcelain)" ] &&
+    grep -q 'versionName = "0.11.0"' app/build.gradle.kts
+}
+
+echo "H. a failed validation never reaches version, master or tag"; fresh
+printf '#!/usr/bin/env bash\necho "fixture: failing suite"\nexit 9\n' > scripts/test-protracktor.sh
+git add scripts/test-protracktor.sh; git commit -q -m "failing suite fixture"
+before=$(git for-each-ref --format='%(refname) %(objectname)' | md5sum)
+echo 0.12.0 | ./scripts/release.sh 0.12.0 > "$S/rt-H.log" 2>&1; rc=$?
+[ "$rc" = 9 ] && ok "validation failure propagated" || bad "exit $rc"
+unchanged && ok "failed suite leaves refs, version and tree unchanged" || bad "failed suite changed release state"
+
+stuck_unit_fixture() {
+  cp "$ROOT/scripts/test-protracktor.sh" scripts/test-protracktor.sh
+  # Ignored pid/log files do not make the fixture source tree dirty.
+  printf '#!/usr/bin/env bash\necho "fixture: stuck Gradle"\nsleep 60 &\necho "$!" > dist/stuck.pid\nwait\n' > gradlew
+  chmod +x gradlew
+  mkdir -p dist
+  git add scripts/test-protracktor.sh gradlew; git commit -q -m "stuck unit fixture"
+}
+
+echo "I. a real unit-stage timeout blocks the release"; fresh; stuck_unit_fixture
+before=$(git for-each-ref --format='%(refname) %(objectname)' | md5sum)
+PROTRACKTOR_UNIT_TEST_TIMEOUT_SECONDS=1 PROTRACKTOR_CHECK_GRACE_SECONDS=.2 \
+  ./scripts/release.sh 0.12.0 > "$S/rt-I.log" 2>&1; rc=$?
+[ "$rc" = 124 ] && grep -q TIMEOUT "$S/rt-I.log" && ok "unit deadline propagated" || {
+  bad "timeout exit $rc"; tail -15 "$S/rt-I.log"
+}
+unchanged && ok "timeout leaves refs, version and tree unchanged" || bad "timeout changed release state"
+if [ -f dist/stuck.pid ] && ! kill -0 "$(<dist/stuck.pid)" 2>/dev/null; then
+  ok "timed-out unit worker terminated"
+else
+  bad "unit worker absent from fixture or still alive"
+fi
+
+echo "J. Ctrl+C during the real unit stage blocks the release"; fresh; stuck_unit_fixture
+before=$(git for-each-ref --format='%(refname) %(objectname)' | md5sum)
+PROTRACKTOR_CHECK_GRACE_SECONDS=.2 python3 - "$S/rt-J.log" <<'PY'
+import os, pathlib, signal, subprocess, sys, time
+with open(sys.argv[1], "wb") as log:
+    process = subprocess.Popen(["bash", "scripts/release.sh", "0.12.0"],
+                               stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    deadline = time.monotonic() + 10
+    while not pathlib.Path("dist/stuck.pid").exists() and time.monotonic() < deadline:
+        if process.poll() is not None:
+            sys.exit(1)
+        time.sleep(.02)
+    os.killpg(process.pid, signal.SIGINT)
+    try:
+        result = process.wait(timeout=5)
+        # The shell may report SIGINT directly or propagate the runner's conventional 130.
+        sys.exit(0 if result in (-signal.SIGINT, 130) else 1)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+        sys.exit(1)
+PY
+rc=$?
+[ "$rc" = 0 ] && ok "interruption propagated" || { bad "interrupt fixture exit $rc"; tail -15 "$S/rt-J.log"; }
+unchanged && ok "interruption leaves refs, version and tree unchanged" || bad "interrupt changed release state"
+python3 - <<'PY'
+import pathlib, time, sys
+pid = pathlib.Path("dist/stuck.pid").read_text().strip()
+deadline = time.monotonic() + 3
+while pathlib.Path(f"/proc/{pid}").exists() and time.monotonic() < deadline:
+    time.sleep(.02)
+sys.exit(1 if pathlib.Path(f"/proc/{pid}").exists() else 0)
+PY
+[ "$?" = 0 ] && ok "interrupted unit worker terminated" || bad "interrupted unit worker survived"
+
+echo "K. unknown options are not interpreted as permission to release"; fresh
+before=$(git for-each-ref --format='%(refname) %(objectname)' | md5sum)
+./scripts/release.sh 0.12.0 --chek > "$S/rt-K.log" 2>&1; rc=$?
+[ "$rc" != 0 ] && unchanged && ok "invalid option refused before validation" || bad "invalid option accepted"
 
 echo; [ $FAILED = 0 ] && { echo "✅ release.sh: every scenario passed"; exit 0; } || { echo "❌ release.sh: a scenario failed"; exit 1; }

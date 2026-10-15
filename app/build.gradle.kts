@@ -248,6 +248,16 @@ tasks.named("preBuild") { dependsOn(copyNotices) }
 // `SupportedFormatsFileTest` the page's format list. Gradle cannot see that, so an edit to either
 // file alone left the test task "up to date" and the check that exists to catch drift never ran.
 tasks.withType<Test>().configureEach {
+    // Compose/native Robolectric classes have hit idle timeouts in a shared worker. Process
+    // isolation contains cross-class state; it does not diagnose the underlying idle failure.
+    forkEvery = 1
+    maxParallelForks = 1
+    maxHeapSize = "1024m"
+    failFast = true
+    testLogging {
+        events("started", "passed", "failed", "skipped")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
     inputs.dir(layout.projectDirectory.dir("schemas")).withPathSensitivity(PathSensitivity.RELATIVE)
     val exportSchemas = providers.gradleProperty("exportSchemas").isPresent
     inputs.property("exportSchemas", exportSchemas)
