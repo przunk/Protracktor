@@ -117,8 +117,20 @@ logs, 121 XML suites, lint XML, focused/negative checks, source checksums and th
 cancellation log/fixture. Bash syntax, whitespace and store metadata checks pass; tracked worktree
 was clean before this documentation closeout. Generated Kotlin sessions remain untouched/ignored.
 
-**Ready for owner merge approval on `fix/release-test-runner`, not merged.** No application APK/AAB,
+**Pre-merge handoff:** ready for owner approval on `fix/release-test-runner`, not merged at that
+checkpoint. No application APK/AAB,
 phone run, push or release was performed. Master stays at `da4569b` / `v1.1.0`, develop at `13fbd4f`,
 and `v1.2.0` is still free. The planned release is 1.2.0; the app literal remains 1.1.0 until the
 owner's release procedure changes it. The cause of the shared-worker Compose idle failure remains
 open; this task delivers tested containment and bounded/observable validation, not that diagnosis.
+
+## Owner-approved integration — 2026-10-15
+
+The owner authorized merging into develop. Merge `6736cd0` contains the approved branch
+`6ec0a3a`; their complete tracked trees are identical. Script/build SHA-256 values match the
+retained final checksums. This is source-equivalence verification, not a repeated unit/lint run;
+the 547-second gate and focused evidence above remain the actual executed checks. The closeout
+changes documentation only. No app artifact or real release was built, and nothing was pushed.
+Master `da4569b`, every tag and every remote-tracking ref stayed unchanged; `v1.2.0` is absent.
+The earlier pending-approval checkpoint is superseded for integration only, not for diagnosing
+the still-open Compose idle issue or claiming device tests.

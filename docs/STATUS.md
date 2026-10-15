@@ -5,7 +5,7 @@ versionCode is the commit count; the next selected release is 1.2.0, not prepare
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Release test runner — checked, awaiting merge approval, 2026-10-15
+## Release test runner — owner approved and merged, 2026-10-15
 
 The owner paused release preparation after two Settings Compose idle failures during the ordinary
 `release.sh 1.2.0 --check` path. At report time the scripts had no test deadline or live Gradle
@@ -26,9 +26,12 @@ Gradle hang terminates at 15 s with 124 and its PID is gone; unrelated process s
 App/build inputs match the checked source; final cancellation-only refinement is covered by the
 same run's twelve runner checks. Evidence and exact source chronology are in the linked report.
 The underlying shared-worker Compose idle failure is **not diagnosed**; isolation is containment.
-**Not performed:** an application APK/AAB build, phone tests, release, merge or push. This is a
-tooling-only handoff, not an app/device claim. Develop remains `13fbd4f`, master remains at
-`v1.1.0` (`da4569b`), `v1.2.0` is absent. Await owner approval before merging.
+The owner authorized integration; merged into develop at `6736cd0`. Its complete tracked tree
+matches approved branch `6ec0a3a`, and script/build SHA-256 checks match the verified sources.
+This is a Git tree/checksum verification, not a fresh execution of the 547-second gate. The
+following closeout is documentation-only. No application APK/AAB, phone test, release or push was
+performed; tooling verification does not establish app/device behaviour. Master remains at
+`v1.1.0` (`da4569b`); all tags and remote refs are unchanged, and `v1.2.0` is absent.
 [Analysis and verification](PR_RELEASE_TEST_RUNNER.md).
 
 ## Release-version history reconciliation — completed, 2026-10-15
