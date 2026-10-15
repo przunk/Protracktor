@@ -179,6 +179,10 @@ after closing Browse. Each visit should start at the newest row with zero offset
 within one visit should retain their positions; the next visit resets all History page positions.
 [Evidence and complete checklist](PR_C107_HISTORY_ENTRY_SCROLL.md). The trial includes pending
 C105 and C106; no acceptance of any branch is inferred from the new host tests.
+The forced gate passed 876 tests/116 suites with lint 0 errors/72 warnings. Offered combined
+release: **1.3.3 (1178)**, clean source `ffdbd87`,
+`dist/protracktor-release-1.3.3-1178-ffdbd87-20261015-191612.apk`. Install without clearing data;
+phone behaviour remains unverified. Earlier 1.3.2 metadata below is its historical handoff.
 
 ## C106 search ownership — code-review correction, phone checks pending, 2026-10-15
 

@@ -57,6 +57,22 @@ with temporary per-class worker isolation, one worker/1 GiB heap; no exclusions 
 build-setting changes. Evidence: ignored `dist/c107-full-gate*`. Release APK remains pending
 at this checkpoint. No phone result or merge is inferred; C105/C106 stay pending too.
 
+## Release APK handoff
+
+Clean source `ffdbd87`, **1.3.3 (1178)**, built in 262 s:
+`dist/protracktor-release-1.3.3-1178-ffdbd87-20261015-191612.apk`, 11,807,383 bytes.
+SHA-256: `0ce11599c8378f5444958d80159dac146a4056eb0fd34f447a90281917207612`.
+R8 ran; manifest is non-debuggable, minSdk 29/targetSdk 36, with arm64-v8a, armeabi-v7a and x86_64.
+Independent apksigner v2 verification passed; the test-certificate SHA-256 remains
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Logs/signature/manifest: ignored `dist/c107-release*` and `dist/c107-apk-*`.
+
+Application/native/scripts match the full-gate commit `ccf85a0`; later handoff changes only docs.
+This trial includes pending C105/C106 and supersedes the 1.3.2 trial for current testing, without
+altering its APK or the C105 branch/APK. Develop/master, schema 23, tags and store remain unchanged.
+This is a minified, test-key-signed sideload release, not an AAB/Play release. Phone acceptance
+remains pending; no merge or push.
+
 ## Phone checklist
 
 1. Open History, scroll down, return to Browse root and open History again. The newest row should

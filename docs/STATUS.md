@@ -4,7 +4,7 @@ Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C107 History entry scroll — full gate passed; APK pending, 2026-10-15
+## C107 History entry scroll — release APK ready; phone acceptance pending, 2026-10-15
 
 The owner observed History opening below the top and requested that every new entry start at
 the top. Exact installed build/device were not separately supplied. History resets the data page
@@ -25,7 +25,16 @@ failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN resource
 581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
 audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK, temporary
 per-class isolation (one worker/1 GiB heap), no exclusions or repository build-setting changes.
-Evidence: ignored `dist/c107-full-gate*`. Replacement release APK remains pending here.
+Evidence: ignored `dist/c107-full-gate*`.
+**Checked artifact:** clean source `ffdbd87`, **1.3.3 (1178)**, built in 262 s:
+`dist/protracktor-release-1.3.3-1178-ffdbd87-20261015-191612.apk`, 11,807,383 bytes.
+SHA-256: `0ce11599c8378f5444958d80159dac146a4056eb0fd34f447a90281917207612`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and the three existing ABIs checked.
+Independent APK v2 verification confirms the unchanged test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+Build/artifact evidence: ignored `dist/c107-release*` / `dist/c107-apk-*`. App/native/scripts match
+the full-gate source `ccf85a0`; later handoff is docs-only. This combined trial includes C105/C106
+and supersedes 1.3.2 for current testing without deleting or altering previous APKs/branches.
 No phone retest, merge or push is claimed. [Analysis](PR_C107_HISTORY_ENTRY_SCROLL.md).
 
 ## C106 search request ownership — release APK ready; phone acceptance pending, 2026-10-15
