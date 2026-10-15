@@ -5,16 +5,30 @@ versionCode is the commit count; the next selected release is 1.2.0, not prepare
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Release test runner — in progress on task branch, 2026-10-15
+## Release test runner — checked, awaiting merge approval, 2026-10-15
 
 The owner paused release preparation after two Settings Compose idle failures during the ordinary
-`release.sh 1.2.0 --check` path. The script has no test deadline or live Gradle progress; the earlier
-successful 910-test gate used temporary worker isolation absent from that ordinary path.
-Work is scoped to `fix/release-test-runner`, with no release/merge/push or app-feature change.
+`release.sh 1.2.0 --check` path. At report time the scripts had no test deadline or live Gradle
+progress; the earlier successful 910-test gate used temporary worker isolation absent from that path.
+`fix/release-test-runner` now tracks class isolation, live test output, 30-second elapsed messages,
+per-stage deadlines (unit default 20 minutes), scoped process cleanup and preserved failure codes.
+Release validation forces test execution; typo options and false/empty JUnit success are refused.
+Generated Kotlin session files are ignored without deletion. No application/engine/UI changes.
 **Checked before correction:** the real script ignores a one-second limit in a stuck-Gradle
 fixture; its external five-second watchdog fails the single regression and cleans up its own
-processes. Underlying shared-worker Compose timeout cause remains unestablished. Implementation,
-process cleanup fixtures and the ordinary full gate remain pending.
+processes. Subsequent lint-status and cleanup-window cancellation regressions also fail before
+correction. **Checked final gate:** ordinary `test-protracktor.sh --really`, no external init script,
+**547 s, 910 tests/121 suites**, zero failures/errors/skips; lint zero errors/**72 warnings**
+(unchanged). Twelve runner checks, eleven disposable Git release scenarios, PL/EN/store,
+581 page, 49 engine, eight SAP, browser upgrade, 30 native audio, 140 icon paths, PWA and eleven
+local-server checks pass. Three injected faults in a supervisor copy are rejected. A real offline single-use
+Gradle hang terminates at 15 s with 124 and its PID is gone; unrelated process sentinel survives.
+App/build inputs match the checked source; final cancellation-only refinement is covered by the
+same run's twelve runner checks. Evidence and exact source chronology are in the linked report.
+The underlying shared-worker Compose idle failure is **not diagnosed**; isolation is containment.
+**Not performed:** an application APK/AAB build, phone tests, release, merge or push. This is a
+tooling-only handoff, not an app/device claim. Develop remains `13fbd4f`, master remains at
+`v1.1.0` (`da4569b`), `v1.2.0` is absent. Await owner approval before merging.
 [Analysis and verification](PR_RELEASE_TEST_RUNNER.md).
 
 ## Release-version history reconciliation — completed, 2026-10-15

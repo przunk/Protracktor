@@ -65,8 +65,8 @@ detached descendants, Ctrl+C, a completed launcher leaving background children, 
 non-passing XML despite Gradle success and lint deadline propagation. The lint regression first
 failed because an empty error grep under `pipefail` replaced status 124 with 1; reporting now
 preserves the status and log path. Auxiliary checks use the same status-preserving wrapper.
-An unrelated sentinel process survives cancellation. Three deliberately broken supervisor copies
-(lost log writes, missing elapsed heartbeat, timeout reported as success) fail all three selected
+An unrelated sentinel process survives cancellation. A supervisor copy with three deliberate faults
+(lost log writes, missing elapsed heartbeat, timeout reported as success) fails all three selected
 checks; the repository supervisor was not mutated.
 An additional cleanup-window regression first failed with exit 0 when Ctrl+C arrived after the
 launcher exited but before its workers were reaped. Completion now honours cancellation too;
@@ -81,11 +81,44 @@ repositories and fixed versions instead of cloning the entire history; no owner 
 **First ordinary full-gate attempt:** all **910 application tests passed**, zero failures/errors/
 skips, 369 seconds for the unit stage, including Settings. The expanded runner checks then caught
 the lint status-reporting regression above, so this is not a completed full gate and did not reach
-the normal auxiliary checks/lint. Corrected focused checks pass; the final forced full gate is
-pending. No readiness, phone or release claim.
+the normal auxiliary checks/lint. Corrected focused checks pass; the completed gate follows.
 
 **Checked real Gradle cancellation:** a disposable unconfigured project initially refused because
 it lacked its own settings file (not timeout evidence). After adding that file, its real Gradle
 9.6 single-use daemon reached a deliberate 60-second sleep. The supervisor timed it out at 15.0 s,
 returned 124 after 15.3 s, and the recorded daemon PID no longer existed. This used only an ignored
 `dist/` fixture, the existing JDK and offline Gradle, without stopping shared daemons.
+
+## Completed host verification and handoff — 2026-10-15
+
+The ordinary command `PROTRACKTOR_BUILD_DIR_ROOT=/tmp/protracktor-search-ownership-build
+./scripts/test-protracktor.sh --really` completed with exit 0 in **547 seconds**. No temporary
+init script, additional test exclusions, fresh JDK or release invocation was used. Unit Gradle/test execution
+took 360.9 s; lint took 94.8 s. JUnit XML confirms **910 tests in 121 suites**, zero failures,
+errors or skips; lint XML confirms zero errors and **72 warnings**, unchanged from baseline.
+This is executed test evidence, not a cache-only result.
+
+The same gate passed twelve runner checks (8.1 s), eleven disposable Git release-flow scenarios
+(14.0 s), resources/store metadata, 581 page checks, 49 engine checks, eight SAP checks, the browser
+database upgrade, 30 native audio checks, 140 icon paths, PWA and eleven local-server checks.
+Those Git scenarios execute release logic only in disposable fixtures with stub builds/test keys;
+they are not real releases or evidence of production AAB signing.
+
+Source chronology: the second forced gate started at `c46b1c1`. The cancellation-window-only
+supervisor refinement and its extra regression were completed as `2be75c5` while unit tests ran.
+App/build inputs and the test/release shell entry points are identical between those commits;
+the subsequently executed twelve-check runner stage tests the final supervisor, including the
+late-Ctrl+C guard. Final tracked script/build SHA-256 checks match. Application, native and web
+source trees still match develop `13fbd4f`; the only Gradle change is Test-task configuration.
+No claim is made that the already-running unit supervisor reloaded Python source mid-invocation.
+
+Evidence is retained in ignored `dist/release-runner-*`: first/final full logs, copied unit/lint
+logs, 121 XML suites, lint XML, focused/negative checks, source checksums and the real Gradle
+cancellation log/fixture. Bash syntax, whitespace and store metadata checks pass; tracked worktree
+was clean before this documentation closeout. Generated Kotlin sessions remain untouched/ignored.
+
+**Ready for owner merge approval on `fix/release-test-runner`, not merged.** No application APK/AAB,
+phone run, push or release was performed. Master stays at `da4569b` / `v1.1.0`, develop at `13fbd4f`,
+and `v1.2.0` is still free. The planned release is 1.2.0; the app literal remains 1.1.0 until the
+owner's release procedure changes it. The cause of the shared-worker Compose idle failure remains
+open; this task delivers tested containment and bounded/observable validation, not that diagnosis.
