@@ -45,6 +45,8 @@ fail() { red "❌ $*"; exit 1; }
 version="${1:-}"
 mode="${2:-}"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "usage: ./scripts/release.sh X.Y.Z [--check]"
+[[ "$mode" = "" || "$mode" = "--check" ]] && [ "$#" -le 2 ] ||
+    fail "usage: ./scripts/release.sh X.Y.Z [--check]"
 tag="v$version"
 
 # --- 1. where we stand ---------------------------------------------------------------------------
@@ -79,8 +81,10 @@ for locale in en-US pl-PL; do echo; echo "   [$locale]"; sed 's/^/   | /' "store
 
 # --- 3. checks -----------------------------------------------------------------------------------
 step "3. Web engine and the full suite"
-./scripts/build-web-engine.sh > /dev/null
-./scripts/test-protracktor.sh
+python3 scripts/internal/run-check.py --label "Build web engine" \
+    --log "/tmp/protracktor-$(basename "$ROOT")-web-build.log" \
+    --timeout "${PROTRACKTOR_WEB_BUILD_TIMEOUT_SECONDS:-1200}" -- ./scripts/build-web-engine.sh
+./scripts/test-protracktor.sh --really
 
 if [ "$mode" = "--check" ]; then
     step "Checked. Nothing was changed."

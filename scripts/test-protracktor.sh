@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Runs the unit tests. Same bargain as the build scripts: Gradle's output goes to a log, the
-# terminal gets the result and, on failure, the tests that failed and why.
+# Runs the full gate with live output, per-stage deadlines and retained logs.
 #
 # Pass --really to force the tests to execute rather than be served from the cache. Worth it before
 # claiming a suite is green on code nobody has run it against.
@@ -15,7 +14,22 @@ source "$SCRIPT_DIR/use-tooling.sh"
 cd "$PROTRACKTOR_DIR"
 
 LOG_FILE="$PROTRACKTOR_LOG_PREFIX-test.log"
+CHECK_RUNNER="$SCRIPT_DIR/internal/run-check.py"
+UNIT_TIMEOUT="${PROTRACKTOR_UNIT_TEST_TIMEOUT_SECONDS:-1200}"
+CHECK_TIMEOUT="${PROTRACKTOR_CHECK_TIMEOUT_SECONDS:-1200}"
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
+
+run_check() {
+    local label="$1" suffix="$2"; shift 2
+    if python3 "$CHECK_RUNNER" --label "$label" --log "$PROTRACKTOR_LOG_PREFIX-$suffix.log" \
+        --timeout "$CHECK_TIMEOUT" -- "$@"; then
+        return 0
+    else
+        local status=$?
+        echo "❌ $label failed or stopped (exit $status); see the full log above."
+        return "$status"
+    fi
+}
 
 force=""
 if [ "${1:-}" = "--really" ]; then
@@ -27,9 +41,17 @@ started_at=$(date +%s)
 echo "🧪 Protracktor — unit tests…"
 
 set +e
-./gradlew :app:testDebugUnitTest --console=plain $force "$@" > "$LOG_FILE" 2>&1
+python3 "$CHECK_RUNNER" --label "Unit tests" --log "$LOG_FILE" --timeout "$UNIT_TIMEOUT" -- \
+    ./gradlew :app:testDebugUnitTest --console=plain $force "$@" --no-daemon \
+    -Pkotlin.compiler.execution.strategy=in-process
 status=$?
 set -e
+
+if [ "$status" -eq 124 ] || [ "$status" -eq 125 ] || [ "$status" -ge 128 ]; then
+    echo "❌ Unit-test gate stopped (exit $status); no release is permitted."
+    echo "Full log: $LOG_FILE"
+    exit "$status"
+fi
 
 # Counted from the JUnit XML rather than from the log. "BUILD SUCCESSFUL" with zero tests run is a
 # failure wearing a success message, and it has fooled this workshop before.
@@ -39,9 +61,12 @@ set -e
 # the other direction. The results are still the results of the current sources; whether they were
 # produced just now is reported separately below.
 RESULTS_DIR="$PROTRACKTOR_BUILD_DIR_ROOT/app/test-results/testDebugUnitTest"
-totals="$(find "$RESULTS_DIR" -name 'TEST-*.xml' \
-    -exec grep -ho 'tests="[0-9]*"\|failures="[0-9]*"\|errors="[0-9]*"\|skipped="[0-9]*"' {} \; 2>/dev/null \
-    | awk -F'"' '{a[$1]+=$2} END {printf "%d %d %d %d", a["tests="], a["failures="], a["errors="], a["skipped="]}')"
+totals=""
+if [ -d "$RESULTS_DIR" ]; then
+    totals="$(find "$RESULTS_DIR" -name 'TEST-*.xml' \
+        -exec grep -ho 'tests="[0-9]*"\|failures="[0-9]*"\|errors="[0-9]*"\|skipped="[0-9]*"' {} \; 2>/dev/null \
+        | awk -F'"' '{a[$1]+=$2} END {printf "%d %d %d %d", a["tests="], a["failures="], a["errors="], a["skipped="]}')"
+fi
 read -r total failures errors skipped <<< "${totals:-0 0 0 0}"
 
 # Two ways Gradle reports a green suite it did not run, and only one of them was noticed here
@@ -87,6 +112,12 @@ if [ "$total" -eq 0 ]; then
     exit 1
 fi
 
+if [ "$failures" -ne 0 ] || [ "$errors" -ne 0 ] || [ "$skipped" -ne 0 ]; then
+    echo "❌ JUnit results are not a complete pass: $total tests, $failures failures, $errors errors, $skipped skipped."
+    echo "Full log: $LOG_FILE"
+    exit 1
+fi
+
 # --- string resources -------------------------------------------------------------------------
 #
 # Two things the compiler is happy with and a phone is not.
@@ -117,16 +148,15 @@ fi
 # let drift. The fields have hard character limits and the two locales have to hold the same files;
 # both are checkable here and neither is checkable in Play Console until an upload is refused.
 "$SCRIPT_DIR/check-store-metadata.sh"
+run_check "Test-runner fixtures" runner python3 "$SCRIPT_DIR/check-test-runner.py"
+run_check "Release-flow fixtures" release-flow bash "$SCRIPT_DIR/check-release.sh"
 
 # The web page, if its DOM is installed. Not required -- somebody checking out this repository to
 # build an APK should not have to run npm -- but when it is there it is part of the suite, because
 # the page is the one half of this project nobody can see while writing it.
 if [ -d web/node_modules/jsdom ]; then
-    if ! page_output=$(node scripts/check-page.mjs 2>&1); then
-        echo "❌ Page checks failed:"
-        echo "$page_output" | sed 's/^/   /'
-        exit 1
-    fi
+    run_check "Web page" page node scripts/check-page.mjs
+    page_output="$(<"$PROTRACKTOR_LOG_PREFIX-page.log")"
     page_checks=$(echo "$page_output" | grep -c '✓' || true)
     echo "🖥  $page_checks page checks passed"
 fi
@@ -137,11 +167,8 @@ fi
 # a refusal quoting the wrong decoder (C55) and a throw crossing the boundary (C42) -- are both in
 # `native/engine/engine.cpp`, which is the file Android compiles too.
 if [ -f web/vendor/engine.mjs ]; then
-    if ! engine_output=$(node scripts/check-engine.mjs 2>&1); then
-        echo "❌ Engine checks failed:"
-        echo "$engine_output" | grep -a '✗' | sed 's/^/   /'
-        exit 1
-    fi
+    run_check "Web engine checks" engine node scripts/check-engine.mjs
+    engine_output="$(<"$PROTRACKTOR_LOG_PREFIX-engine.log")"
     engine_checks=$(echo "$engine_output" | grep -c '✓' || true)
     echo "🔊 $engine_checks engine checks passed"
 fi
@@ -150,11 +177,8 @@ fi
 # compiles. Only where there is a C compiler, and said when there is not, since a check that quietly
 # did not run is a check that quietly passed.
 if command -v cc >/dev/null 2>&1; then
-    if ! sap_output=$(./scripts/check-sap-measure.sh 2>&1); then
-        echo "❌ SAP measurement checks failed:"
-        echo "$sap_output" | sed 's/^/   /'
-        exit 1
-    fi
+    run_check "SAP measurement" sap ./scripts/check-sap-measure.sh
+    sap_output="$(<"$PROTRACKTOR_LOG_PREFIX-sap.log")"
     sap_checks=$(echo "$sap_output" | grep -c '✓' || true)
     [ "$sap_checks" -gt 0 ] || { echo "❌ SAP measurement: no checks ran"; exit 1; }
     echo "📼 $sap_checks SAP measurement checks passed"
@@ -164,47 +188,24 @@ fi
 
 # The page's database upgraded under data a browser already holds (a migration meets it once).
 if [ -d web/node_modules/fake-indexeddb ]; then
-    if ! upgrade_output=$(node scripts/check-web-store-upgrade.mjs 2>&1); then
-        echo "❌ Web database upgrade check failed:"
-        echo "$upgrade_output" | sed 's/^/   /'
-        exit 1
-    fi
-    echo "🗄  $upgrade_output"
+    run_check "Web database upgrade" web-upgrade node scripts/check-web-store-upgrade.mjs
 fi
 
 # The Android Player itself with a fake device; the WASM checks above do not exercise Oboe output.
-if ! audio_output=$("$SCRIPT_DIR/check-audio-host.sh" 2>&1); then
-    echo "❌ Native audio-host checks failed:"
-    echo "$audio_output" | sed 's/^/   /'
-    exit 1
-fi
-echo "$audio_output" | tail -1
+run_check "Native audio" audio "$SCRIPT_DIR/check-audio-host.sh"
 
 # The icons, both players' sets, walked rather than looked at. A path whose shape depends on where
 # the pen sits after `z` draws correctly here and wrongly on somebody else's phone
 # (`docs/STATUS.md` C66), which is not a thing an eye or a screenshot will catch.
-if ! icon_output=$(node scripts/check-icons.mjs 2>&1); then
-    echo "❌ Icon checks failed:"
-    echo "$icon_output" | sed 's/^/   /'
-    exit 1
-fi
-echo "$icon_output" | tail -1
+run_check "Icons" icons node scripts/check-icons.mjs
 
-if ! pwa_output=$(node scripts/check-pwa.mjs 2>&1); then
-    echo "❌ PWA checks failed:"
-    echo "$pwa_output" | sed 's/^/   /'
-    exit 1
-fi
-echo "$pwa_output" | tail -1
+run_check "PWA" pwa node scripts/check-pwa.mjs
 
 # The server, over a real socket. Needs no npm -- it is node and the standard library -- and it is
 # separate from the page checks because the bug it exists for (`docs/STATUS.md` C29) lives in the
 # address a file is served at, which jsdom never sees.
-if ! server_output=$(node scripts/check-server.mjs 2>&1); then
-    echo "❌ Server checks failed:"
-    echo "$server_output" | sed 's/^/   /'
-    exit 1
-fi
+run_check "Local server" server node scripts/check-server.mjs
+server_output="$(<"$PROTRACKTOR_LOG_PREFIX-server.log")"
 server_checks=$(echo "$server_output" | grep -c '✓' || true)
 echo "🌐 $server_checks server checks passed"
 
@@ -212,14 +213,17 @@ echo "🌐 $server_checks server checks passed"
 # sat in the manifest since the scan work because nothing here ran lint, and the release build's
 # lintVital checks a narrower set.
 set +e
-./gradlew :app:lintDebug --console=plain > "$PROTRACKTOR_LOG_PREFIX-lint.log" 2>&1
+python3 "$CHECK_RUNNER" --label "Lint" --log "$PROTRACKTOR_LOG_PREFIX-lint.log" \
+    --timeout "${PROTRACKTOR_LINT_TIMEOUT_SECONDS:-1200}" -- \
+    ./gradlew :app:lintDebug --console=plain --no-daemon -Pkotlin.compiler.execution.strategy=in-process
 lint_status=$?
 set -e
 if [ $lint_status -ne 0 ]; then
-    echo "❌ Lint found errors:"
-    grep -E "Error:|errors? and" "$PROTRACKTOR_LOG_PREFIX-lint.log" | sed 's/^ *//' | awk '!seen[$0]++' | sed 's/^/   /' | head -20
+    echo "❌ Lint failed or stopped (exit $lint_status):"
+    { grep -E "Error:|errors? and" "$PROTRACKTOR_LOG_PREFIX-lint.log" || true; } \
+        | sed 's/^ *//' | awk '!seen[$0]++' | sed 's/^/   /' | head -20
     echo "   Full log: $PROTRACKTOR_LOG_PREFIX-lint.log"
-    exit 1
+    exit "$lint_status"
 fi
 echo "🧹 Lint: $(grep -oE '[0-9]+ errors? and [0-9]+ warnings?|No issues found' "$PROTRACKTOR_LOG_PREFIX-lint.log" | head -1 || echo 'no errors')"
 

@@ -210,12 +210,47 @@ once, by having the version typed again, before it changes anything.
 **If the bundle fails** (a mistyped keystore password), `master` has already moved and the tag
 exists; the script goes back to the branch and prints how to finish from the tag.
 
-**`./scripts/check-release.sh`** runs `release.sh` for real in throwaway clones, builds stubbed and
+**`./scripts/check-release.sh`** runs `release.sh` for real in disposable repositories, builds stubbed and
 a throwaway key: a release, `--check`, a failed bundle, a hotfix, a hotfix that conflicts with
 `develop`, and the refusals. Run it after changing `release.sh`. Verified by making the release merge
 instead of fast-forward: four checks failed. **First real run: 1.0.0, 2026-10-02** -- the owner's keystore,
 `master` fast-forwarded onto `v1.0.0` with no merge commit, `develop` one evidence commit ahead,
 the bundle's SHA-256 matching the one recorded.
+
+### Bounded release validation — 2026-10-15
+
+`release.sh` and `--check` use the same gate. The web build, unit tests, auxiliary checks and lint
+stream output into both the terminal and stage logs, with an elapsed-time message every 30 seconds
+even when the child is silent. Logs are under `/tmp/protracktor-<checkout-name>-<stage>.log`;
+the main ones end in `web-build`, `test` and `lint`. The stage prints its complete path at start/end.
+Each stage is bounded, not the entire release or interactive signing:
+
+| Environment override | Default | Includes |
+| --- | --- | --- |
+| `PROTRACKTOR_UNIT_TEST_TIMEOUT_SECONDS` | 1200 | Gradle compilation and unit tests |
+| `PROTRACKTOR_LINT_TIMEOUT_SECONDS` | 1200 | Gradle lint |
+| `PROTRACKTOR_WEB_BUILD_TIMEOUT_SECONDS` | 1200 | Release-path WASM engine build |
+| `PROTRACKTOR_CHECK_TIMEOUT_SECONDS` | 1200 | Each auxiliary check separately |
+
+Use positive seconds, e.g. `PROTRACKTOR_UNIT_TEST_TIMEOUT_SECONDS=1800 ./scripts/release.sh 1.2.0 --check`.
+The normal Test configuration isolates classes (one worker at a time, 1 GiB heap) and prints test
+start/results. This contains observed shared-worker Compose idle failures; their underlying cause
+has not been established. A failed test stops further scheduling. Release validation forces actual
+unit execution with `--really`; zero results, failures/errors/skips, timeout or cancellation refuse
+success. Do not substitute cached/focused checks for a completed release gate.
+
+Deadline exit status is 124; Ctrl+C is 130. Linux/WSL subreaper cleanup terminates only processes
+created under that stage, including detached workers, escalating TERM to KILL after five seconds.
+Cleanup can add up to two grace intervals; an unkillable process causes failure, not a green gate.
+There is no `gradlew --stop` affecting shared daemons. Gradle uses `--no-daemon` (possibly a
+single-use daemon) and in-process Kotlin compilation. Generated `.kotlin/` sessions are ignored,
+not deleted or committed, so normal compilation does not dirty a release checkout.
+
+`python3 scripts/check-test-runner.py` verifies deadline/streaming/signals/scoped process cleanup.
+`bash scripts/check-release.sh` verifies Git-flow transitions with real working scripts, fixed
+fixture versions, stub builds and a throwaway signer; neither touches release refs or owner keys
+in this checkout. Both are part of the full gate. Failure, timeout and Ctrl+C must stop before the
+release-version commit, master movement and tag. [Analysis and actual verification](PR_RELEASE_TEST_RUNNER.md).
 
 ### Releasing from `master` — decided 2026-10-01, from the first release after the public launch
 
