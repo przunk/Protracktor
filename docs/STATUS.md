@@ -5,6 +5,18 @@ versionCode is the commit count; the next selected release is 1.2.0, not prepare
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## Release test runner — in progress on task branch, 2026-10-15
+
+The owner paused release preparation after two Settings Compose idle failures during the ordinary
+`release.sh 1.2.0 --check` path. The script has no test deadline or live Gradle progress; the earlier
+successful 910-test gate used temporary worker isolation absent from that ordinary path.
+Work is scoped to `fix/release-test-runner`, with no release/merge/push or app-feature change.
+**Checked before correction:** the real script ignores a one-second limit in a stuck-Gradle
+fixture; its external five-second watchdog fails the single regression and cleans up its own
+processes. Underlying shared-worker Compose timeout cause remains unestablished. Implementation,
+process cleanup fixtures and the ordinary full gate remain pending.
+[Analysis and verification](PR_RELEASE_TEST_RUNNER.md).
+
 ## Release-version history reconciliation — completed, 2026-10-15
 
 The owner approved correcting unpublished test-version bumps and the project AGENTS version rule.
