@@ -135,7 +135,7 @@ Master `da4569b`, every tag and every remote-tracking ref stayed unchanged; `v1.
 The earlier pending-approval checkpoint is superseded for integration only, not for diagnosing
 the still-open Compose idle issue or claiming device tests.
 
-## Follow-up: concise console output — checked, awaiting merge approval, 2026-10-15
+## Follow-up: concise console output — owner approved and merged, 2026-10-15
 
 The owner completed an ordinary `--check` with 910 passing tests in 556 seconds, then requested
 the previous concise terminal style. Streaming every successful test and auxiliary-check detail
@@ -163,4 +163,9 @@ match develop `e750591`; only the helper, regression tests, a shell header and d
 Evidence: ignored `dist/concise-runner-before.log`, `concise-runner-focused.log`,
 `concise-runner-release-flow.log` and `concise-runner-preview.log`. No new 910-test/lint run is
 claimed for this output-only tool change; the owner's 556-second run above is separate evidence.
-No app artifact, release, merge or push. Branch `fix/concise-check-output` awaits owner approval.
+No app artifact, release, merge or push at that handoff checkpoint.
+
+The owner subsequently authorized merging `fix/concise-check-output`. Merge `420caed` into develop
+has the same complete tracked tree as approved branch `6d1311b`; verified by Git tree comparison,
+not a fresh test/lint run. The integration closeout is documentation-only. No app artifact, release
+or push; master, tags and remote-tracking refs remain unchanged.

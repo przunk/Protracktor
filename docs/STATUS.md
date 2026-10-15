@@ -5,7 +5,7 @@ versionCode is the commit count; the next selected release is 1.2.0, not prepare
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Concise check output — checked, awaiting merge approval, 2026-10-15
+## Concise check output — owner approved and merged, 2026-10-15
 
 After an owner-run successful `--check` (910 tests, 556 s), the owner requested short terminal
 output again. `fix/concise-check-output` changes presentation only: stage start/result and
@@ -19,7 +19,10 @@ All eleven disposable release scenarios, Bash syntax and whitespace checks also 
 preview shows two console notices and retains 2,000 child lines in the complete log. Application,
 build configuration, native/web and release-script sources match develop `e750591`. No new
 application test/lint run or APK is claimed for this output-only tooling change; the earlier
-910-test gates remain historical evidence, not a new execution. No release, merge or push.
+910-test gates remain historical evidence, not a new execution. Owner-approved merge `420caed`
+has the same complete tracked tree as checked branch `6d1311b`; verified by Git tree comparison,
+not another test run. The following closeout changes documentation only. No release, APK or push;
+master, tags and remote refs are unchanged.
 [Report](PR_RELEASE_TEST_RUNNER.md).
 
 ## Release test runner — owner approved and merged, 2026-10-15
