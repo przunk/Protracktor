@@ -4,7 +4,7 @@ Updated: 2026-10-15 — version 1.3.0, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## C107 History entry scroll — focused checks passed; full gate pending, 2026-10-15
+## C107 History entry scroll — full gate passed; APK pending, 2026-10-15
 
 The owner observed History opening below the top and requested that every new entry start at
 the top. Exact installed build/device were not separately supplied. History resets the data page
@@ -19,8 +19,13 @@ checks, but a fourth UI check exposed a simultaneous playing-key change overridi
 resetting its scroll cache and treating the playing row as arrival rather than a track change.
 Other Browse domains retain their cache; page/row/loading updates within the visit do not reset it.
 **Checked final focused run:** 68 tests in six suites, zero failures/errors/skips, 119 s.
-The trial declares 1.3.3; schema/versionCode policy are unchanged. Full gate and replacement APK
-remain pending here. Evidence: ignored `dist/c107-*`.
+The trial declares 1.3.3; schema/versionCode policy are unchanged.
+**Checked full gate:** forced run on `ccf85a0` passed in 464 s: **876 tests in 116 suites**, zero
+failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN resource/store checks,
+581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
+audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK, temporary
+per-class isolation (one worker/1 GiB heap), no exclusions or repository build-setting changes.
+Evidence: ignored `dist/c107-full-gate*`. Replacement release APK remains pending here.
 No phone retest, merge or push is claimed. [Analysis](PR_C107_HISTORY_ENTRY_SCROLL.md).
 
 ## C106 search request ownership — release APK ready; phone acceptance pending, 2026-10-15

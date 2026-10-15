@@ -45,7 +45,17 @@ also reset the playing-row observer; arrival is not a track change. Evidence: ig
 **Checked final focused run:** 68 checks in six suites passed, zero failures/errors/skips, 119 s:
 four actual History UI checks, Browse navigation/scroll/workflow, History reads and recent-search
 UI. Evidence: ignored `dist/c107-focused-final.log` and `dist/c107-focused-final-results/`.
-Full gate/lint and release artifact remain pending at this checkpoint; phone behaviour is not checked.
+Phone behaviour is not checked by the host run.
+
+## Full verification checkpoint
+
+The forced project gate on `ccf85a0` passed in **464 s**: **876 unit tests in 116 suites**, zero
+failures/errors/skips. Lint XML contains zero errors/72 warnings (unchanged). PL/EN resource/store
+checks, 581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade,
+30 native audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK
+with temporary per-class worker isolation, one worker/1 GiB heap; no exclusions or repository
+build-setting changes. Evidence: ignored `dist/c107-full-gate*`. Release APK remains pending
+at this checkpoint. No phone result or merge is inferred; C105/C106 stay pending too.
 
 ## Phone checklist
 
