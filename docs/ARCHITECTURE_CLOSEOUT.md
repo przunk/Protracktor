@@ -56,6 +56,12 @@ its implementation and verification are tracked in `STATUS.md` and `PLAN_UNEXOTI
 
 ## Known risks retained, not repaired
 
+**Follow-up, 2026-10-16:** the owner selected catalogue/folder ownership, Back publication and
+read-ahead retirement for a separate bounded stability pass. They are implemented on
+`fix/browse-download-stability`; combined verification and phone acceptance are pending, not merged.
+The retained list below records the original extraction boundary, not a claim that the later
+trial is absent. [Plan and implementation evidence](PR_BROWSE_DOWNLOAD_STABILITY.md).
+
 Detailed reproductions are in `STATUS.md`; controlled tests establish the sequences, not their
 frequency on a phone. In particular:
 

@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 class RemoteFiles(private val context: Context) {
 
     private val cacheDir = File(context.cacheDir, "remote").apply { mkdirs() }
+    private val cache = RemoteFileCache(cacheDir)
 
     // filesDir rather than cacheDir: an archive is expensive to fetch and the system may clear a
     // cache directory at any time. Losing 20 MB to a cache sweep would mean downloading it again.
@@ -36,18 +37,12 @@ class RemoteFiles(private val context: Context) {
     /** Returns the bytes, from cache when possible. Null when the fetch failed. */
     suspend fun fetch(url: String): ByteArray? = withContext(Dispatchers.IO) {
         val cached = fileFor(url)
-        if (cached.exists() && cached.length() > 0) {
-            // Touched on the way past, which is what makes the budget's ordering mean "least
-            // recently used" rather than "least recently downloaded". Without it, a tune played
-            // every day would be evicted ahead of one fetched once and never heard again.
-            runCatching { cached.setLastModified(System.currentTimeMillis()) }
-            return@withContext runCatching { cached.readBytes() }.getOrNull()
-        }
+        cache.read(cached.name)?.let { return@withContext it }
 
         // **One download per address** (A55): a tap on a track that is being fetched ahead waits
         // for that fetch instead of starting a second, and a download keeps going when whoever
         // asked for it -- a folder that was left -- stops waiting.
-        downloads.get(url) { downloadAndStore(url, cached) }
+        downloads.get(url) { cache.read(cached.name) ?: downloadAndStore(url, cached) }
     }
 
     private val downloads = SharedFetches<ByteArray?>(CoroutineScope(SupervisorJob() + Dispatchers.IO))
@@ -55,19 +50,7 @@ class RemoteFiles(private val context: Context) {
     private fun downloadAndStore(url: String, cached: File): ByteArray? {
         val downloaded = runCatching { download(url) }.getOrNull() ?: return null
 
-        // Written through a temporary file: a download interrupted halfway would otherwise leave a
-        // truncated file in the cache that looks valid forever after. The budget ignores `.part`
-        // files in both directions -- it neither charges for them nor deletes them.
-        val stored = runCatching {
-            val temporary = File(cached.parentFile, cached.name + CacheBudget.PARTIAL_SUFFIX)
-            temporary.writeBytes(downloaded)
-            temporary.renameTo(cached)
-        }.getOrDefault(false)
-
-        // After a successful write, not before: the file that just arrived is the newest and would
-        // survive anyway, and enforcing before writing would leave the cache briefly over budget
-        // exactly when it is easiest to fix.
-        if (stored) enforceBudget(inUse = setOf(cached.name))
+        cache.store(cached.name, downloaded)
         return downloaded
     }
 
@@ -81,11 +64,7 @@ class RemoteFiles(private val context: Context) {
      * the ones read ahead. Deleting a file mid-read would look to the user like a corrupt download.
      */
     fun enforceBudget(inUse: Set<String> = emptySet(), ceilingBytes: Long = CacheBudget.DEFAULT_CEILING_BYTES) {
-        val files = cacheDir.listFiles() ?: return
-        val entries = files.map { CacheEntry(it.name, it.length(), it.lastModified()) }
-        CacheBudget.evictions(entries, inUse, ceilingBytes).forEach { name ->
-            runCatching { File(cacheDir, name).delete() }
-        }
+        cache.enforceBudget(inUse, ceilingBytes)
     }
 
     /**
@@ -103,12 +82,7 @@ class RemoteFiles(private val context: Context) {
 
     /** Stores a downloaded archive whole, so its contents can be read without the network again. */
     suspend fun storeArchive(catalogueId: String, bytes: ByteArray): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
-            val target = archiveFile(catalogueId)
-            val temporary = File(target.parentFile, target.name + ".part")
-            temporary.writeBytes(bytes)
-            temporary.renameTo(target)
-        }.getOrDefault(false)
+        AtomicFileWrite.write(archiveFile(catalogueId), bytes)
     }
 
     /**
@@ -128,7 +102,7 @@ class RemoteFiles(private val context: Context) {
         }.getOrNull()
     }
 
-    fun isCached(url: String): Boolean = fileFor(url).let { it.exists() && it.length() > 0 }
+    fun isCached(url: String): Boolean = cache.contains(fileFor(url).name)
 
     /** Total bytes held. The eviction budget is still an open question (OPEN_QUESTIONS Q5). */
     /**
@@ -172,9 +146,7 @@ class RemoteFiles(private val context: Context) {
     }.getOrNull()
 
     /** What the fetched-file cache holds. Unfinished downloads do not count. */
-    fun cacheBytes(): Long = CacheBudget.totalBytes(
-        cacheDir.listFiles().orEmpty().map { CacheEntry(it.name, it.length(), it.lastModified()) }
-    )
+    fun cacheBytes(): Long = cache.bytes()
 
     /**
      * What the permanent downloads hold — the ASMA archive and anything like it.
@@ -198,7 +170,7 @@ class RemoteFiles(private val context: Context) {
     fun deleteArchive(catalogueId: String): Boolean = archiveFile(catalogueId).delete()
 
     fun clearCache() {
-        cacheDir.listFiles()?.forEach { it.delete() }
+        cache.clear()
     }
 
     /**

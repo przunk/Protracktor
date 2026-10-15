@@ -37,4 +37,9 @@ Use one task branch from develop; do not merge, push, move release tags or advan
 
 ## Progress
 
-- Plan recorded; implementation and verification pending.
+- Stages 1–3 implemented as separate commits; navigation-focused checks: 47 passed.
+- Stage 4: old disk algorithm extracted and exercised before correction; serial reproduction:
+  three tests, two expected failures (obsolete eviction and staging-file cleanup), 94.4 s.
+- All four corrections implemented; combined serial focused run: 65 passed in 110.1 s.
+- Full tests/lint, release APK, phone acceptance and merge remain pending.
+- [Mechanisms, intermediate failures and evidence](PR_BROWSE_DOWNLOAD_STABILITY.md).

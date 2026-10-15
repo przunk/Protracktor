@@ -18,6 +18,38 @@ once:
 So a handover build is not "tested" when the suite is green. This is what a person checks on a device, and it
 is written down so it is the same list every time rather than whatever anybody remembers.
 
+## Browse/download stability trial — 2026-10-16
+
+Branch `fix/browse-download-stability`; APK identity and host results are recorded in
+[the handoff](PR_BROWSE_DOWNLOAD_STABILITY.md). **All scenarios below are unchecked on a phone.**
+Use existing disposable/saved test playlists; do not uninstall or clear app data.
+
+1. In an indexed catalogue, quickly open different formats/authors, press Back during loading,
+   and reopen the same location. Final rows must match the final heading; an older list must
+   not replace them and loading must finish normally.
+2. During a folder read, enter another domain (Search, History, Local or Saved places). Revisit
+   Online catalogues. Old folder rows must not appear under another domain or at the catalogue root.
+3. Open a previously scanned local grant, close/reopen it and switch to another grant while it
+   loads. Confirm the final root, subfolders and files belong to the selected grant; walk Back
+   through subfolders. No new scan should start merely from opening a grant.
+4. Use cached/indexed views where parent reads finish quickly. Back from an author must show
+   its format's authors, then the catalogue's formats, without a blank/stuck-loading parent.
+5. Open an author's folder from Search and Random; leave quickly or return to its waiting session.
+   Test the same via a bookmark and return to Saved places. No late jump should reopen a dismissed
+   folder or change the transport's source. Existing session/playlist return rules remain unchanged.
+6. Exercise Random Next/Previous, a filter change while replaying history, and switching to a
+   playlist. Heard history, current selection, notification heart and transport must remain coherent.
+7. With folder prefetch enabled on an allowed network, play a row while downloads are running;
+   navigate away/back and repeat. Confirm complete tracks play and cached markers settle. Then
+   enable airplane mode and replay already fetched test files. Cache may evict under its normal
+   limit; permanent archives must remain available. Do not manufacture a full disk on the phone.
+8. Optionally clear only fetched music via the existing storage control while a fetch is active.
+   No crash/corrupt partial track; an in-flight shared transfer may finish and repopulate cache,
+   which is existing behaviour. Playlists, bookmarks, History and permanent archives must survive.
+
+Controlled host gates establish the exact adverse orderings; rapid phone navigation alone does
+not prove every race occurred. Record APK/build, device/Android version, scenarios and outcomes.
+
 ## Every build
 
 **Play for twenty minutes without touching it.** Random, scope *Everything*, screen off, phone in a

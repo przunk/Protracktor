@@ -26,7 +26,7 @@ the project's normal full gate retains its configured process isolation and fail
 
 ## Implementation stages
 
-### 1. Navigation ownership — in progress
+### 1. Navigation ownership — focused checks passed
 
 Use a shared `BrowseReadOwner` and monotonic `BrowseState.navigationVisit`. Selection is published
 at the call boundary, before queuing the read; completion checks both visit and route inside the
@@ -36,10 +36,11 @@ restoration advance the visit; restoration derives it from current state, not th
 The controller's author jump checks ownership before navigation and before playback-side effects.
 Its resolution intent borrows current visit ownership without retiring the existing read; an
 unavailable jump must leave that read valid. A separate intent counter rejects older resolutions,
-and a changed Search query/scope also retires that intent. A direct capture-preservation check was
-added after the initial focused run. An initial full gate was deliberately interrupted after 75.2 s
-to finish this edge-case correction; it is not a verification pass. The final forced run must start
-again from the corrected committed candidate.
+and Search's existing request revision retires it even if changed words/scope later return to the
+same values. Direct capture-preservation and search-revision checks were added after the initial
+focused run. Two initial full-gate attempts were deliberately interrupted after 75.2 s and 42.8 s
+to finish these edge-case corrections; neither is a verification pass. The final forced run must
+start again from the corrected committed candidate.
 Independent catalogue/storage counts remain independent of navigation.
 
 Checked: the final navigation-focused run passed all 47 tests in 116.2 s
@@ -49,15 +50,17 @@ synchronously to invalidate queued work; that assertion has been corrected. The 
 also includes four direct ownership checks. Cancellation/failure reporting policy
 is not redesigned by this stage. Full tests/lint and device acceptance remain pending.
 
-### 2. Back publication — implemented; focused verification pending
+### 2. Back publication — focused checks passed
 
 Back now atomically publishes its parent transition before invoking the parent reader. It modifies
 current state instead of publishing a captured complete snapshot afterwards. Each successful
 transition advances the navigation visit; immediate/reentrant results and unrelated fields survive.
 The controlled synchronous-parent regression failed on the old code. Existing search-scope, jump,
 saved-place and local hierarchy contracts remain covered by the workflow suite.
+Exiting Browse also retires outstanding navigation reads, even when no outside-playlist session
+is active. The serial combined run passed all 65 checks in 110.1 s, including this workflow.
 
-### 3. Read-ahead ownership — implemented; focused verification pending
+### 3. Read-ahead ownership — focused checks passed
 
 Retire the previous generation before checking for missing bytes. Cancel after retiring ownership,
 reject obsolete/cancelled completions and assign a lazy job before starting it. Empty and fully
@@ -65,11 +68,40 @@ held selections now cancel previous work. Clear retires the generation too; an i
 cancellation callback cannot overwrite a preparation started reentrantly. Existing parallelism,
 consume-once semantics and four/eight-megabyte limits remain unchanged. Duplicate candidates are
 read once per request. The old implementation fails the controlled empty-selection regression.
+The complete read-ahead class passed in the 65-check serial run, including cancellation-resistant
+completion, same-ID replacement, reentrant cancellation and the existing memory limits.
 
-### 4. Disk-cache transactions — pending
+### 4. Disk-cache transactions — focused checks passed
 
 Historical review R7 predates `SharedFetches`: the current app already joins overlapping requests
-for one URL. Recheck the actual disk boundary rather than claiming duplicate transfers reproduce.
+for one URL. This is not a reproduction of duplicate network transfers. Disk operations have been
+extracted into `RemoteFileCache` with the old write/evict algorithm first, so the actual shared
+storage boundary can be exercised on real files without Android or network access. Controlled
+tests expose two defects: an old eviction snapshot deletes a concurrent replacement, and a failed
+rename leaves its staging file. The serial pre-correction run completed in 94.4 s, three tests,
+two expected assertion failures and no reporting/worker errors
+(`/tmp/protracktor-Protracktor-cache-before-serial.log`).
+
+The correction serializes cache read/touch/write/snapshot/delete/accounting per app-owned
+cache instance, keeping network transfers outside the monitor. Each cache/archive writer uses
+a unique `.part` sibling and cleans up only its own staging file. The existing one-URL transfer
+sharing remains; a cache recheck after joining closes the miss-to-transfer-completion window.
+The cache budget, protection rules, URL hash keys and permanent archive locations stay unchanged.
+An unreadable cache hit now falls through to the normal shared fetch rather than returning a
+permanent null result. The app has one RemoteFiles owner in its application-scoped controller;
+the monitor is not a cross-process lock and cannot prevent OS-managed cache removal.
+The serial combined run passed all 65 checks (110.1 s), including real disk races, failed/successful
+atomic writes, concurrent archive-style writers/readers, existing SharedFetches and the real local
+HTTP User-Agent/cache-hit checks. No external archive traffic or private credentials were needed.
+
+### Diagnostic-run limitation
+
+Two diagnostic Gradle invocations were accidentally overlapped against the same build/results
+directory. The Back/read-ahead run printed passing checks but ended with `EOFException`; the
+overlapping cache run printed two expected assertion failures but also ended with a missing binary
+results file. Neither is counted as a successful completed verification. Subsequent runs are
+serial. The five-test initial regression run and the completed 47-test navigation run are separate
+completed executions; the final forced gate must establish the complete candidate independently.
 
 ## Final handoff
 

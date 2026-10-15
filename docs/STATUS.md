@@ -1,10 +1,23 @@
 # Status
 
 Updated: 2026-10-16 — prepared release 1.2.0 (1207), schema version 23 on develop.
-The signed AAB is prepared; upload to Play, publication and Git push are not confirmed.
+The signed AAB is prepared; upload to Play and publication are not confirmed.
+GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## Browse/download stability — branch implementation, 2026-10-16
+
+Owner-selected bounded correctness pass on `fix/browse-download-stability`, from develop `59ba578`.
+Not merged. Four stages cover navigation visit ownership, Back publication order, read-ahead
+retirement and disk-cache transactions. These are retained review findings, not new phone reports.
+The initial five correctness regressions failed before the fixes; 47 navigation-focused checks
+passed. A clean serial cache reproduction executes three checks with two expected assertion
+failures on the old extracted algorithm. Combined serial focused checks: **65 passed** (110.1 s).
+Full tests/lint and APK are pending. The earlier overlapping diagnostic runs had result-file errors and are not successful
+verification evidence. Phone behaviour remains **unchecked**.
+[Plan](PLAN_BROWSE_STABILITY.md), [analysis and verification](PR_BROWSE_DOWNLOAD_STABILITY.md).
 
 ## Release 1.2.0 — AAB prepared 2026-10-15, verified 2026-10-16
 
@@ -27,9 +40,11 @@ This release includes stereo mix modes, the notification playlist heart, recent-
 live History search, Bluetooth output recovery, playlist/search ordering safeguards, History entry
 scroll correction and newer-database preservation. The full notes distinguish user feedback from
 code-review findings and retain open device/Compose limitations. PL/EN Play notes are at the tag.
-**Unconfirmed:** upload/acceptance in Play Console, publication, Git push and a phone trial of this
+**Unconfirmed:** upload/acceptance in Play Console, publication and a phone trial of this
 exact store artifact. The preparation evidence does not establish any of those states. No rebuild,
 tag movement, additional release, upload or push was performed for this documentation closeout.
+Follow-up 2026-10-16: a public `git ls-remote --tags` read confirms both v1.1.0 and v1.2.0,
+including their peeled source revisions, match local tags. Tags are separate from GitHub Releases.
 
 ## Concise check output — owner approved and merged, 2026-10-15
 
