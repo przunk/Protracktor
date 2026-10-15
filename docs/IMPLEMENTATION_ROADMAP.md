@@ -19,7 +19,7 @@ Dated implementation checkpoints below describe the earlier, unaccepted builds.
 
 | ID | Remaining work | State |
 | --- | --- | --- |
-| B49 | Live search in History | Selected by owner, 2026-10-15, on `feature/history-live-search`. Literal phrase across title/author/filename, case-insensitive, 200 ms debounce, all History with paging, no queue change. Verification and acceptance pending; [plan](PLAN_HISTORY_SEARCH.md). Separate from B46 recent-query suggestions. |
+| B49 | Live search in History | Implemented on `feature/history-live-search`, 2026-10-15. Literal phrase across title/author/filename, case-insensitive, 200 ms debounce, all History with paging, no queue change. Full gate 897 tests, lint 0 errors/72 warnings; trial APK 1.4.0 (1185). Phone acceptance/merge pending; [plan](PLAN_HISTORY_SEARCH.md). Separate from B46 recent-query suggestions. |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
 | B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |

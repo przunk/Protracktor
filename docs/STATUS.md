@@ -4,7 +4,7 @@ Updated: 2026-10-15 — version 1.3.3, schema version 23 on develop. versionCode
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B49 live History search — full gate passed; APK pending, 2026-10-15
+## B49 live History search — release APK ready; phone acceptance pending, 2026-10-15
 
 Owner selected `feature/history-live-search` from develop `5954c86`: live literal substring
 filtering across all History by title/author/filename, case-insensitive, with 200 ms debounce,
@@ -23,8 +23,17 @@ actual EN/PL History UI and ordinary Search. Host/native SQLite read 10,000 rows
 failures/errors/skips. Lint: zero errors/72 warnings (unchanged). PL/EN resource/store checks,
 581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
 audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK and temporary
-per-class test isolation; no exclusions or repository build-setting changes. APK and phone
-acceptance remain pending. Evidence: ignored `dist/b49-*`.
+per-class test isolation; no exclusions or repository build-setting changes.
+**Checked artifact:** clean source `e4f5ccc`, **1.4.0 (1185)**, built in 161 s:
+`dist/protracktor-release-1.4.0-1185-e4f5ccc-20261015-201306.apk`, 11,817,367 bytes.
+SHA-256: `5170532e9363d331c5523b72812536d6f48ced2bc380106868e61a361e01518a`.
+R8 executed; manifest is non-debuggable, minSdk 29/targetSdk 36; all three existing ABIs remain.
+Independent APK v2 verification confirms unchanged test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+New History resources remain in the APK. App/native/scripts/web/build sources match full-gate
+commit `27bd9fa`; later checkpoints are docs-only. Evidence: ignored `dist/b49-*`.
+**Not checked:** phone behaviour, timing and owner acceptance. Branch is unmerged; develop/master,
+tags and store are unchanged. No push or AAB build. Earlier APKs are preserved.
 [Plan](PLAN_HISTORY_SEARCH.md). Play release is a later owner-driven step, not started here.
 
 ### C108 — destructive database downgrade policy (separate code finding)

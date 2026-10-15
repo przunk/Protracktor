@@ -100,3 +100,20 @@ checks, 140 icon paths, PWA and 11 loopback server checks passed. Existing JDK; 
 test isolation (one worker, 1 GiB heap), no exclusions or repository build-setting changes.
 Evidence: ignored `dist/b49-full-gate*`, including copied JUnit/lint XML and Gradle logs.
 Clean-source release APK and owner phone acceptance remain pending. No merge or Play step.
+
+## Release APK handoff
+
+Built from clean source `e4f5ccc` in 161 s: **1.4.0 (1185)**,
+`dist/protracktor-release-1.4.0-1185-e4f5ccc-20261015-201306.apk`, 11,817,367 bytes.
+SHA-256: `5170532e9363d331c5523b72812536d6f48ced2bc380106868e61a361e01518a`.
+R8 actually executed. Independent artifact checks confirm APK v2 signature and unchanged test
+certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`,
+non-debuggable manifest, minSdk 29/targetSdk 36, arm64-v8a/armeabi-v7a/x86_64 and all four new
+History resources. This is a minified test-key APK, not a Play upload artifact.
+
+App/native/scripts/web/build sources match full-gate `27bd9fa`; the APK checkpoint and later
+handoff change documentation only. Existing 1.3.3 APK is preserved. Checked 93 local documentation
+file links without missing targets; this is not a complete external-link or anchor audit.
+Evidence: ignored `dist/b49-release*` / `dist/b49-apk-*`. Phone behaviour/timing and acceptance
+remain **not checked**. No merge/push/master/tag/store change or AAB build. After acceptance,
+integration and the owner's Play release procedure are separate steps; discuss C108 separately.

@@ -174,6 +174,11 @@ The date above is the recording date, not an independently established occurrenc
 
 ## B49 live History search — phone checks pending, 2026-10-15
 
+Trial: **1.4.0 (1185)**, clean source `e4f5ccc`,
+`dist/protracktor-release-1.4.0-1185-e4f5ccc-20261015-201306.apk`.
+Full forced gate: 897 tests/119 suites, zero failures/errors/skips; lint zero errors/72 warnings.
+Artifact/signature checks passed; no phone behaviour or acceptance is inferred.
+
 Test title/author/filename phrases including mixed case, non-ASCII case, literal `%`/`_`, and an
 entry beyond the first hundred. Results/counts cover the whole History in newest-first order.
 Check fast edits, paging, clearing input, no matches versus empty History, keyboard focus during
