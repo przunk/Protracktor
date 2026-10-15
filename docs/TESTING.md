@@ -172,7 +172,14 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
-## C108 database compatibility guard — phone checks pending, 2026-10-15
+## C108 database compatibility guard — integration approved, 2026-10-15
+
+After the trial handoff the owner authorized integration; merged at `8f3ef56`. Its tracked tree
+matches approved branch `83468f4`; app/build sources match the APK and full gate below. Verified
+by source comparison, not another test/lint run or APK build. Device/Android, exact installed
+build and individual scenario results were not separately supplied. In particular, approval does
+not establish a newer-schema refusal test on a phone. Retain the checklist below for regression
+work; do not treat each item as confirmed or as agent-run device evidence.
 
 Trial: **1.4.1 (1190)**, clean source `2fe0311`,
 `dist/protracktor-release-1.4.1-1190-2fe0311-20261015-213009.apk`.

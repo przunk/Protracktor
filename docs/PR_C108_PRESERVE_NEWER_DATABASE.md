@@ -116,3 +116,16 @@ Evidence: ignored `dist/c108-release*` / `dist/c108-apk-*`. Phone startup/playba
 timing remain **not checked**; no owner acceptance, merge, push, tag/master/store change or AAB.
 Use the [normal-use phone checklist](TESTING.md); never manipulate the owner's database to stage
 the failure. A future-schema phone fixture would require separate, isolated test data.
+
+## Owner approval and integration — 2026-10-15
+
+The owner authorized integration after the 1.4.1 trial handoff. Merge `8f3ef56` on develop has
+the same tracked tree as approved branch `83468f4`; app/native/scripts/web/build sources match
+the offered clean APK source `2fe0311` and full-gate source `a7bd098`. Checked by Git tree/source
+comparison, not another test/lint run. No rebuild was needed for unchanged application sources.
+The retained full gate is 910 tests/121 suites, zero failures/errors/skips, lint zero errors and
+72 warnings. Device/Android, exact installed build and individual scenario results were not
+separately supplied; this records integration approval, not a claim of agent-run phone checks or
+of a newer-schema refusal being exercised on a phone. Earlier pending checkpoints are historical.
+Master/tags/schema/store remain unchanged; no push, publication or AAB build. Older installed
+destructive binaries remain unsafe for schema rollback; this merge changes only the new code.

@@ -445,8 +445,8 @@ shaped so the move to Room stays mechanical if KSP catches up:
 - **`SchemaSqlTest` checks that a fresh install and a fully migrated database end up identical.**
   Updating `CREATE` after adding a migration is the step everyone forgets, and the symptom — a
   schema that differs between an upgraded phone and a new one — surfaces far from its cause.
-- **Unsupported downgrades refuse without deleting data** (C108, 2026-10-15, on
-  `fix/preserve-newer-database`). The previous recreation policy contradicted the current workspace
+- **Unsupported downgrades refuse without deleting data** (C108, merged on owner approval at
+  `8f3ef56`, 2026-10-15). The previous recreation policy contradicted the current workspace
   rules and discarded user data. `onDowngrade` now throws before destructive SQL. A read-only
   `DatabaseAccess` version probe runs before the activity composes its player/ViewModel and before
   a cold playback service constructs playback. The activity checks on IO and shows PL/EN loading

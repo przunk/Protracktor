@@ -57,7 +57,6 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 
 | Reference | Remaining problem | Evidence/state |
 | --- | --- | --- |
-| C108 | Database downgrade drops/recreates user tables | Protection implemented on `fix/preserve-newer-database`, 2026-10-15, after B49 merge. Pre-existing code finding, not user feedback. Before-correction checks fail; corrected full gate 910 tests, lint 0 errors/72 warnings. Release APK 1.4.1 (1190) ready; phone acceptance/merge pending. Schema stays 23. [Analysis](PR_C108_PRESERVE_NEWER_DATABASE.md). |
 | C96 | UADE crashes while cleaning up after rejecting a file | Scanning avoids some triggering paths; the teardown cause remains unfixed. |
 | C104 | Headset/media buttons do not control the WWW player | Owner report, 2026-10-13; Android buttons appear to work. Browser/device/build/buttons and mechanism unknown; deferred, tracked with B47. |
 | C36 | Keyboard/media-key Next or Previous on web can be swallowed after a long press ending without a click | Host sequence reproduced; touch event ordering needs device verification before a fix. |
@@ -70,6 +69,10 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | Download cancellation notice | Stopped notice is suppressed because cancellation is checked inside NonCancellable cleanup | Production workflow exercised with controlled host ports; phone behaviour not independently checked. |
 | Review round 5 R7 | Concurrent fetches for one URL share a temporary `.part` filename | Low-priority retained cache risk; [review record](review.md). |
 | Review round 5 R8 | Cache eviction can remove another fetch's newly written file | Low-priority retained risk of a redundant download; [review record](review.md). |
+
+C108 protection was approved for integration and merged at `8f3ef56`, 2026-10-15, and is no longer
+open. Schema remains 23; older destructive binaries are not repaired by this merge.
+[Verification and remaining phone evidence limits](PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 Completed C105/C106/C107 left the open inventory after owner acceptance on 2026-10-15: C105 merged
 at `557acbb`, then C106/C107 at `d74d339`. Their defect history and verification remain in

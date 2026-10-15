@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-10-15 — version 1.4.0, schema version 23 on develop. versionCode is the commit count.
+Updated: 2026-10-15 — version 1.4.1, schema version 23 on develop. versionCode is the commit count.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
@@ -47,9 +47,21 @@ commit `27bd9fa`; later checkpoints are docs-only. Evidence: ignored `dist/b49-*
 tags and store are unchanged. No push or AAB build. Earlier APKs are preserved.
 [Plan](PLAN_HISTORY_SEARCH.md). Play release is a later owner-driven step, not started here.
 
-### C108 — preservation implemented; release APK ready, acceptance pending
+## ~~C108 — destructive database downgrade~~ — owner approved and merged, 2026-10-15
 
-Recorded 2026-10-15 from `ProtracktorDatabase.onDowngrade`: it drops/recreates user tables.
+After the 1.4.1 trial handoff the owner authorized integration. Merged at `8f3ef56`; its tracked
+tree matches approved branch `83468f4`. App/native/scripts/web/build sources match offered APK
+`2fe0311` and full-gate implementation `a7bd098`. Checked by Git tree/source comparison, not a new
+test/lint run. The recorded gate remains 910 tests/121 suites, lint zero errors/72 warnings.
+No APK rebuild was needed for unchanged application sources. Device/Android, exact installed
+build and individual scenario results were not separately supplied. Integration approval is not
+agent-run phone testing or evidence of exercising the newer-schema refusal on a phone.
+Earlier pending checkpoints below are historical and superseded for integration approval only.
+Master/tags/store/schema are unchanged; no push, publication or AAB build.
+
+### Pre-integration report and verification
+
+Recorded 2026-10-15 from `ProtracktorDatabase.onDowngrade`: the original helper dropped/recreated user tables.
 This contradicts the workspace's data-preserving downgrade policy. No phone reproduction, affected
 device count or current data loss is claimed. B49 changes no schema and does not alter or trigger
 this path. Not independent user feedback.
