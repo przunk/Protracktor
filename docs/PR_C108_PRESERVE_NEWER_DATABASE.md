@@ -98,3 +98,21 @@ zero failures/errors/skips, with the unit task actually executed. Lint XML: zero
 isolation (one worker, 1 GiB heap), no exclusions or repository build-setting changes.
 Restoration SHA-256 checks still pass. Evidence: ignored `dist/c108-full-gate*`.
 Release APK and phone acceptance remain pending; no merge/push/Play step.
+
+## Release APK handoff
+
+Clean source `2fe0311`, **1.4.1 (1190)**, built in 151 s:
+`dist/protracktor-release-1.4.1-1190-2fe0311-20261015-213009.apk`, 11,823,499 bytes.
+SHA-256: `5322d6bf815a130305b51eefc9122df572faeb90027310a2b32fdbc1713213f3`.
+R8 executed; independent checks confirm non-debuggable manifest, minSdk 29/targetSdk 36,
+arm64-v8a/armeabi-v7a/x86_64, all five new compatibility resources and APK v2 signature with
+unchanged test certificate SHA-256 `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+This is a minified test-key APK, not a Play upload artifact.
+
+App/native/scripts/web/build sources match full-gate `a7bd098`; subsequent checkpoints are
+documentation-only. Checked 95 local documentation file links with no missing targets, not a full
+anchor/external-link audit. Existing APKs remain intact, including the unchanged 1.4.0 SHA-256.
+Evidence: ignored `dist/c108-release*` / `dist/c108-apk-*`. Phone startup/playback and refusal UI/
+timing remain **not checked**; no owner acceptance, merge, push, tag/master/store change or AAB.
+Use the [normal-use phone checklist](TESTING.md); never manipulate the owner's database to stage
+the failure. A future-schema phone fixture would require separate, isolated test data.

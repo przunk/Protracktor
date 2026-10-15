@@ -47,7 +47,7 @@ commit `27bd9fa`; later checkpoints are docs-only. Evidence: ignored `dist/b49-*
 tags and store are unchanged. No push or AAB build. Earlier APKs are preserved.
 [Plan](PLAN_HISTORY_SEARCH.md). Play release is a later owner-driven step, not started here.
 
-### C108 — destructive database downgrade policy (separate code finding)
+### C108 — preservation implemented; release APK ready, acceptance pending
 
 Recorded 2026-10-15 from `ProtracktorDatabase.onDowngrade`: it drops/recreates user tables.
 This contradicts the workspace's data-preserving downgrade policy. No phone reproduction, affected
@@ -78,8 +78,19 @@ zero failures/errors/skips; lint zero errors/72 warnings (unchanged). PL/EN reso
 581 page checks, 49 WASM engine checks, eight SAP checks, browser database upgrade, 30 native
 audio checks, 140 icon paths, PWA and 11 loopback server checks passed. Same JDK and temporary
 per-class isolation, no exclusions or repository build-setting changes. Evidence: ignored
-`dist/c108-full-gate*`. APK/phone acceptance remain pending. Schema stays
-23; no reset or migration. [Analysis and verification](PR_C108_PRESERVE_NEWER_DATABASE.md).
+`dist/c108-full-gate*`.
+**Checked artifact:** clean source `2fe0311`, **1.4.1 (1190)**, 151 s:
+`dist/protracktor-release-1.4.1-1190-2fe0311-20261015-213009.apk`, 11,823,499 bytes.
+SHA-256: `5322d6bf815a130305b51eefc9122df572faeb90027310a2b32fdbc1713213f3`.
+R8 executed; non-debuggable manifest, minSdk 29/targetSdk 36 and all three existing ABIs checked.
+Independent APK v2 verification confirms unchanged test certificate SHA-256
+`f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e`.
+All five compatibility resources remain. App/native/scripts/web/build sources match full-gate
+`a7bd098`; later checkpoints are docs-only. Evidence: ignored `dist/c108-release*` / `dist/c108-apk-*`.
+**Not checked:** normal operation and refusal UI/timing on a phone; owner acceptance remains pending.
+Native SQLite/Activity/service checks are host evidence only. Branch unmerged; develop remains at
+the accepted B49 closeout `f41a5fa`. Master/tags/store untouched, no push/AAB. Schema stays 23;
+no reset or migration. Previous APKs preserved. [Analysis and verification](PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 ## C105–C107 — owner accepted and merged, 2026-10-15
 

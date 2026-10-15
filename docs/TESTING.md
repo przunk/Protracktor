@@ -174,6 +174,11 @@ The date above is the recording date, not an independently established occurrenc
 
 ## C108 database compatibility guard — phone checks pending, 2026-10-15
 
+Trial: **1.4.1 (1190)**, clean source `2fe0311`,
+`dist/protracktor-release-1.4.1-1190-2fe0311-20261015-213009.apk`.
+Forced full gate: 910 tests/121 suites, zero failures/errors/skips; lint zero errors/72 warnings.
+Minified release artifact and test signature checked, not phone behaviour.
+
 Code finding selected by the owner, not independent tester feedback. Host-only native SQLite
 fixtures cover newer schema refusal/preservation and later compatible reopen; real Activity,
 Retry/Close and service entry checks also run on the host, not a phone.
