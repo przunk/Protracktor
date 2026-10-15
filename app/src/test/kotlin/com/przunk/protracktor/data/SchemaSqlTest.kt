@@ -713,39 +713,6 @@ class SchemaSqlTest {
         }
     }
 
-    /**
-     * What `ProtracktorDatabase.onDowngrade` runs, against a real engine.
-     *
-     * The path in this file that needs a test most: it meets a phone holding somebody's data
-     * exactly once. A list of tables to drop written at version 1 and never grown makes the
-     * recreate stop at `catalogues`, and the app then cannot start at all.
-     */
-    @Test
-    fun `a downgrade recreates the database instead of tripping over what is already there`() {
-        memoryDatabase().use { connection ->
-            connection.run(SchemaSql.CREATE)
-            connection.run(
-                listOf("INSERT INTO catalogues (id, display_name) VALUES ('m', 'Modland')")
-            )
-
-            val existing = connection.createStatement().use { statement ->
-                statement.executeQuery(SchemaSql.TABLE_NAMES).use { rows ->
-                    buildList { while (rows.next()) add(rows.getString(1)) }
-                }
-            }
-            connection.run(SchemaSql.dropStatements(existing))
-            connection.run(SchemaSql.CREATE)
-
-            // The shape a fresh install has, and nothing left of what was there.
-            assertEquals(freshTableNames(), connection.tableNames())
-            connection.createStatement().use { statement ->
-                statement.executeQuery("SELECT COUNT(*) FROM catalogues").use { rows ->
-                    rows.next()
-                    assertEquals(0, rows.getInt(1))
-                }
-            }
-        }
-    }
 
     @Test
     fun `the favourites clause draws only from tunes that are both listed and indexed`() {

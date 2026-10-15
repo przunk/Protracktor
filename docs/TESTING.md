@@ -172,6 +172,20 @@ The first two 2026-10-06 defects were explicitly attributed to different users; 
 from the owner's own tests. Do not reclassify that observation as an independent tester report.
 The date above is the recording date, not an independently established occurrence timestamp.
 
+## C108 database compatibility guard — phone checks pending, 2026-10-15
+
+Code finding selected by the owner, not independent tester feedback. Host-only native SQLite
+fixtures cover newer schema refusal/preservation and later compatible reopen; real Activity,
+Retry/Close and service entry checks also run on the host, not a phone.
+[Analysis and evidence](PR_C108_PRESERVE_NEWER_DATABASE.md).
+
+For the release-APK phone trial, retain existing data and use the normal schema-23 installation:
+check startup, playlist contents, History search, bookmarks, external file opening and playback/
+notification/Bluetooth after the startup gate. No unexpected reset, error screen or interruption.
+Do not alter the phone's database version or install an old destructive binary to create a test.
+Unsupported-schema screen timing/layout on a phone remains unverified without an isolated fixture;
+normal use of this APK alone cannot prove that refusal path. Record device/build and observations.
+
 ## B49 live History search — overall owner acceptance, 2026-10-15
 
 After the trial handoff the owner reported satisfactory operation and authorized merging at

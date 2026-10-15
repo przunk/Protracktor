@@ -324,6 +324,11 @@
     <string name="notice_track_unreadable">Nie udało się odczytać %1$s</string>
     <string name="notice_share_failed">Nie udało się przygotować %1$s do udostępnienia.</string>
     <string name="preparing_database">Przygotowuję bazę danych…</string>
+    <string name="database_checking">Sprawdzanie zgodności bazy danych…</string>
+    <string name="database_unavailable_title">Baza danych niedostępna</string>
+    <string name="database_newer_detail">Dane używają schematu bazy %1$,d; ta aplikacja obsługuje najwyżej %2$,d. Zainstaluj zgodną, nowszą wersję Protracktora. Dane zostały zachowane. Nie czyść danych aplikacji.</string>
+    <string name="database_unreadable_detail">Nie udało się sprawdzić bazy danych. Niczego nie zresetowano. Spróbuj ponownie. Jeśli problem nie ustąpi, zachowaj dane aplikacji i skontaktuj się z pomocą.</string>
+    <string name="database_retry">Spróbuj ponownie</string>
     <string name="preparing_database_detail">Raz, po aktualizacji. Listy wypełnią się, gdy skończę; muzyka gra dalej.</string>
     <string name="action_share_audio">Udostępnij jako audio</string>
     <string name="notice_share_audio_preparing">Przygotowuję %1$s jako audio…</string>

@@ -5,6 +5,7 @@ package com.przunk.protracktor.data
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 
 /**
@@ -90,32 +91,9 @@ class ProtracktorDatabase private constructor(context: Context) :
         }
     }
 
-    /**
-     * Going down recreates the database rather than refusing to open.
-     *
-     * Installing an older build over a newer one happens whenever anyone tests from a file. The
-     * default behaviour throws on **every** start, which leaves an app that cannot be launched at
-     * all until its data is cleared by hand -- losing exactly the same data, and leaving the user
-     * to work out why (AGENTS.md §10).
-     *
-     * **And this method did the same thing for seven versions.** It dropped a list of five tables
-     * written when there were five, then ran a [SchemaSql.CREATE] that had grown to twelve -- so
-     * the recreate met a `catalogues` that was still there and threw, on every start, exactly the
-     * failure above. Nothing caught it because a downgrade needs a device: the tests here run
-     * migrations, and migrations never take this path.
-     *
-     * The tables are asked of the file now. A hard-coded list is a claim about the schema that
-     * lives somewhere other than the schema, and it went stale the first time one was added.
-     */
-    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.transaction {
-            val existing = rawQuery(SchemaSql.TABLE_NAMES, null).use { row ->
-                buildList { while (row.moveToNext()) add(row.getString(0)) }
-            }
-            SchemaSql.dropStatements(existing).forEach(::execSQL)
-            SchemaSql.CREATE.forEach(::execSQL)
-        }
-    }
+    /** Keep the file intact so a compatible build can reopen it (C108). */
+    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int): Unit =
+        throw SQLiteException("Database schema $oldVersion requires a compatible app; supported schema is $newVersion")
 }
 
 internal inline fun SQLiteDatabase.transaction(body: SQLiteDatabase.() -> Unit) {

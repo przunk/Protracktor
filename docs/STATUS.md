@@ -52,7 +52,28 @@ tags and store are unchanged. No push or AAB build. Earlier APKs are preserved.
 Recorded 2026-10-15 from `ProtracktorDatabase.onDowngrade`: it drops/recreates user tables.
 This contradicts the workspace's data-preserving downgrade policy. No phone reproduction, affected
 device count or current data loss is claimed. B49 changes no schema and does not alter or trigger
-this path; correction requires a separate scope decision. Not independent user feedback.
+this path. Not independent user feedback.
+After B49 integration the owner selected a separate correction on `fix/preserve-newer-database`
+from develop `f41a5fa`. Real-helper native SQLite reproduction, after isolating the process
+singleton per synthetic application directory: both checks fail on the old implementation,
+zero errors/skips, 94 s. An earlier attempt failed compiling a test expression (73 s); the first
+executable run failed one of two checks but the other used a stale singleton context, so it is not
+data-preservation evidence. The corrected fixture demonstrates both missing refusal and a changed
+database version breaking compatible reopen. No owner data or older APK was used.
+Implementation now refuses downgrade and adds read-only startup/service preflight with PL/EN
+feedback. Focused gate passed **51 checks in four suites**, zero failures/errors/skips, 125 s:
+seven native real-file/helper, seven actual entry/UI/service, three preparation and 34 existing
+schema checks. A test import first prevented compilation (45 s); the first executable gate failed
+two of 51 checks (136 s): the WAL fixture used an execution API for a result-returning PRAGMA, and
+the retry test waited on a non-Compose counter instead of the rendered result. Correcting those
+test paths passed without further production changes. Controlled no-op-downgrade/disconnected-Retry
+mutation fails all three selected checks (163 s); both files restored and SHA-256 verified.
+Trial version 1.4.1; the restored full gate follows.
+First forced full run on `9e61064`: 910 tests/121 suites, one failure, zero errors/skips,
+298 s for Gradle. The numeric-resource convention test rejected ungrouped schema-number
+placeholders; corrected both EN/PL strings. All 909 other checks, including restored C108, passed.
+Lint/auxiliary checks were not reached. Full retry/APK/phone acceptance remain pending. Schema stays
+23; no reset or migration. [Analysis and verification](PR_C108_PRESERVE_NEWER_DATABASE.md).
 
 ## C105–C107 — owner accepted and merged, 2026-10-15
 
@@ -3751,6 +3772,11 @@ The report contained the answer: the track had been added from a search the day 
 in the message the whole time.
 
 ### C18. ~~A downgrade left an app that could not start~~ — FIXED 2026-09-08
+
+Historical recreation policy below is superseded by C108 (2026-10-15): preserve newer-schema data
+and display a compatibility refusal. The earlier claim that recovery requires clearing app data
+was wrong; keeping the file allows a compatible build to reopen it. C108 tests the actual helper
+with native SQLite on the host, so this case is not limited to device-only reproduction.
 
 *Found while adding schema 12, by reading the method next to the one being changed.*
 

@@ -321,6 +321,11 @@
     <string name="notice_track_unreadable">Could not read %1$s</string>
     <string name="notice_share_failed">Could not prepare %1$s for sharing.</string>
     <string name="preparing_database">Preparing the database…</string>
+    <string name="database_checking">Checking database compatibility…</string>
+    <string name="database_unavailable_title">Database unavailable</string>
+    <string name="database_newer_detail">Your data uses database schema %1$,d; this app supports up to %2$,d. Install a compatible newer version of Protracktor. Your data has been kept. Do not clear app data.</string>
+    <string name="database_unreadable_detail">Could not check the database. Nothing was reset. Try again. If the problem persists, keep your app data and contact support.</string>
+    <string name="database_retry">Retry</string>
     <string name="preparing_database_detail">Once, after an update. The lists fill in when it is done; the music plays on.</string>
     <string name="action_share_audio">Share as audio</string>
     <string name="notice_share_audio_preparing">Preparing %1$s as audio…</string>
