@@ -7,6 +7,20 @@ versionCode is the source commit count; later documentation commits do not relab
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## C109 — Same Game SPC cannot be played — owner report, 2026-10-18
+
+The owner could not play the Modland entry shown as
+`/modland/nintendo SPC/- unknown/Same Game (same game (22).spc)` during listening tests.
+Keep this as the reported display path, not a confirmed archive URL or filename.
+Expected: selecting the entry starts playback. Observed: the owner reported that it could not
+be played; error text, whether the failure is a download/decoder refusal or silence, exact
+installed build and device were not supplied. SPC is already handled by the existing console
+decoder; this report does not establish a format-wide failure, an AMP regression or a queue bug.
+
+**Unchecked by the agent:** no reproduction, file fetch, decode or fix has been performed.
+Request the visible error and exact file path before diagnosing the mechanism. This is separate
+from the B45 queue discussion and from the deferred SPC tempo report C26.
+
 ## Browse/download stability — merged 2026-10-18; phone testing pending
 
 Owner-selected bounded correctness pass on `fix/browse-download-stability`, from develop `59ba578`.
