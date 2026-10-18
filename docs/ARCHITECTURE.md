@@ -216,7 +216,9 @@ the current boundaries and the proposed post-1.0.0 extractions.
 Its remote unit is one gzip-compressed module, unpacked by `TrackFiles` before the existing
 decoder is called. The gzip suffix remains in the fetch/cache identity, not the decoder filename.
 There is no schema change or second music database. Index format groups use filename prefixes
-rather than encoder version strings; platform inference still uses the shared existing rules.
+rather than encoder version strings; source-declared Face The Music retains its canonical name
+because the filename-only FTM fallback means FamiTracker. Platform inference uses the existing
+shared rules, not an archive-wide assumption that every AMP tune is Amiga music.
 
 `Catalogue.known` describes implementations, while `Catalogue.all` describes current availability.
 This distinction prevents the startup prune from deleting a temporarily disabled AMP index.

@@ -57,6 +57,8 @@ The one module probe SHA-256 is `742da2b3a43360d9e1f0ead400a8e2ee6ec8bd3e89ba1d2
 An unsent owner-review mail is kept locally in ignored
 `docs/letters/2026-10-18-amp-permission-draft.md`; correspondence is not part of the public branch.
 
-Progress: stages 1–3 implemented; focused checks and deliberate negative controls completed.
-The restored-code full test/lint gate is running; APK preparation and phone acceptance are pending.
+Progress: stages 1–4 complete for the agent handoff. Clean source `64c7dcc` passed the forced
+full gate: 952 tests / 127 suites, zero failures/errors/skips; lint zero errors / 73 warnings.
+The minified test APK 1.2.0 (1221) is prepared and its signature/assets are verified.
+Phone acceptance and AMP permission remain pending; **do not merge or publish**.
 [Implementation evidence](PR_AMP_CATALOGUE.md).

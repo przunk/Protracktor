@@ -1059,8 +1059,15 @@ existing cache. No crawler, speculative AMP prefetch, web integration or schema 
 Turning it off blocks retained playlist/history playback references and AMP transfers, while
 keeping user data and the downloaded index. Ongoing AMP playback stops; other sources remain usable.
 **Permission not obtained; merge/publication prohibited before maintainer approval**, independently
-of the owner's phone acceptance. Development verification and test APK preparation are in progress;
-device behaviour is unchecked. The one bounded host module probe fetched valid gzip and the
+of the owner's phone acceptance. **Checked:** clean source `64c7dcc`, forced full gate **509 s**,
+**952 tests / 127 suites**, zero failures/errors/skips; all companion stages passed. Lint: zero
+errors / 73 warnings (including one new preference-editor style suggestion). Minified test-signed
+APK **1.2.0 (1221)**: `dist/protracktor-release-1.2.0-1221-64c7dcc-20261018-150242.apk`.
+Signature, package/version, three ABIs and packaged legal/source assets verified; exact hash and
+size are in the report. This is a private test APK, not a new store release. Subsequent documentation
+commits do not change its fixed source/versionCode. Device behaviour is **unchecked**.
+The production parser accepted all 176,970 distinct file entries, with all 55 FTM entries
+classified as Atari ST. The one bounded host module probe fetched valid gzip and the
 existing OpenMPT host probe rendered three seconds of non-silent audio; this is not an Android test.
 [Plan and protocol evidence](PLAN_AMP.md), [implementation evidence](PR_AMP_CATALOGUE.md).
 The unsent draft is local ignored correspondence, not published branch content.

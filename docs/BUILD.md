@@ -3,6 +3,14 @@
 Everything comes from the shared toolchain in `/mnt/workspace/.tooling`. Nothing needs to be
 installed system-wide, and no build here writes to another project's state.
 
+## Isolated AMP trial, 2026-10-18
+
+`feature/amp-catalogue` defaults its persistent AMP switch on for private testing. Build its
+minified test-signed APK with the normal `scripts/build-release.sh`; do not run a store release,
+merge it or publish it before AMP maintainer permission and the owner's phone acceptance.
+The trial keeps release name 1.2.0; versionCode and source SHA identify each test APK.
+[Verified build and asset-packaging retry](PR_AMP_CATALOGUE.md), [phone checklist](TESTING.md).
+
 ## Prerequisites
 
 Check them before spending time on a failed build:

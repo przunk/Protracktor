@@ -44,6 +44,11 @@ from AMP: HTTP 200, valid gzip, 53,136 compressed / 74,406 unpacked bytes. The e
 OpenMPT probe rendered a full three-second buffer, peak 0.538, ProTracker MOD, title
 `human race gold`. This is checked host parsing/decoding, **not Android playback**.
 
+The production parser was also run against the complete pinned index: **176,970 unique,
+addressable file entries**, no compressed decoder filenames, and all **55 Face The Music
+entries classified as Atari ST**. The production gzip reader expanded the downloaded sample to
+74,406 bytes. These are host corpus checks, not a claim that every indexed format plays.
+
 ## Automated verification
 
 Development checkpoint: **76 focused tests / 11 suites**, no failures/errors/skips, 119.2 s.
@@ -70,9 +75,35 @@ cancellation still propagates. The correction is included in the final gate. Tra
 keeps a stopped AMP Random/results context instead of falling back to the saved playlist;
 that controller/device path is not claimed as host-UI tested.
 
-The final pass also checks stable identity while disabled, write-boundary rejection of a retired
-index epoch and preservation of playlist/History/bookmark data. Restored-code full tests/lint and
-APK verification are pending. Final source and artifact identity will be recorded after them.
+**Final clean source `64c7dcc`:** the forced full gate passed in **509 s**. JUnit XML confirms
+**952 tests / 127 suites**, zero failures/errors/skips; unit execution took **313.6 s**.
+This includes stable identity while disabled, rejection of retired index writes, continuing
+unrelated batch downloads and preserving playlist/History/bookmark data. All companion stages
+passed: store metadata, 14 runner fixtures, 11 disposable release scenarios, 581 web-page checks,
+49 engine checks, 8 SAP checks, database upgrade, native audio, icons, PWA and local server.
+Lint passed in **99.7 s**, **zero errors / 73 warnings**. The new preference setter adds one
+`UseKtx` style suggestion to the previously recorded 72; it uses the existing preference style.
+
+## Test APK
+
+| Field | Verified value |
+| --- | --- |
+| Variant | Minified release, local test certificate; not a Play publication artifact |
+| Version | `1.2.0 (1221)` |
+| Source | `64c7dcc689f6649d0f0a6aef0f1e88ed0da6f983` |
+| File | `dist/protracktor-release-1.2.0-1221-64c7dcc-20261018-150242.apk` |
+| Size | 11,845,087 bytes |
+| SHA-256 | `d4a9f33999fdeace6c578064faf64ac9fbeddcdd22c19f09cce4990fdcbccc04` |
+| Test certificate SHA-256 | `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e` |
+| Native ABIs | `arm64-v8a`, `armeabi-v7a`, `x86_64` |
+
+APK v2 signature, package/version, all three engine libraries and nonempty R8 mapping were
+checked. Packaged source credits and privacy policy are byte-identical to their current sources.
+The first build failed on an AGP duplicate entry in the generated compressed privacy-policy JAR.
+AGP had removed the failed intermediate; the remaining source-credit intermediate matched the
+source. An unchanged retry succeeded in 92 s. No source asset or toolchain change was needed.
+Application/native/web/scripts content was identical before the gate and after the build.
+Subsequent documentation-only commits do not relabel this APK or change its versionCode.
 
 ## Phone and permission handoff
 
