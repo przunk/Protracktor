@@ -12,14 +12,19 @@ Historical dated checks below describe their own builds; they are not current te
 The owner could not play the Modland entry shown as
 `/modland/nintendo SPC/- unknown/Same Game (same game (22).spc)` during listening tests.
 Keep this as the reported display path, not a confirmed archive URL or filename.
-Expected: selecting the entry starts playback. Observed: the owner reported that it could not
-be played; error text, whether the failure is a download/decoder refusal or silence, exact
-installed build and device were not supplied. SPC is already handled by the existing console
-decoder; this report does not establish a format-wide failure, an AMP regression or a queue bug.
+Expected: selecting the entry starts playback. The owner clarified that the app reported a
+download failure with a connection suggestion, and that other tracks have shown this behaviour
+too; their identities were not supplied. Exact installed build and device remain unspecified.
+SPC is already handled by the existing console decoder; this report does not establish a
+format-wide failure, an AMP regression or a queue bug.
 
-**Unchecked by the agent:** no reproduction, file fetch, decode or fix has been performed.
-Request the visible error and exact file path before diagnosing the mechanism. This is separate
-from the B45 queue discussion and from the deferred SPC tempo report C26.
+**Partially checked by code inspection:** `RemoteFiles.attempt` returns null for non-2xx HTTP
+responses, and `fetch` also maps download exceptions to null. `load` reports the same
+`open_failed_not_fetched` connection suggestion when no bytes arrive, before opening the decoder.
+Thus the message does not distinguish network failure from a missing/blocked server file.
+No HTTP status or cause has been established for this entry. No reproduction, file fetch, decode
+or fix has been performed. Confirm the archive path and response before diagnosing the failure.
+This is separate from the B45 queue discussion and from the deferred SPC tempo report C26.
 
 ## Browse/download stability — merged 2026-10-18; phone testing pending
 
