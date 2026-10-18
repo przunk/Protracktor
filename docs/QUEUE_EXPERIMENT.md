@@ -415,6 +415,34 @@ visible destinations). The correct priority was restored before the full gate.
 Intermediate automatic-clock UI runs encountered host idle timeouts, not confirmed application
 defects. Explicit frames and snapshot notification, as used by the existing UI harness, corrected
 the test setup; its position/callback assertions were retained. These timeouts are not counted as
-successful bug reproductions. Full gate/lint and the replacement minified APK are pending.
-The previous artifact remains an immutable checkpoint. Device confirmation and merge approval
-are still pending.
+successful bug reproductions.
+
+Clean source **`bc32beabdeecdebafdb222f0f925f8c9d095776b`** then passed the forced full gate in
+**535 s**: **956 tests / 128 suites**, zero failures/errors/skips; unit stage **342.6 s**.
+All companion checks passed (metadata, runner/release fixtures, 581 page checks, 49 engine checks,
+eight SAP checks, database upgrade, native audio, icons, PWA and 11 server checks).
+Lint took **95.3 s**, with **0 errors / 73 warnings**, unchanged from the initial QUEUE build.
+The retired search-cover heading is still a pre-merge cleanup, not part of these four refinements.
+Four updated documents' **78 local links** were checked; none is missing.
+
+The release script built the clean checkpoint in **107 s**; R8 executed and produced a nonempty
+mapping. APK inspection verified the package/name/code, absence of the debuggable flag, APK v2
+signature and all three engine ABI entries:
+
+| Property | Verified value |
+| --- | --- |
+| APK | `dist/protracktor-release-1.2.0-1221-bc32bea-20261019-002459.apk` |
+| Name / code | `1.2.0 (1221)` — unchanged owner-approved test-only exception |
+| Application ID | `com.przunk.protracktor` |
+| Size | 11,830,331 bytes |
+| APK SHA-256 | `7eb0ed0df15f2a9b0da9f407453c39640289191317014c435b7ce3bdab5b51c6` |
+| Certificate SHA-256 | `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e` — same AMP test certificate |
+| SDK / engine ABIs | min 29, target 36; arm64-v8a, armeabi-v7a, x86_64 |
+
+Logs, full JUnit XML, lint XML and mapping are retained in ignored
+`dist/queue-verification/feedback-bc32bea/`. The previous artifact remains an immutable checkpoint.
+Device confirmation of these refinements and actual AMP interchange are **unchecked**; general
+positive feedback does not certify every scenario. No merge, push, tag movement or store release
+occurred. Develop remains `9ca86ea`, AMP `8e92002`, master `794d8f9`. Documentation-only closeout
+does not relabel this APK or its tested source. The test version override must still be removed
+before any accepted merge.

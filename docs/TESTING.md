@@ -3,6 +3,8 @@
 ## QUEUE experiment — follow-up device checks pending, 2026-10-19
 
 Use only the supplied minified APK from `feature/playback-queue-experiment`. It is not merged.
+Current follow-up: `dist/protracktor-release-1.2.0-1221-bc32bea-20261019-002459.apk`;
+956 host tests passed, but these device refinements remain unchecked on the phone.
 The reference AMP APK has name 1.2.0/code 1221; verify the QUEUE artifact's same package/code and
 test certificate before replacing it. Do not uninstall or clear storage.
 

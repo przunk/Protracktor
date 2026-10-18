@@ -16,10 +16,18 @@ Settings over remembered Random closes first. The direct playlist shortcut remai
 The dice hint names its double-tap target in both languages. Each fresh Queue sheet starts at the
 current row, at the top where possible; later playback changes retain shared list following.
 
-**Verification in progress:** targeted UI regressions, full forced gate/lint and replacement
-minified APK. The dated initial-build evidence below does not certify these follow-up sources.
+**Checked:** clean source `bc32bea`, forced full gate **535 s**, **956 tests / 128 suites**, zero
+failures/errors/skips; all companion checks passed. Lint: **0 errors / 73 unchanged warnings**.
+Minified release APK built in **107 s**:
+`dist/protracktor-release-1.2.0-1221-bc32bea-20261019-002459.apk`, **11,830,331 bytes**.
+APK v2 signature, package/name/code, absence of the debuggable flag, R8 mapping and three engine
+ABIs were verified. Public test certificate matches the AMP reference. Regression tests detect the
+old card boundary/initial scroll and a deliberately incorrect Back priority; eight focused cases
+passed before the full gate. Four updated documents have 78 valid local links.
+
 Phone acceptance of these refinements remains **unchecked**. Version name 1.2.0/test code 1221,
-schema 23 and the AMP permission hold are unchanged. No merge or push authorized.
+schema 23 and the AMP permission hold are unchanged. No merge or push authorized. The previous
+build below remains historical evidence; [new artifact hashes and test details](QUEUE_EXPERIMENT.md).
 
 ## B45 QUEUE experiment — unmerged, ready for owner phone testing, 2026-10-18
 
