@@ -112,7 +112,9 @@ formats/authors; search, author jump, bookmark and saved playlist; cached/offlin
 speculative fetch; Random history preservation; off during playback/download and rapid off/on;
 retained disabled references, re-enable and other-source playback.
 
-**All phone scenarios are unchecked.** No emulator exists in this workspace. No merge, push,
+**Owner-reported phone check, 2026-10-18:** AMP was tested and reported to work well. Individual
+checklist results were not supplied; this does not establish every edge case as checked or
+authorize merging. No emulator exists in this workspace. No merge, push,
 master/tag movement, public release or AAB signing is part of the trial. `versionName` stays 1.2.0.
 On 2026-10-18 the owner confirmed sending the AMP permission request. A reply and explicit
 permission remain pending. The local draft is retained in ignored

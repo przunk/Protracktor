@@ -40,7 +40,8 @@ download page successfully, while robots.txt was blocked. No crawl was performed
 module probe returned HTTP 200 and valid gzip: `M/Major Tom/MOD.human race gold.gz`, 53,136
 compressed / 74,406 uncompressed bytes. The `/modules/` address contract is confirmed by the
 upstream `songdb/scripts/sources/amp.sc`, which reads AMP download redirects. No Referer or
-protection bypass was used. Phone behaviour remains unchecked until the owner tests the APK.
+protection bypass was used. The owner reported a positive overall phone test on 2026-10-18;
+individual checklist results were not supplied.
 
 The index is pinned to songdb `ead6d2d72f31c805f24966bd6dbe6f45ed9d2e0f`, with SHA-256
 `a2cf1f0f8eba1f791691a756afa4c8d7b4deaa296950fd88375fa29294cb59b9`: 176,970 file rows and
@@ -62,5 +63,7 @@ Correspondence is not part of the public branch.
 Progress: stages 1–4 complete for the agent handoff. Clean source `64c7dcc` passed the forced
 full gate: 952 tests / 127 suites, zero failures/errors/skips; lint zero errors / 73 warnings.
 The minified test APK 1.2.0 (1221) is prepared and its signature/assets are verified.
-Phone acceptance and AMP permission remain pending; **do not merge or publish**.
+The owner reported on 2026-10-18 that AMP works well in phone testing; individual checklist
+results were not supplied. AMP permission and owner merge authorization remain pending;
+**do not merge or publish**.
 [Implementation evidence](PR_AMP_CATALOGUE.md).

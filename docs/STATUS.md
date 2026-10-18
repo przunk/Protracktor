@@ -1065,7 +1065,9 @@ errors / 73 warnings (including one new preference-editor style suggestion). Min
 APK **1.2.0 (1221)**: `dist/protracktor-release-1.2.0-1221-64c7dcc-20261018-150242.apk`.
 Signature, package/version, three ABIs and packaged legal/source assets verified; exact hash and
 size are in the report. This is a private test APK, not a new store release. Subsequent documentation
-commits do not change its fixed source/versionCode. Device behaviour is **unchecked**.
+commits do not change its fixed source/versionCode. **Owner-reported phone check, 2026-10-18:**
+AMP was tested and reported to work well. This is a positive overall device result, not a
+scenario-by-scenario confirmation of the full checklist; no merge authorization was given.
 The production parser accepted all 176,970 distinct file entries, with all 55 FTM entries
 classified as Atari ST. The one bounded host module probe fetched valid gzip and the
 existing OpenMPT host probe rendered three seconds of non-silent audio; this is not an Android test.

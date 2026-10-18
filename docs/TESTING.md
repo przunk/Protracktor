@@ -593,10 +593,13 @@ replacement by the old code-1221 AMP APK. AMP integration is deferred. Do not un
 Report installed artifact/SHA, steps and expected/observed results. Compilation, host UI tests
 and signing checks do not establish device audio/gesture behaviour. [Experiment](QUEUE_EXPERIMENT.md).
 
-## AMP isolated trial — owner checks pending, 2026-10-18
+## AMP isolated trial — positive owner test, 2026-10-18
 
 Only install the APK from `feature/amp-catalogue`; this feature is not approved for merge or
-publication. **None of the following phone scenarios is confirmed yet.**
+publication. **The owner tested AMP and reported that it works well on 2026-10-18.** Individual
+results were not supplied, so the checklist below remains a reference for detailed checks,
+not a record that every scenario passed. Maintainer permission and owner merge authorization
+remain pending.
 
 1. In **Settings → Online catalogues**, find **AMP catalogue (experimental)**. Its initial value is on;
    changing it and restarting the app must preserve the chosen value. Check Polish as well.

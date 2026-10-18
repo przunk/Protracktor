@@ -2031,7 +2031,8 @@ foreground scan.
 Use the ready-made songdb index and on-demand files, not a crawler. A persistent in-app switch
 defaults on for this private trial. No merge or release before explicit AMP maintainer permission
 and owner acceptance. [Trial plan](PLAN_AMP.md); the owner confirmed sending the permission request
-on 2026-10-18. A reply and explicit permission remain pending.
+on 2026-10-18 and reported a positive overall phone test on the same date. Individual checklist
+results were not supplied. A reply, explicit permission and owner merge authorization remain pending.
 
 **Historical renewed owner TODO, 2026-10-13: AMP (Amiga Music Preservation) archive integration?**
 Retain it under A7, without a duplicate wishlist number. The first task is to establish an
