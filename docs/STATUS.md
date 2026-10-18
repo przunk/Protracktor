@@ -1050,6 +1050,21 @@ above. Practical phone acceptance and integration are recorded at the start of t
 [Mechanism, bounded scope and verification](MODLAND_LEGACY_DOWNLOADS.md).
 This is separate from the B45 queue discussion and from the deferred SPC tempo report C26.
 
+## AMP catalogue — isolated trial, not merged
+
+Owner-selected 2026-10-18, `feature/amp-catalogue`, based on develop `a421afc`.
+The persistent Settings switch defaults on in this test branch only. The trial uses a pinned
+songdb metadata index and fetches individual AMP files on demand, with gzip unpacking and the
+existing cache. No crawler, speculative AMP prefetch, web integration or schema migration.
+Turning it off blocks retained playlist/history playback references and AMP transfers, while
+keeping user data and the downloaded index. Ongoing AMP playback stops; other sources remain usable.
+**Permission not obtained; merge/publication prohibited before maintainer approval**, independently
+of the owner's phone acceptance. Development verification and test APK preparation are in progress;
+device behaviour is unchecked. The one bounded host module probe fetched valid gzip and the
+existing OpenMPT host probe rendered three seconds of non-silent audio; this is not an Android test.
+[Plan and protocol evidence](PLAN_AMP.md), [implementation evidence](PR_AMP_CATALOGUE.md).
+The unsent draft is local ignored correspondence, not published branch content.
+
 ## Browse/download stability — merged 2026-10-18; phone testing pending
 
 Owner-selected bounded correctness pass on `fix/browse-download-stability`, from develop `59ba578`.

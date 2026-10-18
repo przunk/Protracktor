@@ -32,6 +32,7 @@ import com.przunk.protracktor.engine.NativeEngine
 import com.przunk.protracktor.engine.OutputRecovery
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.CatalogueRetention
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.net.ModArchive
 import com.przunk.protracktor.net.Modland
 import com.przunk.protracktor.net.RemoteFiles
@@ -158,6 +159,7 @@ class PlaybackController private constructor(private val context: Context) {
         stereoMix = Appearance.stereoMix(context),
         volumeNormalization = Appearance.volumeNormalization(context),
         cacheAhead = Appearance.cacheAhead(context),
+        ampEnabled = Appearance.ampEnabled(context).also { Amp.access.setEnabled(it) },
         shareAudioMinutes = Appearance.shareAudioMinutes(context),
     ))
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
@@ -482,7 +484,9 @@ class PlaybackController private constructor(private val context: Context) {
         override suspend fun searchLocal(query: String, limit: Int, platforms: Set<String>) =
             libraryIndex.search(query, limit, platforms)
 
-        override suspend fun playlistTracks() = store.allTracks()
+        override suspend fun playlistTracks() = store.allTracks().filter {
+            Amp.access.enabled || !it.id.startsWith("amp://")
+        }
 
         override suspend fun searchCatalogues(query: String, ids: Set<String>, limit: Int, platforms: Set<String>) =
             catalogues.search(query, ids, limit, platforms).map(CatalogueTracks::referenceOf)
@@ -1344,6 +1348,8 @@ class PlaybackController private constructor(private val context: Context) {
         var left = 0
         var used = 0
         for (track in tracks) {
+            // AMP is Android-only during the permission trial, not a bulk browser transfer.
+            if (track.id.startsWith("amp://")) { left++; continue }
             // **An MP3 never travels**, by arithmetic: the budget for a whole queue is eight
             // megabytes and one four-minute recording is more than that. It is
             // marked instead, and arrives as a greyed row naming the file (`docs/BACKLOG.md` A29).
@@ -2693,6 +2699,43 @@ class PlaybackController private constructor(private val context: Context) {
         _state.update { it.copy(cacheAhead = mode) }
     }
 
+    fun setAmpEnabled(enabled: Boolean) {
+        if (_state.value.ampEnabled == enabled) return
+        Appearance.selectAmpEnabled(context, enabled)
+        Amp.access.setEnabled(enabled)
+        val stopped = !enabled && _state.value.current?.id?.startsWith("amp://") == true
+        if (stopped) stopPlayback()
+        _state.update {
+            it.copy(ampEnabled = enabled, playing = if (stopped) false else it.playing,
+                loadingTrack = if (stopped) false else it.loadingTrack,
+                message = if (stopped) Message(context.getString(R.string.notice_amp_disabled)) else it.message)
+        }
+        browseWorkflow.cancelSearch()
+        BrowseReadOwner.begin(_browse) { current ->
+            val reset = !enabled && current.openCatalogue?.id == Amp.id
+            current.copy(
+                catalogues = current.catalogues.filter { enabled || it.id != Amp.id },
+                openCatalogue = if (reset) null else current.openCatalogue,
+                openFormat = if (reset) null else current.openFormat,
+                openAuthor = if (reset) null else current.openAuthor,
+                groups = if (reset) emptyList() else current.groups,
+                searchScope = if (!enabled && current.searchScope is SearchScope.Online)
+                    current.searchScope.copy(catalogueIds = current.searchScope.catalogueIds - Amp.id)
+                    else current.searchScope,
+                searchMatches = 0,
+                tracks = if (current.domain == BrowseDomain.HISTORY) current.tracks else
+                    current.tracks.filter { enabled || !it.id.startsWith("amp://") },
+                loading = false,
+            )
+        }
+        randomHistory.changeScope()
+        publishRandomPicks()
+        refreshCatalogues()
+        refreshOnPhone()
+        refreshSavedPlaces()
+        if (_state.value.randomMode) prepareRandomQueue()
+    }
+
     fun setStereoMix(mode: StereoMix) {
         if (_state.value.stereoMix == mode) return
         rememberLoudness()
@@ -2732,6 +2775,11 @@ class PlaybackController private constructor(private val context: Context) {
     private var pendingRetry: (() -> Unit)? = null
 
     fun togglePlayPause() {
+        val current = _state.value.current
+        if (current?.id?.startsWith("amp://") == true && !Amp.access.enabled) {
+            say(Message(context.getString(R.string.notice_amp_disabled)))
+            return
+        }
         // **A track being fetched can be called off.** Pressing play on something not cached
         // starts a download that can take ten seconds, and the button shows "play" throughout, so
         // without this the second press falls into the branch below and starts the *same* track
@@ -3040,7 +3088,7 @@ class PlaybackController private constructor(private val context: Context) {
 
     fun enqueueTrack(ref: TrackRef, fromHistory: Boolean = false) {
         if (CatalogueRetention.blocksReference(ref.id)) {
-            _state.update { it.copy(message = Message(context.getString(R.string.notice_catalogue_not_in_trial))) }
+            _state.update { it.copy(message = Message(context.getString(R.string.notice_amp_disabled))) }
             return
         }
         _state.update { it.copy(schedule = it.schedule.enqueue(ref, fromHistory),
@@ -3133,10 +3181,10 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun load(ref: TrackRef) {
-        if (CatalogueRetention.blocksReference(ref.id)) {
+        if (ref.id.startsWith("amp://") && !Amp.access.enabled) {
             stopPlayback()
             _state.update { it.copy(playing = false, loadingTrack = false,
-                message = Message(context.getString(R.string.notice_catalogue_not_in_trial))) }
+                message = Message(context.getString(R.string.notice_amp_disabled))) }
             return
         }
         sampleListening()
@@ -3163,7 +3211,10 @@ class PlaybackController private constructor(private val context: Context) {
             ensureActive()
 
             if (bytes == null) {
-                _state.update { it.copy(message = Message(describeFailure(ref, fetched = false))) }
+                val failure = if (ref.id.startsWith("amp://")) {
+                    context.getString(if (Amp.access.enabled) R.string.notice_amp_unavailable else R.string.notice_amp_disabled)
+                } else describeFailure(ref, fetched = false)
+                _state.update { it.copy(message = Message(failure)) }
                 if (_state.value.randomMode && !_state.value.manualCurrent) skipFailedRandomPick()
                 return@launch
             }
@@ -3398,7 +3449,7 @@ class PlaybackController private constructor(private val context: Context) {
             // Only the ones that would learn something. A track whose title already differs from its
             // filename has been resolved before.
             val pending = _state.value.queue.tracks.filter {
-                it.author.isBlank() && it.title == it.fileNameOrTitle
+                !it.id.startsWith("amp://") && it.author.isBlank() && it.title == it.fileNameOrTitle
             }
             if (pending.isEmpty()) return@launch
 

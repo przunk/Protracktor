@@ -36,7 +36,27 @@ AMP permission is **not obtained**. HTTP availability is not permission and a te
 publication approval. The older [catalogue survey](PLAN_CATALOGUES.md) remains historical; its
 claim that no usable index exists is superseded by the songdb finding above. Direct access from
 the web tool returned 403; a bounded diagnostic request with the app User-Agent read the public
-download page successfully, while robots.txt was blocked. No crawl or music download performed
-at this checkpoint. Phone behaviour remains unchecked until the owner tests the APK.
+download page successfully, while robots.txt was blocked. No crawl was performed. One explicit
+module probe returned HTTP 200 and valid gzip: `M/Major Tom/MOD.human race gold.gz`, 53,136
+compressed / 74,406 uncompressed bytes. The `/modules/` address contract is confirmed by the
+upstream `songdb/scripts/sources/amp.sc`, which reads AMP download redirects. No Referer or
+protection bypass was used. Phone behaviour remains unchecked until the owner tests the APK.
 
-Progress: planning and address/format verification; implementation/tests/APK pending.
+The index is pinned to songdb `ead6d2d72f31c805f24966bd6dbe6f45ed9d2e0f`, with SHA-256
+`a2cf1f0f8eba1f791691a756afa4c8d7b4deaa296950fd88375fa29294cb59b9`: 176,970 file rows and
+9,917 four-column subsong rows. File rows have eleven columns; the final field is the archive
+path, not a module ID. Files use `Letter/Artist/FORMAT.title.gz`; two indexed exceptions are
+uncompressed. Browse groups by the filename's format prefix, not hundreds of encoder versions.
+The gzip suffix is retained in identity/download paths but removed from the decoder filename.
+One certain source format overrides prefix grouping: 55 `FaceTheMusic` entries use `Face The
+Music`, because the shared filename-only `.ftm` fallback means Nintendo FamiTracker. A direct
+production-parser probe failed before correction (Nintendo instead of Atari ST); a regression
+fixture now protects the source-specific disambiguation.
+The one module probe SHA-256 is `742da2b3a43360d9e1f0ead400a8e2ee6ec8bd3e89ba1d2bae72658e003188a1`.
+
+An unsent owner-review mail is kept locally in ignored
+`docs/letters/2026-10-18-amp-permission-draft.md`; correspondence is not part of the public branch.
+
+Progress: stages 1–3 implemented; focused checks and deliberate negative controls completed.
+The restored-code full test/lint gate is running; APK preparation and phone acceptance are pending.
+[Implementation evidence](PR_AMP_CATALOGUE.md).

@@ -593,6 +593,40 @@ replacement by the old code-1221 AMP APK. AMP integration is deferred. Do not un
 Report installed artifact/SHA, steps and expected/observed results. Compilation, host UI tests
 and signing checks do not establish device audio/gesture behaviour. [Experiment](QUEUE_EXPERIMENT.md).
 
+## AMP isolated trial — owner checks pending, 2026-10-18
+
+Only install the APK from `feature/amp-catalogue`; this feature is not approved for merge or
+publication. **None of the following phone scenarios is confirmed yet.**
+
+1. In **Settings → Online catalogues**, find **AMP catalogue (experimental)**. Its initial value is on;
+   changing it and restarting the app must preserve the chosen value. Check Polish as well.
+2. In **Browse → Online catalogues**, download AMP's index explicitly (about 23 MiB), then browse
+   a format and author. It must not download the folder's music just because it is open.
+3. Try **MOD → Major Tom → MOD.human race gold**. Verify audible playback, title/author, History,
+   the played-before marker, and the cached-phone indicator. Replay while offline after caching.
+   Try another MOD and a different supported format; one sample is not archive-wide validation.
+4. Search an author/title with AMP in the online scope; open the author, bookmark the folder,
+   add a track to a playlist, save it and reopen it. Existing user-data rules must remain unchanged.
+5. In Random, new AMP selections may play only when reached; merely preparing the next picks
+   must not download AMP music. Changing scope while replaying history must keep the heard list
+   and walk it before drawing from the new scope (C97).
+6. Turn AMP off while an AMP tune plays or loads: it must stop, not restart later. It disappears
+   from available catalogues/search/new Random draws. Existing playlist/history entries and
+   bookmarks remain stored; playing a retained AMP entry must explain that AMP is off, even
+   when its bytes are cached. Playing from another source must still work. Check filter-opening
+   latency with the retained AMP index as well; device performance is not proved by host tests.
+   Pressing Play while AMP is off must explain why it cannot play, not start the old playlist.
+   Re-enable and press Play: resume the same AMP context rather than a different saved track.
+7. Disable during an AMP index/file download, then quickly enable again. The old transfer must
+   not start music or replace the index with late/empty results. Retry explicitly after the
+   cancelled request retires; existing index data must survive disabling and app restart.
+8. Enable again: retained index, bookmarks and playlist tracks should be usable without another
+   index download. Simulate no network or a blocked response: show an unavailable message, not
+   HTML passed to a decoder or an empty successful index.
+
+Report the installed versionCode/source APK and exact steps. A successful phone trial does not
+remove the separate AMP permission requirement. [Plan](PLAN_AMP.md).
+
 *Started 2026-09-15, because a build was handed over with a fix in it that no check in this
 repository can reach.*
 

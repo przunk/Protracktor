@@ -75,6 +75,13 @@ The reference collection of `.sap`. Natural pair with ASAP.
 
 ### AMP (amp.dascene.net) — investigated 2026-09-04, and the answer is no
 
+**Superseding trial decision, 2026-10-18:** the owner authorized implementation on an isolated,
+unmerged branch, with a default-on in-app test switch. A ready-made AMP index was found in the
+existing songdb source project, so no crawler is needed. One public module path returned valid
+gzip without a Referer or bypass. Neither fact supplies maintainer permission: **merge and release
+still require AMP approval**. See [the trial plan](PLAN_AMP.md) for pinned data, protocol evidence,
+scope, checks and the unsent mail. The older survey below is historical, not the current index finding.
+
 **Follow-up, 2026-10-13:** the owner renewed AMP (Amiga Music Preservation) as an exploration
 TODO under A7. The earlier access finding below remains historical evidence, not a newly
 checked statement about today's site. Before implementation, establish an approved way to

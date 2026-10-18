@@ -173,10 +173,11 @@ do not plan SAP, SID, AHX/HVL, ZXTune or UADE integration again merely from an o
 - **A7 / HVSC:** browse the collection itself; SID song-length lookup already exists.
 - **A7 / Aminet:** indexing and archive extraction.
 - **Catalogue candidates:** investigate vgmrips, snesmusic and zxart if selected.
-- **A7 / AMP (Amiga Music Preservation):** renewed owner TODO, 2026-10-13. Establish an approved
-  access/index/download route before deciding integration. The 2026-09-04 investigation found no
-  sanctioned machine-readable route; this request does not authorize crawling, scraping or contact
-  with maintainers. Reuse A7, not a duplicate wishlist item.
+- **A7 / AMP (Amiga Music Preservation):** owner selected an isolated trial on 2026-10-18,
+  `feature/amp-catalogue`. Pinned songdb index, on-demand files and persistent default-on test
+  switch; no crawling or prefetch. **No merge/release before maintainer permission.** Implementation
+  verification and phone acceptance remain pending. [Plan](PLAN_AMP.md); permission-mail draft
+  remains unsent. Reuse A7, not a duplicate wishlist item.
 - **Web relay:** UnExoticA and The Mod Archive need separate access/infrastructure decisions for
   browser integration; Android permission does not approve server-side relaying.
 - **Web handoff:** optionally retain several From the phone playlists rather than only the latest;

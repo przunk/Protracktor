@@ -2027,7 +2027,12 @@ foreground scan.
 
 ## A7. More online catalogues — planned in `docs/PLAN_CATALOGUES.md`
 
-**Renewed owner TODO, 2026-10-13: AMP (Amiga Music Preservation) archive integration?**
+**AMP trial selected 2026-10-18:** implementation on `feature/amp-catalogue`, separate from develop.
+Use the ready-made songdb index and on-demand files, not a crawler. A persistent in-app switch
+defaults on for this private trial. No merge or release before explicit AMP maintainer permission
+and owner acceptance. [Trial plan](PLAN_AMP.md); the permission email is a draft, not a sent request.
+
+**Historical renewed owner TODO, 2026-10-13: AMP (Amiga Music Preservation) archive integration?**
 Retain it under A7, without a duplicate wishlist number. The first task is to establish an
 approved index/download route; the earlier investigation found no sanctioned machine-readable
 access. The request does not authorize crawling or scraping. See the dated follow-up in

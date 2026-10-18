@@ -210,6 +210,30 @@ as it grew; dated measurements and superseded designs are historical evidence, n
 that every original proposal is the current implementation. The following ownership map records
 the current boundaries and the proposed post-1.0.0 extractions.
 
+### AMP trial boundary — isolated branch, 2026-10-18
+
+`Amp` adapts a pinned songdb index into the existing catalogue rows and stable `amp://` identities.
+Its remote unit is one gzip-compressed module, unpacked by `TrackFiles` before the existing
+decoder is called. The gzip suffix remains in the fetch/cache identity, not the decoder filename.
+There is no schema change or second music database. Index format groups use filename prefixes
+rather than encoder version strings; platform inference still uses the shared existing rules.
+
+`Catalogue.known` describes implementations, while `Catalogue.all` describes current availability.
+This distinction prevents the startup prune from deleting a temporarily disabled AMP index.
+Search/count/Random SQL share `catalogueVisibility`; direct catalogue reads reject disabled IDs.
+The setting is restored before controller stores start and persists through `Appearance`.
+
+`AmpAccess` owns an enable/disable epoch and active HTTP disconnect callbacks. Network/cache
+delivery and `TrackFiles` reads validate that epoch, so an off/on cycle cannot adopt old bytes.
+`LibraryDownloads` also checks it before replacing an index and always retires progress. Catalogue
+overview/platform reads discard results from an older switch epoch. User playlists, History and
+bookmarks are not deleted. Turning off stops AMP playback, not playback from other catalogues.
+
+AMP is excluded from music read-ahead, background metadata resolution and bulk browser transfer;
+folder prefetch remains Modland-only. The stable client User-Agent is unchanged. AMP HTML is
+rejected without ExoticA's cookie retry, and no Referer is forged. This boundary is a permission
+trial, **not permission to merge or publish**. [Contract and evidence](PLAN_AMP.md).
+
 ---
 
 ## Current ownership and proposed boundaries — 2026-10-05
