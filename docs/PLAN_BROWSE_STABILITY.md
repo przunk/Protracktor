@@ -44,5 +44,7 @@ Use one task branch from develop; do not merge, push, move release tags or advan
 - Final clean candidate `f32e6cc`: forced full gate passed in 468 s, 929 tests / 124 suites,
   zero failures/errors/skips; lint zero errors / 72 existing warnings. All companion checks passed.
 - Minified test-signed release APK 1.2.0 (1214) built and verified; exact identity is in the report.
-- Technical handoff complete. Phone acceptance and merge remain pending; nothing pushed/released.
+- Technical handoff complete. Owner explicitly authorized integration on 2026-10-18 before phone
+  acceptance; merged into develop at `e9a7a98`, with the complete branch tree preserved.
+  Phone checks remain pending; nothing pushed/released and no new APK built for the merge.
 - [Mechanisms, intermediate failures and evidence](PR_BROWSE_DOWNLOAD_STABILITY.md).

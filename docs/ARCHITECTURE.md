@@ -1068,7 +1068,8 @@ the atomic publication. A restored snapshot gets a new visit from current state.
 the parent transition before calling the parent reader, which can complete immediately.
 Read-ahead separately retires its generation before cancelling work or accepting an empty/held
 selection; late cancelled or obsolete completions cannot repopulate memory.
-These changes are a branch trial, not merged or phone-accepted.
+Merged into develop on 2026-10-18 with explicit owner authorization ahead of phone acceptance.
+Device behaviour remains unchecked; merging does not close the phone trial.
 [Contract and verification](PR_BROWSE_DOWNLOAD_STABILITY.md).
 
 ### And what the user can throw away themselves

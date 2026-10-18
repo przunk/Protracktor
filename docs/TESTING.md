@@ -21,6 +21,7 @@ is written down so it is the same list every time rather than whatever anybody r
 ## Browse/download stability trial — 2026-10-16
 
 Branch `fix/browse-download-stability`; APK **1.2.0 (1214)**, source `f32e6cc`.
+Merged into develop on 2026-10-18 at the owner's request; this is not phone acceptance.
 Exact identity and successful 929-test/lint host results are recorded in
 [the handoff](PR_BROWSE_DOWNLOAD_STABILITY.md). **All scenarios below are unchecked on a phone.**
 Use existing disposable/saved test playlists; do not uninstall or clear app data.

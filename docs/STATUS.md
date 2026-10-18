@@ -1,16 +1,17 @@
 # Status
 
-Updated: 2026-10-16 — prepared release 1.2.0 (1207), schema version 23 on develop.
+Updated: 2026-10-18 — Browse stability merged; prepared release 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## Browse/download stability — branch implementation, 2026-10-16
+## Browse/download stability — merged 2026-10-18; phone testing pending
 
 Owner-selected bounded correctness pass on `fix/browse-download-stability`, from develop `59ba578`.
-Technical handoff complete, not merged. Four stages cover navigation visit ownership, Back publication order, read-ahead
+Merged into develop at `e9a7a98` on the owner's explicit instruction before phone acceptance.
+Four stages cover navigation visit ownership, Back publication order, read-ahead
 retirement and disk-cache transactions. These are retained review findings, not new phone reports.
 The initial five correctness regressions failed before the fixes; 47 navigation-focused checks
 passed. A clean serial cache reproduction executes three checks with two expected assertion
@@ -23,7 +24,9 @@ APK signature, package/version and three ABIs verified. SHA-256 and public test-
 are in the report. The earlier overlapping diagnostics had result-file errors and are not counted
 as successful verification; two interrupted preliminary full runs are also excluded.
 Phone behaviour remains **unchecked**. Subsequent handoff documentation does not change the APK's
-fixed versionCode/source. No merge, push, master/tag movement, new store release or migration.
+fixed versionCode/source. **Checked integration:** the merge tree equals branch `1af5a72`; app,
+native, web and scripts match verified source `f32e6cc`. This is a Git comparison, not a fresh
+929-test run or a phone check. No new APK, push, master/tag movement, store release or migration.
 [Plan](PLAN_BROWSE_STABILITY.md), [analysis and verification](PR_BROWSE_DOWNLOAD_STABILITY.md).
 
 ## Release 1.2.0 — AAB prepared 2026-10-15, verified 2026-10-16

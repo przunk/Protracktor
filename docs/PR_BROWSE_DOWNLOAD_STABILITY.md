@@ -135,5 +135,16 @@ uninstall/clear data to work around a signer mismatch with a Play-installed buil
 Evidence logs are preserved in ignored `dist/browse-stability/`. The phone checklist is in
 [TESTING](TESTING.md#browsedownload-stability-trial--2026-10-16). **Phone behaviour remains unchecked**;
 host gates do not establish visual behaviour, real audio output or timing on a device.
-No merge, push, release tag/master movement, version-name bump, migration or publication.
+At the original APK handoff, no merge, push, release tag/master movement, version-name bump,
+migration or publication was performed.
 The subsequent handoff commit changes documentation only; it does not relabel or rebuild this APK.
+
+## Owner-authorized integration — 2026-10-18
+
+The owner explicitly requested merging while phone testing remains pending. This authorizes
+integration ahead of the normal device-acceptance hold; it does not establish successful phone
+execution. Merged branch `1af5a72` into develop at `e9a7a98` without conflicts. **Checked:** the
+complete merge tree equals the branch tree; application, native, web and script sources also equal
+verified candidate `f32e6cc`. These are Git comparisons, not a repeated test/lint run.
+The APK above remains the test artifact with its original SHA/versionCode. No new build, push,
+master/tag movement, store release or migration; phone scenarios remain unchecked.

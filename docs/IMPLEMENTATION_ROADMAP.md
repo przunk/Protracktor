@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Updated: 2026-10-16. Owner-requested inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-18. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The owner-approved unpublished version-history correction restores release baseline 1.1.0;
 release 1.2.0 now has a prepared tagged AAB (Play publication unconfirmed). Historical IDs/SHAs below refer to the archived original graph,
@@ -66,12 +66,12 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
 | A45 | Author jump from a playlist does not identify the author as the Random jump does | Open finding; align the heading without introducing Random-only session behaviour. |
-| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | Visit/route ownership implemented on `fix/browse-download-stability`; full gate passes (929 tests, lint zero errors), APK 1.2.0 (1214) ready. Not merged; phone acceptance pending. Search ownership was already fixed by C106. [Stability report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
-| Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Parent-first publication implemented on the stability branch; full gate passes, phone acceptance/merge pending. |
-| Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Retirement and late-completion guards implemented on the stability branch; full gate passes, phone acceptance/merge pending. |
+| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | Visit/route ownership merged at `e9a7a98`, 2026-10-18; full gate passed (929 tests, lint zero errors), APK 1.2.0 (1214) ready. Owner authorized integration before phone acceptance, which remains pending. Search ownership was already fixed by C106. [Stability report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
+| Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Parent-first publication merged at `e9a7a98`; full gate passed, phone acceptance pending. |
+| Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Retirement and late-completion guards merged at `e9a7a98`; full gate passed, phone acceptance pending. |
 | Download cancellation notice | Stopped notice is suppressed because cancellation is checked inside NonCancellable cleanup | Production workflow exercised with controlled host ports; phone behaviour not independently checked. |
-| Review round 5 R7 | Historical shared `.part` filename finding | Current SharedFetches already joins one-URL transfers. Unique staging files and failure cleanup added in the stability trial; not a newly reproduced duplicate transfer. [Reassessment](review.md). |
-| Review round 5 R8 | An old eviction snapshot can remove a concurrent replacement | Controlled disk reproduction fails on the old algorithm; transactional cache correction passes the full gate on the stability branch, phone acceptance/merge pending. [Report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
+| Review round 5 R7 | Historical shared `.part` filename finding | Current SharedFetches already joins one-URL transfers. Unique staging files and failure cleanup merged at `e9a7a98`; not a newly reproduced duplicate transfer. [Reassessment](review.md). |
+| Review round 5 R8 | An old eviction snapshot can remove a concurrent replacement | Controlled disk reproduction fails on the old algorithm; transactional cache correction passed the full gate and merged at `e9a7a98`, phone acceptance pending. [Report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
 
 C108 protection was approved for integration and merged at `8f3ef56`, 2026-10-15, and is no longer
 open. Schema remains 23; older destructive binaries are not repaired by this merge.
