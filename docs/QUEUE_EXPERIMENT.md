@@ -1,0 +1,278 @@
+# Playback queue experiment — B45
+
+Owner-authorized experiment, 2026-10-18. Branch `feature/playback-queue-experiment`, based on
+develop `9ca86ea` (commit count 1219). This document consolidates the discussion, decisions,
+code findings, implementation boundaries and verification plan. Implementation has not begun.
+
+## 1. Why an experiment
+
+Real user feedback initiated B45: returning to the playlist from playback in Browse or Search
+should not interrupt the music. The owner selected a broader solution: one playback queue,
+independent of the visible collection, with its own inspection screen.
+
+Success means a simpler and predictable listening experience, not just moving existing code.
+The owner will test a minified APK and may reject the experiment. No automatic merge, push,
+release or publication is authorized. If rejected, keep develop unchanged and retire this branch
+on the owner's instruction; do not delete saved playlists, History, bookmarks or cached music.
+
+AMP remains on `feature/amp-catalogue`. Its positive phone report does not authorize merging it;
+maintainer permission is still pending. Do not incorporate AMP playback into this experiment.
+
+## 2. Selected interaction contract
+
+The following decisions were selected by the owner on 2026-10-18. They supersede the older A61
+session-ending Playlist action and earlier alternatives in Q13 for this experiment only.
+
+### A single active playback owner
+
+- Exactly one active queue supplies the current item and file-level Next/Previous/end decisions.
+- Repeat and shuffle operate on that active queue, not the collection currently on screen.
+- A queue records its source so the UI can explain what is driving playback.
+- Playlist, Browse, Search, History, Random and the queue screen do not independently own audio.
+- Playing a row in the active queue updates the corresponding source view's selection, and
+  playing a row in that source view updates the active queue.
+- Navigation alone never replaces, resumes, pauses or stops the active queue.
+
+### Playlist viewing is not playlist playback
+
+- Selecting another saved playlist displays it while the previous queue continues playing.
+- Only selecting a track to play activates the displayed playlist as the queue source.
+- Returning to the playlist from Random/Browse/Search keeps the current queue and audio intact.
+- Remove the blocking playlist cover and the required choice between returning to the source
+  and returning to playlist playback. The playlist is usable while another source plays.
+- Highlight a playing row as belonging to the playlist only when that playlist owns the queue.
+  A matching file on an unrelated visible playlist does not make that playlist the active source.
+
+Earlier discussion suggested replacing the queue on playlist selection. The owner explicitly
+rejected that transition: selecting the playlist is navigation, not a request to change music.
+
+### Search, Browse and History activation
+
+- Playing one of ten results activates that collection, starting at the selected row.
+- The queue screen and the originating collection show the same active selection where present.
+- Opening another folder, editing a search or viewing a different collection does not transfer
+  playback ownership. A later Play from that collection does.
+- In particular, opening More from this author must not silently transfer Next/Previous to the
+  author's folder. An explicit Play there is the transfer point.
+
+### Random sessions and the dice gesture
+
+- Reopening an existing Random view shows its remembered record without rerolling or taking
+  over playback. There is no Resume Random button.
+- Random -> author folder -> play an author track -> reopen Random leaves the author's queue
+  active. Next/Previous still walk that author collection. Playing a Random row activates the
+  remembered Random session at that row.
+- Ordinary Next walks the remaining heard record first, then consumes a new Random selection.
+- A double tap on the dice starts a new Random list and plays its first selection, preserving
+  the selected Random filter. Global History is not cleared.
+- A single tap on the dice performs no playback action. The earlier proposal for single-tap
+  reroll-with-history was rejected: Next already supplies the normal forward/new-selection path.
+- Animate a dice throw/rotation on the recognized double tap. Provide a persistent explanation:
+  EN `Double-tap to reroll the list`; PL `Dotknij dwukrotnie, aby wylosować nową listę`.
+- Provide an equivalent accessibility action; it must not depend on recognizing a physical
+  custom double tap. The earlier single-click delay is unnecessary because no single action exists.
+- Preserve C97: changing the filter retires only unplayed speculation. Heard history, its cursor
+  and the remaining heard forward record survive; only newly generated choices use the new filter.
+
+### Queue view is not an editor
+
+- Provide a dedicated way to inspect the active queue regardless of the current source view.
+- Allow browsing rows, choosing a track and inspecting track information.
+- No removal, reordering, drag handles, editing files or modifying the source collection from
+  the queue screen. This supersedes any earlier discussion of editing this screen like a playlist.
+
+## 3. Transition matrix
+
+| Action | Visible collection | Active playback |
+| --- | --- | --- |
+| Open Browse/Search/History/Settings | Changes | Unchanged |
+| Return to the playlist | Selected playlist | Unchanged; no blocking cover |
+| Select playlist B while A plays | Playlist B | A continues |
+| Play a row in playlist B | Playlist B | B queue, selected row |
+| Play a row in Search/folder/History | That source | That collection, selected row |
+| Open an author's folder | Author folder | Unchanged |
+| Open the queue screen | Current queue | Unchanged |
+| Play a queue row | Current queue | Selected row of that same queue |
+| Reopen remembered Random while an author plays | Random record | Author continues |
+| Play a remembered Random row | Random record | Remembered Random session |
+| Double-tap the dice | New Random record | New session, first selection |
+| Single-tap the dice | Unchanged | Unchanged |
+| Change the Random filter | Same heard record | Current track unchanged; replace speculative tail |
+
+These transitions must also hold when the player is paused or loading. Merely viewing a screen
+must not resume a paused track, cancel its current fetch or adopt a late result from an old source.
+
+## 4. Current code and the reason this is not just a navigation patch
+
+Read-only inspection on develop established:
+
+- `PlayQueue` already provides immutable, Android-free list order, shuffle, repeat and cursor
+  behaviour. Reuse its proven rules rather than writing an unrelated second playlist algorithm.
+- `PlayerUiState` currently chooses `transient ?: resultsQueue?.current ?: queue.current`.
+  Playlist playback, results playback and Random therefore have separate ownership paths.
+- `RandomHistory` keeps a heard boundary, cursor, speculative tail and generation checks. Its
+  C97 behaviour must survive the architectural change, including asynchronous refill cancellation.
+- `PlaybackController` branches separately in transport, end handling, retry and prefetch.
+  `returnToPlaylist` stops playback and clears Random/results; `openRandom` starts a new session.
+- `showNeighboursOf` can install an author results queue merely from navigation. This deliberately
+  changes under the new contract; it is not a newly discovered regression in the old behaviour.
+- `PlaylistSession.switchToPlaylist` currently stops playback. `PlaylistSessionState` uses the
+  same `queue` as both editable playlist content and playback state. Both assumptions must change.
+- `ProtracktorApp` and the dock currently expose the session cover and return/resume affordances.
+  Changing only the controller would leave misleading UI; changing only the UI would leave the
+  old ownership and transport rules.
+- `HistoryRecording` deliberately does not reorder/count entries while playback originates in
+  History. Queue origin must preserve that rule even when another screen is visible.
+
+## 5. Proposed architecture and safeguards
+
+This is an implementation design, not authorization for additional user-facing features.
+
+1. Introduce one Android-free active-queue model/coordinator. Its source is an exhaustive sealed
+   type (playlist identity, captured Browse/Search/History source, Random session, external file).
+   Transport decisions and current-entry selection must have one owner.
+2. Separate selected playlist draft/persistence from active playback. Playlist writes capture the
+   destination ID and that playlist's tracks, never whatever collection happens to drive audio.
+   Preserve C103/C105 safeguards, dirty tracking, save/discard, Undo and asynchronous activation.
+3. Keep collection identity separate from file identity. A file may occur in different sources;
+   source ownership, not just a matching URL, determines which view gets an active highlight.
+   Preserve stable row identity where collections allow repeated files.
+4. Capture a finite results collection at activation rather than allowing a later query, History
+   reorder or folder read to replace the running sequence. Metadata enrichment may update labels
+   without changing identity or order. Exact pagination policy remains to be confirmed below.
+5. Treat Random as an extensible queue source, retaining its heard boundary and private read-ahead
+   strategy. Keep a dormant remembered Random session when another source takes over. Merely
+   displaying that dormant record must not mutate the active queue.
+6. Keep decoder, network and Android media-service adapters outside the domain model. UI, headset
+   and notification controls issue the same transport commands against the active queue.
+7. Retire asynchronous work by playback/source generation. Old downloads, native-open results,
+   retries, queries and Random refills must not replace a newer source, cursor or queue.
+8. Keep playback-position, subsong, seek, audio focus, Bluetooth route recovery and listening
+   qualification responsibilities intact. File-level queue advancement does not erase the
+   existing play-all-subsongs layer.
+9. Do not add dependencies or change database schema 23. An experimental restoration format, if
+   selected, must be separate and ignored by the old APK; do not repurpose shared persisted fields
+   with meanings that AMP/develop would interpret differently.
+
+The notification heart continues saving immediately to the selected playlist, as previously
+approved. That playlist may differ from the active queue's playlist. Bookmarking, saving a track,
+sharing and viewing information must not silently replace the active queue.
+
+## 6. APK interchange with AMP — a required compatibility gate
+
+The owner wants to alternate AMP and QUEUE APKs without uninstalling or losing existing data.
+Keeping only the visible version string is insufficient.
+
+**Verified by reading the existing AMP APK with aapt2:**
+
+- Artifact: `dist/protracktor-release-1.2.0-1221-64c7dcc-20261018-150242.apk`.
+- Application ID `com.przunk.protracktor`, versionName `1.2.0`, versionCode **1221**.
+- The existing handoff records its test certificate and schema 23; compare the finished QUEUE
+  APK's certificate and manifest directly rather than relying solely on build configuration.
+
+Android rejects an APK with a lower versionCode than the installed package. Equal version codes
+are needed for repeated replacement with these fixed artifacts, with the same application ID and
+compatible signing certificate. This is sideload testing, not a Play upload/release procedure.
+See [Android versioning](https://developer.android.com/studio/publish/versioning).
+
+**Owner decision requested, not yet received:** a narrowly scoped exception pinning only QUEUE
+test APKs to code 1221. Normal builds/AABs retain the commit-derived code and versionName stays
+1.2.0. If approved, guard this behind the existing test-APK build path, identify every artifact by
+SHA/timestamp, disclose the exception and remove the temporary override before any merge. Do not
+silently replace the project's versioning policy, rewrite history or relabel the existing AMP APK.
+
+### Same schema is not enough
+
+**Code-inspection finding:** develop's startup calls `CatalogueStore.pruneUnknownCatalogues()`.
+Its known IDs come from `Catalogue.all`, which has no AMP on this branch; it would therefore delete
+AMP's persisted index when QUEUE first runs against the same app data.
+
+The experiment must preserve that index while keeping AMP unavailable here. Preserving rows alone
+is insufficient: broad search/Random/platform-count queries must not expose retained unsupported
+AMP rows. Also check retained playlists, History, bookmarks and cache, not just the catalogue list.
+This compatibility safeguard does not enable AMP, import its feature or authorize publication.
+It requires a real SQLite regression test for retained AMP rows and visibility in both directions.
+No destructive migration, uninstall, Clear storage or automatic database reset is acceptable.
+
+## 7. Decisions still open — do not silently implement these proposals
+
+- Exact placement/presentation of the dedicated queue view. Candidate: an icon-and-label Queue
+  action reachable through the persistent player surface, opening a read-only list with a source
+  heading. Reuse track row/info presentation; do not invent a second metadata formatter.
+- First-ever entry into Random when there is no remembered session. Reopening is settled; whether
+  the first entry auto-starts like today or waits for the double-tap action is not yet selected.
+- Showing speculative Random picks in the queue view. Earlier discussion proposed Up next, but
+  the owner has not selected this; today's Random view intentionally shows only the heard record.
+- Random shuffle/repeat-all semantics. Earlier suggestions to disable them were not approved.
+  Preserve existing intentional behaviour until an explicit alternative is selected.
+- Finite-result pagination: proposed queue = currently loaded collection, without background
+  fetching all result pages. Do not confuse a database result count with actual queued entries.
+- Playlist edits when that playlist owns the active queue. Proposed: reflect edits with stable
+  identity and preserve current removal/Undo semantics; unrelated playlist edits cannot affect it.
+- Process-death restoration: proposed active queue/current selection restored paused, never
+  automatic playback. Decide which source/session data to persist and any size bounds, while
+  keeping the AMP APK able to read its existing state safely.
+- Accessible reset affordance beyond the standard accessibility action; a menu alternative was
+  suggested but not selected as an additional visible control.
+
+## 8. Implementation stages
+
+Each stage ends in a focused commit and states its actual verification evidence.
+
+1. Resolve the test-APK version exception and remaining interaction choices. Establish the shared
+   data compatibility guard and failing-before-fix SQLite tests; record the two-APK test protocol.
+2. Introduce/test the single active-queue domain, source identity and deterministic transitions.
+   Reuse existing PlayQueue/RandomHistory invariants, with controlled randomness in tests.
+3. Separate playlist selection/draft writes from playback; integrate controller transport,
+   natural ends, retry and read-ahead. Remove navigation-triggered queue changes and obsolete
+   waiting/resume ownership. Keep unrelated bug C109 and AMP implementation out of scope.
+4. Add the read-only queue view, source-aware highlights, usable uncovered playlist, remembered
+   Random navigation and double-tap reset/animation/help/accessibility in EN and PL.
+5. Review changed paths, update architecture/Q13/B45/status/testing/build documentation, run
+   forced full tests and lint, then build/inspect the minified test-signed release APK in `dist/`.
+   Leave the branch unmerged for owner testing and rejection/acceptance.
+
+## 9. Verification and acceptance
+
+For each new regression test, demonstrate a failure against the relevant old/broken mechanism
+or a deliberate mutation, then restore it. No zero-test success or cached-only run counts.
+
+Host checks must cover at least:
+
+- playlist A playing -> select/edit/save B -> transport still owns A, saves target B;
+- click B -> one coherent transition to B; stale A load/save does not override it;
+- source/queue selection symmetry and source-sensitive highlighting, including a shared file;
+- snapshot Search/History order despite query changes, new History entries or learned titles;
+- Random -> author Play -> reopen Random -> Next remains author -> Random row Play transfers;
+- C97 rewind/filter/Next behaviour, one natural-end advance, cancelled late Random refill;
+- no single-tap action, exactly one reset per double tap, actual gesture/accessibility paths;
+- queue screen has no remove/reorder actions; ordinary playlist edit/Undo/save still works;
+- repeat, shuffle history, subsongs, finite queue end and external single-file ownership;
+- heart destination, History-origin suppression, listened markers, bookmarks and audio controls;
+- AMP index retention without AMP search/Random leakage, no schema change or user-data loss;
+- actual APK identity, code/signature, R8 result and packaged EN/PL resources.
+
+Run the project full gate and lint after application/build changes. If a test reads an external
+fixture/configuration, declare it as a Gradle task input. Build-tool changes require verification
+of the affected artifact path, not just syntax. Keep Gradle work serial in the shared build root.
+
+Owner phone acceptance must cover uninterrupted navigation and playlist switching, queue/source
+selection, Random double-tap/reset/return flows, loading/paused transitions, notification/headset
+transport and actual AMP -> QUEUE -> AMP replacement without uninstalling. In both replacements
+verify playlists, History, bookmarks and AMP index/cache retention. The owner must confirm the
+installed build; host tests and a successful APK build do not prove gestures or audio on a phone.
+
+If the experiment is rejected, return to the existing AMP/develop APK without forcing data loss.
+If accepted, remove temporary APK-version exceptions, reverify and obtain explicit merge approval.
+After integration, update the still-unmerged AMP branch from develop and retest its playback,
+switch gating and no-speculative-fetch rules before considering its separate approval gates.
+
+## 10. Current evidence
+
+- **Checked:** initial git tree clean; separate feature branch created from develop `9ca86ea`.
+- **Checked:** existing AMP APK identity read with aapt2, code 1221/name 1.2.0.
+- **Partially checked:** existing ownership/cleanup mechanisms inspected in source; no phone
+  reproduction or new compatibility/domain tests have been run.
+- **Unchecked/not implemented:** queue experiment, reset gesture, data compatibility safeguard,
+  version override and resulting APK. No full test/lint/build run is claimed for this plan.
+- **Pending:** owner decision on the test-APK version exception and open choices above.
