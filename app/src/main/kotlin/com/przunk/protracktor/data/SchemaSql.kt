@@ -641,8 +641,9 @@ object SchemaSql {
     const val PLAY_HISTORY_PAGE: String = "$PLAY_HISTORY_ROWS LIMIT ? OFFSET ?"
 
     /** The playable tunes on each platform, for the platform chips; read from `idx_catalogue_platform`. */
-    const val PLATFORM_COUNTS: String =
-        "SELECT platform, COUNT(*) FROM catalogue_tracks WHERE playable = 1 AND platform <> '' GROUP BY platform"
+    const val PLATFORM_COUNTS_BASE: String =
+        "SELECT platform, COUNT(*) FROM catalogue_tracks WHERE playable = 1 AND platform <> ''"
+    const val PLATFORM_COUNTS: String = PLATFORM_COUNTS_BASE + " GROUP BY platform"
 
     /** How many tunes History holds, for "101–200 of 734". */
     const val PLAY_HISTORY_COUNT: String = "SELECT COUNT(*) FROM play_history"

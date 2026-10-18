@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="notice_catalogue_not_in_trial">This catalogue is unavailable in the QUEUE experiment. Its saved data is kept for the AMP build.</string>
     <string name="saved_places_title">Saved places</string>
     <string name="saved_places_body">Author and game folders to return to later.</string>
     <string name="saved_places_empty">Nothing saved yet. Open an author or game folder in an online catalogue and choose Bookmark.</string>

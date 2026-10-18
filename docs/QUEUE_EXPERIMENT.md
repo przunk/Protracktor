@@ -2,7 +2,7 @@
 
 Owner-authorized experiment, 2026-10-18. Branch `feature/playback-queue-experiment`, based on
 develop `9ca86ea` (commit count 1219). This document consolidates the discussion, decisions,
-code findings, implementation boundaries and verification plan. Implementation has not begun.
+code findings, implementation boundaries and verification plan. Implementation is in progress.
 
 ## 1. Why an experiment
 
@@ -175,9 +175,9 @@ are needed for repeated replacement with these fixed artifacts, with the same ap
 compatible signing certificate. This is sideload testing, not a Play upload/release procedure.
 See [Android versioning](https://developer.android.com/studio/publish/versioning).
 
-**Owner decision requested, not yet received:** a narrowly scoped exception pinning only QUEUE
+**Owner-approved exception, 2026-10-18:** a narrowly scoped exception pinning only QUEUE
 test APKs to code 1221. Normal builds/AABs retain the commit-derived code and versionName stays
-1.2.0. If approved, guard this behind the existing test-APK build path, identify every artifact by
+1.2.0. Guard this behind the existing test-APK build path, identify every artifact by
 SHA/timestamp, disclose the exception and remove the temporary override before any merge. Do not
 silently replace the project's versioning policy, rewrite history or relabel the existing AMP APK.
 
@@ -194,13 +194,12 @@ This compatibility safeguard does not enable AMP, import its feature or authoriz
 It requires a real SQLite regression test for retained AMP rows and visibility in both directions.
 No destructive migration, uninstall, Clear storage or automatic database reset is acceptable.
 
-## 7. Decisions still open — do not silently implement these proposals
+## 7. Further choices and conservative implementation boundaries
 
-- Exact placement/presentation of the dedicated queue view. Candidate: an icon-and-label Queue
-  action reachable through the persistent player surface, opening a read-only list with a source
-  heading. Reuse track row/info presentation; do not invent a second metadata formatter.
-- First-ever entry into Random when there is no remembered session. Reopening is settled; whether
-  the first entry auto-starts like today or waits for the double-tap action is not yet selected.
+- **Owner selected, 2026-10-18:** the queue opens as a Now Playing-like sheet, immediately at full
+  screen height, through an icon-and-label Queue action by the player. Reuse track/info presentation.
+- **Owner selected, 2026-10-18:** the first entry into an empty Random session starts playing as
+  today. Later entries only show the remembered list, without changing the active queue.
 - Showing speculative Random picks in the queue view. Earlier discussion proposed Up next, but
   the owner has not selected this; today's Random view intentionally shows only the heard record.
 - Random shuffle/repeat-all semantics. Earlier suggestions to disable them were not approved.
@@ -269,10 +268,16 @@ switch gating and no-speculative-fetch rules before considering its separate app
 
 ## 10. Current evidence
 
+Stage 1: AMP index retention reproduced before the fix (one assertion failure, one fail-fast skip).
+The visibility mutation failed on the retained-row count as intended; fail-fast skipped remaining
+checks, so this is not evidence for the read-routing mutation. After restoring safeguards, all
+three native SQLite interoperability tests and all TrackFiles tests passed. Full gate, lint,
+actual pinned-code APK inspection and phone interchange remain pending.
+
 - **Checked:** initial git tree clean; separate feature branch created from develop `9ca86ea`.
 - **Checked:** existing AMP APK identity read with aapt2, code 1221/name 1.2.0.
 - **Partially checked:** existing ownership/cleanup mechanisms inspected in source; no phone
   reproduction or new compatibility/domain tests have been run.
 - **Unchecked/not implemented:** queue experiment, reset gesture, data compatibility safeguard,
   version override and resulting APK. No full test/lint/build run is claimed for this plan.
-- **Pending:** owner decision on the test-APK version exception and open choices above.
+- **Selected:** test APK version exception, full-height queue sheet and first Random entry behaviour.

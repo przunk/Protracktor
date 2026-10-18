@@ -18,6 +18,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TrackFilesTest {
+    @Test fun `retained AMP references cannot fall through to document or network reads`() = runBlocking {
+        val access = Access(byteArrayOf(1))
+        val files = TrackFiles(access, Dispatchers.Default) {}
+        assertNull(files.read(track("amp://A/Artist/MOD.song.gz")))
+        assertTrue(access.calls.isEmpty())
+    }
+
     private val payload = byteArrayOf(1, 2, 3)
     private fun track(id: String, name: String = id.substringAfterLast('/')) =
         TrackRef(id = id, title = name, fileName = name)

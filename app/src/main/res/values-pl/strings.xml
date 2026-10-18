@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="notice_catalogue_not_in_trial">Ten katalog jest niedostępny w eksperymencie QUEUE. Jego dane pozostają zapisane dla wersji AMP.</string>
     <string name="saved_places_title">Zapisane miejsca</string>
     <string name="saved_places_body">Foldery autorów i gier, do których chcesz wrócić.</string>
     <string name="saved_places_empty">Nie ma jeszcze zapisanych miejsc. Otwórz folder autora lub gry w katalogu online i wybierz Zakładka.</string>

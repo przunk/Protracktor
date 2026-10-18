@@ -46,7 +46,9 @@ android {
         //
         // Falls back to 1 outside a git checkout -- a source archive, say -- which is wrong but
         // harmless: nothing built that way is going to a store.
-        versionCode = gitCommitCount
+        // Temporary owner-approved QUEUE trial: replace AMP/QUEUE APKs without a downgrade.
+        // AABs and normal Gradle builds retain the release policy. Remove before merging.
+        versionCode = if (providers.gradleProperty("protracktorTestApk").orNull == "true") 1221 else gitCommitCount
 
         // Typed, deliberately, and it means something. See docs/BUILD.md: patch for a batch of
         // fixes, minor for a round of work that added capability, major reserved for "publishable".

@@ -3011,6 +3011,12 @@ class PlaybackController private constructor(private val context: Context) {
     }
 
     private fun load(ref: TrackRef) {
+        if (com.przunk.protracktor.net.CatalogueRetention.blocksReference(ref.id)) {
+            stopPlayback()
+            _state.update { it.copy(playing = false, loadingTrack = false,
+                message = Message(context.getString(R.string.notice_catalogue_not_in_trial))) }
+            return
+        }
         sampleListening()
         listening.forget()
         listeningTrack = null
