@@ -57,6 +57,15 @@ class LegalTextTest {
         }
     }
 
+    @Test fun `experimental AMP host and pending permission are disclosed in both languages`() {
+        for (polish in listOf(false, true)) {
+            val bullets = LegalText.privacyBlocks(policy, polish).filterIsInstance<LegalText.Block.Bullet>()
+            assertTrue(bullets.any { it.text.startsWith("amp.dascene.net") })
+            assertTrue(bullets.first { it.text.startsWith("amp.dascene.net") }.text.contains(
+                if (polish) "czekamy na zgodę" else "permission for publication is still pending"))
+        }
+    }
+
     @Test
     fun `wrapped lines join into one paragraph`() {
         val blocks = LegalText.privacyBlocks(

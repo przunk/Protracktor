@@ -49,6 +49,8 @@ connect over HTTPS to:
 - `modland.com` to download its catalogue index, the tracks you play, and those in a folder you
   open when **Cache folders ahead** is on (Settings; on Wi-Fi only unless you choose otherwise);
 - `asma.atari.org` to download the ASMA collection;
+- `amp.dascene.net` to download a selected track in the isolated experimental AMP trial. This
+  catalogue has its own Settings switch; maintainer permission for publication is still pending;
 - `files.exotica.org.uk` to download the UnExoticA index and the game archives that hold its tunes;
 - `modarchive.org` and `api.modarchive.org` to send a live search term and download a selected
   module;
@@ -173,6 +175,8 @@ może łączyć się przez HTTPS z:
 - `modland.com`, aby pobrać indeks, odtwarzane utwory oraz utwory z otwartego folderu, gdy
   włączone jest **Pobieraj foldery z wyprzedzeniem** (Ustawienia; domyślnie tylko przez Wi-Fi);
 - `asma.atari.org`, aby pobrać kolekcję ASMA;
+- `amp.dascene.net`, aby pobrać wybrany utwór w odizolowanej próbie eksperymentalnej AMP.
+  Katalog ma własny przełącznik w ustawieniach; czekamy na zgodę opiekunów na publikację;
 - `files.exotica.org.uk`, aby pobrać indeks UnExoticA i archiwa gier zawierające jej utwory;
 - `modarchive.org` i `api.modarchive.org`, aby wysłać wpisane hasło i pobrać wybrany moduł;
 - `deepsid.chordian.net`, aby pobrać bazę długości utworów SID z High Voltage SID Collection,

@@ -6,8 +6,12 @@ package com.przunk.protracktor.player
 import com.przunk.protracktor.data.SongLengths
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.CatalogueEntry
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.net.Modland
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -139,17 +143,24 @@ internal class LibraryDownloads(
      * Returns null when this catalogue is already downloading, which is not a failure.
      */
     private suspend fun fetchCatalogue(catalogue: Catalogue): Fetched? {
+        val ampTicket = Amp.access.capture()
+        if (catalogue == Amp && ampTicket == null) return null
         if (!ui.begin(catalogue.id, catalogue.displayName)) return null
-        run {
+        var ended = false
+        fun finish() {
+            if (!ended) { ended = true; ui.end(catalogue.id) }
+        }
+        try {
             val bytes = sources.fetchIndex(catalogue.indexUrl)
+            if (catalogue == Amp && !Amp.access.allows(ampTicket!!)) return null
             if (bytes == null) {
-                ui.end(catalogue.id)
+                finish()
                 return Fetched(false, text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
             }
             // An archive catalogue's "index" IS the archive, so it is kept rather than parsed and
             // discarded -- afterwards both browsing and playing work with no network at all.
             if (catalogue.isArchive && !sources.storeArchive(catalogue.id, bytes)) {
-                ui.end(catalogue.id)
+                finish()
                 return Fetched(
                     false,
                     text.message(DownloadNotice.ArchiveStoreFailed(catalogue.displayName)),
@@ -164,9 +175,14 @@ internal class LibraryDownloads(
                 // costs every user the whole 40 MB again.
                 catalogue.parseIndex(bytes)
             }
+            if (catalogue == Amp) {
+                if (!Amp.access.allows(ampTicket!!)) return null
+                if (entries.isEmpty()) return Fetched(false,
+                    text.message(DownloadNotice.IndexDownloadFailed(catalogue.displayName)))
+            }
             val playable =
                 sources.replaceIndex(catalogue, entries)
-            ui.end(catalogue.id)
+            finish()
             ui.catalogueStored()
             // **Both numbers, because there are now two** (`docs/ROADMAP_FORMATS.md` step 0).
             // The index keeps everything the archive lists and the app offers what it can open, so
@@ -176,6 +192,15 @@ internal class LibraryDownloads(
                 true,
                 text.message(DownloadNotice.Indexed(catalogue.displayName, entries.size, playable)),
             )
+        } catch (cancelled: CancellationException) {
+            if (catalogue != Amp || ampTicket == null || Amp.access.allows(ampTicket)) throw cancelled
+            // Retiring one catalogue is not cancelling the user's remaining selected downloads.
+            // Real coroutine cancellation still propagates, including a simultaneous Stop.
+            currentCoroutineContext().ensureActive()
+            return null
+        } finally {
+            // In particular, disabling AMP during a suspended fetch must retire its spinner.
+            finish()
         }
     }
 

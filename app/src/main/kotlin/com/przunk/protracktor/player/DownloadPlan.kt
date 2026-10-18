@@ -4,6 +4,7 @@
 package com.przunk.protracktor.player
 
 import com.przunk.protracktor.net.Asma
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.net.Catalogue
 import com.przunk.protracktor.net.Modland
 import com.przunk.protracktor.net.UnExoticA
@@ -74,6 +75,7 @@ object DownloadPlan {
                 DownloadKeys.TRACK_METADATA -> DownloadSizes.TRACK_METADATA_MB
                 Asma.id -> DownloadSizes.ASMA_MB
                 UnExoticA.id -> DownloadSizes.UNEXOTICA_MB
+                Amp.id -> DownloadSizes.AMP_MB
                 else -> 0
             }
         }

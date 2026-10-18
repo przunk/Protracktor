@@ -7,6 +7,7 @@ import com.przunk.protracktor.data.CatalogueGroup
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.CatalogueTrack
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.Amp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,6 +61,7 @@ internal class CatalogueBrowser(
      */
     fun refreshCatalogues() {
         scope.launch {
+            val epoch = Amp.access.revision
             // **What is here, before how much** (C75). Five yes-or-no questions that stop at the
             // first row or the first file, published at once; the counts below walk hundreds of
             // thousands of rows and queue behind the platform counts, and the ticks waited seconds
@@ -106,6 +108,7 @@ internal class CatalogueBrowser(
             val players = withContext(Dispatchers.IO) {
                 files.playerCount() to files.playerBytes()
             }
+            if (epoch != Amp.access.revision) return@launch
             state.showOverview(
                 CatalogueOverview(
                     summaries, lengths, metadataRows, lengthRows, favouriteRows, favouriteRowsListed,
@@ -126,8 +129,10 @@ internal class CatalogueBrowser(
     /** Counts the platform chips from the catalogue index, which is what makes a dead chip honest. */
     fun refreshPlatformCounts() {
         scope.launch {
+            val epoch = Amp.access.revision
             // Counted by the column each row carries (C89), so ASMA counts towards Atari 8-bit.
             val byPlatform = indexes.platformCounts()
+            if (epoch != Amp.access.revision) return@launch
             state.showPlatforms(byPlatform)
         }
     }

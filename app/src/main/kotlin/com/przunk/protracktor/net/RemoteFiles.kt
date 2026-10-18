@@ -39,19 +39,30 @@ class RemoteFiles(
 
     /** Returns the bytes, from cache when possible. Null when the fetch failed. */
     suspend fun fetch(url: String): ByteArray? = withContext(Dispatchers.IO) {
+        val ticket = Amp.access.capture()
+        if (!permitted(url, ticket)) return@withContext null
         val cached = fileFor(url)
-        cache.read(cached.name)?.let { return@withContext it }
+        cache.read(cached.name)?.let { return@withContext it.takeIf { permitted(url, ticket) } }
 
         // **One download per address** (A55): a tap on a track that is being fetched ahead waits
         // for that fetch instead of starting a second, and a download keeps going when whoever
         // asked for it -- a folder that was left -- stops waiting.
-        downloads.get(url) { cache.read(cached.name) ?: downloadAndStore(url, cached) }
+        val key = if (Amp.controls(url)) "$ticket:$url" else url
+        downloads.get(key) {
+            if (!permitted(url, ticket)) null
+            else cache.read(cached.name) ?: downloadAndStore(url, cached, ticket)
+        }.takeIf { permitted(url, ticket) }
     }
 
     private val downloads = SharedFetches<ByteArray?>(CoroutineScope(SupervisorJob() + Dispatchers.IO))
 
-    private fun downloadAndStore(url: String, cached: File): ByteArray? {
-        val downloaded = runCatching { download(url) }.getOrNull() ?: return null
+    private fun permitted(url: String, ticket: Long?): Boolean =
+        !Amp.controls(url) || (ticket != null && Amp.access.allows(ticket))
+
+    private fun downloadAndStore(url: String, cached: File, ticket: Long?): ByteArray? {
+        val downloaded = runCatching { download(url, ticket) }.getOrNull() ?: return null
+        if (!permitted(url, ticket)) return null
+        if (Amp.controls(url) && url != Amp.indexUrl && Amp.moduleBytes(downloaded) == null) return null
 
         cache.store(cached.name, downloaded)
         return downloaded
@@ -77,7 +88,9 @@ class RemoteFiles(
      * button do nothing while appearing to work.
      */
     suspend fun fetchIndex(url: String): ByteArray? = withContext(Dispatchers.IO) {
-        runCatching { download(url) }.getOrNull()
+        val ticket = Amp.access.capture()
+        if (!permitted(url, ticket)) return@withContext null
+        runCatching { download(url, ticket) }.getOrNull().takeIf { permitted(url, ticket) }
     }
 
     /** Where a catalogue that ships as one archive keeps it. */
@@ -190,21 +203,22 @@ class RemoteFiles(
      * on a real answer -- and a host that fails this way twice is a host that is down, so there is
      * one retry rather than a loop.
      */
-    private fun download(url: String): ByteArray = try {
-        downloadAt(url)
+    private fun download(url: String, ticket: Long?): ByteArray? = try {
+        downloadAt(url, ticket)
     } catch (failure: HttpFailure) {
-        // Old Modland indexes retain "- unknown" where the live tree uses "_unknown".
-        // Recover only after a missing file, retaining the original cache/playlist identity.
+        // Preserve legacy Modland recovery alongside AMP's transfer permission checks.
         val replacement = if (failure.status == 404) Modland.legacyUnknownAuthorUrl(url) else null
         if (replacement == null) throw failure
-        downloadAt(replacement)
+        downloadAt(replacement, ticket)
     }
 
-    private fun downloadAt(url: String): ByteArray {
-        val first = attempt(url, cookie = null)
+    private fun downloadAt(url: String, ticket: Long?): ByteArray? {
+        val first = attempt(url, cookie = null, ticket) ?: return null
+        // AMP's protection is not ExoticA's cookie gate. Never replay cookies to bypass it.
+        if (Amp.controls(url)) return first.body.takeUnless { first.contentType.orEmpty().startsWith("text/html") }
         if (!first.looksLikeAGate()) return first.body
         val cookie = first.cookie ?: return first.body
-        return attempt(url, cookie).body
+        return attempt(url, cookie, ticket)?.body
     }
 
     private class HttpFailure(val status: Int) : java.io.IOException("HTTP $status")
@@ -214,8 +228,15 @@ class RemoteFiles(
             cookie != null && body.size < 2048 && contentType.orEmpty().startsWith("text/html")
     }
 
-    private fun attempt(url: String, cookie: String?): Attempt {
+    private fun attempt(url: String, cookie: String?, ticket: Long?): Attempt? {
+        if (!permitted(url, ticket)) return null
         val connection = connect(url)
+        val cancel: () -> Unit = { connection.disconnect() }
+        val guarded = Amp.controls(url)
+        if (guarded && (ticket == null || !Amp.access.attach(ticket, cancel))) {
+            connection.disconnect()
+            return null
+        }
         return try {
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
@@ -224,10 +245,11 @@ class RemoteFiles(
             // The name and value only. A cookie's attributes are the browser's business and this is
             // not one; sending `path=/; HttpOnly` back would be sending the server its own notes.
             if (cookie != null) connection.setRequestProperty("Cookie", cookie)
+            if (!permitted(url, ticket)) return null
             val status = connection.responseCode
             if (status !in 200..299) throw HttpFailure(status)
             Attempt(
-                body = connection.inputStream.use { it.readBytes() },
+                body = connection.inputStream.use { if (guarded) Amp.readBounded(it) else it.readBytes() },
                 contentType = connection.contentType,
                 // **Found without caring about case**, because HTTP header names do not have one and
                 // this map's ordering is somebody else's implementation detail. It very likely works
@@ -240,6 +262,7 @@ class RemoteFiles(
                     ?.value?.firstOrNull()?.substringBefore(';')?.takeIf { it.isNotBlank() },
             )
         } finally {
+            if (guarded) Amp.access.detach(cancel)
             connection.disconnect()
         }
     }

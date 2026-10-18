@@ -4,7 +4,7 @@
 package com.przunk.protracktor.player
 
 import com.przunk.protracktor.net.Catalogue
-import com.przunk.protracktor.net.CatalogueRetention
+import com.przunk.protracktor.net.Amp
 import com.przunk.protracktor.net.UnExoticA
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -28,8 +28,8 @@ internal class TrackFiles(
 
     /** Reads a track's bytes, from wherever it lives. */
     suspend fun read(ref: TrackRef): ByteArray? =
-        if (CatalogueRetention.blocksReference(ref.id)) {
-            null
+        if (ref.id.startsWith("amp://")) {
+            loadFromAmp(ref.id)?.also { onFetched() }
         } else if (UnExoticA.ENABLED && UnExoticA.pathFrom(ref.id) != null) {
             // The one catalogue whose unit of download is not the tune: every UnExoticA file lives
             // inside its game's `.lha`, so this fetches the archive -- cached like any other
@@ -62,6 +62,17 @@ internal class TrackFiles(
      * asked would hide which half was missing.
      */
     suspend fun companions(ref: TrackRef): List<Pair<String, ByteArray>> {
+        if (ref.id.startsWith("amp://")) {
+            val ticket = Amp.access.capture() ?: return emptyList()
+            val path = Amp.pathFrom(ref.id) ?: return emptyList()
+            val name = path.substringAfterLast('/').removeSuffix(".gz")
+            // Use only the existing format-specific companion rules, never a directory crawl.
+            return Companions.siblingPaths(name).mapNotNull { sibling ->
+                val siblingPath = path.substringBeforeLast('/') + "/" + sibling +
+                    (if (path.endsWith(".gz")) ".gz" else "")
+                loadFromAmp(Amp.urlFor(siblingPath))?.let { sibling to it }
+            }.takeIf { Amp.access.allows(ticket) }.orEmpty()
+        }
         if (Companions.namesFor(ref.fileNameOrTitle.substringAfterLast('/')).isEmpty() &&
             Companions.siblingPaths(ref.id).isEmpty()
         ) {
@@ -90,6 +101,16 @@ internal class TrackFiles(
             }
             else -> emptyList()
         }
+    }
+
+    private suspend fun loadFromAmp(id: String): ByteArray? {
+        val ticket = Amp.access.capture() ?: return null
+        val path = Amp.pathFrom(id) ?: return null
+        val url = Amp.downloadUrl(path) ?: return null
+        val packed = access.fetch(url) ?: return null
+        if (!Amp.access.allows(ticket)) return null
+        return withContext(archiveWork) { Amp.moduleBytes(packed) }
+            .takeIf { Amp.access.allows(ticket) }
     }
 
     /**
