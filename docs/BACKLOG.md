@@ -2030,7 +2030,8 @@ foreground scan.
 **AMP trial selected 2026-10-18:** implementation on `feature/amp-catalogue`, separate from develop.
 Use the ready-made songdb index and on-demand files, not a crawler. A persistent in-app switch
 defaults on for this private trial. No merge or release before explicit AMP maintainer permission
-and owner acceptance. [Trial plan](PLAN_AMP.md); the permission email is a draft, not a sent request.
+and owner acceptance. [Trial plan](PLAN_AMP.md); the owner confirmed sending the permission request
+on 2026-10-18. A reply and explicit permission remain pending.
 
 **Historical renewed owner TODO, 2026-10-13: AMP (Amiga Music Preservation) archive integration?**
 Retain it under A7, without a duplicate wishlist number. The first task is to establish an

@@ -54,8 +54,10 @@ production-parser probe failed before correction (Nintendo instead of Atari ST);
 fixture now protects the source-specific disambiguation.
 The one module probe SHA-256 is `742da2b3a43360d9e1f0ead400a8e2ee6ec8bd3e89ba1d2bae72658e003188a1`.
 
-An unsent owner-review mail is kept locally in ignored
-`docs/letters/2026-10-18-amp-permission-draft.md`; correspondence is not part of the public branch.
+On 2026-10-18 the owner confirmed sending the permission request to AMP. A reply and explicit
+permission remain pending. The local draft is retained in ignored
+`docs/letters/2026-10-18-amp-permission-draft.md`; the final sent wording was not supplied.
+Correspondence is not part of the public branch.
 
 Progress: stages 1–4 complete for the agent handoff. Clean source `64c7dcc` passed the forced
 full gate: 952 tests / 127 suites, zero failures/errors/skips; lint zero errors / 73 warnings.

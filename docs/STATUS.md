@@ -1070,7 +1070,9 @@ The production parser accepted all 176,970 distinct file entries, with all 55 FT
 classified as Atari ST. The one bounded host module probe fetched valid gzip and the
 existing OpenMPT host probe rendered three seconds of non-silent audio; this is not an Android test.
 [Plan and protocol evidence](PLAN_AMP.md), [implementation evidence](PR_AMP_CATALOGUE.md).
-The unsent draft is local ignored correspondence, not published branch content.
+On 2026-10-18 the owner confirmed sending the AMP permission request; a reply and explicit
+permission remain pending. The retained draft is local ignored correspondence, not published
+branch content; the final sent wording was not supplied.
 
 ## Browse/download stability — merged 2026-10-18; phone testing pending
 

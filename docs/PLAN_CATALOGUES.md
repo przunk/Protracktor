@@ -80,7 +80,8 @@ unmerged branch, with a default-on in-app test switch. A ready-made AMP index wa
 existing songdb source project, so no crawler is needed. One public module path returned valid
 gzip without a Referer or bypass. Neither fact supplies maintainer permission: **merge and release
 still require AMP approval**. See [the trial plan](PLAN_AMP.md) for pinned data, protocol evidence,
-scope, checks and the unsent mail. The older survey below is historical, not the current index finding.
+scope and checks. The owner confirmed sending the permission request on 2026-10-18; a reply remains
+pending. The older survey below is historical, not the current index finding.
 
 **Follow-up, 2026-10-13:** the owner renewed AMP (Amiga Music Preservation) as an exploration
 TODO under A7. The earlier access finding below remains historical evidence, not a newly

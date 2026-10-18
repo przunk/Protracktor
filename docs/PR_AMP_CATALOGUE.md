@@ -114,6 +114,7 @@ retained disabled references, re-enable and other-source playback.
 
 **All phone scenarios are unchecked.** No emulator exists in this workspace. No merge, push,
 master/tag movement, public release or AAB signing is part of the trial. `versionName` stays 1.2.0.
-The permission email is prepared locally in ignored
-`docs/letters/2026-10-18-amp-permission-draft.md`; it is **not sent**, and the owner chooses its
-recipients and wording. Do not publish local correspondence or infer permission from HTTP 200.
+On 2026-10-18 the owner confirmed sending the AMP permission request. A reply and explicit
+permission remain pending. The local draft is retained in ignored
+`docs/letters/2026-10-18-amp-permission-draft.md`; the final sent wording was not supplied.
+Do not publish local correspondence or infer permission from HTTP 200.
