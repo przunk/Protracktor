@@ -1,13 +1,13 @@
 # Status
 
-Updated: 2026-10-18 — Browse stability merged; prepared release 1.2.0 (1207), schema 23.
+Updated: 2026-10-18 — QUEUE experiment APK prepared on its branch; prepared release 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B45 QUEUE experiment — unmerged, implementation in progress, 2026-10-18
+## B45 QUEUE experiment — unmerged, ready for owner phone testing, 2026-10-18
 
 Owner-selected isolated `feature/playback-queue-experiment` from develop `9ca86ea`.
 One source-aware queue owns transport; playlist selection and navigation do not interrupt music.
@@ -18,9 +18,18 @@ The experiment may be rejected; no merge, push or release is authorized.
 The owner approved code 1221 only for this branch's test APKs to alternate with the existing AMP
 APK. Schema remains 23. Native SQLite tests confirm AMP index/playlist/History/bookmark retention,
 with retained AMP rows excluded from discovery; this branch does not implement AMP playback.
-Full gate, lint, APK build/identity and all device checks are pending. Initial focused runs exposed
-an existing concurrency retry boundary that must be preserved and a test's confusion between
-physical single-tap and accessibility activation; these are not device results.
+**Checked:** clean source `da75839`, forced full gate **510 s**, **953 tests / 128 suites**,
+zero failures/errors/skips; all companion checks passed. Lint: **0 errors / 73 warnings** (one
+new unused legacy search-cover heading). Minified, non-debuggable, test-signed APK:
+`dist/protracktor-release-1.2.0-1221-da75839-20261018-235148.apk`, **11,828,663 bytes**.
+Its package/name/code/certificate match the reference AMP APK; APK v2, three engine ABIs, packaged
+source/privacy assets and R8 mapping were verified. Exact hashes and failed/reproduced/corrected
+intermediate checkpoints are recorded in the experiment report.
+
+**Unchecked:** all phone behaviour and actual AMP -> QUEUE -> AMP interchange. Temporary queues
+remain memory-only; process death restores the selected playlist paused, as before. No merge,
+push, tag change or store release occurred. Later documentation does not relabel this APK.
+Remove the temporary version override and unused legacy heading before an accepted merge.
 [Full contract, decisions and evidence](QUEUE_EXPERIMENT.md); [device checklist](TESTING.md).
 
 ## C109 — Same Game SPC cannot be played — owner report, 2026-10-18

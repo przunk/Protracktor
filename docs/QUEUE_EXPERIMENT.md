@@ -2,7 +2,8 @@
 
 Owner-authorized experiment, 2026-10-18. Branch `feature/playback-queue-experiment`, based on
 develop `9ca86ea` (commit count 1219). This document consolidates the discussion, decisions,
-code findings, implementation boundaries and verification plan. Implementation is in progress.
+code findings, implementation boundaries and verification. Implementation and host/artifact checks
+are complete; owner phone acceptance remains pending.
 
 ## 1. Why an experiment
 
@@ -208,9 +209,9 @@ No destructive migration, uninstall, Clear storage or automatic database reset i
   fetching all result pages. Do not confuse a database result count with actual queued entries.
 - Playlist edits when that playlist owns the active queue. Proposed: reflect edits with stable
   identity and preserve current removal/Undo semantics; unrelated playlist edits cannot affect it.
-- Process-death restoration: proposed active queue/current selection restored paused, never
-  automatic playback. Decide which source/session data to persist and any size bounds, while
-  keeping the AMP APK able to read its existing state safely.
+- Process-death restoration of temporary queues was not selected and is not included. The existing
+  paused selected-playlist restoration remains; temporary collection/Random sessions stay in memory.
+  A future persistence design must also remain safe for the older AMP APK.
 - Accessible reset affordance beyond the standard accessibility action; a menu alternative was
   suggested but not selected as an additional visible control.
 
@@ -334,8 +335,54 @@ the fixture now models the actual source. **All 91 UI tests / 15 suites then pas
 errors or skips. This does not establish phone behaviour.
 
 Actual Gradle configuration probes passed without signing/building an AAB: normal code **1223**
-matches this branch's commit count; the test-APK flag alone selects code **1221**. Both retain
-`com.przunk.protracktor` and name 1.2.0. Final packaged identity/signature still needs inspection.
+matched the source checkpoint's commit count; the test-APK flag alone selected code **1221**.
+Both retain `com.przunk.protracktor` and name 1.2.0. Later documentation commits do not relabel
+the artifact or make the historical probe count the current HEAD count.
 
-**Still pending:** renewed forced full gate/lint, final APK/version/signature inspection and owner device
-checks, including two-way AMP interchange. Focused runs are not a declaration of final readiness.
+## 11. Final host gate and test APK — 2026-10-18
+
+Clean source **`da75839789726ce42aed9c383f9c196bf87f2261`** passed
+`./scripts/test-protracktor.sh --really` in **510 s**:
+
+- **953 tests / 128 suites**, zero failures, errors or skips; unit stage **302.8 s**.
+- Lint **0 errors / 73 warnings**, **95.4 s**. One new warning is the retired
+  `search_playing_title` resource after removal of the cover. It is unused source text, not a
+  failed build; clean it up alongside the temporary version override before an accepted merge.
+- All companion stages passed: store metadata, runner/release fixtures, 581 page checks,
+  49 engine checks, eight SAP checks, database upgrade, native audio, icons, PWA and 11 server checks.
+- Local documentation link check: 118 targets, none missing.
+- Unit XML and logs are retained in ignored `dist/queue-verification/`.
+
+`./scripts/build-release.sh --no-daemon -Pkotlin.compiler.execution.strategy=in-process`
+built the clean source in **143 s**. R8 executed, its mapping is nonempty, and the APK is not
+debuggable. It uses the existing local test certificate; no AAB/publication key was used.
+
+| Property | Verified value |
+| --- | --- |
+| APK | `dist/protracktor-release-1.2.0-1221-da75839-20261018-235148.apk` |
+| Name / code | `1.2.0 (1221)` — owner-approved test-only exception |
+| Application ID | `com.przunk.protracktor` |
+| Size | 11,828,663 bytes |
+| APK SHA-256 | `0e9104c714ee73d2901df8fc19ed50fd925ae4f3d288fabf090e2e72986be772` |
+| Signature | APK v2 verified; Android Debug test certificate |
+| Certificate SHA-256 | `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e` |
+| SDK | min 29, target 36 |
+| Engine ABI entries | arm64-v8a, armeabi-v7a, x86_64 |
+| Database | schema 23, no migration |
+| Packaged source credits | SHA-256 `60831cb8b91af709872eb524bdb432f215f1320626eea4e101b6619ecc955233`, identical to source |
+| Packaged privacy policy | SHA-256 `626b613ccc2297a8f2db4eed807ca0982dd22f1ea6cbbce45df56ab7eebb3862`, identical to source |
+
+The reference AMP APK `protracktor-release-1.2.0-1221-64c7dcc-20261018-150242.apk` has the
+same package/name/code and certificate, verified directly. Its file SHA-256 remains
+`d4a9f33999fdeace6c578064faf64ac9fbeddcdd22c19f09cce4990fdcbccc04`.
+This verifies the artifact prerequisites, not an actual phone install/round-trip.
+
+**Device behaviour remains unchecked:** full-height sheet, continuity, gestures, audio and
+AMP -> QUEUE -> AMP data interchange require the owner's [phone checklist](TESTING.md).
+Temporary queue restoration across process death is deliberately not included.
+No merge, push, tag movement or store release was performed. Develop remains `9ca86ea`,
+AMP remains `8e92002`, master remains `794d8f9`.
+
+After owner acceptance, remove the test-only version override and unused retired heading,
+reverify the changed sources and obtain explicit merge authorization. The separate AMP permission
+hold remains in force. Subsequent documentation-only commits do not change this APK's fixed source.
