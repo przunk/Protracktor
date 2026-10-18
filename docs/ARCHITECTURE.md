@@ -19,6 +19,12 @@ view cannot transfer transport. Random can remain remembered while a different s
 Playback intent epochs prevent a delayed Random query from stealing a newer source. Queue UI
 uses the existing track/info presentation without selection editing, removal or reordering.
 
+Device-feedback refinement (2026-10-19): Queue is a sibling of the expandable dock card, not a
+child action. Its fresh list state starts at the active cursor; `KeepRowInView` still governs later
+changes without resetting other lists on arrival. Shell Back routing follows the visible screen's
+priority (scanner, Settings, Browse, Random), with one shared callback for Random's arrow/system
+Back to Browse. This changes navigation only, never the playback owner.
+
 Schema remains 23; temporary queues/Random records remain in memory. Startup still restores the
 selected playlist paused, not every temporary source. A test-only APK code 1221 exception and
 retained-but-unavailable AMP index guard support replacing the two private trial APKs. The latter

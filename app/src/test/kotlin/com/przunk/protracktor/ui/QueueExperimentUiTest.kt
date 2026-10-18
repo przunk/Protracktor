@@ -6,6 +6,7 @@ import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -78,6 +79,7 @@ class QueueExperimentUiTest {
                 contentPadding = androidx.compose.foundation.layout.PaddingValues())
         } }
         measure()
+        compose.onNodeWithText("Double-tap the dice to reroll the list").assertIsDisplayed()
         compose.onNodeWithText("Rolling…").assertExists()
         compose.runOnIdle { shown.value = shown.value.copy(loadingTrack = false) }
         compose.onNodeWithText("Rolling…").assertDoesNotExist()
@@ -103,5 +105,71 @@ class QueueExperimentUiTest {
         compose.onNodeWithText(activity.get().getString(R.string.action_info)).assertExists()
         compose.onNodeWithText(activity.get().getString(R.string.action_delete)).assertDoesNotExist()
         compose.onAllNodes(isToggleable()).assertCountEquals(0)
+    }
+
+    @Test fun `opening Queue starts with the playing row at the top and reopening follows the new cursor`() {
+        compose.mainClock.autoAdvance = false
+        val rows = (0..60).map { TrackRef("row:$it", "Tune $it") }
+        val shown = androidx.compose.runtime.mutableStateOf(true)
+        val selected = androidx.compose.runtime.mutableStateOf(30)
+        activity.get().setContent { MaterialTheme {
+            if (shown.value) QueueScreen(
+                PlayerUiState(playback = collectionPlayback(PlayQueue(rows).startAt(selected.value))),
+                onPlay = {}, onShowNeighbours = {}, onShareFile = {}, onShareAudio = {},
+                onShareLink = {}, onSendToWeb = {}, onAddToPlaylist = {})
+        } }
+        measure()
+        compose.onNodeWithText("Tune 30").assertIsDisplayed()
+        compose.onNodeWithText("Tune 29").assertIsNotDisplayed()
+        val top = compose.onNodeWithText("Tune 30").fetchSemanticsNode().boundsInRoot.top
+        compose.onNodeWithText("Tune 32").performScrollTo()
+        compose.runOnIdle { shown.value = false; Snapshot.sendApplyNotifications() }
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
+        compose.runOnIdle { selected.value = 45; shown.value = true; Snapshot.sendApplyNotifications() }
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
+        compose.onNodeWithText("Tune 45").assertIsDisplayed()
+        compose.onNodeWithText("Tune 44").assertIsNotDisplayed()
+        assertEquals(top, compose.onNodeWithText("Tune 45").fetchSemanticsNode().boundsInRoot.top, 1f)
+    }
+
+    @Test fun `Queue is a separate right hand action outside the expandable player card`() {
+        var expands = 0
+        var queues = 0
+        activity.get().setContent { MaterialTheme {
+            PlayerDock(PlayerUiState(queue = PlayQueue(listOf(TrackRef("a", "Current tune"))).startAt(0)),
+                onSeek = {}, onKeep = {}, onExpand = { expands++ }, onBrowse = {}, onPlayPause = {},
+                onPrevious = {}, onPreviousFile = {}, onNext = {}, onNextFile = {},
+                onShuffle = {}, onRepeat = {}, onQueue = { queues++ })
+        } }
+        measure()
+        val card = compose.onNodeWithContentDescription(activity.get().getString(R.string.a11y_expand_player))
+        val queue = compose.onNodeWithText("Queue")
+        assertTrue(queue.fetchSemanticsNode().boundsInRoot.left >= card.fetchSemanticsNode().boundsInRoot.right)
+        queue.performClick()
+        compose.runOnIdle { assertEquals(1, queues); assertEquals(0, expands) }
+        card.performClick()
+        compose.runOnIdle { assertEquals(1, queues); assertEquals(1, expands) }
+    }
+
+    @Test fun `system Back closes the visible screen before remembered Random`() {
+        compose.mainClock.autoAdvance = false
+        val level = androidx.compose.runtime.mutableStateOf(3)
+        val calls = mutableListOf<String>()
+        activity.get().setContent { MaterialTheme {
+            androidx.compose.material3.Text("Navigation")
+            ScreenBackHandler(scanning = level.value >= 3, settings = level.value >= 2,
+                browse = level.value >= 1, random = true,
+                onScanner = { calls += "scanner" }, onSettings = { calls += "settings" },
+                onBrowse = { calls += "browse" }, onRandom = { calls += "random" })
+        } }
+        measure()
+        for (destination in 3 downTo 0) {
+            compose.runOnIdle { level.value = destination; Snapshot.sendApplyNotifications() }
+            compose.mainClock.advanceTimeByFrame()
+            compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }
+        }
+        compose.runOnIdle { assertEquals(listOf("scanner", "settings", "browse", "random"), calls) }
     }
 }

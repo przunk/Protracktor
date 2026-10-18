@@ -339,7 +339,7 @@ matched the source checkpoint's commit count; the test-APK flag alone selected c
 Both retain `com.przunk.protracktor` and name 1.2.0. Later documentation commits do not relabel
 the artifact or make the historical probe count the current HEAD count.
 
-## 11. Final host gate and test APK — 2026-10-18
+## 11. Initial host gate and test APK — 2026-10-18
 
 Clean source **`da75839789726ce42aed9c383f9c196bf87f2261`** passed
 `./scripts/test-protracktor.sh --really` in **510 s**:
@@ -386,3 +386,35 @@ AMP remains `8e92002`, master remains `794d8f9`.
 After owner acceptance, remove the test-only version override and unused retired heading,
 reverify the changed sources and obtain explicit merge authorization. The separate AMP permission
 hold remains in force. Subsequent documentation-only commits do not change this APK's fixed source.
+
+## 12. First device feedback — 2026-10-19
+
+The owner tested the initial QUEUE APK and reported a promising overall result, with four requested
+refinements. This is feedback, not blanket acceptance or merge authorization:
+
+1. Put the labelled Queue action at the far right of the dock, outside the expandable Now Playing
+   card, with its own touch target. The original card contains the action as a child.
+2. Back from Random must return to Browse, its entry point, rather than skipping to the playlist.
+   The original callback hides Random after its entry hid Browse. System Back must also respect
+   a Browse/author view over Random instead of letting Random consume that view's Back.
+   The explicit playlist shortcut remains a direct exit; neither exit transfers playback.
+3. Make the persistent dice hint explicitly identify the dice as the double-tap target (EN + PL).
+4. Each fresh Queue opening must start at the current row, aligned at the top where the list's
+   trailing boundary permits it. The shared `KeepRowInView` intentionally ignores arrival, so
+   initialize Queue's list position explicitly and retain shared following for later changes.
+
+Implemented on the experiment branch, without changing the playback controller, queue model,
+schema or test-APK identity. **Checked on the host:** all eight `QueueExperimentUiTest` cases passed.
+The card-boundary test fails against the original nested action. An isolated long-list test with
+an explicitly controlled Compose clock fails against the original initial position, then passes
+with the current row at the top and again after dismissing/reopening at a different cursor.
+The real Back dispatcher test covers all four visible-screen priorities; deliberately putting
+Random first produces one expected assertion failure (four Random callbacks instead of the four
+visible destinations). The correct priority was restored before the full gate.
+
+Intermediate automatic-clock UI runs encountered host idle timeouts, not confirmed application
+defects. Explicit frames and snapshot notification, as used by the existing UI harness, corrected
+the test setup; its position/callback assertions were retained. These timeouts are not counted as
+successful bug reproductions. Full gate/lint and the replacement minified APK are pending.
+The previous artifact remains an immutable checkpoint. Device confirmation and merge approval
+are still pending.

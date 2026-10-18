@@ -1,11 +1,25 @@
 # Status
 
-Updated: 2026-10-18 — QUEUE experiment APK prepared on its branch; prepared release 1.2.0 (1207), schema 23.
+Updated: 2026-10-19 — QUEUE experiment device-feedback follow-up; prepared release 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B45 follow-up — four owner-reported UI refinements, 2026-10-19
+
+The owner tried the initial QUEUE build and reported a promising overall result, not merge approval.
+Queue is now a separate far-right dock action outside the expandable player card. Both Random
+Back paths return to Browse; the system handler follows visible-screen priority so an author or
+Settings over remembered Random closes first. The direct playlist shortcut remains unchanged.
+The dice hint names its double-tap target in both languages. Each fresh Queue sheet starts at the
+current row, at the top where possible; later playback changes retain shared list following.
+
+**Verification in progress:** targeted UI regressions, full forced gate/lint and replacement
+minified APK. The dated initial-build evidence below does not certify these follow-up sources.
+Phone acceptance of these refinements remains **unchecked**. Version name 1.2.0/test code 1221,
+schema 23 and the AMP permission hold are unchanged. No merge or push authorized.
 
 ## B45 QUEUE experiment — unmerged, ready for owner phone testing, 2026-10-18
 

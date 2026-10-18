@@ -1,6 +1,6 @@
 # What only a phone can prove
 
-## QUEUE experiment — device checks pending, 2026-10-18
+## QUEUE experiment — follow-up device checks pending, 2026-10-19
 
 Use only the supplied minified APK from `feature/playback-queue-experiment`. It is not merged.
 The reference AMP APK has name 1.2.0/code 1221; verify the QUEUE artifact's same package/code and
@@ -11,8 +11,11 @@ test certificate before replacing it. Do not uninstall or clear storage.
    Random; explicitly playing its retained reference must explain the limitation.
 2. Play playlist A, select playlist B. A keeps sounding; position/metadata, notification and
    Next/Previous still belong to A. B has no playing selection. Save/edit B without changing A.
-3. Open Queue beside the player. It opens fully expanded, shows A and its actual selection.
-   Play another row: A's position changes, B remains unchanged. View A to see its selection.
+3. Queue is a separate labelled action at the far right, outside the expandable Now Playing card.
+   Tap it: the full-height sheet opens, not Now Playing. With A's cursor far down the list, its
+   current row appears at the top (or as high as the trailing boundary allows). Scroll away,
+   dismiss, change track and reopen: the new current row is shown immediately. Play another row:
+   A's position changes, B remains unchanged. View A to see its selection.
 4. Play a row of B: ownership and transport now belong to B. No automatic start on mere selection.
 5. Play from Search, return to the playlist, enter Settings or edit a new search. Audio and Next
    remain with the captured results until another row is explicitly played.
@@ -20,6 +23,9 @@ test certificate before replacing it. Do not uninstall or clear storage.
    the queue. History-origin playback must not move History entries to the top.
 7. First entry into Random starts a session. After several draws, return to the playlist and
    reopen Random: same record/current track, no reset or restart. Reopening while paused stays paused.
+   Check both the toolbar arrow and system Back: Random returns to Browse, then Browse returns
+   to the playlist. The explicit playlist shortcut still goes directly to the playlist. Back from
+   an author opened over Random first returns to Random; Settings also closes before Random.
 8. From Random open an author: merely looking keeps Random transport. Play an author row, then
    return/reopen Random: author music and Next/Previous continue. Only selecting a Random row
    transfers playback back to its remembered record. No Resume Random button.

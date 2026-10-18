@@ -132,84 +132,89 @@ fun PlayerDock(
             // **It has to look like a control.** This row opens the player, which is also how the
             // tunes inside a file are reached, and nothing else on it says so. Same remedy as the
             // playlist name in the top bar: a surface you can see, and a chevron.
-            Surface(
-                onClick = if (loaded != null) onExpand else onBrowse,
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .semantics { contentDescription = expandLabel },
-            ) {
-            // **A height of its own, not its tallest child's** (`docs/STATUS.md` C54). The keep
-            // button is an `IconButton` and carries Material's 48dp touch target; the chevron beside
-            // it is a bare icon. Without a fixed height the card grows by four pixels wherever
-            // keeping is offered, and the dock is visibly taller in Random than over the playlist.
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(DOCK_CARD_HEIGHT)
-                    .padding(horizontal = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = loaded?.title ?: stringResource(if (state.loadingTrack && state.randomMode) R.string.random_rolling else R.string.dock_idle_title),
-                        // A title that does not fit scrolls rather than losing its end (A54); one
-                        // that fits stands still, which the marquee decides by measuring.
-                        modifier = Modifier.dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
-                        // A size up from titleSmall: this is read at a glance, in a car among
-                        // other places, so the dock grows to fit rather than the text being
-                        // squeezed to keep the dock's old height.
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = NowPlayingText.subtitle(state,
-                            loading = stringResource(R.string.dock_loading),
-                            idle = stringResource(R.string.dock_idle_subtitle)),
-                        modifier = Modifier.dockLine(
-                            DockMarquee.scrolls(animatorScale, isStatus = state.loadingTrack)
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                // For anything playing that is not the playlist: a random pick, a search result, a
-                // track tapped while browsing. Keeping it is a decision made after hearing it,
-                // which is the only order that makes sense for something you did not choose.
-                if (state.awayFromPlaylist) {
-                    IconButton(onClick = onKeep) {
-                        Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                Surface(
+                    onClick = if (loaded != null) onExpand else onBrowse,
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { contentDescription = expandLabel },
+                ) {
+                    // **A height of its own, not its tallest child's** (`docs/STATUS.md` C54). The keep
+                    // button is an `IconButton` and carries Material's 48dp touch target; the chevron beside
+                    // it is a bare icon. Without a fixed height the card grows by four pixels wherever
+                    // keeping is offered, and the dock is visibly taller in Random than over the playlist.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(DOCK_CARD_HEIGHT)
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = loaded?.title ?: stringResource(if (state.loadingTrack && state.randomMode) R.string.random_rolling else R.string.dock_idle_title),
+                                // A title that does not fit scrolls rather than losing its end (A54); one
+                                // that fits stands still, which the marquee decides by measuring.
+                                modifier = Modifier.dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
+                                // A size up from titleSmall: this is read at a glance, in a car among
+                                // other places, so the dock grows to fit rather than the text being
+                                // squeezed to keep the dock's old height.
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = NowPlayingText.subtitle(state,
+                                    loading = stringResource(R.string.dock_loading),
+                                    idle = stringResource(R.string.dock_idle_subtitle)),
+                                modifier = Modifier.dockLine(
+                                    DockMarquee.scrolls(animatorScale, isStatus = state.loadingTrack)
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        // For anything playing that is not the playlist: a random pick, a search result, a
+                        // track tapped while browsing. Keeping it is a decision made after hearing it,
+                        // which is the only order that makes sense for something you did not choose.
+                        if (state.awayFromPlaylist) {
+                            IconButton(onClick = onKeep) {
+                                Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
+                            }
+                        }
+                        // Says there is more inside without adding a control: the tunes are chosen in
+                        // the player this row opens. Shown in **both** modes: gating it on "play all"
+                        // closes a door on itself, since you would have to already know a file held
+                        // fifteen tunes in order to switch to the mode that would tell you. "1 of 15" is
+                        // true either way.
+                        if (state.subsongCount > 1) {
+                            Text(
+                                text = stringResource(
+                                    R.string.subsongs_position, state.subsong + 1, state.subsongCount
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                        Icon(
+                            imageVector = PlayerIcons.Expand,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
                     }
                 }
                 LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
                     onClick = onQueue, slim = true)
-                // Says there is more inside without adding a control: the tunes are chosen in
-                // the player this row opens. Shown in **both** modes: gating it on "play all"
-                // closes a door on itself, since you would have to already know a file held
-                // fifteen tunes in order to switch to the mode that would tell you. "1 of 15" is
-                // true either way.
-                if (state.subsongCount > 1) {
-                    Text(
-                        text = stringResource(
-                            R.string.subsongs_position, state.subsong + 1, state.subsongCount
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
-                Icon(
-                    imageVector = PlayerIcons.Expand,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-            }
             }
 
             Row(

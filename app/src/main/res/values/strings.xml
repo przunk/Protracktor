@@ -7,7 +7,7 @@
     <string name="queue_search">Search: %1$s</string>
     <string name="queue_external">File opened from another app</string>
     <string name="random_reroll_list">Start a new Random list</string>
-    <string name="random_double_tap_hint">Double-tap to reroll the list</string>
+    <string name="random_double_tap_hint">Double-tap the dice to reroll the list</string>
     <string name="notice_catalogue_not_in_trial">This catalogue is unavailable in the QUEUE experiment. Its saved data is kept for the AMP build.</string>
     <string name="saved_places_title">Saved places</string>
     <string name="saved_places_body">Author and game folders to return to later.</string>

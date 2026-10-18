@@ -45,7 +45,10 @@ fun QueueScreen(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
         if (tracks.isEmpty()) Text(stringResource(if (state.loadingTrack) R.string.random_rolling else R.string.queue_empty), modifier = Modifier.padding(20.dp))
         else PlaylistBody(
-            tracks = tracks, listState = rememberLazyListState(), currentIndex = active.order.currentIndex,
+            tracks = tracks,
+            // Arrival is intentional here; shared following only reacts to later cursor changes.
+            listState = rememberLazyListState(initialFirstVisibleItemIndex = active.order.currentIndex ?: 0),
+            currentIndex = active.order.currentIndex,
             onPlayAt = onPlay, onRemoveAt = {}, onMove = { _, _ -> },
             onShowNeighbours = onShowNeighbours, onShareFile = onShareFile, onShareAudio = onShareAudio,
             onShareLink = onShareLink, onSendToWeb = onSendToWeb,

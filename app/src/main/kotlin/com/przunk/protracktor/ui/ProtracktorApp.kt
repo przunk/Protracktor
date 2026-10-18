@@ -181,6 +181,10 @@ fun ProtracktorApp(
     val leaveBrowse = {
         if (!viewModel.browseBack()) showBrowse = false
     }
+    val leaveRandom = {
+        showRandom = false
+        showBrowse = true
+    }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
 
     // The chooser needs an activity; preparing what is shared needed a fetch. The controller does
@@ -272,11 +276,8 @@ fun ProtracktorApp(
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
                                 } else if (showRandom) {
-                                    // The same arrow Browse has: the two screens sit side by side, so one of
-                                    // them offering no way out of its bar would leave their headings out of
-                                    // line as well. **Back leaves, and the dice plays on** (A61): the playlist
-                                    // it leaves to is covered, and the cover leads back here.
-                                    IconButton(onClick = { showRandom = false }) {
+                                    // Return to the Browse entry point without changing playback.
+                                    IconButton(onClick = leaveRandom) {
                                         Icon(PlayerIcons.Back, stringResource(R.string.action_back))
                                     }
                                 }
@@ -532,22 +533,11 @@ fun ProtracktorApp(
         }
     }
 
-    // One level at a time, out of Browse and then out of the screen -- the rule the rest of the
-    // navigation follows.
-    if (showSettings) {
-        BackHandler { showSettings = false }
-    }
-
-    if (scanning) {
-        BackHandler { scanning = false }
-    }
-
-    if (showBrowse) {
-        BackHandler(onBack = leaveBrowse)
-    }
-
-    // Random is remembered navigation, even when another source now owns playback.
-    if (showRandom) BackHandler { showRandom = false }
+    ScreenBackHandler(
+        scanning = scanning, settings = showSettings, browse = showBrowse, random = showRandom,
+        onScanner = { scanning = false }, onSettings = { showSettings = false },
+        onBrowse = leaveBrowse, onRandom = leaveRandom,
+    )
 
     // **Here rather than inside Browse.** The Random view's Filter button opens the same sheet,
     // and a sheet that exists only under one destination cannot be reached from another
@@ -922,3 +912,19 @@ private val TOP_BAR_SLOT_SEAM = 1.dp
  * the space around Browse look unlike the space between Discard, Save and Settings.
  */
 private val LABELLED_ACTION_INSET = 3.dp
+
+/** Match the visible destination's priority; remembered Random must not consume an author's Back. */
+@Composable
+internal fun ScreenBackHandler(
+    scanning: Boolean, settings: Boolean, browse: Boolean, random: Boolean,
+    onScanner: () -> Unit, onSettings: () -> Unit, onBrowse: () -> Unit, onRandom: () -> Unit,
+) {
+    val onBack = when {
+        scanning -> onScanner
+        settings -> onSettings
+        browse -> onBrowse
+        random -> onRandom
+        else -> null
+    }
+    BackHandler(enabled = onBack != null) { onBack?.invoke() }
+}
