@@ -23,6 +23,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LocalFolderBrowserTest {
+    @Test(timeout = 5_000)
+    fun `obsolete local folder reads cannot publish after closing and reopening the same folder`() = runBlocking {
+        val f = Fixture(this)
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        var first = true
+        f.before = { if (it == "tracks:${f.folder.uri}" && first) {
+            first = false
+            entered.complete(Unit)
+            gate.await()
+        } }
+        f.browser.openFolder(f.folder)
+        entered.await()
+        f.browser.closeFolder()
+        f.browser.openFolder(f.folder)
+        kotlinx.coroutines.yield()
+        val expected = f.browse.value.copy(tracks = listOf(f.nested), loading = true)
+        f.browse.value = expected
+        gate.complete(Unit)
+        drain()
+        assertEquals(expected, f.browse.value)
+    }
+
     private suspend fun CoroutineScope.drain() {
         while (coroutineContext.job.children.any()) coroutineContext.job.children.toList().joinAll()
     }
@@ -98,7 +121,7 @@ class LocalFolderBrowserTest {
         f.onScan = {
             assertEquals(f.folder, it)
             assertEquals(f.folders, f.browse.value.folders)
-            assertEquals(f.other, f.browse.value.openFolder)
+            assertEquals(f.folder, f.browse.value.openFolder)
         }
         f.browser.rememberFolder(f.folder.uri)
         assertTrue(f.events.isEmpty())
@@ -114,7 +137,7 @@ class LocalFolderBrowserTest {
         val gate = CompletableDeferred<Unit>()
         f.before = { if (it == "tracks:tree:music") gate.await() }
         f.onScan = {
-            assertEquals(f.other, f.browse.value.openFolder)
+            assertEquals(f.folder, f.browse.value.openFolder)
             assertTrue(f.browse.value.loading)
         }
         f.browser.rememberFolder(f.folder.uri)
@@ -198,7 +221,7 @@ class LocalFolderBrowserTest {
         assertEquals(listOf("tracks:tree:music", "root:tree:music"), f.events)
         assertEquals(before.copy(openFolder = f.folder, loading = false, tracks = emptyList(),
             folderAll = emptyList(), folderRoot = "Music", folderAt = "Music", subfolders = emptyList(),
-            folderUnscanned = true, folderStale = false), f.browse.value)
+            folderUnscanned = true, folderStale = false, navigationVisit = before.navigationVisit + 1), f.browse.value)
     }
 
     @Test(timeout = 5_000)
@@ -211,7 +234,7 @@ class LocalFolderBrowserTest {
         f.browser.openFolder(f.folder)
         entered.await()
         assertEquals(before.copy(openFolder = f.folder, loading = true, tracks = emptyList(),
-            folderUnscanned = false, folderStale = false), f.browse.value)
+            folderUnscanned = false, folderStale = false, navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertEquals(listOf("tracks:tree:music"), f.events)
         f.browse.update { it.copy(query = "new query") }
         gate.complete(Unit)
@@ -220,7 +243,7 @@ class LocalFolderBrowserTest {
         assertEquals(before.copy(openFolder = f.folder, loading = false, tracks = listOf(f.intro),
             folderAll = listOf("Music" to f.intro, "Music/Atari/good" to f.nested), folderRoot = "Music", folderAt = "Music",
             subfolders = listOf(LocalTree.Folder("Atari", "Music/Atari", 1)), folderUnscanned = false,
-            folderStale = true, query = "new query"), f.browse.value)
+            folderStale = true, query = "new query", navigationVisit = before.navigationVisit + 1), f.browse.value)
     }
 
     @Test
@@ -236,7 +259,7 @@ class LocalFolderBrowserTest {
             assertSame(failure, failures.single())
             assertEquals(steps.take(steps.indexOf(failedAt) + 1), f.events)
             assertEquals(before.copy(openFolder = f.folder, loading = true, tracks = emptyList(),
-                folderUnscanned = false, folderStale = false), f.browse.value)
+                folderUnscanned = false, folderStale = false, navigationVisit = before.navigationVisit + 1), f.browse.value)
         }
     }
 
@@ -253,7 +276,8 @@ class LocalFolderBrowserTest {
             assertTrue(failures.isEmpty())
             assertEquals(listOf(if (open) "tracks:tree:music" else "folders"), f.events)
             assertEquals(if (open) before.copy(openFolder = f.folder, loading = true, tracks = emptyList(),
-                folderUnscanned = false, folderStale = false) else before, f.browse.value)
+                folderUnscanned = false, folderStale = false,
+                navigationVisit = before.navigationVisit + 1) else before, f.browse.value)
         }
     }
 
@@ -288,7 +312,8 @@ class LocalFolderBrowserTest {
         assertSame(closed, f.browse.value)
         f.browse.value = before
         f.browser.openSubfolder("Music/Atari/good")
-        assertEquals(before.copy(folderAt = "Music/Atari/good", subfolders = emptyList(), tracks = listOf(f.nested)), f.browse.value)
+        assertEquals(before.copy(folderAt = "Music/Atari/good", subfolders = emptyList(), tracks = listOf(f.nested),
+            navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertTrue(f.events.isEmpty())
     }
 
@@ -297,7 +322,8 @@ class LocalFolderBrowserTest {
         val f = Fixture(this)
         val before = f.browse.value
         f.browser.closeFolder()
-        assertEquals(before.copy(openFolder = null, tracks = emptyList()), f.browse.value)
+        assertEquals(before.copy(openFolder = null, tracks = emptyList(), loading = false,
+            navigationVisit = before.navigationVisit + 1), f.browse.value)
         assertTrue(f.events.isEmpty())
         assertTrue(coroutineContext.job.children.none())
     }
@@ -316,7 +342,7 @@ class LocalFolderBrowserTest {
     }
 
     @Test(timeout = 5_000)
-    fun `a late folder read still publishes its tree into the newer selection`() = runBlocking {
+    fun `a late folder read cannot publish its tree into the newer selection`() = runBlocking {
         val f = Fixture(this)
         val entered = CompletableDeferred<Unit>()
         val gate = CompletableDeferred<Unit>()
@@ -332,8 +358,8 @@ class LocalFolderBrowserTest {
         gate.complete(Unit)
         drain()
         assertEquals(f.other, f.browse.value.openFolder)
-        assertEquals("Music", f.browse.value.folderRoot)
-        assertEquals(listOf(f.intro), f.browse.value.tracks)
+        assertEquals("Other", f.browse.value.folderRoot)
+        assertTrue(f.browse.value.tracks.isEmpty())
         assertTrue(f.events.none { it.startsWith("scan:") })
     }
 }

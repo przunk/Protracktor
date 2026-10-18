@@ -1052,6 +1052,25 @@ the cache sit above its ceiling while reporting that it does not. When protected
 the ceiling, everything else goes and no more: deleting what is playing to satisfy an arithmetic
 target would be the cache breaking the app in order to obey itself.
 
+### Cache transactions and Browse ownership — 2026-10-16 trial
+
+`RemoteFiles` retains transfer sharing and URL keys; `RemoteFileCache` owns the fetched directory's
+read/touch/write/accounting/eviction transactions under one instance monitor. Network transfers
+run outside that monitor. An eviction snapshot and its deletes cannot interleave with a cache
+replacement or read. The application-scoped controller has one RemoteFiles/cache owner; this is
+not cross-process coordination or protection from Android clearing cache files.
+`AtomicFileWrite` gives each cache/archive writer its own `.part` sibling, renames only complete
+bytes and removes only that writer's staging file on failure. Archives remain outside the budget.
+
+Browse uses `navigationVisit` and a route-qualified `BrowseReadOwner`, rather than relying on
+cancellation or route equality. Register selection before launching a read; check ownership inside
+the atomic publication. A restored snapshot gets a new visit from current state. Back publishes
+the parent transition before calling the parent reader, which can complete immediately.
+Read-ahead separately retires its generation before cancelling work or accepting an empty/held
+selection; late cancelled or obsolete completions cannot repopulate memory.
+These changes are a branch trial, not merged or phone-accepted.
+[Contract and verification](PR_BROWSE_DOWNLOAD_STABILITY.md).
+
 ### And what the user can throw away themselves
 
 **Since 2026-09-04 everything the app stores has a delete next to it**, in a Storage section on the

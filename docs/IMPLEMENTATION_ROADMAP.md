@@ -1,9 +1,9 @@
 # Implementation roadmap
 
-Updated: 2026-10-15. Owner-requested inventory of unfinished, deferred and undecided work.
+Updated: 2026-10-16. Owner-requested inventory of unfinished, deferred and undecided work.
 This is a planning index, not an implementation order or permission to resume shelved work.
 The owner-approved unpublished version-history correction restores release baseline 1.1.0;
-the next selected release is 1.2.0. Historical IDs/SHAs below refer to the archived original graph,
+release 1.2.0 now has a prepared tagged AAB (Play publication unconfirmed). Historical IDs/SHAs below refer to the archived original graph,
 not newly built artifacts. [Commit map and validation](VERSION_HISTORY_REWRITE.md).
 Completed tasks are excluded. Historical notes are reconciled where later records establish
 completion; uncertain coverage remains explicitly marked for checking.
@@ -66,12 +66,12 @@ Evidence and reproduction records live in [Status](STATUS.md), [Backlog](BACKLOG
 | C26 | Reported SPC tempo difference | Deferred investigation; compare the same rip with an independent decoder. Cause not established. |
 | A43 | More from this author opens an empty folder when the archive has no index | Open finding; guard the unavailable action or explain the missing prerequisite. |
 | A45 | Author jump from a playlist does not identify the author as the Random jump does | Open finding; align the heading without introducing Random-only session behaviour. |
-| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | These risks remain; search ownership was fixed by C106 at `d74d339`, 2026-10-15. Not a new B46 regression or phone-frequency measurement. [Review R2](review-2026-10-14.md). |
-| Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Retained during extraction; separate fix required. |
-| Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Host sequence reproduced; stale bytes can subsequently enter the in-memory map. |
+| Browse/navigation risk | An older catalogue or folder read can publish after newer navigation | Visit/route ownership implemented on `fix/browse-download-stability`; full gate passes (929 tests, lint zero errors), APK 1.2.0 (1214) ready. Not merged; phone acceptance pending. Search ownership was already fixed by C106. [Stability report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
+| Back navigation risk | A captured snapshot can overwrite a newer reentrant parent-read update | Parent-first publication implemented on the stability branch; full gate passes, phone acceptance/merge pending. |
+| Read-ahead risk | An empty/already-held candidate list returns before cancelling an older fetch | Retirement and late-completion guards implemented on the stability branch; full gate passes, phone acceptance/merge pending. |
 | Download cancellation notice | Stopped notice is suppressed because cancellation is checked inside NonCancellable cleanup | Production workflow exercised with controlled host ports; phone behaviour not independently checked. |
-| Review round 5 R7 | Concurrent fetches for one URL share a temporary `.part` filename | Low-priority retained cache risk; [review record](review.md). |
-| Review round 5 R8 | Cache eviction can remove another fetch's newly written file | Low-priority retained risk of a redundant download; [review record](review.md). |
+| Review round 5 R7 | Historical shared `.part` filename finding | Current SharedFetches already joins one-URL transfers. Unique staging files and failure cleanup added in the stability trial; not a newly reproduced duplicate transfer. [Reassessment](review.md). |
+| Review round 5 R8 | An old eviction snapshot can remove a concurrent replacement | Controlled disk reproduction fails on the old algorithm; transactional cache correction passes the full gate on the stability branch, phone acceptance/merge pending. [Report](PR_BROWSE_DOWNLOAD_STABILITY.md). |
 
 C108 protection was approved for integration and merged at `8f3ef56`, 2026-10-15, and is no longer
 open. Schema remains 23; older destructive binaries are not repaired by this merge.

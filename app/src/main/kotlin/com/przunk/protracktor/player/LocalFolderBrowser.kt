@@ -67,17 +67,17 @@ internal class LocalFolderBrowser(
      * (`docs/STATUS.md` C4). The scan happens once, on purpose, and this reads its result.
      */
     fun openFolder(folder: GrantedFolder) {
+        val owner = BrowseReadOwner.begin(browse) {
+            it.copy(
+                openFolder = folder, loading = true, tracks = emptyList(),
+                folderUnscanned = false, folderStale = false,
+            )
+        }
         scope.launch {
-            browse.update {
-                it.copy(
-                    openFolder = folder, loading = true, tracks = emptyList(),
-                    folderUnscanned = false, folderStale = false,
-                )
-            }
             val found = store.tracksIn(folder.uri)
             val stale = found.isNotEmpty() &&
                 store.isStale(folder.uri, backendFingerprint())
-            browse.update {
+            owner.publish(browse) {
                 treeOf(it, folder, found).copy(
                     loading = false,
                     folderUnscanned = found.isEmpty(),
@@ -115,8 +115,11 @@ internal class LocalFolderBrowser(
 
     /** Into a folder inside the open one. */
     fun openSubfolder(path: String) {
-        browse.update { if (it.openFolder == null) it else levelOf(it, path) }
+        browse.update { if (it.openFolder == null) it else
+            levelOf(it, path).copy(navigationVisit = it.navigationVisit + 1) }
     }
 
-    fun closeFolder() = browse.update { it.copy(openFolder = null, tracks = emptyList()) }
+    fun closeFolder() = browse.update {
+        it.copy(openFolder = null, tracks = emptyList(), loading = false, navigationVisit = it.navigationVisit + 1)
+    }
 }

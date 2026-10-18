@@ -15,7 +15,7 @@ data class CacheEntry(
  * How much fetched music is kept, and what goes first when there is too much.
  *
  * **No Android imports, and no clock.** This decides *what to evict* given a list; reading the
- * directory and deleting files is [RemoteFiles]'s job. That split is what makes the rules testable
+ * directory and deleting files is [RemoteFileCache]'s job. That split is what makes the rules testable
  * here rather than discoverable on somebody's phone — `docs/OPEN_QUESTIONS.md` Q5 stayed open for
  * weeks partly because there was nowhere to write a test for it.
  *

@@ -28,6 +28,8 @@ data class HeldSets(
 data class BrowseState(
     val domain: BrowseDomain = BrowseDomain.ROOT,
     val loading: Boolean = false,
+    /** Distinguishes consecutive visits to the same route; never restored from a saved snapshot. */
+    val navigationVisit: Long = 0,
 
     // Local files
     val folders: List<GrantedFolder> = emptyList(),

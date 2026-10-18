@@ -168,11 +168,22 @@ and a comment claiming an ordering the code does not use is worse than no commen
 
 ### R7 — two fetches of one URL share a temporary file · **low**
 
+**Reassessment, 2026-10-16:** this finding predates `SharedFetches`; current callers of one
+RemoteFiles instance already join one transfer per URL. It is not an established current duplicate
+download defect. A branch trial also gives cache/archive writes unique staging files and cleans
+them on failure; verification/acceptance is recorded in [the stability report](PR_BROWSE_DOWNLOAD_STABILITY.md).
+The original analysis follows as history.
+
 `RemoteFiles.fetch` writes through `<name>.part`. The read-ahead and a play of the same track can
 run at once and would write the same temporary path. Both write identical bytes, so the outcome is
 correct by luck rather than by design.
 
 ### R8 — eviction can delete a file that another fetch has just written · **low**
+
+**Follow-up, 2026-10-16:** a controlled disk test confirms an older eviction snapshot can delete
+a concurrent replacement. The branch trial serializes snapshot/delete with read/write operations;
+this does not exempt completed downloads from normal later budget eviction. See the
+[stability report](PR_BROWSE_DOWNLOAD_STABILITY.md); not merged or phone-accepted.
 
 `enforceBudget` protects the file the calling fetch wrote; a concurrent fetch's file is fair game
 between its write and its use. `fetch` returns the bytes it downloaded rather than re-reading the

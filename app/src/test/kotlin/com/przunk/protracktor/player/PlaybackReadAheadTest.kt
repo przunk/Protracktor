@@ -6,7 +6,10 @@ package com.przunk.protracktor.player
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -22,6 +25,68 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaybackReadAheadTest {
+    @Test(timeout = 5_000)
+    fun `a late result for the same id cannot replace bytes from the new request`() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val fresh = byteArrayOf(2)
+        var first = true
+        val ahead = PlaybackReadAhead(this) {
+            if (first) {
+                first = false
+                entered.complete(Unit)
+                withContext(NonCancellable) { gate.await() }
+                byteArrayOf(1)
+            } else fresh
+        }
+        ahead.prepare(listOf(track("same")))
+        entered.await()
+        ahead.prepare(listOf(track("same")))
+        yield()
+        gate.complete(Unit)
+        drain()
+        assertSame(fresh, ahead.take("same"))
+    }
+
+    @Test(timeout = 5_000)
+    fun `cancellation reentrancy cannot overwrite a newer preparation`() = runBlocking {
+        val immediate = CoroutineScope(coroutineContext + Dispatchers.Unconfined)
+        val calls = mutableListOf<String>()
+        lateinit var ahead: PlaybackReadAhead
+        ahead = PlaybackReadAhead(immediate) {
+            calls += it.id
+            if (it.id == "old") {
+                try { awaitCancellation() }
+                finally { ahead.prepare(listOf(track("reentrant"))) }
+            } else byteArrayOf(1)
+        }
+        ahead.prepare(listOf(track("old")))
+        ahead.prepare(listOf(track("outer")))
+        drain()
+        assertEquals(listOf("old", "reentrant"), calls)
+        assertNull(ahead.take("outer"))
+        assertTrue(ahead.take("reentrant") != null)
+    }
+
+    @Test(timeout = 5_000)
+    fun `empty replacement and clear reject bytes from cancellation resistant reads`() = runBlocking {
+        for (clear in listOf(false, true)) {
+            val entered = CompletableDeferred<Unit>()
+            val gate = CompletableDeferred<Unit>()
+            val ahead = PlaybackReadAhead(this) {
+                entered.complete(Unit)
+                withContext(NonCancellable) { gate.await() }
+                byteArrayOf(9)
+            }
+            ahead.prepare(listOf(track("old")))
+            entered.await()
+            if (clear) ahead.clear() else ahead.prepare(emptyList())
+            gate.complete(Unit)
+            drain()
+            assertNull(ahead.take("old"))
+        }
+    }
+
     private fun track(id: String) = TrackRef(id, id)
     private suspend fun CoroutineScope.drain() = coroutineContext.job.children.toList().joinAll()
 
@@ -149,7 +214,7 @@ class PlaybackReadAheadTest {
     }
 
     @Test(timeout = 5_000)
-    fun `an empty or fully held selection returns before cancelling existing work`() = runBlocking {
+    fun `an empty or fully held selection cancels existing work before returning`() = runBlocking {
         for (keepStored in listOf(false, true)) {
             val entered = CompletableDeferred<Unit>()
             val pending = CompletableDeferred<ByteArray>()
@@ -166,10 +231,10 @@ class PlaybackReadAheadTest {
             entered.await()
             ahead.prepare(if (keepStored) listOf(track("stored")) else emptyList())
             yield()
-            assertFalse(finished)
+            assertTrue(finished)
             pending.complete(late)
             drain()
-            assertSame(late, ahead.take("pending"))
+            assertNull(ahead.take("pending"))
             assertSame(if (keepStored) stored else null, ahead.take("stored"))
         }
     }

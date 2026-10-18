@@ -34,36 +34,33 @@ internal class CatalogueBrowseState(private val browse: MutableStateFlow<BrowseS
         return catalogueId to format
     }
 
-    fun openingCatalogue(summary: CatalogueSummary) {
-        browse.update {
+    fun openingCatalogue(summary: CatalogueSummary): BrowseReadOwner =
+        BrowseReadOwner.begin(browse) {
             it.copy(
                 openCatalogue = summary, openFormat = null, openAuthor = null,
                 loading = true, tracks = emptyList(), arrivedByJump = false,
             )
         }
-    }
 
-    fun openingFormat(format: String) {
-        browse.update {
+    fun openingFormat(format: String): BrowseReadOwner =
+        BrowseReadOwner.begin(browse) {
             it.copy(
                 openFormat = format, openAuthor = null, loading = true,
                 tracks = emptyList(), arrivedByJump = false,
             )
         }
-    }
 
-    fun openingAuthor(author: String) {
-        browse.update {
+    fun openingAuthor(author: String): BrowseReadOwner =
+        BrowseReadOwner.begin(browse) {
             it.copy(openAuthor = author, loading = true, tracks = emptyList(), arrivedByJump = false)
         }
+
+    fun showGroups(owner: BrowseReadOwner, groups: List<CatalogueGroup>) {
+        owner.publish(browse) { it.copy(groups = groups, loading = false) }
     }
 
-    fun showGroups(groups: List<CatalogueGroup>) {
-        browse.update { it.copy(groups = groups, loading = false) }
-    }
-
-    fun showTracks(tracks: List<TrackRef>) {
-        browse.update { it.copy(tracks = tracks, loading = false) }
+    fun showTracks(owner: BrowseReadOwner, tracks: List<TrackRef>) {
+        owner.publish(browse) { it.copy(tracks = tracks, loading = false) }
     }
 
     fun showSavedPlace(key: SavedPlaceKey, destination: SavedPlaceDestination.Found) {

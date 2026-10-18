@@ -4,7 +4,9 @@
 package com.przunk.protracktor.player
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /** Owns read-ahead bytes and work; the caller still decides which tracks are coming next. */
@@ -31,20 +33,30 @@ internal class PlaybackReadAhead(
      */
     private val prefetched = LinkedHashMap<String, ByteArray>()
     private var prefetchJob: Job? = null
+    private var generation = 0L
+
+    private fun retire(): Long {
+        val next = ++generation
+        val old = prefetchJob
+        prefetchJob = null
+        old?.cancel()
+        return next
+    }
 
     fun take(id: String): ByteArray? = prefetched.remove(id)
 
     fun prepare(wanted: List<TrackRef>) {
+        val request = retire()
+        if (request != generation) return
         // The eviction rule, and it is exact rather than a budget: what is no longer coming is no
         // longer wanted. Pressing previous or switching playlists drops what was read for the path
         // not taken, at the moment it stops being the path.
         prefetched.keys.retainAll(wanted.mapTo(mutableSetOf()) { it.id })
 
-        val missing = wanted.filter { it.id !in prefetched }
+        val missing = wanted.distinctBy { it.id }.filter { it.id !in prefetched }
         if (missing.isEmpty()) return
 
-        prefetchJob?.cancel()
-        prefetchJob = scope.launch {
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             // **Together, not one after another.** These fetches spend nearly all their time
             // waiting on a network, so reading three in turn makes the third arrive three round
             // trips late -- which is the wait this whole thing exists to remove. Serial reads here
@@ -52,6 +64,8 @@ internal class PlaybackReadAhead(
             missing.forEach { ref ->
                 launch {
                     val bytes = read(ref) ?: return@launch
+                    ensureActive()
+                    if (request != generation) return@launch
                     // A large file is not worth holding in memory to save a second; these formats
                     // are kilobytes and anything of this size is not one of them.
                     if (bytes.size > MAX_PREFETCH_BYTES) return@launch
@@ -64,10 +78,12 @@ internal class PlaybackReadAhead(
                 }
             }
         }
+        prefetchJob = job
+        job.start()
     }
 
     fun clear() {
-        prefetchJob?.cancel()
-        prefetched.clear()
+        val request = retire()
+        if (request == generation) prefetched.clear()
     }
 }

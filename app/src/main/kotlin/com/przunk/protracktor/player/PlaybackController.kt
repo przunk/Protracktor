@@ -1483,20 +1483,24 @@ class PlaybackController private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Opens Browse where a track came from: the author's folder in its catalogue.
-     *
-     * "Something played at random, it was good, what else did they write" -- and until now the only
-     * way to ask was to remember the name and go and search for it.
-     *
-     * **Catalogue tracks only, and that is a real limit rather than an oversight.** A local file's
-     * neighbours would be the directory it sits in, and the local browser does not list directories
-     * at all: it lists a whole granted tree, flat. Jumping to "the folder" would mean building
-     * directory-level browsing first, which is its own piece of work — `docs/WISHLIST.md` B2 says
-     * so rather than leaving the action to do nothing on half the library.
-     */
+    /** Distinguishes author intents without retiring the current Browse read before resolution. */
+    private var neighboursRequest = 0L
+
+    /** Opens a catalogue author's folder only while the originating intent and visit are current. */
     fun showNeighboursOf(ref: TrackRef) {
+        val request = ++neighboursRequest
+        val current = _browse.value
+        val origin = BrowseReadOwner.capture(current)
+        val fromSearch = current.domain == BrowseDomain.SEARCH
+        val searchRevision = browseWorkflow.searchRevision
+        fun isCurrent(): Boolean {
+            val shown = _browse.value
+            return request == neighboursRequest && origin.matches(shown) &&
+                (!fromSearch ||
+                    searchRevision == browseWorkflow.searchRevision)
+        }
         scope.launch {
+            if (!isCurrent()) return@launch
             // Which catalogue it is from is asked of the catalogues, each of which recognises its
             // own references and no others.
             val from = Catalogue.owning(ref.id)
@@ -1528,6 +1532,7 @@ class PlaybackController private constructor(private val context: Context) {
             // at all: the fix here is to index, and the message has to say so. Where the jump goes
             // is read from the index, so there is nothing to do without one.
             val located = from.pathFrom(ref.id)?.let { path -> catalogues.locate(from.id, path) }
+            if (!isCurrent()) return@launch
             if (located == null) {
                 _state.update {
                     it.copy(
@@ -1540,10 +1545,11 @@ class PlaybackController private constructor(private val context: Context) {
             }
 
             val summary = catalogues.summaries().firstOrNull { it.id == from.id } ?: return@launch
+            if (!isCurrent()) return@launch
             // Read before Browse moves: the search this jump leaves, if it leaves one.
             browseWorkflow.cancelSearch()
             val search = BrowseNavigation.searchToReturnTo(_browse.value)
-            _browse.update {
+            val owner = BrowseReadOwner.begin(_browse) {
                 it.copy(
                     domain = BrowseDomain.ONLINE,
                     openCatalogue = summary,
@@ -1559,7 +1565,9 @@ class PlaybackController private constructor(private val context: Context) {
 
             val found = catalogues.tracks(located.catalogueId, located.format, located.author)
                 .map(CatalogueTracks::referenceOf)
-            _browse.update { it.copy(tracks = found, loading = false) }
+            if (!owner.matches(_browse.value)) return@launch
+            owner.publish(_browse) { it.copy(tracks = found, loading = false) }
+            if (!owner.matches(_browse.value)) return@launch
 
             // **The transport follows the folder you walked into.** A digression leaves the dice's
             // tune playing, and next would otherwise roll another one while the author's list is on
@@ -2098,7 +2106,7 @@ class PlaybackController private constructor(private val context: Context) {
         val playingFrom = sessionBrowse ?: return false
         if (!_state.value.searchMode) return false
         browseWorkflow.cancelSearch()
-        _browse.value = BrowseNavigation.returningTo(playingFrom)
+        _browse.update { BrowseNavigation.returningTo(playingFrom, it) }
         return true
     }
 
@@ -2106,7 +2114,7 @@ class PlaybackController private constructor(private val context: Context) {
         val waiting = waitingSearch ?: return
         browseWorkflow.cancelSearch()
         waitingSearch = null
-        _browse.value = BrowseNavigation.returningTo(waiting.browse)
+        _browse.update { BrowseNavigation.returningTo(waiting.browse, it) }
         val results = waiting.results
         val sounding = _state.value.current?.id
         if (results != null && _state.value.searchMode && sounding != results.current?.id) {
@@ -2176,6 +2184,7 @@ class PlaybackController private constructor(private val context: Context) {
      */
     fun returnToPlaylist() {
         browseWorkflow.cancelSearch()
+        BrowseReadOwner.begin(_browse) { it.copy(loading = false) }
         if (!_state.value.awayFromPlaylist) return
         stopPlayback()
         randomHistory.clear()
