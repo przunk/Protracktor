@@ -34,7 +34,7 @@ class PlaybackPresentationTest {
     private fun state() = PlayerUiState(restored = true, activePlaylistId = 7,
         playlists = listOf(SavedPlaylist(7, "List")),
         queue = PlayQueue(listOf(TrackRef("selected", "Selected"))).startAt(0),
-        resultsQueue = PlayQueue(listOf(track, TrackRef("next", "Next"))).startAt(0),
+        playback = collectionPlayback(PlayQueue(listOf(track, TrackRef("next", "Next"))).startAt(0)),
         metadata = mapOf("year" to "1992", "artist" to "Author"),
         playing = true, positionSeconds = 12.0, durationSeconds = 90.0, subsong = 2)
     private fun assertBold(value: CharSequence) {

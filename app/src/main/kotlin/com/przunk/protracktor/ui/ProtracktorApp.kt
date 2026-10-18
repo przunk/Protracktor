@@ -107,6 +107,7 @@ fun ProtracktorApp(
         storedBrowse.copy(listenedHere = state.listenedIds, learnedTitles = state.learnedTitles)
     }
     var showNowPlaying by remember { mutableStateOf(false) }
+    var showQueue by remember { mutableStateOf(false) }
 
     // Keyed on the URI so the same file opened twice in a row still plays, and a recomposition
     // caused by anything else does not restart it.
@@ -130,13 +131,7 @@ fun ProtracktorApp(
     // Opened from Browse and drawn here, so a run of downloads survives Browse closing under it.
     var choosingDownloads by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
-    /**
-     * The Random view: a full-screen destination like Browse and Settings.
-     *
-     * **Not a mode of the playlist screen.** It shows a different list, with different actions, and
-     * leaving it ends the session — which is a destination, not a state the playlist can be in
-     * (`docs/PLAN_RANDOM.md`).
-     */
+    /** Remembered Random destination; opening it does not replace an existing active source. */
     var showRandom by rememberSaveable { mutableStateOf(false) }
     val randomFilters = rememberRandomFilterState(
         active = showRandom || choosingRandomScope,
@@ -182,23 +177,9 @@ fun ProtracktorApp(
         if (!viewModel.returnToSession()) viewModel.openDomain(BrowseDomain.ROOT)
         showBrowse = true
     }
-    // **Out of Browse, and back to whatever sent us there** (`docs/BACKLOG.md` A41). `browseBack`
-    // answers false when there is no level left to climb -- which for "More from this author" is
-    // straight away, since a jump is one step rather than a descent. That is where a digression
-    // ends: the dice is waiting, so Back returns to its record rather than to the playlist.
+    // Back restores navigation only; the active queue is independent.
     val leaveBrowse = {
-        if (!viewModel.browseBack()) {
-            when {
-                state.diceWaiting -> {
-                    viewModel.resumeDice()
-                    showRandom = true
-                    showBrowse = false
-                }
-                // A search waiting under the folder: back to its results, still in Browse.
-                state.searchWaiting -> viewModel.resumeSearch()
-                else -> showBrowse = false
-            }
-        }
+        if (!viewModel.browseBack()) showBrowse = false
     }
     LaunchedEffect(Unit) { viewModel.showBrowse.collect { showBrowse = true } }
 
@@ -337,9 +318,7 @@ fun ProtracktorApp(
                                         modifier = Modifier.padding(end = TOP_BAR_ACTION_EDGE),
                                     )
                                 }
-                                // **Leaving ends the session**, which is what it has always done -- the record
-                                // goes, the tunes stay in the history, and the playlist is exactly where it was
-                                // left because nothing ever wrote to it.
+                                // Return to the selected playlist view without stopping audio.
                                 if (showRandom && !showBrowse) {
                                     LabelledAction(
                                         icon = PlayerIcons.Playlist,
@@ -364,6 +343,7 @@ fun ProtracktorApp(
                         onSeek = viewModel::seekTo,
                         onKeep = viewModel::keepTransient,
                         onExpand = { showNowPlaying = true },
+                        onQueue = { showQueue = true },
                         onBrowse = openBrowse,
                         onPlayPause = viewModel::togglePlayPause,
                         onPrevious = viewModel::previous,
@@ -488,7 +468,7 @@ fun ProtracktorApp(
                         // Whose folder, while the dice waits under it — from the moment the jump lands,
                         // not only once something here is playing.
                         digressionAuthor = browse.openAuthor
-                            ?.takeIf { browse.arrivedByJump && (state.randomMode || state.diceWaiting || state.searchWaiting) },
+                            ?.takeIf { browse.arrivedByJump },
                         onShowNeighbours = viewModel::showNeighboursOf,
                         onShareFile = viewModel::shareFile,
                         onShareAudio = viewModel::shareAsAudio,
@@ -509,6 +489,7 @@ fun ProtracktorApp(
                         browse = browse,
                         listState = randomState,
                         onPlayAt = viewModel::playRandomAt,
+                        onReroll = viewModel::playRandom,
                         onRemoveAt = viewModel::removeRandomAt,
                         onFilter = { choosingRandomScope = true },
                         onShowNeighbours = viewModel::showNeighboursOf,
@@ -543,13 +524,7 @@ fun ProtracktorApp(
                         // Both halves: the playlist comes from one read and what is held from
                         // another, and the empty screen must not speak before either has landed.
                         stateKnown = state.restored && browse.knowsWhatIsHeld,
-                        onReturnToPlaylist = viewModel::returnToPlaylist,
                         contentPadding = insets,
-                        // Back to the source: the dice's screen, or the list in Browse as it was (A61).
-                        onReturnToSource = {
-                            if (state.randomMode && !state.searchMode) showRandom = true
-                            else if (viewModel.returnToSession()) showBrowse = true
-                        },
                     )
                 }
             }
@@ -571,23 +546,8 @@ fun ProtracktorApp(
         BackHandler(onBack = leaveBrowse)
     }
 
-    // **Back out of Random leaves it playing** (A61, the owner's variant (A)): Back means look
-    // elsewhere, and only the Playlist button ends a session. The playlist it leaves to is covered,
-    // and the cover leads back here.
-    if (showRandom) {
-        BackHandler { showRandom = false }
-
-        // **A file arriving from another app takes the screen.** It replaces what is playing, so
-        // leaving the Random view up would show a record of a session that has been ended
-        // underneath it -- rows that play nothing and a heading that is no longer true.
-        LaunchedEffect(state.externalMode) { if (state.externalMode) showRandom = false }
-
-        // **And so does a tune played from a list** (`docs/STATUS.md` C49). "More from this
-        // author", or a search result, moves playback to that list: the dice is no longer the
-        // source, `next` walks the list, and this screen showed a record of picks that had nothing
-        // to do with what was playing. It closes, and the playlist behind says what is playing.
-        LaunchedEffect(state.searchMode) { if (state.searchMode) showRandom = false }
-    }
+    // Random is remembered navigation, even when another source now owns playback.
+    if (showRandom) BackHandler { showRandom = false }
 
     // **Here rather than inside Browse.** The Random view's Filter button opens the same sheet,
     // and a sheet that exists only under one destination cannot be reached from another
@@ -612,6 +572,21 @@ fun ProtracktorApp(
             },
             onDismiss = { choosingRandomScope = false },
         )
+    }
+
+    if (showQueue) {
+        ModalBottomSheet(
+            onDismissRequest = { showQueue = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            QueueScreen(
+                state = state, onPlay = viewModel::playQueueAt,
+                onShowNeighbours = { showQueue = false; viewModel.showNeighboursOf(it) },
+                onShareFile = viewModel::shareFile, onShareAudio = viewModel::shareAsAudio,
+                onShareLink = viewModel::shareLink, onSendToWeb = viewModel::sendToWeb,
+                onAddToPlaylist = { showQueue = false; pendingAddToPlaylist = listOf(it) },
+            )
+        }
     }
 
     if (showNowPlaying) {
@@ -770,8 +745,6 @@ internal fun PlaylistTopBar(
     onSettings: () -> Unit,
 ) {
     val choosePlaylistLabel = stringResource(R.string.a11y_choose_playlist)
-    // Match PlaylistScreen's cover: choose a return destination before browsing or pairing.
-    val navigationEnabled = !state.awayFromPlaylist
     Surface(color = MaterialTheme.colorScheme.surface) {
         Column(
             verticalArrangement = Arrangement.spacedBy(TOP_BAR_SEAM),
@@ -837,7 +810,6 @@ internal fun PlaylistTopBar(
                     icon = PlayerIcons.Cloud,
                     label = stringResource(R.string.action_browse),
                     onClick = onBrowse,
-                    enabled = navigationEnabled,
                     // Arriving at Browse buzzes; pressing the way in as well would be two for one.
                     haptic = null,
                     slim = true,
@@ -869,7 +841,6 @@ internal fun PlaylistTopBar(
                         icon = if (paired) PlayerIcons.Link else PlayerIcons.QrCode,
                         label = stringResource(R.string.action_send_to_browser),
                         onClick = onSendToBrowser,
-                        enabled = navigationEnabled,
                         onLongClick = onRescan,
                         longClickLabel = stringResource(R.string.action_pair_again),
                         slim = true,

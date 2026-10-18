@@ -7,6 +7,22 @@ versionCode is the source commit count; later documentation commits do not relab
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
+## B45 QUEUE experiment — unmerged, implementation in progress, 2026-10-18
+
+Owner-selected isolated `feature/playback-queue-experiment` from develop `9ca86ea`.
+One source-aware queue owns transport; playlist selection and navigation do not interrupt music.
+The read-only queue sheet opens fully expanded. Random keeps its record when reopened, first entry
+starts as before, and double-tapping the animated dice starts a new list; single tap has no action.
+The experiment may be rejected; no merge, push or release is authorized.
+
+The owner approved code 1221 only for this branch's test APKs to alternate with the existing AMP
+APK. Schema remains 23. Native SQLite tests confirm AMP index/playlist/History/bookmark retention,
+with retained AMP rows excluded from discovery; this branch does not implement AMP playback.
+Full gate, lint, APK build/identity and all device checks are pending. Initial focused runs exposed
+an existing concurrency retry boundary that must be preserved and a test's confusion between
+physical single-tap and accessibility activation; these are not device results.
+[Full contract, decisions and evidence](QUEUE_EXPERIMENT.md); [device checklist](TESTING.md).
+
 ## C109 — Same Game SPC cannot be played — owner report, 2026-10-18
 
 The owner could not play the Modland entry shown as

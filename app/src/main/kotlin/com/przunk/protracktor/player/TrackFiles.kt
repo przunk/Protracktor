@@ -4,6 +4,7 @@
 package com.przunk.protracktor.player
 
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.CatalogueRetention
 import com.przunk.protracktor.net.UnExoticA
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +28,7 @@ internal class TrackFiles(
 
     /** Reads a track's bytes, from wherever it lives. */
     suspend fun read(ref: TrackRef): ByteArray? =
-        if (com.przunk.protracktor.net.CatalogueRetention.blocksReference(ref.id)) {
+        if (CatalogueRetention.blocksReference(ref.id)) {
             null
         } else if (UnExoticA.ENABLED && UnExoticA.pathFrom(ref.id) != null) {
             // The one catalogue whose unit of download is not the tune: every UnExoticA file lives

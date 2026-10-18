@@ -13,7 +13,7 @@ class PlaylistHeartTest {
     private val played = TrackRef("remote", "Played", fileName = "song.mod", sizeBytes = 42)
     private fun state() = PlayerUiState(restored = true, activePlaylistId = 7,
         playlists = listOf(SavedPlaylist(7, "My list")),
-        queue = PlayQueue(listOf(first)).startAt(0), transient = played,
+        queue = PlayQueue(listOf(first)).startAt(0), playback = randomPlayback(played),
         playing = true, positionSeconds = 12.0, subsong = 2)
 
     private class Fixture(initial: PlayerUiState) {
@@ -36,7 +36,7 @@ class PlaylistHeartTest {
         assertNull(PlaylistHeart.of(state().copy(activePlaylistId = 0)))
         assertNull(PlaylistHeart.of(state().copy(playlists = emptyList())))
         assertNull(PlaylistHeart.of(state().copy(loadingTrack = true)))
-        assertNull(PlaylistHeart.of(state().copy(queue = PlayQueue(emptyList()), transient = null)))
+        assertNull(PlaylistHeart.of(state().copy(queue = PlayQueue(emptyList()), playback = null)))
     }
 
     @Test fun `random adds and immediately saves all existing working edits without transport changes`() {
@@ -61,7 +61,7 @@ class PlaylistHeartTest {
     }
 
     @Test fun `browse saves the played result not the playlist cursor`() {
-        val f = Fixture(state().copy(transient = null, resultsQueue = PlayQueue(listOf(played)).startAt(0)))
+        val f = Fixture(state().copy(playback = collectionPlayback(PlayQueue(listOf(played)).startAt(0))))
         f.press()
         assertEquals(listOf(first, played), f.writes.single().second)
         assertEquals(played, f.player.value.resultsQueue?.current)
@@ -80,7 +80,7 @@ class PlaylistHeartTest {
     }
 
     @Test fun `playlist playback remains unchanged when its own filled heart is pressed`() {
-        val f = Fixture(state().copy(transient = null))
+        val f = Fixture(state().copy(playback = null))
         f.press()
         assertEquals(listOf(first), f.player.value.queue.tracks)
         assertEquals(first, f.player.value.current)

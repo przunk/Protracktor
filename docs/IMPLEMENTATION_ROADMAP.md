@@ -25,7 +25,7 @@ it is no longer open. [Verification and acceptance](PLAN_HISTORY_SEARCH.md).
 | ID | Remaining work | State |
 | --- | --- | --- |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
-| B45 | Active playback queue separate from the visible playlist, keeping music playing when returning from search/author browsing | Real user request; context transitions and transport/editing/restoration rules remain undecided. Q13. |
+| B45 | Source-owned playback queue independent of navigation, read-only queue sheet and remembered Random | Owner-selected isolated experiment, 2026-10-18; implementation/verification in progress, not merged. [Contract](QUEUE_EXPERIMENT.md), Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
 | B38 | Phone pairing on public GitHub Pages | Deferred; the owner currently accepts no public-page pairing. |

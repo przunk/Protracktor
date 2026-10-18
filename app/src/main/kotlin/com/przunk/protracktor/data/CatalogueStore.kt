@@ -6,6 +6,7 @@ package com.przunk.protracktor.data
 import android.content.ContentValues
 import android.content.Context
 import com.przunk.protracktor.net.Catalogue
+import com.przunk.protracktor.net.CatalogueRetention
 import com.przunk.protracktor.net.CatalogueEntry
 import com.przunk.protracktor.player.SupportedFormats
 import com.przunk.protracktor.player.Platforms
@@ -182,7 +183,7 @@ class CatalogueStore(context: Context) {
      * column that matches no rows.
      */
     suspend fun pruneUnknownCatalogues() = withContext(Dispatchers.IO) {
-        val known = Catalogue.all.map { it.id } + com.przunk.protracktor.net.CatalogueRetention.ids
+        val known = Catalogue.all.map { it.id } + CatalogueRetention.ids
         val placeholders = known.joinToString(",") { "?" }
         val ids = known.toTypedArray()
 
@@ -334,7 +335,7 @@ class CatalogueStore(context: Context) {
             )
         }
         helper.readableDatabase
-            .rawQuery("SELECT COUNT(*) FROM catalogue_tracks WHERE playable = 1" + com.przunk.protracktor.net.CatalogueRetention.visibility, null)
+            .rawQuery("SELECT COUNT(*) FROM catalogue_tracks WHERE playable = 1" + CatalogueRetention.visibility, null)
             .use { if (it.moveToFirst()) it.getInt(0) else 0 }
     }
 
@@ -394,7 +395,7 @@ class CatalogueStore(context: Context) {
             val byPlatform = platformClause(platforms)
             helper.readableDatabase.rawQuery(
                 "SELECT COUNT(*) FROM catalogue_tracks " +
-                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}" + com.przunk.protracktor.net.CatalogueRetention.visibility,
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}" + CatalogueRetention.visibility,
                 words.second + scope.second + byPlatform.second,
             ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
         }
@@ -410,7 +411,7 @@ class CatalogueStore(context: Context) {
      */
     suspend fun platformCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
         helper.readableDatabase.rawQuery(
-            SchemaSql.PLATFORM_COUNTS_BASE + com.przunk.protracktor.net.CatalogueRetention.visibility + " GROUP BY platform", emptyArray(),
+            SchemaSql.PLATFORM_COUNTS_BASE + CatalogueRetention.visibility + " GROUP BY platform", emptyArray(),
         ).use { row ->
             buildMap { while (row.moveToNext()) put(row.getString(0), row.getInt(1)) }
         }
@@ -451,7 +452,7 @@ class CatalogueStore(context: Context) {
             val byPlatform = platformClause(platforms)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks " +
-                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}" + com.przunk.protracktor.net.CatalogueRetention.visibility + " ORDER BY title LIMIT ?",
+                    "WHERE playable = 1 AND (${words.first})${scope.first}${byPlatform.first}" + CatalogueRetention.visibility + " ORDER BY title LIMIT ?",
                 words.second + scope.second + byPlatform.second + arrayOf(limit.toString()),
             ).use { it.toTracks() }
         }
@@ -506,7 +507,7 @@ class CatalogueStore(context: Context) {
             val (where, arguments) = randomWhere(catalogueIds, platforms, favouritesOnly)
             helper.readableDatabase.rawQuery(
                 "SELECT catalogue_id, path, format, author, title, size FROM catalogue_tracks" +
-                    "$where" + com.przunk.protracktor.net.CatalogueRetention.visibility + " ORDER BY RANDOM() LIMIT $count",
+                    "$where" + CatalogueRetention.visibility + " ORDER BY RANDOM() LIMIT $count",
                 arguments,
             ).use { it.toTracks() }
         }

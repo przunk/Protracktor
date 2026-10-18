@@ -21,6 +21,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.przunk.protracktor.player.randomPlayback
+import com.przunk.protracktor.player.externalPlayback
+import com.przunk.protracktor.player.collectionPlayback
 import com.przunk.protracktor.player.PlayQueue
 import com.przunk.protracktor.player.PlayerUiState
 import com.przunk.protracktor.player.TrackRef
@@ -44,7 +47,7 @@ class PlaylistReturnNavigationTest {
     private val tune = TrackRef(id = "random", title = "Random tune")
     private val state = mutableStateOf(PlayerUiState(
         queue = PlayQueue(tracks = listOf(TrackRef(id = "playlist", title = "Playlist tune"))),
-        transient = tune,
+        playback = randomPlayback(tune),
     ))
     private val calls = mutableListOf<String>()
 
@@ -71,12 +74,10 @@ class PlaylistReturnNavigationTest {
                     PlaylistScreen(
                         state = state.value,
                         listState = rememberLazyListState(),
-                        onPlayAt = {}, onRemoveAt = {}, onMove = { _, _ -> },
+                        onPlayAt = { calls += "play:$it" }, onRemoveAt = {}, onMove = { _, _ -> },
                         onShowNeighbours = {}, onShareFile = {}, onShareAudio = {},
                         onShareLink = {}, onSendToWeb = {}, onBrowse = { calls += "browse" },
                         onPickDownloads = {}, canBrowse = true, stateKnown = true,
-                        onReturnToPlaylist = { calls += "playlist" },
-                        onReturnToSource = { calls += "random" },
                         contentPadding = PaddingValues(),
                     )
                 }
@@ -90,52 +91,39 @@ class PlaylistReturnNavigationTest {
         view.layout(0, 0, 720, 1600)
     }
 
-    @Test fun `covered playlist disables Browse and unpaired Web including long presses`() {
+    @Test fun `Random playback leaves the playlist and navigation usable`() {
         show()
-        compose.onNodeWithText("Back to Random").assertExists()
-        compose.onNodeWithText("Browse").assertIsNotEnabled().performTouchInput { click() }
-        compose.onNodeWithText("WEB").assertIsNotEnabled().performTouchInput { click(); longClick() }
-        compose.runOnIdle { assertEquals(emptyList<String>(), calls) }
-    }
-
-    @Test fun `paired Web is disabled behind the same cover`() {
-        show(paired = true)
-        compose.onNodeWithText("WEB").assertIsNotEnabled().performTouchInput { click(); longClick() }
-        compose.runOnIdle { assertEquals(emptyList<String>(), calls) }
-    }
-
-    @Test fun `Settings and both return actions remain usable`() {
-        show()
-        compose.onNodeWithText("Settings").assertIsEnabled().performClick()
-        compose.onNodeWithText("Back to Random").assertIsEnabled().performClick()
-        compose.onNodeWithText("Back to the playlist").assertIsEnabled().performClick()
-        compose.runOnIdle { assertEquals(listOf("settings", "random", "playlist"), calls) }
-    }
-
-    @Test fun `removing the cover restores Browse and both Web gestures`() {
-        show()
-        compose.runOnIdle {
-            state.value = state.value.copy(transient = null)
-            Snapshot.sendApplyNotifications()
-        }
         compose.onNodeWithText("Back to Random").assertDoesNotExist()
+        compose.onNodeWithText("Playlist tune").assertExists().performClick()
         compose.onNodeWithText("Browse").assertIsEnabled().performClick()
-        compose.onNodeWithText("WEB").assertIsEnabled().performTouchInput { click(); longClick() }
-        compose.runOnIdle { assertEquals(listOf("browse", "web", "rescan"), calls) }
+        compose.onNodeWithText("Settings").assertIsEnabled().performClick()
+        compose.runOnIdle {
+            assertEquals(listOf("play:0", "browse", "settings"), calls)
+            assertEquals(tune, state.value.current)
+        }
     }
 
-    @Test fun `search and external playback use the same visible cover guard`() {
-        state.value = state.value.copy(externalOpen = true)
+    @Test fun `both Web gestures remain available while another collection plays`() {
         show()
-        compose.onNodeWithText("Browse").assertIsNotEnabled()
-        compose.onNodeWithText("WEB").assertIsNotEnabled()
-        compose.onNodeWithText("Settings").assertIsEnabled()
-        compose.runOnIdle {
-            state.value = state.value.copy(transient = null, externalOpen = false, resultsQueue = state.value.queue)
-            Snapshot.sendApplyNotifications()
-        }
-        compose.onNodeWithText("Browse").assertIsNotEnabled()
-        compose.onNodeWithText("WEB").assertIsNotEnabled()
-        compose.onNodeWithText("Settings").assertIsEnabled()
+        compose.onNodeWithText("WEB").assertIsEnabled().performTouchInput { click(); longClick() }
+        compose.runOnIdle { assertEquals(listOf("web", "rescan"), calls) }
     }
+
+    @Test fun `external playback also leaves playlist navigation available`() {
+        state.value = state.value.copy(playback = externalPlayback(tune))
+        show()
+        compose.onNodeWithText("Browse").assertIsEnabled()
+        compose.onNodeWithText("WEB").assertIsEnabled()
+        compose.onNodeWithText("Settings").assertIsEnabled()
+        compose.onNodeWithText("Playlist tune").assertExists()
+    }
+
+    @Test fun `results playback has no blocking return-choice cover`() {
+        state.value = state.value.copy(playback = collectionPlayback(PlayQueue(listOf(tune)).startAt(0)))
+        show()
+        compose.onNodeWithText("Back to the playlist").assertDoesNotExist()
+        compose.onNodeWithText("Browse").assertIsEnabled()
+        compose.onNodeWithText("Playlist tune").assertExists()
+    }
+
 }

@@ -17,10 +17,11 @@ internal class PlaylistSessionState(
     enum class Notice { CHANGES_DISCARDED, PLAYLIST_EMPTIED }
 
     val tracks: List<TrackRef> get() = player.value.queue.tracks
+    val ownsPlayback: Boolean get() = player.value.activePlayback.belongsTo(player.value.activePlaylistId)
 
     data class WriteSnapshot(val playlistId: Long, val tracks: List<TrackRef>)
 
-    /** The queue belongs to the published playlist, not an activation awaiting its storage read. */
+    /** Persist the published selected draft, never an independently playing source. */
     fun writeSnapshot(expectedPlaylistId: Long): WriteSnapshot? {
         val current = player.value
         if (!current.restored || current.activePlaylistId != expectedPlaylistId) return null
@@ -47,6 +48,7 @@ internal class PlaylistSessionState(
 
             current.copy(
                 queue = queue,
+                playback = current.playback ?: ActiveQueue(QueueSource.Playlist(playlistId, playlists.firstOrNull { it.id == playlistId }?.name.orEmpty()), queue),
                 playlists = playlists,
                 activePlaylistId = playlistId,
                 playAllSubsongs = saved?.playAllSubsongs ?: false,
@@ -67,8 +69,8 @@ internal class PlaylistSessionState(
             // The queue's track, never a transient one: a random pick is not where the user
             // was, and restoring into it would be restoring somewhere they never chose to be.
             currentTrackId = snapshot.queue.current?.id,
-            shuffle = snapshot.queue.shuffle,
-            repeat = snapshot.queue.repeat,
+            shuffle = snapshot.transportQueue.shuffle,
+            repeat = snapshot.transportQueue.repeat,
             playAllSubsongs = snapshot.playAllSubsongs,
             fallbackLengthSeconds = snapshot.fallbackLengthSeconds,
             randomScope = browse.value.randomScope.stored(),
@@ -102,14 +104,16 @@ internal class PlaylistSessionState(
 
     suspend fun emptyPlaylist(read: suspend () -> List<SavedPlaylist>) {
         player.update {
+            val owns = it.activePlayback.belongsTo(it.activePlaylistId)
             it.copy(
-                queue = PlayQueue(tracks = emptyList(), shuffle = it.queue.shuffle, repeat = it.queue.repeat),
+                queue = PlayQueue(emptyList(), shuffle = it.queue.shuffle, repeat = it.queue.repeat),
+                playback = it.activePlayback,
                 playlists = read(),
-                playing = false,
+                playing = if (owns) false else it.playing,
                 dirty = false,
-                metadata = emptyMap(),
-                positionSeconds = 0.0,
-                durationSeconds = 0.0,
+                metadata = if (owns) emptyMap() else it.metadata,
+                positionSeconds = if (owns) 0.0 else it.positionSeconds,
+                durationSeconds = if (owns) 0.0 else it.durationSeconds,
                 message = message(Notice.PLAYLIST_EMPTIED),
             )
         }
@@ -118,14 +122,12 @@ internal class PlaylistSessionState(
     fun switchPlaylist(id: Long, tracks: List<TrackRef>, playlists: List<SavedPlaylist>) {
         player.update {
             it.copy(
-                queue = PlayQueue(tracks = tracks, shuffle = it.queue.shuffle, repeat = it.queue.repeat),
+                playback = it.activePlayback,
+                queue = if (it.activePlayback.belongsTo(id)) it.activePlayback.order.withTracks(tracks)
+                    else PlayQueue(tracks = tracks, shuffle = it.transportQueue.shuffle, repeat = it.transportQueue.repeat),
                 playlists = playlists,
                 activePlaylistId = id,
-                playing = false,
                 dirty = false,
-                metadata = emptyMap(),
-                positionSeconds = 0.0,
-                durationSeconds = 0.0,
             )
         }
     }

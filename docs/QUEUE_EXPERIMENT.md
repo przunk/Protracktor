@@ -266,18 +266,76 @@ If accepted, remove temporary APK-version exceptions, reverify and obtain explic
 After integration, update the still-unmerged AMP branch from develop and retest its playback,
 switch gating and no-speculative-fetch rules before considering its separate approval gates.
 
-## 10. Current evidence
+## 10. Implementation and current evidence
 
-Stage 1: AMP index retention reproduced before the fix (one assertion failure, one fail-fast skip).
-The visibility mutation failed on the retained-row count as intended; fail-fast skipped remaining
-checks, so this is not evidence for the read-routing mutation. After restoring safeguards, all
-three native SQLite interoperability tests and all TrackFiles tests passed. Full gate, lint,
-actual pinned-code APK inspection and phone interchange remain pending.
+Implementation stages 3–4 are one atomic integration: removing old state constructor fields also
+requires replacing their screen/transport consumers. This avoids a non-compiling intermediate
+commit or keeping two competing playback owners.
 
-- **Checked:** initial git tree clean; separate feature branch created from develop `9ca86ea`.
-- **Checked:** existing AMP APK identity read with aapt2, code 1221/name 1.2.0.
-- **Partially checked:** existing ownership/cleanup mechanisms inspected in source; no phone
-  reproduction or new compatibility/domain tests have been run.
-- **Unchecked/not implemented:** queue experiment, reset gesture, data compatibility safeguard,
-  version override and resulting APK. No full test/lint/build run is claimed for this plan.
-- **Selected:** test APK version exception, full-height queue sheet and first Random entry behaviour.
+- `ActiveQueue`/`QueueSource`/`QueueStep` implement the common Android-free transport rules.
+  Existing mode aliases in `PlayerUiState` are read-only projections, not independent state.
+- The selected playlist draft is separate from playback. The same selected source playlist stays
+  live; switching its view captures the old order, and viewing it again restores the active cursor.
+  Unrelated playlist edits and metadata do not replace the active queue.
+- Controller natural completion, notification/headset commands, queue-row selection and retry use
+  the active source. Random queries carry an intent epoch; retries consult the current queue.
+- More from this author and Back restore only navigation. The blocking cover and obsolete return
+  controls are removed. The queue sheet shares existing row/info components with editing disabled.
+- `RandomDice` recognizes touch double tap, never touch single tap; its semantic accessibility
+  action is intentionally equivalent to reset without requiring the custom physical gesture.
+- No speculative Random rows, new mode policy, expanded result fetching, persistent temporary
+  queues, schema change, new dependency, web-player implementation or C109 fix was added.
+  Process death retains the old paused selected-playlist restoration, not the temporary queue.
+- Normal Gradle/AAB configuration remains commit-derived. Only the existing test-APK flag selects
+  the owner-approved 1221 exception. This must be removed before merging.
+
+### Focused and negative evidence
+
+- AMP index loss reproduced before the fix: one failed assertion, one fail-fast skip. Visibility
+  mutation failed on the retained-row count; fail-fast means it did not prove the routing guard.
+- Restored compatibility checkpoint: **16 tests passed** (three native SQLite interoperability,
+  thirteen TrackFiles), zero failures/errors/skips. AMP implementation was not imported.
+- Initial domain run passed ActiveQueue/PlayQueue/RandomHistory tests. Mutating external-file Next
+  to RandomNext caused the expected assertion failure (seven ActiveQueue tests, one failure).
+- Integration run executed **96 tests**, with two failures: an accidentally moved existing atomic
+  read/retry boundary, and a test using physical `performClick` instead of the semantic accessibility
+  action. The concurrency behaviour was restored; the accessibility test now invokes that action.
+- Corrected targeted run: **11 tests passed**, including six source-selection checks, four UI tests
+  and the existing atomic retry-boundary check.
+- Controlled production mutations then executed **18 tests**, with exactly **four expected
+  assertion failures**, zero errors/skips: lost source ownership on playlist navigation, AMP bytes
+  falling through to document reads, single-tap reset, and visible Remove in the read-only queue.
+  All four mutations were restored before final verification.
+
+### Final review corrections
+
+The first full gate stopped at 185 tests on the existing AtomicFileWrite concurrent-reader test.
+Production AtomicFileWrite and its original test were identical to develop before this finding.
+The assertion reopened the target for each candidate payload, so several valid publications could
+all fail different comparisons. A deterministic rotating reader reproduced this false rejection.
+Only the test now captures one byte snapshot before comparing candidates; production cache writing
+is unchanged. This is not attributed to the environment, RAM, Java or a decoder failure.
+
+Review also found that an explicit Random reset left the previous source in control until the first
+database result. A production-used state transition now installs an empty Random owner immediately,
+with a loading state, while preserving the selected playlist draft. Explicit Stop/Pause retires the
+intent and native/file open; stale query results cannot restart it. Filter changes during a pending
+query restart only that query, not an already selected file fetch. No new navigation side effect
+was introduced.
+
+Both mechanisms were reproduced by tests before correction (two tests, two assertion failures).
+The corrected focused run passed 31 tests. A further real UI regression reproduced a stale Rolling
+label after cancellation; idle/failed/loading empty Random states are now distinct. Removed cover
+strings are deleted in both languages rather than shipping obsolete UI resources.
+
+A subsequent full run stopped at 911 tests (one failure, one fail-fast skip): the old played-before
+UI fixture supplied Random rows but no active Random source. Its selection assertion was retained;
+the fixture now models the actual source. **All 91 UI tests / 15 suites then passed**, zero failures,
+errors or skips. This does not establish phone behaviour.
+
+Actual Gradle configuration probes passed without signing/building an AAB: normal code **1223**
+matches this branch's commit count; the test-APK flag alone selects code **1221**. Both retain
+`com.przunk.protracktor` and name 1.2.0. Final packaged identity/signature still needs inspection.
+
+**Still pending:** renewed forced full gate/lint, final APK/version/signature inspection and owner device
+checks, including two-way AMP interchange. Focused runs are not a declaration of final readiness.

@@ -1,5 +1,42 @@
 # What only a phone can prove
 
+## QUEUE experiment — device checks pending, 2026-10-18
+
+Use only the supplied minified APK from `feature/playback-queue-experiment`. It is not merged.
+The reference AMP APK has name 1.2.0/code 1221; verify the QUEUE artifact's same package/code and
+test certificate before replacing it. Do not uninstall or clear storage.
+
+1. On AMP, retain an indexed/cached track, bookmark, History row and saved playlist. Install QUEUE:
+   those records must not be deleted. AMP is unavailable here and must not appear in Search or
+   Random; explicitly playing its retained reference must explain the limitation.
+2. Play playlist A, select playlist B. A keeps sounding; position/metadata, notification and
+   Next/Previous still belong to A. B has no playing selection. Save/edit B without changing A.
+3. Open Queue beside the player. It opens fully expanded, shows A and its actual selection.
+   Play another row: A's position changes, B remains unchanged. View A to see its selection.
+4. Play a row of B: ownership and transport now belong to B. No automatic start on mere selection.
+5. Play from Search, return to the playlist, enter Settings or edit a new search. Audio and Next
+   remain with the captured results until another row is explicitly played.
+6. Repeat with an online author/local folder and filtered History. Learning titles must not reorder
+   the queue. History-origin playback must not move History entries to the top.
+7. First entry into Random starts a session. After several draws, return to the playlist and
+   reopen Random: same record/current track, no reset or restart. Reopening while paused stays paused.
+8. From Random open an author: merely looking keeps Random transport. Play an author row, then
+   return/reopen Random: author music and Next/Previous continue. Only selecting a Random row
+   transfers playback back to its remembered record. No Resume Random button.
+9. Single-tap the dice: no reset. Double-tap: one new list/first selection, visible throw/rotation,
+   same filter, global History intact. Check persistent EN/PL help and accessibility activation.
+10. Rewind within the heard Random list, change filter, Next through the remaining heard entries:
+    new picks from the new filter appear only beyond that boundary. Check repeated/rapid Next.
+11. Queue row menus permit information but no Remove, drag or selection editing. Ordinary playlist
+    editing/Undo, saved places and notification heart still work; the heart saves to the selected list.
+12. Test repeat/shuffle/subsongs, headset/notification controls and navigation during slow loading.
+    A retired Random request must not start after playing another source. After process death the
+    existing selected-playlist restoration is paused; temporary queue restoration is not included.
+13. Reinstall the reference AMP APK: AMP index, cache, playlist, History and bookmark are still usable.
+
+Report installed artifact/SHA, steps and expected/observed results. Compilation, host UI tests
+and signing checks do not establish device audio/gesture behaviour. [Experiment](QUEUE_EXPERIMENT.md).
+
 *Started 2026-09-15, because a build was handed over with a fix in it that no check in this
 repository can reach.*
 

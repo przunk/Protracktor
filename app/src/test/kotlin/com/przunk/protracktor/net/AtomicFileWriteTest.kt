@@ -17,6 +17,19 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class AtomicFileWriteTest {
+    private fun matchesPublication(payloads: List<ByteArray>, read: () -> ByteArray): Boolean {
+        // One observation must not mix different valid versions published between comparisons.
+        val observed = read()
+        return payloads.any { it.contentEquals(observed) }
+    }
+
+    @Test fun `one observation compares the same publication against all allowed payloads`() {
+        val payloads = listOf(byteArrayOf(1), byteArrayOf(2), byteArrayOf(3))
+        var reads = 0
+        assertTrue(matchesPublication(payloads) { payloads[(++reads) % payloads.size] })
+        assertEquals(1, reads)
+    }
+
     @get:Rule val temporary = TemporaryFolder()
 
     @Test fun `successful replacement publishes complete bytes and removes its staging file`() {
@@ -54,7 +67,7 @@ class AtomicFileWriteTest {
                 check(start.await(5, TimeUnit.SECONDS))
                 repeat(50) {
                     if (worker < 3) check(AtomicFileWrite.write(target, payloads[worker]))
-                    else check(payloads.any { it.contentEquals(target.readBytes()) })
+                    else check(matchesPublication(payloads) { target.readBytes() })
                 }
             } catch (error: Throwable) { failure.compareAndSet(null, error) }
         } }

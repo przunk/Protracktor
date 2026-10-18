@@ -81,6 +81,7 @@ fun PlayerDock(
     onShuffle: () -> Unit,
     onRepeat: () -> Unit,
     modifier: Modifier = Modifier,
+    onQueue: () -> Unit = {},
 ) {
     val haptics = rememberHaptics()
     val loaded = state.current
@@ -153,7 +154,7 @@ fun PlayerDock(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = loaded?.title ?: stringResource(R.string.dock_idle_title),
+                        text = loaded?.title ?: stringResource(if (state.loadingTrack && state.randomMode) R.string.random_rolling else R.string.dock_idle_title),
                         // A title that does not fit scrolls rather than losing its end (A54); one
                         // that fits stands still, which the marquee decides by measuring.
                         modifier = Modifier.dockLine(DockMarquee.scrolls(animatorScale, isStatus = false)),
@@ -185,6 +186,8 @@ fun PlayerDock(
                         Icon(PlayerIcons.Add, stringResource(R.string.a11y_keep_track))
                     }
                 }
+                LabelledAction(icon = PlayerIcons.Playlist, label = stringResource(R.string.queue_title),
+                    onClick = onQueue, slim = true)
                 // Says there is more inside without adding a control: the tunes are chosen in
                 // the player this row opens. Shown in **both** modes: gating it on "play all"
                 // closes a door on itself, since you would have to already know a file held
@@ -216,20 +219,14 @@ fun PlayerDock(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // **Dead while the dice is running, and drawn dead.** Shuffle reorders the
-                // *playlist's* queue, and Random plays from neither the playlist nor its order, so
-                // pressing it does nothing at all.
-                //
-                // Greyed rather than hidden. A transport that loses a button when the mode changes
-                // is a transport whose other buttons move under the thumb, and this row is pressed
-                // without looking.
+                // Random supplies its own order; retain the shuffle indicator but disable editing it.
                 ToggleControl(
                     icon = PlayerIcons.Shuffle,
-                    active = state.queue.shuffle,
+                    active = state.transportQueue.shuffle,
                     description = stringResource(
-                        if (state.queue.shuffle) R.string.a11y_shuffle_on else R.string.a11y_shuffle_off
+                        if (state.transportQueue.shuffle) R.string.a11y_shuffle_on else R.string.a11y_shuffle_off
                     ),
-                    enabled = state.queue.tracks.isNotEmpty() && !state.randomMode,
+                    enabled = state.transportQueue.tracks.isNotEmpty() && !state.randomMode,
                     onClick = onShuffle,
                 )
 
@@ -247,7 +244,7 @@ fun PlayerDock(
                     onClick = { haptics.press(); onPlayPause() },
                     // A transient track counts: pressing Random with an empty playlist must still
                     // give you something you can pause.
-                    enabled = state.loadingTrack || state.current != null || state.queue.tracks.isNotEmpty(),
+                    enabled = state.loadingTrack || state.current != null || state.transportQueue.tracks.isNotEmpty(),
                     modifier = Modifier.size(64.dp),
                 ) {
                     // Three states, not two. A track being fetched is not "paused", and the button
@@ -282,19 +279,19 @@ fun PlayerDock(
                 // Shape carries the mode, not just tint: repeat-one is a different glyph from
                 // repeat-all, so the state survives being read without colour (AGENTS.md §8).
                 ToggleControl(
-                    icon = if (state.queue.repeat == RepeatMode.ONE) PlayerIcons.RepeatOne else PlayerIcons.Repeat,
-                    active = state.queue.repeat != RepeatMode.OFF,
+                    icon = if (state.transportQueue.repeat == RepeatMode.ONE) PlayerIcons.RepeatOne else PlayerIcons.Repeat,
+                    active = state.transportQueue.repeat != RepeatMode.OFF,
                     description = stringResource(
-                        when (state.queue.repeat) {
+                        when (state.transportQueue.repeat) {
                             RepeatMode.OFF -> R.string.a11y_repeat_off
                             RepeatMode.PLAYLIST -> R.string.a11y_repeat_playlist
                             RepeatMode.ONE -> R.string.a11y_repeat_one
                         }
                     ),
-                    enabled = state.queue.tracks.isNotEmpty(),
+                    enabled = state.transportQueue.tracks.isNotEmpty(),
                     onClick = onRepeat,
                     // off → all → one → off: only the last step turns the light out.
-                    activeAfter = state.queue.repeat != RepeatMode.ONE,
+                    activeAfter = state.transportQueue.repeat != RepeatMode.ONE,
                 )
             }
         }
