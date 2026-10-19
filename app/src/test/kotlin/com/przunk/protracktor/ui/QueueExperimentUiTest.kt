@@ -67,6 +67,7 @@ class QueueExperimentUiTest {
     }
 
     @Test fun `an empty Random record shows rolling only while its own request is pending`() {
+        compose.mainClock.autoAdvance = false
         val shown = androidx.compose.runtime.mutableStateOf(PlayerUiState(
             playback = ActiveQueue(QueueSource.Random(1), PlayQueue(emptyList())), loadingTrack = true,
         ))
@@ -81,12 +82,18 @@ class QueueExperimentUiTest {
         measure()
         compose.onNodeWithText("Double-tap the dice to reroll the list").assertIsDisplayed()
         compose.onNodeWithText("Rolling…").assertExists()
-        compose.runOnIdle { shown.value = shown.value.copy(loadingTrack = false) }
+        compose.runOnIdle {
+            shown.value = shown.value.copy(loadingTrack = false)
+            Snapshot.sendApplyNotifications()
+        }
+        compose.mainClock.advanceTimeByFrame()
         compose.onNodeWithText("Rolling…").assertDoesNotExist()
         compose.runOnIdle {
             shown.value = shown.value.copy(loadingTrack = true,
                 playback = collectionPlayback(PlayQueue(listOf(TrackRef("author", "Author"))).startAt(0)))
+            Snapshot.sendApplyNotifications()
         }
+        compose.mainClock.advanceTimeByFrame()
         compose.onNodeWithText("Rolling…").assertDoesNotExist()
     }
 
@@ -171,5 +178,35 @@ class QueueExperimentUiTest {
             compose.runOnIdle { activity.get().onBackPressedDispatcher.onBackPressed() }
         }
         compose.runOnIdle { assertEquals(listOf("scanner", "settings", "browse", "random"), calls) }
+    }
+
+    @Test fun `a manual copy of a source file shows a quiet context marker not a playing icon`() {
+        val track = TrackRef("a", "Source tune")
+        val context = ActiveQueue(QueueSource.Playlist(1), PlayQueue(listOf(track)).startAt(0))
+        val manual = PlaybackSchedule().enqueue(track).next(context) as ScheduledStep.Select
+        activity.get().setContent { MaterialTheme {
+            QueueScreen(PlayerUiState(playback = context, schedule = manual.schedule),
+                onPlay = {}, onShowNeighbours = {}, onShareFile = {}, onShareAudio = {}, onShareLink = {},
+                onSendToWeb = {}, onAddToPlaylist = {})
+        } }
+        measure()
+        compose.onNodeWithContentDescription("Now playing").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Context position").assertIsDisplayed()
+        compose.onNodeWithText("Manual request").assertIsDisplayed()
+        compose.onNodeWithText("Current track: Source tune").assertIsDisplayed()
+    }
+
+    @Test fun `manual loading over an empty Random context does not claim the dice is rolling`() {
+        val context = ActiveQueue(QueueSource.Random(1), PlayQueue(emptyList()))
+        val manual = PlaybackSchedule().enqueue(TrackRef("x", "Manual")).next(context) as ScheduledStep.Select
+        activity.get().setContent { MaterialTheme {
+            RandomScreen(PlayerUiState(playback = context, schedule = manual.schedule, loadingTrack = true),
+                browse = BrowseState(), listState = androidx.compose.foundation.lazy.rememberLazyListState(),
+                onPlayAt = {}, onRemoveAt = {}, onFilter = {}, onShowNeighbours = {}, onShareFile = {},
+                onShareAudio = {}, onShareLink = {}, onSendToWeb = {}, onAddToOtherPlaylist = {},
+                onAddSelectedToPlaylist = {}, contentPadding = androidx.compose.foundation.layout.PaddingValues())
+        } }
+        measure()
+        compose.onNodeWithText("Rolling…").assertDoesNotExist()
     }
 }

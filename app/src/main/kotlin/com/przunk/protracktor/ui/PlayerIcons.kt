@@ -288,6 +288,9 @@ object PlayerIcons {
             "M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z",
         )
     }
+    val QueueAdd: ImageVector by lazy {
+        icon("QueueAdd", "M3 5H15V7H3ZM3 9H15V11H3ZM3 13H11V15H3ZM17 11H19V15H23V17H19V21H17V17H13V15H17Z")
+    }
     /** Several tunes inside one file. A stack of layers rather than a list, which "playlist" is. */
     val Subsongs: ImageVector by lazy {
         icon(

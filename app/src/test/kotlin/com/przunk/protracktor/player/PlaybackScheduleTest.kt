@@ -249,4 +249,14 @@ class PlaybackScheduleTest {
         assertEquals(0, enriched.current!!.context.order.currentIndex)
         assertEquals("Learned", enriched.current!!.context.current!!.title)
     }
+
+    @Test fun `idle manual requests do not adopt an unstarted editor playlist as context`() {
+        val source = context().copy(order = PlayQueue(listOf(track("A"), track("B"))))
+        val next = selected(PlaybackSchedule().enqueue(track("X")).next(source))
+        val anchor = next.schedule.contextForReplay(next.occurrence, source)
+        assertEquals(QueueSource.None, anchor.source)
+        assertTrue(anchor.order.tracks.isEmpty())
+        assertEquals(QueueStep.Stop, (next.schedule.next(anchor, completed = true) as ScheduledStep.Context).step)
+        assertEquals(listOf("A", "B"), source.order.tracks.map { it.id })
+    }
 }

@@ -89,7 +89,11 @@ data class PlaybackSchedule(
     fun playRequest(id: Long, context: ActiveQueue): ScheduledStep.Select? {
         val state = seeded(context)
         val request = state.pending.firstOrNull { it.id == id } ?: return null
-        val entry = PlaybackOccurrence(request.id, request.track, context, request)
+        // An editor's never-started list is not a source chosen for automatic continuation.
+        val anchor = if (state.record.isEmpty() && context.current == null && context.source !is QueueSource.Random)
+            ActiveQueue(QueueSource.None, PlayQueue(emptyList(), shuffle = context.order.shuffle, repeat = context.order.repeat))
+        else context
+        val entry = PlaybackOccurrence(request.id, request.track, anchor, request)
         val next = state.copy(pending = state.pending.filterNot { it.id == id },
             record = state.record.take(state.cursor + 1) + entry + state.record.drop(state.cursor + 1),
             cursor = state.cursor + 1)
@@ -136,6 +140,8 @@ data class PlaybackSchedule(
     /** Replays cannot overwrite newer edits or mode choices with an old anchor snapshot. */
     fun contextForReplay(entry: PlaybackOccurrence, live: ActiveQueue): ActiveQueue {
         val anchor = entry.context
+        if (anchor.source == QueueSource.None) return anchor.copy(order = anchor.order
+            .withRepeat(live.order.repeat).withShuffle(live.order.shuffle))
         val sameSource = when {
             anchor.source is QueueSource.Playlist && live.source is QueueSource.Playlist ->
                 anchor.source.id == live.source.id

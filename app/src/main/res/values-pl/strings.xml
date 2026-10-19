@@ -2,7 +2,21 @@
 <resources>
     <string name="random_list_empty">Ta lista Random jest jeszcze pusta.</string>
     <string name="queue_title">Kolejka</string>
-    <string name="queue_empty">Odtwórz utwór, aby rozpocząć kolejkę.</string>
+    <string name="queue_empty">Odtwórz utwór, aby ustalić kontekst.</string>
+    <string name="queue_panel_title">Odtwarzanie</string>
+    <string name="queue_context">Kontekst</string>
+    <string name="queue_no_context">Brak kontekstu. Odtwarzanie zakończy się po utworach z kolejki.</string>
+    <string name="queue_current_track">Bieżący utwór: %1$s</string>
+    <string name="queue_manual_current">Utwór z kolejki ręcznej</string>
+    <string name="queue_context_position">Pozycja kontekstu</string>
+    <string name="queue_context_anchor">Pozycja kontekstu: %1$s</string>
+    <string name="queue_pending_empty">Brak oczekujących utworów. Odtwarzanie wróci do kontekstu, jeśli jest dostępny.</string>
+    <string name="queue_repeat_one_wait">Powtarzanie jednego utworu jest aktywne. Kolejka czeka na przejście dalej lub wyłączenie powtarzania.</string>
+    <string name="queue_play">Odtwórz</string>
+    <string name="queue_remove">Usuń</string>
+    <string name="queue_play_request">Odtwórz teraz: %1$s</string>
+    <string name="queue_remove_request">Usuń z kolejki: %1$s</string>
+    <string name="action_add_to_queue">Dodaj do kolejki</string>
     <string name="queue_playlist">Playlista: %1$s</string>
     <string name="queue_search">Wyszukiwanie: %1$s</string>
     <string name="queue_external">Plik otwarty z innej aplikacji</string>

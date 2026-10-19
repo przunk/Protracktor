@@ -46,3 +46,31 @@ An earlier 92-test run also passed before adding the source-emptying projection 
 
 No complete UI feature or release APK is claimed yet. Row actions, two tabs, honest source markers,
 pending swipe/Remove/Undo, host UI regressions and the final forced full gate/lint remain pending.
+
+## Stage 3 — panel and row actions (verification in progress)
+
+Playlist, Browse/Search/History, Random and Context row menus now offer Add to queue through one
+shared menu item. The playback panel separates read-only Context and pending Queue. Its common
+header uses the actual track and shared Now Playing subtitle; parked source positions have quiet
+text/icon markers, not a false playing indicator. Pending occurrence IDs own Play, Remove and
+end-to-start swipe. The shared snackbar is inside the modal so its Undo is reachable.
+
+Two idle/resume boundaries became explicit: ordinary Play resumes an existing paused source before
+pending even when its decoder is released; manual playback from a never-started editor list instead
+uses an absent context and stops after pending. The paused-source regression failed before the
+controller priority correction (`/tmp/protracktor-manual-resume-before.log`).
+
+Initial host UI run: **19 tests / 3 suites** passed (7 C110, 4 real-shell manual queue, 8 existing
+Queue UI cases), `/tmp/protracktor-manual-ui-focused.log`, 59 s. Removing the actual swipe callback
+while leaving the Remove button wired made the physical-swipe regression fail as intended
+(`/tmp/protracktor-manual-swipe-mutation.log`); the callback was restored. A later combined run
+stopped at a Compose-idle timeout in an existing reactive Random test. That run is **not a pass**;
+the test now explicitly flushes snapshots and advances its clock, like the other reactive UI cases.
+The corrected focused rerun passed **63 tests / 6 suites**, zero failures/errors/skips, in 50 s
+(`/tmp/protracktor-manual-ui-final.log`): 23 scheduler, 10 state projection, 9 controller,
+4 manual-shell, 7 C110 and 10 Queue UI cases. Controller/host UI tests do not decode native audio.
+
+The owner requested a second iteration **after** the first verified APK: review requirements and
+all branch commits, record findings, fix justified issues, repeat verification and rebuild if code
+changes. Neither this checkpoint nor the first APK is the final test candidate. Full gate, lint,
+release APKs and all phone behaviour remain pending. No merge, release or push.

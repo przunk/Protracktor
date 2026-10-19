@@ -1,5 +1,48 @@
 # What only a phone can prove
 
+## Manual queue — unmerged experiment, phone checks pending
+
+Branch `feature/manual-playback-queue`. Use the final **second-iteration** artifact identified in
+[the implementation report](MANUAL_QUEUE_IMPLEMENTATION.md), not the first checkpoint APK.
+All scenarios below are **unchecked on a phone**. Install over the existing test-signed build;
+do not uninstall or clear storage. VersionName/schema are unchanged; commit-derived versionCode
+does not permit ordinary replacement by the older AMP APK.
+
+1. Play source A/B/C/D at B. Add X, Y and Z from different views: B continues uninterrupted,
+   then file Next/completion gives X/Y/Z/C/D. Merely browsing or selecting another editor playlist
+   must not change this. Test screen, notification and headset transport.
+2. Add the same file twice. Queue shows two occurrences. Play the second pending row explicitly:
+   only that occurrence becomes current; earlier pending remains. Header/dock/notification refer
+   to the actual manual file, while Context keeps a quiet source position, even for equal file IDs.
+3. During Y, Previous returns to X/B; without new requests Next replays the forward record.
+   Add P/Q while back at X: Next plays P/Q before the retained Y/C suffix. No source rows disappear.
+4. Enqueue while paused: remain paused. Ordinary Play resumes that track; file Next selects a
+   request. From idle with a never-started selected playlist, enqueue then Play: drain requests
+   and stop, without automatically starting that playlist.
+5. Swipe a pending row end-to-start; only it disappears and Undo is reachable **inside** the panel.
+   Undo restores its position among surviving neighbours, not a duplicate. Check labelled Remove,
+   rapid repeated actions, vertical scrolling, large text, TalkBack, EN/PL and unrelated playlist Undo.
+6. Shuffle affects source continuation only. Repeat All repeats source, not consumed requests.
+   Repeat One keeps actual tune repeating with a waiting explanation; file Next escapes to FIFO.
+   Test multi-subsong files with Play all subsongs both on/off and long-press file transport.
+7. Explicitly play a different source row or reroll Random: pending survives, but old mixed
+   traversal is reset. Reopening remembered Random must not resume or steal author playback.
+   Change Random filter while rewound: retain the heard boundary and new-filter speculation rules.
+8. Edit/delete/empty/rename the parked source while a manual file plays: do not interrupt it or
+   resurrect old editor content during Previous/Next. Learning titles must not move duplicate rows.
+9. Enqueue an unavailable file over Random. Failure stays visible for retry/Next, not silently
+   skipped as a failed random pick. Test rapid source changes/retries during slow loading, revoked
+   local grants, offline catalogue downloads, pause during loading and Bluetooth transitions.
+10. History-origin requests must not move their History row to the top; requests from other views
+    should. Short-completion/five-second listened marks, notification heart, Keep and sharing must
+    use the actual manual file, not the parked source. Retained AMP entries stay protected.
+11. Process death loses this session-only pending/traversal; normal paused selected-playlist
+    restoration remains. Recheck C110 generic Browse-root entry and normal playlist Save/Undo.
+
+Report installed code/SHA, steps and expected/observed result. Host tests do not certify audio,
+service/notification layout, gestures or usability. Product questions remain in
+[the contract](QUEUE_CONTEXT_ANALYSIS.md#questions-retained-for-post-implementation-evaluation).
+
 ## C110 — Browse root navigation
 
 Branch `fix/browse-root-navigation`; APK **1.2.0 (1231)**, source `fa09e7a`. Artifact and host evidence are in

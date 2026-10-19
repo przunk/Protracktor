@@ -249,7 +249,7 @@ fun PlayerDock(
                     onClick = { haptics.press(); onPlayPause() },
                     // A transient track counts: pressing Random with an empty playlist must still
                     // give you something you can pause.
-                    enabled = state.loadingTrack || state.current != null || state.transportQueue.tracks.isNotEmpty(),
+                    enabled = state.loadingTrack || state.current != null || state.transportQueue.tracks.isNotEmpty() || state.schedule.pending.isNotEmpty(),
                     modifier = Modifier.size(64.dp),
                 ) {
                     // Three states, not two. A track being fetched is not "paused", and the button
@@ -293,7 +293,7 @@ fun PlayerDock(
                             RepeatMode.ONE -> R.string.a11y_repeat_one
                         }
                     ),
-                    enabled = state.transportQueue.tracks.isNotEmpty(),
+                    enabled = state.current != null || state.transportQueue.tracks.isNotEmpty(),
                     onClick = onRepeat,
                     // off → all → one → off: only the last step turns the light out.
                     activeAfter = state.transportQueue.repeat != RepeatMode.ONE,

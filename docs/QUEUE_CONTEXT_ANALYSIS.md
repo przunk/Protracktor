@@ -77,6 +77,8 @@ and natural completion must enter the same scheduler.
 | Remove pending | Remove exactly its occurrence ID; do not touch actual track, source, position or equal-file requests. |
 | Undo pending removal | Restore before surviving next neighbour, otherwise after surviving previous neighbour, otherwise bounded original index. Never duplicate an already restored ID. |
 | Enqueue from idle | Stay idle; explicit Play/Next selects first pending before default source. |
+| Play with a known paused/restored source track | Resume that track, even if its decoder was released. Pending waits for a file boundary; explicit file Next or pending-row Play can select it immediately. |
+| Manual playback with no previously chosen source | Use an explicit absent context; after pending drains, stop. A merely selected, never-started editor playlist must not start automatically. |
 | Pause/Stop during loading | Retire load intent, retain actual occurrence for explicit resume/retry; no delayed takeover. |
 | Manual read/open failure | Visible failed actual occurrence, explicit Play retries it, Next can skip it. Do not apply Random auto-skip because the parked context is Random. |
 | Process death | Lose transient pending/traversal; retain existing paused selected-playlist restoration. |
@@ -120,6 +122,8 @@ Queue displays pending only; its current manual item is in the common header. Em
 that context continuation follows, not that audio has stopped. Pending rows offer Info, labelled
 Play and Remove. Tap for Info does not skip FIFO; explicit Play selects only that occurrence.
 No pending reorder, bulk edit or Clear queue in v1.
+The shared snackbar is rendered inside the open modal panel, above its scrim, so Undo remains
+visible and reachable without dismissing the panel.
 
 Add to queue is a distinct icon-and-label row action on playlist, Browse/Search/History, Random and
 context tracks. Call sites pass the row's History origin rather than infer it from parked playback.
@@ -167,7 +171,11 @@ continuation, never a stale selected editor draft; asynchronous Random selection
    no-manual behaviour, persistence, C97, C110, subsongs and Bluetooth.
 3. Wire row actions, two-tab panel, honest markers, pending swipe/Remove/Undo and EN/PL strings.
 4. Force full tests/lint, build minified test-signed APK into dist, verify identity/signature and
-   record actual evidence/device scenarios. Stop unmerged for owner acceptance.
+   record actual evidence/device scenarios.
+5. Owner-requested second iteration: after that first APK, re-audit requirements and every branch
+   commit. Record omissions/findings, correct documentation and worthwhile code issues, repeat the
+   full gate and build a new APK if code changes. Only the completed second iteration is a candidate
+   for owner phone testing. Stop unmerged for owner acceptance.
 
 Each stage has a local commit and an explicit partial verification state. A pure scheduler is not
 a working phone feature. Baseline C110 test counts must not be reused as feature evidence.
@@ -186,6 +194,8 @@ The owner explicitly made these non-blocking. Choices are provisional, not settl
 | Subsongs as queue entries? | Whole files only; existing subsong controls remain. |
 | Pending-row immediate Play? | Only that occurrence; preserve earlier pending and forward record. |
 | Enqueue from idle starts audio? | No; explicit Play/Next is required. |
+| Paused source or pending first on ordinary Play? | Resume the known track; enqueue is not a replacement operation. File Next and explicit pending Play remain immediate overrides. |
+| Continue into a never-started selected playlist? | No; use absent context and stop after pending rather than invent a source choice. |
 | Failed manual load? | Retain current for visible retry/skip; never silent Random skipping. |
 | Marker during manual playback? | Quiet textual context position, no false animation; actual file remains in common header/dock. |
 | Initial tab? | Context, predictable fresh entry; remember only during that opening. |

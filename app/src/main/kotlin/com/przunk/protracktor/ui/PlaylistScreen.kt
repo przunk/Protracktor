@@ -101,6 +101,7 @@ fun PlaylistScreen(
     stateKnown: Boolean,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    onEnqueue: ((TrackRef) -> Unit)? = null,
 ) {
     if (state.queue.tracks.isEmpty()) {
         if (stateKnown) {
@@ -130,6 +131,8 @@ fun PlaylistScreen(
         tracks = state.queue.tracks,
         listState = listState,
         currentIndex = state.queue.currentIndex.takeIf { !state.awayFromPlaylist },
+        contextIndex = state.queue.currentIndex.takeIf { state.manualCurrent && state.activePlayback.belongsTo(state.activePlaylistId) },
+        onEnqueue = onEnqueue,
         onPlayAt = onPlayAt,
         onRemoveAt = onRemoveAt,
         onMove = onMove,
@@ -207,6 +210,8 @@ internal fun PlaylistBody(
      * cursor, because its record can hold the same tune twice.
      */
     followKey: Any? = currentIndex?.let { tracks.getOrNull(it)?.id },
+    onEnqueue: ((TrackRef) -> Unit)? = null,
+    contextIndex: Int? = null,
 ) {
     // Identified by track id, not by index. The index of the row being dragged changes the moment it
     // moves, which restarted the gesture and dropped the drag after every single step -- and left
@@ -245,6 +250,7 @@ internal fun PlaylistBody(
                 showFileName = showFileName,
                 playedBefore = listenedIds?.contains(track.id),
                 playing = index == currentIndex,
+                contextPosition = index == contextIndex,
                 loading = loadingCurrent && index == currentIndex,
                 enabled = enabled,
                 dragging = track.id == draggingId,
@@ -260,6 +266,7 @@ internal fun PlaylistBody(
                 onRemove = { onRemoveAt(index) },
                 onInfo = { showingInfo = track },
                 onAddToOtherPlaylist = { onAddToOtherPlaylist(track) },
+                onEnqueue = onEnqueue?.let { enqueue -> { enqueue(track) } },
                 // Absent for a local file, which has no catalogue folder to open, and for a
                 // live-search catalogue, which publishes no index and no author to open one by.
                 onShowNeighbours = track.takeIf { Catalogue.owning(it.id)?.isOnlineOnly == false }
@@ -437,6 +444,7 @@ private fun TrackRow(
     track: TrackRef,
     playedBefore: Boolean?,
     playing: Boolean,
+    contextPosition: Boolean,
     loading: Boolean,
     enabled: Boolean,
     dragging: Boolean,
@@ -449,6 +457,7 @@ private fun TrackRow(
     onRemove: () -> Unit,
     onInfo: () -> Unit,
     onAddToOtherPlaylist: () -> Unit,
+    onEnqueue: (() -> Unit)?,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
     onShareAudio: () -> Unit,
@@ -480,7 +489,8 @@ private fun TrackRow(
         ""
     }
     val fileName = track.fileNameOrTitle.takeIf { showFileName && it != track.title }.orEmpty()
-    val subtitle = listOf(track.displayAuthor, label, tunes, fileName)
+    val subtitle = listOf(track.displayAuthor, label, tunes, fileName,
+        if (contextPosition) stringResource(R.string.queue_context_position) else "")
         .filter { it.isNotBlank() }
         .joinToString(" · ")
 
@@ -501,7 +511,10 @@ private fun TrackRow(
                         onCheckedChange = { on -> haptics.toggle(on); onToggle() },
                     )
                 } else TrackLeadingStatus(playedBefore) {
-                    if (playing) {
+                    if (contextPosition) {
+                        Icon(PlayerIcons.Playlist, stringResource(R.string.queue_context_position),
+                            modifier = Modifier.size(20.dp))
+                    } else if (playing) {
                         Icon(
                             imageVector = PlayerIcons.Play,
                             contentDescription = stringResource(R.string.a11y_now_playing_row),
@@ -541,6 +554,7 @@ private fun TrackRow(
                                 leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
                                 onClick = { menuOpen = false; onAddToOtherPlaylist() },
                             )
+                            EnqueueMenuItem(onEnqueue) { menuOpen = false }
                             onShowNeighbours?.let { show ->
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.action_show_neighbours)) },

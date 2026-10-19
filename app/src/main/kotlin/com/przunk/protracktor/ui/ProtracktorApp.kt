@@ -51,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -351,7 +352,9 @@ fun ProtracktorApp(
                         onRepeat = viewModel::cycleRepeat,
                     )
                 },
-                snackbarHost = { SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) } },
+                snackbarHost = {
+                    if (!showQueue) SnackbarHost(snackbarHostState) { data -> SwipeableSnackbar(data) }
+                },
             ) { insets ->
                 if (scanning) {
                     ScannerScreen(
@@ -459,9 +462,10 @@ fun ProtracktorApp(
                         onHistoryQueryChange = viewModel::setHistoryQuery,
                         // Marks the row you are hearing. Browse plays through the results queue, so the
                         // current track is the queue's, not the playlist's.
-                        playingId = state.current?.id,
+                        playingId = state.current?.id?.takeUnless { state.manualCurrent },
                         // What is being fetched, so its row says so by breathing (`docs/WISHLIST.md` B32).
-                        loadingId = state.current?.id?.takeIf { state.loadingTrack },
+                        loadingId = state.current?.id?.takeIf { state.loadingTrack && !state.manualCurrent },
+                        onEnqueue = { track -> viewModel.enqueueTrack(track, browse.domain == BrowseDomain.HISTORY) },
                         // Whose folder, while the dice waits under it — from the moment the jump lands,
                         // not only once something here is playing.
                         digressionAuthor = browse.openAuthor
@@ -487,6 +491,7 @@ fun ProtracktorApp(
                         listState = randomState,
                         onPlayAt = viewModel::playRandomAt,
                         onReroll = viewModel::playRandom,
+                        onEnqueue = { viewModel.enqueueTrack(it) },
                         onRemoveAt = viewModel::removeRandomAt,
                         onFilter = { choosingRandomScope = true },
                         onShowNeighbours = viewModel::showNeighboursOf,
@@ -505,6 +510,7 @@ fun ProtracktorApp(
                         onPlayAt = viewModel::playAt,
                         onRemoveAt = viewModel::removeTrack,
                         onMove = viewModel::moveTrack,
+                        onEnqueue = { viewModel.enqueueTrack(it) },
                         onShowNeighbours = viewModel::showNeighboursOf,
                         onShareFile = viewModel::shareFile,
                         onShareAudio = viewModel::shareAsAudio,
@@ -565,13 +571,20 @@ fun ProtracktorApp(
             onDismissRequest = { showQueue = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
-            QueueScreen(
-                state = state, onPlay = viewModel::playQueueAt,
-                onShowNeighbours = { showQueue = false; viewModel.showNeighboursOf(it) },
-                onShareFile = viewModel::shareFile, onShareAudio = viewModel::shareAsAudio,
-                onShareLink = viewModel::shareLink, onSendToWeb = viewModel::sendToWeb,
-                onAddToPlaylist = { showQueue = false; pendingAddToPlaylist = listOf(it) },
-            )
+            // Render the shared notice above the modal, not underneath its scrim: Undo must be reachable.
+            Box(Modifier.fillMaxHeight().testTag("playback-panel")) {
+                QueueScreen(
+                    state = state, onPlay = viewModel::playQueueAt,
+                    onShowNeighbours = { showQueue = false; viewModel.showNeighboursOf(it) },
+                    onShareFile = viewModel::shareFile, onShareAudio = viewModel::shareAsAudio,
+                    onShareLink = viewModel::shareLink, onSendToWeb = viewModel::sendToWeb,
+                    onAddToPlaylist = { showQueue = false; pendingAddToPlaylist = listOf(it) },
+                    onEnqueue = { viewModel.enqueueTrack(it, state.activePlayback.fromHistory) },
+                    onPlayPending = viewModel::playPendingRequest,
+                    onRemovePending = viewModel::removePendingRequest,
+                )
+                SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter)) { data -> SwipeableSnackbar(data) }
+            }
         }
     }
 

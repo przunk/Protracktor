@@ -62,8 +62,13 @@ Implementation has started on `feature/manual-playback-queue` from `d6d3297`. Th
 adds a pure scheduler with a failing FIFO mutation probe. The next checkpoint integrates the
 controller/actual-file projection and passes 93 focused tests, including real-controller failure
 and stale-retry cases; negative Random-anchor and manual-failure probes detect broken rules.
-UI integration is still pending. [Stage evidence](MANUAL_QUEUE_IMPLEMENTATION.md).
-Full feature gates, release APK and phone behaviour remain pending; no feature merge.
+UI wiring now includes two tabs, shared row actions, quiet context markers and pending swipe/Remove/
+Undo inside the modal. The final focused run passed 63 tests / 6 suites, zero failures/errors/skips,
+after correcting an existing reactive Random test's snapshot/clock synchronization. Idle/no-source and
+paused-resume boundaries are explicit. [Stage evidence](MANUAL_QUEUE_IMPLEMENTATION.md).
+Full feature gates, release APK and phone behaviour remain pending; no feature merge. The owner
+requested a requirements/all-commits audit after the first APK and a corrected, reverified APK
+before the second iteration can be offered for phone testing.
 
 ## B45 accepted and merged — normal versioning restored, 2026-10-19
 

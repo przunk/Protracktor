@@ -162,4 +162,23 @@ class ManualQueueControllerTest {
         assertEquals("B", state.value.activePlayback.current!!.title)
         assertEquals("X", state.value.current!!.title)
     }
+
+    @Test fun `Play resumes an existing paused source before requests even if its decoder was released`() {
+        controller.enqueueTrack(track("X"))
+        controller.togglePlayPause()
+        assertEquals("B", state.value.current!!.title)
+        assertEquals(listOf("X"), state.value.schedule.pending.map { it.track.title })
+        assertFalse(state.value.manualCurrent)
+    }
+
+    @Test fun `starting manual playback from idle leaves an unstarted editor playlist out of context`() {
+        val draft = PlayQueue(tracks)
+        state.value = state.value.copy(queue = draft, playback = null)
+        controller.enqueueTrack(track("X"))
+        controller.togglePlayPause()
+        assertEquals("X", state.value.current!!.title)
+        assertEquals(QueueSource.None, state.value.activePlayback.source)
+        assertFalse(state.value.canGoNextFile)
+        assertEquals(draft, state.value.queue)
+    }
 }

@@ -142,6 +142,7 @@ fun BrowseScreen(
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit = {},
+    onEnqueue: ((TrackRef) -> Unit)? = null,
     savedPlaces: SavedPlacesState = SavedPlacesState(),
     onSavePlace: () -> Unit = {},
     onRemovePlace: (SavedPlaceKey) -> Unit = {},
@@ -242,6 +243,7 @@ fun BrowseScreen(
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onEnqueue = onEnqueue,
             )
             BrowseDomain.ONLINE -> Column {
                 browse.saveablePlace()?.let { key ->
@@ -266,6 +268,7 @@ fun BrowseScreen(
                     onPlay = onPlay,
                     onAdd = onAdd,
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
+                    onEnqueue = onEnqueue,
                 )
             }
             BrowseDomain.HISTORY -> key(browse.historyVisit) {
@@ -285,6 +288,7 @@ fun BrowseScreen(
                     onPlay = onPlay,
                     onAdd = onAdd,
                     onAddToOtherPlaylist = onAddToOtherPlaylist,
+                    onEnqueue = onEnqueue,
                 )
             }
             BrowseDomain.SEARCH -> SearchDomain(
@@ -308,6 +312,7 @@ fun BrowseScreen(
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onEnqueue = onEnqueue,
             )
         }
     }
@@ -597,6 +602,7 @@ private fun LocalDomain(
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
+    onEnqueue: ((TrackRef) -> Unit)?,
 ) {
     val folder = browse.openFolder
     if (folder != null) {
@@ -650,6 +656,7 @@ private fun LocalDomain(
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onEnqueue = onEnqueue,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareAudio = onShareAudio,
@@ -728,6 +735,7 @@ private fun OnlineDomain(
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
+    onEnqueue: ((TrackRef) -> Unit)?,
 ) {
     val haptics = rememberHaptics()
     when {
@@ -740,6 +748,7 @@ private fun OnlineDomain(
             onPlay = onPlay,
             onAdd = onAdd,
             onAddToOtherPlaylist = onAddToOtherPlaylist,
+            onEnqueue = onEnqueue,
             onShowNeighbours = onShowNeighbours,
             onShareFile = onShareFile,
             onShareAudio = onShareAudio,
@@ -986,6 +995,7 @@ private fun SearchDomain(
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
+    onEnqueue: ((TrackRef) -> Unit)?,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         SearchQueryField(
@@ -1013,6 +1023,7 @@ private fun SearchDomain(
                 onPlay = onPlay,
                 onAdd = onAdd,
                 onAddToOtherPlaylist = onAddToOtherPlaylist,
+                onEnqueue = onEnqueue,
                 onShowNeighbours = onShowNeighbours,
                 onShareFile = onShareFile,
                 onShareAudio = onShareAudio,
@@ -1079,6 +1090,7 @@ private fun HistoryDomain(
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
+    onEnqueue: ((TrackRef) -> Unit)?,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         HistoryQueryField(browse.historyQuery, onHistoryQueryChange)
@@ -1140,6 +1152,7 @@ private fun HistoryDomain(
                         onPlay = onPlay,
                         onAdd = onAdd,
                         onAddToOtherPlaylist = onAddToOtherPlaylist,
+                        onEnqueue = onEnqueue,
                         onShowNeighbours = onShowNeighbours,
                         onShareFile = onShareFile,
                         onShareAudio = onShareAudio,
@@ -1201,6 +1214,7 @@ private fun Selectable(
     onPlay: (Int) -> Unit,
     onAdd: (List<TrackRef>) -> Unit,
     onAddToOtherPlaylist: (List<TrackRef>) -> Unit,
+    onEnqueue: ((TrackRef) -> Unit)?,
     onShowNeighbours: (TrackRef) -> Unit,
     onShareFile: (TrackRef) -> Unit,
     onShareAudio: (TrackRef) -> Unit,
@@ -1345,6 +1359,7 @@ private fun Selectable(
                         },
                         onStartSelecting = { selected = selected + track.id },
                         onAddToOtherPlaylist = { onAddToOtherPlaylist(listOf(track)) },
+                        onEnqueue = onEnqueue?.let { enqueue -> { enqueue(track) } },
                         onInfo = { showingInfo = track },
                         // Not for a live-search catalogue: it publishes no index, and its result
                         // rows carry no author, so there is nowhere for this to go.
@@ -1469,6 +1484,7 @@ private fun BrowseTrackRow(
     onToggle: () -> Unit,
     onStartSelecting: () -> Unit,
     onAddToOtherPlaylist: () -> Unit,
+    onEnqueue: (() -> Unit)?,
     onInfo: () -> Unit,
     onShowNeighbours: (() -> Unit)?,
     onShareFile: () -> Unit,
@@ -1540,6 +1556,7 @@ private fun BrowseTrackRow(
                             leadingIcon = { Icon(PlayerIcons.PlaylistAdd, contentDescription = null) },
                             onClick = { menuOpen = false; onAddToOtherPlaylist() },
                         )
+                        EnqueueMenuItem(onEnqueue) { menuOpen = false }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_info)) },
                             leadingIcon = { Icon(PlayerIcons.Info, contentDescription = null) },

@@ -3,94 +3,28 @@
 package com.przunk.protracktor.ui
 
 import android.app.Application
-import android.view.View
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.przunk.protracktor.Appearance
 import com.przunk.protracktor.data.CatalogueSummary
 import com.przunk.protracktor.data.GrantedFolder
-import com.przunk.protracktor.data.ProtracktorDatabase
 import com.przunk.protracktor.player.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExecutorCoroutineDispatcher
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import org.junit.After
 import org.junit.Assert.*
-import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
-import org.robolectric.Shadows.shadowOf
-import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.SQLiteMode
 import org.robolectric.util.ReflectionHelpers
 
-/** Real shell/VM/controller navigation with a preset playback state, not native audio playback. */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 @Config(sdk = [29], application = Application::class, qualifiers = "en-w360dp-h800dp-xhdpi")
-class BrowseRootNavigationTest {
-    @get:Rule val compose = createEmptyComposeRule()
-    private lateinit var activity: ActivityController<ComponentActivity>
-    private lateinit var controller: PlaybackController
-    private val application get() = ApplicationProvider.getApplicationContext<Application>()
-    private val player get() = ReflectionHelpers.getField<MutableStateFlow<PlayerUiState>>(controller, "_state")
-    private val browse get() = ReflectionHelpers.getField<MutableStateFlow<BrowseState>>(controller, "_browse")
-    private val tune = TrackRef("content://navigation.test/current.mod", "Current tune", author = "Known author")
-
-    @Before fun start() {
-        Appearance.selectCacheAhead(application, CacheAhead.OFF)
-        activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().visible()
-        controller = PlaybackController.get(application)
-        activity.get().setContent { MaterialTheme {
-            ProtracktorApp(viewModel = PlayerViewModel(application))
-        } }
-        val view = activity.get().window.decorView
-        view.measure(View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY))
-        view.layout(0, 0, 720, 1600)
-        compose.waitUntil(10_000) {
-            shadowOf(android.os.Looper.getMainLooper()).idle()
-            controller.state.value.restored && controller.browse.value.knowsWhatIsHeld
-        }
-        compose.waitForIdle()
-        compose.mainClock.autoAdvance = false
-    }
-
-    @After fun stop() {
-        if (::controller.isInitialized) {
-            ReflectionHelpers.getField<CoroutineScope>(controller, "scope").cancel()
-            controller.release()
-            ReflectionHelpers.getField<ExecutorCoroutineDispatcher>(controller, "backgroundWork").close()
-            ReflectionHelpers.getField<ExecutorCoroutineDispatcher>(controller, "scanWork").close()
-            ReflectionHelpers.setStaticField(PlaybackController::class.java, "instance", null)
-        }
-        if (::activity.isInitialized) activity.close()
-        ProtracktorDatabase.of(application).close()
-    }
-
-    private fun frame() {
-        shadowOf(android.os.Looper.getMainLooper()).idle()
-        compose.runOnIdle { Snapshot.sendApplyNotifications() }
-        compose.mainClock.advanceTimeBy(32)
-        compose.waitForIdle()
-    }
-
+class BrowseRootNavigationTest : PlaybackShellTest() {
     @Test fun `Browse opens root after leaving playing History without replacing playback`() {
         reopen(BrowseState(domain = BrowseDomain.HISTORY, historyTotal = 1), playing = true, backs = 2)
     }

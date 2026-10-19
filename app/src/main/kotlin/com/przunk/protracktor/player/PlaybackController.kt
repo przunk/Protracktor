@@ -2634,6 +2634,10 @@ class PlaybackController private constructor(private val context: Context) {
                 now.current?.let(::startActualPlayback)
                 return
             }
+            if (now.activePlayback.current != null) {
+                activateQueue(now.activePlayback)
+                return
+            }
             if (now.schedule.pending.isNotEmpty()) {
                 nextFile()
                 return
@@ -3194,7 +3198,7 @@ class PlaybackController private constructor(private val context: Context) {
         val active = _state.value.activePlayback
         val wanted = when (active.source) {
             is QueueSource.Random -> randomHistory.upcoming(READ_AHEAD)
-            QueueSource.External -> emptyList()
+            QueueSource.None, QueueSource.External -> emptyList()
             is QueueSource.Playlist, is QueueSource.Collection -> listOfNotNull(active.order.upcoming)
         }
         val schedule = _state.value.schedule
