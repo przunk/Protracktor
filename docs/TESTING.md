@@ -1,15 +1,16 @@
 # What only a phone can prove
 
-## QUEUE — owner accepted behaviour; detailed regression checklist retained, 2026-10-19
+## QUEUE — accepted and merged; detailed regression checklist retained, 2026-10-19
 
 The owner confirmed the intended Queue behaviour and authorized integration on 2026-10-19.
 Individual checklist results and the installed build ID were not separately supplied; keep this
 list for regression testing rather than treating every item as independently certified.
-The last fixed-code candidate is
-`dist/protracktor-release-1.2.0-1221-bc32bea-20261019-002459.apk` (956 host tests passed).
-New builds restore normal commit-derived codes; artifact/verification details are in Status and
-the experiment report. Installing a higher-code build prevents ordinary replacement by the old
-code-1221 AMP APK. AMP integration is deferred. Do not uninstall or clear storage.
+Merged into develop as `7cab210`, with a tree equal to tested source `069b238` (956 host tests;
+lint 0 errors/72 warnings). Current minified normal-code APK:
+`dist/protracktor-release-1.2.0-1228-7cab210-20261019-220200.apk`.
+The artifact/signature/version are verified, but this new APK has not yet been tested on a phone.
+Previous code-1221 artifacts remain historical. Installing this higher-code build prevents ordinary
+replacement by the old code-1221 AMP APK. AMP integration is deferred. Do not uninstall or clear storage.
 
 1. On AMP, retain an indexed/cached track, bookmark, History row and saved playlist. Install QUEUE:
    those records must not be deleted. AMP is unavailable here and must not appear in Search or

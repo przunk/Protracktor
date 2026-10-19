@@ -90,9 +90,10 @@ opposite-phase material, level changes and transitions; Mono can cancel opposite
 ## Q13 — Playback queue and navigation
 
 **Experiment selected, 2026-10-18; owner accepted Queue and authorized integration, 2026-10-19.**
-Real user feedback B45 was originally recorded on 2026-10-13. Pre-merge cleanup and verification
-are in progress on `feature/playback-queue-experiment`. Further colleague feedback awaits details
-and a separate next iteration; no unspecified behaviour change is selected here.
+Real user feedback B45 was originally recorded on 2026-10-13. After cleanup and a fresh full gate
+(956 tests, lint without errors), `feature/playback-queue-experiment` was merged into develop as
+`7cab210`. Further colleague feedback awaits details and a new task branch in the next iteration;
+no unspecified behaviour change is selected here.
 
 The owner selected one active playback queue independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning

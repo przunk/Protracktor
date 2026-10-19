@@ -4,7 +4,8 @@ Owner-authorized experiment, 2026-10-18. Branch `feature/playback-queue-experime
 develop `9ca86ea` (commit count 1219). This document consolidates the discussion, decisions,
 code findings, implementation boundaries and verification. The owner accepted the queue behaviour
 and authorized merging on 2026-10-19. Normal-version cleanup and fresh host/artifact verification
-are in progress; see section 13. Earlier pending states and fixed-code artifacts are historical.
+passed; merged into develop as `7cab210` (section 13). Earlier pending states and fixed-code
+artifacts are historical. Follow-up work starts on a new task branch from develop.
 
 ## 1. Why an experiment
 
@@ -464,7 +465,33 @@ cannot ordinarily be replaced by the older AMP APK. Do not uninstall or clear da
 The owner deferred AMP until after the next queue iteration; its branch, permission gate and
 playback implementation remain untouched. Retained AMP data guards and schema 23 stay in place.
 
-Verification pending: forced full gate/lint, integration tree comparison and minified release APK
-with commit-derived code. The owner's positive phone report covers the tested QUEUE behaviour;
-it does not separately certify every checklist item or an actual AMP round-trip. No store release,
-master/tag movement or push is authorized.
+**Checked:** clean source `069b23807d378c8f54c9fbfde34f39717abdd7ae` passed the forced full gate
+in **623 s**, **956 tests / 128 suites**, zero failures/errors/skips. Unit stage **423.8 s**;
+lint **97.0 s**, **0 errors / 72 warnings**, one fewer after the dead resource was removed.
+Every companion stage passed: metadata, runner/release fixtures, 581 page checks, 49 engine checks,
+eight SAP checks, web database upgrade, native audio, icons, PWA and 11 server checks.
+The normal debug manifest reports code 1227, equal to that checkpoint's commit count.
+
+The accepted feature was merged as **`7cab2104631457df1ebfaa3fe7e820f7d030aa55`**. A full-tree
+comparison with `069b238` is empty: integration added no source changes. The clean merge then
+built the minified, test-signed APK in **98 s**:
+
+| Property | Verified value |
+| --- | --- |
+| APK | `dist/protracktor-release-1.2.0-1228-7cab210-20261019-220200.apk` |
+| Name / code | `1.2.0 (1228)`; code equals the merge's commit count, no APK override |
+| Application ID | `com.przunk.protracktor` |
+| Size | 11,829,987 bytes |
+| APK SHA-256 | `14332bfb9e7dab4155b472973d68493b3e57a7dbf8b319cba036331b355f6e14` |
+| Certificate SHA-256 | `f97af50c2d869a2591dd82d24555894a2cc95927afb6c0a1fcd4bd197221e47e` |
+| Signature / variant | APK v2 verified, test certificate; R8 ran, mapping nonempty, no debuggable flag |
+| SDK / engine ABIs | min 29, target 36; arm64-v8a, armeabi-v7a, x86_64 |
+
+JUnit XML, unit/lint logs, lint XML, the normal debug manifest, merge-build log and mapping are
+retained in ignored `dist/queue-verification/integration-069b238/`. Later documentation-only
+commits do not relabel this APK or its source. The original experiment branch is integrated;
+further queue work must start on a new task branch from develop, not continue that branch.
+
+The owner's positive phone report covers the tested QUEUE behaviour, not every checklist item,
+an actual AMP round-trip or this newly built normal-code artifact. The new APK remains unchecked
+on a phone. AMP stays `8e92002`, master `794d8f9`; no store release, tag movement or push occurred.

@@ -389,7 +389,9 @@ AMP build. [Contract and verification](QUEUE_EXPERIMENT.md).
 
 The supplied code-1221 APKs remain unchanged historical artifacts. Installing a new higher-code
 QUEUE/develop APK ends ordinary replacement by that older AMP APK: do not uninstall or clear data
-to work around it. AMP integration/build refresh is deferred until the next queue iteration.
+to work around it. AMP integration/build refresh is deferred until after the next queue iteration.
+The first integrated APK, from merge `7cab210`, was verified as **1.2.0 (1228)**: its code matches
+the merge's commit count even with test signing selected. [Artifact evidence](QUEUE_EXPERIMENT.md).
 
 ### Normal release policy
 

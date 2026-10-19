@@ -1,6 +1,6 @@
 # Architecture
 
-## Active playback queue — owner accepted, 2026-10-19
+## Active playback queue — accepted and merged, 2026-10-19
 
 Implemented on `feature/playback-queue-experiment`, `ActiveQueue` and exhaustive `QueueSource`/`QueueStep`
 types own file-level transport decisions outside Android. `PlayQueue` retains finite-order,
@@ -30,9 +30,10 @@ selected playlist paused, not every temporary source. The retained-but-unavailab
 preserves the parallel trial's data and must be reconciled with AMP availability when that branch
 is integrated. The temporary APK code-1221 exception has ended; new builds use the commit count.
 
-The owner accepted queue behaviour and authorized integration on 2026-10-19; normal-version cleanup
-is undergoing fresh verification before merging. This supersedes the older playback/session
-descriptions below once integrated. [Full contract and evidence](QUEUE_EXPERIMENT.md).
+The owner accepted queue behaviour on 2026-10-19. After normal-version cleanup and a fresh full gate,
+it was merged into develop as `7cab210`; the merge tree equals tested source `069b238`.
+This supersedes the older playback/session descriptions below. AMP remains separately deferred.
+[Full contract and evidence](QUEUE_EXPERIMENT.md).
 
 This document records what has been decided and **why**. A decision without its reason gets
 re-litigated every few weeks, or worse, applied in a situation it was never meant for.

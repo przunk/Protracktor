@@ -1,13 +1,13 @@
 # Status
 
-Updated: 2026-10-19 — QUEUE accepted for integration, normal versioning restored; prepared release 1.2.0 (1207), schema 23.
+Updated: 2026-10-19 — QUEUE merged, normal-code APK 1.2.0 (1228) prepared; prepared AAB 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
 
-## B45 accepted — pre-merge verification, 2026-10-19
+## B45 accepted and merged — normal versioning restored, 2026-10-19
 
 The owner confirmed that Queue behaves as intended and authorized merging it into develop before
 the next iteration. Additional colleague feedback has not yet been described; no fix or severity
@@ -19,9 +19,24 @@ remain historical; installing a new higher-code APK ends ordinary replacement by
 Do not uninstall or clear data to bypass the version check. Schema 23 and retained AMP data guards
 are unchanged. No playback or UI behaviour is modified by this cleanup.
 
-**In progress:** fresh forced full gate/lint, integration and minified normal-code APK.
+**Checked:** clean source `069b238` passed the forced full gate in **623 s**, **956 tests / 128
+suites**, zero failures/errors/skips; unit stage **423.8 s**, lint **97.0 s**, **0 errors / 72
+warnings** (the retired heading warning is gone). All companion stages passed. The normal debug
+manifest reports 1.2.0/code 1227, matching that source's commit count.
+
+Merged as `7cab210`; its entire tree equals the tested branch checkpoint. Release APK built from
+that clean merge in **98 s**:
+`dist/protracktor-release-1.2.0-1228-7cab210-20261019-220200.apk`, **11,829,987 bytes**.
+APK v2 signature, package/name/code, absence of the debuggable flag, R8 execution/nonempty mapping
+and three engine ABIs were verified. Code **1228** equals the merge's commit count, including on
+the test-signing path; versionName remains **1.2.0**, not a new store release. Exact hashes and
+verification evidence are in [the report](QUEUE_EXPERIMENT.md).
+
 The general positive phone report is owner acceptance, not a separately reported result for every
-device checklist item. No push, master/tag change, AMP merge or store release is authorized.
+device checklist item. This new normal-code artifact has not yet been tested on a phone. Further
+work starts on a new task branch from develop, not on the integrated experiment branch.
+AMP remains `8e92002`, master `794d8f9`; no push, tag movement or store release occurred.
+Subsequent documentation commits do not relabel this artifact or its tested source.
 
 ## B45 follow-up — four owner-reported UI refinements, 2026-10-19
 

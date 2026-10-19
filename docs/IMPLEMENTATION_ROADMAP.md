@@ -21,11 +21,13 @@ device checklist outcomes were not separately supplied; [remaining checks](TESTI
 Dated implementation checkpoints below describe the earlier, unaccepted builds.
 B49 live History search was accepted by the owner and merged on 2026-10-15 (`ef8cd39`);
 it is no longer open. [Verification and acceptance](PLAN_HISTORY_SEARCH.md).
+B45 active playback queue was accepted and merged on 2026-10-19 (`7cab210`), after normal-version
+cleanup and a fresh 956-test full gate/lint. It is no longer open inventory work. Further colleague
+feedback awaits details and a separate next iteration; AMP stays deferred. [Evidence](QUEUE_EXPERIMENT.md).
 
 | ID | Remaining work | State |
 | --- | --- | --- |
 | B47 | Bluetooth transport: Next, Previous, Play/Pause and Stop | Android headset buttons appear to work in owner testing; remaining report concerns WWW buttons (C104). Deferred by the owner on 2026-10-13; do not reimplement Android transport. |
-| B45 | Source-owned playback queue independent of navigation, read-only queue sheet and remembered Random | Owner accepted behaviour and authorized integration, 2026-10-19. Normal-version cleanup and fresh verification in progress; further feedback awaits a separate iteration. [Contract](QUEUE_EXPERIMENT.md), Q13. |
 | B44 | Android Auto | Tester request; no selected scope or implementation schedule. |
 | B40 | Remember measured SAP lengths for every subsong | Not scheduled; avoid repeatedly measuring the same subsong. |
 | B38 | Phone pairing on public GitHub Pages | Deferred; the owner currently accepts no public-page pairing. |
