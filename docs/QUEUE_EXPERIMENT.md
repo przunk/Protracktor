@@ -2,8 +2,9 @@
 
 Owner-authorized experiment, 2026-10-18. Branch `feature/playback-queue-experiment`, based on
 develop `9ca86ea` (commit count 1219). This document consolidates the discussion, decisions,
-code findings, implementation boundaries and verification. Implementation and host/artifact checks
-are complete; owner phone acceptance remains pending.
+code findings, implementation boundaries and verification. The owner accepted the queue behaviour
+and authorized merging on 2026-10-19. Normal-version cleanup and fresh host/artifact verification
+are in progress; see section 13. Earlier pending states and fixed-code artifacts are historical.
 
 ## 1. Why an experiment
 
@@ -446,3 +447,24 @@ positive feedback does not certify every scenario. No merge, push, tag movement 
 occurred. Develop remains `9ca86ea`, AMP `8e92002`, master `794d8f9`. Documentation-only closeout
 does not relabel this APK or its tested source. The test version override must still be removed
 before any accepted merge.
+
+## 13. Owner acceptance and normal versioning — 2026-10-19
+
+The owner confirmed that Queue behaves as intended and selected integration into develop before
+the next iteration. Further feedback from a colleague has not yet been described; record and
+analyze it separately rather than guessing or changing behaviour during this merge.
+
+Before integration, the test-only code-1221 override is removed: every build again uses
+`git rev-list --count HEAD`. `protracktorTestApk=true` still selects the existing test certificate,
+not a different code. VersionName stays 1.2.0 until the owner's release procedure. The obsolete
+`search_playing_title` strings are removed in both languages; no playback/UI behaviour changes.
+
+The existing code-1221 AMP and QUEUE APKs are not relabelled or overwritten. New higher-code APKs
+cannot ordinarily be replaced by the older AMP APK. Do not uninstall or clear data as a workaround.
+The owner deferred AMP until after the next queue iteration; its branch, permission gate and
+playback implementation remain untouched. Retained AMP data guards and schema 23 stay in place.
+
+Verification pending: forced full gate/lint, integration tree comparison and minified release APK
+with commit-derived code. The owner's positive phone report covers the tested QUEUE behaviour;
+it does not separately certify every checklist item or an actual AMP round-trip. No store release,
+master/tag movement or push is authorized.

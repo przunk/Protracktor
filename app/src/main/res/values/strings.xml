@@ -32,7 +32,6 @@
     <string name="played_before_explanation">Listened to for at least 5 seconds or through to the end without seeking, or present in History before this feature was added. Clearing History removes this mark.</string>
     <string name="app_name">Protracktor</string>
 
-    <string name="search_playing_title">Playing from search</string>
     <string name="random_playing_title">Playing at random</string>
     <string name="random_filter">Filter</string>
     <string name="random_rolling">Rolling…</string>

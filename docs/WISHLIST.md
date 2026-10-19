@@ -114,12 +114,14 @@ gate passed 835 tests in 112 suites, lint 0 errors/72 warnings; replacement APK 
 clean source `f289863`, is ready. Phone retest is pending. No merge or store release.
 This is search-query history, separate from playback History and B43's listened markers.
 
-## B45. Active playback queue independent of the visible playlist — experiment ready for phone testing, 2026-10-18
+## B45. Active playback queue independent of the visible playlist — owner accepted, 2026-10-19
 
 Real app-user request, relayed by the owner on 2026-10-13: returning to the playlist after playing
 from search or an author should not interrupt playback. The owner selected an isolated, reversible
-experiment on `feature/playback-queue-experiment` on 2026-10-18. A minified test APK is prepared;
-953 host tests and lint passed. It remains unmerged and awaits phone acceptance.
+experiment on `feature/playback-queue-experiment` on 2026-10-18. The latest candidate passed 956
+host tests and lint. On 2026-10-19 the owner confirmed the intended behaviour and authorized
+integration. Normal-version cleanup and fresh verification are in progress before merging.
+Further colleague feedback awaits details and a separate iteration; AMP remains deferred.
 
 One active queue owns transport; navigation and playlist selection only change what is shown.
 Playing a row changes the queue source. Its dedicated full-height sheet is read-only apart from

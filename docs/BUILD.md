@@ -371,12 +371,14 @@ owner installs the APK on a phone. A build that compiles proves the build, and n
 
 ## Versions
 
-### QUEUE trial exception — unmerged branch only, 2026-10-18
+### Historical QUEUE trial exception — 2026-10-18 to 2026-10-19
 
 The owner approved pinning **only test-signed APKs** on `feature/playback-queue-experiment` to
 versionCode **1221**, matching the already supplied AMP APK. `build-release.sh` selects the existing
 `protracktorTestApk=true` path; normal Gradle builds and AAB configuration still use the commit
-count. VersionName remains 1.2.0. Remove this exception before any merge or store release.
+count. VersionName remained 1.2.0. This exception ended with the owner's merge authorization on
+2026-10-19; it has been removed before integration. All new APKs again use the commit count.
+The test-APK flag now selects only test signing, not a different versionCode.
 Different QUEUE builds share the code, so identify them by SHA/timestamp, not Settings' code alone.
 
 Both APKs must have the same application ID/test certificate and schema 23. The QUEUE compatibility
@@ -384,6 +386,10 @@ guard preserves AMP's index without exposing it to queries or playback. Test act
 -> AMP replacement without uninstalling; equal codes alone do not prove data compatibility.
 Only the existing AMP APK with code 1221 is the interchange reference, not an arbitrary future
 AMP build. [Contract and verification](QUEUE_EXPERIMENT.md).
+
+The supplied code-1221 APKs remain unchanged historical artifacts. Installing a new higher-code
+QUEUE/develop APK ends ordinary replacement by that older AMP APK: do not uninstall or clear data
+to work around it. AMP integration/build refresh is deferred until the next queue iteration.
 
 ### Normal release policy
 

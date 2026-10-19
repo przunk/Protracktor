@@ -1,8 +1,8 @@
 # Architecture
 
-## Queue experiment — branch-only, 2026-10-18
+## Active playback queue — owner accepted, 2026-10-19
 
-On `feature/playback-queue-experiment`, `ActiveQueue` and exhaustive `QueueSource`/`QueueStep`
+Implemented on `feature/playback-queue-experiment`, `ActiveQueue` and exhaustive `QueueSource`/`QueueStep`
 types own file-level transport decisions outside Android. `PlayQueue` retains finite-order,
 repeat/shuffle/history rules; `RandomHistory` supplies its growing heard record and private
 speculation. `PlaybackController` executes typed steps against the existing decoder/focus/adapters.
@@ -26,12 +26,13 @@ priority (scanner, Settings, Browse, Random), with one shared callback for Rando
 Back to Browse. This changes navigation only, never the playback owner.
 
 Schema remains 23; temporary queues/Random records remain in memory. Startup still restores the
-selected playlist paused, not every temporary source. A test-only APK code 1221 exception and
-retained-but-unavailable AMP index guard support replacing the two private trial APKs. The latter
-must be reconciled with AMP availability when its separately gated branch is integrated.
+selected playlist paused, not every temporary source. The retained-but-unavailable AMP index guard
+preserves the parallel trial's data and must be reconciled with AMP availability when that branch
+is integrated. The temporary APK code-1221 exception has ended; new builds use the commit count.
 
-This supersedes the older playback/session descriptions below only on the experiment branch.
-No merge or device acceptance is implied. [Full contract and evidence](QUEUE_EXPERIMENT.md).
+The owner accepted queue behaviour and authorized integration on 2026-10-19; normal-version cleanup
+is undergoing fresh verification before merging. This supersedes the older playback/session
+descriptions below once integrated. [Full contract and evidence](QUEUE_EXPERIMENT.md).
 
 This document records what has been decided and **why**. A decision without its reason gets
 re-litigated every few weeks, or worse, applied in a situation it was never meant for.

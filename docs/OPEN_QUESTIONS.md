@@ -89,8 +89,10 @@ opposite-phase material, level changes and transitions; Mono can cancel opposite
 
 ## Q13 — Playback queue and navigation
 
-**Experiment selected, 2026-10-18; real user feedback B45, originally recorded 2026-10-13.**
-Implementation is isolated on `feature/playback-queue-experiment`, not merged or phone-accepted.
+**Experiment selected, 2026-10-18; owner accepted Queue and authorized integration, 2026-10-19.**
+Real user feedback B45 was originally recorded on 2026-10-13. Pre-merge cleanup and verification
+are in progress on `feature/playback-queue-experiment`. Further colleague feedback awaits details
+and a separate next iteration; no unspecified behaviour change is selected here.
 
 The owner selected one active playback queue independent of navigation and the selected playlist.
 Selecting another playlist only displays it; playing a row activates its collection. Returning
@@ -102,8 +104,9 @@ Random record with the same filter. A single dice tap does nothing; provide help
 First-ever Random entry still starts automatically. C97's heard-history boundary is preserved.
 
 [Full decisions, transitions, architecture, APK interchange and tests](QUEUE_EXPERIMENT.md).
-The owner approved pinning only this branch's test APKs to code 1221 to alternate with the existing
-AMP APK; normal builds retain commit-derived codes. Permission to merge/publish AMP remains separate.
+The historical test-only code-1221 exception ended before integration; all new builds use the
+commit count. Higher-code APKs cannot ordinarily be replaced by the older AMP APK. AMP remains
+separate and deferred until after the next queue iteration; its permission hold is unchanged.
 
 Unselected extensions are not included: visible speculative Random picks, new Random mode rules,
 or persistence of every temporary session across process death. Existing finite-result limits,

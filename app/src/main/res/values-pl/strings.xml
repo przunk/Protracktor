@@ -32,7 +32,6 @@
     <string name="played_before_explanation">Odtwarzano przez co najmniej 5 sekund albo do końca bez przewijania lub utwór był w historii przed dodaniem tej funkcji. Wyczyszczenie historii usuwa to oznaczenie.</string>
     <string name="app_name">Protracktor</string>
 
-    <string name="search_playing_title">Odtwarzanie z wyszukiwania</string>
     <string name="random_playing_title">Odtwarzanie losowe</string>
     <string name="random_filter">Filtr</string>
     <string name="random_rolling">Losuję…</string>

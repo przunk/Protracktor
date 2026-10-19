@@ -1,12 +1,15 @@
 # What only a phone can prove
 
-## QUEUE experiment — follow-up device checks pending, 2026-10-19
+## QUEUE — owner accepted behaviour; detailed regression checklist retained, 2026-10-19
 
-Use only the supplied minified APK from `feature/playback-queue-experiment`. It is not merged.
-Current follow-up: `dist/protracktor-release-1.2.0-1221-bc32bea-20261019-002459.apk`;
-956 host tests passed, but these device refinements remain unchecked on the phone.
-The reference AMP APK has name 1.2.0/code 1221; verify the QUEUE artifact's same package/code and
-test certificate before replacing it. Do not uninstall or clear storage.
+The owner confirmed the intended Queue behaviour and authorized integration on 2026-10-19.
+Individual checklist results and the installed build ID were not separately supplied; keep this
+list for regression testing rather than treating every item as independently certified.
+The last fixed-code candidate is
+`dist/protracktor-release-1.2.0-1221-bc32bea-20261019-002459.apk` (956 host tests passed).
+New builds restore normal commit-derived codes; artifact/verification details are in Status and
+the experiment report. Installing a higher-code build prevents ordinary replacement by the old
+code-1221 AMP APK. AMP integration is deferred. Do not uninstall or clear storage.
 
 1. On AMP, retain an indexed/cached track, bookmark, History row and saved playlist. Install QUEUE:
    those records must not be deleted. AMP is unavailable here and must not appear in Search or
@@ -40,7 +43,9 @@ test certificate before replacing it. Do not uninstall or clear storage.
 12. Test repeat/shuffle/subsongs, headset/notification controls and navigation during slow loading.
     A retired Random request must not start after playing another source. After process death the
     existing selected-playlist restoration is paused; temporary queue restoration is not included.
-13. Reinstall the reference AMP APK: AMP index, cache, playlist, History and bookmark are still usable.
+13. Historical interchange check, only for the original code-1221 APK pair: reinstall AMP and
+    verify its index, cache, playlist, History and bookmark. Do not attempt that downgrade after
+    installing a new higher-code QUEUE/develop build; no data-destructive workaround is selected.
 
 Report installed artifact/SHA, steps and expected/observed results. Compilation, host UI tests
 and signing checks do not establish device audio/gesture behaviour. [Experiment](QUEUE_EXPERIMENT.md).

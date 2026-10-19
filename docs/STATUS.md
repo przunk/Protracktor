@@ -1,11 +1,27 @@
 # Status
 
-Updated: 2026-10-19 — QUEUE experiment device-feedback follow-up; prepared release 1.2.0 (1207), schema 23.
+Updated: 2026-10-19 — QUEUE accepted for integration, normal versioning restored; prepared release 1.2.0 (1207), schema 23.
 The signed AAB is prepared; upload to Play and publication are not confirmed.
 GitHub tags v1.1.0/v1.2.0 were verified remotely on 2026-10-16.
 versionCode is the source commit count; later documentation commits do not relabel the AAB.
 Google requires another 14 days of closed testing before reapplying for production access.
 Historical dated checks below describe their own builds; they are not current test counts.
+
+## B45 accepted — pre-merge verification, 2026-10-19
+
+The owner confirmed that Queue behaves as intended and authorized merging it into develop before
+the next iteration. Additional colleague feedback has not yet been described; no fix or severity
+is inferred. AMP work/integration is deferred until after that iteration, with its branch untouched.
+
+Pre-merge cleanup restores commit-derived versionCode for every build and removes the two unused
+search-cover strings. VersionName remains 1.2.0 until a release procedure. Existing code-1221 APKs
+remain historical; installing a new higher-code APK ends ordinary replacement by the older AMP APK.
+Do not uninstall or clear data to bypass the version check. Schema 23 and retained AMP data guards
+are unchanged. No playback or UI behaviour is modified by this cleanup.
+
+**In progress:** fresh forced full gate/lint, integration and minified normal-code APK.
+The general positive phone report is owner acceptance, not a separately reported result for every
+device checklist item. No push, master/tag change, AMP merge or store release is authorized.
 
 ## B45 follow-up — four owner-reported UI refinements, 2026-10-19
 
